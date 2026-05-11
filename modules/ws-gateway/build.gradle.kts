@@ -11,8 +11,8 @@ dependencies {
     implementation("org.apache.tomcat.embed:tomcat-embed-websocket:$tomcatVersion")
 
     implementation("jakarta.servlet:jakarta.servlet-api:6.0.0")
-    implementation("jakarta.websocket:jakarta.websocket-api:2.1.1")
-    implementation("jakarta.websocket:jakarta.websocket-client-api:2.1.1")
+    implementation("jakarta.websocket:jakarta.websocket-api:2.2.0")
+    implementation("jakarta.websocket:jakarta.websocket-client-api:2.2.0")
 
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0")
