@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+### 2026-05-13 16:30 UTC — **web-client**: мессенджер-UI, Markdown, демо-видео
+
+- **`modules/web-client/src/main/resources/webui/app.js`**, **`styles.css`**: экран авторизации (двухколоночный на широких экранах), список чатов с аватаром и поиском, Markdown в сообщениях, панель видео/конференции (локальная камера, миниатюры, экран, заглушки участников).
+- **`modules/web-client/README.md`**: раздел про возможности UI.
+
 ### 2026-05-13 16:00 UTC — SolrJ **10**: API клиента и запросов
 
 - **`modules/core-api`**: **`SolrQuery`** → **`org.apache.solr.client.solrj.request`**, **`HttpJdkSolrClient`** вместо **`Http2SolrClient`**, **`CloudSolrClient.Builder.withDefaultCollection`** вместо **`setDefaultCollection`**.
