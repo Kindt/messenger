@@ -23,6 +23,7 @@ services:
       WEB_CLIENT_PORT: "9080"
       WEB_CLIENT_API_UPSTREAM: ${WEB_CLIENT_API_UPSTREAM:-http://core-api:8080}
       WEB_CLIENT_WS_PUBLIC_URL: ${WEB_CLIENT_WS_PUBLIC_URL:-ws://localhost:9088/ws}
+      WEB_CLIENT_RTC_ICE_SERVERS: ${WEB_CLIENT_RTC_ICE_SERVERS:-}
 
   web-b:
     networks:
@@ -32,6 +33,7 @@ services:
       WEB_CLIENT_PORT: "9080"
       WEB_CLIENT_API_UPSTREAM: ${WEB_CLIENT_API_UPSTREAM:-http://core-api:8080}
       WEB_CLIENT_WS_PUBLIC_URL: ${WEB_CLIENT_WS_PUBLIC_URL:-ws://localhost:9088/ws}
+      WEB_CLIENT_RTC_ICE_SERVERS: ${WEB_CLIENT_RTC_ICE_SERVERS:-}
 
   lb:
     networks:

@@ -46,4 +46,26 @@ public final class PipelineFanoutLogic {
         }
         return result;
     }
+
+    /**
+     * Whether {@code userId} is an active (non-banned) member of {@code chatId}.
+     */
+    public static boolean isChatMember(DataSource dataSource, UUID chatId, UUID userId) {
+        var sql = """
+            SELECT 1 FROM chat_members
+            WHERE chat_id = ? AND user_id = ? AND banned = false
+            LIMIT 1
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, chatId);
+            stmt.setObject(2, userId);
+            try (var rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            log.error("Failed to check chat membership for {} in {}", userId, chatId, e);
+            return false;
+        }
+    }
 }

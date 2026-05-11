@@ -20,6 +20,8 @@
     callThumbTimer: null,
     callCamOn: true,
     callMicOn: true,
+    rtcPeerIds: [],
+    rtcPeers: {},
   };
 
   function apiRoot() {
@@ -31,6 +33,20 @@
     if (cfg && cfg.wsUrl) return String(cfg.wsUrl).replace(/\/$/, "");
     var p = location.protocol === "https:" ? "wss:" : "ws:";
     return p + "//" + location.host + "/ws";
+  }
+
+  /** ICE from /web-client-env.js (WEB_CLIENT_RTC_ICE_SERVERS) or default STUN. */
+  function getRtcIceServers() {
+    var cfg = window.__WEB_CLIENT__;
+    if (cfg && cfg.iceServersJson) {
+      try {
+        var arr = JSON.parse(cfg.iceServersJson);
+        if (Array.isArray(arr) && arr.length > 0) {
+          return arr;
+        }
+      } catch (e) {}
+    }
+    return [{ urls: "stun:stun.l.google.com:19302" }];
   }
 
   async function apiJson(path, opts) {
@@ -146,7 +162,60 @@
     return s;
   }
 
+  function sendRtcHangups() {
+    try {
+      if (!state.ws || state.ws.readyState !== WebSocket.OPEN || !state.selectedId) return;
+      Object.keys(state.rtcPeers).forEach(function (pid) {
+        state.ws.send(
+          JSON.stringify({
+            type: "rtc_signal",
+            chatId: state.selectedId,
+            payload: { kind: "hangup", targetUserId: pid },
+          })
+        );
+      });
+    } catch (e) {}
+  }
+
+  function teardownPeer(peerId) {
+    var pc = state.rtcPeers[peerId];
+    if (pc) {
+      try {
+        pc.close();
+      } catch (e) {}
+      delete state.rtcPeers[peerId];
+    }
+    var wrap = document.getElementById("rtc-remote-" + peerId);
+    if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
+  }
+
+  function rtcHangupAll() {
+    sendRtcHangups();
+    Object.keys(state.rtcPeers).forEach(function (pid) {
+      try {
+        state.rtcPeers[pid].close();
+      } catch (e) {}
+      delete state.rtcPeers[pid];
+      var wrap = document.getElementById("rtc-remote-" + pid);
+      if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
+    });
+    state.rtcPeers = {};
+    state.rtcPeerIds = [];
+  }
+
+  function sendRtcSignal(payload) {
+    if (!state.ws || state.ws.readyState !== WebSocket.OPEN || !state.selectedId) return;
+    state.ws.send(
+      JSON.stringify({
+        type: "rtc_signal",
+        chatId: state.selectedId,
+        payload: payload,
+      })
+    );
+  }
+
   function stopCallMedia() {
+    rtcHangupAll();
     if (state.callThumbTimer) {
       clearInterval(state.callThumbTimer);
       state.callThumbTimer = null;
@@ -180,6 +249,109 @@
     }
   }
 
+  async function loadRtcPeerIds() {
+    state.rtcPeerIds = [];
+    if (!state.selectedId || !state.tokens) return;
+    try {
+      var rows = await apiJson("/chats/" + state.selectedId + "/members", { method: "GET" });
+      var me = jwtSub(state.tokens.access_token);
+      state.rtcPeerIds = rows
+        .filter(function (r) {
+          return r.user_id !== me;
+        })
+        .map(function (r) {
+          return r.user_id;
+        });
+    } catch (e) {
+      state.error = (e && e.message) || "Не удалось загрузить участников для звонка";
+    }
+  }
+
+  function getOrCreatePeerConnection(peerId) {
+    if (state.rtcPeers[peerId]) return state.rtcPeers[peerId];
+    var pc = new RTCPeerConnection({
+      iceServers: getRtcIceServers(),
+    });
+    state.rtcPeers[peerId] = pc;
+    if (state.callStream) {
+      state.callStream.getTracks().forEach(function (t) {
+        pc.addTrack(t, state.callStream);
+      });
+    }
+    pc.onicecandidate = function (ev) {
+      if (ev.candidate) {
+        sendRtcSignal({
+          kind: "candidate",
+          targetUserId: peerId,
+          candidate: ev.candidate.toJSON(),
+        });
+      }
+    };
+    pc.ontrack = function (ev) {
+      var wrap = document.getElementById("rtc-remote-" + peerId);
+      if (!wrap) return;
+      var video = wrap.querySelector("video");
+      if (video && ev.streams[0]) {
+        video.srcObject = ev.streams[0];
+      }
+    };
+    return pc;
+  }
+
+  async function createOfferTo(peerId) {
+    var pc = getOrCreatePeerConnection(peerId);
+    var offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    sendRtcSignal({ kind: "offer", targetUserId: peerId, sdp: offer.sdp });
+  }
+
+  function beginRtcMesh() {
+    var me = jwtSub(state.tokens && state.tokens.access_token);
+    if (!me || !state.callPanelOpen) return;
+    state.rtcPeerIds.forEach(function (pid) {
+      if (me < pid) {
+        createOfferTo(pid).catch(function () {});
+      }
+    });
+  }
+
+  async function handleRtcEnvelope(env) {
+    if (!env || env.type !== "rtc_signal" || !env.payload) return;
+    if (env.chatId !== state.selectedId) return;
+    var from = env.fromUserId;
+    var me = jwtSub(state.tokens && state.tokens.access_token);
+    if (!from || !me || from === me) return;
+    var p = env.payload;
+    if (p.targetUserId && p.targetUserId !== me) return;
+    try {
+      if (p.kind === "hangup") {
+        teardownPeer(from);
+        render();
+        return;
+      }
+      if (p.kind === "offer" && p.sdp) {
+        var pcO = getOrCreatePeerConnection(from);
+        await pcO.setRemoteDescription({ type: "offer", sdp: p.sdp });
+        var ans = await pcO.createAnswer();
+        await pcO.setLocalDescription(ans);
+        sendRtcSignal({ kind: "answer", targetUserId: from, sdp: ans.sdp });
+        return;
+      }
+      if (p.kind === "answer" && p.sdp) {
+        var pcA = state.rtcPeers[from];
+        if (pcA) await pcA.setRemoteDescription({ type: "answer", sdp: p.sdp });
+        return;
+      }
+      if (p.kind === "candidate" && p.candidate) {
+        var pcC = state.rtcPeers[from];
+        if (pcC) await pcC.addIceCandidate(p.candidate);
+      }
+    } catch (e) {
+      state.error = (e && e.message) || "WebRTC";
+      render();
+    }
+  }
+
   async function toggleCallPanel() {
     state.callPanelOpen = !state.callPanelOpen;
     if (!state.callPanelOpen) {
@@ -189,9 +361,13 @@
     }
     try {
       await ensureCallStream();
+      await loadRtcPeerIds();
       startThumbCapture();
       render();
       attachLocalVideo();
+      setTimeout(function () {
+        beginRtcMesh();
+      }, 120);
     } catch (e) {
       state.callPanelOpen = false;
       render();
@@ -295,6 +471,7 @@
   }
 
   function closeWs() {
+    rtcHangupAll();
     if (state.ws) {
       try {
         state.ws.close();
@@ -326,6 +503,10 @@
     ws.onmessage = function (ev) {
       try {
         var data = JSON.parse(String(ev.data));
+        if (data && data.type === "rtc_signal") {
+          handleRtcEnvelope(data);
+          return;
+        }
         if (!isMessageSendEvent(data)) return;
         if (data.chatId !== state.selectedId) {
           loadChats().then(render).catch(function () {});
@@ -555,7 +736,13 @@
     };
     ph.appendChild(cl);
     panel.appendChild(ph);
-    panel.appendChild(el("p", "call-hint", "Локальный предпросмотр и демо-миниатюры. Многопользовательский звонок потребует сигнальный сервер (WebRTC) — этап бэкенда."));
+    panel.appendChild(
+      el(
+        "p",
+        "call-hint",
+        "WebRTC mesh через NATS (rtc.signal). ICE: по умолчанию публичный STUN; TURN — переменная WEB_CLIENT_RTC_ICE_SERVERS (JSON-массив в /web-client-env.js)."
+      )
+    );
     var stage = el("div", "call-stage");
     var mainVid = el("div", "call-main-wrap");
     var lv = document.createElement("video");
@@ -587,14 +774,26 @@
     thumbs.appendChild(c1);
     thumbs.appendChild(c2);
     panel.appendChild(thumbs);
-    var grid = el("div", "call-participants");
-    for (var i = 0; i < 3; i++) {
-      var slot = el("div", "call-participant-slot");
-      slot.appendChild(el("span", null, "Участник " + (i + 2)));
-      slot.appendChild(el("small", null, "ожидание сигнального сервера"));
-      grid.appendChild(slot);
+    var remotes = el("div", "call-remotes");
+    remotes.appendChild(el("div", "call-remotes-title", "Удалённые потоки (участники чата)"));
+    state.rtcPeerIds.forEach(function (pid) {
+      var slot = el("div", "rtc-remote-slot");
+      slot.id = "rtc-remote-" + pid;
+      slot.appendChild(el("div", "rtc-remote-label", pid.slice(0, 8) + "…"));
+      var rv = document.createElement("video");
+      rv.className = "call-video rtc-remote-video";
+      rv.autoplay = true;
+      rv.playsInline = true;
+      rv.setAttribute("playsinline", "");
+      slot.appendChild(rv);
+      remotes.appendChild(slot);
+    });
+    if (!state.rtcPeerIds.length) {
+      remotes.appendChild(
+        el("div", "call-participant-slot", "В чате только вы, или нет доступа к списку участников.")
+      );
     }
-    panel.appendChild(grid);
+    panel.appendChild(remotes);
     var bar = el("div", "call-toolbar");
     var bMic = el("button", "btn " + (state.callMicOn ? "btn-primary" : "btn-ghost"), state.callMicOn ? "Мик: вкл" : "Мик: выкл");
     bMic.type = "button";
@@ -689,6 +888,7 @@
       var b = el("button", "chat-item" + (c.id === state.selectedId ? " active" : ""));
       b.type = "button";
       b.onclick = function () {
+        rtcHangupAll();
         state.selectedId = c.id;
         state.error = null;
         loadThread(c.id)

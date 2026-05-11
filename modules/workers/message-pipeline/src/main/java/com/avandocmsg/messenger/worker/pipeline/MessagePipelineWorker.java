@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.worker.pipeline;
 
 import com.avandocmsg.messenger.common.dto.MessageSendEvent;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.dto.RtcSignalEvent;
 import com.avandocmsg.messenger.common.nats.JetStreamMessagingSetup;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,6 +28,7 @@ public class MessagePipelineWorker {
     private static final Logger log = LoggerFactory.getLogger(MessagePipelineWorker.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String QUEUE_GROUP = "pipeline-workers";
+    private static final String RTC_QUEUE_GROUP = "rtc-pipeline-workers";
 
     private final DataSource dataSource;
     private final Connection natsConnection;
@@ -64,6 +66,40 @@ public class MessagePipelineWorker {
             dispatcher.subscribe(NatsSubjects.MSG_SEND, QUEUE_GROUP);
             log.info("Subscribed to {} (queue: {}). Waiting for messages...", NatsSubjects.MSG_SEND, QUEUE_GROUP);
         }
+        subscribeRtcFanout();
+    }
+
+    private void subscribeRtcFanout() {
+        var rtcDispatcher = natsConnection.createDispatcher(this::handleRtcCoreMessage);
+        rtcDispatcher.subscribe(NatsSubjects.RTC_SIGNAL, RTC_QUEUE_GROUP);
+        log.info("Subscribed to {} (queue: {}) for WebRTC signaling", NatsSubjects.RTC_SIGNAL, RTC_QUEUE_GROUP);
+    }
+
+    private void handleRtcCoreMessage(Message msg) {
+        try {
+            handleRtcPayload(msg.getData());
+        } catch (Exception e) {
+            log.error("RTC fan-out failed", e);
+        }
+    }
+
+    private void handleRtcPayload(byte[] raw) throws Exception {
+        var evt = MAPPER.readValue(raw, RtcSignalEvent.class);
+        if (!RtcSignalEvent.TYPE.equals(evt.type())) {
+            return;
+        }
+        var chatId = UUID.fromString(evt.chatId());
+        var sender = UUID.fromString(evt.fromUserId());
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, sender)) {
+            log.warn("rtc.signal dropped: sender {} is not an active member of chat {}", sender, chatId);
+            return;
+        }
+        var out = MAPPER.writeValueAsBytes(evt);
+        var members = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, sender);
+        for (var memberId : members) {
+            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, out);
+        }
+        log.debug("rtc.signal from {} in chat {} -> {} recipients", sender, chatId, members.size());
     }
 
     private void handleCoreMessage(Message msg) {

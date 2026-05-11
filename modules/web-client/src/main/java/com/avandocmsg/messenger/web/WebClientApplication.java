@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Автономный веб-клиент: встроенный Tomcat, статика из classpath, HTTP-прокси на core-api.
- * WebSocket к ws-gateway задаётся через {@code WEB_CLIENT_WS_PUBLIC_URL} (см. {@link WebClientEnvServlet}).
+ * WebSocket к ws-gateway — {@code WEB_CLIENT_WS_PUBLIC_URL}; ICE для WebRTC — {@code WEB_CLIENT_RTC_ICE_SERVERS} (см. {@link WebClientEnvServlet}).
  */
 public final class WebClientApplication {
     private static final Logger log = LoggerFactory.getLogger(WebClientApplication.class);

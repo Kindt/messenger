@@ -8,6 +8,12 @@ public final class NatsSubjects {
     public static final String MSG_SEND = "msg.send";
     public static final String MSG_DELIVER_PREFIX = "msg.deliver.";
 
+    /**
+     * WebRTC signaling ingress: JSON {@link com.avandocmsg.messenger.common.dto.RtcSignalEvent} (поле {@code payload} — SDP / ICE и т.д.).
+     * Публикует ws-gateway; fan-out в {@link #MSG_DELIVER_PREFIX} делает message-pipeline после проверки членства в чате.
+     */
+    public static final String RTC_SIGNAL = "rtc.signal";
+
     /** Клиент печатает (метаданные JSON {@link com.avandocmsg.messenger.common.dto.TypingEvent}). */
     public static final String MSG_TYPING = "msg.typing";
 

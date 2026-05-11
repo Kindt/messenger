@@ -1,13 +1,17 @@
 package com.avandocmsg.messenger.ws;
 
+import com.avandocmsg.messenger.common.dto.RtcSignalEvent;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.ws.auth.WsTokenValidator;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.nats.client.Connection;
 import io.nats.client.Dispatcher;
 import jakarta.websocket.CloseReason;
 import jakarta.websocket.OnClose;
 import jakarta.websocket.OnError;
+import jakarta.websocket.OnMessage;
 import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.ServerEndpoint;
@@ -17,11 +21,14 @@ import org.slf4j.LoggerFactory;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @ServerEndpoint("/ws")
 public class MessagingWebSocket {
     private static final Logger log = LoggerFactory.getLogger(MessagingWebSocket.class);
+    private static final ObjectMapper WS_JSON = new ObjectMapper();
+
     static Connection natsConnection;
     static WsTokenValidator tokenValidator;
     /** Set in {@link WsGatewayApplication#main} before accepting connections. */
@@ -62,6 +69,34 @@ public class MessagingWebSocket {
         dispatcher.subscribe(NatsSubjects.MSG_DELIVER_PREFIX + userId);
         sessionDispatchers.put(session, dispatcher);
         log.info("WS opened for user {} (session {})", userId, session.getId());
+    }
+
+    private static final int MAX_WS_TEXT_BYTES = 48_000;
+
+    @OnMessage(maxMessageSize = 65_536)
+    public void onMessage(String text, Session session) {
+        var userId = sessionUsers.get(session);
+        if (userId == null || natsConnection == null) {
+            return;
+        }
+        if (text == null || text.length() > MAX_WS_TEXT_BYTES) {
+            return;
+        }
+        try {
+            JsonNode root = WS_JSON.readTree(text);
+            if (!root.hasNonNull("type") || !RtcSignalEvent.TYPE.equals(root.get("type").asText())) {
+                return;
+            }
+            if (!root.hasNonNull("chatId") || !root.has("payload") || !root.get("payload").isObject()) {
+                return;
+            }
+            UUID.fromString(root.get("chatId").asText());
+            JsonNode payload = root.get("payload");
+            var evt = new RtcSignalEvent(root.get("chatId").asText(), userId, payload);
+            natsConnection.publish(NatsSubjects.RTC_SIGNAL, WS_JSON.writeValueAsBytes(evt));
+        } catch (Exception e) {
+            log.debug("Ignoring invalid client WS payload: {}", e.toString());
+        }
     }
 
     @OnClose

@@ -5,6 +5,7 @@
 | Subject | Назначение | JSON / полезная нагрузка | Кто публикует | Кто потребляет |
 |--------|------------|--------------------------|---------------|----------------|
 | **`msg.send`** | Исходящее сообщение в pipeline (JetStream при включённом JS) | см. **`MessageService`** / pipeline | **core-api** | **message-pipeline** worker |
+| **`rtc.signal`** | WebRTC signaling (mesh); fan-out в **`msg.deliver.{peer}`** после проверки членства в чате | JSON **`RtcSignalEvent`** (`type`, `chatId`, `fromUserId`, `payload`: offer / answer / candidate / hangup) | **ws-gateway** (из **WebSocket**) | **message-pipeline** worker |
 | **`msg.deliver.{userId}`** | Доставка клиенту (per-user) | payload сообщения/события | воркеры / pipeline | **ws-gateway** (`MessagingWebSocket` подписывается на префикс + `sub`) |
 | **`msg.typing`** | Набор текста | **`TypingEvent`** | клиент / gateway (по ТЗ) | подписчики |
 | **`msg.event.index`** | Событие для индексации (Solr и т.д.) | **`MessageWorkerEvent`** (поле **`index_op`**: upsert при отсутствии, **`update`** после правки, **`delete`** при мягком удалении) | **message-pipeline** (новые сообщения), **core-api** **`MessageService`** (edit/delete), **`RetentionWorker`** (очистка тела по политике, **`index_op=update`**) | indexer worker |
@@ -21,7 +22,7 @@
 
 ## ws-gateway
 
-Модуль **`modules/ws-gateway`** импортирует **`NatsSubjects`** и подписывается на **`msg.deliver.`** + **`userId`** из JWT **`sub`** — см. **`MessagingWebSocket`**.
+Модуль **`modules/ws-gateway`** импортирует **`NatsSubjects`** и подписывается на **`msg.deliver.`** + **`userId`** из JWT **`sub`** — см. **`MessagingWebSocket`**. Клиент может отправлять в сокет JSON **`rtc_signal`** (см. **`RtcSignalEvent`**); шлюз публикует в **`rtc.signal`**.
 
 ## Переменные окружения
 

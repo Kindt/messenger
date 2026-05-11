@@ -6,7 +6,7 @@
 
 - Экран входа / регистрации и основное окно в стиле мессенджера: список чатов с поиском, область переписки, поле ввода.
 - Сообщения рендерятся как **безопасное подмножество Markdown** (экранирование HTML, **жирный**, *курсив*, `` `код` ``, блоки ` ``` `, ссылки только **http/https**).
-- Панель **«Видео / конференция»**: локальный поток с камеры и микрофона, демо-миниатюры (снимки с видео), демонстрация экрана (**getDisplayMedia**), заглушки участников. Полноценные групповые звонки (mesh или SFU) требуют отдельного **WebRTC-сигнального** и медиа-сервера — в текущей версии UI готов к подключению такого бэкенда.
+- Панель **«Видео / конференция»**: локальный поток, миниатюры, демонстрация экрана, **mesh WebRTC** с другими участниками чата: сигналы (**offer / answer / candidate / hangup**) уходят по тому же WebSocket в NATS **`rtc.signal`** и рассылаются **message-pipeline** на **`msg.deliver.{userId}`** (проверка членства в чате). Для жёсткого NAT может понадобиться **TURN** (сейчас только публичный STUN).
 
 ## Локально
 
@@ -15,7 +15,7 @@
 .\gradlew.bat :modules:web-client:run
 ```
 
-Переменные: **`WEB_CLIENT_PORT`**, **`WEB_CLIENT_API_UPSTREAM`**, **`WEB_CLIENT_WS_PUBLIC_URL`** (см. **`WebClientApplication`**, **`WebClientEnvServlet`**).
+Переменные: **`WEB_CLIENT_PORT`**, **`WEB_CLIENT_API_UPSTREAM`**, **`WEB_CLIENT_WS_PUBLIC_URL`**, опционально **`WEB_CLIENT_RTC_ICE_SERVERS`** — JSON-массив ICE-серверов для WebRTC (см. **`WebClientEnvServlet`**, поле **`iceServersJson`** в **`/web-client-env.js`**). Пример: `[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:turn.example.com:3478","username":"u","credential":"p"}]`.
 
 ## Docker и балансировщик
 

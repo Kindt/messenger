@@ -620,6 +620,41 @@ button {
   opacity: 0.85;
 }
 
+.call-remotes {
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.call-remotes-title {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.rtc-remote-slot {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #000;
+}
+
+.rtc-remote-label {
+  font-size: 0.68rem;
+  color: var(--muted);
+  padding: 4px 8px;
+  background: var(--panel2);
+}
+
+.rtc-remote-video {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
 .call-toolbar {
   display: flex;
   flex-wrap: wrap;

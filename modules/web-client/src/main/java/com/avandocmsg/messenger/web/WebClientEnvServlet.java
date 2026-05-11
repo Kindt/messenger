@@ -6,17 +6,40 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Function;
 
 /**
- * Отдаёт небольшой JS с публичным URL WebSocket (ws-gateway), т.к. встроенный Tomcat не проксирует upgrade.
+ * Отдаёт небольшой JS: публичный URL WebSocket (ws-gateway) и опционально JSON-массив ICE-серверов для WebRTC.
+ * ICE: переменная {@code WEB_CLIENT_RTC_ICE_SERVERS} — строка JSON (массив объектов {@code urls} / {@code username} / {@code credential}),
+ * например {@code [{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:…","username":"…","credential":"…"}]}.
  */
 final class WebClientEnvServlet extends HttpServlet {
+    /**
+     * Собирает тело скрипта (как в {@link #doGet}). {@code getenv} возвращает {@code null}, если переменной нет.
+     * Пакетный доступ — для юнит-тестов без подмены {@link System#getenv()}.
+     */
+    static String buildEnvScriptBody(Function<String, String> getenv) {
+        String wsUrl = getenv.apply("WEB_CLIENT_WS_PUBLIC_URL");
+        if (wsUrl == null) {
+            wsUrl = "ws://127.0.0.1:8081/ws";
+        }
+        wsUrl = wsUrl.trim().replaceAll("/$", "");
+        String iceRaw = getenv.apply("WEB_CLIENT_RTC_ICE_SERVERS");
+        if (iceRaw == null) {
+            iceRaw = "";
+        }
+        iceRaw = iceRaw.trim();
+        String iceJs = iceRaw.isEmpty() ? "null" : jsonQuote(iceRaw);
+        return "window.__WEB_CLIENT__ = { wsUrl: "
+            + jsonQuote(wsUrl)
+            + ", iceServersJson: "
+            + iceJs
+            + " };\n";
+    }
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String wsUrl = System.getenv().getOrDefault("WEB_CLIENT_WS_PUBLIC_URL", "ws://127.0.0.1:8081/ws")
-            .trim()
-            .replaceAll("/$", "");
-        String body = "window.__WEB_CLIENT__ = { wsUrl: " + jsonQuote(wsUrl) + " };\n";
+        String body = buildEnvScriptBody(System::getenv);
         resp.setCharacterEncoding("UTF-8");
         resp.setContentType("application/javascript;charset=UTF-8");
         resp.setHeader("Cache-Control", "no-store, max-age=0");
