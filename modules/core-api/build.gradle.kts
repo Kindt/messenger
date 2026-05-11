@@ -23,7 +23,7 @@ dependencies {
 
     // Jakarta EE
     implementation("jakarta.servlet:jakarta.servlet-api:6.0.0")
-    implementation("jakarta.ws.rs:jakarta.ws.rs-api:3.1.0")
+    implementation("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")
     implementation("jakarta.validation:jakarta.validation-api:3.0.2")
 
     // DB
