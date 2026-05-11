@@ -34,8 +34,8 @@ subprojects {
             exclude("net.bytebuddy", "byte-buddy-agent")
         }
         testImplementation("org.mockito:mockito-junit-jupiter:5.14.0")
-        testImplementation("net.bytebuddy:byte-buddy:1.16.0")
-        testImplementation("net.bytebuddy:byte-buddy-agent:1.16.0")
+        testImplementation("net.bytebuddy:byte-buddy:1.18.8")
+        testImplementation("net.bytebuddy:byte-buddy-agent:1.18.8")
     }
 
     tasks.withType<Test> {
