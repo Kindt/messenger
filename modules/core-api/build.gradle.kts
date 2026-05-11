@@ -58,7 +58,7 @@ dependencies {
     implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
 
     // Solr (optional message search)
-    implementation("org.apache.solr:solr-solrj:9.4.1")
+    implementation("org.apache.solr:solr-solrj:10.0.0")
 
     testImplementation("com.h2database:h2:2.2.224")
 
