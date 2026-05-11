@@ -8,6 +8,24 @@
 
 ## [Unreleased]
 
+### 2026-05-12 23:15 UTC — GitHub Actions: Node 24 (checkout, setup-java, wrapper-validation)
+
+- **`.github/workflows/ci.yml`**: **`actions/checkout@v6`**, **`actions/setup-java@v5`**, **`gradle/actions/wrapper-validation@v5`** — рантайм экшенов на Node.js **24**, без предупреждений о deprecated Node.js **20**.
+- **`docs/CI_AND_REPO_HYGIENE.md`**: таблица под актуальные версии.
+
+### 2026-05-12 23:00 UTC — Retry 10s в `korus_compose_file_retry`, `clean.sh all`, `SKIP_KORUS_ENSURE` в `create-stand.ps1`
+
+- **`scripts/lib/korus-env.sh`**: между попытками **`korus_compose_file_retry`** — **10** с (как в PowerShell **`Invoke-KorusDockerComposeInvoke`** / **`up`**).
+- **`scripts/clean.sh`**: ветка **`all`** — **`docker system prune -f || true`**.
+- **`scripts/create-stand.ps1`**: **`SKIP_KORUS_ENSURE=1`** в сессии — то же, что **`-SkipEnsure`** (паритет с **`create-stand.sh`**).
+- **`README.md`**: уточнения в строке таблицы.
+
+### 2026-05-12 22:30 UTC — Bash: `full-stack-down` / `clean` / `create-stand` и `korus_compose_file_retry`
+
+- **`scripts/lib/korus-env.sh`**: универсальная **`korus_compose_file_retry`** (**`docker compose -f …`** с **2** попытками) вместо узкого имени **`korus_compose_down_retry`**.
+- **`scripts/full-stack-down.sh`**, **`scripts/clean.sh`**, **`scripts/create-stand.sh`**: **`ROOT`** из **`BASH_SOURCE`**, **`source lib/korus-env.sh`**, **`korus_set_path_env`**, **`korus_compose_file_retry`**; в **`create-stand.sh`** — **`korus_ensure_env`** (если не **`SKIP_KORUS_ENSURE=1`**).
+- **`README.md`**: строка таблицы про **`clean`/`create-stand`** (**.ps1** и **.sh**).
+
 ### 2026-05-12 22:00 UTC — CI workflow: YAML на строке с `name`
 
 - **`.github/workflows/ci.yml`**: значение **`name`** шага в **кавычках** — двоеточие в тексте **`(all modules: …)`** без кавычек ломало разбор YAML на GitHub (**Invalid workflow file**).

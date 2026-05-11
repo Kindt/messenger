@@ -8,8 +8,9 @@
 |--------|-----------|
 | **Триггеры** | Push в ветки **`main`**, **`master`**, **`develop`**; все **pull request**; ручной запуск (**`workflow_dispatch`**) |
 | **ОС** | **`ubuntu-latest`** |
-| **JDK** | **25** (Temurin), кэш Gradle через **`setup-java`** (`**cache: gradle**`) |
-| **Проверка wrapper** | **`gradle/actions/wrapper-validation@v4`** — контроль целостности **`gradle-wrapper.jar`** (файл **должен** быть в репозитории; не игнорировать **`*.jar`** для `gradle/wrapper/`, см. **`!gradle/wrapper/gradle-wrapper.jar`** в **`.gitignore`**) |
+| **JDK** | **25** (Temurin), кэш Gradle через **`setup-java@v5`** (`**cache: gradle**`) |
+| **Проверка wrapper** | **`gradle/actions/wrapper-validation@v5`** — контроль целостности **`gradle-wrapper.jar`** (файл **должен** быть в репозитории; не игнорировать **`*.jar`** для `gradle/wrapper/`, см. **`!gradle/wrapper/gradle-wrapper.jar`** в **`.gitignore`**) |
+| **Checkout** | **`actions/checkout@v6`** (рантайм экшенов на Node.js **24**, см. [changelog GitHub Actions](https://github.blog/changelog/)) |
 | **Команда** | **`chmod +x gradlew && ./gradlew buildIntegrity --no-daemon`** — корневая задача **`buildIntegrity`** вызывает **`build`** у всех subprojects (компиляция, тесты, **`jar`**) |
 | **Права** | **`permissions: contents: read`** у job |
 | **Concurrency** | Одна активная сборка на ветку; новый запуск отменяет предыдущий (**`cancel-in-progress: true`**) |
