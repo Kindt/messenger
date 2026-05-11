@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+### 2026-05-12 22:00 UTC — CI workflow: YAML на строке с `name`
+
+- **`.github/workflows/ci.yml`**: значение **`name`** шага в **кавычках** — двоеточие в тексте **`(all modules: …)`** без кавычек ломало разбор YAML на GitHub (**Invalid workflow file**).
+
 ### 2026-05-12 21:30 UTC — CI GitHub: закоммичен `gradle-wrapper.jar`
 
 - **`.gitignore`**: исключение **`!gradle/wrapper/gradle-wrapper.jar`** — ранее правило **`*.jar`** не пускало wrapper в репозиторий, на **`ubuntu-latest`** падали **`wrapper-validation`** и **`./gradlew`**.

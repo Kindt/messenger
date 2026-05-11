@@ -29,5 +29,5 @@ jobs:
           distribution: temurin
           cache: gradle
 
-      - name: buildIntegrity (all modules: compile, test, assemble)
+      - name: "buildIntegrity (all modules: compile, test, assemble)"
         run: chmod +x gradlew && ./gradlew buildIntegrity --no-daemon
