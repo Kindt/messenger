@@ -1,0 +1,226 @@
+# Полный сервер: инфраструктура + core-api + ws-gateway + message-pipeline + retention-worker.
+# Запуск из корня репозитория:
+#   docker compose -f docker/docker-compose.full-server.yml up -d --build
+# Остановка:
+#   docker compose -f docker/docker-compose.full-server.yml down
+#
+# Админка: http://localhost:8080/admin/  (realm-роль admin: csadmin / csadmin или admin / admin)
+# Keycloak (realm avandocmsg): http://localhost:8081/
+# WS gateway: http://localhost:8082/  | retention metrics/health: http://localhost:9192/
+#
+# Та же сеть korus_messenger_dev_min, что и у docker-compose.dev-min.yml (korus-web attach).
+
+version: "3.8"
+
+services:
+  postgres-hot:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: avandocmsg_hot
+      POSTGRES_USER: avandocmsg
+      POSTGRES_PASSWORD: avandocmsg
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-hot-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U avandocmsg"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  postgres-archive:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: avandocmsg_archive
+      POSTGRES_USER: avandocmsg
+      POSTGRES_PASSWORD: avandocmsg
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg-archive-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U avandocmsg"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["-js", "-sd", "/data"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats-data:/data
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: avandocmsg
+      MINIO_ROOT_PASSWORD: avandocmsg123
+    volumes:
+      - minio-data:/data
+
+  zoo:
+    image: zookeeper:3.9
+    ports:
+      - "2181:2181"
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888;2181
+
+  solr:
+    image: solr:9.4
+    ports:
+      - "8983:8983"
+    environment:
+      ZK_HOST: zoo:2181
+    volumes:
+      - solr-data:/var/solr
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    command: ["start-dev", "--import-realm"]
+    ports:
+      - "8081:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      KC_DB_USERNAME: avandocmsg
+      KC_DB_PASSWORD: avandocmsg
+    volumes:
+      - ../keycloak:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+
+  core-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.core-api
+    ports:
+      - "8080:8080"
+    environment:
+      APP_PORT: 8080
+      DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      DB_USER: avandocmsg
+      DB_PASSWORD: avandocmsg
+      REDIS_URI: redis://redis:6379
+      NATS_URL: nats://nats:4222
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/avandocmsg
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/avandocmsg/protocol/openid-connect/certs
+      KEYCLOAK_MASTER_USER: admin
+      KEYCLOAK_MASTER_PASSWORD: admin
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: avandocmsg
+      MINIO_SECRET_KEY: avandocmsg123
+      MINIO_BUCKET: avandocmsg
+      MEDIA_MAX_UPLOAD_BYTES: "52428800"
+      JITSI_MEET_BASE_URL: https://meet.jit.si
+      WEBRTC_STUN_URIS: stun:stun.l.google.com:19302
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_started
+      keycloak:
+        condition: service_started
+      minio:
+        condition: service_started
+
+  ws-gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ws-gateway
+    ports:
+      - "8082:8081"
+    environment:
+      WS_PORT: 8081
+      NATS_URL: nats://nats:4222
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/avandocmsg
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/avandocmsg/protocol/openid-connect/certs
+      APP_LOCALE: ru
+    depends_on:
+      nats:
+        condition: service_started
+      keycloak:
+        condition: service_started
+
+  message-pipeline:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.message-pipeline
+    environment:
+      NATS_URL: nats://nats:4222
+      DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      DB_USER: avandocmsg
+      DB_PASSWORD: avandocmsg
+      NATS_JETSTREAM: "false"
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+      nats:
+        condition: service_started
+
+  retention-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.retention-worker
+    environment:
+      RETENTION_WORKER_ENABLED: "true"
+      RETENTION_SCAN_INTERVAL_SECONDS: "3600"
+      RETENTION_INITIAL_DELAY_SECONDS: "30"
+      RETENTION_METRICS_PORT: "9191"
+      DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      DB_USER: avandocmsg
+      DB_PASSWORD: avandocmsg
+      NATS_URL: nats://nats:4222
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: avandocmsg
+      MINIO_SECRET_KEY: avandocmsg123
+      MINIO_BUCKET: avandocmsg
+    ports:
+      - "9192:9191"
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+      nats:
+        condition: service_started
+      minio:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9191/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+networks:
+  default:
+    name: korus_messenger_dev_min
+
+volumes:
+  pg-hot-data:
+  pg-archive-data:
+  nats-data:
+  minio-data:
+  solr-data:

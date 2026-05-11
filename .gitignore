@@ -1,0 +1,20 @@
+.gradle/
+build/
+out/
+*.class
+*.jar
+*.war
+*.log
+logs/
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+/bin/
+**/bin/
+
+# Локальные overrides для Docker-стека веб-клиента
+korus-web/.env
+

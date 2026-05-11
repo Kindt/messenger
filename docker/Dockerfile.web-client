@@ -1,0 +1,16 @@
+FROM gradle:jdk25 AS builder
+WORKDIR /app
+COPY . .
+RUN gradle :modules:web-client:distTar --no-daemon -x test
+
+FROM eclipse-temurin:25-jre
+WORKDIR /app
+COPY --from=builder /app/modules/web-client/build/distributions/web-client.tar .
+RUN tar xf web-client.tar && rm web-client.tar
+EXPOSE 9080
+ENV APP_HOME=/app/web-client
+ENV WEB_CLIENT_PORT=9080
+ENV WEB_CLIENT_API_UPSTREAM=http://host.docker.internal:8080
+# URL WebSocket для браузера (не из контейнера): при открытии UI на localhost:9080 обычно указывают порт ws-gateway на хосте.
+ENV WEB_CLIENT_WS_PUBLIC_URL=ws://127.0.0.1:8081/ws
+ENTRYPOINT ["/app/web-client/bin/web-client"]

@@ -1,0 +1,42 @@
+# Опционально: подключить стек korus-web к сети docker-compose.dev-min.yml,
+# чтобы web-client ходил на core-api/ws-gateway по именам сервисов (без host.docker.internal).
+#
+# 1) Поднимите dev-min (из корня репозитория): .\scripts\dev-web-stack-up.ps1  (или compose без профиля + core-api).
+# 2) Имя сети dev-min зафиксировано в compose: korus_messenger_dev_min (переопределите KORUS_DEV_MIN_NETWORK, если меняли сеть в override).
+# 3) При необходимости задайте KORUS_DEV_MIN_NETWORK в .env (см. .env.example).
+# 4) Запуск:
+#    docker compose -f docker-compose.yml -f docker-compose.attach.yml --env-file .env up -d --build
+#
+# Внутри общей сети: core-api:8080, ws-gateway:8081 (внутренний порт контейнера).
+
+networks:
+  messenger_backend:
+    external: true
+    name: ${KORUS_DEV_MIN_NETWORK:-korus_messenger_dev_min}
+
+services:
+  web-a:
+    networks:
+      - default
+      - messenger_backend
+    environment:
+      WEB_CLIENT_PORT: "9080"
+      WEB_CLIENT_API_UPSTREAM: ${WEB_CLIENT_API_UPSTREAM:-http://core-api:8080}
+      WEB_CLIENT_WS_PUBLIC_URL: ${WEB_CLIENT_WS_PUBLIC_URL:-ws://localhost:9088/ws}
+
+  web-b:
+    networks:
+      - default
+      - messenger_backend
+    environment:
+      WEB_CLIENT_PORT: "9080"
+      WEB_CLIENT_API_UPSTREAM: ${WEB_CLIENT_API_UPSTREAM:-http://core-api:8080}
+      WEB_CLIENT_WS_PUBLIC_URL: ${WEB_CLIENT_WS_PUBLIC_URL:-ws://localhost:9088/ws}
+
+  lb:
+    networks:
+      - default
+      - messenger_backend
+    environment:
+      KORUS_WS_GATEWAY_HOST: ${KORUS_WS_GATEWAY_HOST:-ws-gateway}
+      KORUS_WS_GATEWAY_PORT: ${KORUS_WS_GATEWAY_PORT:-8081}

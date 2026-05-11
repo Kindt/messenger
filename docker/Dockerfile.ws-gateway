@@ -1,0 +1,12 @@
+FROM gradle:jdk25 AS builder
+WORKDIR /app
+COPY . .
+RUN gradle :modules:ws-gateway:distTar --no-daemon -x test
+
+FROM eclipse-temurin:25-jre
+WORKDIR /app
+COPY --from=builder /app/modules/ws-gateway/build/distributions/ws-gateway.tar .
+RUN tar xf ws-gateway.tar && rm ws-gateway.tar
+EXPOSE 8081
+ENV APP_HOME=/app/ws-gateway
+ENTRYPOINT ["/app/ws-gateway/bin/ws-gateway"]

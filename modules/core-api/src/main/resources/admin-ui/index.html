@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Администрирование — Korus Messenger</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<header class="top">
+  <div class="title-row">
+    <h1>Админ-консоль</h1>
+    <span id="apiVersionLabel" class="muted small" hidden></span>
+  </div>
+  <div class="auth">
+    <label>Логин <input type="text" id="username" autocomplete="username"/></label>
+    <label>Пароль <input type="password" id="password" autocomplete="current-password"/></label>
+    <button type="button" id="btnLogin">Войти</button>
+    <button type="button" id="btnLogout" hidden>Выйти</button>
+    <span id="authStatus" class="muted"></span>
+  </div>
+</header>
+
+<main class="layout">
+  <nav class="sidebar" id="sidebar">
+    <p class="muted small">Разделы подгружаются из подключённых модулей (SPI).</p>
+    <ul id="sectionList"></ul>
+  </nav>
+  <section class="panel" id="panel">
+    <p class="muted" id="panelHint">Войдите под пользователем с realm-ролью <code>admin</code>, затем выберите раздел.</p>
+    <div id="panelSummary" class="panel-summary" hidden></div>
+    <pre id="panelContent" hidden></pre>
+  </section>
+</main>
+
+<footer class="site-footer muted small">
+  <a href="/api/v1/admin/console" rel="noopener">Вход через API (редирект)</a>
+  ·
+  Без JWT:
+  <a href="/api/v1/health" target="_blank" rel="noopener">health</a>
+  ·
+  <a href="/api/v1/health/ready" target="_blank" rel="noopener">ready</a>
+  ·
+  <a href="/api/v1/media/capabilities" target="_blank" rel="noopener">capabilities</a>
+  ·
+  <a href="/api/v1/metrics/prometheus" target="_blank" rel="noopener">Prometheus</a>
+  ·
+  <a href="/openapi.json" target="_blank" rel="noopener">OpenAPI</a>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

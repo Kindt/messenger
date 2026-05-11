@@ -1,0 +1,53 @@
+# Автономный стек развёртывания веб-клиента (Java + Tomcat из modules/web-client).
+# Сборка образа — из корня репозитория (docker/Dockerfile.web-client).
+#
+# UI за балансировщиком: http://localhost:${KORUS_WEB_LB_PORT:-9088}
+#
+# Переменные для реплик web-client см. korus-web/README.md и .env.example
+
+services:
+  web-a:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.web-client
+    image: korus-messenger-web-client:local
+    environment:
+      WEB_CLIENT_PORT: "9080"
+      WEB_CLIENT_API_UPSTREAM: ${WEB_CLIENT_API_UPSTREAM:-http://host.docker.internal:8080}
+      WEB_CLIENT_WS_PUBLIC_URL: ${WEB_CLIENT_WS_PUBLIC_URL:-ws://localhost:9088/ws}
+    expose:
+      - "9080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  web-b:
+    image: korus-messenger-web-client:local
+    depends_on:
+      web-a:
+        condition: service_started
+    environment:
+      WEB_CLIENT_PORT: "9080"
+      WEB_CLIENT_API_UPSTREAM: ${WEB_CLIENT_API_UPSTREAM:-http://host.docker.internal:8080}
+      WEB_CLIENT_WS_PUBLIC_URL: ${WEB_CLIENT_WS_PUBLIC_URL:-ws://localhost:9088/ws}
+    expose:
+      - "9080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  lb:
+    build:
+      context: ./nginx-lb
+      dockerfile: Dockerfile
+    ports:
+      - "${KORUS_WEB_LB_PORT:-9088}:80"
+    environment:
+      KORUS_WS_GATEWAY_HOST: ${KORUS_WS_GATEWAY_HOST:-host.docker.internal}
+      KORUS_WS_GATEWAY_PORT: ${KORUS_WS_GATEWAY_PORT:-8081}
+    depends_on:
+      - web-a
+      - web-b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

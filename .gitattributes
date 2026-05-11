@@ -1,0 +1,5 @@
+* text=auto
+
+# Linux/macOS wrapper must stay LF (avoids "bad interpreter" on CI)
+gradlew text eol=lf
+gradlew.bat text eol=crlf

@@ -1,0 +1,675 @@
+# Журнал изменений (AvandocMsg / Korus Messenger)
+
+Формат: по **дате и времени (UTC)** фиксируются сделанные изменения и заметные **отклонения от базового ТЗ** (`tz_full.html`). Дополнения из `tz_revision_proposal.md` учитываются как целевое развитие, но полное соответствие им не гарантируется, пока не отмечено явно.
+
+**Важно:** время в записях — ориентир хронологии внутри дня (или момент фиксации вручную). При необходимости укажите часовой пояс в коммит-процессе или подставьте время из `git log`.
+
+---
+
+## [Unreleased]
+
+### 2026-05-12 20:00 UTC — Удалён каталог `docs/miro/`
+
+- Удалены вспомогательные CSV/TSV и README из **`docs/miro/`**; из корневого **`README.md`** убрана связанная строка таблицы документации.
+- Удалены прежние записи **`[Unreleased]`**, которые описывали только появление и правки содержимого этого каталога.
+
+### 2026-05-12 17:45 UTC — `dev-web-stack-up` / `korus-web-up` и `KORUS_KORUS_WEB_*`
+
+- **`scripts/lib/korus-env.ps1`**: **`Invoke-KorusDockerComposeInvoke`** (произвольные аргументы **`docker`**, рабочий каталог, **2** попытки); **`KORUS_KORUS_WEB_COMPOSE`**, **`KORUS_KORUS_WEB_COMPOSE_ATTACH`**.
+- **`scripts/lib/korus-env.sh`**: **`korus_compose_in_dir_retry`**.
+- **`scripts/dev-web-stack-up.ps1`**, **`scripts/korus-web-up.ps1`**, **`scripts/dev-web-stack-up.sh`**, **`scripts/korus-web-up.sh`**: **`KORUS_*`**, проверка/тихая установка, повтор **`docker compose`**; **`-SkipEnsure`** / **`SKIP_KORUS_ENSURE=1`**.
+- **`README.md`**: строки таблицы про **`dev-web-stack-up`** / **`korus-web-up`**.
+
+### 2026-05-12 17:30 UTC — `KORUS_*` env, установка в `start` / `full-stack-up`
+
+- **`scripts/lib/korus-env.ps1`**, **`scripts/lib/korus-env.sh`**: **`Set-KorusPathEnvironment`** / **`korus_set_path_env`** (**`KORUS_REPO_ROOT`**, **`KORUS_DOCKER_DIR`**, **`KORUS_COMPOSE_DEV_MIN`**, **`KORUS_COMPOSE_FULL_SERVER`**, **`KORUS_SCRIPTS_DIR`**, **`KORUS_KORUS_WEB_DIR`**); **`Invoke-KorusEnsureDevTooling`** / **`korus_ensure_env`**; **`docker compose up`** с **2** попытками.
+- **`scripts/start.ps1`**, **`scripts/start.sh`**, **`scripts/full-stack-up.ps1`**, **`scripts/full-stack-up.sh`**: перед стендом — проверка окружения и при необходимости тихая установка; **`-SkipEnsure`** / **`SKIP_KORUS_ENSURE=1`** — пропуск.
+- **`scripts/install-environment.ps1`**, **`scripts/install-environment.sh`**: при наличии **`lib/korus-env.*`** — выставление **`KORUS_*`**.
+- **`README.md`**: таблица документации.
+
+### 2026-05-12 17:00 UTC — Тихая установка окружения (`install-env-silent`)
+
+- **`scripts/install-env-silent.ps1`**: **winget** — JDK (**Temurin 25** / **21** / **OpenJDK 21**), **Git**, **Docker Desktop**; флаги **`-Quiet`** (минимум вывода, **`winget`** в **`Out-Null`**), **`-WhatIf`**, **`-SkipDocker`**; **`--disable-interactivity`**; строки на **латинице** (**PS 5.1**).
+- **`scripts/install-env-silent.cmd`**: запуск **`.ps1`** из **`cmd.exe`**.
+- **`scripts/install-environment.ps1`**: **`-SilentInstall`** передаёт **`-Quiet`** в silent-скрипт при **`-Quiet`**; краткий итог проверки при **`-Quiet`**.
+- **`scripts/install-env-silent.sh`**: **`--quiet`** / **`QUIET=1`**, функция **`apt_update`** при тихом режиме; **`scripts/install-environment.sh`**: **`--quiet`** / **`-q`** вместе с **`--silent-install`**.
+- **`README.md`**: обновлена строка таблицы.
+
+### 2026-05-12 16:30 UTC — PowerShell 5.1: разбор скриптов без UTF-8 BOM
+
+- **`scripts/dev-ui-hints.ps1`**, **`scripts/dev-infra-up.ps1`**, **`scripts/dev-web-stack-up.ps1`**, **`scripts/start.ps1`**, **`scripts/install-environment.ps1`**: сообщения на **ASCII** / латиница, чтобы **Windows PowerShell 5.1** не ломал строки при UTF-8 без BOM; проверка **`[Parser]::ParseFile`** для всех **`scripts/**/*.ps1`**.
+
+### 2026-05-12 16:00 UTC — Скрипты стенда под Windows (аналоги `.sh`) + правка `.sh` под `full-server`
+
+- **`scripts/start.ps1`**, **`scripts/clean.ps1`**, **`scripts/create-stand.ps1`**, **`scripts/install-environment.ps1`**: из корня репозитория; аргумент **`full`** — **`docker/docker-compose.full-server.yml`** (вместо отсутствующего **`dev-full`**).
+- **`scripts/start.cmd`**, **`clean.cmd`**, **`create-stand.cmd`**, **`install-environment.cmd`**: вызов **`powershell.exe -File`** для **`cmd.exe`**.
+- **`scripts/start.sh`**, **`clean.sh`**, **`create-stand.sh`**: для **`full`** и **`clean all`** — **`docker-compose.full-server.yml`**; комментарии с отсылкой на **`.ps1` / `.cmd`**.
+- **`README.md`**: строка в таблице документации.
+
+### 2026-05-12 15:30 UTC — Скрипты подсказок UI и логинов (`dev-ui-hints`)
+
+- **`scripts/dev-ui-hints.ps1`**, **`scripts/dev-ui-hints.sh`**: URL веб-клиента (порт **`KORUS_WEB_LB_PORT`** из **`korus-web/.env`**, иначе **9088**), **`/admin/`**, health, Keycloak, **ws://localhost:8082/ws**; логины realm **`admin`/`admin`**, **`csadmin`/`csadmin`** (см. **`keycloak/avandocmsg-realm.json`**).
+- **`scripts/korus-web-up.ps1`**, **`scripts/korus-web-up.sh`**, **`scripts/dev-web-stack-up.ps1`**, **`scripts/dev-web-stack-up.sh`**: в конце вызываются подсказки; после **dev-web-stack-up** — напоминание поднять **korus-web**.
+- **`README.md`**: строка в таблице документации.
+
+### 2026-05-12 15:00 UTC — Docker: полный стек `docker-compose.full-server.yml`
+
+- **`docker/docker-compose.full-server.yml`**: один файл — инфраструктура (**postgres-hot/archive**, **redis**, **nats**, **minio**, **zookeeper**, **solr**, **keycloak**) + **core-api** + **ws-gateway** + **message-pipeline** + **retention-worker** (без **`--profile`**); healthcheck **retention-worker** на порт **9191** внутри контейнера.
+- **`README.md`**: строка в таблице документации со ссылкой на файл и команду запуска.
+- **`scripts/full-stack-up.ps1`**, **`scripts/full-stack-down.ps1`**, **`scripts/full-stack-up.sh`**, **`scripts/full-stack-down.sh`**: обёртки над **`docker compose`** для этого файла.
+- **`scripts/TEST_SERVER_READY.md`**: подраздел про полный стек.
+
+### 2026-05-12 14:40 UTC — Bash `dev-web-stack-up.sh` и `smoke-korus-web.sh`
+
+- **`scripts/dev-web-stack-up.sh`**: **`docker/docker-compose.dev-min.yml`** с профилем **`web`** (**`--build`**); подсказки по **`korus-web-up`** / смоку.
+- **`scripts/smoke-korus-web.sh`**: **`curl`** — **`/health`**, корень UI, **`/web-client-env.js`**, опционально **`/api/v1/health`** (**`--check-api`**); **`--url`** / **`WEB_BASE_URL`**.
+- **`README.md`**, **`korus-web/README.md`**, **`scripts/TEST_SERVER_READY.md`**, **`modules/web-client/README.md`**, **`docs/PARALLEL_DEVELOPMENT.md`**, **`scripts/dev-web-stack-up.ps1`**, **`scripts/korus-web-up.sh`**: ссылки на новые скрипты.
+
+### 2026-05-12 14:30 UTC — Админ-консоль: раздел «Манифест консоли»
+
+- **`CoreAdminUiContributor`**: **`core-admin-manifest`** — **`GET /admin/ui/manifest`** в боковом меню (**`sort_order` 35**, между аудитом и ретенцией).
+- **`AdminUiManifestLoadTest`**, **`scripts/lib/SmokeAdminUi.ps1`**: ожидание не менее **7** разделов и наличие **`core-admin-manifest`**.
+
+### 2026-05-12 14:05 UTC — Bash `korus-web-up.sh`, предупреждение о сети в `korus-web-up.ps1`
+
+- **`scripts/korus-web-up.sh`**: подъём **`korus-web/`**, **`--attach` / `-a`**, **`--build` / `-b`**; предупреждение при отсутствии сети **`korus_messenger_dev_min`**.
+- **`scripts/korus-web-up.ps1`**: при **`-Attach`** — **`docker network inspect`** и **`Write-Warning`**, если сеть не найдена.
+- **`README.md`**, **`korus-web/README.md`**, **`scripts/TEST_SERVER_READY.md`**, **`modules/web-client/README.md`**: ссылки на **`.sh`**.
+
+### 2026-05-12 14:00 UTC — Админ-консоль: кнопка «Обновить»
+
+- **`admin-ui/app.js`**: **«Обновить»** для **статистики**, **аудита** (текущие фильтры), **организаций**, **ретенции** (повторный **GET** последней загруженной **org**/**chat**) и простых **`json_panel`** (**GET** по **`data_path`**, в т. ч. **сессия admin**).
+
+### 2026-05-12 13:45 UTC — Стабильное имя Docker-сети dev-min для attach
+
+- **`docker/docker-compose.dev-min.yml`**: у default-сети задано имя **`korus_messenger_dev_min`** (удобно для **`korus-web/docker-compose.attach.yml`** без **`docker network ls`**).
+- **`korus-web/docker-compose.attach.yml`**, **`korus-web/.env.example`**, **`korus-web/README.md`**: дефолт **`KORUS_DEV_MIN_NETWORK`** → **`korus_messenger_dev_min`**; примечание о пересоздании стенда после смены имени сети.
+
+### 2026-05-12 13:15 UTC — Скрипт `korus-web-up.ps1` и документация attach
+
+- **`scripts/korus-web-up.ps1`**: подъём **`korus-web/`** из корня; **`-Attach`** — второй compose-файл **`docker-compose.attach.yml`**; **`-Build`**; **`--env-file .env`**, если файл есть.
+- **`scripts/dev-web-stack-up.ps1`**, **`scripts/TEST_SERVER_READY.md`**, **`korus-web/README.md`**, **`README.md`**: ссылки на скрипт и режим attach.
+
+### 2026-05-12 13:00 UTC — `korus-web`: опциональная сеть с dev-min (`docker-compose.attach.yml`)
+
+- **`korus-web/docker-compose.attach.yml`**: внешняя сеть **`${KORUS_DEV_MIN_NETWORK:-korus_messenger_dev_min}`** (после фикса имени в dev-min; иначе задать вручную); **web-a** / **web-b** / **lb** подключаются к ней и по умолчанию используют **`http://core-api:8080`**, **`ws-gateway:8081`** (внутренние имена/порты).
+- **`korus-web/.env.example`**, **`korus-web/README.md`**: запуск **`docker compose -f docker-compose.yml -f docker-compose.attach.yml`** (имя внешней сети см. **`docker-compose.dev-min.yml`** / **`KORUS_DEV_MIN_NETWORK`**).
+
+### 2026-05-12 12:30 UTC — Админ-консоль: пользователь → организация
+
+- **`CoreAdminUiContributor`**: раздел **«Пользователь → организация»** (`core-user-organization`, **`json_panel`**, без **`data_path`**).
+- **`admin-ui/app.js`**: **`PATCH /admin/users/{user_id}/organization`** с **`{"org_id":"…"}`** (подсказка **204**).
+- **`AdminUiManifestLoadTest`**, **`scripts/lib/SmokeAdminUi.ps1`**: манифест — не менее **5** разделов, наличие **`core-user-organization`**.
+
+### 2026-05-12 12:00 UTC — Админ-консоль: PATCH ретенции org/chat
+
+- **`admin-ui/app.js`**: в разделе **«Ретенция»** после GET — форма и **`PATCH .../organizations/{id}/retention`** / **`PATCH .../chats/{id}/retention`** с телом **`UpdateRetentionPolicyRequest`** (дни опционально как **null**, три флага — чекбоксы).
+
+### 2026-05-12 00:50 UTC — Скрипты стенда UI (dev-web-stack-up) и смок API через korus-web
+
+- **`scripts/dev-web-stack-up.ps1`**: подъём **`docker/docker-compose.dev-min.yml`** с профилем **`web`**; ключ **`-Build`**.
+- **`scripts/smoke-korus-web.ps1`**: ключ **`-CheckApi`** — **`GET /api/v1/health`** через прокси web-client на lb.
+- **`modules/web-client/README.md`**: кратко про запуск, Docker и **`korus-web/`**.
+- **`README.md`**, **`korus-web/README.md`**, **`scripts/TEST_SERVER_READY.md`**, **`docs/PARALLEL_DEVELOPMENT.md`**: ссылки на **`dev-web-stack-up.ps1`** и **`-CheckApi`**.
+
+### 2026-05-12 00:10 UTC — Смоук манифеста админки
+
+- **`scripts/lib/SmokeAdminUi.ps1`**: после **`GET .../admin/ui/manifest`** — не менее **4** разделов и наличие **`core-retention`** (согласовано с **`AdminUiManifestLoadTest`**).
+- **`admin-ui/app.js`**: если в DOM остался старый тулбар аудита без **`#auditLimit`**, он удаляется и строится заново (без полной перезагрузки страницы).
+
+### 2026-05-11 23:55 UTC — Админ-консоль: ретенция, лимит аудита, удаление организации
+
+- **`admin-ui/app.js`**: раздел **«Ретенция (org / chat)»** (GET org/chat retention), для **«Аудит»** — поле **limit** (1–500), для **«Организации»** — удаление по UUID (**DELETE** + подтверждение).
+
+### 2026-05-11 22:45 UTC — Профиль `web`: воркер message-pipeline в Docker
+
+- **`docker/Dockerfile.message-pipeline`**: образ JRE + **`installDist`** воркера **`modules/workers/message-pipeline`**.
+- **`docker/docker-compose.dev-min.yml`**: сервис **`message-pipeline`** (профиль **`web`**), **`NATS_URL`**, **`DB_*`**, **`NATS_JETSTREAM=false`** (совместимо с **core-api** без JetStream).
+- **`korus-web/README.md`**, **`scripts/TEST_SERVER_READY.md`**, **`README.md`**: уточнено, что профиль **`web`** поднимает и **ws-gateway**, и **message-pipeline**.
+
+### 2026-05-11 21:30 UTC — Интеграция стенда: ws-gateway в dev-min (профиль `web`)
+
+- **`docker/docker-compose.dev-min.yml`**: опциональный сервис **`ws-gateway`** (профиль **`web`**), публикация **`8082:8081`**, **`KEYCLOAK_*`** на сервис **`keycloak:8080`** внутри сети compose, **`NATS_URL`** — **`nats://nats:4222`**.
+- **`korus-web/README.md`**, **`korus-web/.env.example`**: как поднять стенд вместе с **dev-min** и выставить **`KORUS_WS_GATEWAY_PORT=8082`**.
+- **`scripts/TEST_SERVER_READY.md`**: раздел про **`korus-web/`**, профиль **`web`** и воркер **message-pipeline**.
+- **`scripts/smoke-korus-web.ps1`**: смок **`/health`**, корня UI и **`/web-client-env.js`** на URL стека **korus-web**.
+- **`README.md`**: строка в таблице документации про **`docker-compose.dev-min.yml`** и профиль **`web`**.
+
+### 2026-05-11 20:15 UTC — Веб-клиент: вынесен Docker-стек `korus-web/`
+
+- Каталог **`korus-web/`**: **`docker-compose.yml`** — две реплики образа из **`docker/Dockerfile.web-client`** (**`modules/web-client`**, Java + Tomcat), сервис **`lb`** (nginx) с балансировкой **`least_conn`** между **web-a** и **web-b**; **`location /ws`** на ws-gateway (**`KORUS_WS_GATEWAY_HOST`** / **`KORUS_WS_GATEWAY_PORT`**, по умолчанию **host.docker.internal:8081**).
+- **`korus-web/nginx-lb/`**: Dockerfile образа балансировщика, **`nginx.conf.template`** + **`docker-entrypoint-lb.sh`** (**`envsubst`** для хоста/порта ws-gateway).
+- **`korus-web/README.md`**, **`korus-web/.env.example`**; корневой **`README.md`** — раздел о **ведении `CHANGELOG.md`** (UTC + перечень работ) и **поддержке описания проекта**; **`.gitignore`** — **`korus-web/.env`**.
+
+### Локализация API (сообщения для клиента)
+
+- Юнит-тесты **`CompositeMessageSourceTest`** (**`modules/common`**): **`ru`**/**`en`**, UTF-8, цепочка bundle (**`messages_chain_a`** → **`messages_chain_b`** в test resources). Паритет ключей **`messages_common_*`** — **`MessagesCommonBundleParityTest`**; **`messages_core_api_*`** — **`MessagesCoreApiBundleParityTest`** (**`modules/core-api`**). Разбор **`app.locale`**: **`AppConfig.localeFromProperty`** — **`AppConfigLocaleFromPropertyTest`**.
+- Тексты **`ApiError.message`** и подписи параметров UUID (**`InvalidUuidParameterException`**) вынесены в **`ResourceBundle`**: **`messages_core_api_{ru,en}.properties`**, общие — **`messages_common_{ru,en}.properties`** (модуль **`modules/common`**). UTF-8 через **`Utf8Control`**.
+- Язык при старте **`core-api`**: **`app.locale`** (по умолчанию **`ru`**), переменная окружения **`APP_LOCALE`** (**`en`**, **`en-US`** и т.д.). Лог: **`API locale`** в **`MessengerApplication`**. HK2: **`UserMessageSource`** (**`CompositeMessageSource`**).
+- **`InvalidUuidParameterException`**: второй аргумент **`UuidParams.required`** — стабильный ключ параметра (**`chat_id`**, **`user_id`**, …), метки — ключи **`param.*`** в bundle. Дополнительно: оставшиеся ответы **`body required`** в **`AdminResource`** переведены на **`messages.get("error.admin.body_required")`**.
+- Заготовки bundle по модулям: **`messages_worker_*`** (каждый воркер — свой файл **`_ru`/`_en`**). **`ws-gateway`:** **`messages_ws_gateway_{ru,en}.properties`** — тексты причин закрытия WebSocket при ошибках токена (**`APP_LOCALE`**, по умолчанию **`ru`**); паритет ключей — **`MessagesWsGatewayBundleParityTest`**. Указание **`APP_LOCALE`**: **`README.md`** (таблица), **`scripts/TEST_SERVER_READY.md`**.
+
+### Встроенная админ-консоль
+
+- Статика **`/admin/`** (classpath **`admin-ui/`**): вход через **`POST /api/v1/auth/login`**, затем **`GET /api/v1/admin/ui/manifest`** и данные панелей (эндпоинты из manifest). Раздел «Статистика сервера»: **`GET /api/v1/admin/ui/stats`** (JVM, PostgreSQL/Redis/NATS, счётчики **`users`/`chats`/`messages`**).
+- Эпик админки: **`AdminUiSectionKind.JSON_PANEL`** — панель с GET и выводом JSON; в **`CoreAdminUiContributor`** добавлены разделы **«Организации»** (`**/admin/organizations**`) и **«Аудит»** (`**/admin/audit-events**`). Исправлено сохранение **`refresh_token`** в SPA после логина (выход через Keycloak).
+- Админка SPA: для **`json_panel`** при массиве объектов — **таблица** (до 100 строк, до 14 колонок); **«Организации»** — **`POST /admin/organizations`** (имя + «Создать»); **«Аудит»** — фильтры **action** / **resource_type** / **resource_id** + «Применить», параметр **`limit`** (1–500, по умолчанию 50); путь в manifest для аудита — **`/admin/audit-events`** (параметры собирает клиент).
+- **`scripts/smoke-ready.ps1`**: проверки **`GET /admin/`**, **`GET /api/v1/admin/ui/manifest`**, **`GET /api/v1/admin/ui/stats`** после login; **`scripts/TEST_SERVER_READY.md`** — описание этих шагов. SPA: после входа вызов **`/admin/session`**, сброс токена при **401** и при ошибке загрузки manifest.
+- **`scripts/smoke-auth.ps1`**: до **`POST .../auth/logout`** — проверка **`/admin/ui/manifest`** и **`/admin/ui/stats`**. В SPA для «Статистика сервера» — таблица-сводка (uptime, heap, зависимости, счётчики) и полный JSON ниже.
+- **`scripts/lib/SmokeAdminUi.ps1`**: общие функции **`Test-SmokeAdminStaticPage`** / **`Test-SmokeAdminUiApi`** для **`smoke-ready.ps1`** и **`smoke-auth.ps1`**. Футер **`/admin/`** — ссылки на **health**, **ready**, **capabilities**, **Prometheus**, **OpenAPI**.
+- **`GET /api/v1/admin/ui/manifest`**: поле **`api_version`** (как у **`health`**). Статика админки: заголовок **`X-Content-Type-Options: nosniff`**. SPA: метка версии в шапке, кнопка **«Выйти»** (**`POST /auth/logout`** + сброс **sessionStorage**).
+- **`GET /api/v1/admin/console`** (и путь **`v1/admin/console`** в фильтре): **303** на **`/admin/`**, без JWT (**`JwtAuthFilter`**). Статика: **`Cache-Control`** (**`no-store`** для **`.html`**, **`max-age=3600`** для **`.js`/`.css`**).
+- **`scripts/lib/SmokeAdminUi.ps1`**: **`Test-SmokeAdminConsoleRedirect`** (**`HttpWebRequest`**, без авто-редиректа) — проверка **303** и **`Location`**; вызывается из **`smoke-ready.ps1`**. Футер **`/admin/`**: ссылка «Вход через API (редирект)».
+- Расширение разделов: интерфейс **`com.avandocmsg.messenger.common.admin.ui.AdminUiContributor`** + файл **`META-INF/services/com.avandocmsg.messenger.common.admin.ui.AdminUiContributor`**; ядро — **`CoreAdminUiContributor`**. Отключённый модуль (нет JAR на classpath) не попадает в SPI — разделы исчезают после перезапуска.
+
+### Документация процесса
+
+- **`docs/PARALLEL_DEVELOPMENT.md`**: параллельная разработка (`core-api` / воркеры / `common` / миграции / i18n), ссылка из **`README.md`**.
+- Удалён закрытый трекер **`docs/TZ_SERVER_100.md`** (100 пунктов); добавлен **`docs/ROADMAP_EPICS.md`** — эпики доработок после базовой реализации. Обновлены **`README.md`**, **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** (в т. ч. ссылки с мёртвого трекера на дорожную карту).
+
+### CI и репозиторий
+
+- **`.editorconfig`:** UTF-8, **`end_of_line = lf`** для текстовых файлов; переводы строк для **`gradlew`** / **`gradlew.bat`** по-прежнему задаёт **`.gitattributes`** (LF / CRLF). Отступы: **4** пробела для Java и **`.kts`**, **2** для YAML и XML в репозитории.
+- **GitHub Actions:** **`.github/workflows/ci.yml`** — JDK **25**, **`./gradlew buildIntegrity`** (все subprojects: **`build`**), проверка Gradle Wrapper; job **`build`**; push в **`main`** / **`master`** / **`develop`**, PR, **`workflow_dispatch`**; **`permissions: contents: read`**, concurrency. Документация **`docs/CI_AND_REPO_HYGIENE.md`**, **`README.md`**, **`scripts/TEST_SERVER_READY.md`**.
+- **Dependabot:** **`.github/dependabot.yml`** — Gradle **weekly**, GitHub Actions **monthly**.
+- **`.gitattributes`:** **`gradlew`** → LF, **`gradlew.bat`** → CRLF. См. **`docs/CI_AND_REPO_HYGIENE.md`**.
+
+### Аудит (админка и файлы): безопасный JSON в `details_json`
+
+- **`AdminResource`:** политики ретенции (**`PATCH`** org/chat) — **`ObjectMapper` / `ObjectNode`** (**`retentionPolicyPatchAuditDetails`**); **`user.organization.set`** — **`userOrganizationSetAuditDetails(UUID)`**; **`organization.create`** — **`organizationCreateAuditDetails(name)`**; **`organization.delete`** — **`organizationDeleteAuditDetails(name)`** (имя до удаления через **`OrganizationRepository.findById`**). Общий вывод: **`writeAdminAuditJson`**. Тесты **`AdminResourceTest`**.
+- **`FileResource`:** публичные ссылки — **`publicLinkCreateAuditDetails`**, **`publicLinkRevokeAuditDetails`**. Тест **`FileResourceAuditDetailsTest`**.
+
+### Репозитории: API и регрессии
+
+- **`AdminResource`:** UUID в путях ретенции org/chat, **`DELETE .../organizations/{orgId}`** и тело **`PATCH .../users/{userId}/organization`** (`org_id`) — через **`UuidParams.required`** (единый **400** + **`ApiError`**, счётчик **`api_invalid_uuid_parameter_total`**, ТЗ п. 28); для **`PATCH .../organization`** при отсутствии тела — **400** **`body required`**. Тесты **`AdminResourceTest`**.
+- **`ContactResource`** / **`ChatBanResource`:** невалидные UUID в path/body → **`UuidParams`** (**400** + **`ApiError`**); **`ContactService`** и **`ChatBanService.banUser`** работают с **`UUID`**. Тесты **`ContactResourceTest`**, **`ChatBanResourceTest`**.
+- **`BlocksResource`:** невалидный UUID в **`DELETE .../blocks/{userId}`** или в **`user_id`** тела **`POST`** → **`UuidParams`**. Тест **`BlocksResourceTest`**.
+- **`FileResource`**, **`ConferenceResource`**, **`CryptoResource`** (key packages), **`UserResource`** **`/{id}`:** ранний выход при невалидном UUID — **`FileResourceTest`**, **`ConferenceResourceTest`**, **`CryptoResourceTest`**, **`UserResourceTest`**.
+- **`ChatResource`** (**`POST /v1/chats`**, тип **`group`**): каждый элемент **`member_ids`** — **`UuidParams.required`**; **`markRead`**: **`up_to_message_id`** (если задан). **`MessageResource.send`**: **`reply_to_msg_id`** (если задан) — **`UuidParams.required`**, разбор передаётся в **`MessageService`** как **`UUID`**; **`GET`** истории — query **`before`**; **`getById`** — **`msgId`**. Тесты **`ChatResourceTest`**, **`MessageResourceTest`**.
+- **`OrganizationRepository`:** **`findById(UUID) → Optional<OrgRow>`**. Тест **`OrganizationRepositoryH2Test`**.
+- **`GET .../audit-events`:** фильтр только по **`resource_id`** и нижняя граница **`limit`** (**`AuditRepository.listRecent`**) — тесты **`AuditRepositoryH2Test`** (**`listRecent_withResourceIdOnly_matchesWithoutActionOrType`**, **`listRecent_limitZero_clampedToOne`**).
+
+### Юнит-тесты H2 (`modules/core-api`)
+
+In-memory **H2** для изолированной проверки SQL без PostgreSQL (часть сценариев намеренно обходит методы с **`INSERT … ON CONFLICT`** / **`RETURNING`**, несовместимыми с H2 — см. javadoc в классах тестов):
+
+| Класс теста | Что покрыто (кратко) |
+|-------------|----------------------|
+| **`FilePublicLinkRepositoryH2Test`** | insert/revoke/find по токену, kind C без пароля |
+| **`ChatRepositoryRetentionOverlayH2Test`** | **`chatExists`**, **`findOrgIdForRetentionOverlay`** (владелец / роли участников) |
+| **`UserRepositoryH2Test`** | **`create`**, **`findById`**, **`findByUsername`**, **`updateProfile`**, **`updatePresence`**, **`touchHeartbeat`** |
+| **`BlockRepositoryH2Test`** | **`exists`**, **`listBlockedUsers`**, **`unblock`** (данные через JDBC — см. класс) |
+| **`ContactRepositoryH2Test`** | **`list`**, **`remove`** (данные через JDBC) |
+| **`ChatBanRepositoryH2Test`** | **`ban`**, **`findById`**, **`findByChatId`**, **`isBanned`**, **`unban`**; явные **`created_at`** для порядка списка |
+| **`ConferenceRepositoryH2Test`** | **`newRoomSlug`**, **`findById`**, **`listForChat`**, **`endConference`**, **`findCreatorId`** (строки через JDBC — без **`INSERT … RETURNING`**) |
+| **`FileRepositoryH2Test`** | **`insert`**, **`findById`**, **`delete`** |
+| **`MessageRepositoryH2Test`** | **`insert`**, **`findById`**, **`findByChatId`**, **`findLatestMessageId`**; TTL скрывает сообщение; явные **`created_at`** для детерминизма сортировки |
+| **`ChatReadRepositoryH2Test`** | **`countUnreadFromOthers`** в режиме **`MODE=PostgreSQL`**; состояние чтения через JDBC (**`upsertLastRead`** в H2 не используется) |
+
+### Ретенция: `pass_id` в построчном `audit_events.details_json`
+
+- Для **`message.retention.hot_body_cleared`** в **`details_json`** добавлено опциональное поле **`pass_id`** (UUID прохода — тот же, что в **`RetentionAppliedEvent`** и в **`resource_id`** сводки **`message.retention.bulk_cleared`**). Для **`message.retention.bulk_cleared`** в **`details_json`** добавлено поле **`pass_id`** (дубликат **`resource_id`** для единообразного парсинга). **`RetentionHotBodyJanitor`**. Документация **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §8.
+
+### Docker
+
+- **`docker/docker-compose.dev-min.yml`**, сервис **`retention-worker`**: **`healthcheck`** (**`curl`** → **`http://127.0.0.1:$RETENTION_METRICS_PORT/health`** внутри контейнера, порт как в **`environment`**, **`interval`** 30s, **`timeout`** 5s, **`retries`** 3, **`start_period`** 60s). В **`docker/Dockerfile.retention-worker`** добавлен пакет **`curl`** (лёгкий слой **`apt-get`**) для проверки; при **`RETENTION_METRICS_PORT=0`** HTTP выключен — **`healthy`** недостижим без включения метрик.
+
+### База данных (Flyway)
+
+- **`V015__messages_retention_hot_body_candidate_index.sql`:** частичный индекс **`idx_messages_retention_hot_body_candidates`** на **`messages (created_at ASC, chat_id)`** при **`deleted = false`**, **`content IS NOT NULL`**, **`trim(content) <> ''`** — под выборку кандидатов **`RetentionHotBodyJanitor.hotBodyCandidateSelectSql`**; **`docs/db/FLYWAY_AND_SCHEMA.md`**.
+
+- **`V014__audit_events_list_indexes.sql`:** индексы **`idx_audit_events_action_occurred`** (**`action`**, **`occurred_at DESC`**) и **`idx_audit_events_resource_occurred`** (**`resource_id`**, **`occurred_at DESC`**) для **`GET /api/v1/admin/audit-events`** с фильтрами и **`ORDER BY occurred_at DESC LIMIT`**; **`docs/db/FLYWAY_AND_SCHEMA.md`**.
+
+### Документация и скрипты
+
+- **`README.md`** (корень репозитория): краткая точка входа — **`./gradlew test`**, таблица ссылок на **`CHANGELOG.md`**, **`docs/*`**, **`scripts/TEST_SERVER_READY.md`**, **`modules/workers/retention/README.md`**.
+- **`docs/CI_AND_REPO_HYGIENE.md`** (новый): GitHub Actions, Dependabot, **`.gitattributes`**; перекрёстные ссылки на **`scripts/TEST_SERVER_READY.md`**, **`docs/TZ_SERVER_100.md`** (п. 95), **`docs/db/FLYWAY_AND_SCHEMA.md`**.
+- **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §8: дополнение — формы **`details_json`** для **`organization.*`**, **`user.organization.set`**, **`file.public_link.*`** и политик ретенции (Jackson).
+- **`docs/RETENTION_AND_DEEP_ARCHIVE.md`:** **§10** — явная отсылка: текущий фокус — **фаза A** (**§13**), граница «завершения A» vs **B/C**; **§13** — укрупнённые фазы **A / B / C** для планирования (маппинг на §10) и краткое правило автономных низкорисковых правок; **`modules/workers/retention/README.md`** — ссылка на §13 и абзац про **`scripts/smoke-retention-worker.ps1`** / **`retention_worker_build_info`**. **`scripts/TEST_SERVER_READY.md`** (Docker / **retention**) — ссылки на **§10/§13** и **`docs/db/FLYWAY_AND_SCHEMA.md`** (**V014**/**V015**); **`docs/db/FLYWAY_AND_SCHEMA.md`** — перекрёстные ссылки на RETENTION §8/§9/§13 для **V014**/**V015**.
+
+- **`docs/RETENTION_AND_DEEP_ARCHIVE.md`:** §12 — черновик этапа 4 (purge строки Hot, `file_metadata`/MinIO, legal hold вне hot-body); в §10 для этапа 4 — отсылка «см. §12».
+
+- Smoke-скрипт **`scripts/smoke-retention-worker.ps1`**: **`GET /health`**, **`GET /metrics`** (в т.ч. подстрока **`retention_worker_build_info`**), по умолчанию **`http://localhost:9192`**; абзац в **`scripts/TEST_SERVER_READY.md`** (блок Docker / профиль **`retention`**).
+
+- **`AdminResource`**, **`GET .../audit-events`**: в **`@Operation`** — пояснение про **`pass_id`** в **`details_json`** и ссылка на **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §8.
+
+- **`docs/NATS_SUBJECTS_INTEROP.md`:** абзац «Корреляция с админским аудитом» — **`pass_id`** в NATS и в **`audit_events`**, ссылка на §8 RETENTION.
+
+- **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §8: обратная ссылка на **`docs/NATS_SUBJECTS_INTEROP.md`** для связки **`msg.event.retention`** ↔ аудит.
+
+### Ретенция: Prometheus `retention_worker_build_info`
+
+- Метрика **`retention_worker_build_info`** (**`io.prometheus.client.Info`**, default registry): метки **`version`** (из **`Package#getImplementationVersion`** для **`RetentionWorker`**, иначе **`unknown`**) и **`name`** = **`retention-worker`**. Регистрация/установка меток один раз при старте HTTP **`/metrics`** (**`RetentionMetricsHttpServer.start`** → **`RetentionMetrics.registerBuildInfoOnce`**). В **`modules/workers/retention/build.gradle.kts`** для задачи **`jar`** — manifest **`Implementation-Version`** из **`project.version`**. Тест **`RetentionMetricsHttpServerTest`**. Документация **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §9.1, **`modules/workers/retention/README.md`**.
+
+### Ретенция: Prometheus gauge последнего hot-body прохода
+
+- После успешного **`SELECT`** кандидатов в **`RetentionHotBodyJanitor.runOnce`** (в т.ч. **0** кандидатов и **dry-run**): **`retention_worker_last_hot_body_pass_epoch_seconds`** (Unix epoch), **`retention_worker_last_pass_cleared_count`** (**`0`** в dry-run, не «would_clear»). Не обновляются при пропуске **`RETENTION_REQUIRE_MINIO`**, при неудачном **`pg_try_advisory_lock`** (без **`SELECT`**), при исключении до завершения прохода. Тесты **`RetentionHotBodyPassGaugesTest`**. Документация **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §9.1, **`modules/workers/retention/README.md`**.
+
+### Deep-archive MinIO: `snapshot_sha256` на `messages/{id}.json`
+
+- **`DeepArchiverWorker`:** в корень JSON объекта **`messages/{messageId}.json`** добавлено **`snapshot_sha256`** — та же семантика, что у снимка ретенции в MinIO (SHA-256 hex по UTF-8 байтам корня **до** этого поля, затем поле в загружаемом документе). Общий хелпер **`ArchiveSnapshotEnvelopeDigest`** (**`modules/common`**); класс **`RetentionSnapshotEnvelopeDigest`** в модуле retention удалён в пользу него. Тест **`DeepArchiverWorkerMinioJsonTest`**. Документация **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §6.
+
+### Админ: фильтр аудита по `resource_id`
+
+- **`GET /api/v1/admin/audit-events`:** опциональный query **`resource_id`** (точное совпадение с колонкой **`audit_events.resource_id`**, до **128** символов); с **`action`** / **`resource_type`** объединяется через **AND**. Удобно для сводки ретенции по UUID прохода (**`message.retention.bulk_cleared`**, **`resource_type=retention_pass`**). **`AuditRepository.listRecent(limit, action, resourceType, resourceId)`**; тест **`AuditRepositoryH2Test`**.
+
+### Hot-body снимок и NATS: `snapshot_sha256` (SHA-256 hex)
+
+- В корень JSON снимка в MinIO (**`RetentionHotBodyJanitor`**) добавлено **`snapshot_sha256`** (**`ArchiveSnapshotFormat.JSON_SNAPSHOT_SHA256`**): **64** символа **a–f**, SHA-256 по UTF-8 байтам объекта **до** добавления этого поля (тот же **`ObjectMapper`**, что **`putObject`/`uploadObject`**). В **`RetentionAppliedEvent`** (**`msg.event.retention`**) — опциональное поле **`snapshot_sha256`** (**`@JsonInclude(NON_NULL)`**, в старых сообщениях отсутствие → **`null`**); при **`RETENTION_DRY_RUN=true`** событие не публикуется. В построчном **`audit_events`** (**`message.retention.hot_body_cleared`**) в **`details_json`** — опционально **`snapshot_sha256`**; в сводном **`message.retention.bulk_cleared`** — **без** агрегата **`snapshot_sha256`**. При пропуске **`putObject`** из‑за уже существующего объекта digest считается для того же конверта, что и при загрузке. Утилита **`Sha256Hex`** (**`modules/common`**), хелпер дайджеста — **`ArchiveSnapshotEnvelopeDigest`**. Тесты **`Sha256HexTest`**, **`RetentionMinioSnapshotPayloadTest`**, **`RetentionAppliedEventTest`**. Документация **`docs/NATS_SUBJECTS_INTEROP.md`**, **`docs/RETENTION_AND_DEEP_ARCHIVE.md`**, **`modules/workers/retention/README.md`**.
+
+### MinIO снимок hot-body ретенции: `pass_id` в JSON
+
+- В корне JSON объекта, загружаемого **`RetentionHotBodyJanitor`** в MinIO при очистке тела, опционально **`pass_id`** (тот же UUID строкой, что **`RetentionAppliedEvent.pass_id`** за проход **`runOnce`**); при **`null`** ключ не пишется. Тесты **`RetentionMinioSnapshotPayloadTest`**. Документация **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §6, **`modules/workers/retention/README.md`**.
+
+### NATS `msg.event.retention`: `pass_id` в `RetentionAppliedEvent`
+
+- Поле **`pass_id`** (UUID прохода **`RetentionHotBodyJanitor.runOnce`**, **`string`**) в JSON **`RetentionAppliedEvent`**; генерируется один раз на проход (в т.ч. dry-run — в **`INFO`**-логе; при сводном **`message.retention.bulk_cleared`** тот же UUID в **`resource_id`**). Десериализация: отсутствие поля → **`null`**. Тесты **`RetentionAppliedEventTest`**. Документация **`docs/NATS_SUBJECTS_INTEROP.md`**, **`docs/RETENTION_AND_DEEP_ARCHIVE.md`**.
+
+### NATS `msg.event.retention`: `snapshot_version` в `RetentionAppliedEvent`
+
+- Поле **`snapshot_version`** (**`int`**, **`ArchiveSnapshotFormat.SNAPSHOT_VERSION`**) в JSON **`RetentionAppliedEvent`**; воркер задаёт его при публикации (**`RetentionHotBodyJanitor`**). Десериализация: отсутствие поля в старых сообщениях → **`1`**. Тесты **`RetentionAppliedEventTest`**. Документация **`docs/NATS_SUBJECTS_INTEROP.md`**.
+
+### MinIO: общий конверт снимков ретенции и deep-archive
+
+- Поля **`snapshot_version`** (**`1`**) и **`producer`** (**`retention-worker`** / **`deep-archiver`**) в корне JSON, записываемого в MinIO: снимок тела **`RetentionHotBodyJanitor`** и объект **`DeepArchiverWorker`** по ключу **`messages/{id}.json`** (аддитивно к существующим полям). Константы — **`com.avandocmsg.messenger.common.retention.ArchiveSnapshotFormat`**. Тесты **`ArchiveSnapshotFormatTest`**, **`RetentionMinioSnapshotPayloadTest`**, **`DeepArchiverWorkerMinioJsonTest`**. Документация **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §6 / §10, **`docs/NATS_SUBJECTS_INTEROP.md`** (объект в MinIO vs payload NATS).
+
+### Ретенция: опциональный PostgreSQL advisory lock на проход hot-body
+
+- Env **`RETENTION_USE_ADVISORY_LOCK`** (по умолчанию **`false`**): при **`true`** и **`jdbc:postgresql:`** на **`DB_JDBC_URL`** один JDBC‑сеанс на проход держит session **`pg_try_advisory_lock`** с ключами **`RetentionAdvisoryLockIds`** до **`pg_advisory_unlock`** в **`finally`**; кандидаты **`SELECT`**, **`UPDATE`**, **`retention_hot_body_applied`**, сводный **`audit_events`** идут через то же соединение. Если lock не получен — **`INFO`**, без **`SELECT`**, счётчик **`retention_worker_pass_skipped_advisory_lock_total`**, **`0`** очищенных (в т.ч. чтобы два реплики не сканировали в **dry-run**). Тесты **`RetentionAdvisoryLockIdsTest`**, **`RetentionPlatformDefaultsTest`**. Документация **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §9, **`modules/workers/retention/README.md`**, **`application.properties`**.
+
+### Ретенция: multipart для больших temp-file снимков в MinIO
+
+- Env **`RETENTION_MINIO_MULTIPART_THRESHOLD_BYTES`**: при temp-file пути снимка и **`Files.size(temp) >=`** порога — **`MinioClient.uploadObject`** (MinIO Java SDK **8.5.10**, внутренний multipart при необходимости); иначе — прежний **`putObject`** со стримом; путь **`writeValueAsBytes`** без изменений. По умолчанию порог **`Long.MAX_VALUE`** (**`RetentionPlatformDefaults.MINIO_MULTIPART_THRESHOLD_BYTES_DEFAULT`**) — фактически только **`putObject`** для temp-file, пока env не задан (типичное значение для включения — **`33554432`**, 32 MiB). Счётчик **`retention_worker_minio_multipart_uploads_total`** после успешного **`uploadObject`**. Парсинг и тесты **`RetentionPlatformDefaultsTest`**, **`RetentionHotBodyJanitorDryRunTest`**. Документация **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §9–§10, **`modules/workers/retention/README.md`**, **`application.properties`**.
+
+### Ретенция: graceful shutdown для `RetentionWorker`
+
+- Один JVM shutdown-hook (**`hookStarted`** — идемпотентность): **`INFO`** в начале и в конце; **`shutdownRequested`** останавливает ожидание главного потока; однопоточный **`ScheduledExecutorService`** для проходов — **`shutdown`** + **`awaitTermination`** (до **15 с**), затем закрытие **метрики HTTP → NATS → Hikari** через **`RetentionShutdown.runCloseables`** (**`WARN`** на сбой каждого шага). Юнит-тест **`RetentionShutdownTest`** для **`runCloseables`**. Документация **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §9, **`modules/workers/retention/README.md`** (Operations).
+
+### Ретенция: снимок MinIO через temp-file при большом `messages.content`
+
+- Env **`RETENTION_SNAPSHOT_TEMPFILE_THRESHOLD_BYTES`** (по умолчанию **`0`** = выключено; прежний путь **`writeValueAsBytes`** без изменений): при **`> 0`** и UTF-8 длине **`messages.content`**, **строго большей** порога, JSON снимка пишется во временный файл (**`java.io.tmpdir`**, префикс **`retention-snapshot-`**), **`putObject`** с **`InputStream`** и известным размером, удаление файла в **`finally`**. Парсинг и потолок **1 GiB** — **`RetentionPlatformDefaults`**, выбор пути — **`RetentionSnapshotMaterialization`**, метрика **`retention_worker_minio_snapshot_tempfile_total`**. Тесты **`RetentionPlatformDefaultsTest`**, **`RetentionSnapshotMaterializationTest`**. Документация **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §9, **`modules/workers/retention/README.md`**, **`application.properties`**.
+
+### Операторская документация: воркер ретенции
+
+- **`modules/workers/retention/README.md`:** единая точка входа для операторов — назначение воркера, ссылка на **`docs/RETENTION_AND_DEEP_ARCHIVE.md`**, таблица **`RETENTION_*`** и связанных переменных (**`DB_JDBC_URL`**, **`DB_*`**, **`NATS_URL`**, **`MINIO_*`**), метрики **`/metrics`**, **`GET /health`**, локальный запуск **`gradlew :modules:workers:retention:run`**, профиль Compose **`retention`** (**`docker/docker-compose.dev-min.yml`**, сервис **`retention-worker`**), чеклист безопасности (в т.ч. **`RETENTION_DRY_RUN`**), кратко про загрузку в MinIO (**`putObject`**, версия SDK).
+
+### Ретенция: пауза между сообщениями в проходе hot-body
+
+- Env **`RETENTION_INTER_MESSAGE_DELAY_MS`** (по умолчанию **`0`**, макс. **`60000`**): опциональная пауза между кандидатами в одном проходе **`RetentionHotBodyJanitor`** после успешной или неуспешной обработки; после последнего в пачке — без паузы. При прерывании во время **`Thread.sleep`** — восстановление **`interrupt`** и досрочный выход из прохода с **`WARN`** в логе. Парсинг **`RetentionPlatformDefaults`**, хелпер **`RetentionInterMessageSleep.sleepQuiet`**, стартовый лог **`RetentionWorker`**. Тесты **`RetentionPlatformDefaultsTest`**, **`RetentionInterMessageSleepTest`**. Документация **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §9, **`application.properties`**, **`scripts/TEST_SERVER_READY.md`**.
+
+### Ретенция: опциональный JDBC query timeout для hot-body
+
+- Env **`RETENTION_JDBC_QUERY_TIMEOUT_SECONDS`** (по умолчанию **`0`** = без **`Statement.setQueryTimeout`**): при **`> 0`** — лимит в секундах на **`SELECT`** кандидатов и на **`UPDATE messages SET content = NULL`** в **`RetentionHotBodyJanitor`** (только воркер ретенции). Парсинг и дефолт **`0`** — **`RetentionPlatformDefaults.jdbcQueryTimeoutSecondsFromEnv`**, тесты **`RetentionPlatformDefaultsTest`**, **`RetentionHotBodyJanitorDryRunTest`**. Документация **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §9, подсказка в **`application.properties`**.
+
+### Ретенция: readiness `GET /health` на порту метрик
+
+- При **`RETENTION_METRICS_PORT` > 0** на том же HTTP‑сервере, что **`/metrics`**, доступен **`GET /health`**: **`200`** и **`ok`**, если воркер выключен или (включён и) Hot DB отвечает на **`SELECT 1`**, NATS **`CONNECTED`**, при **`RETENTION_REQUIRE_MINIO=true`** — MinIO настроен и бакет ретенции существует; иначе **`503`** и **`not ready`** (без утечки секретов). Классы **`RetentionMetricsHttpServer`**, **`RetentionHealthProbe`**; тесты **`RetentionMetricsHttpServerTest`**. Документация **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §9 / §9.1, комментарий в **`docker/docker-compose.dev-min.yml`**.
+
+### Ретенция: dry-run для `RetentionWorker` / `RetentionHotBodyJanitor`
+
+- Env **`RETENTION_DRY_RUN`** (по умолчанию **`false`**): проход hot-body только **`SELECT`** кандидатов + **`INFO`**-сводка и метрика **`retention_worker_dry_run_passes_total`**; без **`UPDATE`**, MinIO **`putObject`/`statObject`** на пути мутации, **`retention_hot_body_applied`**, **`audit_events`**, NATS **`msg.event.index`** / **`msg.event.retention`**. Стартовый **`WARN`** с **`RETENTION_DRY_RUN=true`**. Тесты **`RetentionPlatformDefaultsTest`**, **`RetentionHotBodyJanitorDryRunTest`**; подсказки в **`application.properties`**, **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §9, **`scripts/TEST_SERVER_READY.md`**.
+
+### Ретенция: регрессионные тесты SQL кандидатов (legal hold / deep)
+
+- Юнит-тесты **`RetentionHotBodyCandidateSqlTest`**: проверка, что текст SELECT hot-body включает **`pol.eff_legal = false`**, **`pol.eff_deep = true`** и вычисление **`eff_legal` / `eff_deep` / `eff_body_days`** (без PostgreSQL). В **`RetentionHotBodyJanitor`** вынесен **`hotBodyCandidateSelectSql(useAppliedLog)`** для единого источника строки запроса.
+
+### Ретенция: регрессия SQL — исключение soft-delete из кандидатов hot-body
+
+- **`RetentionHotBodyCandidateSqlTest`:** в SELECT кандидатов должно оставаться условие **`m.deleted = false`** (соответствует **`messages.deleted`** в **`V001`**), чтобы soft-deleted сообщения не попадали в hot-body ретенцию. Документировано только в журнале; логика SQL без изменений.
+
+### Документация: ретенция (env и legal hold)
+
+- Подсказки в **`application.properties`** (**`RETENTION_BULK_AUDIT_MIN_CLEARED`**, **`RETENTION_SKIP_SNAPSHOT_IF_DEEP_EXISTS`**, **`RETENTION_METRICS_PORT`** в списке env воркера), выравнивание **`scripts/TEST_SERVER_READY.md`** и **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §9 / §10 с фактическим SQL (**`legal_hold`** исключает кандидатов на очистку тела). Дополнительно: **`docs/TZ_SERVER_100.md`** п. **89** (воркер, env, аудит), **`docs/NATS_SUBJECTS_INTEROP.md`** (поля **`RetentionAppliedEvent`**), §10 таблица этапов — по текущему коду.
+
+### Ретенция: пропуск дублирующего MinIO-снимка при уже существующем объекте
+
+- Env **`RETENTION_SKIP_SNAPSHOT_IF_DEEP_EXISTS`** (по умолчанию **`false`**): перед **`putObject`** воркер выполняет **`statObject`** — если бакет записи ретенции совпадает с **`MINIO_BUCKET`**, сначала ключ **`messages/{messageId}.json`** (как у **`DeepArchiverWorker`**); иначе только ключ снимка ретенции в целевом бакете. При «объект уже есть» загрузка пропускается, **`UPDATE` / NATS / аудит** без изменений; в **`retention_hot_body_applied`** и событиях фиксируется фактический ключ (**`messages/…`** или префикс ретенции). Метрика Prometheus **`retention_worker_minio_snapshot_skipped_existing_total{reason=...}`**. Чистая логика и env в тестах **`RetentionSnapshotSkipResolverTest`**, **`RetentionPlatformDefaultsTest`**.
+
+### Ретенция: сводный аудит массового прохода (`RetentionWorker`)
+
+- Env **`RETENTION_BULK_AUDIT_MIN_CLEARED`** (по умолчанию **`0`** = выключено): после прохода hot-body, если число успешно очищенных тел **`≥`** порога, одна строка в **`audit_events`**: **`action`** = **`message.retention.bulk_cleared`**, **`resource_type`** = **`retention_pass`**, **`resource_id`** = UUID прохода, **`details_json`** с метриками прохода (в т.ч. **`sample_chat_ids`**). Построчный аудит **`message.retention.hot_body_cleared`** при **`RETENTION_AUDIT_ENABLED=true`** не отключается — сводка **дополнительная**. Тесты **`RetentionBulkAuditTest`**, **`RetentionPlatformDefaultsTest`**.
+
+### Ретенция: Prometheus для `RetentionWorker`
+
+- Env **`RETENTION_METRICS_PORT`**: при значении **`1…65535`** процесс поднимает **`/metrics`** (Prometheus text, JVM default exports + счётчики/гистограммы прохода hot-body, MinIO, ошибок, пинга БД). Зависимости **`io.prometheus:simpleclient*`** в **`modules/workers/retention`**.
+
+### Админ: фильтр аудита по `action`
+
+- **`GET /api/v1/admin/audit-events`:** опциональные query **`action`** и **`resource_type`** (точное совпадение, до 64 символов каждый; при двух — **AND**); **`AuditRepository.listRecent(limit, action, resourceType)`**; тесты **`AuditRepositoryH2Test`**. Удобно для событий ретенции **`message.retention.hot_body_cleared`** / **`resource_type=message`**.
+
+### Ретенция: фаза 1 (схема + GET)
+
+- **Миграция `V011__org_retention_policy.sql`:** таблица **`org_retention_policy`** (FK на **`organizations`**, каскад при удалении org).
+- **`RetentionPolicyRepository`**, **`RetentionPolicyResponse.resolved`**, **`AppConfig`:** свойства **`retention.default.*`** и env **`RETENTION_DEFAULT_*`**.
+- **`GET /api/v1/admin/organizations/{orgId}/retention`** в **`AdminResource`** (роль **admin**).
+- Тесты: **`RetentionPolicyResponseTest`**, **`RetentionPolicyRepositoryH2Test`**.
+
+### Сообщения: TTL видимости (`ttl_seconds`)
+
+- **`SendMessageRequest`** / **`MessageResponse`:** поле **`ttl_seconds`** (JSON); валидация в **`MessageResource`** (**1 … `message.ttl.max.seconds`**, env **`MESSAGE_TTL_MAX_SECONDS`**).
+- **`MessageRepository`:** предикат **`SQL_MSG_TTL_VISIBLE`** — скрытие истёкших в ленте, **`findById`**, поиске, доступе к файлу по ссылке из сообщения, **`findLatestMessageId`**; **`ChatReadRepository.countUnreadFromOthers`** не считает истёкшие.
+- **`MessageResource`:** зависимость **`AppConfig`**.
+
+### Ретенция: PATCH политики организации
+
+- **`PATCH /api/v1/admin/organizations/{orgId}/retention`** + **`UpdateRetentionPolicyRequest`**; **`RetentionPolicyRepository.upsert`**; аудит **`organization.retention.set`**; тест **`upsert`** в **`RetentionPolicyRepositoryH2Test`**.
+
+### Ретенция: воркер (hot-body, этап 3)
+
+- **`AppConfig`:** **`retention.worker.enabled`** / **`retention.scan.interval.seconds`** (env **`RETENTION_WORKER_ENABLED`**, **`RETENTION_SCAN_INTERVAL_SECONDS`**; по умолчанию выключено, интервал 3600 с).
+- Модуль **`modules/workers/retention`**: при **`RETENTION_WORKER_ENABLED=true`** — Hot PostgreSQL (**`DB_JDBC_URL`**), NATS (**`NATS_URL`**), MinIO (**`MINIO_*`**, по умолчанию обязательно **`RETENTION_REQUIRE_MINIO=true`**); env **`RETENTION_INITIAL_DELAY_SECONDS`** — пауза перед первым сканом (в dev-compose **`retention-worker`** — **30** с); опционально отдельный бакет снимков **`RETENTION_MINIO_BUCKET`** и префикс ключей **`RETENTION_MINIO_OBJECT_PREFIX`** (по умолчанию **`retention/body/`**); при **`RETENTION_ENSURE_MINIO_BUCKET=true`** — попытка создать бакет при старте (**`RetentionMinioBootstrap`**). Пакетный проход: эффективная **`hot_message_body_max_age_days`** (как в админском GET чата), без **legal hold**, при **`deep_archive_enabled`** → снимок **`content`** в MinIO, **`UPDATE messages SET content = NULL`**, публикация **`msg.event.index`** с **`index_op=update`**, публикация **`msg.event.retention`** (**`RetentionAppliedEvent`**), запись в **`retention_hot_body_applied`** (миграция **`V013`**, env **`RETENTION_USE_APPLIED_LOG`** по умолчанию **`true`**), при **`RETENTION_AUDIT_ENABLED=true`** — строка в **`audit_events`** (**`message.retention.hot_body_cleared`**, **`actor_user_id`** = null). Env: **`RETENTION_BATCH_LIMIT`**, **`RETENTION_DEFAULT_*`** (как в core-api). Тесты **`RetentionPlatformDefaultsTest`**, **`RetentionAppliedEventTest`**.
+- **`docker/Dockerfile.retention-worker`**, сервис **`retention-worker`** в **`docker/docker-compose.dev-min.yml`** (профиль Compose **`retention`**); корневой **`.dockerignore`** для контекста сборки образов.
+- **`application.properties`**: подсказка по env **`RetentionWorker`** (чтение только из окружения).
+- **`docs/RETENTION_AND_DEEP_ARCHIVE.md`**, **`docs/NATS_SUBJECTS_INTEROP.md`**, **`docs/db/FLYWAY_AND_SCHEMA.md`**, **`scripts/TEST_SERVER_READY.md`**: описание поведения и рисков.
+
+### Ретенция: политика чата (V012 + admin)
+
+- **`V012__chat_retention_policy`**, **`ChatRetentionPolicyRepository`**, **`ChatRetentionPolicyResponse.resolved`** (без org — **`RetentionPolicyResponse.platformDefaults`**, не подставлять UUID чата в org-слой).
+- **`ChatRepository.chatExists`**, **`findOrgIdForRetentionOverlay`** (владелец → участники по ролям).
+- **`GET`/`PATCH /api/v1/admin/chats/{chatId}/retention`**; аудит **`chat.retention.set`**; тесты **`ChatRetentionPolicyRepositoryH2Test`**, **`ChatRetentionPolicyResponseTest`**, доп. кейс в **`RetentionPolicyResponseTest`**.
+
+### ТЗ п. 89: проект ретенции и deep-archive
+
+- **`docs/RETENTION_AND_DEEP_ARCHIVE.md`:** целевая модель сроков хранения (Hot / Archive / Deep), черновик схем **`retention_policy`** / override на чат, использование **`messages.ttl_seconds`**, воркер очистки, Solr, админский API и поэтапное внедрение.
+- **`docs/TZ_SERVER_100.md`:** пункт **89** закрыт со ссылкой на документ и на существующие воркеры.
+
+### ТЗ п. 63: граница объёма MLS (RFC 9420)
+
+- **`docs/TZ_SERVER_100.md`:** пункт **63** закрыт как **осознанный объём**: полный MLS по **RFC 9420** не реализован; зафиксированы **`MlsService`** (упрощение) и роль **`E2EEService`** / **`CryptoResource`**.
+- **`MlsService`:** javadoc — явное различие с полным MLS-handshake.
+- **`CryptoResource`:** уточнён текст **`@Tag`** OpenAPI (без заявления полного RFC 9420 handshake).
+
+### ТЗ п. 59–60: Solr после edit/delete
+
+- **`MessageWorkerEvent`:** опциональное поле **`index_op`** (**`update`** / **`delete`**); фабрики **`fromPersistedMessage`**, **`forIndexDelete`**; **`fromSendEvent`** без изменения контракта для pipeline (**`index_op`** = null).
+- **`MessageService`:** публикация в **`msg.event.index`** после успешного **`editMessage`** и **`deleteMessage`**.
+- **`IndexerWorker`:** **`deleteById`** + commit при **`index_op=delete`**; иначе прежний upsert.
+- **`ArchiverWorker`:** при **`index_op=delete`** — **`DELETE`** из **`archive_message_meta`** (если архив включён), затем handoff в deep-archive как раньше.
+- **`PreviewWorker`:** игнор событий **`delete`** (нет контекста для превью).
+- **`MessageRepository.loadMessagesForSearchResults`:** фильтр **`m.deleted = false`**.
+- **`docs/TZ_SERVER_100.md`**, **`docs/NATS_SUBJECTS_INTEROP.md`:** пункты **59–60** закрыты.
+
+### ТЗ п. 33: граница API по read receipts
+
+- **`docs/TZ_SERVER_100.md`:** пункт **33** закрыт как **осознанный объём**: per-message / per-participant receipts **вне** **`chat_read_state`** не входят в API; для синхронизации «прочитано» используются только агрегат и эндпоинты **п. 34** (**`POST .../read`**, **`GET .../unread-count`**).
+
+### Серверный logout (отзыв refresh)
+
+- **`POST /api/v1/auth/logout`** с телом **`{"refresh_token":"..."}`** — отзыв refresh в Keycloak (**RFC 7009**, `openid-connect/revoke`); успех — **204**; при сбое отзыва (Keycloak недоступен / неожиданный статус) — **502** и **`ApiError`**. Тот же **rate limit** по IP, что у логина (**`AuthRateLimiter.allowLogout`**). Публичный путь в **`JwtAuthFilter`**. Скрипт **`smoke-auth.ps1`**: опциональная проверка logout после login/refresh, ключ **`-SkipLogout`**.
+
+---
+
+## 2026-05-09
+
+### ТЗ п. 1–82: синхронизация трекера с кодом + опциональный JWT `aud`
+
+- **`docs/TZ_SERVER_100.md`:** пункты **1–8, 10–38, 39–44, 45–55, 56–58, 61–62, 64–73, 82** отмечены как реализованные со ссылками на API/классы; далее закрыты **33**, **59–60**, **63**, **89** (см. записи **[Unreleased]**).
+- **`AppConfig` / `TokenValidator`:** опциональная проверка **`aud`** (**`KEYCLOAK_AUDIENCE`**, **`keycloak.audience`**).
+- **`scripts/TEST_SERVER_READY.md`:** упоминание **`KEYCLOAK_AUDIENCE`**.
+
+### ТЗ §93–§97, §99–§100: тесты, OpenAPI, скрипты, убран символ §
+
+- Тест **`ChatDtoJsonTest`** (snake_case для **`ChatResponse`**).
+- OpenAPI / Swagger: отмечено в **`TZ_SERVER_100`**; в описаниях операций и комментариях **§** заменён на **«ТЗ п. …»** (в т.ч. **`ChatResource`**, **`FileResource`**, **`AdminResource`**, **`PrometheusMetricsResource`**, **`application.properties`**, **`V010`** SQL).
+- Пункты **93–97**, **99–100** в **`docs/TZ_SERVER_100.md`** отмечены выполненными с отсылками к коду и скриптам.
+- Дополнительно: **`NatsSubjects`**, **`TypingEvent`**, **`FLYWAY_AND_SCHEMA`**, javadoc репозиториев — та же замена **§** → **«ТЗ п. …»**.
+
+### ТЗ §88, §90–§92, §98: экспорт, NATS interop, JWT для файлов
+
+- **`docs/NATS_SUBJECTS_INTEROP.md`:** таблица subject’ов, DTO, core-api / workers / **ws-gateway**.
+- **`NatsSubjects`:** ссылка на документ interop.
+- **`ExportResource`:** уточнённое описание OpenAPI (очередь **export-replay**, stub, не GDPR-пакет).
+- **`JwtAuthFilter`:** комментарий про **`/files/pub`** vs **`/files/auth-link`** (kind B с JWT).
+- **`docs/TZ_SERVER_100.md`:** отмечены пункты **88**, **90–92**, **98**.
+
+### ТЗ §85–§87: Flyway, индексы, схема audit_events
+
+- **`V010__hot_path_indexes.sql`:** идемпотентные индексы под блоки, **`users.org_id`**, активные сообщения в чате, срок жизни публичных ссылок.
+- **`V001`:** удалено создание legacy-**`audit_events`** (схема только в **`V008`**).
+- **`V008`:** в начале **`DROP TABLE IF EXISTS audit_events CASCADE`** перед **`CREATE`**, чтобы убрать старую таблицу с копий после прежнего V001.
+- Документ **`docs/db/FLYWAY_AND_SCHEMA.md`** (идемпотентность, checksum/**`repair`**, политика FK).
+- **Важно:** после подтягивания изменений в **`V001`/`V008`** на окружениях с уже применёнными миграциями может понадобиться **`flyway repair`**.
+
+### ТЗ §79–§84: CORS, MDC в логах, админ-роли, безопасное логирование auth
+
+- **CORS:** **`CorsPreflightFilter`** (**`OPTIONS`**, `@PreMatching`), **`CorsResponseFilter`**, **`CorsOriginPolicy`** / **`cors.allowed.origins`** (env **`CORS_ALLOWED_ORIGINS`**); удалён старый **`CorsFilter`**.
+- **Логи:** **`RequestContextMdcFilter`** / **`RequestContextMdcClearFilter`**, MDC **`http.method`** / **`http.path`**, обновлён **`logback.xml`**.
+- **`AdminResource`:** **`@RolesAllowed("admin")`** на уровне класса.
+- **`AuthService`:** при ошибках Keycloak в лог пишется только HTTP-статус, не тело ответа.
+- Документы: **`docs/TZ_SERVER_100.md`**, комментарий в **`application.properties`**.
+
+### Health / smoke-ready / трекер ТЗ
+
+- **`scripts/smoke-ready.ps1`:** опция **`-StrictDependencies`** — после **`database_ok`** проверяются **`redis_ok`** и **`nats_ok`** из **`GET /api/v1/health/ready`**.
+- **`docs/TZ_SERVER_100.md`:** пункты **74–78** отмечены как выполненные (фактические пути **`/api/v1/health`**, **`/api/v1/health/ready`**, поля **`redis_ok`/`nats_ok`**, метрики в т.ч. **`api_invalid_uuid_parameter_total`**).
+- **`scripts/TEST_SERVER_READY.md`:** описание **`StrictDependencies`**.
+
+### Неверный UUID: исключение, mapper, метрика, тесты ACL файла
+
+- **`InvalidUuidParameterException`** + **`InvalidUuidParameterExceptionMapper`**: **`UuidParams.required`** больше не бросает **`WebApplicationException`**; ответы **400** + **`ApiError`** как раньше; счётчик **`api_invalid_uuid_parameter_total`** (**`ApiValidationMetrics`**).
+- **`CurrentUserId.uuid`:** разбор JWT **`sub`** через тот же **`UuidParams`** (см. ресурсы **`SearchResource`**, **`ContactResource`**, **`AdminResource`**, **`UserResource`** `/me` и др.).
+- Тесты: **`InvalidUuidParameterExceptionMapperTest`**, **`MessageRepositoryViewerMayAccessFileH2Test`** (H2 в **`core-api`**), **`ExportResourceTest`** на новое исключение.
+
+### ACL файлов по общему сообщению в чате, блоки в fan-out, UUID, метрики
+
+- **`MessageRepository.viewerMayAccessFileViaSharedNonE2eeMessage`:** не-E2EE сообщение с **`trim(content)` = file UUID**, участник чата не в бане, те же правила **`blocks`**, что у ленты.
+- **`FileService.mayViewFile`**, **`GET /api/v1/files/{fileId}`** и **`GET .../download`:** владелец **или** проверка выше; **`DELETE`** без изменений (только владелец).
+- **`UuidParams.required`:** единый разбор UUID (**400** + **`ApiError`**) в **`ChatResource`**, **`MessageResource`**, **`FileResource`** (где применимо); см. также mapper выше.
+- **`PipelineFanoutLogic`:** исключение получателей с блокировкой с отправителем (в обе стороны); тест **H2** с таблицей **`blocks`**.
+- **`ApiDeniedMetrics`:** счётчики **`api_denied_file_access_total`**, **`api_denied_message_send_total`** (экспорт через существующий **`PrometheusMetricsResource`**).
+- Документы: **`docs/TZ_SERVER_100.md`**, **`scripts/TEST_SERVER_READY.md`**.
+
+### Целевая структура пакетов ядра (hexagonal)
+
+- **`docs/ARCHITECTURE_CORE_PACKAGES.md`:** границы `domain` / `application` / `port` / `adapter.*`, таблица соответствия текущему `api.*`, фазы миграции.
+- Якорные пакеты **`com.avandocmsg.messenger.core.*`** (`package-info.java` в модуле **`core-api`**) без переноса существующих классов.
+
+### Фаза 1 портов: NATS
+
+- **`NatsOutboundPort`** (`core.port`): **`publish`**, **`flush`**, **`publishPipelineMessageSend`** (JetStream vs core NATS как раньше в **`MessageService`**).
+- **`NatsConnectionOutbound`** (`core.adapter.messaging`): реализация над **`Connection`** и **`Optional` из JetStream**; собирается в **`MessengerApplication`**, биндится в HK2 рядом с **`Connection`** (для **`HealthResource`**).
+- **`ChatService`**, **`MessageService`**, **`ExportResource`** переведены на порт; тесты — **`NatsOutboundPort.noop()`** или запись вызовов.
+- **`NatsConnectionStatus`**, **`UuidGenerator`**, биндинг **`Clock.systemUTC()`** в HK2; **`HealthResource`** → статус NATS через порт; **`FileService`** / **`FileResource`** (TTL ссылок) и генерация id в **`ChatService`** / **`MessageService`** / **`ExportResource`** через **`UuidGenerator`**.
+- **`Clock` / `UuidGenerator` в конструкторе `MessengerApplication`:** те же экземпляры для **`TokenValidator`** (JWKS TTL и проверка **`exp`**), **`AuthService`**, репозиториев **`ChatRepository`**, **`MessageRepository`**, **`OrganizationRepository`**, **`FilePublicLinkRepository`**, **`ChatBanRepository`**, **`KeyPackageRepository`**, **`SessionRepository`**, **`ConferenceRepository`** (вместо разрозненных **`Instant.now()` / `UUID.randomUUID()`**).
+
+---
+
+## 2026-05-08
+
+### Файлы и мелкие ACL
+
+- **`GET/DELETE /api/v1/files/{fileId}`**, **`GET .../download`:** доступ только **владельцу** (`uploaded_by`); неверный UUID файла — **400**.
+- **`MessageResource`:** безопасный разбор UUID для **send, list (before), get, edit, delete**; пустой **`before`** игнорируется; **PATCH** сообщения без тела/контента — **400**.
+- **`POST .../export`:** участники с **banned** в чате не могут ставить задачу экспорта (**403**).
+
+### Дополнение — ACL сообщений (реакции, pin, версии, forward), поиск пользователей
+
+- **`ChatRepository.findById`:** доступ только если пользователь — участник не забанен; для **p2p** тот же критерий, что и в списке чатов (нет активной блокировки с собеседником).
+- **`MessageService`:** **`messageVisibleToViewer`** для GET сообщения, **реакций**, **версий правок**, **pin**; **`canAccessChat`** для списка/отправки/**unpin**/закреплённых; **`getPinnedMessages`**; отправка только членами (**403** «Not a member»); **edit/delete** — проверка `chat_id`; **forward** без лишней проверки только **`sendBlockedReason`**.
+- **`MessageResource`:** **403** членства для списка, закреплённых, версий, реакций, pin/unpin; неверный UUID — **400**; pin/add reaction при недоступном сообщении — **404**; **forward** при запрете источника или назначения — **403** из **`sendBlockedReason`**, иначе при ошибке пересылки — **400**.
+- **`GET /api/v1/chats/{chatId}`:** разбор UUID с **400** при неверном формате.
+- **`GET /api/v1/search/users`:** **`UserRepository.searchForViewer`**, ответ **`UserSearchHit`**; **`SearchResource`** — OpenAPI (**`UserSearchHit`** в схеме).
+
+### 23:55 UTC — Блокировки по ТЗ (раздел 10)
+
+- **REST:** **`POST /api/v1/blocks`** (`{"user_id":"..."}`) — блокировка; **`DELETE /api/v1/blocks/{userId}`** — снятие; **`GET /api/v1/blocks`** — список с **`blocked_at`**.
+- При блокировке удаляются записи **контактов в обе стороны**; **добавление контакта** запрещено при любой блокировке между пользователями.
+- **Сообщения:** в ленте исключаются отправители с блокировкой в **любую сторону** (не только «я заблокировал»); отправка в **P2P** при взаимной блокировке — **403**; пересылка учитывает те же ограничения.
+- **Чаты и поиск:** список чатов и **`listChatIdsForUser`** скрывают **P2P** при активной блокировке с собеседником (согласовано с отсутствием нового P2P при блоке).
+
+### 22:45 UTC — Прочитано / непрочитано, блоки, готовность Redis+NATS, отзыв ссылок, удаление org
+
+- **Миграция `V009`:** таблица **`chat_read_state`** (`last_read_message_id` по паре user/chat).
+- **Чаты:** **`POST /api/v1/chats/{chatId}/read`**, **`GET .../unread-count`**, **`POST .../typing`** (NATS **`msg.typing`**); **`ChatReadRepository`**, расширен **`ChatService`** и wiring в **`MessengerApplication` / `JerseyConfig`** (**`ChatReadRepository`**, **`BlocksResource`**).
+- **Блокировки:** **`GET /api/v1/blocks`** — список заблокированных (**`BlockedUserResponse`**).
+- **Профиль:** **`GET /api/v1/users/me/saved-chat`** — id чата «Хранилище».
+- **`GET /api/v1/health/ready`:** в **`HealthReadyResponse`** добавлены **`redis_ok`**, **`nats_ok`** (проверка Lettuce + статус NATS).
+- **Файлы:** **`DELETE /api/v1/files/{fileId}/public-links/{linkId}`** — отзыв ссылки (**`revoked_at`** в **`file_public_links`**).
+- **Админ:** **`DELETE /api/v1/admin/organizations/{orgId}`** — удаление организации без пользователей (**409** если есть **`users.org_id`**).
+- **Трекер объёма работ:** **`docs/TZ_SERVER_100.md`** (100 пунктов для серверной реализации по ТЗ).
+
+### 20:30 UTC — Покрытие ТЗ (сервер, без клиентов): поиск, Хранилище, ссылки, аудит, org, метрики
+
+- **Миграция `V008`:** таблицы **`organizations`**, **`audit_events`**, **`file_public_links`**; колонка **`users.org_id`**; тип чата **`saved`** («Хранилище» §30).
+- **Индексация Solr:** в **`MessageWorkerEvent`** добавлено опциональное поле **`searchText`** (только для не‑E2EE); воркер **indexer** пишет в Solr поле **`content_txt`**.
+- **Поиск сообщений:** **`GET /api/v1/search/messages?q=`** — при **`SOLR_URL`** / **`SOLR_ZK`** запрос к Solr + ACL по чатам пользователя; иначе **SQL** по plaintext с фильтрами блоков и членства.
+- **Хранилище:** при логине/регистрации **`ensureSavedVaultChat`** создаёт чат **`saved`** «Saved Messages»; **`POST .../messages/{msgId}/forward`** с **`target_chat_id`** копирует сообщение (в т.ч. в vault); редактирование в **`saved`** запрещено.
+- **Публичные ссылки на файлы §15:** **`POST /api/v1/files/{file_id}/public-links`** (`link_kind` A/B/C, TTL); выдача **`GET /api/v1/files/pub/{token}`** (A,C + пароль для C), **`GET /api/v1/files/auth-link/{token}`** (B + JWT).
+- **Админ (realm admin):** **`GET /admin/audit-events`**, **`GET/POST /admin/organizations`**, **`PATCH /admin/users/{userId}/organization`**.
+- **Профиль:** **`UserProfile.org_id`**.
+- **Наблюдаемость §22 (база):** **`GET /api/v1/metrics/prometheus`** (JVM/process через Prometheus simpleclient).
+- **`JwtAuthFilter`:** публичные пути **`/metrics`**, **`/files/pub`**.
+
+---
+
+## 2026-05-12
+
+### 09:10 UTC — Скрипты тестового стенда и критерии готовности
+
+- **`scripts/dev-infra-up.ps1`** — Docker: postgres-hot, redis, nats, minio; опция `-WithKeycloak` добавляет keycloak.
+- **`scripts/dev-keycloak-up.ps1`** — только postgres-hot + keycloak (realm из `keycloak/`).
+- **`scripts/run-core-api-local.ps1`** — переменные окружения по умолчанию для localhost и запуск `gradlew :modules:core-api:run`.
+- **`scripts/TEST_SERVER_READY.md`** — когда считать готовым тестовый запуск: минимум **GET /api/v1/health** после инфры; полный JWT-тест — после Keycloak и совпадения issuer/JWKS.
+
+### 08:45 UTC — Логика fan-out пайплайна и тесты
+
+- Выделен класс **`PipelineFanoutLogic`** (`loadRecipientUserIds`) — выбор получателей из `chat_members` (исключая отправителя и `banned`). **`MessagePipelineWorker`** использует его вместо дублирования SQL.
+- **Тесты:** `PipelineFanoutLogicTest` на встроенном **H2** + **HikariCP** (`testImplementation com.h2database:h2`). Проверки: исключение отправителя и забаненных; пустой список при одном участнике-отправителе.
+
+---
+
+## 2026-05-08
+
+### 18:00 UTC — Готовность prod-like: файлы, compose, smoke
+
+- **`FileService`:** лимит загрузки = **`AppConfig.mediaMaxUploadBytes()`** (не константа 50 MB); метод **`uploadStream`** для multipart.
+- **`POST /api/v1/files/upload`** с **`multipart/form-data`**, поле **`file`** (**`MultiPartFeature`**); сырое тело (**octet-stream**) без изменений по смыслу.
+- **`docker-compose.dev-min.yml`:** для **core-api** добавлены **MinIO**, **MEDIA_MAX_UPLOAD_BYTES**, **JITSI_MEET_BASE_URL**, **WEBRTC_STUN_URIS**, зависимость от сервиса **minio**.
+- **`run-core-api-local.ps1`:** значения по умолчанию для **MINIO_*** (локальный стенд с **dev-infra-up**).
+- **`scripts/smoke-ready.ps1`** — автоматическая проверка health → ready → capabilities → login → admin session.
+
+### 17:00 UTC — Присутствие, медиа-возможности, конференции (Jitsi)
+
+- **Миграция `V007`:** поля **`presence_status`**, **`last_seen_at`** у **`users`**; таблицы **`conferences`**, **`conference_participants`**.
+- **Профиль:** в **`UserProfile`** добавлены **`presence_status`**, **`last_seen_at`**; **`PATCH /api/v1/users/me/presence`** (`presence_status`: online | away | dnd | offline); **`POST /api/v1/users/me/heartbeat`** обновляет **`last_seen_at`**.
+- **Медиа:** **`GET /api/v1/media/capabilities`** (публичный путь без JWT) — лимит загрузки, список типов сообщений с вложениями, STUN из **`WEBRTC_STUN_URIS`**, базовый URL Jitsi; изображения/видео как и раньше через **`POST /api/v1/files/upload`** и сообщения с типом **`image`** / **`video`** / **`file`**.
+- **Конференции:** создание в чате **`POST /api/v1/chats/{chat_id}/conferences`**, список, **`join_url`** на meet.jit.si (или **`JITSI_MEET_BASE_URL`**), участники join/leave/end; медиапоток не проходит через core-api — клиент открывает **`join_url`** или свой WebRTC.
+- **`AppConfig`:** **`media.max.upload.bytes`**, **`jitsi.meet.base.url`**, **`conference.room.prefix`**, **`webrtc.stun.uris`**.
+
+### 16:00 UTC — Единый контракт REST: snake_case по всему API
+
+- Все публичные DTO **`modules/core-api/.../dto`** используют **`@JsonProperty`** с **snake_case** в JSON (сообщения, чаты, контакты, пользователи, файлы, баны, MLS и т.д.).
+- Убраны **`@JsonAlias`** для camelCase: клиенты должны слать **`display_name`**, **`refresh_token`**, **`member_ids`** и т.п.
+- **`HealthReadyResponse.database_ok`** в **`common`** (зависимость **`jackson-annotations`** добавлена в **`modules/common`**).
+- **Не изменялись** DTO внутренних событий NATS (**`MessageSendEvent`**, **`ExportReplayJob`**, …) — формат очередей между сервисами прежний.
+
+### 15:30 UTC — Единый JSON для auth/admin DTO
+
+- **`RegisterResponse`:** **`user_id`**, **`display_name`** в JSON (совместимо с контрактом login/refresh).
+- **`RegisterRequest`:** **`display_name`** в JSON, **`displayName`** через **`@JsonAlias`**.
+- **`AdminSessionResponse`:** **`user_id`**, **`realm_roles`**, **`api_version`**.
+- Тест **`AuthDtoJsonTest`** — проверка имён полей при сериализации/десериализации.
+
+### 15:00 UTC — Refresh с телом как у login, OAuth JSON, Docker, WebSocket
+
+- **`POST /api/v1/auth/refresh`** возвращает **`LoginResponse`** (новые **`access_token`** / **`refresh_token`** / **`expires_in`**), а не пустое тело; **`AuthService.refreshAccessToken`**. Запрос принимает **`refresh_token`** или **`refreshToken`** (**`@JsonAlias`**).
+- **`LoginResponse`:** в JSON поля в стиле OAuth (**`access_token`**, **`refresh_token`**, **`expires_in`**).
+- **`docker-compose.dev-min.yml`:** у **`core-api`** переменные **`KEYCLOAK_MASTER_*`** и зависимость от сервиса **`keycloak`** (регистрация через Admin API внутри сети compose).
+- **`MessagingWebSocket`:** **`URLDecoder`** для query-параметра **`token`** (корректные JWT в URL).
+- **`smoke-auth.ps1`:** цепочка **login → refresh → admin/session** (ключ **`-SkipRefresh`** отключает refresh).
+
+### 14:30 UTC — Пакет из 10 этапов (регистрация, master, health, smoke)
+
+1. **Регистрация:** сначала создание пользователя в Keycloak; **`id` в PostgreSQL** берётся из **`Location`** ответа Admin API или из **`GET .../users?exact=true`** — совпадение **`sub`** и строки в **`users`** без лишнего upsert при первом логине.
+2. **409** от Keycloak при занятом имени → конфликт регистрации (как и раньше на уровне API).
+3. **`KEYCLOAK_MASTER_USER` / `KEYCLOAK_MASTER_PASSWORD`** и свойства **`keycloak.master.*`** — учётка realm **master** для **admin-cli** (не хардкод только в коде).
+4. **`JwtAuthFilter`:** без JWT доступны **`openapi.json`** / **`openapi.yaml`** (просмотр Swagger без логина).
+5. **`POST .../auth/refresh`:** при успешном ответе разбор **`access_token`** и **`upsertFromKeycloak`** (актуальный профиль после refresh).
+6. **`GET /api/v1/health/ready`** и DTO **`HealthReadyResponse`** — **`SELECT 1`** к БД; при недоступности PostgreSQL тело JSON и статус **503**.
+7. **`scripts/smoke-auth.ps1`** — логин и **`GET /api/v1/admin/session`** (выход **0** при успехе).
+8. **`run-core-api-local.ps1`:** значения по умолчанию для **`KEYCLOAK_MASTER_*`**.
+9. **`application.properties`:** комментарий и ключи master по умолчанию.
+10. Обновлён **`TEST_SERVER_READY.md`** (готовность и smoke).
+
+### 13:15 UTC — `@RolesAllowed`, админ API и OpenAPI Bearer
+
+- **`RolesAllowedDynamicFeature`** в **`JerseyConfig`** — Jakarta **`@RolesAllowed("admin")`** на ресурсах.
+- **`GET /api/v1/admin/session`** (**`AdminResource`**) — для учёток с realm-ролью **admin** возвращает `userId`, `username`, `realmRoles`, `apiVersion` (проверка UI после входа **csadmin**/admin).
+- **`ForbiddenExceptionMapper`** — ответ **403** с **`ApiError`**, без падения в общий 500.
+- **OpenAPI:** схема **`bearerAuth`** (JWT) в **`OpenApiConfig`**.
+
+### 13:00 UTC — Realm-роли Keycloak в `SecurityContext`
+
+- **`RealmRoleExtractor`** — разбор `realm_access.roles` из JWT.
+- **`UserPrincipal`** хранит набор realm-ролей; **`JwtAuthFilter`** выставляет **`isUserInRole(role)`** по ним (для `csadmin`/`admin` с ролью **`admin`** в токене).
+
+### 12:30 UTC — Тестовый суперпользователь `csadmin`
+
+- **`keycloak/avandocmsg-realm.json`:** пользователь **`csadmin` / `csadmin`** с realm-ролью **`admin`** — основная учётка для проверок и визуальной настройки сервера из клиента (рядом с существующим `admin`/`admin`).
+- **`scripts/TEST_SERVER_READY.md`:** таблица тестовых пользователей realm и напоминание про учётную запись консоли Keycloak.
+
+### 12:00 UTC — Авторизация Keycloak: ROPC, admin API, синхронизация `users`
+
+- **`keycloak/avandocmsg-realm.json`:** для клиентов `messenger-web` и `messenger-mobile` включено **`directAccessGrantsEnabled`** (password grant для API-логина).
+- **`AppConfig`:** `keycloakBaseUrl`, `keycloakMasterTokenEndpoint`, **`keycloakAdminRealmBase`** — корректные URL для master-токена и Admin REST (`/admin/realms/{realm}` вместо ошибочной подстановки).
+- **`AuthService`:** токен админа запрашивается у **realm `master`**; после успешного логина из access token читаются `sub`, `preferred_username`, `name` и вызывается **`UserRepository.upsertFromKeycloak`** — строка в PostgreSQL с `id = sub`, чтобы защищённые эндпоинты находили пользователя по JWT.
+
+### 09:15 UTC — Пайплайн, воркеры, интеграции
+
+- **NATS / пайплайн:** константы тем в `NatsSubjects`; после fan-out на `msg.deliver.{userId}` публикация метаданных в `msg.event.index`, `msg.event.push`, `msg.event.bot` (без тела сообщения в событии). DTO `MessageWorkerEvent` для downstream-воркеров.
+- **Отправка сообщений:** публикация в `msg.send` через `NatsSubjects.MSG_SEND`; в событие передаётся `clientMsgId` (исправление рассинхрона с дедупом).
+- **Воркеры:** у всех модулей Gradle добавлены исполняемые `main`, подписки на NATS (очереди где уместно), Logback.
+- **Архивация:** archiver — опциональная запись метаданных в Archive Postgres (`ARCHIVE_JDBC_URL`), затем публикация в `msg.event.deep-archive`.
+- **Deep archive:** потребление `msg.event.deep-archive`, опциональная запись JSON в MinIO.
+- **Индексация:** indexer — индекс в Solr только метаданных при `SOLR_URL` / `SOLR_ZK` (без plaintext для E2EE).
+- **Preview:** извлечение URL из `messages.content` в Hot DB (для не‑E2EE), SSRF-ограничения, TTL-кэш; переменные `PREVIEW_*`.
+- **Push / bot / export-replay:** MVP — разрешение устройств и вебхуков метаданными без текста сообщения; таблица `bot_webhook_subscriptions` (миграция V006); export-replay — потребление `msg.export.replay`, запись stub-файла, опционально `msg.export.replay.complete`.
+- **Общее:** `HikariDataSources` в `common`; `ExportReplayJob` / `ExportReplayCompleteEvent`.
+- **WebSocket:** подписка на доставку использует префикс из `NatsSubjects.MSG_DELIVER_PREFIX`.
+- **REST:** `POST /api/v1/chats/{chatId}/export` — постановка задачи экспорта в NATS (`msg.export.replay`) для ролей **owner** и **admin** (см. код).
+
+### 10:40 UTC — NATS JetStream (опционально)
+
+- Стрим `MESSAGING` для темы `msg.send` (`JetStreamMessagingSetup` в `common`). В **core-api**: `nats.jetstream` / env `NATS_JETSTREAM` — публикация через `JetStream.publish` при старте создаёт/проверяет стрим. В **message-pipeline**: env `NATS_JETSTREAM=true` — push-подписка с durable `pipeline-msg-send`, ручной **ack/nak** после fan-out и `msg.event.*`. Включать **оба** сервиса с JetStream одновременно.  
+- **Зависимости:** `modules/common` тянет `jnats` (общая настройка стрима).  
+- **Тесты:** `MessageService` принимает `Optional<JetStream>`; unit-тесты с `Optional.empty()`.
+
+| Тема | Комментарий (уточнение к ТЗ) |
+|------|------------------------------|
+| JetStream / at-least-once | Режим **опция**; `msg.event.*`, `msg.deliver.*`, `msg.export.replay` по умолчанию без стримов. Полное покрытие JetStream не заявлено. |
+
+### 11:55 UTC — Rate-limit auth (Redis)
+
+- Опционально `rate.limit.auth.enabled=true` / env `RATE_LIMIT_AUTH_ENABLED` — Redis при старте; счётчики по IP (`X-Forwarded-For` или remote): логин — окно 60 с, по умолчанию 60/мин; регистрация — окно 1 ч, по умолчанию 5/ч. Lua `INCR`+`EXPIRE`, при ошибке Redis — **fail-open**. Ответ **429** с `ApiError`. Класс `AuthRateLimiter`, закрытие Redis в `MessengerApplication.stop()`.
+
+| Источник | Комментарий |
+|----------|-------------|
+| `tz_revision_proposal.md` (rate-limit) | Реализован **первый слой** только для `/v1/auth/login` и `/v1/auth/register`; остальные API — не охвачены. |
+
+### 14:05 UTC — Unit-тесты, целостность сборки, исправление noop
+
+- **Тесты:** `modules/common` (`MessageWorkerEvent`, `NatsSubjects`), `modules/core-api` (`AuthRateLimiter`, `ExportResource` через JDK `Proxy`/`stub`; `AppConfigRateLimitDefaultsTest` с `assume` при env), `modules/workers/preview` (`UrlExtractor`, `SsrfGuard`, `TtlStringCache`), `modules/ws-gateway` (`WsTokenValidator`).
+- **Исправление:** `AuthRateLimiter.noop()` — NPE в `allowLogin`/`allowRegister` из‑за порядка вычисления аргументов; ранний выход `if (!enabled) return true`.
+- **Сборка:** задача Gradle **`buildIntegrity`** — `build` во всех подпроектах (`gradlew buildIntegrity`). JVM для тестов: `-Dnet.bytebuddy.experimental=true`.
+- **Бэклог:** воркеры без отдельных тестов; JaCoCo — по необходимости.
+
+### 14:10 UTC — Отклонения от `tz_full.html` (сводка)
+
+| Тема | В ТЗ (полное HTML) | Факт в проекте |
+|------|---------------------|----------------|
+| Версия Java | 17 | Целевая **25** (`build.gradle.kts`) — осознанное расхождение. |
+| Регистрация §7 | Телефон + SMS OTP | Логин/пароль и **Keycloak** — ближе к MD, не к §7 HTML. |
+| Поиск сообщений | Solr + ACL | API поиска — SQL; Solr у indexer при настройке окружения. |
+| NATS | JetStream, at-least-once | По умолчанию core NATS; JetStream для `msg.send` — **опция** (см. блок **10:40 UTC**). |
+| E2EE сообщений | §24 | **`MlsService` не RFC 9420**; цель — MLS по MD. |
+| Клиенты | Web / Android / Desktop | В репозитории — сервер и воркеры. |
+| Экспорт | по ТЗ | Воркер-заглушка + **POST экспорта**; полный compliance — не завершён. |
+
+---
+
+## Как вести журнал дальше
+
+1. Новые записи добавляйте **в начало** файла под заголовок **`## ГГГГ-ММ-ДД`**.
+2. Несколько изменений за один день — подзаголовки **`### ЧЧ:ММ UTC — краткое название`** (или локальный пояс, если договорились иначе).
+3. «Отклонения от ТЗ» переносите в общую таблицу при необходимости или дублируйте ссылку на время блока.
+4. По возможности сверяйте дату/время с **`git log --format=%ci`** для точности.

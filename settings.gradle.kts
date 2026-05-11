@@ -1,0 +1,17 @@
+rootProject.name = "avandocmsg-messenger"
+
+include(
+    "modules:common",
+    "modules:core-api",
+    "modules:web-client",
+    "modules:ws-gateway",
+    "modules:workers:message-pipeline",
+    "modules:workers:archiver",
+    "modules:workers:deep-archiver",
+    "modules:workers:indexer",
+    "modules:workers:preview",
+    "modules:workers:push",
+    "modules:workers:bot-delivery",
+    "modules:workers:export-replay",
+    "modules:workers:retention"
+)

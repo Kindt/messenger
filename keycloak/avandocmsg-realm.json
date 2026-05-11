@@ -1,0 +1,127 @@
+{
+  "realm": "avandocmsg",
+  "displayName": "AvandocMsg.Messenger",
+  "enabled": true,
+  "registrationAllowed": true,
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": false,
+  "bruteForceProtected": true,
+  "sslRequired": "none",
+
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "System",
+      "lastName": "Admin",
+      "credentials": [{
+        "type": "password",
+        "value": "admin",
+        "temporary": false
+      }],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "csadmin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Console",
+      "lastName": "Superuser",
+      "credentials": [{
+        "type": "password",
+        "value": "csadmin",
+        "temporary": false
+      }],
+      "realmRoles": ["admin"]
+    }
+  ],
+
+  "roles": {
+    "realm": [
+      { "name": "user", "description": "Regular user" },
+      { "name": "admin", "description": "System administrator" }
+    ]
+  },
+
+  "clients": [
+    {
+      "clientId": "messenger-web",
+      "name": "Messenger Web Client",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:3000/*"],
+      "webOrigins": ["http://localhost:3000"],
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true
+    },
+    {
+      "clientId": "messenger-mobile",
+      "name": "Messenger Mobile Client",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true
+    },
+    {
+      "clientId": "messenger-desktop",
+      "name": "Messenger Desktop Client",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true
+    },
+    {
+      "clientId": "messenger-bot-api",
+      "name": "Bot API Client",
+      "enabled": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    }
+  ],
+
+  "identityProviders": [
+    {
+      "alias": "google",
+      "displayName": "Google",
+      "providerId": "google",
+      "enabled": false,
+      "storeToken": false,
+      "config": {
+        "clientId": "${env.GOOGLE_CLIENT_ID:-}",
+        "clientSecret": "${env.GOOGLE_CLIENT_SECRET:-}",
+        "defaultScope": "openid profile email"
+      }
+    },
+    {
+      "alias": "yandex",
+      "displayName": "Yandex",
+      "providerId": "oidc",
+      "enabled": false,
+      "storeToken": false,
+      "config": {
+        "clientId": "${env.YANDEX_CLIENT_ID:-}",
+        "clientSecret": "${env.YANDEX_CLIENT_SECRET:-}",
+        "authorizationUrl": "https://oauth.yandex.ru/authorize",
+        "tokenUrl": "https://oauth.yandex.ru/token",
+        "userInfoUrl": "https://login.yandex.ru/info",
+        "clientAuthMethod": "post",
+        "defaultScope": "openid profile email"
+      }
+    }
+  ],
+
+  "identityProviderMappers": [
+    {
+      "name": "google-domain-mapper",
+      "identityProviderAlias": "google",
+      "identityProviderMapper": "oidc-username-idp-mapper",
+      "config": {
+        "syncMode": "IMPORT"
+      }
+    }
+  ]
+}

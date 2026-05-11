@@ -1,0 +1,14 @@
+# Контекст сборки для docker/Dockerfile.* (compose: context: ..)
+.git
+.gradle
+**/build
+.idea
+.vscode
+.cursor
+*.iml
+
+# Не нужны для Gradle-сборки Java-модулей внутри образа
+keycloak
+docs
+scripts
+tz_full.html
