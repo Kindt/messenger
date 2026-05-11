@@ -29,11 +29,11 @@ subprojects {
     dependencies {
         testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
         testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.2")
-        testImplementation("org.mockito:mockito-core:5.14.0") {
+        testImplementation("org.mockito:mockito-core:5.23.0") {
             exclude("net.bytebuddy", "byte-buddy")
             exclude("net.bytebuddy", "byte-buddy-agent")
         }
-        testImplementation("org.mockito:mockito-junit-jupiter:5.14.0")
+        testImplementation("org.mockito:mockito-junit-jupiter:5.23.0")
         testImplementation("net.bytebuddy:byte-buddy:1.18.8")
         testImplementation("net.bytebuddy:byte-buddy-agent:1.18.8")
     }
