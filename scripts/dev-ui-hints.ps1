@@ -1,7 +1,15 @@
 # Prints dev URLs and test logins (realm avandocmsg). Run: .\scripts\dev-ui-hints.ps1
+# Help: .\scripts\dev-ui-hints.ps1 -Help
 param(
-    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot)
+    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
+    [switch]$Help
 )
+
+if ($Help) {
+    Write-Host "Usage: .\scripts\dev-ui-hints.ps1 [-RepoRoot <path>] [-Help]"
+    Write-Host "  Default repo root: parent of scripts/. Linux/macOS: ./scripts/dev-ui-hints.sh --help"
+    exit 0
+}
 
 function Read-KorusWebLbPort([string]$Root) {
     $p = Join-Path $Root "korus-web\.env"

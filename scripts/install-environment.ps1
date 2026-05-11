@@ -2,13 +2,22 @@
 # Install missing tools then verify: .\scripts\install-environment.ps1 -SilentInstall
 # Same, minimal output: .\scripts\install-environment.ps1 -SilentInstall -Quiet
 # Install only: .\scripts\install-env-silent.ps1   |   Quiet: .\scripts\install-env-silent.ps1 -Quiet
+# Help: .\scripts\install-environment.ps1 -Help
 
 param(
     [switch]$SilentInstall,
-    [switch]$Quiet
+    [switch]$Quiet,
+    [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
+if ($Help) {
+    Write-Host "Usage: .\scripts\install-environment.ps1 [-SilentInstall] [-Quiet] [-Help]"
+    Write-Host "  -SilentInstall: run install-env-silent.ps1 then verify docker/java/gradlew."
+    Write-Host "  -Quiet: minimal output (combine with -SilentInstall for silent setup)."
+    Write-Host "  Linux/macOS: ./scripts/install-environment.sh --help"
+    exit 0
+}
 $Root = Split-Path -Parent $PSScriptRoot
 
 $korusLib = Join-Path $PSScriptRoot "lib\korus-env.ps1"
@@ -88,5 +97,6 @@ if (-not (Test-Path $gradlewBat) -and -not (Test-Path $gradlew)) {
 if ($Quiet) {
     Write-Host "[OK] environment check (docker, java, gradle wrapper)" -ForegroundColor Green
 } else {
+    Write-Host "Next: .\scripts\create-stand.ps1 min then .\scripts\start.ps1 min (or full; see README.md)." -ForegroundColor DarkGray
     Write-Host "=== Environment check complete ===" -ForegroundColor Cyan
 }

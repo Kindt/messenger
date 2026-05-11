@@ -1,11 +1,17 @@
-# Быстрая проверка стека korus-web (Java web-client за nginx-lb).
-# Условия: docker compose в каталоге korus-web поднят, порт lb по умолчанию 9088.
+# Smoke korus-web stack (Java web-client behind nginx-lb). Needs stack up; default lb port 9088.
+# Help: .\scripts\smoke-korus-web.ps1 -Help
 param(
     [string]$WebBaseUrl = "http://localhost:9088",
-    # Проверить цепочку lb → web-client → core-api (нужен доступный WEB_CLIENT_API_UPSTREAM).
-    [switch]$CheckApi
+    # Check lb -> web-client -> core-api (needs WEB_CLIENT_API_UPSTREAM).
+    [switch]$CheckApi,
+    [switch]$Help
 )
 $ErrorActionPreference = "Stop"
+if ($Help) {
+    Write-Host "Usage: .\scripts\smoke-korus-web.ps1 [-WebBaseUrl <url>] [-CheckApi] [-Help]"
+    Write-Host "  Default URL: http://localhost:9088. Linux/macOS: ./scripts/smoke-korus-web.sh --help"
+    exit 0
+}
 
 function Fail([string]$msg) {
     Write-Host "[FAIL] $msg" -ForegroundColor Red

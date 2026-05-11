@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# korus-web stack. From repo root: ./scripts/korus-web-up.sh [--attach] [--build]
+# korus-web stack. From repo root: ./scripts/korus-web-up.sh [--attach|-a] [--build|-b] [--skip-ensure|-S]
 set -euo pipefail
 
 ATTACH=false
@@ -9,8 +9,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --attach|-a) ATTACH=true ;;
     --build|-b) BUILD=true ;;
+    --skip-ensure|-S) SKIP_KORUS_ENSURE=1 ;;
     -h|--help)
-      echo "Usage: $0 [--attach|-a] [--build|-b]  (SKIP_KORUS_ENSURE=1 to skip install check)"
+      echo "Usage: $0 [--attach|-a] [--build|-b] [--skip-ensure|-S]"
+      echo "  Env SKIP_KORUS_ENSURE=1 also skips install-environment."
       exit 0
       ;;
     *)

@@ -1,13 +1,21 @@
 # Start Docker stand (dev-min or full-server). From repo root: .\scripts\start.ps1 [min|full]
 # Sets KORUS_* env vars, runs install check / silent install, then docker compose (2 attempts).
+# Skip tooling: -SkipEnsure or env SKIP_KORUS_ENSURE=1 (same as start.sh --skip-ensure).
+# Help: .\scripts\start.ps1 -Help
 param(
     [Parameter(Position = 0)]
     [ValidateSet("min", "full")]
     [string]$Stand = "min",
-    [switch]$SkipEnsure
+    [switch]$SkipEnsure,
+    [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
+if ($Help) {
+    Write-Host "Usage: .\scripts\start.ps1 [min|full] [-SkipEnsure]  (default stand: min)"
+    Write-Host "  Env SKIP_KORUS_ENSURE=1 skips tooling (same as -SkipEnsure). Linux/macOS: ./scripts/start.sh --help"
+    exit 0
+}
 $Root = Split-Path -Parent $PSScriptRoot
 $Lib = Join-Path $PSScriptRoot "lib\korus-env.ps1"
 if (-not (Test-Path $Lib)) {
@@ -17,7 +25,8 @@ if (-not (Test-Path $Lib)) {
 
 Set-KorusPathEnvironment -RepoRoot $Root
 
-if (-not $SkipEnsure) {
+$skipEnsure = $SkipEnsure -or ($env:SKIP_KORUS_ENSURE -eq "1")
+if (-not $skipEnsure) {
     try {
         Invoke-KorusEnsureDevTooling -ScriptsRoot $PSScriptRoot
     } catch {

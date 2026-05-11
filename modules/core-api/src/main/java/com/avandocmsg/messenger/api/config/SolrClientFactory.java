@@ -2,7 +2,7 @@ package com.avandocmsg.messenger.api.config;
 
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
-import org.apache.solr.client.solrj.impl.Http2SolrClient;
+import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,8 +29,9 @@ public final class SolrClientFactory {
         var zk = config.solrZkHosts();
         if (!zk.isBlank()) {
             var zkHosts = List.of(zk.split("\\s*,\\s*"));
-            var client = new CloudSolrClient.Builder(zkHosts, Optional.empty()).build();
-            client.setDefaultCollection(config.solrCollection());
+            var client = new CloudSolrClient.Builder(zkHosts, Optional.empty())
+                    .withDefaultCollection(config.solrCollection())
+                    .build();
             log.info("Solr Cloud client for collection {}", config.solrCollection());
             return new Binding(client, true);
         }
@@ -39,7 +40,7 @@ public final class SolrClientFactory {
             var base = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
             var collection = config.solrCollection();
             var coreUrl = base.contains("/solr/" + collection) ? base : base + "/solr/" + collection;
-            var client = new Http2SolrClient.Builder(coreUrl).build();
+            var client = new HttpJdkSolrClient.Builder(coreUrl).build();
             log.info("Solr HTTP client baseUrl={}", coreUrl);
             return new Binding(client, false);
         }

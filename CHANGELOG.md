@@ -8,6 +8,62 @@
 
 ## [Unreleased]
 
+### 2026-05-13 16:00 UTC — SolrJ **10**: API клиента и запросов
+
+- **`modules/core-api`**: **`SolrQuery`** → **`org.apache.solr.client.solrj.request`**, **`HttpJdkSolrClient`** вместо **`Http2SolrClient`**, **`CloudSolrClient.Builder.withDefaultCollection`** вместо **`setDefaultCollection`**.
+- **`modules/workers/indexer`**: то же для **`main`**; URL к коллекции через **`/solr/`** как в **`SolrClientFactory`**.
+
+### 2026-05-13 15:20 UTC — **`.cmd`** для smoke / hints; **`install-env-silent` —help**
+
+- **`scripts/smoke-korus-web.cmd`**, **`scripts/dev-ui-hints.cmd`**: запуск одноимённых **`.ps1`** из **`cmd.exe`** (**`%*`**).
+- **`scripts/install-env-silent.ps1`**, **`scripts/install-env-silent.sh`**: **`-Help`** / **`--help`** / **`-h`**.
+- **`README.md`**: таблица и полный список **`.cmd`** в строке **clean/create-stand**.
+- **`scripts/TEST_SERVER_READY.md`**: **`smoke-korus-web.cmd`**, **`-Help`**.
+
+### 2026-05-13 15:10 UTC — **`-Help` / `--help`**: `install-environment`, `smoke-korus-web`, `dev-ui-hints`
+
+- **`scripts/install-environment.ps1`**, **`scripts/install-environment.sh`**: справка **`-Help`** / **`--help`** / **`-h`** (в начале).
+- **`scripts/smoke-korus-web.ps1`**: **`-Help`**; комментарий в шапке на **ASCII**.
+- **`scripts/dev-ui-hints.ps1`**, **`scripts/dev-ui-hints.sh`**: **`-Help`** / **`--help`**; в **`.sh`** лишние аргументы — ошибка.
+- **`README.md`**: таблица документации.
+
+### 2026-05-13 15:00 UTC — Jackson в **`modules:common`**: BOM **2.21.3**
+
+- **`modules/common/build.gradle.kts`**: **`com.fasterxml.jackson:jackson-bom:2.21.3`** (**`api(platform(...))`**) и артефакты **без жёсткой версии** — согласованный набор (**`databind`** = **2.21.x** с тремя сегментами, **`annotations`** = **2.21** по BOM). Ранее **`2.21`** для **`databind`** и **`2.21.2`** для **`annotations`** не совпадали с Central → **Could not resolve**.
+
+### 2026-05-13 14:30 UTC — **`.cmd`** для full-stack / web; **`-Help`** в подъёмных **`.ps1`**
+
+- **`scripts/full-stack-up.cmd`**, **`scripts/full-stack-down.cmd`**, **`scripts/dev-web-stack-up.cmd`**, **`scripts/korus-web-up.cmd`**: запуск одноимённых **`.ps1`** из **`cmd.exe`** (**`%*`**).
+- **`scripts/start.ps1`**, **`scripts/create-stand.ps1`**, **`scripts/full-stack-up.ps1`**, **`scripts/dev-web-stack-up.ps1`**, **`scripts/korus-web-up.ps1`**: переключатель **`-Help`** (краткий usage и **exit 0** до загрузки **`korus-env`**).
+- **`scripts/full-stack-down.ps1`**: текст **`-Help`** — также **`scripts\full-stack-down.cmd`**.
+- **`README.md`**: таблица (**`start.cmd`**, **`full-stack-*.cmd`**, **`-Help`**).
+
+### 2026-05-13 14:00 UTC — Справка: `clean`, `full-stack-down`
+
+- **`scripts/clean.sh`**, **`scripts/full-stack-down.sh`**: **`--help`** / **`-h`**; у **`full-stack-down.sh`** лишние аргументы — ошибка.
+- **`scripts/clean.ps1`**: **`-Help`**.
+- **`scripts/full-stack-down.ps1`**: **`-Help`**.
+- **`README.md`**: уточнения в таблице.
+
+### 2026-05-13 13:00 UTC — Документация: Eclipse и classpath Gradle
+
+- **`docs/CI_AND_REPO_HYGIENE.md`**: раздел **Eclipse (Buildship)** — импорт корня монорепо, **JDK 25**, **Refresh Gradle Project** при ошибках **`com.fasterxml`** / **`java.nio cannot be resolved`**.
+- **`README.md`**: ссылка в таблице документации на раздел про Eclipse.
+- Удалены файлы **`.vscode/`** из репозитория; **`.gitignore`** снова целиком игнорирует **`.vscode/`**.
+
+### 2026-05-13 12:45 UTC — `SKIP_KORUS_ENSURE` в подъёмных **`.ps1`**, `--skip-ensure` в **`.sh`**
+
+- **`scripts/start.ps1`**, **`scripts/full-stack-up.ps1`**, **`scripts/dev-web-stack-up.ps1`**, **`scripts/korus-web-up.ps1`**: **`$env:SKIP_KORUS_ENSURE -eq '1'`** эквивалентно **`-SkipEnsure`** (как в **`create-stand.ps1`**).
+- **`scripts/start.sh`**: разбор **`--skip-ensure`** / **`-S`**, **`--help`**, **`min`/`full`**; исправлена строка **Keycloak** в подсказках.
+- **`scripts/full-stack-up.sh`**, **`scripts/dev-web-stack-up.sh`**, **`scripts/korus-web-up.sh`**: флаг **`--skip-ensure`** / **`-S`** и обновлённый **`--help`**.
+- **`README.md`**: таблица документации.
+
+### 2026-05-12 23:30 UTC — `create-stand.sh`: `--skip-ensure` / `-S`, подсказки в `install-environment`
+
+- **`scripts/create-stand.sh`**: разбор аргументов **`--skip-ensure`** / **`-S`**, **`--help`**, позиция **`min`/`full`** в любом порядке с флагами; **`SKIP_KORUS_ENSURE=1`** по-прежнему действует.
+- **`scripts/install-environment.ps1`**, **`scripts/install-environment.sh`**: после успешной проверки (не в **`-Quiet`**) — одна строка «дальше: **create-stand** + **start**» со ссылкой на **README**.
+- **`README.md`**: флаги **`create-stand.sh`**.
+
 ### 2026-05-12 23:15 UTC — GitHub Actions: Node 24 (checkout, setup-java, wrapper-validation)
 
 - **`.github/workflows/ci.yml`**: **`actions/checkout@v6`**, **`actions/setup-java@v5`**, **`gradle/actions/wrapper-validation@v5`** — рантайм экшенов на Node.js **24**, без предупреждений о deprecated Node.js **20**.

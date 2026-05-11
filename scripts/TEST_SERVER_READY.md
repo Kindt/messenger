@@ -90,7 +90,7 @@
   `docker compose -f docker/docker-compose.dev-min.yml --profile web up -d`  
   Для **`korus-web`** в **`.env`**: **`KORUS_WS_GATEWAY_PORT=8082`** (см. **`korus-web/.env.example`**). Если для **core-api** включён **JetStream** (**`NATS_JETSTREAM=true`**), задайте то же для **message-pipeline**.
 
-Проверка lb/UI: **`.\scripts\smoke-korus-web.ps1`** или **`./scripts/smoke-korus-web.sh`** (по умолчанию **`http://localhost:9088`**; **`-WebBaseUrl`** / **`--url`** при другом порте; **`-CheckApi`** / **`--check-api`** — **`GET …/api/v1/health`** через прокси web-client). Поднять профиль **`web`**: **`.\scripts\dev-web-stack-up.ps1`** или **`./scripts/dev-web-stack-up.sh`** (**`-Build`** / **`--build`**; **`-SkipEnsure`** / **`SKIP_KORUS_ENSURE=1`** — без проверки/установки окружения; см. **`README.md`**).
+Проверка lb/UI: **`.\scripts\smoke-korus-web.ps1`**, **`scripts\smoke-korus-web.cmd`** или **`./scripts/smoke-korus-web.sh`** (по умолчанию **`http://localhost:9088`**; **`-WebBaseUrl`** / **`--url`** при другом порте; **`-Help`** / **`--help`**; **`-CheckApi`** / **`--check-api`** — **`GET …/api/v1/health`** через прокси web-client). Поднять профиль **`web`**: **`.\scripts\dev-web-stack-up.ps1`** или **`./scripts/dev-web-stack-up.sh`** (**`-Build`** / **`--build`**; **`-SkipEnsure`** / **`SKIP_KORUS_ENSURE=1`** — без проверки/установки окружения; см. **`README.md`**).
 
 
 Опционально воркер ретенции (**`RetentionWorker`**, образ **`docker/Dockerfile.retention-worker`**):  

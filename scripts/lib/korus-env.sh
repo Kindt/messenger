@@ -51,3 +51,17 @@ korus_compose_in_dir_retry() {
   done
   return 1
 }
+
+# docker compose -f FILE ... (pull, build, down, etc.)
+korus_compose_file_retry() {
+  local compose_file="$1"
+  shift
+  local i
+  for i in 1 2; do
+    if docker compose -f "$compose_file" "$@"; then
+      return 0
+    fi
+    sleep 10
+  done
+  return 1
+}

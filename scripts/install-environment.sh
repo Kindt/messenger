@@ -3,6 +3,14 @@
 # Тихая установка (Debian/Ubuntu): ./scripts/install-env-silent.sh
 set -euo pipefail
 
+for arg in "$@"; do
+  if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then
+    echo "Usage: $0 [--silent-install|-s] [--quiet|-q]"
+    echo "  Проверка docker, java, gradlew. Windows: .\\scripts\\install-environment.ps1 -Help"
+    exit 0
+  fi
+done
+
 SILENT_INSTALL=0
 QUIET=0
 for arg in "$@"; do
@@ -72,5 +80,6 @@ fi
 if [[ "$QUIET" == "1" ]]; then
   echo "[OK] environment check (docker, java, gradle wrapper)"
 else
+  echo "Далее: ./scripts/create-stand.sh min && ./scripts/start.sh min (или full; см. README.md)."
   echo "=== Проверка завершена ==="
 fi

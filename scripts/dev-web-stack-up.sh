@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# docker/docker-compose.dev-min.yml with profile web. From repo root: ./scripts/dev-web-stack-up.sh [--build]
+# docker/docker-compose.dev-min.yml with profile web.
+# From repo root: ./scripts/dev-web-stack-up.sh [--build|-b] [--skip-ensure|-S]
 set -euo pipefail
 
 BUILD=false
@@ -7,8 +8,10 @@ SKIP_KORUS_ENSURE="${SKIP_KORUS_ENSURE:-0}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --build|-b) BUILD=true ;;
+    --skip-ensure|-S) SKIP_KORUS_ENSURE=1 ;;
     -h|--help)
-      echo "Usage: $0 [--build|-b]  (SKIP_KORUS_ENSURE=1 to skip install check)"
+      echo "Usage: $0 [--build|-b] [--skip-ensure|-S]"
+      echo "  Env SKIP_KORUS_ENSURE=1 also skips install-environment."
       exit 0
       ;;
     *)

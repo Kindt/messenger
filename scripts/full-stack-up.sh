@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
-# docker/docker-compose.full-server.yml from repo root: ./scripts/full-stack-up.sh [--build|-b]
+# docker/docker-compose.full-server.yml from repo root:
+#   ./scripts/full-stack-up.sh [--build|-b] [--skip-ensure|-S]
 # Sets KORUS_* env, ensure tooling, compose with retry.
 set -euo pipefail
 
 BUILD=false
+SKIP_KORUS_ENSURE="${SKIP_KORUS_ENSURE:-0}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --build|-b) BUILD=true ;;
+    --skip-ensure|-S) SKIP_KORUS_ENSURE=1 ;;
     -h|--help)
-      echo "Usage: $0 [--build|-b]"
+      echo "Usage: $0 [--build|-b] [--skip-ensure|-S]"
+      echo "  Env SKIP_KORUS_ENSURE=1 also skips install-environment."
       exit 0
       ;;
     *)
@@ -26,7 +30,7 @@ source "$SCRIPT_DIR/lib/korus-env.sh"
 
 korus_set_path_env "$ROOT"
 
-if [[ "${SKIP_KORUS_ENSURE:-0}" != "1" ]]; then
+if [[ "$SKIP_KORUS_ENSURE" != "1" ]]; then
   korus_ensure_env "$ROOT" || exit 1
 fi
 

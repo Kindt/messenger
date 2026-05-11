@@ -1,11 +1,19 @@
 # korus-web stack (docker compose in korus-web/). -Attach: docker-compose.attach.yml (network korus_messenger_dev_min).
+# Skip tooling: -SkipEnsure or env SKIP_KORUS_ENSURE=1 (same as korus-web-up.sh --skip-ensure).
+# Help: .\scripts\korus-web-up.ps1 -Help
 param(
     [switch]$Attach,
     [switch]$Build,
-    [switch]$SkipEnsure
+    [switch]$SkipEnsure,
+    [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
+if ($Help) {
+    Write-Host "Usage: .\scripts\korus-web-up.ps1 [-Attach] [-Build] [-SkipEnsure]"
+    Write-Host "  Env SKIP_KORUS_ENSURE=1 skips tooling. Linux/macOS: ./scripts/korus-web-up.sh --help"
+    exit 0
+}
 $Root = Split-Path -Parent $PSScriptRoot
 $Lib = Join-Path $PSScriptRoot "lib\korus-env.ps1"
 if (-not (Test-Path $Lib)) {
@@ -23,7 +31,8 @@ if ($Attach -and -not (Test-Path $env:KORUS_KORUS_WEB_COMPOSE_ATTACH)) {
     Write-Error "Not found: $($env:KORUS_KORUS_WEB_COMPOSE_ATTACH)"
 }
 
-if (-not $SkipEnsure) {
+$skipEnsure = $SkipEnsure -or ($env:SKIP_KORUS_ENSURE -eq "1")
+if (-not $skipEnsure) {
     try {
         Invoke-KorusEnsureDevTooling -ScriptsRoot $PSScriptRoot
     } catch {

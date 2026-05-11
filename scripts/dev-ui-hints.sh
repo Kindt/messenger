@@ -3,6 +3,16 @@
 # Из корня репозитория: ./scripts/dev-ui-hints.sh
 set -euo pipefail
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  echo "Usage: $0"
+  echo "  Repo root is fixed (parent of scripts/). Windows: .\\scripts\\dev-ui-hints.ps1 -Help"
+  exit 0
+fi
+if [[ $# -gt 0 ]]; then
+  echo "Unknown argument: $1 (try --help)" >&2
+  exit 1
+fi
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 read_lb_port() {
   local f="$ROOT/korus-web/.env"

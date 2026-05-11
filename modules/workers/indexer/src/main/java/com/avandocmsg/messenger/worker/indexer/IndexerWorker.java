@@ -8,7 +8,7 @@ import io.nats.client.Nats;
 import io.nats.client.Options;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
-import org.apache.solr.client.solrj.impl.Http2SolrClient;
+import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
 import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,15 +145,16 @@ public class IndexerWorker {
 
         if (zk != null && !zk.isBlank()) {
             var zkHosts = List.of(zk.split("\\s*,\\s*"));
-            client = new CloudSolrClient.Builder(zkHosts, Optional.empty()).build();
-            ((CloudSolrClient) client).setDefaultCollection(collection);
+            client = new CloudSolrClient.Builder(zkHosts, Optional.empty())
+                    .withDefaultCollection(collection)
+                    .build();
             cloud = true;
             enabled = true;
             log.info("Solr Cloud mode ZK={} collection={}", zk, collection);
         } else if (solrUrl != null && !solrUrl.isBlank()) {
             var base = solrUrl.endsWith("/") ? solrUrl.substring(0, solrUrl.length() - 1) : solrUrl;
-            var coreUrl = base.contains("/solr/" + collection) ? base : base + "/" + collection;
-            client = new Http2SolrClient.Builder(coreUrl).build();
+            var coreUrl = base.contains("/solr/" + collection) ? base : base + "/solr/" + collection;
+            client = new HttpJdkSolrClient.Builder(coreUrl).build();
             enabled = true;
             log.info("Solr HTTP mode baseUrl={}", coreUrl);
         }

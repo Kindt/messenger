@@ -1,27 +1,41 @@
 #!/bin/bash
-# Unix/macOS. На Windows: scripts\clean.ps1 или scripts\clean.cmd
+# Unix/macOS. From repo root: ./scripts/clean.sh [min|full|all]
+# Windows: scripts\clean.ps1
 set -euo pipefail
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  echo "Usage: $0 [min|full|all]  (default: min)"
+  echo "  min|full: docker compose down -v for that compose file."
+  echo "  all: best-effort down for both stacks, then docker system prune -f."
+  exit 0
+fi
 
 STAND_TYPE="${1:-min}"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=lib/korus-env.sh
+source "$SCRIPT_DIR/lib/korus-env.sh"
+
+korus_set_path_env "$ROOT"
+
 echo "=== Cleaning AvandocMsg stand: $STAND_TYPE ==="
+
+cd "$ROOT"
 
 case "$STAND_TYPE" in
     min)
-        cd ../docker
-        docker compose -f docker-compose.dev-min.yml down -v
+        korus_compose_file_retry "$KORUS_COMPOSE_DEV_MIN" down -v || exit 1
         echo "Stand 'min' cleaned (volumes removed)"
         ;;
     full)
-        cd ../docker
-        docker compose -f docker-compose.full-server.yml down -v
+        korus_compose_file_retry "$KORUS_COMPOSE_FULL_SERVER" down -v || exit 1
         echo "Stand 'full' (full-server) cleaned (volumes removed)"
         ;;
     all)
-        cd ../docker
-        docker compose -f docker-compose.dev-min.yml down -v 2>/dev/null || true
-        docker compose -f docker-compose.full-server.yml down -v 2>/dev/null || true
-        docker system prune -f
+        korus_compose_file_retry "$KORUS_COMPOSE_DEV_MIN" down -v || true
+        korus_compose_file_retry "$KORUS_COMPOSE_FULL_SERVER" down -v || true
+        docker system prune -f || true
         echo "All stands cleaned (dev-min + full-server)"
         ;;
     *)

@@ -1,6 +1,7 @@
 dependencies {
-    api("com.fasterxml.jackson.core:jackson-databind:2.21")
-    api("com.fasterxml.jackson.core:jackson-annotations:2.21")
+    api(platform("com.fasterxml.jackson:jackson-bom:2.21.3"))
+    api("com.fasterxml.jackson.core:jackson-databind")
+    api("com.fasterxml.jackson.core:jackson-annotations")
     api("com.zaxxer:HikariCP:5.1.0")
     api("org.postgresql:postgresql:42.7.1")
     api("io.nats:jnats:2.17.4")

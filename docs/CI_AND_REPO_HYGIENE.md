@@ -34,6 +34,20 @@
 
 После добавления атрибутов при необходимости один раз нормализуйте **`gradlew`** в индексе git (**`git add --renormalize gradlew`**) на машине разработчика.
 
+## Eclipse (Buildship) и classpath
+
+Проект собирается **Gradle**, язык **Java 25**. Ошибки вроде **`The import com.fasterxml cannot be resolved`** или **`The import java.nio cannot be resolved`** в Eclipse почти всегда означают, что IDE **не видит classpath Gradle** или подключён **не JDK 25**.
+
+| Шаг | Действие |
+|-----|----------|
+| Плагин | Установить **Buildship Gradle Integration** (в дистрибутивах *Enterprise Java* обычно уже есть). |
+| Импорт | **File → Import → Gradle → Existing Gradle Project** — каталог **корня** репозитория (где **`settings.gradle.kts`** и **`gradlew`**), не отдельный **`modules/...`** как сырой Java-проект. |
+| JDK | **Window → Preferences → Java → Installed JREs** — добавить **JDK 25** (не «обрезанный» JRE без `java.compiler`/`jmods`). В **Java → Compiler** для workspace или проекта — **25**. |
+| Обновление classpath | ПКМ по корневому Gradle-проекту → **Gradle → Refresh Gradle Project** (после смены ветки или **`build.gradle.kts`**). |
+| «Unbound» JRE | **Project Properties → Java Build Path → Libraries** — убрать битую **JRE System Library**, при необходимости **Gradle → Refresh** заново. |
+
+Если **`./gradlew buildIntegrity`** из терминала проходит, а Eclipse ругается на импорты — проблема в настройке Eclipse/Buildship, а не в зависимостях репозитория.
+
 ## Связанные документы
 
 - Готовность стенда и ручные смоки: **`scripts/TEST_SERVER_READY.md`**

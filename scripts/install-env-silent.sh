@@ -5,6 +5,15 @@
 # Минимум вывода: QUIET=1 ./scripts/install-env-silent.sh   или   ./scripts/install-env-silent.sh --quiet
 set -euo pipefail
 
+for arg in "$@"; do
+  if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then
+    echo "Usage: $0 [--quiet|-q]"
+    echo "  Env: INSTALL_DOCKER=0 to skip Docker, QUIET=1 for minimal logs."
+    echo "  Windows: scripts\\install-env-silent.ps1 -Help"
+    exit 0
+  fi
+done
+
 INSTALL_DOCKER="${INSTALL_DOCKER:-1}"
 QUIET="${QUIET:-0}"
 for arg in "$@"; do

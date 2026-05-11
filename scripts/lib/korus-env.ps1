@@ -95,3 +95,17 @@ function Invoke-KorusDockerComposeInvoke {
         }
     }
 }
+
+function Invoke-KorusDockerComposeDown {
+    param(
+        [Parameter(Mandatory)][string]$ComposeFile,
+        [switch]$Volumes,
+        [int]$Retries = 2,
+        [string]$WorkingDirectory = ""
+    )
+    $dockerArgs = @("compose", "-f", $ComposeFile, "down")
+    if ($Volumes) {
+        $dockerArgs += "-v"
+    }
+    Invoke-KorusDockerComposeInvoke -DockerArgs $dockerArgs -WorkingDirectory $WorkingDirectory -Retries $Retries
+}

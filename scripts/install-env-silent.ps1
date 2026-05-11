@@ -3,14 +3,22 @@
 # Quiet (minimal output): .\scripts\install-env-silent.ps1 -Quiet
 # Dry run: .\scripts\install-env-silent.ps1 -WhatIf
 # Skip Docker: .\scripts\install-env-silent.ps1 -SkipDocker
+# Help: .\scripts\install-env-silent.ps1 -Help
 
 param(
     [switch]$WhatIf,
     [switch]$SkipDocker,
-    [switch]$Quiet
+    [switch]$Quiet,
+    [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
+if ($Help) {
+    Write-Host "Usage: .\scripts\install-env-silent.ps1 [-WhatIf] [-SkipDocker] [-Quiet] [-Help]"
+    Write-Host "  winget: JDK (Temurin 25 / fallbacks), Git, Docker Desktop. Admin recommended."
+    Write-Host "  Linux/macOS: ./scripts/install-env-silent.sh --help"
+    exit 0
+}
 
 function Test-CommandExists([string]$Name) {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)

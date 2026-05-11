@@ -1,18 +1,28 @@
-# Останавливает стек docker/docker-compose.full-server.yml (контейнеры; тома не удаляются).
+# Stops docker/docker-compose.full-server.yml (containers; volumes kept).
+# Help: .\scripts\full-stack-down.ps1 -Help
+param([switch]$Help)
+
 $ErrorActionPreference = "Stop"
+if ($Help) {
+    Write-Host "Usage: .\scripts\full-stack-down.ps1"
+    Write-Host "  Runs docker compose down on full-server (no -v)."
+    Write-Host "  cmd.exe: scripts\full-stack-down.cmd -Help   Linux/macOS: ./scripts/full-stack-down.sh --help"
+    exit 0
+}
 $Root = Split-Path -Parent $PSScriptRoot
-$Compose = Join-Path $Root "docker\docker-compose.full-server.yml"
+$Lib = Join-Path $PSScriptRoot "lib\korus-env.ps1"
+if (-not (Test-Path $Lib)) {
+    Write-Error "Missing: $Lib"
+}
+. $Lib
 
-if (-not (Test-Path $Compose)) {
-    Write-Error "Не найден $Compose"
+Set-KorusPathEnvironment -RepoRoot $Root
+
+if (-not (Test-Path $env:KORUS_COMPOSE_FULL_SERVER)) {
+    Write-Error "Compose file not found: $($env:KORUS_COMPOSE_FULL_SERVER)"
 }
 
-Write-Host "docker compose -f $Compose down" -ForegroundColor Cyan
-Push-Location $Root
-try {
-    docker compose -f $Compose down
-} finally {
-    Pop-Location
-}
+Write-Host "docker compose -f $($env:KORUS_COMPOSE_FULL_SERVER) down" -ForegroundColor Cyan
+Invoke-KorusDockerComposeDown -ComposeFile $env:KORUS_COMPOSE_FULL_SERVER -WorkingDirectory $env:KORUS_REPO_ROOT -Retries 2
 
-Write-Host "[OK] Стек остановлен." -ForegroundColor Green
+Write-Host "[OK] Full stack stopped." -ForegroundColor Green
