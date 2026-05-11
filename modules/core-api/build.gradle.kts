@@ -4,7 +4,7 @@ plugins {
 
 val tomcatVersion = "10.1.19"
 val jerseyVersion = "3.1.3"
-val swaggerVersion = "2.2.22"
+val swaggerVersion = "2.2.49"
 
 dependencies {
     implementation(project(":modules:common"))
