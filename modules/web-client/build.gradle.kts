@@ -2,7 +2,7 @@ plugins {
     id("application")
 }
 
-val tomcatVersion = "10.1.19"
+val tomcatVersion = "11.0.22"
 
 dependencies {
     implementation("org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion")
