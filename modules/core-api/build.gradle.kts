@@ -2,7 +2,7 @@ plugins {
     id("application")
 }
 
-val tomcatVersion = "10.1.19"
+val tomcatVersion = "11.0.22"
 val jerseyVersion = "3.1.3"
 val swaggerVersion = "2.2.22"
 
