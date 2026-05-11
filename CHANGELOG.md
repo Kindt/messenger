@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+### 2026-05-12 21:30 UTC — CI GitHub: закоммичен `gradle-wrapper.jar`
+
+- **`.gitignore`**: исключение **`!gradle/wrapper/gradle-wrapper.jar`** — ранее правило **`*.jar`** не пускало wrapper в репозиторий, на **`ubuntu-latest`** падали **`wrapper-validation`** и **`./gradlew`**.
+- **`gradle/wrapper/gradle-wrapper.jar`**: добавлен в git.
+
 ### 2026-05-12 20:00 UTC — Удалён каталог `docs/miro/`
 
 - Удалены вспомогательные CSV/TSV и README из **`docs/miro/`**; из корневого **`README.md`** убрана связанная строка таблицы документации.
