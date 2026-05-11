@@ -17,6 +17,8 @@
 
 Локально тот же контур: **`./gradlew buildIntegrity`** (или **`.\gradlew.bat buildIntegrity`** на Windows). Для только тестов без сборки артефактов: **`./gradlew test`**.
 
+**JDK в корневом `gradle.properties`:** не задавайте **`org.gradle.java.home`** с путём одной ОС в репозитории — на **Linux** (GitHub Actions) такой путь сломает любой **`./gradlew`**. Локально укажите JDK в **`JAVA_HOME`**, в **`~/.gradle/gradle.properties`** или в настройках IDE.
+
 Локаль **`core-api`** (тексты **`ApiError`** и подписи параметров UUID): **`app.locale`** в **`application.properties`** (по умолчанию **`ru`**) или переменная окружения **`APP_LOCALE`** (**`en`**, **`en-US`** и т.д.).
 
 ## Dependabot

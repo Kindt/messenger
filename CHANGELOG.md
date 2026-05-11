@@ -8,6 +8,25 @@
 
 ## [Unreleased]
 
+### 2026-05-13 17:50 UTC — CI GitHub: **`gradle.properties`** без **`org.gradle.java.home`**
+
+- **`gradle.properties`**: удалён путь **`C:/Program Files/Java/...`** — на **ubuntu-latest** Gradle не находил JVM и падал на шаге **`buildIntegrity`**.
+- **`docs/CI_AND_REPO_HYGIENE.md`**: где задавать JDK локально.
+
+### 2026-05-13 17:30 UTC — WebRTC ICE: **`WEB_CLIENT_RTC_ICE_SERVERS`**, клиент и **korus-web**
+
+- **`modules/web-client`**: **`getRtcIceServers()`** в **`app.js`** — чтение **`iceServersJson`** из **`/web-client-env.js`**, иначе публичный STUN; подсказка в панели видео.
+- **`modules/web-client/README.md`**, **`korus-web/.env.example`**: описание переменной и пример JSON.
+- **`korus-web/docker-compose.yml`**, **`docker-compose.attach.yml`**: проброс **`WEB_CLIENT_RTC_ICE_SERVERS`** в **web-a** / **web-b**.
+
+### 2026-05-13 17:00 UTC — WebRTC signaling: **`rtc.signal`**, mesh в **web-client**
+
+- **`modules/common`**: **`RtcSignalEvent`**, **`NatsSubjects.RTC_SIGNAL`**.
+- **`modules/ws-gateway`**: **`@OnMessage`** — клиент **`rtc_signal`** → NATS **`rtc.signal`** (с **`fromUserId`** из JWT).
+- **`modules/workers/message-pipeline`**: подписка на **`rtc.signal`**, проверка **`PipelineFanoutLogic.isChatMember`**, fan-out в **`msg.deliver.{userId}`**.
+- **`modules/web-client`**: mesh **RTCPeerConnection** (STUN), **`GET /chats/.../members`**, обработка **`rtc_signal`** в WS.
+- **`docs/NATS_SUBJECTS_INTEROP.md`**, **`modules/web-client/README.md`**.
+
 ### 2026-05-13 16:30 UTC — **web-client**: мессенджер-UI, Markdown, демо-видео
 
 - **`modules/web-client/src/main/resources/webui/app.js`**, **`styles.css`**: экран авторизации (двухколоночный на широких экранах), список чатов с аватаром и поиском, Markdown в сообщениях, панель видео/конференции (локальная камера, миниатюры, экран, заглушки участников).
