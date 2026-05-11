@@ -2,8 +2,8 @@ plugins {
     id("application")
 }
 
-val tomcatVersion = "10.1.19"
-val jerseyVersion = "3.1.3"
+val tomcatVersion = "11.0.22"
+val jerseyVersion = "4.0.2"
 val swaggerVersion = "2.2.49"
 
 dependencies {
@@ -23,7 +23,7 @@ dependencies {
 
     // Jakarta EE
     implementation("jakarta.servlet:jakarta.servlet-api:6.0.0")
-    implementation("jakarta.ws.rs:jakarta.ws.rs-api:3.1.0")
+    implementation("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")
     implementation("jakarta.validation:jakarta.validation-api:3.0.2")
 
     // DB
