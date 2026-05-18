@@ -55,7 +55,7 @@ dependencies {
     implementation("io.minio:minio:8.5.17")
 
     // Crypto (E2EE / MLS)
-    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.84")
 
     // Solr (optional message search)
     implementation("org.apache.solr:solr-solrj:10.0.0")
