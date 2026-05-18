@@ -38,7 +38,7 @@ dependencies {
 
     // JSON
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.21.3")
 
     // Logging
     implementation("ch.qos.logback:logback-classic:1.5.3")
