@@ -17,6 +17,18 @@ public final class NatsSubjects {
     /** Клиент печатает (метаданные JSON {@link com.avandocmsg.messenger.common.dto.TypingEvent}). */
     public static final String MSG_TYPING = "msg.typing";
 
+    /** Правка или мягкое удаление сообщения (JSON {@link com.avandocmsg.messenger.common.dto.MessageChangeEvent}). */
+    public static final String MSG_CHANGE = "msg.change";
+
+    /** Реакция на сообщение (JSON {@link com.avandocmsg.messenger.common.dto.ReactionChangeEvent}). */
+    public static final String MSG_REACTION = "msg.reaction";
+
+    /** Закрепление сообщения (JSON {@link com.avandocmsg.messenger.common.dto.PinChangeEvent}). */
+    public static final String MSG_PIN = "msg.pin";
+
+    /** Конференция в чате (JSON {@link com.avandocmsg.messenger.common.dto.ConferenceChangeEvent}). */
+    public static final String MSG_CONFERENCE = "msg.conference";
+
     /** Metadata-only downstream events (JSON {@link com.avandocmsg.messenger.common.dto.MessageWorkerEvent}). */
     public static final String MSG_EVENT_INDEX = "msg.event.index";
     public static final String MSG_EVENT_PUSH = "msg.event.push";
@@ -36,6 +48,18 @@ public final class NatsSubjects {
 
     /** Export job completion (JSON {@link com.avandocmsg.messenger.common.dto.ExportReplayCompleteEvent}). */
     public static final String MSG_EXPORT_REPLAY_COMPLETE = "msg.export.replay.complete";
+
+    /**
+     * Retention (or other subsystem) suggests running chat export before destructive retention
+     * (JSON {@link com.avandocmsg.messenger.common.dto.ExportSuggestedEvent}).
+     */
+    public static final String MSG_EXPORT_SUGGESTED = "msg.export.suggested";
+
+    /**
+     * Export job cancelled (JSON {@link com.avandocmsg.messenger.common.dto.ExportReplayCancelEvent}).
+     * Workers still rely on {@code export_jobs.status = export_cancelled}; this is an optional fast hint.
+     */
+    public static final String MSG_EXPORT_REPLAY_CANCEL = "msg.export.replay.cancel";
 
     private NatsSubjects() {
     }

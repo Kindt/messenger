@@ -3,7 +3,10 @@ package com.avandocmsg.messenger.api.files;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.files.dto.CreatePublicLinkRequest;
 import com.avandocmsg.messenger.api.files.dto.FileInfoResponse;
+import com.avandocmsg.messenger.api.files.dto.FileMessageRefResponse;
+import com.avandocmsg.messenger.api.files.dto.OwnerPublicLinkSummary;
 import com.avandocmsg.messenger.api.files.dto.PublicLinkCreatedResponse;
+import com.avandocmsg.messenger.api.files.dto.PublicLinkSummary;
 import com.avandocmsg.messenger.api.files.dto.FileUploadResponse;
 import com.avandocmsg.messenger.api.metrics.ApiDeniedMetrics;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
@@ -16,12 +19,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -204,9 +209,28 @@ public class FileResource {
     }
 
     @GET
+    @Path("/{fileId}/message-ref")
+    @Operation(summary = "Message with file", description = "Последнее видимое сообщение чата с файлом (content или attachment_file_id)")
+    @ApiResponse(responseCode = "200", description = "Chat and message ids",
+        content = @Content(schema = @Schema(implementation = FileMessageRefResponse.class)))
+    public Response messageRef(@PathParam("fileId") String fileIdStr,
+                               @Context SecurityContext securityContext) {
+        var fileId = UuidParams.required(fileIdStr, "file_id");
+        var userId = CurrentUserId.uuid(securityContext);
+        var ref = fileService.findMessageRefForViewer(fileId, userId);
+        if (ref.isEmpty()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.file.message_ref_not_found")))
+                .build();
+        }
+        var r = ref.get();
+        return Response.ok(new FileMessageRefResponse(r.chatId().toString(), r.messageId().toString())).build();
+    }
+
+    @GET
     @Path("/{fileId}/download")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    @Operation(summary = "Download file", description = "Скачивание: владелец или общий не-E2EE file reference в чате")
+    @Operation(summary = "Download file", description = "Скачивание: владелец или участник чата с доступом к файлу")
     @ApiResponse(responseCode = "403", description = "Not the file owner",
         content = @Content(schema = @Schema(implementation = ApiError.class)))
     public Response download(@PathParam("fileId") String fileId,
@@ -264,6 +288,37 @@ public class FileResource {
                 .build();
         }
         return Response.noContent().build();
+    }
+
+    @GET
+    @Path("/public-links")
+    @Operation(summary = "List my active public links", description = "Все активные публичные ссылки текущего пользователя")
+    @ApiResponse(responseCode = "200", description = "List of links",
+        content = @Content(array = @ArraySchema(schema = @Schema(implementation = OwnerPublicLinkSummary.class))))
+    public Response listMyPublicLinks(@QueryParam("limit") @DefaultValue("50") int limit,
+                                      @Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        var links = filePublicLinkRepository.listActiveByOwner(userId, limit);
+        return Response.ok(links).build();
+    }
+
+    @GET
+    @Path("/{fileId}/public-links")
+    @Operation(summary = "List active public links", description = "Активные (не отозванные, не истёкшие) ссылки владельца файла")
+    @ApiResponse(responseCode = "200", description = "List of links",
+        content = @Content(array = @ArraySchema(schema = @Schema(implementation = PublicLinkSummary.class))))
+    public Response listPublicLinks(@PathParam("fileId") String fileIdStr,
+                                    @Context SecurityContext securityContext) {
+        var fileId = UuidParams.required(fileIdStr, "file_id");
+        var userId = CurrentUserId.uuid(securityContext);
+        var meta = fileService.getInfo(fileIdStr);
+        if (meta == null || !meta.uploadedBy().equals(userId.toString())) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(new ApiError(403, messages.get("error.file.not_allowed")))
+                .build();
+        }
+        var links = filePublicLinkRepository.listActiveByFileAndOwner(fileId, userId);
+        return Response.ok(links).build();
     }
 
     @POST

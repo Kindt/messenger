@@ -1,0 +1,72 @@
+# E2E: Docker full stack + export compliance smoke pack.
+# Manual: Actions -> Export compliance smoke -> Run workflow
+# Nightly: 04:00 UTC (after default CI window on main)
+name: Export compliance smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_down:
+        description: Leave stack running after smoke
+        type: boolean
+        default: false
+      poll_seconds:
+        description: Export job poll timeout (seconds)
+        type: string
+        default: "300"
+  schedule:
+    - cron: "0 4 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: export-compliance-smoke
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: "25"
+          distribution: temurin
+          cache: gradle
+
+      - name: Build images (Gradle assemble for workers)
+        run: chmod +x gradlew && ./gradlew :modules:core-api:assemble :modules:workers:export-replay:assemble :modules:workers:retention:assemble --no-daemon -q
+
+      - name: Full stack up (export smoke overlays)
+        run: |
+          chmod +x scripts/*.sh scripts/lib/*.sh
+          ./scripts/full-stack-up.sh --export-smoke --export-auto-queue --skip-ensure --build
+
+      - name: Wait for health
+        run: ./scripts/wait-stack-ready.sh
+        env:
+          TIMEOUT_SEC: 420
+
+      - name: OpenAPI export-compliance-prep
+        run: ./scripts/smoke-openapi-export-compliance.sh
+
+      - name: Export observability metrics
+        run: ./scripts/smoke-export-observability.sh
+
+      - name: Admin compliance flow (text + file, binary inspect)
+        run: ./scripts/smoke-export-compliance-flow.sh --include-file
+        env:
+          POLL_SECONDS: ${{ github.event.inputs.poll_seconds || '300' }}
+
+      - name: Export compliance pack
+        run: ./scripts/smoke-export-compliance-pack.sh --skip-observability
+        env:
+          POLL_SECONDS: ${{ github.event.inputs.poll_seconds || '300' }}
+
+      - name: Stack down
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.skip_down != 'true' }}
+        run: ./scripts/full-stack-down.sh --export-smoke --export-auto-queue

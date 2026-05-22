@@ -1,9 +1,14 @@
 package com.avandocmsg.messenger.api.conference;
 
+import com.avandocmsg.messenger.api.conference.dto.ConferenceParticipantResponse;
 import com.avandocmsg.messenger.api.conference.dto.ConferenceResponse;
 import com.avandocmsg.messenger.api.conference.dto.CreateConferenceRequest;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ConferenceRepository;
+import com.avandocmsg.messenger.common.dto.ConferenceChangeEvent;
+import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.core.port.NatsOutboundPort;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,13 +18,17 @@ import java.util.UUID;
 
 public class ConferenceService {
     private static final Logger log = LoggerFactory.getLogger(ConferenceService.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final ConferenceRepository conferenceRepository;
     private final ChatRepository chatRepository;
+    private final NatsOutboundPort natsOutbound;
 
-    public ConferenceService(ConferenceRepository conferenceRepository, ChatRepository chatRepository) {
+    public ConferenceService(ConferenceRepository conferenceRepository, ChatRepository chatRepository,
+                             NatsOutboundPort natsOutbound) {
         this.conferenceRepository = conferenceRepository;
         this.chatRepository = chatRepository;
+        this.natsOutbound = natsOutbound;
     }
 
     public Optional<ConferenceResponse> create(UUID chatId, UUID userId, CreateConferenceRequest request) {
@@ -29,7 +38,13 @@ public class ConferenceService {
         }
         var title = request != null && request.title() != null ? request.title() : "";
         var slug = conferenceRepository.newRoomSlug();
-        return conferenceRepository.insert(chatId, userId, title, slug);
+        var created = conferenceRepository.insert(chatId, userId, title, slug);
+        created.ifPresent(conf -> publishConferenceChange("created", conf, userId));
+        return created;
+    }
+
+    public List<ConferenceResponse> listActiveForUser(UUID userId) {
+        return conferenceRepository.listActiveForUser(userId);
     }
 
     public List<ConferenceResponse> listForChat(UUID chatId, UUID userId, boolean activeOnly) {
@@ -51,6 +66,13 @@ public class ConferenceService {
         return conf;
     }
 
+    public Optional<List<ConferenceParticipantResponse>> listParticipants(UUID conferenceId, UUID userId) {
+        if (get(conferenceId, userId).isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(conferenceRepository.listActiveParticipants(conferenceId));
+    }
+
     public boolean join(UUID conferenceId, UUID userId) {
         var conf = conferenceRepository.findById(conferenceId);
         if (conf.isEmpty() || !"active".equals(conf.get().status())) {
@@ -60,7 +82,12 @@ public class ConferenceService {
         if (chatRepository.getMemberRole(chatId, userId) == null) {
             return false;
         }
-        return conferenceRepository.join(conferenceId, userId);
+        if (!conferenceRepository.join(conferenceId, userId)) {
+            return false;
+        }
+        conferenceRepository.findById(conferenceId)
+            .ifPresent(c -> publishConferenceChange("updated", c, userId));
+        return true;
     }
 
     public boolean leave(UUID conferenceId, UUID userId) {
@@ -84,6 +111,29 @@ public class ConferenceService {
             log.warn("User {} cannot end conference {}", userId, conferenceId);
             return false;
         }
-        return conferenceRepository.endConference(conferenceId);
+        if (!conferenceRepository.endConference(conferenceId)) {
+            return false;
+        }
+        conferenceRepository.findById(conferenceId).ifPresent(ended -> publishConferenceChange("ended", ended, userId));
+        return true;
+    }
+
+    private void publishConferenceChange(String change, ConferenceResponse conf, UUID actorId) {
+        try {
+            var event = new ConferenceChangeEvent(
+                change,
+                conf.conferenceId(),
+                conf.chatId(),
+                actorId.toString(),
+                conf.title(),
+                conf.status(),
+                conf.roomSlug(),
+                conf.joinUrl(),
+                conf.provider(),
+                conf.participantCount());
+            natsOutbound.publish(NatsSubjects.MSG_CONFERENCE, MAPPER.writeValueAsBytes(event));
+        } catch (Exception e) {
+            log.warn("Failed to publish {} for conference {}", NatsSubjects.MSG_CONFERENCE, conf.conferenceId(), e);
+        }
     }
 }

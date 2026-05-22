@@ -188,7 +188,7 @@ class MessageServiceTest {
 
     private MessageResponse msg(UUID chatId, UUID senderId, String content) {
         return new MessageResponse(msgId.toString(), chatId.toString(), senderId.toString(),
-            "text", content, null, false, now, null, null);
+            "text", content, null, false, now, null, null, null);
     }
 
     static final class RecordingNats implements NatsOutboundPort {
@@ -238,10 +238,18 @@ class MessageServiceTest {
         @Override
         public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
                                        UUID replyToMsgId, String clientMsgId, Integer ttlSeconds) {
+            return insert(id, chatId, senderId, type, content, replyToMsgId, clientMsgId, ttlSeconds, null);
+        }
+
+        @Override
+        public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
+                                       UUID replyToMsgId, String clientMsgId, Integer ttlSeconds,
+                                       UUID attachmentFileId) {
             lastInsertTtl = ttlSeconds;
             lastInsertReplyTo = replyToMsgId;
             var msg = new MessageResponse(id.toString(), chatId.toString(), senderId.toString(), type, content,
-                replyToMsgId != null ? replyToMsgId.toString() : null, false, Instant.now(), null, ttlSeconds);
+                replyToMsgId != null ? replyToMsgId.toString() : null, false, Instant.now(), null, ttlSeconds,
+                attachmentFileId != null ? attachmentFileId.toString() : null);
             messages.add(msg);
             return msg;
         }
@@ -271,7 +279,7 @@ class MessageServiceTest {
             var m = msg.get();
             messages.remove(m);
             messages.add(new MessageResponse(m.id(), m.chatId(), m.senderId(), m.type(), newContent,
-                m.replyToMsgId(), m.deleted(), m.createdAt(), Instant.now(), m.ttlSeconds()));
+                m.replyToMsgId(), m.deleted(), m.createdAt(), Instant.now(), m.ttlSeconds(), m.attachmentFileId()));
             return true;
         }
 
@@ -345,5 +353,56 @@ class MessageServiceTest {
             }
             return null;
         }
+
+        String decryptResult;
+
+        @Override
+        public String decryptContentBase64(UUID chatId, String contentBase64) {
+            return decryptResult;
+        }
+    }
+
+    @Test
+    void plaintextPreview_returnsDecryptedForE2ee() {
+        var msgId = UUID.randomUUID();
+        msgRepo.messages.add(new MessageResponse(
+            msgId.toString(), chatId.toString(), userId.toString(), "e2ee-text", "cipher", null,
+            false, java.time.Instant.now(), null, null, null));
+        mlsService.decryptResult = "secret";
+
+        var plain = messageService.plaintextPreview(chatId, msgId, userId);
+
+        assertEquals("secret", plain);
+    }
+
+    @Test
+    void parseAttachmentFileId_acceptsFileTypesAndE2eePrefix() {
+        var fileId = UUID.randomUUID();
+        assertEquals(fileId, MessageService.parseAttachmentFileId("file", fileId.toString()));
+        assertEquals(fileId, MessageService.parseAttachmentFileId("e2ee-image", " " + fileId + " "));
+        assertNull(MessageService.parseAttachmentFileId("text", fileId.toString()));
+        assertNull(MessageService.parseAttachmentFileId("file", "not-a-uuid"));
+    }
+
+    @Test
+    void sendMessage_storesAttachmentFileIdBeforeEncryption() {
+        var fileId = UUID.randomUUID();
+        mlsService.encryptResult = "encrypted_blob";
+        var sent = messageService.sendMessage(chatId, userId,
+            new SendMessageRequest("e2ee-file", fileId.toString(), null, null, null), null);
+        assertNotNull(sent);
+        assertEquals(fileId.toString(), sent.attachmentFileId());
+        assertEquals(1, msgRepo.messages.size());
+        assertEquals(fileId.toString(), msgRepo.messages.get(0).attachmentFileId());
+    }
+
+    @Test
+    void plaintextPreview_nullForPlainText() {
+        var msgId = UUID.randomUUID();
+        msgRepo.messages.add(new MessageResponse(
+            msgId.toString(), chatId.toString(), userId.toString(), "text", "hello", null,
+            false, java.time.Instant.now(), null, null, null));
+
+        assertNull(messageService.plaintextPreview(chatId, msgId, userId));
     }
 }

@@ -4,9 +4,12 @@
 
 ## Возможности UI (`webui/app.js`)
 
-- Экран входа / регистрации и основное окно в стиле мессенджера: список чатов с поиском, область переписки, поле ввода.
+- Экран входа / регистрации и основное окно в оформлении **КОРУС Консалтинг**: список чатов с поиском, область переписки, поле ввода.
+- После обновления статики: баннер «Доступна новая версия» (Service Worker) или **Настройки → Сбросить кэш UI**.
 - Сообщения рендерятся как **безопасное подмножество Markdown** (экранирование HTML, **жирный**, *курсив*, `` `код` ``, блоки ` ``` `, ссылки только **http/https**).
-- Панель **«Видео / конференция»**: локальный поток, миниатюры, демонстрация экрана, **mesh WebRTC** с другими участниками чата: сигналы (**offer / answer / candidate / hangup**) уходят по тому же WebSocket в NATS **`rtc.signal`** и рассылаются **message-pipeline** на **`msg.deliver.{userId}`** (проверка членства в чате). Для жёсткого NAT может понадобиться **TURN** (сейчас только публичный STUN).
+- Панель **«Видео / конференция»**: локальный поток, миниатюры, демонстрация экрана (в mesh у удалённых участников), **mesh WebRTC** с другими участниками чата: сигналы (**offer / answer / candidate / hangup**) уходят по тому же WebSocket в NATS **`rtc.signal`** и рассылаются **message-pipeline** на **`msg.deliver.{userId}`** (проверка членства в чате). Для жёсткого NAT может понадобиться **TURN** (сейчас только публичный STUN).
+- Сессия: при **401** — автоматический **`POST /auth/refresh`** и повтор запроса; при обрыве WebSocket — переподключение с backoff (индикатор **WS переподкл.**).
+- Вложения: кнопка **Файл** в композере — **`POST /files/upload`** (multipart), сообщение с типом **image** / **video** / **file** и **`content`** = **file_id**; превью картинок и скачивание через API с JWT.
 
 ## Локально
 
@@ -23,4 +26,4 @@
 
 ## Стенд с WebSocket
 
-Профиль **`web`** в **`docker/docker-compose.dev-min.yml`** (**`scripts/dev-web-stack-up.ps1`** или **`scripts/dev-web-stack-up.sh`**: **`KORUS_*`**, проверка окружения, повтор **`docker compose`**) поднимает **ws-gateway** и **message-pipeline**; для UI из корня — **`scripts/korus-web-up.ps1`** или **`scripts/korus-web-up.sh`** (**`-Attach` / `--attach`**, **`-SkipEnsure`** / **`SKIP_KORUS_ENSURE=1`** — см. корневой **`README.md`**). Смоки: **`scripts/smoke-korus-web.ps1`** / **`scripts/smoke-korus-web.sh`**. Подробности: **`scripts/TEST_SERVER_READY.md`**.
+Профиль **`web`** в **`docker/docker-compose.dev-min.yml`** (**`scripts/dev-web-stack-up.ps1`** или **`scripts/dev-web-stack-up.sh`**: **`KORUS_*`**, проверка окружения, повтор **`docker compose`**) поднимает **ws-gateway** и **message-pipeline**; остановка того же профиля: **`scripts/dev-web-stack-down.ps1`** / **`scripts/dev-web-stack-down.sh`**. Для UI из корня — **`scripts/korus-web-up.ps1`** или **`scripts/korus-web-up.sh`** (**`-Attach` / `--attach`**, **`-Turn` / `--turn`**, **`-SkipEnsure`** / **`SKIP_KORUS_ENSURE=1`** — см. корневой **`README.md`**); остановка — **`scripts/korus-web-down.ps1`** / **`.sh`** с теми же флагами. Смоки: **`scripts/smoke-korus-web.ps1`** / **`scripts/smoke-korus-web.sh`**. Подробности: **`scripts/TEST_SERVER_READY.md`**.

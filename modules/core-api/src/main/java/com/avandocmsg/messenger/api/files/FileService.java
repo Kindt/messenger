@@ -13,6 +13,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 import java.util.UUID;
 
 public class FileService {
@@ -96,12 +97,20 @@ public class FileService {
         return fileRepository.findById(UUID.fromString(fileId)).orElse(null);
     }
 
-    /** Owner, or participant who may see a shared non-E2EE message containing this file id in {@code content}. */
+    /** Owner, or chat member who may see a shared message referencing this file ({@code content} or {@code attachment_file_id}). */
     public boolean mayViewFile(FileInfoResponse info, UUID fileId, UUID viewerId) {
         if (info.uploadedBy().equals(viewerId.toString())) {
             return true;
         }
         return messageRepository.viewerMayAccessFileViaSharedNonE2eeMessage(fileId, viewerId);
+    }
+
+    public Optional<MessageRepository.FileMessageRef> findMessageRefForViewer(UUID fileId, UUID viewerId) {
+        var info = getInfo(fileId.toString());
+        if (info == null || !mayViewFile(info, fileId, viewerId)) {
+            return Optional.empty();
+        }
+        return messageRepository.findLatestMessageRefForViewer(fileId, viewerId);
     }
 
     public boolean delete(String fileId) {

@@ -24,15 +24,16 @@ public class JwtAuthFilter implements ContainerRequestFilter {
      * Без Bearer. {@code /files/pub} — kind A/C (анонимная выдача по токену); {@code /files/auth-link} — kind B, JWT обязателен, не публичный.
      * {@code v1/admin/console} и {@code /api/v1/admin/console} — редирект на встроенную веб-консоль {@code /admin/}.
      */
-    private static final Set<String> PUBLIC_PATHS = Set.of(
-        "/api/v1/auth/login",
-        "/api/v1/auth/logout",
-        "/api/v1/auth/register",
-        "/api/v1/health",
-        "/api/v1/media/capabilities",
-        "/api/v1/metrics",
-        "/api/v1/files/pub",
-        "/api/v1/admin/console",
+    /** Paths relative to Jersey servlet mapping {@code /api/*} (see {@link #normalizeJerseyPath}). */
+    private static final Set<String> PUBLIC_JERSEY_PREFIXES = Set.of(
+        "v1/auth/login",
+        "v1/auth/logout",
+        "v1/auth/register",
+        "v1/auth/refresh",
+        "v1/health",
+        "v1/media/capabilities",
+        "v1/metrics",
+        "v1/files/pub",
         "v1/admin/console"
     );
 
@@ -104,10 +105,27 @@ public class JwtAuthFilter implements ContainerRequestFilter {
         }
     }
 
-    private boolean isPublic(String path) {
-        if (path != null && (path.endsWith("openapi.json") || path.endsWith("openapi.yaml"))) {
+    static String normalizeJerseyPath(String path) {
+        if (path == null) {
+            return "";
+        }
+        var p = path.startsWith("/") ? path.substring(1) : path;
+        if (p.startsWith("api/")) {
+            p = p.substring(4);
+        }
+        return p;
+    }
+
+    static boolean isPublicJerseyPath(String path) {
+        var p = normalizeJerseyPath(path);
+        if (p.endsWith("openapi.json") || p.endsWith("openapi.yaml")) {
             return true;
         }
-        return PUBLIC_PATHS.stream().anyMatch(p -> path.equals(p) || path.startsWith(p + "/"));
+        return PUBLIC_JERSEY_PREFIXES.stream()
+            .anyMatch(pub -> p.equals(pub) || p.startsWith(pub + "/"));
+    }
+
+    private boolean isPublic(String path) {
+        return isPublicJerseyPath(path);
     }
 }

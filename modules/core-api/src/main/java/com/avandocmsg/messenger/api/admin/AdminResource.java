@@ -1,5 +1,9 @@
 package com.avandocmsg.messenger.api.admin;
 
+import com.avandocmsg.messenger.api.admin.dto.AdminExportCompliancePrepRequest;
+import com.avandocmsg.messenger.api.admin.dto.AdminExportCompliancePrepResponse;
+import com.avandocmsg.messenger.api.admin.dto.AdminExportSuggestRequest;
+import com.avandocmsg.messenger.api.admin.dto.AdminExportSuggestResponse;
 import com.avandocmsg.messenger.api.admin.dto.AdminSessionResponse;
 import com.avandocmsg.messenger.api.admin.dto.CreateOrganizationRequest;
 import com.avandocmsg.messenger.api.admin.dto.ChatRetentionPolicyResponse;
@@ -15,7 +19,25 @@ import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
 import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
+import com.avandocmsg.messenger.api.export.AdminExportComplianceSeed;
+import com.avandocmsg.messenger.api.export.ExportDownloadSupport;
+import com.avandocmsg.messenger.api.export.ExportFileAccess;
+import com.avandocmsg.messenger.api.export.ExportJobCancelSupport;
+import com.avandocmsg.messenger.api.export.ExportJobEnqueuer;
+import com.avandocmsg.messenger.api.export.ExportJobReadSupport;
+import com.avandocmsg.messenger.api.export.ExportSuggestDispatch;
+import com.avandocmsg.messenger.api.export.ExportSuggestedHandler;
+import com.avandocmsg.messenger.api.export.dto.ExportAcceptedResponse;
+import com.avandocmsg.messenger.api.export.dto.ExportAdminJobsListResponse;
+import com.avandocmsg.messenger.api.export.dto.ExportCancelResponse;
+import com.avandocmsg.messenger.api.export.dto.ExportAttachmentsListResponse;
+import com.avandocmsg.messenger.api.export.dto.ExportJobListResponse;
+import com.avandocmsg.messenger.api.export.dto.ExportJobStatusResponse;
+import com.avandocmsg.messenger.api.repository.ExportJobRepository;
 import com.avandocmsg.messenger.common.dto.ApiError;
+import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
+import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -23,6 +45,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -32,8 +55,8 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
-import jakarta.ws.rs.GET;
 import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -45,6 +68,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -62,6 +86,12 @@ public class AdminResource {
     private final RetentionPolicyRepository retentionPolicyRepository;
     private final ChatRepository chatRepository;
     private final ChatRetentionPolicyRepository chatRetentionPolicyRepository;
+    private final ExportSuggestedHandler exportSuggestedHandler;
+    private final AdminExportComplianceSeed exportComplianceSeed;
+    private final ExportJobEnqueuer exportJobEnqueuer;
+    private final ExportJobRepository exportJobRepository;
+    private final ExportFileAccess exportFileAccess;
+    private final NatsOutboundPort natsOutbound;
     private final UserMessageSource messages;
 
     @Inject
@@ -70,6 +100,12 @@ public class AdminResource {
                          RetentionPolicyRepository retentionPolicyRepository,
                          ChatRepository chatRepository,
                          ChatRetentionPolicyRepository chatRetentionPolicyRepository,
+                         ExportSuggestedHandler exportSuggestedHandler,
+                         AdminExportComplianceSeed exportComplianceSeed,
+                         ExportJobEnqueuer exportJobEnqueuer,
+                         ExportJobRepository exportJobRepository,
+                         ExportFileAccess exportFileAccess,
+                         NatsOutboundPort natsOutbound,
                          UserMessageSource messages) {
         this.appConfig = appConfig;
         this.auditRepository = auditRepository;
@@ -77,6 +113,12 @@ public class AdminResource {
         this.retentionPolicyRepository = retentionPolicyRepository;
         this.chatRepository = chatRepository;
         this.chatRetentionPolicyRepository = chatRetentionPolicyRepository;
+        this.exportSuggestedHandler = exportSuggestedHandler;
+        this.exportComplianceSeed = exportComplianceSeed;
+        this.exportJobEnqueuer = exportJobEnqueuer;
+        this.exportJobRepository = exportJobRepository;
+        this.exportFileAccess = exportFileAccess;
+        this.natsOutbound = natsOutbound;
         this.messages = messages;
     }
 
@@ -103,7 +145,7 @@ public class AdminResource {
     @GET
     @Path("audit-events")
     @Operation(summary = "Последние события аудита",
-        description = "Опционально **`action`**, **`resource_type`** и/или **`resource_id`** — точное совпадение с колонками (AND). Примеры ретенции: **`action=message.retention.hot_body_cleared`**, **`resource_type=message`**; сводка прохода: **`action=message.retention.bulk_cleared`**, **`resource_type=retention_pass`**; по UUID прохода: **`resource_id=<pass_id>`** (тот же, что в **`msg.event.retention.pass_id`**). В **`details_json`** построчной ретенции и в сводке может быть поле **`pass_id`** — для корреляции с NATS без разбора только **`resource_id`** (у построчной строки **`resource_id`** — id сообщения). См. **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §8.",
+        description = "Опционально **`action`**, **`resource_type`** и/или **`resource_id`** — точное совпадение с колонками (AND). Ретенция: **`message.retention.hot_body_cleared`**, **`message.retention.bulk_cleared`**. Экспорт: **`export.requested`**, **`export.downloaded`**, **`export.cancelled`**, **`export.admin_downloaded`**, **`export.admin_cancelled`**, **`export.admin_inspected`**, **`export.suggested`**, **`export.auto_queued`**, **`export.auto_queue_skipped`** (в админ-UI — кнопки-пресеты). См. **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §8.",
         security = @SecurityRequirement(name = "bearerAuth"))
     public Response listAudit(
         @QueryParam("limit") @DefaultValue("100") int limit,
@@ -118,6 +160,395 @@ public class AdminResource {
                 r.resourceType(), r.resourceId(), r.detailsJson()));
         }
         return Response.ok(out).build();
+    }
+
+    @POST
+    @Path("export-compliance-prep")
+    @Operation(summary = "Подготовить чат для export/retention smokes",
+        description = "Создаёт group (опционально), PATCH политики ретенции (hot_body=0, deep_archive) и N тестовых сообщений. "
+            + "При **include_file=true** — upload + сообщение type=file. "
+            + "Требует **EXPORT_ADMIN_SUGGEST_ENABLED=true** (тот же флаг, что и export-suggest).",
+        security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "200",
+        content = @Content(
+            schema = @Schema(implementation = AdminExportCompliancePrepResponse.class),
+            examples = @ExampleObject(
+                name = "with_file",
+                value = """
+                    {
+                      "chat_id": "11111111-1111-1111-1111-111111111111",
+                      "message_ids": ["aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"],
+                      "retention_patched": true,
+                      "file_id": "22222222-2222-2222-2222-222222222222",
+                      "file_message_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                    }
+                    """
+            )
+        ))
+    @ApiResponse(responseCode = "400", description = "Validation error",
+        content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @ApiResponse(responseCode = "404", description = "EXPORT_ADMIN_SUGGEST_ENABLED=false",
+        content = @Content(schema = @Schema(implementation = ApiError.class)))
+    public Response exportCompliancePrep(
+        @RequestBody(
+            description = "Пустое тело допустимо (по умолчанию: create_group=true, message_count=3)",
+            content = @Content(
+                mediaType = MediaType.APPLICATION_JSON,
+                schema = @Schema(implementation = AdminExportCompliancePrepRequest.class),
+                examples = {
+                    @ExampleObject(
+                        name = "new_group_text",
+                        summary = "Новый group, только text",
+                        value = "{\"create_group\":true,\"message_count\":3}"
+                    ),
+                    @ExampleObject(
+                        name = "new_group_with_file",
+                        summary = "Новый group + file attachment",
+                        value = """
+                            {
+                              "create_group": true,
+                              "message_count": 2,
+                              "include_file": true,
+                              "file_name": "compliance-smoke.txt"
+                            }
+                            """
+                    ),
+                    @ExampleObject(
+                        name = "existing_chat",
+                        summary = "Существующий chat_id",
+                        value = """
+                            {
+                              "chat_id": "11111111-1111-1111-1111-111111111111",
+                              "create_group": false,
+                              "message_count": 3
+                            }
+                            """
+                    )
+                }
+            )
+        )
+        AdminExportCompliancePrepRequest body,
+        @Context SecurityContext securityContext
+    ) {
+        if (!appConfig.exportAdminSuggestEnabled()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.export.admin_suggest_disabled")))
+                .build();
+        }
+        try {
+            var result = exportComplianceSeed.prepare(CurrentUserId.uuid(securityContext), body);
+            return Response.ok(result.response()).build();
+        } catch (IllegalArgumentException e) {
+            var detail = compliancePrepErrorMessage(e.getMessage());
+            if (detail != null) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ApiError(400, detail))
+                    .build();
+            }
+            throw e;
+        } catch (IllegalStateException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ApiError(500, messages.get("error.export.compliance_prep_failed")))
+                .build();
+        }
+    }
+
+    @POST
+    @Path("chats/{chatId}/export-suggest")
+    @Operation(summary = "Опубликовать подсказку export (dev/compliance)",
+        description = "Эмулирует **msg.export.suggested** без NATS CLI. Требует **EXPORT_ADMIN_SUGGEST_ENABLED=true**. "
+            + "**dispatch**: **local** (аудит + auto-queue на этом узле), **nats** (только publish), **both**.",
+        security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "202", description = "Suggestion accepted")
+    public Response exportSuggest(
+        @PathParam("chatId") String chatIdStr,
+        AdminExportSuggestRequest body
+    ) {
+        if (!appConfig.exportAdminSuggestEnabled()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.export.admin_suggest_disabled")))
+                .build();
+        }
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        final ExportSuggestDispatch dispatch;
+        try {
+            dispatch = ExportSuggestDispatch.parse(body != null ? body.dispatch() : null);
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.export.invalid_suggest_dispatch")))
+                .build();
+        }
+        var reason = body != null && body.reason() != null && !body.reason().isBlank()
+            ? body.reason().trim()
+            : ExportSuggestedEvent.REASON_HOT_BODY_CANDIDATES;
+        var candidates = body != null && body.candidateMessageCount() != null
+            ? Math.max(0, body.candidateMessageCount())
+            : 0;
+        var suggestedAt = Instant.now().toEpochMilli();
+        var event = new ExportSuggestedEvent(chatId.toString(), reason, candidates, suggestedAt);
+
+        if (dispatch == ExportSuggestDispatch.NATS || dispatch == ExportSuggestDispatch.BOTH) {
+            try {
+                natsOutbound.publish(NatsSubjects.MSG_EXPORT_SUGGESTED, ADMIN_AUDIT_JSON.writeValueAsBytes(event));
+                natsOutbound.flush(Duration.ofSeconds(2));
+            } catch (Exception e) {
+                return Response.status(Response.Status.BAD_GATEWAY)
+                    .entity(new ApiError(502, messages.get("error.export.suggest_nats_failed")))
+                    .build();
+            }
+        }
+        java.util.Optional<UUID> autoJob = java.util.Optional.empty();
+        if (dispatch == ExportSuggestDispatch.LOCAL || dispatch == ExportSuggestDispatch.BOTH) {
+            try {
+                autoJob = exportSuggestedHandler.handle(event);
+            } catch (JsonProcessingException e) {
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ApiError(500, messages.get("error.export.suggest_handler_failed")))
+                    .build();
+            }
+        }
+        return Response.accepted(new AdminExportSuggestResponse(
+            chatId.toString(),
+            dispatch.name().toLowerCase(),
+            reason,
+            candidates,
+            suggestedAt,
+            autoJob.map(UUID::toString).orElse(null)
+        )).build();
+    }
+
+    @POST
+    @Path("chats/{chatId}/export")
+    @Operation(summary = "Поставить export-задачу в очередь (admin)",
+        description = "Публикует **msg.export.replay** и создаёт **export_jobs** (как пользовательский POST export). "
+            + "Требует **EXPORT_ADMIN_EXPORT_ENABLED=true**. **requested_by** — текущий admin.",
+        security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "202",
+        content = @Content(schema = @Schema(implementation = ExportAcceptedResponse.class)))
+    public Response requestExport(
+        @PathParam("chatId") String chatIdStr,
+        @Context SecurityContext securityContext
+    ) {
+        if (!appConfig.exportAdminExportEnabled()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.export.admin_enqueue_disabled")))
+                .build();
+        }
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        if (!chatRepository.chatExists(chatId)) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.export.chat_not_found")))
+                .build();
+        }
+        var actorId = CurrentUserId.uuid(securityContext);
+        UUID jobId;
+        try {
+            jobId = exportJobEnqueuer.enqueue(chatId, actorId, "admin_api", null);
+        } catch (ExportJobEnqueuer.ExportEnqueueException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ApiError(500, messages.get("error.export.queue_failed")))
+                .build();
+        }
+        return Response.status(Response.Status.ACCEPTED)
+            .entity(new ExportAcceptedResponse(jobId.toString(), chatId.toString(), "accepted"))
+            .build();
+    }
+
+    @GET
+    @Path("chats/{chatId}/export/jobs")
+    @Operation(summary = "Список export-задач чата (admin)",
+        description = "Последние задачи по **created_at** (новые первыми). Опционально **status** "
+            + "(queued, processing, export_v1, stub_written, export_failed, export_cancelled). **limit** по умолчанию 20, макс. "
+            + ExportJobReadSupport.MAX_JOBS_LIST_SIZE + ".",
+        security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "200",
+        content = @Content(schema = @Schema(implementation = ExportJobListResponse.class)))
+    public Response listExportJobs(
+        @PathParam("chatId") String chatIdStr,
+        @QueryParam("status") String status,
+        @QueryParam("limit") @DefaultValue("20") int limit,
+        @Context SecurityContext securityContext
+    ) {
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var lim = ExportJobReadSupport.normalizeJobsListLimit(limit);
+        var rows = exportJobRepository.listForChat(chatId, status, lim);
+        var items = rows.stream().map(ExportJobReadSupport::toListItem).toList();
+        if (!rows.isEmpty()) {
+            auditExportInspect(securityContext, rows.getFirst().id(), chatId, "jobs_list");
+        }
+        var filter = status != null && !status.isBlank() ? status.trim() : null;
+        return Response.ok(new ExportJobListResponse(
+            chatId.toString(),
+            filter,
+            items.size(),
+            items)).build();
+    }
+
+    @GET
+    @Path("export/jobs")
+    @Operation(summary = "Список export-задач (все чаты, admin)",
+        description = "Последние задачи по **created_at** (новые первыми). Опционально **status**, **chat_id**, **limit** (макс. "
+            + ExportJobReadSupport.MAX_JOBS_LIST_SIZE + "). Аудит: **export.admin_inspected** / view **global_jobs_list**.",
+        security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "200",
+        content = @Content(schema = @Schema(implementation = ExportAdminJobsListResponse.class)))
+    public Response listAllExportJobs(
+        @QueryParam("status") String status,
+        @QueryParam("chat_id") String chatIdStr,
+        @QueryParam("limit") @DefaultValue("30") int limit,
+        @Context SecurityContext securityContext
+    ) {
+        UUID chatFilter = null;
+        if (chatIdStr != null && !chatIdStr.isBlank()) {
+            chatFilter = UuidParams.required(chatIdStr, "chat_id");
+        }
+        var lim = ExportJobReadSupport.normalizeJobsListLimit(limit);
+        var statusFilter = status != null && !status.isBlank() ? status.trim() : null;
+        var rows = exportJobRepository.listRecent(statusFilter, chatFilter, lim);
+        var items = rows.stream().map(ExportJobReadSupport::toAdminListItem).toList();
+        auditExportGlobalJobsList(securityContext, statusFilter, chatFilter, items.size());
+        return Response.ok(new ExportAdminJobsListResponse(
+            statusFilter,
+            chatFilter != null ? chatFilter.toString() : null,
+            items.size(),
+            items)).build();
+    }
+
+    @GET
+    @Path("chats/{chatId}/export/latest/status")
+    @Operation(summary = "Статус последней export-задачи чата (admin)",
+        description = "Без проверки членства в чате. Для операторской консоли.",
+        security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "200",
+        content = @Content(schema = @Schema(implementation = ExportJobStatusResponse.class)))
+    public Response exportLatestStatus(
+        @PathParam("chatId") String chatIdStr,
+        @Context SecurityContext securityContext
+    ) {
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var row = exportJobRepository.findLatestForChat(chatId);
+        if (row.isEmpty()) {
+            return ExportJobReadSupport.jobNotFound(messages);
+        }
+        auditExportInspect(securityContext, row.get().id(), chatId, "latest_status");
+        return Response.ok(ExportJobReadSupport.toStatusResponse(row.get())).build();
+    }
+
+    @GET
+    @Path("chats/{chatId}/export/{jobId}/status")
+    @Operation(summary = "Статус export-задачи (admin)",
+        security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "200",
+        content = @Content(schema = @Schema(implementation = ExportJobStatusResponse.class)))
+    public Response exportJobStatus(
+        @PathParam("chatId") String chatIdStr,
+        @PathParam("jobId") String jobIdStr,
+        @Context SecurityContext securityContext
+    ) {
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var jobId = UuidParams.required(jobIdStr, "job_id");
+        var row = exportJobRepository.findByIdAndChat(jobId, chatId);
+        if (row.isEmpty()) {
+            return ExportJobReadSupport.jobNotFound(messages);
+        }
+        auditExportInspect(securityContext, jobId, chatId, "status");
+        return Response.ok(ExportJobReadSupport.toStatusResponse(row.get())).build();
+    }
+
+    @DELETE
+    @Path("chats/{chatId}/export/{jobId}")
+    @Operation(summary = "Отменить export (admin)",
+        description = "**queued** или **processing**. Требует **EXPORT_ADMIN_EXPORT_ENABLED=true**. "
+            + "Аудит: **export.admin_cancelled**; NATS: **msg.export.replay.cancel**.",
+        security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "200",
+        content = @Content(schema = @Schema(implementation = ExportCancelResponse.class)))
+    public Response cancelExportJob(
+        @PathParam("chatId") String chatIdStr,
+        @PathParam("jobId") String jobIdStr,
+        @Context SecurityContext securityContext
+    ) {
+        if (!appConfig.exportAdminExportEnabled()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.export.admin_enqueue_disabled")))
+                .build();
+        }
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var jobId = UuidParams.required(jobIdStr, "job_id");
+        var row = exportJobRepository.findByIdAndChat(jobId, chatId);
+        if (row.isEmpty()) {
+            return ExportJobReadSupport.jobNotFound(messages);
+        }
+        return ExportJobCancelSupport.cancel(
+            row.get(),
+            chatId,
+            jobId,
+            CurrentUserId.uuid(securityContext),
+            ExportJobCancelSupport.AUDIT_ADMIN_CANCEL,
+            exportJobRepository,
+            auditRepository,
+            messages,
+            natsOutbound);
+    }
+
+    @GET
+    @Path("chats/{chatId}/export/{jobId}/attachments")
+    @Operation(summary = "Список вложений export ZIP (admin)",
+        description = "Тот же JSON, что **GET /v1/chats/{chatId}/export/{jobId}/attachments**; пагинация: **offset**, **limit** (макс. "
+            + ExportJobReadSupport.MAX_ATTACHMENT_PAGE_SIZE + ").",
+        security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "200",
+        content = @Content(schema = @Schema(implementation = ExportAttachmentsListResponse.class)))
+    public Response exportJobAttachments(
+        @PathParam("chatId") String chatIdStr,
+        @PathParam("jobId") String jobIdStr,
+        @QueryParam("offset") @DefaultValue("0") int offset,
+        @QueryParam("limit") @DefaultValue("0") int limit,
+        @Context SecurityContext securityContext
+    ) {
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var jobId = UuidParams.required(jobIdStr, "job_id");
+        var row = exportJobRepository.findByIdAndChat(jobId, chatId);
+        if (row.isEmpty()) {
+            return ExportJobReadSupport.jobNotFound(messages);
+        }
+        auditExportInspect(securityContext, jobId, chatId, "attachments");
+        return ExportJobReadSupport.attachmentsResponse(row.get(), exportFileAccess, messages, offset, limit);
+    }
+
+    @GET
+    @Path("chats/{chatId}/export/{jobId}/download")
+    @Produces({MediaType.APPLICATION_JSON, "application/zip"})
+    @Operation(summary = "Скачать артефакт export (admin)",
+        description = "Те же **part** / **file_id** / **file_ids**, что у пользовательского download. "
+            + "Аудит: **export.admin_downloaded**.",
+        security = @SecurityRequirement(name = "bearerAuth"))
+    public Response exportJobDownload(
+        @PathParam("chatId") String chatIdStr,
+        @PathParam("jobId") String jobIdStr,
+        @QueryParam("part") @DefaultValue("bundle") String part,
+        @QueryParam("file_id") String fileIdStr,
+        @QueryParam("file_ids") String fileIdsStr,
+        @Context SecurityContext securityContext
+    ) {
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var jobId = UuidParams.required(jobIdStr, "job_id");
+        var row = exportJobRepository.findByIdAndChat(jobId, chatId);
+        if (row.isEmpty()) {
+            return ExportJobReadSupport.jobNotFound(messages);
+        }
+        return ExportDownloadSupport.download(
+            row.get(),
+            chatId,
+            jobId,
+            CurrentUserId.uuid(securityContext),
+            ExportDownloadSupport.AUDIT_ADMIN_DOWNLOAD,
+            exportFileAccess,
+            auditRepository,
+            messages,
+            part,
+            fileIdStr,
+            fileIdsStr);
     }
 
     @GET
@@ -425,6 +856,63 @@ public class AdminResource {
         n.put("deep_archive_enabled", deepArchiveEnabled);
         n.put("legal_hold", legalHold);
         return writeAdminAuditJson(n);
+    }
+
+    private void auditExportInspect(SecurityContext securityContext, UUID jobId, UUID chatId, String view) {
+        try {
+            var details = ADMIN_AUDIT_JSON.createObjectNode()
+                .put("chat_id", chatId.toString())
+                .put("view", view);
+            auditRepository.record(
+                CurrentUserId.uuid(securityContext),
+                "export.admin_inspected",
+                "export_job",
+                jobId.toString(),
+                writeAdminAuditJson(details));
+        } catch (Exception ignored) {
+            // audit must not block operator reads
+        }
+    }
+
+    private void auditExportGlobalJobsList(
+        SecurityContext securityContext,
+        String statusFilter,
+        UUID chatIdFilter,
+        int resultCount
+    ) {
+        try {
+            var details = ADMIN_AUDIT_JSON.createObjectNode()
+                .put("view", "global_jobs_list")
+                .put("result_count", resultCount);
+            if (statusFilter != null) {
+                details.put("status_filter", statusFilter);
+            }
+            if (chatIdFilter != null) {
+                details.put("chat_id_filter", chatIdFilter.toString());
+            }
+            auditRepository.record(
+                CurrentUserId.uuid(securityContext),
+                "export.admin_inspected",
+                "export_jobs",
+                "global",
+                writeAdminAuditJson(details));
+        } catch (Exception ignored) {
+            // audit must not block operator reads
+        }
+    }
+
+    private String compliancePrepErrorMessage(String code) {
+        if (code == null) {
+            return null;
+        }
+        return switch (code) {
+            case "body_required" -> messages.get("error.admin.body_required");
+            case "message_count_range" -> messages.get("error.admin.message_count_range");
+            case "chat_id_or_create_group" -> messages.get("error.admin.chat_id_or_create_group");
+            case "chat_not_found" -> messages.get("error.admin.chat_not_found");
+            case "invalid_chat_id" -> messages.get("error.admin.invalid_chat_id");
+            default -> null;
+        };
     }
 
     public record AuditEventJson(

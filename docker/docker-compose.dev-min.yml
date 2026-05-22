@@ -179,6 +179,39 @@ services:
       nats:
         condition: service_started
 
+  # Web Push: msg.event.push → devices.push_token (provider web). VAPID optional (scripts/generate-vapid.*).
+  push-worker:
+    profiles:
+      - web
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.push-worker
+    environment:
+      NATS_URL: nats://nats:4222
+      DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      DB_USER: avandocmsg
+      DB_PASSWORD: avandocmsg
+      PUSH_METRICS_PORT: "9191"
+    ports:
+      - "9193:9191"
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+      nats:
+        condition: service_started
+      message-pipeline:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:$$PUSH_METRICS_PORT/health >/dev/null || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
   # Опционально: воркер ретенции (включение — профиль retention: docker compose ... --profile retention up -d retention-worker)
   # Healthcheck: HTTP GET /health на RETENTION_METRICS_PORT внутри контейнера (compose: 9191). При RETENTION_METRICS_PORT=0 HTTP выключен — статус healthy не достижим без смены порта.
   retention-worker:

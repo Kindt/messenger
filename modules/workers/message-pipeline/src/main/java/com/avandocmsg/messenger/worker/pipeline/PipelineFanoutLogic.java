@@ -50,6 +50,26 @@ public final class PipelineFanoutLogic {
     /**
      * Whether {@code userId} is an active (non-banned) member of {@code chatId}.
      */
+    public static List<String> loadAllChatMemberUserIds(DataSource dataSource, UUID chatId) {
+        var sql = """
+            SELECT cm.user_id FROM chat_members cm
+            WHERE cm.chat_id = ? AND cm.banned = false
+            """;
+        var result = new ArrayList<String>();
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, chatId);
+            try (var rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(rs.getObject("user_id", UUID.class).toString());
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to list chat members for {}", chatId, e);
+        }
+        return result;
+    }
+
     public static boolean isChatMember(DataSource dataSource, UUID chatId, UUID userId) {
         var sql = """
             SELECT 1 FROM chat_members

@@ -1,0 +1,11 @@
+# Example scrape targets for export observability (add to your Prometheus config).
+scrape_configs:
+  - job_name: korus-core-api
+    metrics_path: /api/v1/metrics/prometheus
+    static_configs:
+      - targets: ["localhost:8080"]
+
+  - job_name: korus-export-replay-worker
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["localhost:9193"]

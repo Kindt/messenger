@@ -22,6 +22,13 @@ public final class CoreAdminUiContributor implements AdminUiContributor {
                 "/admin/ui/stats"
             ),
             new AdminUiSectionDescriptor(
+                "core-export-compliance",
+                "Экспорт / GDPR",
+                12,
+                AdminUiSectionKind.JSON_PANEL,
+                "/admin/ui/export-compliance-guide"
+            ),
+            new AdminUiSectionDescriptor(
                 "core-admin-session",
                 "Сессия (admin)",
                 15,

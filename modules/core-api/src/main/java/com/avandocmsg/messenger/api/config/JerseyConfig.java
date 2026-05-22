@@ -13,6 +13,7 @@ import com.avandocmsg.messenger.api.contacts.ContactResource;
 import com.avandocmsg.messenger.api.contacts.ContactService;
 import com.avandocmsg.messenger.api.contacts.SearchResource;
 import com.avandocmsg.messenger.api.crypto.CryptoResource;
+import com.avandocmsg.messenger.api.devices.DeviceResource;
 import com.avandocmsg.messenger.api.admin.AdminResource;
 import com.avandocmsg.messenger.api.admin.ui.AdminServerStatsService;
 import com.avandocmsg.messenger.api.admin.ui.AdminStatsPort;
@@ -22,7 +23,11 @@ import com.avandocmsg.messenger.api.admin.ui.AdminUiResource;
 import com.avandocmsg.messenger.api.blocks.BlocksResource;
 import com.avandocmsg.messenger.api.conference.ConferenceResource;
 import com.avandocmsg.messenger.api.conference.ConferenceService;
+import com.avandocmsg.messenger.api.export.AdminExportComplianceSeed;
+import com.avandocmsg.messenger.api.export.ExportFileAccess;
+import com.avandocmsg.messenger.api.export.ExportJobEnqueuer;
 import com.avandocmsg.messenger.api.export.ExportResource;
+import com.avandocmsg.messenger.api.export.ExportSuggestedHandler;
 import com.avandocmsg.messenger.api.crypto.E2EEService;
 import com.avandocmsg.messenger.api.crypto.KeyPackageRepository;
 import com.avandocmsg.messenger.api.files.FileProxy;
@@ -31,6 +36,7 @@ import com.avandocmsg.messenger.api.files.FileService;
 import com.avandocmsg.messenger.api.media.MediaCapabilitiesResource;
 import com.avandocmsg.messenger.api.metrics.PrometheusMetricsResource;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
+import com.avandocmsg.messenger.api.repository.ExportJobRepository;
 import com.avandocmsg.messenger.api.repository.FilePublicLinkRepository;
 import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
@@ -87,6 +93,11 @@ public class JerseyConfig extends ResourceConfig {
                         SessionRepository sessionRepository, MlsService mlsService,
                         FileProxy fileProxy, ConferenceService conferenceService,
                         AuditRepository auditRepository,
+                        ExportJobRepository exportJobRepository,
+                        ExportJobEnqueuer exportJobEnqueuer,
+                        ExportFileAccess exportFileAccess,
+                        ExportSuggestedHandler exportSuggestedHandler,
+                        AdminExportComplianceSeed exportComplianceSeed,
                         OrganizationRepository organizationRepository,
                         RetentionPolicyRepository retentionPolicyRepository,
                         ChatRetentionPolicyRepository chatRetentionPolicyRepository,
@@ -129,6 +140,11 @@ public class JerseyConfig extends ResourceConfig {
                 bind(mlsService).to(MlsService.class);
                 bind(conferenceService).to(ConferenceService.class);
                 bind(auditRepository).to(AuditRepository.class);
+                bind(exportJobRepository).to(ExportJobRepository.class);
+                bind(exportJobEnqueuer).to(ExportJobEnqueuer.class);
+                bind(exportFileAccess).to(ExportFileAccess.class);
+                bind(exportSuggestedHandler).to(ExportSuggestedHandler.class);
+                bind(exportComplianceSeed).to(AdminExportComplianceSeed.class);
                 bind(organizationRepository).to(OrganizationRepository.class);
                 bind(retentionPolicyRepository).to(RetentionPolicyRepository.class);
                 bind(chatRetentionPolicyRepository).to(ChatRetentionPolicyRepository.class);
@@ -156,6 +172,7 @@ public class JerseyConfig extends ResourceConfig {
         register(FileResource.class);
         register(ChatBanResource.class);
         register(CryptoResource.class);
+        register(DeviceResource.class);
         register(ExportResource.class);
         register(ConferenceResource.class);
         register(MediaCapabilitiesResource.class);

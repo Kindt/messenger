@@ -8,6 +8,178 @@
 
 ## [Unreleased]
 
+### 2026-05-16 — **export**: compliance prep API, smokes, admin UI
+
+- **`POST /api/v1/admin/export-compliance-prep`** (`EXPORT_ADMIN_SUGGEST_ENABLED`): group + retention policy + N text messages; **`include_file`** — upload и сообщение `type=file`; ответ `file_id`, `file_message_id`.
+- Админ UI: **seed+prepare**, **seed+file**, **compliance flow** (prep → suggest → export → poll → download/inspect), **poll**.
+- Smokes: `smoke-export-compliance-flow` (`-IncludeFile`), `smoke-export-compliance-pack`, `smoke-admin-export-inspect`, `smoke-openapi-export-compliance` (`/api/openapi.json`), CI workflow **Export compliance smoke** (`poll_seconds` input).
+- OpenAPI: `@ExampleObject` на **export-compliance-prep**; unit **`AdminExportComplianceOpenApiTest`**; smoke **`smoke-openapi-export-compliance`**.
+- Admin UI: кнопка **flow+file**; исправлен **`smoke-export-compliance-flow.sh --include-file`** (prep с файлом).
+- Тест **`AdminExportComplianceSeedH2Test`** (H2 + in-memory file proxy).
+
+### 2026-05-16 — **export**: E2EE stats, avatar source, admin audit presets
+
+- **`exportCompleteness`**: `e2eeMessageCount`, `nonE2eeMessageCount`, GDPR `e2ee_file_refs`; `referencedFiles[].exportFileSource=chat_avatar`.
+- Админ-консоль: пресеты фильтра аудита для export.* событий.
+
+### 2026-05-16 — **export**: аудит скачивания + smoke ZIP/parts
+
+- **audit_events** `export.downloaded` (part, output_format, output_storage) на **GET …/download**.
+- **`scripts/smoke-export-chat.ps1`**: `output_format`, скачивание `bundle` / `?part=json` / `?part=manifest`; `-SkipDownload`.
+
+### 2026-05-16 — **export**: manifest в ZIP + частичное скачивание
+
+- В ZIP: **`attachments/manifest.json`** (fileId, zipPath, size, sha256); **`output_format`** в **GET** status (`json` | `zip`).
+- **GET download** query **`part`**: `bundle` (default), `json`, `manifest`.
+
+### 2026-05-16 — **export-replay**: ZIP с бинарными вложениями
+
+- **`EXPORT_REPLAY_INCLUDE_FILE_BODIES`**: `export.json` + `attachments/{fileId}/{filename}` в **`.export.zip`**; MinIO key `exports/{jobId}.export.zip`.
+- Лимиты **`EXPORT_REPLAY_MAX_FILE_BODIES`**, **`EXPORT_REPLAY_MAX_FILE_BODY_BYTES`**; блок **`fileBodies`** и обновление GDPR **`file_binary`** в JSON.
+- **GET download** отдаёт zip (`application/zip`) при bundle.
+
+### 2026-05-16 — **export**: auto-queue по `msg.export.suggested`
+
+- **`ExportJobEnqueuer`** — общая постановка export (REST + auto).
+- **`EXPORT_AUTO_QUEUE_ON_SUGGESTED`** (default false): **`ExportAutoQueueOnSuggested`** → **`msg.export.replay`**, аудит **`export.auto_queued`** / **`export.auto_queue_skipped`**.
+- Актор: **`EXPORT_AUTO_QUEUE_ACTOR_USER_ID`** или **`chats.owner_id`**; cooldown **`EXPORT_AUTO_QUEUE_COOLDOWN_MINUTES`** (default 1440).
+
+### 2026-05-16 — **export**: GDPR disclosures + retention export hint (NATS)
+
+- В **`exportCompleteness.gdprDisclosures`** — структурированный чеклист (hot DB, E2EE, файлы, deep-archive, retention, Solr, TTL).
+- Subject **`msg.export.suggested`** (`ExportSuggestedEvent`); retention публикует при **`RETENTION_PUBLISH_EXPORT_SUGGESTED=true`** перед hot-body pass.
+- **core-api** `ExportSuggestedSubscriber` → аудит **`export.suggested`**; env **`EXPORT_SUGGESTED_SUBSCRIBER_ENABLED`** (default true).
+
+### 2026-05-16 — **export-replay**: дамп Solr-индекса по чату
+
+- **`solrIndex`** в JSON (`chat_id_s` query); env **`EXPORT_REPLAY_INCLUDE_SOLR_INDEX`**, **`EXPORT_REPLAY_MAX_SOLR_DOCS`**, **`EXPORT_REPLAY_SOLR_INCLUDE_CONTENT`**.
+- Скрипт **`scripts/pre-retention-export.ps1`** — export перед агрессивной ретенцией.
+
+### 2026-05-16 — **export-replay**: снимки retention hot-body из MinIO
+
+- **`retentionSnapshots`**: ключи из **`retention_hot_body_applied`**, объекты в бакете retention; env **`EXPORT_REPLAY_INCLUDE_RETENTION_SNAPSHOTS`**, **`EXPORT_REPLAY_MAX_RETENTION_SNAPSHOTS`**, **`EXPORT_REPLAY_RETENTION_MINIO_BUCKET`**, **`EXPORT_REPLAY_RETENTION_OBJECT_PREFIX`**.
+- Общий **`ExportMinioJsonFetcher`** для deep-archive и retention.
+
+### 2026-05-16 — **export-replay**: снимки deep-archive из MinIO
+
+- Опционально **`deepArchiveSnapshots`** (`messages/{id}.json` из бакета deep-archive); env **`EXPORT_REPLAY_INCLUDE_DEEP_ARCHIVE`**, **`EXPORT_REPLAY_MAX_DEEP_ARCHIVE_SNAPSHOTS`**, **`EXPORT_REPLAY_DEEP_ARCHIVE_BUCKET`**.
+- **`exportCompleteness`** отражает число найденных снимков.
+
+### 2026-05-16 — **export-replay**: retention + completeness в JSON
+
+- **`retentionPolicy`** (эффективная политика чата) и **`exportCompleteness`** (что в пакете / что нет); флаг **`exportRecommendedBeforeHotBodyPurge`**.
+- Env **`EXPORT_REPLAY_INCLUDE_RETENTION_POLICY`**, **`EXPORT_REPLAY_INCLUDE_EXPORT_COMPLETENESS`** (default **true**).
+
+### 2026-05-16 — **export**: `message_ttl_filter_applied` в **export_jobs** и **GET** status
+
+- **`V017__export_jobs_ttl_filter`**, поле в **`ExportReplayCompleteEvent`**, воркер и NATS-подписчик сохраняют флаг TTL.
+
+### 2026-05-16 — **export**: MinIO для JSON экспорта
+
+- **`ExportOutputRef`** (`minio:exports/{jobId}.export.json`); воркер **`EXPORT_REPLAY_MINIO_UPLOAD`** → upload в MinIO; **GET download** читает из MinIO или **EXPORT_DIR**.
+- **`output_storage`** в **GET** status; **full-server** compose включает upload.
+
+### 2026-05-16 — **export**: подписчик **msg.export.replay.complete** в core-api
+
+- **`ExportReplayCompleteSubscriber`**: queue **`core-api-export-complete`**, **`ExportJobRepository.applyCompleteIfPending`** (идемпотентно для **queued** / **processing**).
+- Env **EXPORT_COMPLETE_SUBSCRIBER_ENABLED** (по умолчанию **true**); воркеру нужен **EXPORT_PUBLISH_COMPLETE=true**.
+
+### 2026-05-16 — **export**: скачивание JSON через API
+
+- **GET /v1/chats/{chatId}/export/{jobId}/download** — файл из **EXPORT_DIR** (общий том с **export-replay-worker** в **full-server** compose).
+- **`ExportFileAccess`**, env **EXPORT_DIR** на **core-api**; тесты **`ExportFileAccessTest`**, **`ExportResourceTest`**.
+
+### 2026-05-16 — **export-replay**: TTL сообщений как в API
+
+- **`ExportReplayWorker`**: **`EXPORT_REPLAY_APPLY_MESSAGE_TTL_FILTER`** (по умолчанию **true**) — тот же предикат, что **`MessageRepository.SQL_MSG_TTL_VISIBLE`**; в JSON **`messageTtlFilterApplied`**.
+- Тест **`buildMessagesSql_appliesTtlWhenEnabled`**; smoke **`scripts/smoke-export-chat.ps1`**.
+
+### 2026-05-13 19:45 UTC — **export**: статус задачи и аудит
+
+- **`V016__export_jobs`**, **`ExportJobRepository`**: **POST** создаёт **queued**; **export-replay** → **processing** / терминальный статус + **`output_path`**.
+- **`GET /v1/chats/{chatId}/export/{jobId}`**, **`ExportJobStatusResponse`**; **audit_events**: **export.requested**, **export.completed**.
+- **`ExportJobStore`**, **`ExportAuditWriter`** в **export-replay**; тесты **`ExportResourceTest`**, **`ExportJobRepositoryH2Test`**.
+
+### 2026-05-13 19:40 UTC — **web-client**: загрузка файлов в чат
+
+- **`app.js`**: **`apiFetch`**, **`uploadChatFile`**, **`sendFileMessage`**; отображение **image** / **file** / **video** по **file_id** (превью и скачивание с Bearer); лимит из **`GET /media/capabilities`**.
+- **`styles.css`**: **`.msg-attachment-image`**, **`.msg-attachment-dl`**.
+
+### 2026-05-13 19:30 UTC — **web-client**: refresh JWT и переподключение WebSocket
+
+- **`app.js`**: при **401** — **`POST /auth/refresh`**, повтор запроса, иначе выход из сессии; после refresh — переподключение WS с новым access token.
+- Автопереподключение **WebSocket** (backoff до 30 с), статус **WS переподкл.**; **`closeWs`** / выход — без реконнекта.
+
+### 2026-05-13 19:20 UTC — WebRTC mesh: демонстрация экрана удалённым участникам
+
+- **`modules/web-client/app.js`**: **`getDisplayMedia`** — трек экрана в каждый **`RTCPeerConnection`** (через **`clone()`** при наличии), **`rtcRenegotiateMesh`**, **`stopScreenShareInternal`** / **`removeScreenTracksFromMesh`** по **`displaySurface`** / метке трека; при создании **`pc`** учёт уже включённого экрана; второй **`<video>`** на участника для экрана; **`ontrack`** разделяет камеру и дисплей.
+- **`modules/web-client/styles.css`**: **`.rtc-remote-screen`**.
+
+### 2026-05-13 19:15 UTC — **export-replay**: **referencedUsers** включает загрузчиков **file_metadata**
+
+- **`ExportReplayWorker`**: CTE **`fup`** в **`SQL_REFERENCED_USERS`** — **`uploaded_by`** для UUID из того же набора, что **`referencedFiles`** (пустой **`ANY`** — безопасно).
+- **`ExportResource`** (OpenAPI).
+
+### 2026-05-13 19:10 UTC — **export-replay**: **referencedFiles** (**file_metadata**)
+
+- **`ExportReplayWorker`**: UUID из не‑**e2ee-*** текста **messages** / **message_versions** (regex) и из **chats.avatar_file_id**; **`EXPORT_REPLAY_INCLUDE_REFERENCED_FILES`**, **`EXPORT_REPLAY_MAX_FILE_IDS_FROM_CONTENT`**, **`EXPORT_REPLAY_MAX_REFERENCED_FILES`**; **`referencedFileIdsTruncated`**, **`referencedFilesTruncated`**.
+- **`ExportResource`** (OpenAPI), тесты **`collectFileIdsFromText`** / **`tryAddUuidString`** в **`ExportReplayWorkerTest`**.
+
+### 2026-05-13 19:05 UTC — WebRTC mesh: очередь ICE до **`remoteDescription`**
+
+- **`modules/web-client/app.js`**: **`rtcPendingCandidates`**, **`addRemoteIceCandidate`** / **`flushPendingIceCandidates`** — trickle **candidate** до прихода **offer**/**answer** не теряется; сброс при **`teardownPeer`** / **`rtcHangupAll`**; **`flushPendingIceCandidates`** повторяется, если за время **`addIceCandidate`** в очередь снова что-то попало; **`addIceCandidate(null)`** (конец trickle), если уже есть **`remoteDescription`**.
+
+### 2026-05-13 19:00 UTC — WebRTC: обрыв **`connectionState`**, STUN в **`docker-compose.turn`**
+
+- **`modules/web-client`**: **`app.js`** — при **`RTCPeerConnection.connectionState === "failed"`** отправка **`hangup`**, **`teardownPeer`**, сообщение пользователю.
+- **`korus-web/docker-compose.turn.yml`**: в **`WEB_CLIENT_RTC_ICE_SERVERS`** добавлен публичный **STUN** вместе с **TURN**.
+- **`korus-web/README.md`**: уточнение про состав ICE в **`turn`**-оверлее.
+
+### 2026-05-13 18:55 UTC — Документация **korus-web** / **`-Help`** у **`korus-web-down`** и **`dev-web-stack-down`**
+
+- **`korus-web/README.md`**: шаг **3** — остановка профиля **`web`** через **`dev-web-stack-down`**.
+- **`scripts/korus-web-down.ps1`**, **`scripts/korus-web-down.sh`**: в справке — когда использовать **`dev-web-stack-down`**.
+- **`scripts/dev-web-stack-down.ps1`**, **`scripts/dev-web-stack-down.sh`**: в справке — остановка **korus-web** отдельно (**`korus-web-down`**).
+
+### 2026-05-13 18:50 UTC — **export-replay**: **chats** + **chat_members**
+
+- **`ExportReplayWorker`**: объект **`chat`** (или **`chatMissing`**), массив **`chatMembers`**; **`EXPORT_REPLAY_INCLUDE_CHAT`**, **`EXPORT_REPLAY_INCLUDE_CHAT_MEMBERS`**, **`EXPORT_REPLAY_MAX_CHAT_MEMBERS`**, **`chatMembersTruncated`**.
+- **`ExportResource`** (OpenAPI): флаги выключения чата / участников.
+
+### 2026-05-13 18:45 UTC — **`full-stack-up`**: подсказки TURN, smoke, порядок остановки
+
+- **`scripts/full-stack-up.ps1`**, **`scripts/full-stack-up.sh`**: опциональный **`korus-web-up`** с **`-Turn`**, **`smoke-korus-web`**, явный текст про **`full-stack-down`** и **`korus-web-down`**; **`-Help`** — кратко про подсказки после успеха.
+- **`korus-web/README.md`**, **`scripts/TEST_SERVER_READY.md`**: остановка **korus-web** перед **`full-stack-down`** при общей сети с **full-server**.
+
+### 2026-05-13 18:40 UTC — **`dev-web-stack-down`**, подсказки в **`full-stack-down`** / **`dev-web-stack-up`**
+
+- **`scripts/dev-web-stack-down.ps1`**, **`scripts/dev-web-stack-down.sh`**, **`scripts/dev-web-stack-down.cmd`**: **`docker compose -f docker-compose.dev-min.yml --profile web down`** (опционально **`-Volumes`**).
+- **`scripts/dev-web-stack-up.ps1`**, **`scripts/dev-web-stack-up.sh`**: строка «Stop profile web».
+- **`scripts/full-stack-down.ps1`**, **`scripts/full-stack-down.sh`**: напоминание о **`korus-web-down`** и **`dev-web-stack-down`**; расширен **`-Help`**.
+- **`README.md`** (таблица + **`dev-web-stack-down.cmd`**), **`scripts/TEST_SERVER_READY.md`**, **`docs/PARALLEL_DEVELOPMENT.md`**, **`modules/web-client/README.md`**.
+
+### 2026-05-13 18:35 UTC — **export-replay**: **reactions**, **pinned**
+
+- **`ExportReplayWorker`**: массивы **`reactions`**, **`pinnedMessages`** (тот же поднабор сообщений); **`EXPORT_REPLAY_INCLUDE_REACTIONS`**, **`EXPORT_REPLAY_MAX_REACTION_ROWS`**, **`EXPORT_REPLAY_INCLUDE_PINS`**, **`EXPORT_REPLAY_MAX_PINNED_ROWS`**; флаги **`reactionsTruncated`**, **`pinnedTruncated`**.
+- **`ExportResource`** (OpenAPI): перечислены новые переменные.
+
+### 2026-05-13 18:25 UTC — **export-replay**: **message_versions**, Docker в **full-server**
+
+- **`ExportReplayWorker`**: массив **`messageVersions`** (подзапрос по тем же сообщениям, что и экспорт; **`contentOmitted`** для правок сообщений с типом **`e2ee-*`**); **`EXPORT_REPLAY_INCLUDE_VERSIONS`**, **`EXPORT_REPLAY_MAX_MESSAGE_VERSIONS`**; флаг **`versionsTruncated`**.
+- **`docker/Dockerfile.export-replay-worker`**, сервис **`export-replay-worker`** в **`docker/docker-compose.full-server.yml`** (том **`export-replay-data`**, **`EXPORT_DIR=/export`**).
+- **`ExportResource`** (OpenAPI): переменные для версий.
+
+### 2026-05-13 18:15 UTC — **`korus-web-down`**: симметричная остановка со **`Attach` / `Turn`**
+
+- **`scripts/korus-web-down.ps1`**, **`scripts/korus-web-down.sh`**, **`scripts/korus-web-down.cmd`**: **`docker compose down`** из **`korus-web/`** с теми же **`-f`**, что **`korus-web-up`** (**`-Attach`**, **`-Turn`**); **`-Volumes`** — **`down -v`**.
+- **`scripts/korus-web-up.ps1`**: строка «Stop: … **korus-web-down**» с актуальными флагами.
+- **`korus-web/README.md`**, **`scripts/TEST_SERVER_READY.md`**, **`docs/PARALLEL_DEVELOPMENT.md`**, **`modules/web-client/README.md`**, **`korus-web/docker-compose.turn.yml`**, корневой **`README.md`**.
+
+### 2026-05-13 18:10 UTC — **export-replay**: выгрузка **messages** из hot-БД (JSON v1)
+
+- **`modules/workers/export-replay`**: при **`DB_JDBC_URL`** — SELECT по **`chat_id`**, типы **`e2ee-*`** без поля **`content`** (**`contentOmitted`**); **`EXPORT_REPLAY_MAX_MESSAGES`**, **`EXPORT_REPLAY_QUERY_TIMEOUT_SECONDS`**; статусы **`msg.export.replay.complete`**: **`export_v1`** / **`export_failed`**; без БД — прежний stub (**`stub_written`**).
+- **`ExportResource`** (OpenAPI), **`ExportReplayCompleteEvent`**, **`docs/NATS_SUBJECTS_INTEROP.md`**, тест **`ExportReplayWorkerTest`**.
+
 ### 2026-05-13 17:50 UTC — CI GitHub: **`gradle.properties`** без **`org.gradle.java.home`**
 
 - **`gradle.properties`**: удалён путь **`C:/Program Files/Java/...`** — на **ubuntu-latest** Gradle не находил JVM и падал на шаге **`buildIntegrity`**.
@@ -18,6 +190,8 @@
 - **`modules/web-client`**: **`getRtcIceServers()`** в **`app.js`** — чтение **`iceServersJson`** из **`/web-client-env.js`**, иначе публичный STUN; подсказка в панели видео.
 - **`modules/web-client/README.md`**, **`korus-web/.env.example`**: описание переменной и пример JSON.
 - **`korus-web/docker-compose.yml`**, **`docker-compose.attach.yml`**: проброс **`WEB_CLIENT_RTC_ICE_SERVERS`** в **web-a** / **web-b**.
+- **`WebClientEnvServlet.buildEnvScriptBody`**: вынесена логика сборки скрипта для тестов без **`System.getenv`**; **`WebClientEnvServletTest`**.
+- **`scripts/TEST_SERVER_READY.md`**: когда нужен **TURN** для mesh WebRTC и откуда берётся **`iceServersJson`**.
 
 ### 2026-05-13 17:00 UTC — WebRTC signaling: **`rtc.signal`**, mesh в **web-client**
 

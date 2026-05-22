@@ -111,11 +111,298 @@
     } else {
       addRow("Счётчики БД", "недоступны");
     }
+    const ec = stats.export_compliance || {};
+    if (ec.available) {
+      addRow("Экспорт: задачи (всего)", String(ec.jobs_total));
+      addRow(
+        "Экспорт: queued / processing",
+        String(ec.jobs_queued) + " / " + String(ec.jobs_processing)
+      );
+      if (ec.jobs_processing_stale > 0) {
+        addRow(
+          "Экспорт: processing stale",
+          String(ec.jobs_processing_stale) + " (>" + String(ec.processing_stale_minutes) + " мин)"
+        );
+      }
+      addRow(
+        "Экспорт: завершено / ошибка",
+        String(ec.jobs_completed) + " / " + String(ec.jobs_failed)
+      );
+      addRow("Экспорт: отменено", String(ec.jobs_cancelled));
+      addRow("Аудит export.* (7 дн.)", String(ec.audit_export_events_7d));
+      addRow("Аудит export cancel (7 дн.)", String(ec.audit_export_cancelled_7d));
+    } else {
+      addRow("Экспорт (compliance)", "недоступен");
+    }
     container.appendChild(table);
     const cap = document.createElement("p");
     cap.className = "muted small";
     cap.textContent = "Полный JSON ниже.";
     container.appendChild(cap);
+  }
+
+  function renderGdprDisclosuresTable(disclosures, container) {
+    if (!Array.isArray(disclosures) || disclosures.length === 0) {
+      return;
+    }
+    const wrap = document.createElement("div");
+    wrap.className = "json-table-wrap";
+    const table = document.createElement("table");
+    const head = document.createElement("thead");
+    const hr = document.createElement("tr");
+    ["id", "category", "included", "note"].forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    head.appendChild(hr);
+    table.appendChild(head);
+    const body = document.createElement("tbody");
+    disclosures.forEach((row) => {
+      const tr = document.createElement("tr");
+      const inc = row.included === true;
+      [
+        row.id || "—",
+        row.category || "—",
+        inc ? "да" : "нет",
+        row.note || ""
+      ].forEach((val) => {
+        const td = document.createElement("td");
+        td.textContent = val;
+        tr.appendChild(td);
+      });
+      if (inc) {
+        tr.classList.add("gdpr-included");
+      }
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    container.appendChild(wrap);
+  }
+
+  function renderExportJobsTable(list, container) {
+    if (!list || !Array.isArray(list.jobs) || list.jobs.length === 0) {
+      return;
+    }
+    const note = document.createElement("p");
+    note.className = "json-panel-note";
+    const filterHint = list.status_filter ? " filter=" + list.status_filter : "";
+    const chatHint = list.chat_id_filter ? " chat=" + list.chat_id_filter : "";
+    note.textContent =
+      "Задачи export_jobs (" + String(list.job_count) + ")" + filterHint + chatHint + ":";
+    container.appendChild(note);
+    const wrap = document.createElement("div");
+    wrap.className = "json-table-wrap export-jobs-table";
+    const table = document.createElement("table");
+    const head = document.createElement("thead");
+    const hr = document.createElement("tr");
+    const withChat = list.jobs.length > 0 && list.jobs[0].chat_id != null;
+    const cols = withChat
+      ? ["job_id", "chat_id", "status", "format", "created_at"]
+      : ["job_id", "status", "format", "created_at"];
+    cols.forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    head.appendChild(hr);
+    table.appendChild(head);
+    const body = document.createElement("tbody");
+    list.jobs.forEach((j) => {
+      const tr = document.createElement("tr");
+      tr.style.cursor = "pointer";
+      tr.title = "Подставить chat_id и job_id";
+      tr.addEventListener("click", () => {
+        const inp = document.getElementById("exportInspectJobId");
+        if (inp && j.job_id) {
+          inp.value = j.job_id;
+        }
+        const chatInp = document.getElementById("exportSuggestChatId");
+        if (chatInp && j.chat_id) {
+          chatInp.value = j.chat_id;
+        }
+      });
+      const rowVals = withChat
+        ? [j.job_id, j.chat_id, j.status, j.output_format, j.created_at]
+        : [j.job_id, j.status, j.output_format, j.created_at];
+      rowVals.forEach((val) => {
+        const td = document.createElement("td");
+        td.textContent = val != null ? String(val) : "";
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    container.appendChild(wrap);
+  }
+
+  function renderExportAttachmentsTable(att, container) {
+    if (!att || !att.zip_bundle || !Array.isArray(att.files) || att.files.length === 0) {
+      return;
+    }
+    const note = document.createElement("p");
+    note.className = "json-panel-note";
+    note.textContent =
+      "Вложения export (страница " +
+      String(att.file_count) +
+      " из " +
+      String(att.total_count) +
+      ", offset=" +
+      String(att.offset) +
+      "):";
+    container.appendChild(note);
+    const wrap = document.createElement("div");
+    wrap.className = "json-table-wrap";
+    const table = document.createElement("table");
+    const head = document.createElement("thead");
+    const hr = document.createElement("tr");
+    ["file_id", "filename", "mime_type", "size_bytes", "sha256"].forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    head.appendChild(hr);
+    table.appendChild(head);
+    const body = document.createElement("tbody");
+    att.files.forEach((f) => {
+      const tr = document.createElement("tr");
+      [f.file_id, f.filename, f.mime_type, String(f.size_bytes), f.sha256].forEach((val) => {
+        const td = document.createElement("td");
+        td.textContent = val != null ? String(val) : "";
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    container.appendChild(wrap);
+  }
+
+  function renderExportComplianceGuide(guide, container, pre) {
+    container.innerHTML = "";
+    const ec = guide.export_compliance || {};
+    const table = document.createElement("table");
+    const addRow = (label, value) => {
+      const tr = document.createElement("tr");
+      const th = document.createElement("th");
+      th.textContent = label;
+      const td = document.createElement("td");
+      td.textContent = value;
+      tr.appendChild(th);
+      tr.appendChild(td);
+      table.appendChild(tr);
+    };
+    if (ec.available) {
+      addRow("Задачи export_jobs", String(ec.jobs_total));
+      addRow("queued / processing", String(ec.jobs_queued) + " / " + String(ec.jobs_processing));
+      if (ec.jobs_processing_stale > 0) {
+        addRow(
+          "processing stale",
+          String(ec.jobs_processing_stale) + " (>" + String(ec.processing_stale_minutes) + " мин)"
+        );
+      }
+      addRow("завершено / ошибка", String(ec.jobs_completed) + " / " + String(ec.jobs_failed));
+      addRow("отменено", String(ec.jobs_cancelled));
+      addRow("Аудит export.* (7 дн.)", String(ec.audit_export_events_7d));
+      addRow("аудит cancel (7 дн.)", String(ec.audit_export_cancelled_7d));
+    } else {
+      addRow("Счётчики", "недоступны");
+    }
+    container.appendChild(table);
+
+    const hGdpr = document.createElement("p");
+    hGdpr.className = "json-panel-note";
+    hGdpr.textContent = "Справочник gdprDisclosures (шаблон для export.json):";
+    container.appendChild(hGdpr);
+    renderGdprDisclosuresTable(guide.gdpr_disclosures_reference, container);
+
+    const envList = guide.env_checklist;
+    if (Array.isArray(envList) && envList.length > 0) {
+      const hEnv = document.createElement("p");
+      hEnv.className = "json-panel-note";
+      hEnv.textContent = "Переменные окружения (полный compliance-пакет):";
+      container.appendChild(hEnv);
+      const envWrap = document.createElement("div");
+      envWrap.className = "json-table-wrap";
+      const envTable = document.createElement("table");
+      const eHead = document.createElement("thead");
+      const eHr = document.createElement("tr");
+      ["env", "purpose", "default"].forEach((h) => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        eHr.appendChild(th);
+      });
+      eHead.appendChild(eHr);
+      envTable.appendChild(eHead);
+      const eBody = document.createElement("tbody");
+      envList.forEach((row) => {
+        const tr = document.createElement("tr");
+        [row.env || "", row.purpose || "", row.default_value || ""].forEach((val) => {
+          const td = document.createElement("td");
+          td.textContent = val;
+          tr.appendChild(td);
+        });
+        eBody.appendChild(tr);
+      });
+      envTable.appendChild(eBody);
+      envWrap.appendChild(envTable);
+      container.appendChild(envWrap);
+    }
+
+    const smokeList = guide.smoke_commands;
+    if (Array.isArray(smokeList) && smokeList.length > 0) {
+      const hSmoke = document.createElement("p");
+      hSmoke.className = "json-panel-note";
+      hSmoke.textContent = "Smoke-команды (локальный стенд):";
+      container.appendChild(hSmoke);
+      const smokeWrap = document.createElement("div");
+      smokeWrap.className = "export-smoke-commands";
+      smokeList.forEach((row) => {
+        const block = document.createElement("div");
+        block.className = "export-smoke-cmd-block";
+        const title = document.createElement("p");
+        title.className = "small";
+        title.textContent = row.title || "smoke";
+        block.appendChild(title);
+        const cmd = row.command_ps || row.command_sh || "";
+        const preCmd = document.createElement("pre");
+        preCmd.className = "export-smoke-cmd-pre";
+        preCmd.textContent = cmd;
+        block.appendChild(preCmd);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = "копировать";
+        btn.addEventListener("click", () => {
+          const text = cmd;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(
+              () => {
+                btn.textContent = "скопировано";
+                setTimeout(() => {
+                  btn.textContent = "копировать";
+                }, 1500);
+              },
+              () => {
+                btn.textContent = "ошибка";
+              }
+            );
+          } else {
+            btn.textContent = "Ctrl+C из pre";
+          }
+        });
+        block.appendChild(btn);
+        smokeWrap.appendChild(block);
+      });
+      container.appendChild(smokeWrap);
+    }
+
+    const cap = document.createElement("p");
+    cap.className = "muted small";
+    cap.textContent = "Полный JSON ниже. Аудит: пресеты в разделе «Аудит».";
+    container.appendChild(cap);
+    pre.textContent = JSON.stringify(guide, null, 2);
   }
 
   function normalizePanelPath(p) {
@@ -193,6 +480,54 @@
     btn.addEventListener("click", () => onApply());
     box.appendChild(btn);
     container.appendChild(box);
+    appendExportAuditPresets(container, onApply);
+  }
+
+  function appendExportAuditPresets(container, onApply) {
+    if (document.getElementById("exportAuditPresets")) {
+      return;
+    }
+    const row = document.createElement("div");
+    row.id = "exportAuditPresets";
+    row.className = "admin-toolbar export-audit-presets";
+    const cap = document.createElement("span");
+    cap.className = "small muted";
+    cap.textContent = "Export:";
+    row.appendChild(cap);
+    const presets = [
+      { label: "requested", action: "export.requested", resourceType: "export_job", resourceId: "" },
+      { label: "downloaded", action: "export.downloaded", resourceType: "export_job", resourceId: "" },
+      { label: "suggested", action: "export.suggested", resourceType: "chat", resourceId: "" },
+      { label: "auto_queued", action: "export.auto_queued", resourceType: "export_job", resourceId: "" },
+      { label: "skip", action: "export.auto_queue_skipped", resourceType: "chat", resourceId: "" },
+      { label: "admin_view", action: "export.admin_inspected", resourceType: "export_job", resourceId: "" },
+      { label: "admin_dl", action: "export.admin_downloaded", resourceType: "export_job", resourceId: "" },
+      { label: "cancelled", action: "export.cancelled", resourceType: "export_job", resourceId: "" },
+      { label: "admin_cancel", action: "export.admin_cancelled", resourceType: "export_job", resourceId: "" }
+    ];
+    presets.forEach((p) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "small";
+      btn.textContent = p.label;
+      btn.addEventListener("click", () => {
+        const a = document.getElementById("auditFilterAction");
+        const t = document.getElementById("auditFilterResourceType");
+        const r = document.getElementById("auditFilterResourceId");
+        if (a) {
+          a.value = p.action;
+        }
+        if (t) {
+          t.value = p.resourceType;
+        }
+        if (r) {
+          r.value = p.resourceId;
+        }
+        onApply();
+      });
+      row.appendChild(btn);
+    });
+    container.appendChild(row);
   }
 
   function appendJsonPanelReload(container, onReload) {
@@ -583,6 +918,41 @@
     return body;
   }
 
+  async function apiDownload(path, filename) {
+    const headers = {};
+    const tok = token();
+    if (tok) {
+      headers.Authorization = "Bearer " + tok;
+    }
+    const res = await fetch(API + path, { headers });
+    if (!res.ok) {
+      if (res.status === 401) {
+        clearAuthStorage();
+        updateLogoutButton();
+      }
+      let msg = res.status + " " + res.statusText;
+      try {
+        const err = await res.json();
+        if (err && err.message) {
+          msg = err.message;
+        }
+      } catch (_) {}
+      throw new Error(msg);
+    }
+    const blob = await res.blob();
+    const name =
+      filename ||
+      (res.headers.get("Content-Disposition") || "").replace(/^.*filename="?([^";]+)"?.*$/, "$1") ||
+      "export-download.bin";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  }
+
   async function login() {
     const username = el("username").value.trim();
     const password = el("password").value;
@@ -687,7 +1057,786 @@
           pre.textContent = JSON.stringify(data, null, 2);
         }
 
-        if (section.id === "core-audit-events") {
+        if (section.id === "core-export-compliance") {
+          function appendExportSuggestToolbar(container, preEl) {
+            if (document.getElementById("exportSuggestChatId")) {
+              return;
+            }
+            const suggestRow = document.createElement("div");
+            suggestRow.className = "admin-toolbar export-suggest-toolbar";
+          const lChat = document.createElement("label");
+          lChat.className = "small";
+          lChat.textContent = "chat_id";
+          const inChat = document.createElement("input");
+          inChat.type = "text";
+          inChat.id = "exportSuggestChatId";
+          inChat.placeholder = "UUID чата";
+          lChat.appendChild(inChat);
+          const lDispatch = document.createElement("label");
+          lDispatch.className = "small";
+          lDispatch.textContent = "dispatch";
+          const selDispatch = document.createElement("select");
+          selDispatch.id = "exportSuggestDispatch";
+          ["local", "nats", "both"].forEach((v) => {
+            const o = document.createElement("option");
+            o.value = v;
+            o.textContent = v;
+            selDispatch.appendChild(o);
+          });
+          lDispatch.appendChild(selDispatch);
+          const btnNewChat = document.createElement("button");
+          btnNewChat.type = "button";
+          btnNewChat.textContent = "new group";
+          const btnDevSeed = document.createElement("button");
+          btnDevSeed.type = "button";
+          btnDevSeed.title = "3 сообщения + PATCH retention (smoke)";
+          btnDevSeed.textContent = "seed+prepare";
+          const btnSeedFile = document.createElement("button");
+          btnSeedFile.type = "button";
+          btnSeedFile.title = "export-compliance-prep с include_file";
+          btnSeedFile.textContent = "seed+file";
+          const btnPrepareRet = document.createElement("button");
+          btnPrepareRet.type = "button";
+          btnPrepareRet.textContent = "retention";
+          const btnSuggest = document.createElement("button");
+          btnSuggest.type = "button";
+          btnSuggest.textContent = "export-suggest";
+          const btnEnqueue = document.createElement("button");
+          btnEnqueue.type = "button";
+          btnEnqueue.textContent = "export";
+          const btnComplianceFlow = document.createElement("button");
+          btnComplianceFlow.type = "button";
+          btnComplianceFlow.title =
+            "prep → suggest → export → poll → download → attachments inspect";
+          btnComplianceFlow.textContent = "compliance flow";
+          const btnComplianceFlowFile = document.createElement("button");
+          btnComplianceFlowFile.type = "button";
+          btnComplianceFlowFile.title =
+            "prep (include_file) → suggest → export → poll → download → inspect";
+          btnComplianceFlowFile.textContent = "flow+file";
+          const btnPollExport = document.createElement("button");
+          btnPollExport.type = "button";
+          btnPollExport.title = "poll status по chat_id + job_id (до 120s)";
+          btnPollExport.textContent = "poll";
+          const suggestMsg = document.createElement("span");
+          suggestMsg.className = "muted small";
+
+          const exportTerminalStatuses = new Set([
+            "export_v1",
+            "stub_written",
+            "export_failed",
+            "export_cancelled"
+          ]);
+
+          async function pollExportJobStatus(chatId, jobId, onTick) {
+            const maxMs = 120000;
+            const intervalMs = 2000;
+            const deadline = Date.now() + maxMs;
+            let last = null;
+            while (Date.now() < deadline) {
+              last = await apiFetch(
+                "/admin/chats/" +
+                  encodeURIComponent(chatId) +
+                  "/export/" +
+                  encodeURIComponent(jobId) +
+                  "/status"
+              );
+              const st = last.status || "";
+              if (onTick) {
+                onTick(st);
+              }
+              if (exportTerminalStatuses.has(st)) {
+                return last;
+              }
+              await new Promise((resolve) => setTimeout(resolve, intervalMs));
+            }
+            const err = new Error("poll timeout (" + (last?.status || "?") + ")");
+            err.lastStatus = last;
+            throw err;
+          }
+
+          async function ensureChatId() {
+            let cid = inChat.value.trim();
+            if (cid) {
+              return cid;
+            }
+            const chat = await apiFetch("/chats", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                type: "group",
+                title: "export-compliance-smoke",
+                member_ids: []
+              })
+            });
+            cid = chat.id || chat.chat_id || "";
+            if (!cid) {
+              throw new Error("create chat: no id");
+            }
+            inChat.value = cid;
+            return cid;
+          }
+
+          btnNewChat.addEventListener("click", async () => {
+            suggestMsg.textContent = "";
+            try {
+              const cid = await ensureChatId();
+              suggestMsg.textContent = "chat_id=" + cid;
+              preEl.textContent = JSON.stringify({ chat_id: cid }, null, 2);
+            } catch (e) {
+              suggestMsg.textContent = e.message || String(e);
+            }
+          });
+
+          btnPrepareRet.addEventListener("click", async () => {
+            suggestMsg.textContent = "";
+            const cid = inChat.value.trim();
+            if (!cid) {
+              suggestMsg.textContent = "Укажите chat_id.";
+              return;
+            }
+            try {
+              const pol = await apiFetch(
+                "/admin/chats/" + encodeURIComponent(cid) + "/retention",
+                {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    hot_message_body_max_age_days: 0,
+                    hot_metadata_min_age_days: null,
+                    archive_metadata_enabled: false,
+                    deep_archive_enabled: true,
+                    legal_hold: false
+                  })
+                }
+              );
+              suggestMsg.textContent = "retention OK";
+              preEl.textContent = JSON.stringify(pol, null, 2);
+            } catch (e) {
+              suggestMsg.textContent = e.message || String(e);
+            }
+          });
+
+          btnDevSeed.addEventListener("click", async () => {
+            suggestMsg.textContent = "";
+            try {
+              const cid = inChat.value.trim();
+              const prep = await apiFetch("/admin/export-compliance-prep", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  chat_id: cid || null,
+                  create_group: !cid,
+                  message_count: 3
+                })
+              });
+              const outCid = prep.chat_id || prep.chatId || "";
+              if (outCid) {
+                inChat.value = outCid;
+              }
+              suggestMsg.textContent = "seed OK, chat=" + outCid;
+              preEl.textContent = JSON.stringify(prep, null, 2);
+            } catch (e) {
+              suggestMsg.textContent = e.message || String(e);
+            }
+          });
+
+          btnSeedFile.addEventListener("click", async () => {
+            suggestMsg.textContent = "";
+            try {
+              const cidIn = inChat.value.trim();
+              const prep = await apiFetch("/admin/export-compliance-prep", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  chat_id: cidIn || null,
+                  create_group: !cidIn,
+                  message_count: 2,
+                  include_file: true,
+                  file_name: "compliance-smoke.txt"
+                })
+              });
+              const cid = prep.chat_id || prep.chatId || "";
+              if (cid) {
+                inChat.value = cid;
+              }
+              const fileId = prep.file_id || prep.fileId || "";
+              suggestMsg.textContent = fileId
+                ? "seed+file OK, file_id=" + fileId
+                : "seed+file OK, chat=" + cid;
+              preEl.textContent = JSON.stringify(prep, null, 2);
+            } catch (e) {
+              suggestMsg.textContent = e.message || String(e);
+            }
+          });
+
+          btnEnqueue.addEventListener("click", async () => {
+            suggestMsg.textContent = "";
+            const cid = inChat.value.trim();
+            if (!cid) {
+              suggestMsg.textContent = "Укажите chat_id.";
+              return;
+            }
+            try {
+              const res = await apiFetch("/admin/chats/" + encodeURIComponent(cid) + "/export", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: "{}"
+              });
+              suggestMsg.textContent = "job_id=" + (res.job_id || res.jobId);
+              const jobInp = document.getElementById("exportInspectJobId");
+              if (jobInp && (res.job_id || res.jobId)) {
+                jobInp.value = res.job_id || res.jobId;
+              }
+              preEl.textContent = JSON.stringify(res, null, 2);
+            } catch (e) {
+              suggestMsg.textContent = e.message || String(e);
+            }
+          });
+          btnSuggest.addEventListener("click", async () => {
+            suggestMsg.textContent = "";
+            const cid = inChat.value.trim();
+            if (!cid) {
+              suggestMsg.textContent = "Укажите chat_id.";
+              return;
+            }
+            try {
+              const res = await apiFetch(
+                "/admin/chats/" + encodeURIComponent(cid) + "/export-suggest",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    dispatch: selDispatch.value,
+                    candidate_message_count: 1,
+                    reason: "hot_body_candidates"
+                  })
+                }
+              );
+              suggestMsg.textContent = res.auto_queued_job_id
+                ? "OK, auto_queued_job_id=" + res.auto_queued_job_id
+                : "OK (" + res.dispatch + ")";
+              const jobInp = document.getElementById("exportInspectJobId");
+              if (jobInp && res.auto_queued_job_id) {
+                jobInp.value = res.auto_queued_job_id;
+              }
+              preEl.textContent = JSON.stringify(res, null, 2);
+            } catch (e) {
+              suggestMsg.textContent = e.message || String(e);
+            }
+          });
+
+          async function runComplianceFlow(includeFile) {
+            suggestMsg.textContent = includeFile ? "flow+file…" : "flow…";
+            const cidIn = inChat.value.trim();
+            const prepBody = {
+              chat_id: cidIn || null,
+              create_group: !cidIn,
+              message_count: includeFile ? 2 : 3
+            };
+            if (includeFile) {
+              prepBody.include_file = true;
+              prepBody.file_name = "compliance-smoke.txt";
+            }
+            const prep = await apiFetch("/admin/export-compliance-prep", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(prepBody)
+            });
+              const cid = prep.chat_id || prep.chatId || "";
+              if (cid) {
+                inChat.value = cid;
+              }
+              const suggest = await apiFetch(
+                "/admin/chats/" + encodeURIComponent(cid) + "/export-suggest",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    dispatch: selDispatch.value,
+                    candidate_message_count: 3,
+                    reason: "hot_body_candidates"
+                  })
+                }
+              );
+              let jobId =
+                suggest.auto_queued_job_id || suggest.autoQueuedJobId || "";
+              let exportRes = null;
+              if (!jobId) {
+                exportRes = await apiFetch(
+                  "/admin/chats/" + encodeURIComponent(cid) + "/export",
+                  {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: "{}"
+                  }
+                );
+                jobId = exportRes.job_id || exportRes.jobId || "";
+              }
+              const jobInp = document.getElementById("exportInspectJobId");
+              if (jobInp && jobId) {
+                jobInp.value = jobId;
+              }
+              if (!jobId) {
+                suggestMsg.textContent = "flow OK (no job_id)";
+                preEl.textContent = JSON.stringify(
+                  { prep: prep, suggest: suggest, export: exportRes },
+                  null,
+                  2
+                );
+                return;
+              }
+              let finalStatus = null;
+              try {
+                finalStatus = await pollExportJobStatus(cid, jobId, (st) => {
+                  suggestMsg.textContent = "poll " + st + " …";
+                });
+              } catch (pollErr) {
+                suggestMsg.textContent = pollErr.message || String(pollErr);
+                preEl.textContent = JSON.stringify(
+                  {
+                    prep: prep,
+                    suggest: suggest,
+                    export: exportRes,
+                    job_id: jobId,
+                    poll_error: pollErr.message,
+                    last_status: pollErr.lastStatus || null
+                  },
+                  null,
+                  2
+                );
+                return;
+              }
+              const st = finalStatus?.status || "";
+              const prepFid = prep.file_id || prep.fileId || "";
+              suggestMsg.textContent =
+                includeFile && prepFid
+                  ? "flow OK, status=" + st + ", file_id=" + prepFid
+                  : "flow OK, status=" + st;
+              preEl.textContent = JSON.stringify(
+                {
+                  prep: prep,
+                  suggest: suggest,
+                  export: exportRes,
+                  job_id: jobId,
+                  final_status: finalStatus
+                },
+                null,
+                2
+              );
+              if (st === "export_v1" || st === "stub_written") {
+                let att = null;
+                let manifest = null;
+                try {
+                  att = await apiFetch(
+                    "/admin/chats/" +
+                      encodeURIComponent(cid) +
+                      "/export/" +
+                      encodeURIComponent(jobId) +
+                      "/attachments?limit=20"
+                  );
+                } catch (attErr) {
+                  suggestMsg.textContent =
+                    "flow OK, status=" + st + "; attachments: " + (attErr.message || String(attErr));
+                }
+                try {
+                  manifest = await apiFetch(
+                    "/admin/chats/" +
+                      encodeURIComponent(cid) +
+                      "/export/" +
+                      encodeURIComponent(jobId) +
+                      "/download?part=manifest"
+                  );
+                } catch (_) {}
+                try {
+                  await apiDownload(
+                    "/admin/chats/" +
+                      encodeURIComponent(cid) +
+                      "/export/" +
+                      encodeURIComponent(jobId) +
+                      "/download?part=bundle",
+                    "export-" + jobId + ".zip"
+                  );
+                  const fc = att?.file_count ?? att?.fileCount ?? "?";
+                  const mf = Array.isArray(manifest?.files) ? manifest.files.length : "?";
+                  suggestMsg.textContent =
+                    "flow OK, status=" + st + ", bundle скачан, files=" + fc + ", manifest=" + mf;
+                  if (att || manifest) {
+                    preEl.textContent = JSON.stringify(
+                      {
+                        prep: prep,
+                        suggest: suggest,
+                        export: exportRes,
+                        job_id: jobId,
+                        final_status: finalStatus,
+                        attachments: att,
+                        manifest: manifest
+                      },
+                      null,
+                      2
+                    );
+                  }
+                } catch (dlErr) {
+                  suggestMsg.textContent =
+                    "flow OK, status=" + st + "; download: " + (dlErr.message || String(dlErr));
+                }
+              }
+          }
+
+          btnComplianceFlow.addEventListener("click", async () => {
+            try {
+              await runComplianceFlow(false);
+            } catch (e) {
+              suggestMsg.textContent = e.message || String(e);
+            }
+          });
+
+          btnComplianceFlowFile.addEventListener("click", async () => {
+            try {
+              await runComplianceFlow(true);
+            } catch (e) {
+              suggestMsg.textContent = e.message || String(e);
+            }
+          });
+
+          btnPollExport.addEventListener("click", async () => {
+            suggestMsg.textContent = "";
+            const cid = inChat.value.trim();
+            const jid = document.getElementById("exportInspectJobId")?.value.trim() || "";
+            if (!cid || !jid) {
+              suggestMsg.textContent = "Нужны chat_id и job_id.";
+              return;
+            }
+            try {
+              const finalStatus = await pollExportJobStatus(cid, jid, (st) => {
+                suggestMsg.textContent = "poll " + st + " …";
+              });
+              suggestMsg.textContent = "status=" + (finalStatus?.status || "?");
+              preEl.textContent = JSON.stringify(finalStatus, null, 2);
+            } catch (e) {
+              suggestMsg.textContent = e.message || String(e);
+              if (e.lastStatus) {
+                preEl.textContent = JSON.stringify(e.lastStatus, null, 2);
+              }
+            }
+          });
+
+          const btnCancel = document.createElement("button");
+          btnCancel.type = "button";
+          btnCancel.textContent = "cancel";
+          btnCancel.addEventListener("click", async () => {
+            suggestMsg.textContent = "";
+            const cid = inChat.value.trim();
+            const jid = document.getElementById("exportInspectJobId")?.value.trim() || "";
+            if (!cid || !jid) {
+              suggestMsg.textContent = "Нужны chat_id и job_id (queued или processing).";
+              return;
+            }
+            if (
+              !window.confirm(
+                "Отменить export " + jid + "?\nДопустимо в статусе queued или processing."
+              )
+            ) {
+              return;
+            }
+            try {
+              const res = await apiFetch(
+                "/admin/chats/" + encodeURIComponent(cid) + "/export/" + encodeURIComponent(jid),
+                { method: "DELETE" }
+              );
+              suggestMsg.textContent = "cancelled=" + (res.cancelled || res.status);
+              preEl.textContent = JSON.stringify(res, null, 2);
+            } catch (e) {
+              suggestMsg.textContent = e.message || String(e);
+            }
+          });
+          suggestRow.appendChild(lChat);
+          suggestRow.appendChild(lDispatch);
+          suggestRow.appendChild(btnNewChat);
+          suggestRow.appendChild(btnDevSeed);
+          suggestRow.appendChild(btnSeedFile);
+          suggestRow.appendChild(btnPrepareRet);
+          suggestRow.appendChild(btnSuggest);
+          suggestRow.appendChild(btnEnqueue);
+          suggestRow.appendChild(btnComplianceFlow);
+          suggestRow.appendChild(btnComplianceFlowFile);
+          suggestRow.appendChild(btnPollExport);
+          suggestRow.appendChild(btnCancel);
+          suggestRow.appendChild(suggestMsg);
+            container.insertBefore(suggestRow, container.firstChild);
+          }
+
+          function appendExportJobInspectorToolbar(container, preEl, summaryEl) {
+            if (document.getElementById("exportInspectJobId")) {
+              return;
+            }
+            const row = document.createElement("div");
+            row.className = "admin-toolbar export-inspect-toolbar";
+            const lJob = document.createElement("label");
+            lJob.className = "small";
+            lJob.textContent = "job_id";
+            const inJob = document.createElement("input");
+            inJob.type = "text";
+            inJob.id = "exportInspectJobId";
+            inJob.placeholder = "UUID задачи export";
+            lJob.appendChild(inJob);
+            const inspectMsg = document.createElement("span");
+            inspectMsg.className = "muted small";
+            const chatIdVal = () => {
+              const el = document.getElementById("exportSuggestChatId");
+              return el ? el.value.trim() : "";
+            };
+            const jobIdVal = () => inJob.value.trim();
+            const mkBtn = (label, handler) => {
+              const b = document.createElement("button");
+              b.type = "button";
+              b.textContent = label;
+              b.addEventListener("click", handler);
+              return b;
+            };
+            row.appendChild(lJob);
+            const lJobsFilter = document.createElement("label");
+            lJobsFilter.className = "small";
+            lJobsFilter.textContent = "jobs status";
+            const selJobsStatus = document.createElement("select");
+            selJobsStatus.id = "exportJobsStatusFilter";
+            [
+              { v: "", t: "(все)" },
+              { v: "queued", t: "queued" },
+              { v: "processing", t: "processing" },
+              { v: "export_v1", t: "export_v1" },
+              { v: "export_cancelled", t: "export_cancelled" },
+              { v: "export_failed", t: "export_failed" },
+              { v: "stub_written", t: "stub_written" }
+            ].forEach((o) => {
+              const opt = document.createElement("option");
+              opt.value = o.v;
+              opt.textContent = o.t;
+              selJobsStatus.appendChild(opt);
+            });
+            lJobsFilter.appendChild(selJobsStatus);
+            row.appendChild(lJobsFilter);
+            row.appendChild(
+              mkBtn("status", async () => {
+                inspectMsg.textContent = "";
+                const cid = chatIdVal();
+                const jid = jobIdVal();
+                if (!cid || !jid) {
+                  inspectMsg.textContent = "Нужны chat_id и job_id.";
+                  return;
+                }
+                try {
+                  const st = await apiFetch(
+                    "/admin/chats/" + encodeURIComponent(cid) + "/export/" + encodeURIComponent(jid) + "/status"
+                  );
+                  inspectMsg.textContent = "status=" + st.status;
+                  preEl.textContent = JSON.stringify(st, null, 2);
+                } catch (e) {
+                  inspectMsg.textContent = e.message || String(e);
+                }
+              })
+            );
+            row.appendChild(
+              mkBtn("attachments", async () => {
+                inspectMsg.textContent = "";
+                const cid = chatIdVal();
+                const jid = jobIdVal();
+                if (!cid || !jid) {
+                  inspectMsg.textContent = "Нужны chat_id и job_id.";
+                  return;
+                }
+                try {
+                  const att = await apiFetch(
+                    "/admin/chats/" +
+                      encodeURIComponent(cid) +
+                      "/export/" +
+                      encodeURIComponent(jid) +
+                      "/attachments?limit=100"
+                  );
+                  inspectMsg.textContent =
+                    "files " + String(att.file_count) + "/" + String(att.total_count);
+                  summaryEl.querySelectorAll(".export-att-table").forEach((n) => n.remove());
+                  const box = document.createElement("div");
+                  box.className = "export-att-table";
+                  renderExportAttachmentsTable(att, box);
+                  if (box.childNodes.length > 0) {
+                    summaryEl.insertBefore(box, preEl);
+                  }
+                  preEl.textContent = JSON.stringify(att, null, 2);
+                } catch (e) {
+                  inspectMsg.textContent = e.message || String(e);
+                }
+              })
+            );
+            row.appendChild(
+              mkBtn("latest", async () => {
+                inspectMsg.textContent = "";
+                const cid = chatIdVal();
+                if (!cid) {
+                  inspectMsg.textContent = "Нужен chat_id.";
+                  return;
+                }
+                try {
+                  const st = await apiFetch(
+                    "/admin/chats/" + encodeURIComponent(cid) + "/export/latest/status"
+                  );
+                  if (st.job_id) {
+                    inJob.value = st.job_id;
+                  }
+                  inspectMsg.textContent = "status=" + st.status;
+                  preEl.textContent = JSON.stringify(st, null, 2);
+                } catch (e) {
+                  inspectMsg.textContent = e.message || String(e);
+                }
+              })
+            );
+            row.appendChild(
+              mkBtn("jobs", async () => {
+                inspectMsg.textContent = "";
+                const cid = chatIdVal();
+                if (!cid) {
+                  inspectMsg.textContent = "Нужен chat_id.";
+                  return;
+                }
+                try {
+                  let jobsUrl =
+                    "/admin/chats/" + encodeURIComponent(cid) + "/export/jobs?limit=30";
+                  const statusFilter = document.getElementById("exportJobsStatusFilter")?.value || "";
+                  if (statusFilter) {
+                    jobsUrl += "&status=" + encodeURIComponent(statusFilter);
+                  }
+                  const list = await apiFetch(jobsUrl);
+                  inspectMsg.textContent =
+                    "jobs=" + String(list.job_count) + (list.status_filter ? " (" + list.status_filter + ")" : "");
+                  summaryEl.querySelectorAll(".export-jobs-table").forEach((n) => n.remove());
+                  const box = document.createElement("div");
+                  box.className = "export-jobs-table";
+                  renderExportJobsTable(list, box);
+                  if (box.childNodes.length > 0) {
+                    summaryEl.insertBefore(box, preEl);
+                  }
+                  if (list.jobs && list.jobs[0] && list.jobs[0].job_id && !inJob.value.trim()) {
+                    inJob.value = list.jobs[0].job_id;
+                  }
+                  preEl.textContent = JSON.stringify(list, null, 2);
+                } catch (e) {
+                  inspectMsg.textContent = e.message || String(e);
+                }
+              })
+            );
+            row.appendChild(
+              mkBtn("all jobs", async () => {
+                inspectMsg.textContent = "";
+                try {
+                  let jobsUrl = "/admin/export/jobs?limit=50";
+                  const statusFilter = document.getElementById("exportJobsStatusFilter")?.value || "";
+                  if (statusFilter) {
+                    jobsUrl += "&status=" + encodeURIComponent(statusFilter);
+                  }
+                  const cid = chatIdVal();
+                  if (cid) {
+                    jobsUrl += "&chat_id=" + encodeURIComponent(cid);
+                  }
+                  const list = await apiFetch(jobsUrl);
+                  inspectMsg.textContent = "all jobs=" + String(list.job_count);
+                  summaryEl.querySelectorAll(".export-jobs-table").forEach((n) => n.remove());
+                  const box = document.createElement("div");
+                  box.className = "export-jobs-table";
+                  renderExportJobsTable(list, box);
+                  if (box.childNodes.length > 0) {
+                    summaryEl.insertBefore(box, preEl);
+                  }
+                  if (list.jobs && list.jobs[0]) {
+                    if (list.jobs[0].job_id && !inJob.value.trim()) {
+                      inJob.value = list.jobs[0].job_id;
+                    }
+                    const chatInp = document.getElementById("exportSuggestChatId");
+                    if (chatInp && list.jobs[0].chat_id && !chatInp.value.trim()) {
+                      chatInp.value = list.jobs[0].chat_id;
+                    }
+                  }
+                  preEl.textContent = JSON.stringify(list, null, 2);
+                } catch (e) {
+                  inspectMsg.textContent = e.message || String(e);
+                }
+              })
+            );
+            row.appendChild(
+              mkBtn("download", async () => {
+                inspectMsg.textContent = "";
+                const cid = chatIdVal();
+                const jid = jobIdVal();
+                if (!cid || !jid) {
+                  inspectMsg.textContent = "Нужны chat_id и job_id.";
+                  return;
+                }
+                try {
+                  await apiDownload(
+                    "/admin/chats/" +
+                      encodeURIComponent(cid) +
+                      "/export/" +
+                      encodeURIComponent(jid) +
+                      "/download?part=bundle",
+                    "export-" + jid + ".zip"
+                  );
+                  inspectMsg.textContent = "скачано (bundle)";
+                } catch (e) {
+                  inspectMsg.textContent = e.message || String(e);
+                }
+              })
+            );
+            row.appendChild(
+              mkBtn("cancel", async () => {
+                inspectMsg.textContent = "";
+                const cid = chatIdVal();
+                const jid = jobIdVal();
+                if (!cid || !jid) {
+                  inspectMsg.textContent = "Нужны chat_id и job_id.";
+                  return;
+                }
+                if (
+                  !window.confirm(
+                    "Отменить export " + jid + "?\nДопустимо в статусе queued или processing."
+                  )
+                ) {
+                  return;
+                }
+                try {
+                  const res = await apiFetch(
+                    "/admin/chats/" +
+                      encodeURIComponent(cid) +
+                      "/export/" +
+                      encodeURIComponent(jid),
+                    { method: "DELETE" }
+                  );
+                  inspectMsg.textContent = "cancelled=" + (res.cancelled || res.status);
+                  preEl.textContent = JSON.stringify(res, null, 2);
+                } catch (e) {
+                  inspectMsg.textContent = e.message || String(e);
+                }
+              })
+            );
+            row.appendChild(inspectMsg);
+            container.insertBefore(row, container.firstChild);
+          }
+
+          const reloadGuide = async () => {
+            try {
+              const guide = await apiFetch("/admin/ui/export-compliance-guide");
+              renderExportComplianceGuide(guide, summary, pre);
+              appendExportSuggestToolbar(summary, pre);
+              appendExportJobInspectorToolbar(summary, pre, summary);
+              cap.textContent =
+                "Источник: GET " +
+                API +
+                "/admin/ui/export-compliance-guide · admin export status/attachments · export-suggest";
+            } catch (e) {
+              pre.textContent = "Ошибка: " + e.message;
+            }
+          };
+          appendJsonPanelReload(summary, reloadGuide);
+          await reloadGuide();
+        } else if (section.id === "core-audit-events") {
           const reloadAudit = async () => {
             try {
               const fp = auditEventsFetchPath();

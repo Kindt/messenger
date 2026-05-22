@@ -1,0 +1,6 @@
+# Enables auto-queue on msg.export.suggested (combine with export-smoke.yml).
+services:
+  core-api:
+    environment:
+      EXPORT_AUTO_QUEUE_ON_SUGGESTED: "true"
+      EXPORT_AUTO_QUEUE_COOLDOWN_MINUTES: "0"

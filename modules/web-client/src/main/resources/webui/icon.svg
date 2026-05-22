@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Korus">
+  <defs>
+    <linearGradient id="korus-g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7949F4"/>
+      <stop offset="100%" stop-color="#4514C2"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#korus-g)"/>
+  <path fill="#fff" d="M36 36h22v56H36V36zm22 0h34v14H70V62H58v30H46V50h12V36z"/>
+</svg>

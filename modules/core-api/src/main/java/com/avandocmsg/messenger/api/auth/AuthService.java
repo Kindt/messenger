@@ -46,8 +46,9 @@ public class AuthService {
     public LoginResponse login(LoginRequest request) {
         try {
             var tokenEndpoint = appConfig.keycloakIssuer() + "/protocol/openid-connect/token";
+            var username = request.username() != null ? request.username().trim() : "";
             var body = "client_id=messenger-web" +
-                "&username=" + urlEncode(request.username()) +
+                "&username=" + urlEncode(username) +
                 "&password=" + urlEncode(request.password()) +
                 "&grant_type=password";
 
@@ -78,66 +79,98 @@ public class AuthService {
         }
     }
 
-    public RegisterResponse register(RegisterRequest request) {
-        UUID userId = null;
+    public RegisterOutcome register(RegisterRequest request) {
+        final UUID keycloakUserId;
+        try {
+            keycloakUserId = provisionKeycloakUser(request);
+        } catch (UsernameExistsException e) {
+            return RegisterOutcome.failure(RegisterOutcome.Status.USERNAME_EXISTS);
+        }
+        if (keycloakUserId == null) {
+            return RegisterOutcome.failure(RegisterOutcome.Status.KEYCLOAK_UNAVAILABLE);
+        }
+        if (!userRepository.create(keycloakUserId, request.username(), request.displayName())) {
+            log.warn("Local user row not created for {} (id={})", request.username(), keycloakUserId);
+            if (userRepository.findByUsername(request.username()).isPresent()) {
+                return RegisterOutcome.failure(RegisterOutcome.Status.USERNAME_EXISTS);
+            }
+            return RegisterOutcome.failure(RegisterOutcome.Status.PERSISTENCE_FAILED);
+        }
+        ensureSavedVault(keycloakUserId);
+        return RegisterOutcome.success(
+            new RegisterResponse(keycloakUserId.toString(), request.username(), request.displayName()));
+    }
 
+    /**
+     * Creates the user in Keycloak and returns their realm id ({@code sub}).
+     *
+     * @return user id, {@code null} if Keycloak is unavailable or user id could not be resolved
+     * @throws UsernameExistsException if username is already taken in Keycloak
+     */
+    protected UUID provisionKeycloakUser(RegisterRequest request) throws UsernameExistsException {
         try {
             var adminToken = getAdminToken();
-            if (adminToken != null) {
-                var usersEndpoint = appConfig.keycloakAdminRealmBase() + "/users";
-                var keycloakUser = MAPPER.createObjectNode();
-                keycloakUser.put("username", request.username());
-                keycloakUser.put("enabled", true);
-                keycloakUser.put("emailVerified", false);
-
-                var creds = MAPPER.createArrayNode();
-                var cred = MAPPER.createObjectNode();
-                cred.put("type", "password");
-                cred.put("value", request.password());
-                cred.put("temporary", false);
-                creds.add(cred);
-                keycloakUser.set("credentials", creds);
-
-                var kcRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(usersEndpoint))
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + adminToken)
-                    .timeout(Duration.ofSeconds(10))
-                    .POST(HttpRequest.BodyPublishers.ofString(keycloakUser.toString()))
-                    .build();
-
-                var kcResponse = httpClient.send(kcRequest, HttpResponse.BodyHandlers.ofString());
-                if (kcResponse.statusCode() == 201) {
-                    var loc = kcResponse.headers().firstValue("Location").orElse("");
-                    userId = parseUserIdFromLocation(loc);
-                    if (userId == null) {
-                        userId = lookupKeycloakUserId(adminToken, request.username());
-                    }
-                    if (userId == null) {
-                        log.warn("Keycloak created user but could not resolve id for {}", request.username());
-                    }
-                } else if (kcResponse.statusCode() == 409) {
-                    log.warn("Keycloak user already exists: {}", request.username());
-                    return null;
-                } else {
-                    log.warn("Keycloak user create failed: http_status={} (response body not logged)",
-                        kcResponse.statusCode());
-                }
+            if (adminToken == null) {
+                log.warn("Keycloak admin token unavailable; cannot register {}", request.username());
+                return null;
             }
+            var usersEndpoint = appConfig.keycloakAdminRealmBase() + "/users";
+            var keycloakUser = MAPPER.createObjectNode();
+            keycloakUser.put("username", request.username());
+            keycloakUser.put("enabled", true);
+            var email = request.username() + "@users.korus.local";
+            keycloakUser.put("email", email);
+            keycloakUser.put("emailVerified", true);
+            var display = request.displayName();
+            if (display != null && !display.isBlank()) {
+                var parts = display.trim().split("\\s+", 2);
+                keycloakUser.put("firstName", parts[0]);
+                keycloakUser.put("lastName", parts.length > 1 ? parts[1] : parts[0]);
+            } else {
+                keycloakUser.put("firstName", request.username());
+                keycloakUser.put("lastName", request.username());
+            }
+
+            var creds = MAPPER.createArrayNode();
+            var cred = MAPPER.createObjectNode();
+            cred.put("type", "password");
+            cred.put("value", request.password());
+            cred.put("temporary", false);
+            creds.add(cred);
+            keycloakUser.set("credentials", creds);
+
+            var kcRequest = HttpRequest.newBuilder()
+                .uri(URI.create(usersEndpoint))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + adminToken)
+                .timeout(Duration.ofSeconds(10))
+                .POST(HttpRequest.BodyPublishers.ofString(keycloakUser.toString()))
+                .build();
+
+            var kcResponse = httpClient.send(kcRequest, HttpResponse.BodyHandlers.ofString());
+            if (kcResponse.statusCode() == 409) {
+                throw new UsernameExistsException(request.username());
+            }
+            if (kcResponse.statusCode() != 201) {
+                log.warn("Keycloak user create failed: http_status={} (response body not logged)",
+                    kcResponse.statusCode());
+                return null;
+            }
+            var loc = kcResponse.headers().firstValue("Location").orElse("");
+            var userId = parseUserIdFromLocation(loc);
+            if (userId == null) {
+                userId = lookupKeycloakUserId(adminToken, request.username());
+            }
+            if (userId == null) {
+                log.warn("Keycloak created user but could not resolve id for {}", request.username());
+            }
+            return userId;
+        } catch (UsernameExistsException e) {
+            throw e;
         } catch (Exception e) {
-            log.warn("Keycloak user creation skipped: {}", e.getMessage());
-        }
-
-        if (userId == null) {
-            userId = uuidGenerator.randomUuid();
-        }
-
-        if (!userRepository.create(userId, request.username(), request.displayName())) {
+            log.warn("Keycloak user creation failed: {}", e.getMessage());
             return null;
         }
-        ensureSavedVault(userId);
-
-        return new RegisterResponse(userId.toString(), request.username(), request.displayName());
     }
 
     /**

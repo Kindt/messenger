@@ -36,6 +36,13 @@ class ConferenceResourceTest {
             () -> resource.list("not-a-uuid", true, userSecurityContext()));
     }
 
+    @Test
+    void listParticipants_invalidConferenceId_throwsInvalidUuidParameterException() {
+        var resource = new ConferenceResource(null, I18nTestFixtures.messagesEn());
+        assertThrows(InvalidUuidParameterException.class,
+            () -> resource.listParticipants("not-a-uuid", userSecurityContext()));
+    }
+
     private static SecurityContext userSecurityContext() {
         var actorId = UUID.randomUUID().toString();
         var principal = new UserPrincipal(actorId, "user", Set.of());

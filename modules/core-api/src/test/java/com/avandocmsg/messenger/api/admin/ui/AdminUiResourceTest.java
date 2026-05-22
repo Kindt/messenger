@@ -22,7 +22,8 @@ class AdminUiResourceTest {
             "0",
             new AdminServerStatsResponse.JvmStats(1, 2, 3, 4, 5),
             new AdminServerStatsResponse.DependencyHealth(true, true, true),
-            new AdminServerStatsResponse.TableCounts(0, 0, 0, false));
+            new AdminServerStatsResponse.TableCounts(0, 0, 0, false),
+            AdminServerStatsResponse.ExportCompliance.unavailable());
         var appConfig = new AppConfig() {
             @Override
             public String version() {

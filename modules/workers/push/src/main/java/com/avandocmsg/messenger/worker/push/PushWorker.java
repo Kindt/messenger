@@ -27,8 +27,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Push routing MVP: resolves {@code devices.push_token} rows for chat members (excluding sender), logs counts,
- * optionally POSTs metadata (no message body) to {@code PUSH_WEBHOOK_URL}.
+ * Push routing: resolves {@code devices.push_token} for chat members (excluding sender),
+ * sends Web Push for provider {@code web} when {@code PUSH_VAPID_*} is configured,
+ * optionally POSTs metadata to {@code PUSH_WEBHOOK_URL}.
  */
 public class PushWorker {
     private static final Logger log = LoggerFactory.getLogger(PushWorker.class);
@@ -39,10 +40,17 @@ public class PushWorker {
     private final DataSource dataSource;
     private final HttpClient httpClient;
     private final String pushWebhookUrl;
+    private final WebPushDelivery webPushDelivery;
 
     public PushWorker(String natsUrl, DataSource dataSource, String pushWebhookUrl) throws Exception {
+        this(natsUrl, dataSource, pushWebhookUrl, WebPushDelivery.fromEnvironment());
+    }
+
+    PushWorker(String natsUrl, DataSource dataSource, String pushWebhookUrl, WebPushDelivery webPushDelivery)
+        throws Exception {
         this.dataSource = dataSource;
         this.pushWebhookUrl = pushWebhookUrl != null && !pushWebhookUrl.isBlank() ? pushWebhookUrl.trim() : null;
+        this.webPushDelivery = webPushDelivery != null ? webPushDelivery : WebPushDelivery.disabled();
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
         var options = Options.builder()
             .server(natsUrl)
@@ -77,6 +85,77 @@ public class PushWorker {
         } catch (Exception e) {
             log.error("Failed to handle push message", e);
         }
+    }
+
+    private void deliverWebPush(MessageWorkerEvent event, List<DeviceRow> devices) {
+        if (!webPushDelivery.isEnabled() || devices.isEmpty()) {
+            return;
+        }
+        String chatTitle = null;
+        try {
+            if (event.chatId() != null && !event.chatId().isBlank()) {
+                chatTitle = loadChatTitle(UUID.fromString(event.chatId()));
+            }
+        } catch (Exception e) {
+            log.debug("Chat title lookup failed: {}", e.getMessage());
+        }
+        var preview = PushNotificationPreview.forEvent(event, chatTitle);
+        var sent = 0;
+        var failed = 0;
+        var expired = 0;
+        for (var d : devices) {
+            if (!WebPushDelivery.isWebProvider(d.provider())) {
+                continue;
+            }
+            var result = webPushDelivery.send(d.token(), preview);
+            switch (result) {
+                case SENT -> sent++;
+                case EXPIRED -> {
+                    expired++;
+                    clearPushToken(d.userId(), d.token());
+                }
+                case FAILED -> failed++;
+            }
+        }
+        if (sent > 0 || failed > 0 || expired > 0) {
+            log.info("Web push messageId={} sent={} failed={} expired={}", event.messageId(), sent, failed,
+                expired);
+        }
+    }
+
+    private void clearPushToken(String userId, String pushToken) {
+        if (userId == null || pushToken == null || pushToken.isBlank()) {
+            return;
+        }
+        var sql = """
+            UPDATE devices SET push_token = NULL, push_provider = NULL, last_active_at = now()
+            WHERE user_id = ? AND push_token = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, UUID.fromString(userId));
+            stmt.setString(2, pushToken);
+            var n = stmt.executeUpdate();
+            if (n > 0) {
+                log.info("Cleared expired web push token for userId={}", userId);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to clear push token for userId={}: {}", userId, e.getMessage());
+        }
+    }
+
+    private String loadChatTitle(UUID chatId) throws SQLException {
+        var sql = "SELECT title FROM chats WHERE id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, chatId);
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString(1);
+                }
+            }
+        }
+        return null;
     }
 
     private void postWebhook(MessageWorkerEvent event, List<DeviceRow> devices) throws Exception {
@@ -153,6 +232,14 @@ public class PushWorker {
     private record DeviceRow(String userId, String provider, String token) {
     }
 
+    Connection natsConnection() {
+        return connection;
+    }
+
+    DataSource dataSource() {
+        return dataSource;
+    }
+
     public void shutdown() {
         try {
             connection.close();
@@ -175,10 +262,23 @@ public class PushWorker {
             System.exit(2);
         }
 
+        PushHealthHttpServer healthServer = null;
         try {
             var worker = new PushWorker(natsUrl, ds, webhook);
             worker.start();
-            Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));
+            var metricsPort = PushPlatformDefaults.metricsPort();
+            if (metricsPort > 0) {
+                healthServer = PushHealthHttpServer.start(metricsPort,
+                    new PushHealthProbe(worker.natsConnection(), worker.dataSource()));
+                log.info("Push worker health on http://0.0.0.0:{}/health", healthServer.getPort());
+            }
+            PushHealthHttpServer healthRef = healthServer;
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                if (healthRef != null) {
+                    healthRef.close();
+                }
+                worker.shutdown();
+            }));
             Thread.currentThread().join();
         } catch (Exception e) {
             log.error("Fatal error", e);

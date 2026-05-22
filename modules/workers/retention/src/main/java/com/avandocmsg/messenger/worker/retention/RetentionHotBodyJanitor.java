@@ -26,8 +26,10 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -181,6 +183,7 @@ final class RetentionHotBodyJanitor {
                     batch.size(),
                     wouldClear
                 );
+                publishExportSuggestedIfEnabled(nats, batch);
                 RetentionMetrics.dryRunPassCompleted();
                 recordPassCompletionGauges = true;
                 passClearedCountForGauge = 0;
@@ -191,6 +194,7 @@ final class RetentionHotBodyJanitor {
                 passClearedCountForGauge = 0;
                 return 0;
             }
+            publishExportSuggestedIfEnabled(nats, batch);
             var sampleChatIds = sampleChatIdsFromBatch(batch, 5);
             int done = 0;
             int errors = 0;
@@ -542,6 +546,20 @@ final class RetentionHotBodyJanitor {
             log.debug("Retention statObject failed bucket={} key={}: {}", bucket, objectKey, e.getMessage());
             return false;
         }
+    }
+
+    private static void publishExportSuggestedIfEnabled(Connection nats, List<Candidate> batch) {
+        if (RetentionPlatformDefaults.publishExportSuggestedFromEnv() && nats != null && !batch.isEmpty()) {
+            RetentionExportSuggester.publishForChatCounts(nats, candidateCountByChatId(batch));
+        }
+    }
+
+    private static Map<UUID, Integer> candidateCountByChatId(List<Candidate> batch) {
+        var counts = new HashMap<UUID, Integer>();
+        for (var c : batch) {
+            counts.merge(c.chatId(), 1, Integer::sum);
+        }
+        return counts;
     }
 
     private static List<UUID> sampleChatIdsFromBatch(List<Candidate> batch, int maxIds) {

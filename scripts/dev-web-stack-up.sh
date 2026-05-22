@@ -49,10 +49,14 @@ else
 fi
 
 echo ""
-echo "[OK] Profile web: ws-gateway (host :8082), message-pipeline"
+echo "[OK] Profile web: ws-gateway (host :8082), message-pipeline, push-worker health :9193"
+echo "Web Push: ./scripts/generate-vapid.sh  → VAPID in push-worker + korus-web .env" >&2
 echo "Next UI: ./scripts/korus-web-up.sh --build  (or PowerShell: .\\scripts\\korus-web-up.ps1 -Build)"
 echo "Attach UI to dev-min: ./scripts/korus-web-up.sh --attach --build  (network korus_messenger_dev_min; see korus-web/README.md)"
+echo "Optional local TURN (coturn): ./scripts/korus-web-up.sh --turn --build  (see korus-web/docker-compose.turn.yml)" >&2
+echo "Smoke push-worker: ./scripts/smoke-push-worker.sh" >&2
 echo "Smoke: ./scripts/smoke-korus-web.sh --check-api  (or .\\scripts\\smoke-korus-web.ps1 -CheckApi)"
+echo "Stop profile web: ./scripts/dev-web-stack-down.sh" >&2
 echo "Core API direct: curl -fsS http://localhost:8080/api/v1/health"
 bash "$ROOT/scripts/dev-ui-hints.sh"
 echo "Then run ./scripts/korus-web-up.sh --build and open the web client URL from the hints above."

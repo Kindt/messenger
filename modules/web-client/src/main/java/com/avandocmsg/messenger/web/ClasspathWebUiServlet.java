@@ -76,6 +76,9 @@ public final class ClasspathWebUiServlet extends HttpServlet {
         if (lower.endsWith(".js")) {
             return "application/javascript;charset=UTF-8";
         }
+        if (lower.endsWith(".json")) {
+            return "application/json;charset=UTF-8";
+        }
         if (lower.endsWith(".svg")) {
             return "image/svg+xml";
         }
@@ -87,11 +90,12 @@ public final class ClasspathWebUiServlet extends HttpServlet {
 
     static String cacheControl(String relative) {
         String lower = relative.toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".html")) {
+        if (lower.endsWith(".html")
+            || "sw.js".equals(lower)
+            || "app.js".equals(lower)
+            || "themes.css".equals(lower)
+            || "styles.css".equals(lower)) {
             return "no-store, max-age=0";
-        }
-        if (lower.endsWith(".js") || lower.endsWith(".css")) {
-            return "public, max-age=3600";
         }
         return "public, max-age=86400";
     }

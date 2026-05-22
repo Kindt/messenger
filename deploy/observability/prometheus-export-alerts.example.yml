@@ -1,0 +1,65 @@
+# Example Prometheus alerting rules for export pipeline (requires scrape from prometheus-export-scrape.example.yml).
+groups:
+  - name: korus_export
+    rules:
+      - alert: ExportCancelRejectedSpike
+        expr: sum(rate(export_jobs_cancel_rejected_total[10m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Export cancel requests rejected (409)
+          description: >-
+            Clients receive not_cancellable or db_race on DELETE export.
+            Check export_jobs stuck in terminal states or worker lag.
+
+      - alert: ExportReplayWorkerNotCancelling
+        expr: >-
+          (sum(rate(export_jobs_cancelled_total[15m])) > 0)
+          unless (sum(rate(export_replay_worker_jobs_cancelled_total[15m])) > 0)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: API cancels export but worker does not record cooperative abort
+          description: >-
+            Verify export-replay-worker metrics scrape and DB connectivity.
+            Worker may finish jobs before cancel or EXPORT_REPLAY_METRICS_PORT is off.
+
+      - alert: ExportJobsStuckProcessing
+        expr: >-
+          (sum(export_replay_worker_jobs_started_total)
+           - sum(export_replay_worker_jobs_completed_total)
+           - sum(export_replay_worker_jobs_cancelled_total)) > 5
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: Many export jobs appear stuck in processing (worker counter heuristic)
+          description: >-
+            Compare with export_jobs_processing_stale (DB) and admin UI stats.
+            Consider worker restart or EXPORT_REPLAY_DEBUG_DELAY_MS left enabled.
+
+      - alert: RetentionPassesWithoutExportSuggested
+        expr: >-
+          (sum(increase(retention_worker_dry_run_passes_total[1h])) > 0
+           or sum(increase(retention_worker_hot_body_cleared_total[1h])) > 0)
+          unless sum(increase(retention_worker_export_suggested_published_total[1h])) > 0
+        for: 2h
+        labels:
+          severity: info
+        annotations:
+          summary: Retention active but no msg.export.suggested published recently
+          description: >-
+            Enable RETENTION_PUBLISH_EXPORT_SUGGESTED or verify hot-body candidates exist.
+
+      - alert: ExportJobsProcessingStaleDb
+        expr: export_jobs_processing_stale > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: export_jobs stuck in processing (DB updated_at)
+          description: >-
+            Rows in status processing older than EXPORT_PROCESSING_STALE_MINUTES.
+            Check export-replay-worker, cancel stuck jobs, or disable EXPORT_REPLAY_DEBUG_DELAY_MS.

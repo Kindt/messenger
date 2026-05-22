@@ -1,0 +1,9 @@
+# Compose overrides for export compliance smokes (admin suggest/export APIs).
+# Usage:
+#   docker compose -f docker/docker-compose.full-server.yml -f docker/docker-compose.export-smoke.yml up -d core-api
+services:
+  core-api:
+    environment:
+      EXPORT_ADMIN_SUGGEST_ENABLED: "true"
+      EXPORT_ADMIN_EXPORT_ENABLED: "true"
+      EXPORT_SUGGESTED_SUBSCRIBER_ENABLED: "true"

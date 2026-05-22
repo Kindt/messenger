@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -79,5 +80,33 @@ public class MlsService {
     public byte[] deriveSessionKey(UUID sessionId, UUID chatId) {
         var seed = (sessionId.toString() + ":" + chatId.toString()).getBytes(StandardCharsets.UTF_8);
         return e2eeService.deriveKey(e2eeService.randomBytes(32), seed, "mls-session-key", 32);
+    }
+
+    /**
+     * Расшифровка содержимого сообщения (nonce + ciphertext в одном Base64), сохранённого в {@code messages.content}.
+     */
+    public String decryptContentBase64(UUID chatId, String contentBase64) {
+        if (contentBase64 == null || contentBase64.isBlank()) {
+            return null;
+        }
+        var sessionOpt = sessionRepository.findByChatId(chatId, 0);
+        if (sessionOpt.isEmpty()) {
+            return null;
+        }
+        var session = sessionOpt.get();
+        byte[] full;
+        try {
+            full = Base64.getDecoder().decode(contentBase64);
+        } catch (IllegalArgumentException e) {
+            log.debug("Invalid content base64 for chat {}", chatId);
+            return null;
+        }
+        var sessionKey = deriveSessionKey(session.id(), session.chatId());
+        var aad = (session.chatId().toString() + ":" + session.epoch()).getBytes(StandardCharsets.UTF_8);
+        var plaintext = e2eeService.decrypt(full, sessionKey, aad);
+        if (plaintext == null) {
+            return null;
+        }
+        return new String(plaintext, StandardCharsets.UTF_8);
     }
 }

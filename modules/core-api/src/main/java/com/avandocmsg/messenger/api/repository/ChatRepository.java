@@ -106,7 +106,7 @@ public class ChatRepository {
             }
             addMemberInternal(conn, chatId, ownerId, "owner");
             conn.commit();
-            return new ChatResponse(chatId.toString(), title, "group", ownerId.toString(), 1, false, null, clock.instant());
+            return new ChatResponse(chatId.toString(), title, "group", ownerId.toString(), 1, false, false, null, clock.instant());
         } catch (Exception e) {
             log.error("Failed to create group chat", e);
             return null;
@@ -125,7 +125,7 @@ public class ChatRepository {
             addMemberInternal(conn, chatId, user1Id, "member");
             addMemberInternal(conn, chatId, user2Id, "member");
             conn.commit();
-            return new ChatResponse(chatId.toString(), "", "p2p", null, 2, false, null, clock.instant());
+            return new ChatResponse(chatId.toString(), "", "p2p", null, 2, false, false, null, clock.instant());
         } catch (Exception e) {
             log.error("Failed to create P2P chat", e);
             return null;
@@ -156,7 +156,8 @@ public class ChatRepository {
 
     public List<ChatResponse> listByUser(UUID userId) {
         var sql = """
-            SELECT c.id, c.title, c.type, c.owner_id, c.muted, c.ttl_seconds, c.created_at,
+            SELECT c.id, c.title, c.type, c.owner_id, cm.muted, cm.personal_filter_active,
+                   c.ttl_seconds, c.created_at,
                    (SELECT COUNT(*) FROM chat_members WHERE chat_id = c.id) AS member_count
             FROM chats c
             JOIN chat_members cm ON cm.chat_id = c.id
@@ -218,7 +219,8 @@ public class ChatRepository {
 
     public Optional<ChatResponse> findById(UUID chatId, UUID userId) {
         var sql = """
-            SELECT c.id, c.title, c.type, c.owner_id, c.muted, c.ttl_seconds, c.created_at,
+            SELECT c.id, c.title, c.type, c.owner_id, cm.muted, cm.personal_filter_active,
+                   c.ttl_seconds, c.created_at,
                    (SELECT COUNT(*) FROM chat_members WHERE chat_id = c.id) AS member_count
             FROM chats c
             INNER JOIN chat_members cm ON cm.chat_id = c.id AND cm.user_id = ? AND cm.banned = false
@@ -366,6 +368,24 @@ public class ChatRepository {
             log.error("Failed to list members of chat {}", chatId, e);
         }
         return result;
+    }
+
+    /** Chat owner ({@code chats.owner_id}) for system actions such as retention-triggered export. */
+    public Optional<UUID> findOwnerId(UUID chatId) {
+        var sql = "SELECT owner_id FROM chats WHERE id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, chatId);
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    var ownerId = rs.getObject("owner_id", UUID.class);
+                    return ownerId != null ? Optional.of(ownerId) : Optional.empty();
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to find owner for chat {}", chatId, e);
+        }
+        return Optional.empty();
     }
 
     public String getMemberRole(UUID chatId, UUID userId) {
@@ -566,6 +586,7 @@ public class ChatRepository {
             rs.getObject("owner_id", UUID.class) != null ? rs.getObject("owner_id", UUID.class).toString() : null,
             rs.getInt("member_count"),
             rs.getBoolean("muted"),
+            rs.getBoolean("personal_filter_active"),
             rs.getObject("ttl_seconds", Integer.class),
             rs.getTimestamp("created_at").toInstant()
         );

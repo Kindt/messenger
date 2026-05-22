@@ -2,12 +2,16 @@ package com.avandocmsg.messenger.api.admin.ui;
 
 import com.avandocmsg.messenger.api.admin.ui.dto.AdminServerStatsResponse;
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.api.export.ExportJobStaleCounts;
 import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 
 import javax.sql.DataSource;
 import java.lang.management.ManagementFactory;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 /**
  * Сводная статистика для встроенной админ-панели «Статистика сервера».
@@ -37,13 +41,15 @@ public final class AdminServerStatsService implements AdminStatsPort {
         boolean natsOk = natsConnectionStatus.natsClientConnected();
 
         TableScan counts = countTables();
+        var exportCompliance = scanExportCompliance();
 
         return new AdminServerStatsResponse(
             appConfig.version(),
             new AdminServerStatsResponse.JvmStats(heapUsed, heapCommitted, heapMax,
                 rt.availableProcessors(), uptime),
             new AdminServerStatsResponse.DependencyHealth(dbOk, redisOk, natsOk),
-            new AdminServerStatsResponse.TableCounts(counts.users, counts.chats, counts.messages, counts.ok)
+            new AdminServerStatsResponse.TableCounts(counts.users, counts.chats, counts.messages, counts.ok),
+            exportCompliance
         );
     }
 
@@ -84,6 +90,74 @@ public final class AdminServerStatsService implements AdminStatsPort {
                 return rs.getLong(1);
             }
             return 0L;
+        }
+    }
+
+    private AdminServerStatsResponse.ExportCompliance scanExportCompliance() {
+        try (var conn = dataSource.getConnection()) {
+            long total = 0;
+            long queued = 0;
+            long processing = 0;
+            long completed = 0;
+            long failed = 0;
+            long cancelled = 0;
+            try (var st = conn.prepareStatement("SELECT status, COUNT(*) FROM export_jobs GROUP BY status");
+                 var rs = st.executeQuery()) {
+                while (rs.next()) {
+                    var status = rs.getString(1);
+                    var c = rs.getLong(2);
+                    total += c;
+                    switch (status) {
+                        case "queued" -> queued += c;
+                        case "processing" -> processing += c;
+                        case "export_v1", "stub_written" -> completed += c;
+                        case "export_failed" -> failed += c;
+                        case "export_cancelled" -> cancelled += c;
+                        default -> { /* ignore unknown status values */ }
+                    }
+                }
+            }
+            var auditSince = Timestamp.from(Instant.now().minus(7, ChronoUnit.DAYS));
+            long audit7d;
+            try (var st = conn.prepareStatement(
+                "SELECT COUNT(*) FROM audit_events WHERE action LIKE 'export.%' AND occurred_at >= ?")) {
+                st.setTimestamp(1, auditSince);
+                try (var rs = st.executeQuery()) {
+                    audit7d = rs.next() ? rs.getLong(1) : 0L;
+                }
+            }
+            long auditCancelled7d;
+            try (var st = conn.prepareStatement(
+                """
+                SELECT COUNT(*) FROM audit_events
+                WHERE action IN ('export.cancelled', 'export.admin_cancelled') AND occurred_at >= ?
+                """)) {
+                st.setTimestamp(1, auditSince);
+                try (var rs = st.executeQuery()) {
+                    auditCancelled7d = rs.next() ? rs.getLong(1) : 0L;
+                }
+            }
+            int staleMinutes = appConfig.exportProcessingStaleMinutes();
+            long processingStale = 0;
+            try {
+                processingStale = ExportJobStaleCounts.countProcessingStale(dataSource, staleMinutes);
+            } catch (Exception ignored) {
+                // keep 0 when query fails
+            }
+            return new AdminServerStatsResponse.ExportCompliance(
+                true,
+                total,
+                queued,
+                processing,
+                processingStale,
+                staleMinutes,
+                completed,
+                failed,
+                cancelled,
+                audit7d,
+                auditCancelled7d);
+        } catch (Exception e) {
+            return AdminServerStatsResponse.ExportCompliance.unavailable();
         }
     }
 

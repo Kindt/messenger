@@ -54,12 +54,13 @@ public class AuthResource {
                 .entity(new ApiError(429, messages.get("error.auth.rate_login")))
                 .build();
         }
-        if (request.username() == null || request.password() == null) {
+        var username = request.username() != null ? request.username().trim() : null;
+        if (username == null || username.isEmpty() || request.password() == null) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(new ApiError(400, messages.get("error.auth.username_password_required")))
                 .build();
         }
-        var response = authService.login(request);
+        var response = authService.login(new LoginRequest(username, request.password()));
         if (response == null) {
             return Response.status(Response.Status.UNAUTHORIZED)
                 .entity(new ApiError(401, messages.get("error.auth.invalid_credentials")))
@@ -83,23 +84,38 @@ public class AuthResource {
                 .entity(new ApiError(429, messages.get("error.auth.rate_register")))
                 .build();
         }
-        if (request.username() == null || request.password() == null) {
+        var username = request.username() != null ? request.username().trim() : null;
+        var password = request.password();
+        var displayName = request.displayName() != null ? request.displayName().trim() : null;
+        if (username == null || username.isEmpty() || password == null) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(new ApiError(400, messages.get("error.auth.username_password_required")))
                 .build();
         }
-        if (request.username().length() < 3 || request.username().length() > 32) {
+        if (username.length() < 3 || username.length() > 32) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(new ApiError(400, messages.get("error.auth.username_length")))
                 .build();
         }
-        var response = authService.register(request);
-        if (response == null) {
+        if (password.length() < 8) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.auth.password_length")))
+                .build();
+        }
+        request = new RegisterRequest(username, password, displayName);
+        var outcome = authService.register(request);
+        if (outcome instanceof RegisterOutcome.Success success) {
+            return Response.status(Response.Status.CREATED).entity(success.response()).build();
+        }
+        var failure = (RegisterOutcome.Failure) outcome;
+        if (failure.status() == RegisterOutcome.Status.USERNAME_EXISTS) {
             return Response.status(Response.Status.CONFLICT)
                 .entity(new ApiError(409, messages.get("error.auth.username_exists")))
                 .build();
         }
-        return Response.status(Response.Status.CREATED).entity(response).build();
+        return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+            .entity(new ApiError(503, messages.get("error.auth.registration_unavailable")))
+            .build();
     }
 
     @POST

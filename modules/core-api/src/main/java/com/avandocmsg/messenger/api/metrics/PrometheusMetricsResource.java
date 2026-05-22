@@ -14,8 +14,8 @@ import java.io.Writer;
 
 /**
  * JVM + default process metrics (ТЗ п. 22, baseline observability).
- * Application counters such as {@link ApiDeniedMetrics} and {@link ApiValidationMetrics}
- * register with the same default registry and appear here.
+ * Application counters such as {@link ApiDeniedMetrics}, {@link ApiValidationMetrics},
+ * and {@link ExportMetrics} register with the same default registry and appear here.
  */
 @Path("/v1/metrics")
 public class PrometheusMetricsResource {

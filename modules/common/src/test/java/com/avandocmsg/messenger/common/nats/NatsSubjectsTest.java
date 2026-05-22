@@ -20,5 +20,7 @@ class NatsSubjectsTest {
         assertEquals("msg.event.retention", NatsSubjects.MSG_EVENT_RETENTION);
         assertEquals("msg.export.replay", NatsSubjects.MSG_EXPORT_REPLAY);
         assertEquals("msg.export.replay.complete", NatsSubjects.MSG_EXPORT_REPLAY_COMPLETE);
+        assertEquals("msg.export.suggested", NatsSubjects.MSG_EXPORT_SUGGESTED);
+        assertEquals("msg.export.replay.cancel", NatsSubjects.MSG_EXPORT_REPLAY_CANCEL);
     }
 }

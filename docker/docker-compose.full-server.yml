@@ -1,4 +1,4 @@
-# Полный сервер: инфраструктура + core-api + ws-gateway + message-pipeline + retention-worker.
+# Полный сервер: инфраструктура + core-api + ws-gateway + message-pipeline + retention-worker + export-replay-worker.
 # Запуск из корня репозитория:
 #   docker compose -f docker/docker-compose.full-server.yml up -d --build
 # Остановка:
@@ -6,7 +6,7 @@
 #
 # Админка: http://localhost:8080/admin/  (realm-роль admin: csadmin / csadmin или admin / admin)
 # Keycloak (realm avandocmsg): http://localhost:8081/
-# WS gateway: http://localhost:8082/  | retention metrics/health: http://localhost:9192/
+# WS gateway: http://localhost:8082/  | retention metrics/health: http://localhost:9192/  | export-replay metrics: http://localhost:9193/
 #
 # Та же сеть korus_messenger_dev_min, что и у docker-compose.dev-min.yml (korus-web attach).
 
@@ -132,6 +132,7 @@ services:
       MINIO_ACCESS_KEY: avandocmsg
       MINIO_SECRET_KEY: avandocmsg123
       MINIO_BUCKET: avandocmsg
+      EXPORT_DIR: /export
       MEDIA_MAX_UPLOAD_BYTES: "52428800"
       JITSI_MEET_BASE_URL: https://meet.jit.si
       WEBRTC_STUN_URIS: stun:stun.l.google.com:19302
@@ -146,6 +147,8 @@ services:
         condition: service_started
       minio:
         condition: service_started
+    volumes:
+      - export-replay-data:/export
 
   ws-gateway:
     build:
@@ -180,6 +183,75 @@ services:
         condition: service_healthy
       nats:
         condition: service_started
+
+  push-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.push-worker
+    environment:
+      NATS_URL: nats://nats:4222
+      DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      DB_USER: avandocmsg
+      DB_PASSWORD: avandocmsg
+      PUSH_METRICS_PORT: "9191"
+      # Web Push (optional; public key must match WEB_CLIENT_VAPID_PUBLIC_KEY on web-client):
+      # PUSH_VAPID_PUBLIC_KEY: ""
+      # PUSH_VAPID_PRIVATE_KEY: ""
+      # PUSH_VAPID_SUBJECT: "mailto:notify@localhost"
+    ports:
+      - "9193:9191"
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+      nats:
+        condition: service_started
+      message-pipeline:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:$$PUSH_METRICS_PORT/health >/dev/null || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+  export-replay-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.export-replay-worker
+    environment:
+      NATS_URL: nats://nats:4222
+      DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      DB_USER: avandocmsg
+      DB_PASSWORD: avandocmsg
+      EXPORT_DIR: /export
+      EXPORT_PUBLISH_COMPLETE: "true"
+      EXPORT_REPLAY_INCLUDE_VERSIONS: "true"
+      EXPORT_REPLAY_APPLY_MESSAGE_TTL_FILTER: "true"
+      EXPORT_REPLAY_MINIO_UPLOAD: "true"
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: avandocmsg
+      MINIO_SECRET_KEY: avandocmsg123
+      MINIO_BUCKET: avandocmsg
+      EXPORT_REPLAY_METRICS_PORT: "9191"
+    ports:
+      - "9193:9191"
+    volumes:
+      - export-replay-data:/export
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9191/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
 
   retention-worker:
     build:
@@ -224,3 +296,4 @@ volumes:
   nats-data:
   minio-data:
   solr-data:
+  export-replay-data:

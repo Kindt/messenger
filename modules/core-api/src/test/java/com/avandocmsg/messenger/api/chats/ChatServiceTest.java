@@ -27,7 +27,7 @@ class ChatServiceTest {
 
     @Test
     void findOrCreateP2P_returnsExistingChat() {
-        var existingChat = new ChatResponse(chatId.toString(), "", "p2p", null, 2, false, null, null);
+        var existingChat = new ChatResponse(chatId.toString(), "", "p2p", null, 2, false, false, null, null);
         chatRepo.p2pChats.put(new StubChatRepository.P2PKey(userA, userB), chatId);
         chatRepo.chats.put(chatId, existingChat);
 
@@ -115,7 +115,7 @@ class ChatServiceTest {
     @Test
     void updateTitle_allowedForOwner() {
         chatRepo.roles.put(new StubChatRepository.RoleKey(chatId, userA), "owner");
-        chatRepo.chats.put(chatId, new ChatResponse(chatId.toString(), "title", "group", userA.toString(), 1, false, null, null));
+        chatRepo.chats.put(chatId, new ChatResponse(chatId.toString(), "title", "group", userA.toString(), 1, false, false, null, null));
 
         assertTrue(chatService.updateTitle(chatId, userA, "new title"));
     }
@@ -171,14 +171,14 @@ class ChatServiceTest {
 
         @Override
         public ChatResponse createP2P(UUID id, UUID u1, UUID u2) {
-            var chat = new ChatResponse(id.toString(), "", "p2p", null, 2, false, null, null);
+            var chat = new ChatResponse(id.toString(), "", "p2p", null, 2, false, false, null, null);
             chats.put(id, chat);
             return chat;
         }
 
         @Override
         public ChatResponse createGroup(UUID id, String title, UUID ownerId) {
-            var chat = new ChatResponse(id.toString(), title, "group", ownerId.toString(), 1, false, null, null);
+            var chat = new ChatResponse(id.toString(), title, "group", ownerId.toString(), 1, false, false, null, null);
             chats.put(id, chat);
             return chat;
         }
@@ -212,7 +212,8 @@ class ChatServiceTest {
             var chat = chats.get(chatId);
             if (chat != null) {
                 chats.put(chatId, new ChatResponse(chat.id(), title, chat.type(), chat.ownerId(),
-                    chat.memberCount(), chat.muted(), chat.ttlSeconds(), chat.createdAt()));
+                    chat.memberCount(), chat.muted(), chat.personalFilterActive(),
+                    chat.ttlSeconds(), chat.createdAt()));
                 return true;
             }
             return false;

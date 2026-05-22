@@ -51,4 +51,16 @@ class ClasspathWebUiServletTest {
     void cacheControl_htmlNoStore() {
         assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("index.html"));
     }
+
+    @Test
+    void cacheControl_serviceWorkerNoStore() {
+        assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("sw.js"));
+    }
+
+    @Test
+    void cacheControl_appAndThemesNoStore() {
+        assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("app.js"));
+        assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("themes.css"));
+        assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("styles.css"));
+    }
 }

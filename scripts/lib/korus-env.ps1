@@ -1,6 +1,22 @@
 # Shared: KORUS_* path env vars, optional tooling install, docker compose with retry.
 # Dot-source: . (Join-Path $PSScriptRoot "lib\korus-env.ps1")
 
+function Get-KorusExportSmokeComposeArgs {
+    param([switch]$AutoQueue)
+    $dockerDir = $env:KORUS_DOCKER_DIR
+    if (-not $dockerDir) {
+        throw "KORUS_DOCKER_DIR not set; call Set-KorusPathEnvironment first"
+    }
+    $args = @(
+        "-f", (Join-Path $dockerDir "docker-compose.export-smoke.yml"),
+        "-f", (Join-Path $dockerDir "docker-compose.retention-export-smoke.yml")
+    )
+    if ($AutoQueue) {
+        $args += "-f", (Join-Path $dockerDir "docker-compose.export-auto-queue-smoke.yml")
+    }
+    return $args
+}
+
 function Set-KorusPathEnvironment {
     param([Parameter(Mandatory)][string]$RepoRoot)
     $dockerDir = Join-Path $RepoRoot "docker"
@@ -8,11 +24,15 @@ function Set-KorusPathEnvironment {
     $env:KORUS_DOCKER_DIR = $dockerDir
     $env:KORUS_COMPOSE_DEV_MIN = Join-Path $dockerDir "docker-compose.dev-min.yml"
     $env:KORUS_COMPOSE_FULL_SERVER = Join-Path $dockerDir "docker-compose.full-server.yml"
+    $env:KORUS_COMPOSE_LAN_PUBLISH = Join-Path $dockerDir "docker-compose.lan-publish.yml"
+    $env:KORUS_DEV_OVERLAY_DIR = Join-Path $RepoRoot "dev-overlay"
     $env:KORUS_SCRIPTS_DIR = Join-Path $RepoRoot "scripts"
     $kw = Join-Path $RepoRoot "korus-web"
     $env:KORUS_KORUS_WEB_DIR = $kw
     $env:KORUS_KORUS_WEB_COMPOSE = Join-Path $kw "docker-compose.yml"
     $env:KORUS_KORUS_WEB_COMPOSE_ATTACH = Join-Path $kw "docker-compose.attach.yml"
+    $env:KORUS_KORUS_WEB_COMPOSE_TURN = Join-Path $kw "docker-compose.turn.yml"
+    $env:KORUS_KORUS_WEB_COMPOSE_HOTSWAP = Join-Path $kw "docker-compose.hotswap.yml"
 }
 
 function Update-KorusSessionPathFromMachine {
@@ -46,10 +66,17 @@ function Invoke-KorusEnsureDevTooling {
 function Invoke-KorusDockerComposeUp {
     param(
         [Parameter(Mandatory)][string]$ComposeFile,
+        [string[]]$AdditionalComposeFiles = @(),
         [switch]$Build,
         [int]$Retries = 2
     )
-    $dockerArgs = @("compose", "-f", $ComposeFile, "up", "-d")
+    $dockerArgs = @("compose", "-f", $ComposeFile)
+    foreach ($extra in $AdditionalComposeFiles) {
+        if ($extra) {
+            $dockerArgs += @("-f", $extra)
+        }
+    }
+    $dockerArgs += @("up", "-d")
     if ($Build) {
         $dockerArgs += "--build"
     }

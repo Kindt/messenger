@@ -31,7 +31,7 @@ class FilePublicLinkRepositoryH2Test {
         ds = new HikariDataSource(cfg);
         try (var c = ds.getConnection(); Statement st = c.createStatement()) {
             st.execute("CREATE TABLE users (id UUID PRIMARY KEY)");
-            st.execute("CREATE TABLE file_metadata (id UUID PRIMARY KEY)");
+            st.execute("CREATE TABLE file_metadata (id UUID PRIMARY KEY, filename VARCHAR(255))");
             st.execute("""
                 CREATE TABLE file_public_links (
                   id UUID PRIMARY KEY,
@@ -52,8 +52,9 @@ class FilePublicLinkRepositoryH2Test {
             ps.executeUpdate();
         }
         try (var c = ds.getConnection();
-             var ps = c.prepareStatement("INSERT INTO file_metadata (id) VALUES (?)")) {
+             var ps = c.prepareStatement("INSERT INTO file_metadata (id, filename) VALUES (?, ?)")) {
             ps.setObject(1, fileId);
+            ps.setString(2, "doc.pdf");
             ps.executeUpdate();
         }
         repo = new FilePublicLinkRepository(ds, UuidGenerator.standard());
@@ -113,6 +114,17 @@ class FilePublicLinkRepositoryH2Test {
         assertTrue(repo.findValidByTokenHash(hash).isPresent());
         assertTrue(repo.revoke(userId, fileId, linkId));
         assertTrue(repo.findValidByTokenHash(hash).isEmpty());
+    }
+
+    @Test
+    void listActiveByOwner_returnsActiveLinksWithFilename() {
+        var exp = Instant.now().plus(1, ChronoUnit.HOURS);
+        var created = repo.insert(fileId, userId, 'A', null, exp).orElseThrow();
+        var list = repo.listActiveByOwner(userId, 10);
+        assertEquals(1, list.size());
+        assertEquals(created.id(), list.get(0).id());
+        assertEquals(fileId.toString(), list.get(0).fileId());
+        assertEquals("doc.pdf", list.get(0).filename());
     }
 
     @Test

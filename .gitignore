@@ -19,3 +19,13 @@ logs/
 # Локальные overrides для Docker-стека веб-клиента
 korus-web/.env
 
+# Hot-swap webui (копии создаёт dev-overlay-init)
+dev-overlay/webui/*
+!dev-overlay/webui/.gitkeep
+
+# QEMU local tools/images/runtime
+deploy/qemu/tools/
+deploy/qemu/images/*.qcow2
+deploy/qemu/run/
+deploy/qemu/tools/__pycache__/
+

@@ -11,7 +11,8 @@ class AdminUiManifestLoadTest {
     @Test
     void load_includesCoreSectionsFromSpi() {
         var manifest = AdminUiManifest.load(CoreAdminUiContributor.class.getClassLoader());
-        assertTrue(manifest.sections().size() >= 7);
+        assertTrue(manifest.sections().size() >= 8);
+        assertTrue(manifest.sections().stream().anyMatch(s -> "core-export-compliance".equals(s.id())));
         assertTrue(manifest.sections().stream().anyMatch(s -> "core-server-stats".equals(s.id())));
         assertTrue(manifest.sections().stream().anyMatch(s -> "core-organizations".equals(s.id())
             && s.kind() == AdminUiSectionKind.JSON_PANEL));

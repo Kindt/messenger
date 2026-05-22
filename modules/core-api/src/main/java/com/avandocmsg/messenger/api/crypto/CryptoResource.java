@@ -97,6 +97,11 @@ public class CryptoResource {
         if (kp == null) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
         }
-        return Response.ok(Map.of("publicKey", Base64.getEncoder().encodeToString(kp.publicKey()))).build();
+        var signatureKey = e2eeService.randomBytes(32);
+        return Response.ok(Map.of(
+            "public_key", Base64.getEncoder().encodeToString(kp.publicKey()),
+            "signature_key", Base64.getEncoder().encodeToString(signatureKey),
+            "private_key", Base64.getEncoder().encodeToString(kp.privateKey())
+        )).build();
     }
 }

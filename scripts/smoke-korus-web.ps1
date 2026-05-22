@@ -9,7 +9,9 @@ param(
 $ErrorActionPreference = "Stop"
 if ($Help) {
     Write-Host "Usage: .\scripts\smoke-korus-web.ps1 [-WebBaseUrl <url>] [-CheckApi] [-Help]"
-    Write-Host "  Default URL: http://localhost:9088. Linux/macOS: ./scripts/smoke-korus-web.sh --help"
+    Write-Host "  Checks /health, / HTML, /web-client-env.js (wsUrl + iceServersJson)."
+    Write-Host "  Default URL: http://localhost:9088 (QEMU web-VM: http://127.0.0.1:19088)."
+    Write-Host "  Linux/macOS: ./scripts/smoke-korus-web.sh --help"
     exit 0
 }
 
@@ -44,6 +46,14 @@ try {
     $e = Invoke-WebRequest -Uri $envJs -Method Get -UseBasicParsing
     if ($e.StatusCode -ne 200) { Fail "web-client-env.js status $($e.StatusCode)" }
     if ($e.Content -notmatch "__WEB_CLIENT__") { Fail "web-client-env.js missing __WEB_CLIENT__" }
+    if ($e.Content -notmatch 'wsUrl\s*:') { Fail "web-client-env.js missing wsUrl" }
+    if ($e.Content -notmatch 'iceServersJson\s*:') { Fail "web-client-env.js missing iceServersJson" }
+    if ($e.Content -notmatch 'iceServersJson\s*:\s*(null|")') {
+        Fail "web-client-env.js iceServersJson must be null or a JSON string"
+    }
+    if ($e.Content -notmatch 'vapidPublicKey\s*:') {
+        Fail "web-client-env.js missing vapidPublicKey"
+    }
 } catch {
     Fail "web-client-env.js: $_"
 }

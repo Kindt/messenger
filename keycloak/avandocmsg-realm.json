@@ -12,6 +12,7 @@
     {
       "username": "admin",
       "enabled": true,
+      "email": "admin@korus.local",
       "emailVerified": true,
       "firstName": "System",
       "lastName": "Admin",
@@ -25,6 +26,7 @@
     {
       "username": "csadmin",
       "enabled": true,
+      "email": "csadmin@korus.local",
       "emailVerified": true,
       "firstName": "Console",
       "lastName": "Superuser",

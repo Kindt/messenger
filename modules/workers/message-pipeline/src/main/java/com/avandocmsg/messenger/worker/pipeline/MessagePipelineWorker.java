@@ -1,8 +1,13 @@
 package com.avandocmsg.messenger.worker.pipeline;
 
+import com.avandocmsg.messenger.common.dto.MessageChangeEvent;
+import com.avandocmsg.messenger.common.dto.ConferenceChangeEvent;
+import com.avandocmsg.messenger.common.dto.PinChangeEvent;
+import com.avandocmsg.messenger.common.dto.ReactionChangeEvent;
 import com.avandocmsg.messenger.common.dto.MessageSendEvent;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.dto.RtcSignalEvent;
+import com.avandocmsg.messenger.common.dto.TypingEvent;
 import com.avandocmsg.messenger.common.nats.JetStreamMessagingSetup;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +34,11 @@ public class MessagePipelineWorker {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String QUEUE_GROUP = "pipeline-workers";
     private static final String RTC_QUEUE_GROUP = "rtc-pipeline-workers";
+    private static final String TYPING_QUEUE_GROUP = "typing-pipeline-workers";
+    private static final String CHANGE_QUEUE_GROUP = "change-pipeline-workers";
+    private static final String REACTION_QUEUE_GROUP = "reaction-pipeline-workers";
+    private static final String PIN_QUEUE_GROUP = "pin-pipeline-workers";
+    private static final String CONFERENCE_QUEUE_GROUP = "conference-pipeline-workers";
 
     private final DataSource dataSource;
     private final Connection natsConnection;
@@ -67,6 +77,169 @@ public class MessagePipelineWorker {
             log.info("Subscribed to {} (queue: {}). Waiting for messages...", NatsSubjects.MSG_SEND, QUEUE_GROUP);
         }
         subscribeRtcFanout();
+        subscribeTypingFanout();
+        subscribeChangeFanout();
+        subscribeReactionFanout();
+        subscribePinFanout();
+        subscribeConferenceFanout();
+    }
+
+    private void subscribeTypingFanout() {
+        var typingDispatcher = natsConnection.createDispatcher(this::handleTypingCoreMessage);
+        typingDispatcher.subscribe(NatsSubjects.MSG_TYPING, TYPING_QUEUE_GROUP);
+        log.info("Subscribed to {} (queue: {}) for typing", NatsSubjects.MSG_TYPING, TYPING_QUEUE_GROUP);
+    }
+
+    private void subscribeChangeFanout() {
+        var changeDispatcher = natsConnection.createDispatcher(this::handleChangeCoreMessage);
+        changeDispatcher.subscribe(NatsSubjects.MSG_CHANGE, CHANGE_QUEUE_GROUP);
+        log.info("Subscribed to {} (queue: {}) for message change", NatsSubjects.MSG_CHANGE, CHANGE_QUEUE_GROUP);
+    }
+
+    private void handleChangeCoreMessage(Message msg) {
+        try {
+            handleChangePayload(msg.getData());
+        } catch (Exception e) {
+            log.error("Message change fan-out failed", e);
+        }
+    }
+
+    private void handleChangePayload(byte[] raw) throws Exception {
+        var evt = MAPPER.readValue(raw, MessageChangeEvent.class);
+        var chatId = UUID.fromString(evt.chatId());
+        var sender = UUID.fromString(evt.senderId());
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, sender)) {
+            log.warn("msg.change dropped: user {} is not an active member of chat {}", sender, chatId);
+            return;
+        }
+        var members = new java.util.ArrayList<>(
+            PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, sender));
+        var authorId = sender.toString();
+        if (!members.contains(authorId)) {
+            members.add(authorId);
+        }
+        for (var memberId : members) {
+            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
+        }
+        log.debug("msg.change {} in chat {} -> {} recipients", evt.change(), chatId, members.size());
+    }
+
+    private void subscribeReactionFanout() {
+        var reactionDispatcher = natsConnection.createDispatcher(this::handleReactionCoreMessage);
+        reactionDispatcher.subscribe(NatsSubjects.MSG_REACTION, REACTION_QUEUE_GROUP);
+        log.info("Subscribed to {} (queue: {}) for reactions", NatsSubjects.MSG_REACTION, REACTION_QUEUE_GROUP);
+    }
+
+    private void handleReactionCoreMessage(Message msg) {
+        try {
+            handleReactionPayload(msg.getData());
+        } catch (Exception e) {
+            log.error("Reaction fan-out failed", e);
+        }
+    }
+
+    private void handleReactionPayload(byte[] raw) throws Exception {
+        var evt = MAPPER.readValue(raw, ReactionChangeEvent.class);
+        var chatId = UUID.fromString(evt.chatId());
+        var actor = UUID.fromString(evt.userId());
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, actor)) {
+            log.warn("msg.reaction dropped: user {} is not an active member of chat {}", actor, chatId);
+            return;
+        }
+        var members = new java.util.ArrayList<>(
+            PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, actor));
+        var actorId = actor.toString();
+        if (!members.contains(actorId)) {
+            members.add(actorId);
+        }
+        for (var memberId : members) {
+            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
+        }
+        log.debug("msg.reaction {} on {} in chat {} -> {} recipients",
+            evt.change(), evt.messageId(), chatId, members.size());
+    }
+
+    private void subscribePinFanout() {
+        var pinDispatcher = natsConnection.createDispatcher(this::handlePinCoreMessage);
+        pinDispatcher.subscribe(NatsSubjects.MSG_PIN, PIN_QUEUE_GROUP);
+        log.info("Subscribed to {} (queue: {}) for pins", NatsSubjects.MSG_PIN, PIN_QUEUE_GROUP);
+    }
+
+    private void handlePinCoreMessage(Message msg) {
+        try {
+            handlePinPayload(msg.getData());
+        } catch (Exception e) {
+            log.error("Pin fan-out failed", e);
+        }
+    }
+
+    private void handlePinPayload(byte[] raw) throws Exception {
+        var evt = MAPPER.readValue(raw, PinChangeEvent.class);
+        var chatId = UUID.fromString(evt.chatId());
+        var actor = UUID.fromString(evt.pinnedBy());
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, actor)) {
+            log.warn("msg.pin dropped: user {} is not an active member of chat {}", actor, chatId);
+            return;
+        }
+        var members = PipelineFanoutLogic.loadAllChatMemberUserIds(dataSource, chatId);
+        for (var memberId : members) {
+            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
+        }
+        log.debug("msg.pin {} on {} in chat {} -> {} recipients",
+            evt.change(), evt.messageId(), chatId, members.size());
+    }
+
+    private void subscribeConferenceFanout() {
+        var confDispatcher = natsConnection.createDispatcher(this::handleConferenceCoreMessage);
+        confDispatcher.subscribe(NatsSubjects.MSG_CONFERENCE, CONFERENCE_QUEUE_GROUP);
+        log.info("Subscribed to {} (queue: {}) for conferences", NatsSubjects.MSG_CONFERENCE, CONFERENCE_QUEUE_GROUP);
+    }
+
+    private void handleConferenceCoreMessage(Message msg) {
+        try {
+            handleConferencePayload(msg.getData());
+        } catch (Exception e) {
+            log.error("Conference fan-out failed", e);
+        }
+    }
+
+    private void handleConferencePayload(byte[] raw) throws Exception {
+        var evt = MAPPER.readValue(raw, ConferenceChangeEvent.class);
+        var chatId = UUID.fromString(evt.chatId());
+        var actor = UUID.fromString(evt.actorId());
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, actor)) {
+            log.warn("msg.conference dropped: user {} is not an active member of chat {}", actor, chatId);
+            return;
+        }
+        var members = PipelineFanoutLogic.loadAllChatMemberUserIds(dataSource, chatId);
+        for (var memberId : members) {
+            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
+        }
+        log.debug("msg.conference {} {} in chat {} -> {} recipients",
+            evt.change(), evt.conferenceId(), chatId, members.size());
+    }
+
+    private void handleTypingCoreMessage(Message msg) {
+        try {
+            handleTypingPayload(msg.getData());
+        } catch (Exception e) {
+            log.error("Typing fan-out failed", e);
+        }
+    }
+
+    private void handleTypingPayload(byte[] raw) throws Exception {
+        var evt = MAPPER.readValue(raw, TypingEvent.class);
+        var chatId = UUID.fromString(evt.chatId());
+        var sender = UUID.fromString(evt.userId());
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, sender)) {
+            log.warn("msg.typing dropped: user {} is not an active member of chat {}", sender, chatId);
+            return;
+        }
+        var members = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, sender);
+        for (var memberId : members) {
+            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
+        }
+        log.debug("msg.typing from {} in chat {} -> {} recipients", sender, chatId, members.size());
     }
 
     private void subscribeRtcFanout() {

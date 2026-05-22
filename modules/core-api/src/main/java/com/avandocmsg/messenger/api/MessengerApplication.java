@@ -17,6 +17,14 @@ import com.avandocmsg.messenger.api.config.MinioConfig;
 import com.avandocmsg.messenger.api.config.NatsConfig;
 import com.avandocmsg.messenger.api.config.RedisConfig;
 import com.avandocmsg.messenger.api.contacts.ContactService;
+import com.avandocmsg.messenger.api.export.AdminExportComplianceSeed;
+import com.avandocmsg.messenger.api.export.ExportFileAccess;
+import com.avandocmsg.messenger.api.export.ExportAutoQueueOnSuggested;
+import com.avandocmsg.messenger.api.export.ExportJobEnqueuer;
+import com.avandocmsg.messenger.api.export.ExportReplayCompleteSubscriber;
+import com.avandocmsg.messenger.api.export.ExportSuggestedHandler;
+import com.avandocmsg.messenger.api.export.ExportSuggestedSubscriber;
+import com.avandocmsg.messenger.api.metrics.ExportJobsDbCollector;
 import com.avandocmsg.messenger.api.crypto.CryptoProvider;
 import com.avandocmsg.messenger.api.crypto.E2EEService;
 import com.avandocmsg.messenger.api.crypto.KeyPackageRepository;
@@ -27,6 +35,7 @@ import com.avandocmsg.messenger.api.files.MinioFileProxy;
 import com.avandocmsg.messenger.common.nats.JetStreamMessagingSetup;
 import com.avandocmsg.messenger.api.messages.MessageService;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
+import com.avandocmsg.messenger.api.repository.ExportJobRepository;
 import com.avandocmsg.messenger.api.repository.FilePublicLinkRepository;
 import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
@@ -85,6 +94,9 @@ public class MessengerApplication {
     private final SessionRepository sessionRepository;
     private final MlsService mlsService;
     private final FileProxy fileProxy;
+    private final ExportJobRepository exportJobRepository;
+    private final AuditRepository auditRepository;
+    private final ExportJobEnqueuer exportJobEnqueuer;
     private final Clock clock;
     private final UuidGenerator uuidGenerator;
 
@@ -93,6 +105,9 @@ public class MessengerApplication {
     private HotReloadWatcher watcher;
     private RedisConfig redisConfig;
     private SolrClient solrClient;
+    private ExportReplayCompleteSubscriber exportCompleteSubscriber;
+    private ExportSuggestedSubscriber exportSuggestedSubscriber;
+    private final ExportSuggestedHandler exportSuggestedHandler;
 
     public MessengerApplication() {
         this.appConfig = new AppConfig();
@@ -124,11 +139,36 @@ public class MessengerApplication {
         this.sessionRepository = new SessionRepository(dataSource, clock, uuidGenerator);
         this.mlsService = new MlsService(sessionRepository, e2eeService);
         this.fileProxy = createFileProxy();
+        this.exportJobRepository = new ExportJobRepository(dataSource);
+        this.auditRepository = new AuditRepository(dataSource);
+        var natsOutbound = new NatsConnectionOutbound(natsConnection, jetStreamOptional());
+        this.exportJobEnqueuer = new ExportJobEnqueuer(
+            exportJobRepository,
+            auditRepository,
+            natsOutbound,
+            uuidGenerator
+        );
+        var exportAutoQueue = appConfig.exportAutoQueueOnSuggestedEnabled()
+            ? Optional.of(new ExportAutoQueueOnSuggested(
+                appConfig, exportJobEnqueuer, exportJobRepository, chatRepository, auditRepository))
+            : Optional.<ExportAutoQueueOnSuggested>empty();
+        this.exportSuggestedHandler = new ExportSuggestedHandler(auditRepository, exportAutoQueue);
+        ExportJobsDbCollector.registerDefault(dataSource, appConfig.exportProcessingStaleMinutes());
         if (appConfig.rateLimitAuthEnabled()) {
             this.redisConfig = new RedisConfig(appConfig);
             log.info("Auth rate limiting enabled (Redis)");
         } else {
             this.redisConfig = null;
+        }
+    }
+
+    private Optional<JetStream> jetStreamOptional() {
+        try {
+            return appConfig.natsJetstream()
+                ? Optional.of(natsConnection.jetStream())
+                : Optional.empty();
+        } catch (IOException e) {
+            throw new RuntimeException("Cannot obtain JetStream context", e);
         }
     }
 
@@ -151,6 +191,29 @@ public class MessengerApplication {
         tomcat.start();
         log.info("core-api started on port {} (API locale: {})", appConfig.port(), appConfig.locale().toLanguageTag());
 
+        if (appConfig.exportCompleteSubscriberEnabled()) {
+            exportCompleteSubscriber = new ExportReplayCompleteSubscriber(natsConnection, exportJobRepository);
+            exportCompleteSubscriber.start();
+        } else {
+            exportCompleteSubscriber = null;
+            log.info("Export complete NATS subscriber disabled (EXPORT_COMPLETE_SUBSCRIBER_ENABLED=false)");
+        }
+
+        if (appConfig.exportSuggestedSubscriberEnabled()) {
+            if (appConfig.exportAutoQueueOnSuggestedEnabled()) {
+                log.info(
+                    "Export auto-queue on {} enabled (cooldown {} min)",
+                    com.avandocmsg.messenger.common.nats.NatsSubjects.MSG_EXPORT_SUGGESTED,
+                    appConfig.exportAutoQueueCooldownMinutes()
+                );
+            }
+            exportSuggestedSubscriber = new ExportSuggestedSubscriber(natsConnection, exportSuggestedHandler);
+            exportSuggestedSubscriber.start();
+        } else {
+            exportSuggestedSubscriber = null;
+            log.info("Export suggested NATS subscriber disabled (EXPORT_SUGGESTED_SUBSCRIBER_ENABLED=false)");
+        }
+
         if (appConfig.hotReloadEnabled()) {
             var libDir = Paths.get(System.getProperty("app.home", "."), "lib");
             if (Files.exists(libDir)) {
@@ -168,7 +231,7 @@ public class MessengerApplication {
 
         var solrBinding = SolrClientFactory.create(appConfig);
         this.solrClient = solrBinding.client();
-        var auditRepository = new AuditRepository(dataSource);
+        var exportFileAccess = new ExportFileAccess(appConfig, Optional.of(minioClient));
         var organizationRepository = new OrganizationRepository(dataSource, this.clock, this.uuidGenerator);
         var retentionPolicyRepository = new RetentionPolicyRepository(dataSource);
         var chatRetentionPolicyRepository = new ChatRetentionPolicyRepository(dataSource);
@@ -182,15 +245,7 @@ public class MessengerApplication {
             ? AuthRateLimiter.redis(redisConfig.sync(), appConfig)
             : AuthRateLimiter.noop();
         var contactService = new ContactService(contactRepository, userRepository, blockRepository);
-        Optional<JetStream> jetStream;
-        try {
-            jetStream = appConfig.natsJetstream()
-                ? Optional.of(natsConnection.jetStream())
-                : Optional.empty();
-        } catch (IOException e) {
-            throw new RuntimeException("Cannot obtain JetStream context", e);
-        }
-        var natsOutbound = new NatsConnectionOutbound(natsConnection, jetStream);
+        var natsOutbound = new NatsConnectionOutbound(natsConnection, jetStreamOptional());
         var adminManifest = AdminUiManifest.load(MessengerApplication.class.getClassLoader());
         var adminServerStatsService = new AdminServerStatsService(dataSource, appConfig, natsOutbound);
         var chatService = new ChatService(chatRepository, blockRepository, chatReadRepository,
@@ -198,10 +253,13 @@ public class MessengerApplication {
         var messageService = new MessageService(messageRepository, chatRepository, blockRepository,
             mlsService, natsOutbound, this.uuidGenerator);
         var fileService = new FileService(appConfig, fileProxy, fileRepository, messageRepository, this.uuidGenerator);
+        var exportComplianceSeed = new AdminExportComplianceSeed(
+            chatService, messageService, fileService, chatRepository, chatRetentionPolicyRepository);
         var chatBanService = new ChatBanService(chatBanRepository, chatRepository);
         var conferenceRepository = new com.avandocmsg.messenger.api.repository.ConferenceRepository(dataSource, appConfig,
             this.uuidGenerator);
-        var conferenceService = new com.avandocmsg.messenger.api.conference.ConferenceService(conferenceRepository, chatRepository);
+        var conferenceService = new com.avandocmsg.messenger.api.conference.ConferenceService(
+            conferenceRepository, chatRepository, natsOutbound);
 
         UserMessageSource userMessages = new CompositeMessageSource(appConfig.locale(),
             MessengerApplication.class.getClassLoader(),
@@ -217,7 +275,9 @@ public class MessengerApplication {
                 minioClient, fileRepository, fileService,
                 chatBanRepository, chatBanService,
                 e2eeService, keyPackageRepository, sessionRepository, mlsService, fileProxy, conferenceService,
-                auditRepository, organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,
+                auditRepository, exportJobRepository, exportJobEnqueuer, exportFileAccess, this.exportSuggestedHandler,
+                exportComplianceSeed,
+                organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,
                 filePublicLinkRepository, messageSearchService, adminManifest, adminServerStatsService));
         Tomcat.addServlet(ctx, SERVLET_NAME, jerseyServlet);
         ctx.addServletMappingDecoded("/api/*", SERVLET_NAME);
@@ -241,6 +301,14 @@ public class MessengerApplication {
     }
 
     public void stop() throws Exception {
+        if (exportCompleteSubscriber != null) {
+            exportCompleteSubscriber.close();
+            exportCompleteSubscriber = null;
+        }
+        if (exportSuggestedSubscriber != null) {
+            exportSuggestedSubscriber.close();
+            exportSuggestedSubscriber = null;
+        }
         if (watcher != null) watcher.stop();
         if (tomcat != null) tomcat.stop();
         if (redisConfig != null) {

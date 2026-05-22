@@ -9,6 +9,9 @@ import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.common.dto.MessageChangeEvent;
+import com.avandocmsg.messenger.common.dto.PinChangeEvent;
+import com.avandocmsg.messenger.common.dto.ReactionChangeEvent;
 import com.avandocmsg.messenger.common.dto.MessageSendEvent;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
@@ -18,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -107,14 +111,15 @@ public class MessageService {
             log.warn("Send denied for user {} in chat {}", senderId, chatId);
             return null;
         }
+        var attachmentFileId = parseAttachmentFileId(request.type(), request.content());
         var content = request.content();
         var encrypted = mlsService.encrypt(chatId, senderId, content);
         if (encrypted != null) {
-            content = encrypted.ciphertextBase64();
+            content = combinedCiphertextBase64(encrypted);
         }
         var id = uuidGenerator.randomUuid();
         var msg = messageRepository.insert(id, chatId, senderId, typeForEncrypted(request.type(), encrypted),
-            content, replyToMsgId, request.clientMsgId(), request.ttlSeconds());
+            content, replyToMsgId, request.clientMsgId(), request.ttlSeconds(), attachmentFileId);
         if (msg != null) {
             publishSendEvent(msg, request.clientMsgId());
         }
@@ -126,16 +131,86 @@ public class MessageService {
         return "e2ee-" + (type != null ? type : "text");
     }
 
+    static boolean isE2eeType(String type) {
+        return type != null && type.startsWith("e2ee-");
+    }
+
+    static UUID parseAttachmentFileId(String type, String content) {
+        if (content == null || content.isBlank() || type == null) {
+            return null;
+        }
+        var base = type.startsWith("e2ee-") ? type.substring(5) : type;
+        if (!"file".equals(base) && !"image".equals(base) && !"video".equals(base)) {
+            return null;
+        }
+        try {
+            return UUID.fromString(content.trim());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    static String combinedCiphertextBase64(com.avandocmsg.messenger.api.mls.dto.EncryptedMessage encrypted) {
+        var nonce = Base64.getDecoder().decode(encrypted.nonceBase64());
+        var ct = Base64.getDecoder().decode(encrypted.ciphertextBase64());
+        var combined = new byte[nonce.length + ct.length];
+        System.arraycopy(nonce, 0, combined, 0, nonce.length);
+        System.arraycopy(ct, 0, combined, nonce.length, ct.length);
+        return Base64.getEncoder().encodeToString(combined);
+    }
+
+    /** Серверная расшифровка для веб-превью (MLS-контур на сервере, не полный RFC 9420). */
+    public String plaintextPreview(UUID chatId, UUID msgId, UUID userId) {
+        if (messageVisibleToViewer(chatId, msgId, userId).isEmpty()) {
+            return null;
+        }
+        var msg = messageRepository.findById(msgId).orElse(null);
+        if (msg == null || !msg.chatId().equals(chatId.toString()) || !isE2eeType(msg.type())) {
+            return null;
+        }
+        return mlsService.decryptContentBase64(chatId, msg.content());
+    }
+
     private void publishSendEvent(MessageResponse msg, String clientMsgId) {
         try {
             var event = new MessageSendEvent(
                 msg.id(), msg.chatId(), msg.senderId(), msg.type(),
                 msg.content(), clientMsgId,
-                msg.createdAt() != null ? msg.createdAt().toEpochMilli() : null);
+                msg.createdAt() != null ? msg.createdAt().toEpochMilli() : null,
+                msg.replyToMsgId(),
+                msg.attachmentFileId(),
+                msg.ttlSeconds());
             var data = MAPPER.writeValueAsBytes(event);
             natsOutbound.publishPipelineMessageSend(data);
         } catch (Exception e) {
             log.warn("Failed to publish msg.send event for {}", msg.id(), e);
+        }
+    }
+
+    private void publishMessageChange(MessageChangeEvent event) {
+        try {
+            var data = MAPPER.writeValueAsBytes(event);
+            natsOutbound.publish(NatsSubjects.MSG_CHANGE, data);
+        } catch (Exception e) {
+            log.warn("Failed to publish {} for message {}", NatsSubjects.MSG_CHANGE, event.messageId(), e);
+        }
+    }
+
+    private void publishReactionChange(ReactionChangeEvent event) {
+        try {
+            var data = MAPPER.writeValueAsBytes(event);
+            natsOutbound.publish(NatsSubjects.MSG_REACTION, data);
+        } catch (Exception e) {
+            log.warn("Failed to publish {} for message {}", NatsSubjects.MSG_REACTION, event.messageId(), e);
+        }
+    }
+
+    private void publishPinChange(PinChangeEvent event) {
+        try {
+            var data = MAPPER.writeValueAsBytes(event);
+            natsOutbound.publish(NatsSubjects.MSG_PIN, data);
+        } catch (Exception e) {
+            log.warn("Failed to publish {} for message {}", NatsSubjects.MSG_PIN, event.messageId(), e);
         }
     }
 
@@ -200,6 +275,15 @@ public class MessageService {
             return false;
         }
         publishIndexEvent(MessageWorkerEvent.forIndexDelete(msgId.toString()));
+        publishMessageChange(new MessageChangeEvent(
+            "delete",
+            msg.id(),
+            msg.chatId(),
+            msg.senderId(),
+            msg.type(),
+            null,
+            msg.createdAt() != null ? msg.createdAt().toEpochMilli() : null,
+            null));
         return true;
     }
 
@@ -213,12 +297,22 @@ public class MessageService {
     public boolean addReaction(UUID chatId, UUID msgId, UUID userId, String reaction) {
         if (reaction == null || reaction.isBlank()) return false;
         if (messageVisibleToViewer(chatId, msgId, userId).isEmpty()) return false;
-        return messageRepository.addReaction(msgId, userId, reaction);
+        if (!messageRepository.addReaction(msgId, userId, reaction)) {
+            return false;
+        }
+        publishReactionChange(new ReactionChangeEvent(
+            "add", msgId.toString(), chatId.toString(), userId.toString(), reaction));
+        return true;
     }
 
     public boolean removeReaction(UUID chatId, UUID msgId, UUID userId, String reaction) {
         if (messageVisibleToViewer(chatId, msgId, userId).isEmpty()) return false;
-        return messageRepository.removeReaction(msgId, userId, reaction);
+        if (!messageRepository.removeReaction(msgId, userId, reaction)) {
+            return false;
+        }
+        publishReactionChange(new ReactionChangeEvent(
+            "remove", msgId.toString(), chatId.toString(), userId.toString(), reaction));
+        return true;
     }
 
     public List<ReactionResponse> getReactions(UUID chatId, UUID msgId, UUID userId) {
@@ -230,12 +324,30 @@ public class MessageService {
 
     public boolean pinMessage(UUID chatId, UUID msgId, UUID userId) {
         if (messageVisibleToViewer(chatId, msgId, userId).isEmpty()) return false;
-        return messageRepository.pinMessage(chatId, msgId, userId);
+        if (!messageRepository.pinMessage(chatId, msgId, userId)) {
+            return false;
+        }
+        publishPinChange(new PinChangeEvent(
+            "pin",
+            chatId.toString(),
+            msgId.toString(),
+            userId.toString(),
+            System.currentTimeMillis()));
+        return true;
     }
 
     public boolean unpinMessage(UUID chatId, UUID msgId, UUID userId) {
         if (!canAccessChat(chatId, userId)) return false;
-        return messageRepository.unpinMessage(chatId, msgId);
+        if (!messageRepository.unpinMessage(chatId, msgId)) {
+            return false;
+        }
+        publishPinChange(new PinChangeEvent(
+            "unpin",
+            chatId.toString(),
+            msgId.toString(),
+            userId.toString(),
+            null));
+        return true;
     }
 
     public List<PinnedMessageResponse> getPinnedMessages(UUID chatId, UUID userId) {
@@ -255,8 +367,12 @@ public class MessageService {
             return null;
         }
         var newId = uuidGenerator.randomUuid();
+        UUID attachmentFileId = null;
+        if (msg.attachmentFileId() != null && !msg.attachmentFileId().isBlank()) {
+            attachmentFileId = UUID.fromString(msg.attachmentFileId());
+        }
         var inserted = messageRepository.insert(newId, targetChatId, userId, msg.type(), msg.content(),
-            null, null, null);
+            null, null, null, attachmentFileId);
         if (inserted != null) {
             publishSendEvent(inserted, null);
         }

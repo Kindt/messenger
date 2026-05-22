@@ -1,0 +1,40 @@
+# Опциональный локальный TURN (coturn) для mesh WebRTC в браузере на хосте.
+# Учётные данные и порт — только для стенда; в продакшене задайте свои секреты и --external-ip.
+#
+# Запуск вместе с основным стеком:
+#   docker compose -f docker-compose.yml -f docker-compose.turn.yml up -d
+# С attach к dev-min:
+#   docker compose --env-file .env -f docker-compose.yml -f docker-compose.attach.yml -f docker-compose.turn.yml up -d
+#
+# Из корня репозитория: .\scripts\korus-web-up.ps1 -Turn  или  ./scripts/korus-web-up.sh --turn
+# Остановка: .\scripts\korus-web-down.ps1 -Turn  или  ./scripts/korus-web-down.sh --turn (те же -f).
+
+services:
+  coturn:
+    image: coturn/coturn:4.6.2
+    restart: unless-stopped
+    ports:
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+    command:
+      - "-n"
+      - "--log-file=stdout"
+      - "--listening-ip=0.0.0.0"
+      - "--listening-port=3478"
+      - "--min-port=10000"
+      - "--max-port=10100"
+      - "--fingerprint"
+      - "--lt-cred-mech"
+      - "--user=korus:korus-turn-demo-secret"
+      - "--realm=korus-messenger-turn.local"
+      - "--no-cli"
+      - "--allowed-peer-ip=0.0.0.0-255.255.255.255"
+
+  web-a:
+    environment:
+      # STUN + TURN: при сбое relay браузер всё ещё может попробовать host/srflx.
+      WEB_CLIENT_RTC_ICE_SERVERS: '[{"urls":"stun:stun.l.google.com:19302"},{"urls":["turn:127.0.0.1:3478?transport=udp","turn:127.0.0.1:3478?transport=tcp"],"username":"korus","credential":"korus-turn-demo-secret"}]'
+
+  web-b:
+    environment:
+      WEB_CLIENT_RTC_ICE_SERVERS: '[{"urls":"stun:stun.l.google.com:19302"},{"urls":["turn:127.0.0.1:3478?transport=udp","turn:127.0.0.1:3478?transport=tcp"],"username":"korus","credential":"korus-turn-demo-secret"}]'

@@ -1,8 +1,10 @@
 package com.avandocmsg.messenger.api.admin.ui;
 
+import com.avandocmsg.messenger.api.admin.ui.dto.AdminExportComplianceGuideResponse;
 import com.avandocmsg.messenger.api.admin.ui.dto.AdminManifestResponse;
 import com.avandocmsg.messenger.api.admin.ui.dto.AdminServerStatsResponse;
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.common.export.ExportGdprDisclosures;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -54,5 +56,20 @@ public class AdminUiResource {
         content = @Content(schema = @Schema(implementation = AdminServerStatsResponse.class)))
     public AdminServerStatsResponse stats() {
         return stats.snapshot();
+    }
+
+    @GET
+    @Path("export-compliance-guide")
+    @Operation(summary = "Справочник export / GDPR для операторов",
+        description = "Шаблон gdprDisclosures (как в export.json), чеклист env и текущие счётчики export_jobs / аудита.",
+        security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "200",
+        content = @Content(schema = @Schema(implementation = AdminExportComplianceGuideResponse.class)))
+    public AdminExportComplianceGuideResponse exportComplianceGuide() {
+        return new AdminExportComplianceGuideResponse(
+            ExportGdprDisclosures.referenceTemplate(),
+            AdminExportEnvChecklist.items(),
+            AdminExportSmokeHints.commands(),
+            stats.snapshot().exportCompliance());
     }
 }

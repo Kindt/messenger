@@ -11,6 +11,7 @@ public record ChatResponse(
     @JsonProperty("owner_id") String ownerId,
     @JsonProperty("member_count") int memberCount,
     boolean muted,
+    @JsonProperty("personal_filter_active") boolean personalFilterActive,
     @JsonProperty("ttl_seconds") Integer ttlSeconds,
     @JsonProperty("created_at") Instant createdAt
 ) {}

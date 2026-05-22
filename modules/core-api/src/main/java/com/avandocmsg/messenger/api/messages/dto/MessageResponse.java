@@ -19,5 +19,7 @@ public record MessageResponse(
     @Schema(description = "When the message was last edited") @JsonProperty("edited_at") Instant editedAt,
     @Schema(description = "Срок видимости с момента создания (сек); null = без TTL (ТЗ п. 12.4)")
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    @JsonProperty("ttl_seconds") Integer ttlSeconds
+    @JsonProperty("ttl_seconds") Integer ttlSeconds,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("attachment_file_id") String attachmentFileId
 ) {}

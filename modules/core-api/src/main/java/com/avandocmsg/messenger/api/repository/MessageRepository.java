@@ -32,8 +32,17 @@ public class MessageRepository {
 
     public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
                                   UUID replyToMsgId, String clientMsgId, Integer ttlSeconds) {
-        var sql = "INSERT INTO messages (id, chat_id, sender_id, type, content, reply_to_msg_id, client_msg_id, ttl_seconds, created_at) " +
-                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, now())";
+        return insert(id, chatId, senderId, type, content, replyToMsgId, clientMsgId, ttlSeconds, null);
+    }
+
+    public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
+                                  UUID replyToMsgId, String clientMsgId, Integer ttlSeconds,
+                                  UUID attachmentFileId) {
+        var sql = """
+            INSERT INTO messages (id, chat_id, sender_id, type, content, reply_to_msg_id, client_msg_id,
+                ttl_seconds, attachment_file_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, now())
+            """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
             stmt.setObject(1, id);
@@ -44,10 +53,12 @@ public class MessageRepository {
             stmt.setObject(6, replyToMsgId);
             stmt.setString(7, clientMsgId);
             stmt.setObject(8, ttlSeconds);
+            stmt.setObject(9, attachmentFileId);
             stmt.executeUpdate();
             return new MessageResponse(id.toString(), chatId.toString(), senderId.toString(),
                 type != null ? type : "text", content, replyToMsgId != null ? replyToMsgId.toString() : null,
-                false, clock.instant(), null, ttlSeconds);
+                false, clock.instant(), null, ttlSeconds,
+                attachmentFileId != null ? attachmentFileId.toString() : null);
         } catch (Exception e) {
             log.error("Failed to insert message", e);
             return null;
@@ -76,7 +87,8 @@ public class MessageRepository {
 
     public Optional<MessageResponse> findById(UUID id) {
         var sql = """
-            SELECT id, chat_id, sender_id, type, content, reply_to_msg_id, deleted, created_at, edited_at, ttl_seconds
+            SELECT id, chat_id, sender_id, type, content, reply_to_msg_id, deleted, created_at, edited_at, ttl_seconds,
+                attachment_file_id
             FROM messages m WHERE m.id = ? AND (m.ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - m.created_at)) < m.ttl_seconds)
             """;
         try (var conn = dataSource.getConnection();
@@ -99,7 +111,8 @@ public class MessageRepository {
 
     public List<MessageResponse> findByChatId(UUID chatId, int limit, UUID before, UUID filterUserId) {
         var sql = new StringBuilder("""
-            SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at, m.edited_at, m.ttl_seconds
+            SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at,
+                m.edited_at, m.ttl_seconds, m.attachment_file_id
             FROM messages m WHERE m.chat_id = ? AND """ + SQL_MSG_TTL_VISIBLE);
         if (before != null) {
             sql.append(" AND m.created_at < (SELECT m2.created_at FROM messages m2 WHERE m2.id = ?)");
@@ -313,13 +326,53 @@ public class MessageRepository {
      * (trimmed), viewer is a non-banned member of that chat, and block rules match the message feed
      * (mutual block with sender hides the message).
      */
+    public record FileMessageRef(UUID messageId, UUID chatId) {}
+
+    /**
+     * Последнее видимое сообщение с вложением: plaintext {@code content} = file id или {@code attachment_file_id}.
+     */
+    public Optional<FileMessageRef> findLatestMessageRefForViewer(UUID fileId, UUID viewerId) {
+        var sql = """
+            SELECT m.id, m.chat_id
+            FROM messages m
+            INNER JOIN chat_members cm ON cm.chat_id = m.chat_id AND cm.user_id = ? AND cm.banned = false
+            WHERE (trim(m.content) = ? OR m.attachment_file_id = ?)
+              AND m.deleted = false
+              AND """ + SQL_MSG_TTL_VISIBLE + """
+              AND m.sender_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
+              AND m.sender_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)
+            ORDER BY m.created_at DESC
+            LIMIT 1
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, viewerId);
+            stmt.setString(2, fileId.toString());
+            stmt.setObject(3, fileId);
+            stmt.setObject(4, viewerId);
+            stmt.setObject(5, viewerId);
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(new FileMessageRef(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("chat_id", UUID.class)));
+                }
+            }
+        } catch (Exception e) {
+            log.error("findLatestMessageRefForViewer failed", e);
+        }
+        return Optional.empty();
+    }
+
     public boolean viewerMayAccessFileViaSharedNonE2eeMessage(UUID fileId, UUID viewerId) {
         var sql = """
             SELECT 1
             FROM messages m
             INNER JOIN chat_members cm ON cm.chat_id = m.chat_id AND cm.user_id = ? AND cm.banned = false
-            WHERE trim(m.content) = ?
-              AND m.type NOT LIKE 'e2ee-%'
+            WHERE (
+                (trim(m.content) = ? AND m.type NOT LIKE 'e2ee-%')
+                OR m.attachment_file_id = ?
+              )
               AND m.deleted = false
               AND """ + SQL_MSG_TTL_VISIBLE + """
               AND m.sender_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
@@ -330,8 +383,9 @@ public class MessageRepository {
              var stmt = conn.prepareStatement(sql)) {
             stmt.setObject(1, viewerId);
             stmt.setString(2, fileId.toString());
-            stmt.setObject(3, viewerId);
+            stmt.setObject(3, fileId);
             stmt.setObject(4, viewerId);
+            stmt.setObject(5, viewerId);
             try (var rs = stmt.executeQuery()) {
                 return rs.next();
             }
@@ -347,7 +401,8 @@ public class MessageRepository {
             return List.of();
         }
         var sql = """
-            SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at, m.edited_at, m.ttl_seconds
+            SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at,
+                m.edited_at, m.ttl_seconds, m.attachment_file_id
             FROM messages m
             WHERE m.chat_id = ANY (?)
               AND m.deleted = false
@@ -395,7 +450,8 @@ public class MessageRepository {
             return List.of();
         }
         var sql = """
-            SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at, m.edited_at, m.ttl_seconds
+            SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at,
+                m.edited_at, m.ttl_seconds, m.attachment_file_id
             FROM messages m
             WHERE m.id = ANY (?)
               AND m.deleted = false
@@ -442,6 +498,7 @@ public class MessageRepository {
         var editedTs = rs.getTimestamp("edited_at");
         var replyTo = rs.getObject("reply_to_msg_id", UUID.class);
         var ttl = (Integer) rs.getObject("ttl_seconds");
+        var attachmentFileId = rs.getObject("attachment_file_id", UUID.class);
         return new MessageResponse(
             rs.getObject("id", UUID.class).toString(),
             rs.getObject("chat_id", UUID.class).toString(),
@@ -452,7 +509,8 @@ public class MessageRepository {
             rs.getBoolean("deleted"),
             ts != null ? ts.toInstant() : null,
             editedTs != null ? editedTs.toInstant() : null,
-            ttl
+            ttl,
+            attachmentFileId != null ? attachmentFileId.toString() : null
         );
     }
 }

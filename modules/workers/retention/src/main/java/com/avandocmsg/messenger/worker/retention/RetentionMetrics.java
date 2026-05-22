@@ -77,6 +77,11 @@ final class RetentionMetrics {
         .help("Hot-body pass skipped because RETENTION_USE_ADVISORY_LOCK=true and pg_try_advisory_lock returned false (another session holds the lock)")
         .register();
 
+    private static final Counter EXPORT_SUGGESTED_PUBLISHED = Counter.build()
+        .name("retention_worker_export_suggested_published_total")
+        .help("msg.export.suggested NATS publishes (RETENTION_PUBLISH_EXPORT_SUGGESTED=true)")
+        .register();
+
     private static final Counter DRY_RUN_PASSES = Counter.build()
         .name("retention_worker_dry_run_passes_total")
         .help("Hot-body passes completed in RETENTION_DRY_RUN=true mode (no Hot DB / MinIO / NATS / audit mutations)")
@@ -187,6 +192,10 @@ final class RetentionMetrics {
 
     static void dryRunPassCompleted() {
         DRY_RUN_PASSES.inc();
+    }
+
+    static void exportSuggestedPublished() {
+        EXPORT_SUGGESTED_PUBLISHED.inc();
     }
 
     static void auditInsertFailed() {

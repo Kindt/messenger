@@ -37,6 +37,13 @@ class FileResourceTest {
             () -> resource.revokePublicLink("not-a-uuid", linkId, userSecurityContext()));
     }
 
+    @Test
+    void listPublicLinks_invalidFileId_throwsInvalidUuidParameterException() {
+        var resource = new FileResource(null, null, null, null, null, I18nTestFixtures.messagesEn());
+        assertThrows(InvalidUuidParameterException.class,
+            () -> resource.listPublicLinks("not-a-uuid", userSecurityContext()));
+    }
+
     private static SecurityContext userSecurityContext() {
         var actorId = UUID.randomUUID().toString();
         var principal = new UserPrincipal(actorId, "user", Set.of());

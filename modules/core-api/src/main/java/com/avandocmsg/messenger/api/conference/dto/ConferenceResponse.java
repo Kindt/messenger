@@ -14,5 +14,6 @@ public record ConferenceResponse(
     @JsonProperty("join_url") String joinUrl,
     String provider,
     @JsonProperty("created_at") Instant createdAt,
-    @JsonProperty("ended_at") Instant endedAt
+    @JsonProperty("ended_at") Instant endedAt,
+    @JsonProperty("participant_count") int participantCount
 ) {}

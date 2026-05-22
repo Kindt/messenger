@@ -44,10 +44,14 @@ Write-Host "docker $($dockerArgs -join ' ')" -ForegroundColor Cyan
 Invoke-KorusDockerComposeInvoke -DockerArgs $dockerArgs -WorkingDirectory $env:KORUS_REPO_ROOT -Retries 2
 
 Write-Host ""
-Write-Host "[OK] Profile web: ws-gateway (host :8082), message-pipeline" -ForegroundColor Green
+Write-Host "[OK] Profile web: ws-gateway (host :8082), message-pipeline, push-worker health :9193" -ForegroundColor Green
+Write-Host "Web Push: .\scripts\generate-vapid.ps1  → VAPID in push-worker + korus-web .env" -ForegroundColor DarkGray
 Write-Host "Next UI: .\scripts\korus-web-up.ps1 -Build   (Linux/macOS: ./scripts/korus-web-up.sh --build)" -ForegroundColor Green
 Write-Host "Attach UI to dev-min: .\scripts\korus-web-up.ps1 -Attach -Build   (./scripts/korus-web-up.sh --attach --build, network korus_messenger_dev_min, see korus-web/README.md)" -ForegroundColor Green
+Write-Host "Optional local TURN (coturn): .\scripts\korus-web-up.ps1 -Turn -Build   (./scripts/korus-web-up.sh --turn --build; see korus-web/docker-compose.turn.yml)" -ForegroundColor DarkGray
+Write-Host "Smoke push-worker: .\scripts\smoke-push-worker.ps1   (./scripts/smoke-push-worker.sh)" -ForegroundColor DarkGray
 Write-Host "Smoke: .\scripts\smoke-korus-web.ps1 -CheckApi   (./scripts/smoke-korus-web.sh --check-api)" -ForegroundColor Green
+Write-Host "Stop profile web: .\scripts\dev-web-stack-down.ps1   (Linux/macOS: ./scripts/dev-web-stack-down.sh)" -ForegroundColor DarkGray
 Write-Host "Core API: curl http://localhost:8080/api/v1/health" -ForegroundColor Green
 & (Join-Path $PSScriptRoot "dev-ui-hints.ps1") -RepoRoot $Root
 Write-Host "Then run .\scripts\korus-web-up.ps1 -Build and open the web client URL from the hints above." -ForegroundColor DarkGray

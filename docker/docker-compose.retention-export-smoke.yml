@@ -1,0 +1,11 @@
+# Override for retention → msg.export.suggested smokes (no hot-body mutation).
+# Usage:
+#   docker compose -f docker/docker-compose.full-server.yml \
+#     -f docker/docker-compose.retention-export-smoke.yml up -d retention-worker
+services:
+  retention-worker:
+    environment:
+      RETENTION_PUBLISH_EXPORT_SUGGESTED: "true"
+      RETENTION_DRY_RUN: "true"
+      RETENTION_SCAN_INTERVAL_SECONDS: "30"
+      RETENTION_INITIAL_DELAY_SECONDS: "10"

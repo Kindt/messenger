@@ -8,8 +8,13 @@ import com.avandocmsg.messenger.core.port.UuidGenerator;
 import javax.sql.DataSource;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import com.avandocmsg.messenger.api.files.dto.OwnerPublicLinkSummary;
+import com.avandocmsg.messenger.api.files.dto.PublicLinkSummary;
+
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -76,6 +81,67 @@ public class FilePublicLinkRepository {
     /**
      * Отзыв публичной ссылки: помечает {@code revoked_at}; токен перестаёт проходить в {@link #findValidByTokenHash}.
      */
+    public List<OwnerPublicLinkSummary> listActiveByOwner(UUID createdBy, int limit) {
+        if (limit <= 0 || limit > 200) {
+            limit = 50;
+        }
+        var sql = """
+            SELECT l.id, l.file_id, l.link_kind, l.expires_at, l.created_at, f.filename
+            FROM file_public_links l
+            LEFT JOIN file_metadata f ON f.id = l.file_id
+            WHERE l.created_by = ? AND l.revoked_at IS NULL AND l.expires_at > now()
+            ORDER BY l.created_at DESC
+            LIMIT ?
+            """;
+        var result = new ArrayList<OwnerPublicLinkSummary>();
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, createdBy);
+            stmt.setInt(2, limit);
+            try (var rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(new OwnerPublicLinkSummary(
+                        rs.getObject("id", UUID.class).toString(),
+                        rs.getObject("file_id", UUID.class).toString(),
+                        rs.getString("link_kind"),
+                        rs.getTimestamp("expires_at").toInstant(),
+                        rs.getTimestamp("created_at").toInstant(),
+                        rs.getString("filename")));
+                }
+            }
+        } catch (Exception e) {
+            log.error("list owner public links failed", e);
+        }
+        return result;
+    }
+
+    public List<PublicLinkSummary> listActiveByFileAndOwner(UUID fileId, UUID createdBy) {
+        var sql = """
+            SELECT id, link_kind, expires_at, created_at
+            FROM file_public_links
+            WHERE file_id = ? AND created_by = ? AND revoked_at IS NULL AND expires_at > now()
+            ORDER BY created_at DESC
+            """;
+        var result = new ArrayList<PublicLinkSummary>();
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, fileId);
+            stmt.setObject(2, createdBy);
+            try (var rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(new PublicLinkSummary(
+                        rs.getObject("id", UUID.class).toString(),
+                        rs.getString("link_kind"),
+                        rs.getTimestamp("expires_at").toInstant(),
+                        rs.getTimestamp("created_at").toInstant()));
+                }
+            }
+        } catch (Exception e) {
+            log.error("list public links failed", e);
+        }
+        return result;
+    }
+
     public boolean revoke(UUID createdBy, UUID fileId, UUID linkId) {
         var sql = """
             UPDATE file_public_links

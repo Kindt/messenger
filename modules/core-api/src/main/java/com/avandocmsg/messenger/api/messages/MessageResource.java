@@ -4,6 +4,7 @@ import com.avandocmsg.messenger.api.messages.dto.EditMessageRequest;
 import com.avandocmsg.messenger.api.messages.dto.ForwardMessageRequest;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.MessageVersionResponse;
+import com.avandocmsg.messenger.api.messages.dto.PlaintextPreviewResponse;
 import com.avandocmsg.messenger.api.messages.dto.PinnedMessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.ReactionRequest;
 import com.avandocmsg.messenger.api.messages.dto.ReactionResponse;
@@ -121,6 +122,28 @@ public class MessageResource {
         }
         var messages = messageService.listMessages(chatId, userId, limit, before);
         return Response.ok(messages).build();
+    }
+
+    @GET
+    @Path("/{msgId}/plaintext-preview")
+    @Operation(summary = "E2EE plaintext preview", description = "Server-side decrypt for e2ee-* messages (MLS stub on server)")
+    @ApiResponse(responseCode = "200", description = "Decrypted plaintext",
+        content = @Content(schema = @Schema(implementation = PlaintextPreviewResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Not found or not decryptable",
+        content = @Content(schema = @Schema(implementation = ApiError.class)))
+    public Response plaintextPreview(@PathParam("chatId") String chatIdStr,
+                                     @PathParam("msgId") String msgIdStr,
+                                     @Context SecurityContext securityContext) {
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var msgId = UuidParams.required(msgIdStr, "message_id");
+        var userId = CurrentUserId.uuid(securityContext);
+        var plain = messageService.plaintextPreview(chatId, msgId, userId);
+        if (plain == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.message.not_found")))
+                .build();
+        }
+        return Response.ok(new PlaintextPreviewResponse(plain)).build();
     }
 
     @GET

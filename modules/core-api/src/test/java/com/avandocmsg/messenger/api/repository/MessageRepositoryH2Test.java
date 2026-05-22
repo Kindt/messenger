@@ -50,6 +50,7 @@ class MessageRepositoryH2Test {
                   reply_to_msg_id UUID,
                   deleted BOOLEAN NOT NULL DEFAULT false,
                   ttl_seconds INT,
+                  attachment_file_id UUID,
                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                   edited_at TIMESTAMP
                 )
@@ -112,6 +113,52 @@ class MessageRepositoryH2Test {
             ps.executeUpdate();
         }
         assertTrue(repo.findById(msgId).isEmpty());
+    }
+
+    @Test
+    void findLatestMessageRef_matchesPlaintextContentOrAttachmentFileId() throws Exception {
+        var viewerId = UUID.randomUUID();
+        var fileId = UUID.randomUUID();
+        var plainMsgId = UUID.randomUUID();
+        var e2eeMsgId = UUID.randomUUID();
+        try (var c = ds.getConnection(); Statement st = c.createStatement()) {
+            st.execute("""
+                CREATE TABLE chat_members (
+                  chat_id UUID NOT NULL,
+                  user_id UUID NOT NULL,
+                  banned BOOLEAN NOT NULL DEFAULT FALSE
+                )
+                """);
+            st.execute("""
+                CREATE TABLE blocks (
+                  blocker_id UUID NOT NULL,
+                  blocked_id UUID NOT NULL,
+                  PRIMARY KEY (blocker_id, blocked_id)
+                )
+                """);
+        }
+        try (var c = ds.getConnection();
+             var ps = c.prepareStatement("INSERT INTO users (id) VALUES (?)")) {
+            ps.setObject(1, viewerId);
+            ps.executeUpdate();
+        }
+        try (var c = ds.getConnection();
+             var ps = c.prepareStatement(
+                 "INSERT INTO chat_members (chat_id, user_id, banned) VALUES (?, ?, false)")) {
+            ps.setObject(1, chatId);
+            ps.setObject(2, senderId);
+            ps.executeUpdate();
+            ps.setObject(2, viewerId);
+            ps.executeUpdate();
+        }
+        assertNotNull(repo.insert(plainMsgId, chatId, senderId, "file", fileId.toString(), null, null, null));
+        assertNotNull(repo.insert(e2eeMsgId, chatId, senderId, "e2ee-file", "ciphertext", null, null, null,
+            fileId));
+        setMessageCreatedAt(plainMsgId, Instant.parse("2024-01-01T10:00:00Z"));
+        setMessageCreatedAt(e2eeMsgId, Instant.parse("2024-01-01T11:00:00Z"));
+
+        var ref = repo.findLatestMessageRefForViewer(fileId, viewerId).orElseThrow();
+        assertEquals(e2eeMsgId, ref.messageId());
     }
 
     private void setMessageCreatedAt(UUID messageId, Instant createdAt) throws Exception {

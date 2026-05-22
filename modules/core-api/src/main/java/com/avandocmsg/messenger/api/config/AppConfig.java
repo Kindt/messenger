@@ -5,8 +5,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Properties;
 
 public class AppConfig {
@@ -68,6 +70,14 @@ public class AppConfig {
         override("MESSAGE_TTL_MAX_SECONDS", "message.ttl.max.seconds");
         override("RETENTION_WORKER_ENABLED", "retention.worker.enabled");
         override("RETENTION_SCAN_INTERVAL_SECONDS", "retention.scan.interval.seconds");
+        override("EXPORT_DIR", "export.dir");
+        override("EXPORT_COMPLETE_SUBSCRIBER_ENABLED", "export.complete.subscriber.enabled");
+        override("EXPORT_SUGGESTED_SUBSCRIBER_ENABLED", "export.suggested.subscriber.enabled");
+        override("EXPORT_ADMIN_SUGGEST_ENABLED", "export.admin.suggest.enabled");
+        override("EXPORT_ADMIN_EXPORT_ENABLED", "export.admin.export.enabled");
+        override("EXPORT_AUTO_QUEUE_ON_SUGGESTED", "export.auto.queue.on.suggested.enabled");
+        override("EXPORT_AUTO_QUEUE_ACTOR_USER_ID", "export.auto.queue.actor.user.id");
+        override("EXPORT_AUTO_QUEUE_COOLDOWN_MINUTES", "export.auto.queue.cooldown.minutes");
     }
 
     private void override(String envKey, String propKey) {
@@ -339,5 +349,98 @@ public class AppConfig {
      */
     public List<String> corsAllowedOrigins() {
         return CorsOriginPolicy.parseOriginsList(props.getProperty("cors.allowed.origins", "*"));
+    }
+
+    /**
+     * Каталог JSON-экспортов (тот же том, что у export-replay worker). Пусто — скачивание через API недоступно.
+     * Env: {@code EXPORT_DIR}.
+     */
+    public Optional<Path> exportDir() {
+        var raw = props.getProperty("export.dir", "").trim();
+        if (raw.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(Path.of(raw));
+    }
+
+    /**
+     * Subscribe to {@code msg.export.replay.complete} and sync {@code export_jobs}. Env: {@code EXPORT_COMPLETE_SUBSCRIBER_ENABLED}.
+     */
+    public boolean exportCompleteSubscriberEnabled() {
+        return Boolean.parseBoolean(props.getProperty("export.complete.subscriber.enabled", "true"));
+    }
+
+    /**
+     * Subscribe to {@code msg.export.suggested} and write {@code export.suggested} audit rows.
+     * Env: {@code EXPORT_SUGGESTED_SUBSCRIBER_ENABLED}.
+     */
+    public boolean exportSuggestedSubscriberEnabled() {
+        return Boolean.parseBoolean(props.getProperty("export.suggested.subscriber.enabled", "true"));
+    }
+
+    /**
+     * Allow {@code POST /admin/chats/{chatId}/export-suggest} (local / NATS dispatch). Env:
+     * {@code EXPORT_ADMIN_SUGGEST_ENABLED}; default {@code false}.
+     */
+    public boolean exportAdminSuggestEnabled() {
+        return Boolean.parseBoolean(props.getProperty("export.admin.suggest.enabled", "false"));
+    }
+
+    /**
+     * Allow {@code POST /admin/chats/{chatId}/export} (queue export job). Env:
+     * {@code EXPORT_ADMIN_EXPORT_ENABLED}; default {@code false}.
+     */
+    public boolean exportAdminExportEnabled() {
+        return Boolean.parseBoolean(props.getProperty("export.admin.export.enabled", "false"));
+    }
+
+    /**
+     * On {@code msg.export.suggested}, enqueue export (deduped). Env: {@code EXPORT_AUTO_QUEUE_ON_SUGGESTED};
+     * default {@code false}.
+     */
+    public boolean exportAutoQueueOnSuggestedEnabled() {
+        return Boolean.parseBoolean(props.getProperty("export.auto.queue.on.suggested.enabled", "false"));
+    }
+
+    /**
+     * {@code requested_by} for auto-queued jobs; if unset — {@code chats.owner_id}. Env:
+     * {@code EXPORT_AUTO_QUEUE_ACTOR_USER_ID}.
+     */
+    public java.util.Optional<java.util.UUID> exportAutoQueueActorUserId() {
+        var raw = props.getProperty("export.auto.queue.actor.user.id", "").trim();
+        if (raw.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+        try {
+            return java.util.Optional.of(java.util.UUID.fromString(raw));
+        } catch (IllegalArgumentException e) {
+            return java.util.Optional.empty();
+        }
+    }
+
+    /** Min minutes between auto-queues per chat (pending jobs always block). Env: {@code EXPORT_AUTO_QUEUE_COOLDOWN_MINUTES}. */
+    public int exportAutoQueueCooldownMinutes() {
+        var raw = props.getProperty("export.auto.queue.cooldown.minutes", "1440").trim();
+        try {
+            return Math.max(0, Integer.parseInt(raw));
+        } catch (NumberFormatException e) {
+            return 1440;
+        }
+    }
+
+    /**
+     * Jobs in {@code processing} with {@code updated_at} older than this are "stale" (metrics + admin stats).
+     * Env: {@code EXPORT_PROCESSING_STALE_MINUTES}; default {@code 30}.
+     */
+    public int exportProcessingStaleMinutes() {
+        var raw = props.getProperty("export.processing.stale.minutes", "").trim();
+        if (raw.isEmpty()) {
+            raw = System.getenv().getOrDefault("EXPORT_PROCESSING_STALE_MINUTES", "30");
+        }
+        try {
+            return Math.max(1, Integer.parseInt(raw));
+        } catch (NumberFormatException e) {
+            return 30;
+        }
     }
 }

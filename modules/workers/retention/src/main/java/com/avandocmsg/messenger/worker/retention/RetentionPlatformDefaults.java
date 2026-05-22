@@ -298,6 +298,14 @@ public record RetentionPlatformDefaults(
         }
     }
 
+    /**
+     * Перед очисткой hot-body публиковать {@code msg.export.suggested} по чатам в батче (подсказка compliance;
+     * не ставит export в очередь). Env: {@code RETENTION_PUBLISH_EXPORT_SUGGESTED}; по умолчанию {@code false}.
+     */
+    static boolean publishExportSuggestedFromEnv() {
+        return parseBool(System.getenv("RETENTION_PUBLISH_EXPORT_SUGGESTED"), false);
+    }
+
     /** Нормализация префикса: без ведущих {@code /}, с завершающим {@code /}; пусто → {@code retention/body/}. */
     public static String normalizeRetentionObjectPrefix(String raw) {
         if (raw == null || raw.isBlank()) {

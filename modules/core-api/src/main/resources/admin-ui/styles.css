@@ -215,6 +215,38 @@ table.json-panel-table th {
   text-decoration: underline;
 }
 
+.export-smoke-commands {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.export-smoke-cmd-block {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.export-suggest-toolbar {
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+.export-suggest-toolbar button {
+  font-size: 0.85rem;
+}
+
+.export-smoke-cmd-pre {
+  margin: 0.35rem 0;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
 @media (max-width: 720px) {
   .layout {
     grid-template-columns: 1fr;

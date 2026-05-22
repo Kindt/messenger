@@ -1,0 +1,16 @@
+# Overlay для явной публикации сервисов на 0.0.0.0 (доступ из LAN).
+# Использование: docker compose -f docker-compose.full-server.yml -f docker-compose.lan-publish.yml up -d
+# Скрипт: scripts/server-host-up.ps1 / server-host-up.sh
+
+services:
+  keycloak:
+    ports:
+      - "0.0.0.0:8081:8080"
+
+  core-api:
+    ports:
+      - "0.0.0.0:8080:8080"
+
+  ws-gateway:
+    ports:
+      - "0.0.0.0:8082:8081"

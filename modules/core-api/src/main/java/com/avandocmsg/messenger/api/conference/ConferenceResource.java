@@ -1,7 +1,12 @@
 package com.avandocmsg.messenger.api.conference;
 
+import com.avandocmsg.messenger.api.conference.dto.ConferenceParticipantResponse;
 import com.avandocmsg.messenger.api.conference.dto.ConferenceResponse;
 import com.avandocmsg.messenger.api.conference.dto.CreateConferenceRequest;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
 import com.avandocmsg.messenger.common.dto.ApiError;
@@ -58,6 +63,14 @@ public class ConferenceResource {
     }
 
     @GET
+    @Path("conferences/active")
+    @Operation(summary = "Активные конференции", description = "По одной активной конференции на каждый чат, где пользователь — участник")
+    public Response listActive(@Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        return Response.ok(conferenceService.listActiveForUser(userId)).build();
+    }
+
+    @GET
     @Path("chats/{chatId}/conferences")
     @Operation(summary = "Список конференций чата")
     public Response list(@PathParam("chatId") String chatId,
@@ -78,6 +91,23 @@ public class ConferenceResource {
         var id = UuidParams.required(conferenceId, "conference_id");
         return conferenceService.get(id, userId)
             .map(c -> Response.ok(c).build())
+            .orElse(Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.conference.not_found")))
+                .build());
+    }
+
+    @GET
+    @Path("conferences/{conferenceId}/participants")
+    @Operation(summary = "Участники конференции", description = "Пользователи с активной записью входа (left_at IS NULL)")
+    @ApiResponse(responseCode = "200", description = "Participant list",
+        content = @Content(array = @ArraySchema(schema = @Schema(implementation = ConferenceParticipantResponse.class))))
+    public Response listParticipants(@PathParam("conferenceId") String conferenceId,
+                                     @Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        var id = UuidParams.required(conferenceId, "conference_id");
+        var list = conferenceService.listParticipants(id, userId);
+        return list.map(Response::ok)
+            .map(b -> b.build())
             .orElse(Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.conference.not_found")))
                 .build());

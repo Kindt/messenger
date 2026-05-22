@@ -1,5 +1,8 @@
 package com.avandocmsg.messenger.common.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public record MessageSendEvent(
     String messageId,
     String chatId,
@@ -7,5 +10,11 @@ public record MessageSendEvent(
     String type,
     String content,
     String clientMsgId,
-    Long createdAt
+    Long createdAt,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("reply_to_msg_id") String replyToMsgId,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("attachment_file_id") String attachmentFileId,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("ttl_seconds") Integer ttlSeconds
 ) {}

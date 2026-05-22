@@ -30,10 +30,23 @@ final class WebClientEnvServlet extends HttpServlet {
         }
         iceRaw = iceRaw.trim();
         String iceJs = iceRaw.isEmpty() ? "null" : jsonQuote(iceRaw);
+        String vapidRaw = getenv.apply("WEB_CLIENT_VAPID_PUBLIC_KEY");
+        if (vapidRaw == null) {
+            vapidRaw = "";
+        }
+        vapidRaw = vapidRaw.trim();
+        String vapidJs = vapidRaw.isEmpty() ? "null" : jsonQuote(vapidRaw);
+        String disableSw = getenv.apply("WEB_CLIENT_DISABLE_SW");
+        boolean disableServiceWorker = disableSw != null
+            && ("1".equals(disableSw.trim()) || "true".equalsIgnoreCase(disableSw.trim()));
         return "window.__WEB_CLIENT__ = { wsUrl: "
             + jsonQuote(wsUrl)
             + ", iceServersJson: "
             + iceJs
+            + ", vapidPublicKey: "
+            + vapidJs
+            + ", disableServiceWorker: "
+            + disableServiceWorker
             + " };\n";
     }
 

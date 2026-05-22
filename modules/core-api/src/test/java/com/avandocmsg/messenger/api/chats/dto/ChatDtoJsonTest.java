@@ -23,9 +23,10 @@ class ChatDtoJsonTest {
     void chatResponse_serializesSnakeCase() throws Exception {
         var om = mapper();
         var json = om.writeValueAsString(new ChatResponse(
-            "c1", "Title", "group", "u1", 3, false, null, Instant.parse("2026-01-01T00:00:00Z")));
+            "c1", "Title", "group", "u1", 3, false, false, null, Instant.parse("2026-01-01T00:00:00Z")));
         assertTrue(json.contains("\"owner_id\""));
         assertTrue(json.contains("\"member_count\""));
+        assertTrue(json.contains("\"personal_filter_active\""));
         assertTrue(json.contains("\"ttl_seconds\""));
         assertTrue(json.contains("\"created_at\""));
     }

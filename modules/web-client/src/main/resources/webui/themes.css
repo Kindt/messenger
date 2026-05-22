@@ -1,0 +1,154 @@
+/* КОРУС Консалтинг — единственная палитра (korusconsulting.ru)
+ * Акцент #7949F4, hover #4514C2, текст #000 / #8E8E8E, границы #DEDEDE
+ * Шрифт Source Sans 3 */
+
+[data-appearance="dark"] {
+  color-scheme: dark;
+  --danger: #ff9f9f;
+  --danger-bg: rgba(255, 159, 159, 0.12);
+  --danger-border: rgba(255, 159, 159, 0.35);
+  --success: #6ecf8f;
+  --success-bg: rgba(110, 207, 143, 0.12);
+  --success-border: rgba(110, 207, 143, 0.35);
+  --warning: #ffe0cc;
+  --bg: #0c0b10;
+  --panel: #16151c;
+  --panel2: #1e1d26;
+  --border: #2e2c38;
+  --text: #f4f3f7;
+  --muted: #8e8e8e;
+  --accent: #7949f4;
+  --accent-hover: #9568ff;
+  --accent-dim: rgba(121, 73, 244, 0.22);
+  --accent-secondary: #4514c2;
+  --theme-color-meta: #7949f4;
+  --auth-gradient: radial-gradient(
+      ellipse 120% 80% at 15% 15%,
+      rgba(121, 73, 244, 0.38),
+      transparent
+    ),
+    linear-gradient(160deg, #1a1028 0%, var(--bg) 58%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+[data-appearance="light"] {
+  color-scheme: light;
+  --danger: #c62828;
+  --danger-bg: rgba(198, 40, 40, 0.08);
+  --danger-border: rgba(198, 40, 40, 0.3);
+  --success: #2e7d32;
+  --success-bg: rgba(46, 125, 50, 0.1);
+  --success-border: rgba(46, 125, 50, 0.28);
+  --warning: #e65100;
+  --bg: #f5f5f7;
+  --panel: #ffffff;
+  --panel2: #fafafa;
+  --border: #dedede;
+  --text: #000000;
+  --muted: #8e8e8e;
+  --accent: #7949f4;
+  --accent-hover: #4514c2;
+  --accent-dim: rgba(121, 73, 244, 0.14);
+  --accent-secondary: #cebcff;
+  --theme-color-meta: #7949f4;
+  --auth-gradient: radial-gradient(
+      ellipse 120% 80% at 20% 20%,
+      rgba(121, 73, 244, 0.14),
+      transparent
+    ),
+    linear-gradient(160deg, #f0ebff 0%, var(--bg) 55%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+[data-appearance="light"] .msg-body.md pre {
+  background: #f0f0f2;
+}
+
+[data-appearance="dark"] .msg-body.md pre {
+  background: #1e1d26;
+}
+
+[data-appearance="light"] .msg-reply-quote {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-appearance="light"] .chat-item.active {
+  background: var(--accent-dim);
+}
+
+[data-appearance="light"] .sw-update-banner {
+  background: var(--accent);
+}
+
+[data-appearance="light"] .network-banner {
+  background: #d97706;
+}
+
+[data-appearance="light"] .settings-hint-error {
+  color: #dc2626;
+}
+
+.auth-brand {
+  background: var(--auth-gradient);
+}
+
+.auth-brand-logo {
+  background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+}
+
+.chat-avatar {
+  background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+}
+
+.app-header {
+  border-bottom-color: var(--border);
+}
+
+[data-appearance="light"] .btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent-hover);
+}
+
+.app-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-title-row h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.app-title-logo {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-secondary, #4514c2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.settings-kbd-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.settings-kbd-hint kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--panel2);
+  font-size: 0.72rem;
+  font-family: inherit;
+}

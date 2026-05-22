@@ -1,0 +1,79 @@
+{
+  "title": "Korus Export",
+  "uid": "korus-export",
+  "schemaVersion": 39,
+  "version": 1,
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "API export enqueued (rate)",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(export_jobs_enqueued_total[5m])) by (source)",
+          "legendFormat": "{{source}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "API export cancelled (rate)",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(export_jobs_cancelled_total[5m])) by (source)",
+          "legendFormat": "{{source}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Worker jobs completed",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(export_replay_worker_jobs_completed_total[5m])) by (terminal_status)",
+          "legendFormat": "{{terminal_status}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Processing stale (DB)",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "export_jobs_processing_stale",
+          "legendFormat": "stale"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "API cancel rejected (rate)",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(export_jobs_cancel_rejected_total[5m]))",
+          "legendFormat": "rejected"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Worker cooperative cancel",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "expr": "rate(export_replay_worker_jobs_cancelled_total[5m])",
+          "legendFormat": "cancelled"
+        },
+        {
+          "expr": "rate(export_replay_worker_cancel_hints_total[5m])",
+          "legendFormat": "nats_hints"
+        }
+      ]
+    }
+  ]
+}

@@ -5,6 +5,9 @@ import org.apache.catalina.startup.Tomcat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 /**
  * Автономный веб-клиент: встроенный Tomcat, статика из classpath, HTTP-прокси на core-api.
  * WebSocket к ws-gateway — {@code WEB_CLIENT_WS_PUBLIC_URL}; ICE для WebRTC — {@code WEB_CLIENT_RTC_ICE_SERVERS} (см. {@link WebClientEnvServlet}).
@@ -35,7 +38,17 @@ public final class WebClientApplication {
         Tomcat.addServlet(ctx, "webClientEnv", new WebClientEnvServlet());
         ctx.addServletMappingDecoded("/web-client-env.js", "webClientEnv");
 
-        Tomcat.addServlet(ctx, "webUi", new ClasspathWebUiServlet());
+        String overlayDir = System.getenv("WEB_CLIENT_WEBUI_OVERLAY");
+        if (overlayDir != null && !overlayDir.isBlank()) {
+            Path overlayRoot = Path.of(overlayDir.trim());
+            if (!Files.isDirectory(overlayRoot)) {
+                throw new IllegalStateException("WEB_CLIENT_WEBUI_OVERLAY is not a directory: " + overlayRoot);
+            }
+            Tomcat.addServlet(ctx, "webUi", new OverlayWebUiServlet(overlayRoot));
+            log.info("web-client webui overlay: {}", overlayRoot.toAbsolutePath());
+        } else {
+            Tomcat.addServlet(ctx, "webUi", new ClasspathWebUiServlet());
+        }
         ctx.addServletMappingDecoded("/*", "webUi");
 
         tomcat.start();

@@ -55,6 +55,7 @@ class MessageRepositoryViewerMayAccessFileH2Test {
                   sender_id UUID NOT NULL,
                   type VARCHAR(64) NOT NULL,
                   content VARCHAR(4096),
+                  attachment_file_id UUID,
                   deleted BOOLEAN NOT NULL DEFAULT FALSE,
                   ttl_seconds INT,
                   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -132,12 +133,24 @@ class MessageRepositoryViewerMayAccessFileH2Test {
     }
 
     @Test
-    void viewerMayAccess_falseForE2eeType() throws Exception {
+    void viewerMayAccess_falseForE2eeTypeWithoutAttachment() throws Exception {
         try (var conn = ds.getConnection();
              var ps = conn.prepareStatement("UPDATE messages SET type = 'e2ee-text' WHERE id = ?")) {
             ps.setObject(1, msgId);
             ps.executeUpdate();
         }
         assertFalse(repo.viewerMayAccessFileViaSharedNonE2eeMessage(fileId, viewerId));
+    }
+
+    @Test
+    void viewerMayAccess_trueForE2eeFileWhenAttachmentFileIdSet() throws Exception {
+        try (var conn = ds.getConnection();
+             var ps = conn.prepareStatement(
+                 "UPDATE messages SET type = 'e2ee-file', content = 'cipher', attachment_file_id = ? WHERE id = ?")) {
+            ps.setObject(1, fileId);
+            ps.setObject(2, msgId);
+            ps.executeUpdate();
+        }
+        assertTrue(repo.viewerMayAccessFileViaSharedNonE2eeMessage(fileId, viewerId));
     }
 }

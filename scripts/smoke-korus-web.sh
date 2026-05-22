@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Смок стека korus-web (lb → web-client). Нужен curl.
 # Использование: ./scripts/smoke-korus-web.sh [--url URL] [--check-api]
-#   или задайте WEB_BASE_URL (по умолчанию http://localhost:9088).
+#   или задайте WEB_BASE_URL (по умолчанию http://localhost:9088; QEMU web-VM: http://127.0.0.1:19088).
 set -euo pipefail
 
 fail() {
@@ -42,6 +42,10 @@ echo "$html" | grep -q "Korus Messenger" || fail "root HTML missing title marker
 echo "GET $WEB_BASE_URL/web-client-env.js ..." >&2
 js=$(curl -fsS "$WEB_BASE_URL/web-client-env.js") || fail "web-client-env.js request"
 echo "$js" | grep -q "__WEB_CLIENT__" || fail "web-client-env.js missing __WEB_CLIENT__"
+echo "$js" | grep -qE 'wsUrl\s*:' || fail "web-client-env.js missing wsUrl"
+echo "$js" | grep -qE 'iceServersJson\s*:' || fail "web-client-env.js missing iceServersJson"
+echo "$js" | grep -qE 'iceServersJson\s*:\s*(null|")' || fail "web-client-env.js iceServersJson must be null or a JSON string"
+echo "$js" | grep -qE 'vapidPublicKey\s*:' || fail "web-client-env.js missing vapidPublicKey"
 
 if "$CHECK_API"; then
   echo "GET $WEB_BASE_URL/api/v1/health ..." >&2

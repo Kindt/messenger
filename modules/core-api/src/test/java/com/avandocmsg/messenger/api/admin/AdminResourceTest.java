@@ -10,6 +10,11 @@ import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
 import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
+import com.avandocmsg.messenger.api.export.AdminExportComplianceSeed;
+import com.avandocmsg.messenger.api.export.ExportFileAccess;
+import com.avandocmsg.messenger.api.export.ExportJobEnqueuer;
+import com.avandocmsg.messenger.api.export.ExportSuggestedHandler;
+import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.core.SecurityContext;
@@ -21,6 +26,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 class AdminResourceTest {
 
@@ -38,6 +44,12 @@ class AdminResourceTest {
             new RetentionPolicyRepository(null),
             new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
             new ChatRetentionPolicyRepository(null),
+            new ExportSuggestedHandler(new AuditRepository(null)),
+            mock(AdminExportComplianceSeed.class),
+            new ExportJobEnqueuer(null, new AuditRepository(null), mock(NatsOutboundPort.class), UuidGenerator.standard()),
+            null,
+            new ExportFileAccess(cfg),
+            mock(NatsOutboundPort.class),
             I18nTestFixtures.messagesEn());
         var principal = new UserPrincipal(id, "csadmin", Set.of("admin", "offline_access"));
 
@@ -154,6 +166,12 @@ class AdminResourceTest {
             new RetentionPolicyRepository(null),
             new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
             new ChatRetentionPolicyRepository(null),
+            new ExportSuggestedHandler(new AuditRepository(null)),
+            mock(AdminExportComplianceSeed.class),
+            new ExportJobEnqueuer(null, new AuditRepository(null), mock(NatsOutboundPort.class), UuidGenerator.standard()),
+            null,
+            new ExportFileAccess(cfg),
+            mock(NatsOutboundPort.class),
             I18nTestFixtures.messagesEn());
     }
 

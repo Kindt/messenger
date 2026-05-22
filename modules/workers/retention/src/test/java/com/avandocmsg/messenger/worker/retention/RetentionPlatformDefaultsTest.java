@@ -90,6 +90,12 @@ class RetentionPlatformDefaultsTest {
     }
 
     @Test
+    void publishExportSuggestedFromEnv_defaultFalseWhenUnset() {
+        assumeTrue(System.getenv("RETENTION_PUBLISH_EXPORT_SUGGESTED") == null);
+        assertFalse(RetentionPlatformDefaults.publishExportSuggestedFromEnv());
+    }
+
+    @Test
     void useAdvisoryLockFromEnv_defaultFalseWhenUnset() {
         assumeTrue(System.getenv("RETENTION_USE_ADVISORY_LOCK") == null);
         assertFalse(RetentionPlatformDefaults.useAdvisoryLockFromEnv());

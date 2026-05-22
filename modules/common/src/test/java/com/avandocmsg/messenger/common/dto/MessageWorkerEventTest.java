@@ -18,7 +18,7 @@ class MessageWorkerEventTest {
     @Test
     void fromSendEvent_marksEncryptedWhenE2eePrefix() {
         var send = new MessageSendEvent(
-            "mid", "cid", "sid", "e2ee-text", "blob", "cmid", 1000L);
+            "mid", "cid", "sid", "e2ee-text", "blob", "cmid", 1000L, null, null, null);
         var ev = MessageWorkerEvent.fromSendEvent(send);
         assertTrue(ev.encrypted());
         assertEquals("e2ee-text", ev.type());
@@ -30,7 +30,7 @@ class MessageWorkerEventTest {
     @Test
     void fromSendEvent_plainTextNotEncrypted() {
         var send = new MessageSendEvent(
-            "mid", "cid", "sid", "text", "hello", null, null);
+            "mid", "cid", "sid", "text", "hello", null, null, null, null, null);
         var ev = MessageWorkerEvent.fromSendEvent(send);
         assertFalse(ev.encrypted());
         assertEquals(5, ev.storageByteLength());
