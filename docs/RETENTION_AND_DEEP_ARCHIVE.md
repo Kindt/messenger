@@ -26,7 +26,7 @@
 
 ## 2. Текущее состояние репозитория (опорные точки)
 
-- **Схема Hot DB:** в **`messages`** есть **`ttl_seconds`** (**`V001`**). **`POST .../messages`:** опциональное поле **`ttl_seconds`** в **`SendMessageRequest`** (1…**`message.ttl.max.seconds`**, env **`MESSAGE_TTL_MAX_SECONDS`**); лента/поиск/одиночный GET не возвращают истёкшие по TTL сообщения (предикат **`MessageRepository.SQL_MSG_TTL_VISIBLE`**).
+- **Схема Hot DB:** в **`messages`** есть **`visibility_ttl_seconds`** (ранее **`ttl_seconds`**, V023 rename) и **`archive_ttl_seconds`** (новое поле V023). **`POST .../messages`:** опциональные поля **`visibility_ttl_seconds`** и **`archive_ttl_seconds`** в **`SendMessageRequest`** (1…**`MESSAGE_VISIBILITY_TTL_MAX_SECONDS`** / **`MESSAGE_ARCHIVE_TTL_MAX_SECONDS`**); лента/поиск/одиночный GET не возвращают истёкшие по visibility TTL сообщения (предикат **`MessageRepository.SQL_MSG_VISIBILITY_TTL_VISIBLE`**). Тело истекает по archive TTL через механизм ретенции.
 - **Цепочка событий:** **`msg.send`** → pipeline → **`msg.event.index`** (и др.); **`ArchiverWorker`** пишет метаданные в Archive DB и публикует **`msg.event.deep-archive`**; **`DeepArchiverWorker`** кладёт JSON события в MinIO при настроенных кредах.
 - **Файлы:** публичные ссылки с **`expires_at`** и конфигом **`file.public.link.default.ttl.seconds`** — это **TTL ссылки**, не ретенция тела файла в бакете.
 - **Поиск:** Solr / SQL; при окончательном выносе или удалении контента из Hot DB нужна согласованная очистка индекса (см. уже реализованные **`index_op`** в **`MessageWorkerEvent`**).
@@ -72,14 +72,14 @@ ACTIVE → ELIGIBLE_ARCHIVE → ARCHIVED_METADATA_ONLY → DEEP_PACKED → (оп
 
 Переопределение для чата (групповой чат с коротким TTL, «секретный» канал с длинным и т.д.): те же числовые поля, FK **`chat_id`**, приоритет выше, чем у org.
 
-### 4.3 Сообщение: использование `ttl_seconds`
+### 4.3 Сообщение: использование visibility/archive TTL
 
 Два независимых сценария (продукт должен выбрать или поддержать оба):
 
-1. **Per-message TTL (пользовательский):** клиент передаёт **`ttl_seconds`** в API отправки → после `created_at + ttl` сообщение **скрывается** из ленты (не показывается обычным пользователям), но остаётся для админа/аудита до глобальной политики org.
-2. **Только политика org:** поле в БД не используется до включения фичи.
+1. **Visibility TTL (`visibility_ttl_seconds`):** после `created_at + visibility_ttl_seconds` сообщение скрывается из ленты/поиска для обычных пользователей, но сохраняется для аудита и жизненного цикла ретенции.
+2. **Archive TTL (`archive_ttl_seconds`):** определяет срок до выноса тела сообщения в deep-archive/retention-пайплайн (при включенных политиках и воркерах).
 
-Рекомендация: в API явно назвать семантику (например **`visibility_ttl_seconds`**) чтобы не смешивать с «deep-archive через N дней».
+Текущий API уже разведен на эти два поля; alias `ttl_seconds` оставлен только для обратной совместимости клиентских JSON.
 
 ---
 
@@ -195,8 +195,8 @@ ACTIVE → ELIGIBLE_ARCHIVE → ARCHIVED_METADATA_ONLY → DEEP_PACKED → (оп
 |------|------------|
 | **0** | Утвердить этот документ + юридический минимум для целевых регионов. |
 | **1** | **Частично сделано:** **`V011`**/**`V012`**, админ **`GET`/`PATCH`** org и чата, аудит смены политик; **`RetentionWorker`** (§9). **Сделано:** порт Prometheus (**`RETENTION_METRICS_PORT`**), сводный аудит (**`bulk_cleared`**), skip‑snapshot (**`RETENTION_SKIP_SNAPSHOT_IF_DEEP_EXISTS`**), регрессия SQL (**`RetentionHotBodyCandidateSqlTest`**), graceful shutdown воркера (§9), порог temp-file снимка (**`RETENTION_SNAPSHOT_TEMPFILE_THRESHOLD_BYTES`**), **`GET .../audit-events`**: фильтр **`resource_id`** (AND с **`action`**/**`resource_type`**) для **`pass_id`**/id сообщения. Дальше: чанки; TTL — этап 2. |
-| **2** | **Частично:** **`ttl_seconds`** в **`SendMessageRequest`**, фильтр TTL в **`findByChatId`**, **`findById`**, поиске, **`viewerMayAccessFile...`**, **`findLatestMessageId`**, **`ChatReadRepository.countUnreadFromOthers`**. Дальше: только «видимость» vs отдельная семантика deep-archive; опционально переименовать в **`visibility_ttl_seconds`** в API. |
-| **3** | **Частично сделано:** hot-body: MinIO‑снимок, **`content=null`**, **`msg.event.index`** (**update**) + **`msg.event.retention`**, **`V013`**. **Сделано:** **`/metrics`**, **`GET /health`** на том же порту, **`bulk_cleared`**, skip‑snapshot + метрика пропуска, **`RetentionHotBodyCandidateSqlTest`**, graceful shutdown, temp-file снимок при большом **`messages.content`**, опционально **`uploadObject`** при **`Files.size(temp) >= RETENTION_MINIO_MULTIPART_THRESHOLD_BYTES`** (дефолт env — только **`putObject`** для temp-file), опционально **`RETENTION_USE_ADVISORY_LOCK`** + session advisory lock на проход (**`RetentionAdvisoryLockIds`**), минимальный общий конверт MinIO JSON (**`snapshot_version`** / **`producer`**, см. §6), **`snapshot_sha256`** в **`messages/{id}.json`** (deep) и в снимке ретенции, общий **`ArchiveSnapshotEnvelopeDigest`** (**`modules/common`**, Jackson **`api`**). Дальше: чанки; дальнейшая унификация схемы тел с deep-archive. |
+| **2** | **Сделано:** dual TTL в API/БД — `visibility_ttl_seconds` + `archive_ttl_seconds` (миграция `V023`, alias `ttl_seconds` для backward compatibility). Фильтр visibility TTL действует в чтении сообщений/поиске/доступе к файлам. Дальше: UI-индикатор TTL и эксплуатационные smoke для user-flow. |
+| **3** | **Сделано:** hot-body pass, MinIO-снимок, `content=null`, `msg.event.index` (`update`) + `msg.event.retention`, `V013`; observability (`/metrics`, `/health`), bulk audit, skip-snapshot, advisory lock, temp-file/multipart, общий JSON envelope (`snapshot_version`/`producer`), `snapshot_sha256`. **Сделано в Phase B:** chunked deep-archive/retention (`manifest.json` + `part-*.json`) и унифицированное чтение через `DeepArchiveReader`. Дальше: финальная валидация Solr и web-client TTL. |
 | **4** | Purge Hot row, ретенция **файлов** и связка с MinIO file bucket; **legal hold** для hot-body уже учитывается в SQL воркера (§9), дальше — расширения вне очистки тела (см. §12). |
 
 ---

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Alias for: smoke-export-compliance-flow.sh --include-file
+# DEPRECATED alias (kept for backward compatibility).
+# Canonical path: smoke-export-compliance-flow.sh --include-file
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 args=(--include-file)

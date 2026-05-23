@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+### 2026-05-23 — **hygiene**: docs/scripts canonicalization, retention/export status sync
+
+- Введен канон для cleanup-работ: `docs/plans/README.md` (freeze-правила `canonical`/`deprecated`) и новый индекс smoke-сценариев `scripts/SMOKE_INDEX.md`.
+- Синхронизированы статусы и фактическое состояние эпиков: `docs/plans/01-retention-phase-b.md` и `docs/plans/03-export-compliance.md` переведены в актуальный `in_progress` контекст.
+- Обновлены roadmap/retention-описания под текущую dual-TTL и chunked deep-archive реализацию: `docs/ROADMAP_EPICS.md`, `docs/RETENTION_AND_DEEP_ARCHIVE.md`.
+- Актуализирована трассировка задач по feature 001: `specs/001-system-review-refactoring/tasks.md` (отмечены завершенные setup/foundation пункты).
+- Документация проекта ссылается на новые источники правды: `README.md` и `docs/CI_AND_REPO_HYGIENE.md` дополнены ссылками на `docs/plans/README.md` и `scripts/SMOKE_INDEX.md`.
+
 ### 2026-05-16 — **export**: compliance prep API, smokes, admin UI
 
 - **`POST /api/v1/admin/export-compliance-prep`** (`EXPORT_ADMIN_SUGGEST_ENABLED`): group + retention policy + N text messages; **`include_file`** — upload и сообщение `type=file`; ответ `file_id`, `file_message_id`.

@@ -25,9 +25,11 @@
 | **`CHANGELOG.md`** | Журнал изменений |
 | **`docs/CI_AND_REPO_HYGIENE.md`** | CI, Dependabot, `.gitattributes`, локаль HTTP API (**`app.locale`** / **`APP_LOCALE`**: `ru`, `en`) |
 | **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** | Ретенция, политики, воркер hot-body, аудит |
+| **`docs/plans/README.md`** | Детальные эпики (статусы и freeze-правила cleanup) |
 | **`docs/db/FLYWAY_AND_SCHEMA.md`** | Миграции PostgreSQL |
 | **`docs/ROADMAP_EPICS.md`** | Дорожная карта эпиков после базовой реализации |
 | **`docs/PARALLEL_DEVELOPMENT.md`** | Параллельные потоки, контракты, миграции БД |
+| **`scripts/SMOKE_INDEX.md`** | Канонические smoke-сценарии и матрица оберток |
 | **`docker/docker-compose.dev-min.yml`** | Минимальный стенд; default Docker-сеть **`korus_messenger_dev_min`** (для **`korus-web`** с **`docker-compose.attach.yml`**). Профиль **`web`** — **ws-gateway** (**8082** на хосте) и **message-pipeline** (fan-out в WS; см. **`docker/Dockerfile.message-pipeline`**) |
 | **`docker/docker-compose.full-server.yml`** | Полный стенд без профилей: **dev-min**-инфраструктура + **core-api** + **ws-gateway** (**8082**) + **message-pipeline** + **retention-worker** (**9192** metrics/health). Та же сеть **`korus_messenger_dev_min`**. Запуск: **`.\scripts\full-stack-up.ps1`** (**`-Build`**, **`-SkipEnsure`** / **`$env:SKIP_KORUS_ENSURE='1'`**, **`-Help`**, …) или **`scripts\full-stack-up.cmd`**, либо **`./scripts/full-stack-up.sh`** (**`--build`**, **`--skip-ensure`** / **`-S`**, **`SKIP_KORUS_ENSURE=1`**). Остановка: **`.\scripts\full-stack-down.ps1`** (**`-Help`**) / **`scripts\full-stack-down.cmd`** / **`./scripts/full-stack-down.sh`** (**`--help`**, **2** попытки **`docker compose down`**). Админка: **`http://localhost:8080/admin/`** (**csadmin**/**csadmin** или **admin**/**admin**, realm **avandocmsg**). |
 | **`scripts/TEST_SERVER_READY.md`** | Когда стенд готов к ручным проверкам |

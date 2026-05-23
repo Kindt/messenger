@@ -1,4 +1,5 @@
-# Alias: compliance flow with include_file prep (see smoke-export-compliance-flow.ps1).
+# DEPRECATED alias (kept for backward compatibility).
+# Canonical path: smoke-export-compliance-flow.ps1 -IncludeFile.
 param(
     [string]$ChatId = "",
     [string]$BaseUrl = "http://localhost:8080",
