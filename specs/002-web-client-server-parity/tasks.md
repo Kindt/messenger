@@ -128,6 +128,14 @@
 - [x] T032 Run `./gradlew.bat buildIntegrity`.
 - [x] T033 Final parity report: list covered capabilities and explicit deferred items in `specs/002-web-client-server-parity/plan.md` or companion report.
 
+## Deferred Runtime Gates (Environment-Dependent)
+
+- [ ] T010 [US1] Messaging parity smoke checklist on running stack.
+- [ ] T016 [US2] File/export parity smoke checklist on running stack.
+- [ ] T022 [US3] Realtime/call parity smoke checklist on running stack.
+
+Note: these checks are intentionally left deferred for operator-run execution on an available runtime environment.
+
 ---
 
 ## Dependencies & Execution Order
