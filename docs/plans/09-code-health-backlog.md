@@ -13,6 +13,7 @@
 
 - **Фокус:** `modules/workers/export-replay/.../ExportReplayWorker.java`
 - **Шаг:** выделить из worker отдельный компонент SQL-чтения сообщений (например `ExportMessageLoader`) без изменения API/формата выходного JSON.
+- **Прогресс:** `completed` (выделен `ExportMessageLoader`, `ExportReplayWorker` оставляет совместимые фасады для SQL/helper API).
 - **Safety tests (обязательные):**
   - `ExportReplayWorkerTest`
   - `ExportReplayWorkerTest#buildMessagesSql_appliesTtlWhenEnabled`
