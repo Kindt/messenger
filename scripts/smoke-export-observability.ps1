@@ -1,3 +1,5 @@
+# DEPRECATED (wrapper): canonical CI path is `scripts/smoke-export-observability.sh`.
+# Keep this script for Windows/manual operator flows.
 # Verifies Prometheus metrics on core-api, export-replay, and retention workers.
 param(
     [string]$CoreMetricsUrl = "http://localhost:8080/api/v1/metrics/prometheus",
