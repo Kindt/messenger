@@ -118,3 +118,4 @@ As a maintainer, I want web-client boundary code (servlets, env bridge, proxy) a
 - Server contracts in `core-api` represent source of truth for parity.
 - Existing web stack scripts and smoke scripts are reused; no new browser automation framework is mandatory for this iteration.
 - Progressive modularization of `webui/app.js` continues instead of framework rewrite.
+- Parity scope is frozen against baseline matrix `specs/002-web-client-server-parity/parity-matrix.md` (snapshot date: 2026-05-23).

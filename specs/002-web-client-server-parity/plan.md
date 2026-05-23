@@ -74,6 +74,8 @@ modules/web-client/
 - Classify each capability as `covered`, `partial`, or `missing`.
 - Freeze parity scope for this iteration (admin APIs excluded).
 
+**Baseline Artifact**: `specs/002-web-client-server-parity/parity-matrix.md`
+
 ### Phase 1 — Core Messaging and Chat Parity (P1)
 
 - Ensure all message and chat operations are represented in web-client UI flow.

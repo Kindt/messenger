@@ -16,9 +16,9 @@
 
 **Purpose**: Build explicit scope and gap baseline before implementation.
 
-- [ ] T001 Build non-admin endpoint inventory from `modules/core-api/src/main/java/com/avandocmsg/messenger/api/**/*Resource.java` and record parity mapping in `specs/002-web-client-server-parity/plan.md` appendix or companion markdown.
-- [ ] T002 [P] Classify each endpoint capability as `covered` / `partial` / `missing` for `modules/web-client/src/main/resources/webui/app.js`.
-- [ ] T003 Freeze parity scope and exclusions (admin-only) in `specs/002-web-client-server-parity/spec.md` assumptions.
+- [x] T001 Build non-admin endpoint inventory from `modules/core-api/src/main/java/com/avandocmsg/messenger/api/**/*Resource.java` and record parity mapping in `specs/002-web-client-server-parity/plan.md` appendix or companion markdown.
+- [x] T002 [P] Classify each endpoint capability as `covered` / `partial` / `missing` for `modules/web-client/src/main/resources/webui/app.js`.
+- [x] T003 Freeze parity scope and exclusions (admin-only) in `specs/002-web-client-server-parity/spec.md` assumptions.
 
 **Checkpoint**: Parity matrix accepted as execution baseline.
 
@@ -32,15 +32,15 @@
 
 ### Implementation
 
-- [ ] T004 [US1] Complete chat lifecycle coverage in `modules/web-client/src/main/resources/webui/app.js` for `/v1/chats/*` operations (create/update/delete/members/role/mute/filter/read/unread/typing).
-- [ ] T005 [P] [US1] Complete message lifecycle coverage in `modules/web-client/src/main/resources/webui/app.js` for `/v1/chats/{chatId}/messages/*` operations (send/edit/delete/versions/reactions/pin/forward/plaintext-preview where applicable).
-- [ ] T006 [P] [US1] Extend timeline helpers in `modules/web-client/src/main/resources/webui/ui-messages-utils.js` for deterministic merge/patch/reaction/pin/thread behavior.
-- [ ] T007 [US1] Wire remaining message/timeline delegates from `app.js` to `ui-messages-utils.js` with fallback preservation.
-- [ ] T008 [US1] Ensure chat preview/unread/read indicators stay consistent under WS events in `modules/web-client/src/main/resources/webui/app.js`.
+- [x] T004 [US1] Complete chat lifecycle coverage in `modules/web-client/src/main/resources/webui/app.js` for `/v1/chats/*` operations (create/update/delete/members/role/mute/filter/read/unread/typing).
+- [x] T005 [P] [US1] Complete message lifecycle coverage in `modules/web-client/src/main/resources/webui/app.js` for `/v1/chats/{chatId}/messages/*` operations (send/edit/delete/versions/reactions/pin/forward/plaintext-preview where applicable).
+- [x] T006 [P] [US1] Extend timeline helpers in `modules/web-client/src/main/resources/webui/ui-messages-utils.js` for deterministic merge/patch/reaction/pin/thread behavior.
+- [x] T007 [US1] Wire remaining message/timeline delegates from `app.js` to `ui-messages-utils.js` with fallback preservation.
+- [x] T008 [US1] Ensure chat preview/unread/read indicators stay consistent under WS events in `modules/web-client/src/main/resources/webui/app.js`.
 
 ### Validation
 
-- [ ] T009 [US1] Run `./gradlew.bat :modules:web-client:test`.
+- [x] T009 [US1] Run `./gradlew.bat :modules:web-client:test`.
 - [ ] T010 [US1] Execute messaging parity smoke checklist on running stack (manual): create chat, add/remove member, send/edit/delete/reply/reaction/pin/forward.
 
 **Checkpoint**: Core messaging/chat parity complete.
@@ -55,14 +55,14 @@
 
 ### Implementation
 
-- [ ] T011 [US2] Audit and complete `/v1/files/*` user flow coverage in `modules/web-client/src/main/resources/webui/app.js` (upload/download/link list/create/revoke/public auth-link navigation).
-- [ ] T012 [P] [US2] Improve file/public-link UI state handling in `modules/web-client/src/main/resources/webui/ui-messages-utils.js` or dedicated file helper module if needed.
-- [ ] T013 [US2] Audit and complete `/v1/chats/{chatId}/export/*` coverage in `modules/web-client/src/main/resources/webui/app.js` (request/status/attachments/download/cancel where available).
-- [ ] T014 [P] [US2] Normalize file/export error mapping and status labels in `app.js` for parity with server response semantics.
+- [x] T011 [US2] Audit and complete `/v1/files/*` user flow coverage in `modules/web-client/src/main/resources/webui/app.js` (upload/download/link list/create/revoke/public auth-link navigation).
+- [x] T012 [P] [US2] Improve file/public-link UI state handling in `modules/web-client/src/main/resources/webui/ui-messages-utils.js` or dedicated file helper module if needed.
+- [x] T013 [US2] Audit and complete `/v1/chats/{chatId}/export/*` coverage in `modules/web-client/src/main/resources/webui/app.js` (request/status/attachments/download/cancel where available).
+- [x] T014 [P] [US2] Normalize file/export error mapping and status labels in `app.js` for parity with server response semantics.
 
 ### Validation
 
-- [ ] T015 [US2] Run `./gradlew.bat :modules:web-client:test`.
+- [x] T015 [US2] Run `./gradlew.bat :modules:web-client:test`.
 - [ ] T016 [US2] Execute file+export smoke checklist on running stack (manual): upload/download file, create/revoke public link, request export, inspect status and artifact download.
 
 **Checkpoint**: File and export parity complete.
@@ -77,14 +77,14 @@
 
 ### Implementation
 
-- [ ] T017 [US3] Extend RTC helper boundaries in `modules/web-client/src/main/resources/webui/ui-rtc-utils.js` (signal helpers, peer lifecycle helpers, hangup/cleanup helpers).
-- [ ] T018 [US3] Delegate remaining rtc/call flow segments in `modules/web-client/src/main/resources/webui/app.js` to `ui-rtc-utils.js` while keeping wire format unchanged.
-- [ ] T019 [P] [US3] Harden reconnect convergence logic in `app.js` (WS reconnect + thread refresh + unread updates + heartbeat).
-- [ ] T020 [P] [US3] Validate conference participant and active-conference sync behavior under event updates in `app.js`.
+- [x] T017 [US3] Extend RTC helper boundaries in `modules/web-client/src/main/resources/webui/ui-rtc-utils.js` (signal helpers, peer lifecycle helpers, hangup/cleanup helpers).
+- [x] T018 [US3] Delegate remaining rtc/call flow segments in `modules/web-client/src/main/resources/webui/app.js` to `ui-rtc-utils.js` while keeping wire format unchanged.
+- [x] T019 [P] [US3] Harden reconnect convergence logic in `app.js` (WS reconnect + thread refresh + unread updates + heartbeat).
+- [x] T020 [P] [US3] Validate conference participant and active-conference sync behavior under event updates in `app.js`.
 
 ### Validation
 
-- [ ] T021 [US3] Run `./gradlew.bat :modules:web-client:test`.
+- [x] T021 [US3] Run `./gradlew.bat :modules:web-client:test`.
 - [ ] T022 [US3] Execute realtime/call checklist on running stack (manual): ws reconnect, incoming message sync, start/accept/hangup call, participant updates.
 
 **Checkpoint**: Realtime and calls reliability parity complete.
@@ -99,11 +99,11 @@
 
 ### Implementation
 
-- [ ] T023 [US4] Complete shell/settings extraction in `modules/web-client/src/main/resources/webui/ui-shell-utils.js` and delegate remaining storage/settings paths from `app.js`.
-- [ ] T024 [US4] Complete transport extraction in `modules/web-client/src/main/resources/webui/ui-transport-utils.js` and delegate remaining api/ws helpers from `app.js`.
-- [ ] T025 [US4] Complete pwa/settings extraction in `modules/web-client/src/main/resources/webui/ui-pwa-settings-utils.js` and delegate SW/push/update helpers from `app.js`.
-- [ ] T026 [P] [US4] Keep script load order explicit in `modules/web-client/src/main/resources/webui/index.html` for deterministic initialization.
-- [ ] T027 [US4] Refine servlet boundary helpers in:
+- [x] T023 [US4] Complete shell/settings extraction in `modules/web-client/src/main/resources/webui/ui-shell-utils.js` and delegate remaining storage/settings paths from `app.js`.
+- [x] T024 [US4] Complete transport extraction in `modules/web-client/src/main/resources/webui/ui-transport-utils.js` and delegate remaining api/ws helpers from `app.js`.
+- [x] T025 [US4] Complete pwa/settings extraction in `modules/web-client/src/main/resources/webui/ui-pwa-settings-utils.js` and delegate SW/push/update helpers from `app.js`.
+- [x] T026 [P] [US4] Keep script load order explicit in `modules/web-client/src/main/resources/webui/index.html` for deterministic initialization.
+- [x] T027 [US4] Refine servlet boundary helpers in:
   - `modules/web-client/src/main/java/com/avandocmsg/messenger/web/UpstreamProxyServlet.java`
   - `modules/web-client/src/main/java/com/avandocmsg/messenger/web/WebClientApplication.java`
   - `modules/web-client/src/main/java/com/avandocmsg/messenger/web/WebClientEnvServlet.java`
@@ -111,8 +111,8 @@
 
 ### Validation
 
-- [ ] T028 [US4] Run `./gradlew.bat :modules:web-client:test`.
-- [ ] T029 [US4] Verify servlet boundary tests still pass:
+- [x] T028 [US4] Run `./gradlew.bat :modules:web-client:test`.
+- [x] T029 [US4] Verify servlet boundary tests still pass:
   - `ClasspathWebUiServletTest`
   - `OverlayWebUiServletTest`
   - `WebClientEnvServletTest`
@@ -123,10 +123,10 @@
 
 ## Phase 6: Polish & Closure
 
-- [ ] T030 [P] Update parity status and completion notes in `docs/plans/10-web-client-code-health-backlog.md`.
-- [ ] T031 [P] Sync index status in `docs/plans/README.md`.
-- [ ] T032 Run `./gradlew.bat buildIntegrity`.
-- [ ] T033 Final parity report: list covered capabilities and explicit deferred items in `specs/002-web-client-server-parity/plan.md` or companion report.
+- [x] T030 [P] Update parity status and completion notes in `docs/plans/10-web-client-code-health-backlog.md`.
+- [x] T031 [P] Sync index status in `docs/plans/README.md`.
+- [x] T032 Run `./gradlew.bat buildIntegrity`.
+- [x] T033 Final parity report: list covered capabilities and explicit deferred items in `specs/002-web-client-server-parity/plan.md` or companion report.
 
 ---
 
