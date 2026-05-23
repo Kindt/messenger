@@ -130,9 +130,10 @@
 
 ## Deferred Runtime Gates (Environment-Dependent)
 
-- [ ] T010 [US1] Messaging parity smoke checklist on running stack.
-- [ ] T016 [US2] File/export parity smoke checklist on running stack.
-- [ ] T022 [US3] Realtime/call parity smoke checklist on running stack.
+- Reference existing deferred tasks:
+  - `T010` (US1 messaging smoke)
+  - `T016` (US2 file/export smoke)
+  - `T022` (US3 realtime/call smoke)
 
 Note: these checks are intentionally left deferred for operator-run execution on an available runtime environment.
 
