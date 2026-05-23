@@ -21,6 +21,7 @@ This directory contains the complete Spec-Kit package for bringing `modules/web-
 - `parity-matrix.md` — baseline endpoint-to-flow coverage map
 - `parity-report.md` — closure report with deferred items
 - `runtime-gate-report.md` — operator-run evidence template for deferred runtime checks
+- `IMPLEMENTATION_LOG.md` — commit-level traceability for implementation and closure
 
 ## How to Finish Deferred Runtime Gates
 
