@@ -44,6 +44,7 @@ Deliver full web-client parity to the current non-admin server surface through a
 
 ```text
 specs/002-web-client-server-parity/
+├── README.md
 ├── checklists/requirements.md
 ├── contracts/web-client-parity-contract.md
 ├── data-model.md
