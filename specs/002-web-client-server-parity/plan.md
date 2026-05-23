@@ -50,6 +50,7 @@ specs/002-web-client-server-parity/
 ├── parity-matrix.md
 ├── parity-report.md
 ├── quickstart.md
+├── runtime-gate-report.md
 ├── research.md
 ├── spec.md
 ├── plan.md

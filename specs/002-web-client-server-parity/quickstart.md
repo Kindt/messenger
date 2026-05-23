@@ -76,3 +76,4 @@ Run these on an available environment when localhost/lb runtime is ready:
 - `T022` (US3 realtime/call): ws reconnect, incoming sync convergence, start/accept/hangup call, participant updates
 
 Record result as `passed`/`failed` in `tasks.md` and mirror final note in `parity-report.md`.
+Use `runtime-gate-report.md` as the canonical evidence template for operator-run validation.
