@@ -92,6 +92,16 @@ final class RetentionMetrics {
         .help("Failed inserts into audit_events after successful body clear (non-fatal)")
         .register();
 
+    private static final Counter CHUNK_WRITES = Counter.build()
+        .name("retention_worker_chunk_writes_total")
+        .help("Chunked MinIO writes for large retention snapshots")
+        .register();
+
+    private static final Counter FILE_REF_SKIPPED = Counter.build()
+        .name("retention_worker_file_ref_skipped_total")
+        .help("Messages skipped by hot-body pass because content is a file reference (file://...)")
+        .register();
+
     private static final Histogram PASS_DURATION_SECONDS = Histogram.build()
         .name("retention_worker_hot_body_pass_duration_seconds")
         .help("Wall time for one RetentionHotBodyJanitor.runOnce pass (query + per-message processing)")
@@ -200,6 +210,14 @@ final class RetentionMetrics {
 
     static void auditInsertFailed() {
         AUDIT_INSERT_FAILURES.inc();
+    }
+
+    static void chunkWrite() {
+        CHUNK_WRITES.inc();
+    }
+
+    static void fileRefSkipped() {
+        FILE_REF_SKIPPED.inc();
     }
 
     static void observePassDurationSeconds(double seconds) {

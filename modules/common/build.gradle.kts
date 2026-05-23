@@ -5,4 +5,5 @@ dependencies {
     api("com.zaxxer:HikariCP:5.1.0")
     api("org.postgresql:postgresql:42.7.1")
     api("io.nats:jnats:2.17.4")
+    implementation("io.minio:minio:8.5.17")
 }

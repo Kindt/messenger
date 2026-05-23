@@ -119,7 +119,7 @@ public class MessageService {
         }
         var id = uuidGenerator.randomUuid();
         var msg = messageRepository.insert(id, chatId, senderId, typeForEncrypted(request.type(), encrypted),
-            content, replyToMsgId, request.clientMsgId(), request.ttlSeconds(), attachmentFileId);
+            content, replyToMsgId, request.clientMsgId(), request.visibilityTtlSeconds(), attachmentFileId);
         if (msg != null) {
             publishSendEvent(msg, request.clientMsgId());
         }
@@ -179,7 +179,7 @@ public class MessageService {
                 msg.createdAt() != null ? msg.createdAt().toEpochMilli() : null,
                 msg.replyToMsgId(),
                 msg.attachmentFileId(),
-                msg.ttlSeconds());
+                msg.visibilityTtlSeconds());
             var data = MAPPER.writeValueAsBytes(event);
             natsOutbound.publishPipelineMessageSend(data);
         } catch (Exception e) {

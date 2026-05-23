@@ -43,7 +43,7 @@ class MessageServiceTest {
         chatRepo.p2pChatId = null;
         chatRepo.p2pPeerId = null;
         mlsService.encryptResult = null;
-        msgRepo.lastInsertTtl = null;
+        msgRepo.lastInsertVisibilityTtl = null;
         msgRepo.lastInsertReplyTo = null;
         recordingNats.clear();
     }
@@ -53,7 +53,7 @@ class MessageServiceTest {
         chatRepo.bannedUsers.add(bannedUserId);
 
         var result = messageService.sendMessage(chatId, bannedUserId,
-            new SendMessageRequest("text", "hello", null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null), null);
 
         assertNull(result);
     }
@@ -61,7 +61,7 @@ class MessageServiceTest {
     @Test
     void sendMessage_allowsNonBannedUser() {
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null), null);
 
         assertNotNull(result);
         assertEquals("text", result.type());
@@ -75,7 +75,7 @@ class MessageServiceTest {
         blockRepo.blockedPairs.add(userId.toString() + ":" + peer);
 
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null), null);
 
         assertNull(result);
         assertTrue(messageService.sendBlockedReason(chatId, userId).isPresent());
@@ -86,7 +86,7 @@ class MessageServiceTest {
         mlsService.encryptResult = "encrypted_hello";
 
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null), null);
 
         assertNotNull(result);
         assertEquals("e2ee-text", result.type());
@@ -94,13 +94,13 @@ class MessageServiceTest {
 
     @Test
     void sendMessage_passesTtlToRepository() {
-        msgRepo.lastInsertTtl = null;
+        msgRepo.lastInsertVisibilityTtl = null;
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, 120), null);
+            new SendMessageRequest("text", "hello", null, null, 120, null), null);
 
         assertNotNull(result);
-        assertEquals(120, msgRepo.lastInsertTtl);
-        assertEquals(120, result.ttlSeconds());
+        assertEquals(120, msgRepo.lastInsertVisibilityTtl);
+        assertEquals(120, result.visibilityTtlSeconds());
     }
 
     @Test
@@ -108,7 +108,7 @@ class MessageServiceTest {
         var replyId = UUID.randomUUID();
         msgRepo.lastInsertReplyTo = null;
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", replyId.toString(), null, null), replyId);
+            new SendMessageRequest("text", "hello", replyId.toString(), null, null, null), replyId);
 
         assertNotNull(result);
         assertEquals(replyId, msgRepo.lastInsertReplyTo);
@@ -228,7 +228,7 @@ class MessageServiceTest {
     static class StubMessageRepository extends com.avandocmsg.messenger.api.repository.MessageRepository {
         final List<MessageResponse> messages = new ArrayList<>();
         UUID lastFilterUserId;
-        Integer lastInsertTtl;
+        Integer lastInsertVisibilityTtl;
         UUID lastInsertReplyTo;
 
         StubMessageRepository() {
@@ -237,18 +237,18 @@ class MessageServiceTest {
 
         @Override
         public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
-                                       UUID replyToMsgId, String clientMsgId, Integer ttlSeconds) {
-            return insert(id, chatId, senderId, type, content, replyToMsgId, clientMsgId, ttlSeconds, null);
+                                       UUID replyToMsgId, String clientMsgId, Integer visibilityTtlSeconds) {
+            return insert(id, chatId, senderId, type, content, replyToMsgId, clientMsgId, visibilityTtlSeconds, null);
         }
 
         @Override
         public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
-                                       UUID replyToMsgId, String clientMsgId, Integer ttlSeconds,
+                                       UUID replyToMsgId, String clientMsgId, Integer visibilityTtlSeconds,
                                        UUID attachmentFileId) {
-            lastInsertTtl = ttlSeconds;
+            lastInsertVisibilityTtl = visibilityTtlSeconds;
             lastInsertReplyTo = replyToMsgId;
             var msg = new MessageResponse(id.toString(), chatId.toString(), senderId.toString(), type, content,
-                replyToMsgId != null ? replyToMsgId.toString() : null, false, Instant.now(), null, ttlSeconds,
+                replyToMsgId != null ? replyToMsgId.toString() : null, false, Instant.now(), null, visibilityTtlSeconds,
                 attachmentFileId != null ? attachmentFileId.toString() : null);
             messages.add(msg);
             return msg;
@@ -279,7 +279,7 @@ class MessageServiceTest {
             var m = msg.get();
             messages.remove(m);
             messages.add(new MessageResponse(m.id(), m.chatId(), m.senderId(), m.type(), newContent,
-                m.replyToMsgId(), m.deleted(), m.createdAt(), Instant.now(), m.ttlSeconds(), m.attachmentFileId()));
+                m.replyToMsgId(), m.deleted(), m.createdAt(), Instant.now(), m.visibilityTtlSeconds(), m.attachmentFileId()));
             return true;
         }
 
@@ -389,7 +389,7 @@ class MessageServiceTest {
         var fileId = UUID.randomUUID();
         mlsService.encryptResult = "encrypted_blob";
         var sent = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("e2ee-file", fileId.toString(), null, null, null), null);
+            new SendMessageRequest("e2ee-file", fileId.toString(), null, null, null, null), null);
         assertNotNull(sent);
         assertEquals(fileId.toString(), sent.attachmentFileId());
         assertEquals(1, msgRepo.messages.size());

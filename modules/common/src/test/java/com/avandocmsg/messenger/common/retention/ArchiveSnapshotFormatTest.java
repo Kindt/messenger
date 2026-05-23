@@ -13,5 +13,9 @@ class ArchiveSnapshotFormatTest {
         assertEquals("deep-archiver", ArchiveSnapshotFormat.PRODUCER_DEEP_ARCHIVER);
         assertEquals("snapshot_version", ArchiveSnapshotFormat.JSON_SNAPSHOT_VERSION);
         assertEquals("producer", ArchiveSnapshotFormat.JSON_PRODUCER);
+        assertEquals("manifest.json", ArchiveSnapshotFormat.CHUNK_MANIFEST_FILENAME);
+        assertEquals("part-", ArchiveSnapshotFormat.CHUNK_PART_PREFIX);
+        assertEquals("part-%03d.json", ArchiveSnapshotFormat.CHUNK_PART_FORMAT);
+        assertEquals(10 * 1024 * 1024, ArchiveSnapshotFormat.DEFAULT_CHUNK_SIZE_BYTES);
     }
 }

@@ -71,9 +71,9 @@ public class MessageResource {
                 .entity(new ApiError(400, messages.get("error.message.content_required")))
                 .build();
         }
-        if (request.ttlSeconds() != null) {
-            int ttl = request.ttlSeconds();
-            int max = appConfig.messageTtlMaxSeconds();
+        if (request.visibilityTtlSeconds() != null) {
+            int ttl = request.visibilityTtlSeconds();
+            int max = appConfig.visibilityTtlMaxSeconds();
             if (ttl < 1 || ttl > max) {
                 return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new ApiError(400, messages.format("error.message.ttl_range", max)))

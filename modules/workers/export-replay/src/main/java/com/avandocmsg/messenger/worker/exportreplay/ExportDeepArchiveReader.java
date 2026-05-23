@@ -1,14 +1,17 @@
 package com.avandocmsg.messenger.worker.exportreplay;
 
+import com.avandocmsg.messenger.common.retention.DeepArchiveReader;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.minio.MinioClient;
 
 import java.util.Optional;
 
-/** Reads {@code messages/{messageId}.json} snapshots from deep-archive MinIO (same layout as deep-archiver). */
+/** Reads deep-archive snapshots from MinIO, supporting both flat and chunked formats via {@link DeepArchiveReader}. */
 final class ExportDeepArchiveReader {
 
     private static final String SOURCE = "deep-archive";
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final MinioClient client;
     private final String bucket;
@@ -44,8 +47,23 @@ final class ExportDeepArchiveReader {
         if (messageId == null || messageId.isBlank()) {
             return Optional.empty();
         }
-        var key = objectKeyForMessage(messageId.trim());
-        return ExportMinioJsonFetcher.fetchSnapshot(client, bucket, key, messageId.trim(), SOURCE);
+        var id = messageId.trim();
+        var key = objectKeyForMessage(id);
+        return DeepArchiveReader.readMessage(client, bucket, id)
+            .map(in -> {
+                try (in) {
+                    var snapshot = MAPPER.readTree(in);
+                    var out = MAPPER.createObjectNode();
+                    out.put("messageId", id);
+                    out.put("source", SOURCE);
+                    out.put("objectKey", key);
+                    out.put("bucket", bucket);
+                    out.set("snapshot", snapshot);
+                    return out;
+                } catch (Exception e) {
+                    return null;
+                }
+            });
     }
 
     String bucket() {

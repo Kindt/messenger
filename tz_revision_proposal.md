@@ -373,6 +373,43 @@ Production:                 Dev / single-node:
 - Интерфейс `FileProxyProvider` с двумя реализациями: `EmbeddedFileProxy` (dev) и `RemoteFileProxyClient` (prod)
 - Переключение через конфиг: `file-proxy.mode: embedded | remote`
 
+## 6. Dual TTL model: visibility + archive
+
+**Уточнение раздела 5/6 ТЗ (TTL сообщений).**
+
+### 6.1 Две независимые модели TTL
+
+| Параметр | `visibility_ttl_seconds` | `archive_ttl_seconds` |
+|----------|-------------------------|----------------------|
+| Назначение | Скрыть сообщение из UI | Перенести тело в deep-archive |
+| Эффект в Hot DB | Сообщение не показывается в ленте/поиске, строка сохраняется | `content` очищается, в hot остаётся каркас (id, метаданные) |
+| Эффект в Deep Archive | Не влияет | JSON снимок в MinIO |
+| Для кого | Все участники чата | Все участники чата |
+| Отображение для админа | Видно в админке (audit) | Каркас + ссылка на deep-archive |
+| Origin | Отправитель сообщения | Политика организации/чата |
+| Поведение при обоих | `visibility_ttl` < `archive_ttl`: сначала скрывается из UI, позже — deep-archive | |
+| Совместимость с existing | Старое поле `ttl_seconds` → `visibility_ttl_seconds` (Jackson alias) | Новое поле |
+
+### 6.2 Формат в API
+
+```json
+{
+  "text": "Hello",
+  "visibility_ttl_seconds": 3600,
+  "archive_ttl_seconds": 86400
+}
+```
+
+- Если указаны оба: `visibility_ttl` должен быть <= `archive_ttl` (проверка на сервере).
+- Лимиты: `MESSAGE_VISIBILITY_TTL_MAX_SECONDS`, `MESSAGE_ARCHIVE_TTL_MAX_SECONDS`.
+
+### 6.3 Миграция существующих данных
+
+- Старое поле `messages.ttl_seconds` → `messages.visibility_ttl_seconds` (rename).
+- Существующие сообщения с `ttl_seconds` получают семантику `visibility_ttl`.
+
+---
+
 ### 5.4 Конфигурация
 
 ```yaml

@@ -24,6 +24,20 @@ public final class ArchiveSnapshotFormat {
      */
     public static final String JSON_SNAPSHOT_SHA256 = "snapshot_sha256";
 
+    // --- chunk constants ---
+
+    /** Filename of the chunk manifest within a chunked message directory. */
+    public static final String CHUNK_MANIFEST_FILENAME = "manifest.json";
+
+    /** Prefix for chunk part files. */
+    public static final String CHUNK_PART_PREFIX = "part-";
+
+    /** Format for chunk part filenames (zero-padded index). */
+    public static final String CHUNK_PART_FORMAT = "part-%03d.json";
+
+    /** Default chunk size threshold (10 MiB). */
+    public static final int DEFAULT_CHUNK_SIZE_BYTES = 10 * 1024 * 1024;
+
     private ArchiveSnapshotFormat() {
     }
 }

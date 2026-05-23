@@ -75,7 +75,7 @@ class AdminExportComplianceSeedH2Test {
                   content TEXT,
                   reply_to_msg_id UUID,
                   deleted BOOLEAN NOT NULL DEFAULT false,
-                  ttl_seconds INT,
+                  visibility_ttl_seconds INT,
                   attachment_file_id UUID,
                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                   edited_at TIMESTAMP

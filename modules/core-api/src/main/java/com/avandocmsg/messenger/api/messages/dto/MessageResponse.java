@@ -17,9 +17,9 @@ public record MessageResponse(
     @Schema(description = "Whether the message is deleted") boolean deleted,
     @Schema(description = "When the message was created") @JsonProperty("created_at") Instant createdAt,
     @Schema(description = "When the message was last edited") @JsonProperty("edited_at") Instant editedAt,
-    @Schema(description = "Срок видимости с момента создания (сек); null = без TTL (ТЗ п. 12.4)")
+    @Schema(description = "Срок видимости с момента создания (сек); null = без TTL (ТЗ п. 12.4)", example = "3600")
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    @JsonProperty("ttl_seconds") Integer ttlSeconds,
+    @JsonProperty("visibility_ttl_seconds") Integer visibilityTtlSeconds,
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonProperty("attachment_file_id") String attachmentFileId
 ) {}

@@ -89,10 +89,10 @@ public class ExportReplayWorker {
         """;
 
     /**
-     * Same visibility rule as {@code MessageRepository#SQL_MSG_TTL_VISIBLE} (unqualified column names on {@code messages}).
+     * Same visibility rule as {@code MessageRepository#SQL_MSG_VISIBILITY_TTL_VISIBLE} (unqualified column names on {@code messages}).
      */
-    static final String SQL_MSG_TTL_VISIBLE =
-        "(ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at)) < ttl_seconds)";
+    static final String SQL_MSG_VISIBILITY_TTL_VISIBLE =
+        "(visibility_ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at)) < visibility_ttl_seconds)";
 
     private static final String SQL_CHAT = """
         SELECT id, title, type, owner_id, avatar_file_id, hidden, muted, ttl_seconds, created_at, updated_at
@@ -1102,9 +1102,9 @@ public class ExportReplayWorker {
             n.put("replyToMessageId", reply);
         }
         n.put("deleted", rs.getBoolean("deleted"));
-        var ttl = rs.getObject("ttl_seconds");
+        var ttl = rs.getObject("visibility_ttl_seconds");
         if (ttl != null) {
-            n.put("ttlSeconds", ((Number) ttl).intValue());
+            n.put("visibilityTtlSeconds", ((Number) ttl).intValue());
         }
         putInstant(n, "createdAt", rs.getTimestamp("created_at"));
         putInstant(n, "editedAt", rs.getTimestamp("edited_at"));
@@ -1168,7 +1168,7 @@ public class ExportReplayWorker {
     }
 
     static String messageSubsetWhere(boolean applyTtlFilter) {
-        return "chat_id = ?::uuid" + (applyTtlFilter ? " AND " + SQL_MSG_TTL_VISIBLE : "");
+        return "chat_id = ?::uuid" + (applyTtlFilter ? " AND " + SQL_MSG_VISIBILITY_TTL_VISIBLE : "");
     }
 
     static String buildMessageIdSubsetSql(boolean applyTtlFilter) {
@@ -1177,7 +1177,7 @@ public class ExportReplayWorker {
 
     static String buildMessagesSql(boolean applyTtlFilter) {
         return """
-            SELECT id, sender_id, client_msg_id, type, content, reply_to_msg_id, deleted, ttl_seconds, created_at, edited_at
+            SELECT id, sender_id, client_msg_id, type, content, reply_to_msg_id, deleted, visibility_ttl_seconds, created_at, edited_at
             FROM messages
             WHERE %s
             ORDER BY created_at ASC

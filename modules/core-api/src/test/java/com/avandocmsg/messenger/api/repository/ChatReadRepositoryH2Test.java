@@ -59,7 +59,7 @@ class ChatReadRepositoryH2Test {
                   content TEXT,
                   reply_to_msg_id UUID,
                   deleted BOOLEAN NOT NULL DEFAULT false,
-                  ttl_seconds INT,
+                  visibility_ttl_seconds INT,
                   created_at TIMESTAMP NOT NULL,
                   edited_at TIMESTAMP
                 )
@@ -145,8 +145,8 @@ class ChatReadRepositoryH2Test {
     private void insertMessage(UUID id, UUID chat, UUID sender, String content, Instant createdAt) throws Exception {
         try (var c = ds.getConnection();
              var ps = c.prepareStatement("""
-                 INSERT INTO messages (id, chat_id, sender_id, type, content, deleted, ttl_seconds, created_at)
-                 VALUES (?, ?, ?, 'text', ?, false, NULL, ?)
+                 INSERT INTO messages (id, chat_id, sender_id, type, content, deleted, visibility_ttl_seconds, created_at)
+                  VALUES (?, ?, ?, 'text', ?, false, NULL, ?)
                  """)) {
             ps.setObject(1, id);
             ps.setObject(2, chat);

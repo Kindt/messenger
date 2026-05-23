@@ -42,6 +42,10 @@
 - Используется для **исключения повторной обработки** в SQL выборки (при **`RETENTION_USE_APPLIED_LOG=true`**, по умолчанию). Публикация **`msg.event.retention`** — см. **`RetentionAppliedEvent`** в **`modules/common`**.
 - При **`RETENTION_AUDIT_ENABLED=true`** (по умолчанию) тот же воркер добавляет строку в **`audit_events`** (**`V008`**, действие **`message.retention.hot_body_cleared`**, **`actor_user_id`** = **`NULL`**).
 
+## `messages.visibility_ttl_seconds` rename (V023)
+
+- **`V023__rename_ttl_to_visibility.sql`**: переименование колонки `messages.ttl_seconds` → `messages.visibility_ttl_seconds` (dual TTL model: visibility + archive). Обратная совместимость JSON API через `@JsonAlias("ttl_seconds")`.
+
 ## `audit_events` list indexes (V014)
 
 - **`idx_audit_events_action_occurred`** на **`(action, occurred_at DESC)`** и **`idx_audit_events_resource_occurred`** на **`(resource_id, occurred_at DESC)`** — для админского **`GET /api/v1/admin/audit-events`** с фильтром **`action`** или **`resource_id`** и сортировкой **`occurred_at DESC`** + **`LIMIT`**. Дополняют **`idx_audit_occurred`** (**`V008`**). См. также **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §8 и §13 (**фаза A**).

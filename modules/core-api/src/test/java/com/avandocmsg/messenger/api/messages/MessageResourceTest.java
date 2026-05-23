@@ -23,7 +23,7 @@ class MessageResourceTest {
         var chatId = UUID.randomUUID().toString();
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.send(chatId,
-                new SendMessageRequest("text", "hello", "bad-uuid", null, null),
+                new SendMessageRequest("text", "hello", "bad-uuid", null, null, null),
                 userSecurityContext()));
     }
 
@@ -32,7 +32,7 @@ class MessageResourceTest {
         var resource = new MessageResource(null, new AppConfig(), I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.send("not-a-uuid",
-                new SendMessageRequest("text", "hello", null, null, null),
+                new SendMessageRequest("text", "hello", null, null, null, null),
                 userSecurityContext()));
     }
 

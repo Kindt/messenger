@@ -67,7 +67,8 @@ public class AppConfig {
         override("RETENTION_DEFAULT_ARCHIVE_METADATA_ENABLED", "retention.default.archive_metadata_enabled");
         override("RETENTION_DEFAULT_DEEP_ARCHIVE_ENABLED", "retention.default.deep_archive_enabled");
         override("RETENTION_DEFAULT_LEGAL_HOLD", "retention.default.legal_hold");
-        override("MESSAGE_TTL_MAX_SECONDS", "message.ttl.max.seconds");
+        override("MESSAGE_VISIBILITY_TTL_MAX_SECONDS", "message.visibility.ttl.max.seconds");
+        override("MESSAGE_ARCHIVE_TTL_MAX_SECONDS", "message.archive.ttl.max.seconds");
         override("RETENTION_WORKER_ENABLED", "retention.worker.enabled");
         override("RETENTION_SCAN_INTERVAL_SECONDS", "retention.scan.interval.seconds");
         override("EXPORT_DIR", "export.dir");
@@ -309,10 +310,17 @@ public class AppConfig {
     }
 
     /**
-     * Максимум для {@code ttl_seconds} при отправке сообщения (включительно). Env: {@code MESSAGE_TTL_MAX_SECONDS}.
+     * Максимум для {@code visibility_ttl_seconds} при отправке сообщения (включительно). Env: {@code MESSAGE_VISIBILITY_TTL_MAX_SECONDS}.
      */
-    public int messageTtlMaxSeconds() {
-        return Integer.parseInt(props.getProperty("message.ttl.max.seconds", "31536000"));
+    public int visibilityTtlMaxSeconds() {
+        return Integer.parseInt(props.getProperty("message.visibility.ttl.max.seconds", "31536000"));
+    }
+
+    /**
+     * Максимум для {@code archive_ttl_seconds} при отправке сообщения (включительно). Env: {@code MESSAGE_ARCHIVE_TTL_MAX_SECONDS}.
+     */
+    public int archiveTtlMaxSeconds() {
+        return Integer.parseInt(props.getProperty("message.archive.ttl.max.seconds", "31536000"));
     }
 
     /**

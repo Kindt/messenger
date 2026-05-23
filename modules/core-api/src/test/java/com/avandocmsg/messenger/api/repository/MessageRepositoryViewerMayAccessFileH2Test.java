@@ -57,7 +57,7 @@ class MessageRepositoryViewerMayAccessFileH2Test {
                   content VARCHAR(4096),
                   attachment_file_id UUID,
                   deleted BOOLEAN NOT NULL DEFAULT FALSE,
-                  ttl_seconds INT,
+                  visibility_ttl_seconds INT,
                   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """);

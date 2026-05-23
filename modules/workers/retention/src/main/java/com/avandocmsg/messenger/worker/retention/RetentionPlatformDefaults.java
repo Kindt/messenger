@@ -224,6 +224,26 @@ public record RetentionPlatformDefaults(
      * Пауза между обработкой соседних кандидатов в одном проходе hot-body (мс). Env: {@code RETENTION_INTER_MESSAGE_DELAY_MS};
      * по умолчанию {@code 0} — без паузы; значения ограничены диапазоном {@code 0…60000}.
      */
+    /**
+     * Порог для чанкования снимков ретенции (байты); 0 = без чанков. Env: {@code RETENTION_CHUNK_THRESHOLD_BYTES};
+     * по умолчанию {@code 0}.
+     */
+    static long chunkThresholdBytesFromEnv() {
+        return chunkThresholdBytesFromRaw(System.getenv("RETENTION_CHUNK_THRESHOLD_BYTES"));
+    }
+
+    static long chunkThresholdBytesFromRaw(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return 0L;
+        }
+        try {
+            long v = Long.parseLong(raw.trim());
+            return Math.max(0, v);
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+
     static int interMessageDelayMsFromEnv() {
         return interMessageDelayMillisFromRaw(System.getenv("RETENTION_INTER_MESSAGE_DELAY_MS"));
     }

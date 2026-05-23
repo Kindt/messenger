@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -71,6 +72,10 @@ public class IndexerWorker {
                 deleteFromSolr(event.messageId());
                 return;
             }
+            if ("update".equalsIgnoreCase(event.indexOp())) {
+                clearContentTxt(event.messageId());
+                return;
+            }
             indexMetadata(event);
         } catch (Exception e) {
             log.error("Failed to handle indexer message", e);
@@ -85,6 +90,22 @@ public class IndexerWorker {
         }
         solrClient.commit(cloudMode ? solrCollection : null);
         log.debug("Deleted from Solr id={}", messageId);
+    }
+
+    /** Atomic partial update: clears content_txt when retention removes the body. */
+    private void clearContentTxt(String messageId) throws Exception {
+        var doc = new SolrInputDocument();
+        doc.addField("id", messageId);
+        var clearOp = new HashMap<String, String>();
+        clearOp.put("set", "");
+        doc.addField("content_txt", clearOp);
+        if (cloudMode) {
+            solrClient.add(solrCollection, doc);
+        } else {
+            solrClient.add(doc);
+        }
+        solrClient.commit(cloudMode ? solrCollection : null);
+        log.debug("Cleared content_txt for Solr id={}", messageId);
     }
 
     private void indexMetadata(MessageWorkerEvent event) throws Exception {

@@ -19,9 +19,9 @@ import java.util.UUID;
 
 public class MessageRepository {
     private static final Logger log = LoggerFactory.getLogger(MessageRepository.class);
-    /** Сообщение видимо по TTL: нет лимита или возраст меньше {@code ttl_seconds} секунд с {@code created_at}. */
-    public static final String SQL_MSG_TTL_VISIBLE =
-        "(m.ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - m.created_at)) < m.ttl_seconds)";
+    /** Сообщение видимо по TTL: нет лимита или возраст меньше {@code visibility_ttl_seconds} секунд с {@code created_at}. */
+    public static final String SQL_MSG_VISIBILITY_TTL_VISIBLE =
+        "(m.visibility_ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - m.created_at)) < m.visibility_ttl_seconds)";
     private final DataSource dataSource;
     private final Clock clock;
 
@@ -31,16 +31,16 @@ public class MessageRepository {
     }
 
     public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
-                                  UUID replyToMsgId, String clientMsgId, Integer ttlSeconds) {
-        return insert(id, chatId, senderId, type, content, replyToMsgId, clientMsgId, ttlSeconds, null);
+                                  UUID replyToMsgId, String clientMsgId, Integer visibilityTtlSeconds) {
+        return insert(id, chatId, senderId, type, content, replyToMsgId, clientMsgId, visibilityTtlSeconds, null);
     }
 
     public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
-                                  UUID replyToMsgId, String clientMsgId, Integer ttlSeconds,
+                                  UUID replyToMsgId, String clientMsgId, Integer visibilityTtlSeconds,
                                   UUID attachmentFileId) {
         var sql = """
             INSERT INTO messages (id, chat_id, sender_id, type, content, reply_to_msg_id, client_msg_id,
-                ttl_seconds, attachment_file_id, created_at)
+                visibility_ttl_seconds, attachment_file_id, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, now())
             """;
         try (var conn = dataSource.getConnection();
@@ -52,12 +52,12 @@ public class MessageRepository {
             stmt.setString(5, content);
             stmt.setObject(6, replyToMsgId);
             stmt.setString(7, clientMsgId);
-            stmt.setObject(8, ttlSeconds);
+            stmt.setObject(8, visibilityTtlSeconds);
             stmt.setObject(9, attachmentFileId);
             stmt.executeUpdate();
             return new MessageResponse(id.toString(), chatId.toString(), senderId.toString(),
                 type != null ? type : "text", content, replyToMsgId != null ? replyToMsgId.toString() : null,
-                false, clock.instant(), null, ttlSeconds,
+                false, clock.instant(), null, visibilityTtlSeconds,
                 attachmentFileId != null ? attachmentFileId.toString() : null);
         } catch (Exception e) {
             log.error("Failed to insert message", e);
@@ -68,7 +68,7 @@ public class MessageRepository {
     public Optional<UUID> findLatestMessageId(UUID chatId) {
         var sql = """
             SELECT m.id FROM messages m
-            WHERE m.chat_id = ? AND m.deleted = false AND """ + SQL_MSG_TTL_VISIBLE + """
+            WHERE m.chat_id = ? AND m.deleted = false AND """ + SQL_MSG_VISIBILITY_TTL_VISIBLE + """
              ORDER BY m.created_at DESC LIMIT 1
             """;
         try (var conn = dataSource.getConnection();
@@ -87,9 +87,9 @@ public class MessageRepository {
 
     public Optional<MessageResponse> findById(UUID id) {
         var sql = """
-            SELECT id, chat_id, sender_id, type, content, reply_to_msg_id, deleted, created_at, edited_at, ttl_seconds,
+            SELECT id, chat_id, sender_id, type, content, reply_to_msg_id, deleted, created_at, edited_at, visibility_ttl_seconds,
                 attachment_file_id
-            FROM messages m WHERE m.id = ? AND (m.ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - m.created_at)) < m.ttl_seconds)
+            FROM messages m WHERE m.id = ? AND (m.visibility_ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - m.created_at)) < m.visibility_ttl_seconds)
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
@@ -112,8 +112,8 @@ public class MessageRepository {
     public List<MessageResponse> findByChatId(UUID chatId, int limit, UUID before, UUID filterUserId) {
         var sql = new StringBuilder("""
             SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at,
-                m.edited_at, m.ttl_seconds, m.attachment_file_id
-            FROM messages m WHERE m.chat_id = ? AND """ + SQL_MSG_TTL_VISIBLE);
+                m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id
+            FROM messages m WHERE m.chat_id = ? AND """ + SQL_MSG_VISIBILITY_TTL_VISIBLE);
         if (before != null) {
             sql.append(" AND m.created_at < (SELECT m2.created_at FROM messages m2 WHERE m2.id = ?)");
         }
@@ -338,7 +338,7 @@ public class MessageRepository {
             INNER JOIN chat_members cm ON cm.chat_id = m.chat_id AND cm.user_id = ? AND cm.banned = false
             WHERE (trim(m.content) = ? OR m.attachment_file_id = ?)
               AND m.deleted = false
-              AND """ + SQL_MSG_TTL_VISIBLE + """
+              AND """ + SQL_MSG_VISIBILITY_TTL_VISIBLE + """
               AND m.sender_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
               AND m.sender_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)
             ORDER BY m.created_at DESC
@@ -374,7 +374,7 @@ public class MessageRepository {
                 OR m.attachment_file_id = ?
               )
               AND m.deleted = false
-              AND """ + SQL_MSG_TTL_VISIBLE + """
+              AND """ + SQL_MSG_VISIBILITY_TTL_VISIBLE + """
               AND m.sender_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
               AND m.sender_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)
             LIMIT 1
@@ -402,11 +402,11 @@ public class MessageRepository {
         }
         var sql = """
             SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at,
-                m.edited_at, m.ttl_seconds, m.attachment_file_id
+                m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id
             FROM messages m
             WHERE m.chat_id = ANY (?)
               AND m.deleted = false
-              AND """ + SQL_MSG_TTL_VISIBLE + """
+              AND """ + SQL_MSG_VISIBILITY_TTL_VISIBLE + """
               AND m.type NOT LIKE 'e2ee-%'
               AND POSITION(lower(CAST (? AS text)) IN lower(coalesce(m.content, ''))) > 0
               AND EXISTS (SELECT 1 FROM chat_members cm WHERE cm.chat_id = m.chat_id AND cm.user_id = ? AND cm.banned = false)
@@ -451,11 +451,11 @@ public class MessageRepository {
         }
         var sql = """
             SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at,
-                m.edited_at, m.ttl_seconds, m.attachment_file_id
+                m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id
             FROM messages m
             WHERE m.id = ANY (?)
               AND m.deleted = false
-              AND """ + SQL_MSG_TTL_VISIBLE + """
+              AND """ + SQL_MSG_VISIBILITY_TTL_VISIBLE + """
               AND EXISTS (SELECT 1 FROM chat_members cm WHERE cm.chat_id = m.chat_id AND cm.user_id = ? AND cm.banned = false)
               AND m.sender_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
               AND m.sender_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)
@@ -497,7 +497,7 @@ public class MessageRepository {
         var ts = rs.getTimestamp("created_at");
         var editedTs = rs.getTimestamp("edited_at");
         var replyTo = rs.getObject("reply_to_msg_id", UUID.class);
-        var ttl = (Integer) rs.getObject("ttl_seconds");
+        var ttl = (Integer) rs.getObject("visibility_ttl_seconds");
         var attachmentFileId = rs.getObject("attachment_file_id", UUID.class);
         return new MessageResponse(
             rs.getObject("id", UUID.class).toString(),

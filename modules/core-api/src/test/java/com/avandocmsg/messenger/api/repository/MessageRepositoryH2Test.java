@@ -49,7 +49,7 @@ class MessageRepositoryH2Test {
                   content TEXT,
                   reply_to_msg_id UUID,
                   deleted BOOLEAN NOT NULL DEFAULT false,
-                  ttl_seconds INT,
+                  visibility_ttl_seconds INT,
                   attachment_file_id UUID,
                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                   edited_at TIMESTAMP
@@ -89,7 +89,7 @@ class MessageRepositoryH2Test {
 
         var one = repo.findById(m1).orElseThrow();
         assertEquals("one", one.content());
-        assertNull(one.ttlSeconds());
+        assertNull(one.visibilityTtlSeconds());
 
         var list = repo.findByChatId(chatId, 10, null);
         assertEquals(2, list.size());
@@ -104,7 +104,7 @@ class MessageRepositoryH2Test {
         var msgId = UUID.randomUUID();
         try (var c = ds.getConnection();
              var ps = c.prepareStatement("""
-                 INSERT INTO messages (id, chat_id, sender_id, type, content, deleted, ttl_seconds, created_at)
+                  INSERT INTO messages (id, chat_id, sender_id, type, content, deleted, visibility_ttl_seconds, created_at)
                  VALUES (?, ?, ?, 'text', 'old', false, 60, TIMESTAMPADD(MINUTE, -5, CURRENT_TIMESTAMP))
                  """)) {
             ps.setObject(1, msgId);

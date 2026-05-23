@@ -13,4 +13,7 @@ dependencies {
     implementation("io.minio:minio:8.5.10")
     implementation("ch.qos.logback:logback-classic:1.5.3")
     implementation("org.slf4j:slf4j-api:2.0.12")
+
+    // Prometheus (same stack as retention module)
+    implementation("io.prometheus:simpleclient:0.16.0")
 }

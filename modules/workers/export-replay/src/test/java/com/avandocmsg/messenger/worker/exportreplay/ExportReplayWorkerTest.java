@@ -66,7 +66,7 @@ class ExportReplayWorkerTest {
 
     @Test
     void buildMessagesSql_appliesTtlWhenEnabled() {
-        assertTrue(ExportReplayWorker.buildMessagesSql(true).contains(ExportReplayWorker.SQL_MSG_TTL_VISIBLE));
-        assertFalse(ExportReplayWorker.buildMessagesSql(false).contains(ExportReplayWorker.SQL_MSG_TTL_VISIBLE));
+        assertTrue(ExportReplayWorker.buildMessagesSql(true).contains(ExportReplayWorker.SQL_MSG_VISIBILITY_TTL_VISIBLE));
+        assertFalse(ExportReplayWorker.buildMessagesSql(false).contains(ExportReplayWorker.SQL_MSG_VISIBILITY_TTL_VISIBLE));
     }
 }
