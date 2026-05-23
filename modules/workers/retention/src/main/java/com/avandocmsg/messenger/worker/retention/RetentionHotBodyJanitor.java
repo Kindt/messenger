@@ -381,102 +381,20 @@ final class RetentionHotBodyJanitor {
         String storageKey = retentionSnapKey;
         String snapshotSha256 = null;
         if (minioEnabled) {
-            if (ContentAnalyzer.isFileReference(c.content())) {
-                log.debug("Retention skip snapshot for message {}: content is file reference", c.id());
-                RetentionMetrics.minioSnapshotSkippedExisting("file_ref");
-                RetentionMetrics.fileRefSkipped();
-                storageKey = null;
-            } else {
-                boolean doPut = true;
-                if (skipSnapshotIfDeepExists && retentionSnapKey != null) {
-                    if (RetentionSnapshotSkipResolver.sameBucketAsDeepArchive(retentionWriteBucket, minioDefaultBucket)) {
-                        var deepKey = RetentionSnapshotSkipResolver.deepArchiveObjectKey(c.id());
-                        if (minioObjectExists(minioClient, retentionWriteBucket, deepKey)) {
-                            doPut = false;
-                            storageKey = deepKey;
-                            RetentionMetrics.minioSnapshotSkippedExisting("deep");
-                        }
-                    }
-                    if (doPut && minioObjectExists(minioClient, retentionWriteBucket, retentionSnapKey)) {
-                        doPut = false;
-                        storageKey = retentionSnapKey;
-                        RetentionMetrics.minioSnapshotSkippedExisting("retention");
-                    }
-                }
-                ObjectNode payload = minioSnapshotPayload(
-                    MAPPER,
-                    c.id(),
-                    c.chatId(),
-                    c.senderId(),
-                    c.type(),
-                    c.createdMs(),
-                    c.content(),
-                    passId
-                );
-                snapshotSha256 = ArchiveSnapshotEnvelopeDigest.computeAndAttach(MAPPER, payload);
-                if (doPut) {
-                    long chunkThreshold = RetentionPlatformDefaults.chunkThresholdBytesFromEnv();
-                    if (RetentionSnapshotMaterialization.shouldUseTempFile(snapshotTempfileThresholdBytes, contentUtf8Bytes)) {
-                        Path tmp = null;
-                        try {
-                            tmp = Files.createTempFile("retention-snapshot-", ".json");
-                            MAPPER.writeValue(tmp.toFile(), payload);
-                            long fileSize = Files.size(tmp);
-                            if (chunkThreshold > 0 && fileSize > chunkThreshold) {
-                                byte[] allBytes = Files.readAllBytes(tmp);
-                                writeRetentionChunks(minioClient, retentionWriteBucket, retentionObjectPrefix, c.id(), allBytes);
-                            } else if (fileSize >= minioMultipartThresholdBytes) {
-                                minioClient.uploadObject(
-                                    UploadObjectArgs.builder()
-                                        .bucket(retentionWriteBucket)
-                                        .object(retentionSnapKey)
-                                        .filename(tmp.toAbsolutePath().toString())
-                                        .contentType("application/json")
-                                        .build()
-                                );
-                                RetentionMetrics.minioMultipartUploadSucceeded();
-                            } else {
-                                try (InputStream in = Files.newInputStream(tmp)) {
-                                    minioClient.putObject(
-                                        PutObjectArgs.builder()
-                                            .bucket(retentionWriteBucket)
-                                            .object(retentionSnapKey)
-                                            .stream(in, fileSize, -1)
-                                            .contentType("application/json")
-                                            .build()
-                                    );
-                                }
-                            }
-                            int metricBytes = fileSize > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) fileSize;
-                            RetentionMetrics.minioSnapshotUploaded(metricBytes);
-                            RetentionMetrics.minioSnapshotTempfileUsed();
-                        } finally {
-                            if (tmp != null) {
-                                try {
-                                    Files.deleteIfExists(tmp);
-                                } catch (Exception delEx) {
-                                    log.warn("Retention failed to delete temp snapshot file {}: {}", tmp, delEx.getMessage());
-                                }
-                            }
-                        }
-                    } else {
-                        byte[] bytes = MAPPER.writeValueAsBytes(payload);
-                        if (chunkThreshold > 0 && bytes.length > chunkThreshold) {
-                            writeRetentionChunks(minioClient, retentionWriteBucket, retentionObjectPrefix, c.id(), bytes);
-                        } else {
-                            minioClient.putObject(
-                                PutObjectArgs.builder()
-                                    .bucket(retentionWriteBucket)
-                                    .object(retentionSnapKey)
-                                    .stream(new ByteArrayInputStream(bytes), bytes.length, -1)
-                                    .contentType("application/json")
-                                    .build()
-                            );
-                            RetentionMetrics.minioSnapshotUploaded(bytes.length);
-                        }
-                    }
-                }
-            }
+            var snapshotResult = RetentionSnapshotWriter.persistSnapshot(
+                minioClient,
+                retentionWriteBucket,
+                retentionObjectPrefix,
+                minioDefaultBucket,
+                c,
+                passId,
+                skipSnapshotIfDeepExists,
+                snapshotTempfileThresholdBytes,
+                minioMultipartThresholdBytes,
+                contentUtf8Bytes
+            );
+            storageKey = snapshotResult.storageKey();
+            snapshotSha256 = snapshotResult.snapshotSha256();
         }
         int updated;
         if (sharedJdbc != null) {
@@ -732,46 +650,225 @@ final class RetentionHotBodyJanitor {
         return payload;
     }
 
-    private static void writeRetentionChunks(
-        MinioClient client, String bucket, String prefix, UUID messageId, byte[] bytes) throws Exception {
-        var dir = prefix + messageId + "/";
-        var chunks = new ArrayList<ChunkEntry>();
-        long chunkThreshold = RetentionPlatformDefaults.chunkThresholdBytesFromEnv();
-        int actualChunkSize = chunkThreshold > 0 ? (int) Math.min(chunkThreshold, Integer.MAX_VALUE)
-            : ArchiveSnapshotFormat.DEFAULT_CHUNK_SIZE_BYTES;
-        int offset = 0;
-        int partIndex = 0;
-        while (offset < bytes.length) {
-            int end = Math.min(offset + actualChunkSize, bytes.length);
-            var partBytes = new byte[end - offset];
-            System.arraycopy(bytes, offset, partBytes, 0, partBytes.length);
-            var partName = String.format(ArchiveSnapshotFormat.CHUNK_PART_FORMAT, partIndex);
-            var sha256 = Sha256Hex.of(partBytes);
+    private record SnapshotStoreResult(String storageKey, String snapshotSha256) {
+    }
+
+    private static final class RetentionSnapshotWriter {
+        private RetentionSnapshotWriter() {
+        }
+
+        private static SnapshotStoreResult persistSnapshot(
+            MinioClient minioClient,
+            String retentionWriteBucket,
+            String retentionObjectPrefix,
+            String minioDefaultBucket,
+            Candidate candidate,
+            String passId,
+            boolean skipSnapshotIfDeepExists,
+            long snapshotTempfileThresholdBytes,
+            long minioMultipartThresholdBytes,
+            int contentUtf8Bytes
+        ) throws Exception {
+            if (ContentAnalyzer.isFileReference(candidate.content())) {
+                log.debug("Retention skip snapshot for message {}: content is file reference", candidate.id());
+                RetentionMetrics.minioSnapshotSkippedExisting("file_ref");
+                RetentionMetrics.fileRefSkipped();
+                return new SnapshotStoreResult(null, null);
+            }
+
+            var retentionSnapKey = retentionObjectPrefix + candidate.id() + ".json";
+            String storageKey = retentionSnapKey;
+            boolean doPut = true;
+            if (skipSnapshotIfDeepExists) {
+                if (RetentionSnapshotSkipResolver.sameBucketAsDeepArchive(retentionWriteBucket, minioDefaultBucket)) {
+                    var deepKey = RetentionSnapshotSkipResolver.deepArchiveObjectKey(candidate.id());
+                    if (minioObjectExists(minioClient, retentionWriteBucket, deepKey)) {
+                        doPut = false;
+                        storageKey = deepKey;
+                        RetentionMetrics.minioSnapshotSkippedExisting("deep");
+                    }
+                }
+                if (doPut && minioObjectExists(minioClient, retentionWriteBucket, retentionSnapKey)) {
+                    doPut = false;
+                    storageKey = retentionSnapKey;
+                    RetentionMetrics.minioSnapshotSkippedExisting("retention");
+                }
+            }
+
+            ObjectNode payload = minioSnapshotPayload(
+                MAPPER,
+                candidate.id(),
+                candidate.chatId(),
+                candidate.senderId(),
+                candidate.type(),
+                candidate.createdMs(),
+                candidate.content(),
+                passId
+            );
+            var snapshotSha256 = ArchiveSnapshotEnvelopeDigest.computeAndAttach(MAPPER, payload);
+            if (doPut) {
+                uploadSnapshotPayload(
+                    minioClient,
+                    retentionWriteBucket,
+                    retentionObjectPrefix,
+                    candidate.id(),
+                    retentionSnapKey,
+                    payload,
+                    snapshotTempfileThresholdBytes,
+                    minioMultipartThresholdBytes,
+                    contentUtf8Bytes
+                );
+            }
+            return new SnapshotStoreResult(storageKey, snapshotSha256);
+        }
+
+        private static void uploadSnapshotPayload(
+            MinioClient minioClient,
+            String retentionWriteBucket,
+            String retentionObjectPrefix,
+            UUID messageId,
+            String retentionSnapKey,
+            ObjectNode payload,
+            long snapshotTempfileThresholdBytes,
+            long minioMultipartThresholdBytes,
+            int contentUtf8Bytes
+        ) throws Exception {
+            long chunkThreshold = RetentionPlatformDefaults.chunkThresholdBytesFromEnv();
+            if (RetentionSnapshotMaterialization.shouldUseTempFile(snapshotTempfileThresholdBytes, contentUtf8Bytes)) {
+                uploadThroughTempFile(
+                    minioClient,
+                    retentionWriteBucket,
+                    retentionObjectPrefix,
+                    messageId,
+                    retentionSnapKey,
+                    payload,
+                    chunkThreshold,
+                    minioMultipartThresholdBytes
+                );
+                return;
+            }
+
+            byte[] bytes = MAPPER.writeValueAsBytes(payload);
+            if (chunkThreshold > 0 && bytes.length > chunkThreshold) {
+                RetentionChunkWriter.writeRetentionChunks(minioClient, retentionWriteBucket, retentionObjectPrefix, messageId, bytes);
+            } else {
+                minioClient.putObject(
+                    PutObjectArgs.builder()
+                        .bucket(retentionWriteBucket)
+                        .object(retentionSnapKey)
+                        .stream(new ByteArrayInputStream(bytes), bytes.length, -1)
+                        .contentType("application/json")
+                        .build()
+                );
+                RetentionMetrics.minioSnapshotUploaded(bytes.length);
+            }
+        }
+
+        private static void uploadThroughTempFile(
+            MinioClient minioClient,
+            String retentionWriteBucket,
+            String retentionObjectPrefix,
+            UUID messageId,
+            String retentionSnapKey,
+            ObjectNode payload,
+            long chunkThreshold,
+            long minioMultipartThresholdBytes
+        ) throws Exception {
+            Path tmp = null;
+            try {
+                tmp = Files.createTempFile("retention-snapshot-", ".json");
+                MAPPER.writeValue(tmp.toFile(), payload);
+                long fileSize = Files.size(tmp);
+                if (chunkThreshold > 0 && fileSize > chunkThreshold) {
+                    byte[] allBytes = Files.readAllBytes(tmp);
+                    RetentionChunkWriter.writeRetentionChunks(minioClient, retentionWriteBucket, retentionObjectPrefix, messageId, allBytes);
+                } else if (fileSize >= minioMultipartThresholdBytes) {
+                    minioClient.uploadObject(
+                        UploadObjectArgs.builder()
+                            .bucket(retentionWriteBucket)
+                            .object(retentionSnapKey)
+                            .filename(tmp.toAbsolutePath().toString())
+                            .contentType("application/json")
+                            .build()
+                    );
+                    RetentionMetrics.minioMultipartUploadSucceeded();
+                } else {
+                    try (InputStream in = Files.newInputStream(tmp)) {
+                        minioClient.putObject(
+                            PutObjectArgs.builder()
+                                .bucket(retentionWriteBucket)
+                                .object(retentionSnapKey)
+                                .stream(in, fileSize, -1)
+                                .contentType("application/json")
+                                .build()
+                        );
+                    }
+                }
+                int metricBytes = fileSize > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) fileSize;
+                RetentionMetrics.minioSnapshotUploaded(metricBytes);
+                RetentionMetrics.minioSnapshotTempfileUsed();
+            } finally {
+                if (tmp != null) {
+                    try {
+                        Files.deleteIfExists(tmp);
+                    } catch (Exception delEx) {
+                        log.warn("Retention failed to delete temp snapshot file {}: {}", tmp, delEx.getMessage());
+                    }
+                }
+            }
+        }
+    }
+
+    private static final class RetentionChunkWriter {
+        private RetentionChunkWriter() {
+        }
+
+        private static void writeRetentionChunks(
+            MinioClient client,
+            String bucket,
+            String prefix,
+            UUID messageId,
+            byte[] bytes
+        ) throws Exception {
+            var dir = prefix + messageId + "/";
+            var chunks = new ArrayList<ChunkEntry>();
+            long chunkThreshold = RetentionPlatformDefaults.chunkThresholdBytesFromEnv();
+            int actualChunkSize = chunkThreshold > 0 ? (int) Math.min(chunkThreshold, Integer.MAX_VALUE)
+                : ArchiveSnapshotFormat.DEFAULT_CHUNK_SIZE_BYTES;
+            int offset = 0;
+            int partIndex = 0;
+            while (offset < bytes.length) {
+                int end = Math.min(offset + actualChunkSize, bytes.length);
+                var partBytes = new byte[end - offset];
+                System.arraycopy(bytes, offset, partBytes, 0, partBytes.length);
+                var partName = String.format(ArchiveSnapshotFormat.CHUNK_PART_FORMAT, partIndex);
+                var sha256 = Sha256Hex.of(partBytes);
+                client.putObject(
+                    PutObjectArgs.builder()
+                        .bucket(bucket)
+                        .object(dir + partName)
+                        .stream(new ByteArrayInputStream(partBytes), partBytes.length, -1)
+                        .contentType("application/json")
+                        .build()
+                );
+                chunks.add(new ChunkEntry(partName, partIndex, partBytes.length, sha256));
+                offset = end;
+                partIndex++;
+            }
+            long totalSize = bytes.length;
+            var totalSha256 = Sha256Hex.of(bytes);
+            var manifest = new DeepArchiveManifest(messageId.toString(), chunks.size(), chunks, totalSize, totalSha256);
+            var manifestBytes = MAPPER.writeValueAsBytes(manifest);
             client.putObject(
                 PutObjectArgs.builder()
                     .bucket(bucket)
-                    .object(dir + partName)
-                    .stream(new ByteArrayInputStream(partBytes), partBytes.length, -1)
+                    .object(dir + ArchiveSnapshotFormat.CHUNK_MANIFEST_FILENAME)
+                    .stream(new ByteArrayInputStream(manifestBytes), manifestBytes.length, -1)
                     .contentType("application/json")
                     .build()
             );
-            chunks.add(new ChunkEntry(partName, partIndex, partBytes.length, sha256));
-            offset = end;
-            partIndex++;
+            RetentionMetrics.chunkWrite();
         }
-        long totalSize = bytes.length;
-        var totalSha256 = Sha256Hex.of(bytes);
-        var manifest = new DeepArchiveManifest(messageId.toString(), chunks.size(), chunks, totalSize, totalSha256);
-        var manifestBytes = MAPPER.writeValueAsBytes(manifest);
-        client.putObject(
-            PutObjectArgs.builder()
-                .bucket(bucket)
-                .object(dir + ArchiveSnapshotFormat.CHUNK_MANIFEST_FILENAME)
-                .stream(new ByteArrayInputStream(manifestBytes), manifestBytes.length, -1)
-                .contentType("application/json")
-                .build()
-        );
-        RetentionMetrics.chunkWrite();
     }
 
     private record Candidate(

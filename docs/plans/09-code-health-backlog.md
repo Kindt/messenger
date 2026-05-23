@@ -33,6 +33,7 @@
 
 - **Фокус:** `modules/workers/retention/.../RetentionHotBodyJanitor.java`
 - **Шаг:** вынести chunk/snapshot-ветви в отдельные внутренние helper-методы/классы (`snapshot writer`, `chunk writer`) без смены SQL-контракта.
+- **Прогресс:** `completed` (ветви snapshot/chunk выделены во внутренние helper-классы `RetentionSnapshotWriter` и `RetentionChunkWriter`).
 - **Safety tests (обязательные):**
   - `RetentionHotBodyPassGaugesTest`
   - `RetentionHotBodyCandidateSqlTest`
