@@ -22,6 +22,7 @@ This directory contains the complete Spec-Kit package for bringing `modules/web-
 - `parity-report.md` — closure report with deferred items
 - `runtime-gate-report.md` — operator-run evidence template for deferred runtime checks
 - `IMPLEMENTATION_LOG.md` — commit-level traceability for implementation and closure
+- `HANDOFF.md` — minimal operator checklist to close deferred runtime gates
 
 ## How to Finish Deferred Runtime Gates
 
