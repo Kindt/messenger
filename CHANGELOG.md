@@ -10,10 +10,11 @@
 
 ### 2026-05-23 — **web-client parity docs**: Spec 002 closure package and deferred runtime runbook
 
-- Сформирован и синхронизирован self-contained пакет `specs/002-web-client-server-parity/*`: baseline (`parity-matrix.md`), closure report (`parity-report.md`), package `README.md`, operator template (`runtime-gate-report.md`), актуализированные `spec.md`/`plan.md`/`tasks.md`/`quickstart.md`/`checklists/requirements.md`.
+- Сформирован и синхронизирован self-contained пакет `specs/002-web-client-server-parity/*`: baseline (`parity-matrix.md`), closure report (`parity-report.md`), package `README.md`, implementation audit-trail (`IMPLEMENTATION_LOG.md`), operator template (`runtime-gate-report.md`), handoff checklist (`HANDOFF.md`), актуализированные `spec.md`/`plan.md`/`tasks.md`/`quickstart.md`/`checklists/requirements.md`.
 - В `spec.md` статус зафиксирован как `Completed (runtime smoke deferred)`; в `plan.md` добавлен `Closure Snapshot` и полный инвентарь артефактов.
 - Runtime-gates `T010`/`T016`/`T022` явно выделены как environment-dependent и перенесены в operator-run процесс без запуска localhost smoke в этом цикле.
 - Навигация docs синхронизирована: `docs/plans/10-web-client-code-health-backlog.md` и `docs/plans/README.md` ссылаются на пакет `specs/002-web-client-server-parity/`.
+- Вход в parity-пакет добавлен из верхнеуровневой и модульной документации: `README.md`, `modules/web-client/README.md`.
 - Локальный quality gate подтвержден: `./gradlew.bat buildIntegrity` — green.
 
 ### 2026-05-23 — **hygiene**: docs/scripts canonicalization, retention/export status sync
