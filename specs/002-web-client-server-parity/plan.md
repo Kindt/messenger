@@ -138,3 +138,10 @@ modules/web-client/
 - Rollout is progressive by phase; each phase can ship independently.
 - Rollback is file-scope revert for the phase utility module + delegation wiring.
 - Servlet boundary rollback is full-file revert with no migration dependency.
+
+## Closure Snapshot
+
+- **Parity baseline**: `specs/002-web-client-server-parity/parity-matrix.md`
+- **Final report**: `specs/002-web-client-server-parity/parity-report.md`
+- **Final gate**: `./gradlew.bat buildIntegrity` (green, local run)
+- **Deferred runtime checks**: `T010`, `T016`, `T022` (manual operator-run checks on available environment)

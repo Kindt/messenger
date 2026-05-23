@@ -4,7 +4,7 @@
 
 **Created**: 2026-05-23
 
-**Status**: Draft
+**Status**: Completed (runtime smoke deferred)
 
 **Input**: User description: "с помощю Spec-kit разработать план полной доработки веб клиента до текущего состояния сервера"
 
