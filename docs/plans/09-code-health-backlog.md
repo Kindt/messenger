@@ -23,6 +23,7 @@
 
 - **Фокус:** `modules/core-api/.../admin/AdminResource.java`
 - **Шаг:** выделить export-related обработчики в отдельный helper/facade класс, сохранив URL/контракты.
+- **Прогресс:** `completed` (добавлен `AdminExportFacade`, export endpoints в `AdminResource` делегируют в facade без изменения маршрутов/DTO).
 - **Safety tests (обязательные):**
   - `AdminExportComplianceSeedH2Test`
   - `AdminExportComplianceOpenApiTest`
