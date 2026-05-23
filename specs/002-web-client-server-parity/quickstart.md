@@ -66,3 +66,13 @@ Alternative (bash):
 - `buildIntegrity` green
 - parity tasks `T001..T033` in `tasks.md` resolved or explicitly deferred
 - `spec.md`/`plan.md`/`tasks.md` status synchronized
+
+## 7) Deferred runtime gates (operator-run)
+
+Run these on an available environment when localhost/lb runtime is ready:
+
+- `T010` (US1 messaging): create chat, add/remove member, send/edit/delete/reply/reaction/pin/forward
+- `T016` (US2 file/export): upload/download, create/revoke public link, request export, verify artifacts download
+- `T022` (US3 realtime/call): ws reconnect, incoming sync convergence, start/accept/hangup call, participant updates
+
+Record result as `passed`/`failed` in `tasks.md` and mirror final note in `parity-report.md`.
