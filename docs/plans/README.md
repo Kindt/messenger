@@ -14,7 +14,8 @@
 | 6 | `06-e2ee-mls.md` | E2EE/MLS — полное RFC 9420 | По запросу | `not_started` |
 | 7 | `07-read-receipts.md` | Per-message read receipts | По запросу | `not_started` |
 | 8 | `08-hexagonal-refactoring.md` | Ports & Adapters рефакторинг Phase 2-3 | Опционально | `not_started` |
-| 9 | `09-code-health-backlog.md` | Серия малых PR по рефакторингу hotspot-зон | Высокий | `in_progress` |
+| 9 | `09-code-health-backlog.md` | Серия малых PR по рефакторингу hotspot-зон | Высокий | `completed` |
+| 10 | `10-web-client-code-health-backlog.md` | Серия малых PR по оздоровлению web-client | Высокий | `completed` |
 
 ## Структура каждого плана
 

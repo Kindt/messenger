@@ -19,26 +19,13 @@ final class WebClientEnvServlet extends HttpServlet {
      * Пакетный доступ — для юнит-тестов без подмены {@link System#getenv()}.
      */
     static String buildEnvScriptBody(Function<String, String> getenv) {
-        String wsUrl = getenv.apply("WEB_CLIENT_WS_PUBLIC_URL");
-        if (wsUrl == null) {
-            wsUrl = "ws://127.0.0.1:8081/ws";
-        }
-        wsUrl = wsUrl.trim().replaceAll("/$", "");
-        String iceRaw = getenv.apply("WEB_CLIENT_RTC_ICE_SERVERS");
-        if (iceRaw == null) {
-            iceRaw = "";
-        }
-        iceRaw = iceRaw.trim();
+        String wsUrl = envOrDefault(getenv, "WEB_CLIENT_WS_PUBLIC_URL", "ws://127.0.0.1:8081/ws")
+            .replaceAll("/$", "");
+        String iceRaw = envOrDefault(getenv, "WEB_CLIENT_RTC_ICE_SERVERS", "");
         String iceJs = iceRaw.isEmpty() ? "null" : jsonQuote(iceRaw);
-        String vapidRaw = getenv.apply("WEB_CLIENT_VAPID_PUBLIC_KEY");
-        if (vapidRaw == null) {
-            vapidRaw = "";
-        }
-        vapidRaw = vapidRaw.trim();
+        String vapidRaw = envOrDefault(getenv, "WEB_CLIENT_VAPID_PUBLIC_KEY", "");
         String vapidJs = vapidRaw.isEmpty() ? "null" : jsonQuote(vapidRaw);
-        String disableSw = getenv.apply("WEB_CLIENT_DISABLE_SW");
-        boolean disableServiceWorker = disableSw != null
-            && ("1".equals(disableSw.trim()) || "true".equalsIgnoreCase(disableSw.trim()));
+        boolean disableServiceWorker = envFlag(getenv, "WEB_CLIENT_DISABLE_SW");
         return "window.__WEB_CLIENT__ = { wsUrl: "
             + jsonQuote(wsUrl)
             + ", iceServersJson: "
@@ -62,5 +49,18 @@ final class WebClientEnvServlet extends HttpServlet {
 
     private static String jsonQuote(String s) {
         return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+    }
+
+    private static String envOrDefault(Function<String, String> getenv, String key, String fallback) {
+        String value = getenv.apply(key);
+        if (value == null) {
+            return fallback;
+        }
+        return value.trim();
+    }
+
+    private static boolean envFlag(Function<String, String> getenv, String key) {
+        String value = getenv.apply(key);
+        return value != null && ("1".equals(value.trim()) || "true".equalsIgnoreCase(value.trim()));
     }
 }

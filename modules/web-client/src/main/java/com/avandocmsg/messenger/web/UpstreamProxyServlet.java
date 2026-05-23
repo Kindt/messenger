@@ -21,6 +21,8 @@ import java.util.Locale;
  * Проксирует HTTP на core-api (или иной upstream), сохраняя путь {@code /api/...}.
  */
 public final class UpstreamProxyServlet extends HttpServlet {
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(15);
+    private static final Duration UPSTREAM_REQUEST_TIMEOUT = Duration.ofMinutes(5);
 
     private static final List<String> HOP_BY_HOP_REQUEST = List.of(
         "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
@@ -40,9 +42,9 @@ public final class UpstreamProxyServlet extends HttpServlet {
         if (raw == null || raw.isBlank()) {
             throw new ServletException("init-param upstreamBase is required");
         }
-        upstreamBase = stripTrailingSlashes(raw);
+        upstreamBase = normalizedUpstreamBase(raw);
         httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(15))
+            .connectTimeout(CONNECT_TIMEOUT)
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
     }
@@ -58,26 +60,11 @@ public final class UpstreamProxyServlet extends HttpServlet {
     }
 
     private void forward(HttpServletRequest req, HttpServletResponse resp) throws IOException, InterruptedException {
-        String uri = req.getRequestURI();
-        String q = req.getQueryString();
-        String target = upstreamBase + uri + (q != null && !q.isEmpty() ? "?" + q : "");
-        var method = req.getMethod().toUpperCase(Locale.ROOT);
-
-        var rb = HttpRequest.newBuilder(URI.create(target)).timeout(Duration.ofMinutes(5));
+        var method = normalizedMethod(req);
+        var target = upstreamTargetUri(req);
+        var rb = HttpRequest.newBuilder(target).timeout(UPSTREAM_REQUEST_TIMEOUT);
         copyRequestHeaders(req, rb);
-
-        HttpRequest.BodyPublisher body;
-        if ("GET".equals(method) || "HEAD".equals(method) || "DELETE".equals(method)) {
-            body = HttpRequest.BodyPublishers.noBody();
-        } else {
-            body = HttpRequest.BodyPublishers.ofInputStream(() -> {
-                try {
-                    return req.getInputStream();
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                }
-            });
-        }
+        var body = requestBodyPublisher(req, method);
         rb.method(method, body);
 
         HttpResponse<InputStream> upstreamResp = httpClient.send(rb.build(), HttpResponse.BodyHandlers.ofInputStream());
@@ -88,6 +75,34 @@ public final class UpstreamProxyServlet extends HttpServlet {
                 in.transferTo(out);
             }
         }
+    }
+
+    private URI upstreamTargetUri(HttpServletRequest req) {
+        String uri = req.getRequestURI();
+        String q = req.getQueryString();
+        String target = upstreamBase + uri + (q != null && !q.isEmpty() ? "?" + q : "");
+        return URI.create(target);
+    }
+
+    private static String normalizedMethod(HttpServletRequest req) {
+        return req.getMethod().toUpperCase(Locale.ROOT);
+    }
+
+    private static HttpRequest.BodyPublisher requestBodyPublisher(HttpServletRequest req, String method) {
+        if ("GET".equals(method) || "HEAD".equals(method) || "DELETE".equals(method)) {
+            return HttpRequest.BodyPublishers.noBody();
+        }
+        return HttpRequest.BodyPublishers.ofInputStream(() -> {
+            try {
+                return req.getInputStream();
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        });
+    }
+
+    private static String normalizedUpstreamBase(String raw) {
+        return stripTrailingSlashes(raw);
     }
 
     private static void copyRequestHeaders(HttpServletRequest req, HttpRequest.Builder rb) {

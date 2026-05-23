@@ -188,47 +188,419 @@
       return "⏱ " + seconds + " с";
     },
   };
+  var uiShellUtils = window.KorusUiShellUtils || {
+    loadStyleSet: function (styleKey, themeKey, palette) {
+      try {
+        var raw = localStorage.getItem(styleKey);
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          if (parsed && (parsed.appearance === "light" || parsed.appearance === "dark")) {
+            return { appearance: parsed.appearance, palette: palette };
+          }
+        }
+      } catch (e) {}
+      var legacyTheme = localStorage.getItem(themeKey);
+      return {
+        appearance: legacyTheme === "light" ? "light" : "dark",
+        palette: palette,
+      };
+    },
+    saveStyleSet: function (styleKey, themeKey, appearance, palette) {
+      try {
+        localStorage.setItem(
+          styleKey,
+          JSON.stringify({ appearance: appearance, palette: palette })
+        );
+        localStorage.setItem(themeKey, appearance);
+      } catch (e) {}
+    },
+    applyStyleSet: function (doc, set, palette) {
+      var appearance = set && set.appearance === "light" ? "light" : "dark";
+      doc.documentElement.setAttribute("data-appearance", appearance);
+      doc.documentElement.setAttribute("data-palette", palette);
+      doc.documentElement.removeAttribute("data-theme");
+      doc.documentElement.style.colorScheme = appearance;
+      var metaTheme = doc.querySelector('meta[name="theme-color"]');
+      if (metaTheme) {
+        var rootStyle = getComputedStyle(doc.documentElement);
+        var fromVar = rootStyle.getPropertyValue("--theme-color-meta").trim();
+        metaTheme.setAttribute("content", fromVar || "#7949f4");
+      }
+      return { appearance: appearance, palette: palette };
+    },
+    syncNotifyPref: function (notifKey, soundNotifKey) {
+      return {
+        notifyPref:
+          localStorage.getItem(notifKey) === "1" &&
+          typeof Notification !== "undefined" &&
+          Notification.permission === "granted",
+        soundNotify: localStorage.getItem(soundNotifKey) === "1",
+      };
+    },
+    draftStorageKey: function (prefix, chatId) {
+      return prefix + chatId;
+    },
+    loadComposerDraftForChat: function (prefix, chatId) {
+      if (!chatId) return "";
+      try {
+        return localStorage.getItem(prefix + chatId) || "";
+      } catch (e) {
+        return "";
+      }
+    },
+    saveComposerDraftForChat: function (prefix, chatId, text) {
+      if (!chatId) return;
+      try {
+        var key = prefix + chatId;
+        if (text && String(text).trim()) {
+          localStorage.setItem(key, text);
+        } else {
+          localStorage.removeItem(key);
+        }
+      } catch (e) {}
+    },
+    clearComposerDraftForChat: function (prefix, chatId) {
+      if (!chatId) return;
+      try {
+        localStorage.removeItem(prefix + chatId);
+      } catch (e) {}
+    },
+    composerDraftPreview: function (prefix, chatId) {
+      var draft = this.loadComposerDraftForChat(prefix, chatId);
+      if (!draft || !String(draft).trim()) return "";
+      var text = String(draft).trim().replace(/\s+/g, " ");
+      if (text.length > 48) text = text.slice(0, 48) + "…";
+      return text;
+    },
+    loadLastPublicLink: function (storageKey) {
+      try {
+        var raw = sessionStorage.getItem(storageKey);
+        if (!raw) return null;
+        var parsed = JSON.parse(raw);
+        if (parsed && parsed.file_id && parsed.link_id) return parsed;
+      } catch (e) {}
+      return null;
+    },
+    saveLastPublicLink: function (storageKey, link) {
+      try {
+        if (link && link.file_id && link.link_id) {
+          sessionStorage.setItem(storageKey, JSON.stringify(link));
+        } else {
+          sessionStorage.removeItem(storageKey);
+        }
+      } catch (e) {}
+    },
+    stashPendingDeepLink: function (chatStorageKey, msgStorageKey, chatId, msgId) {
+      try {
+        if (chatId) sessionStorage.setItem(chatStorageKey, chatId);
+        if (msgId) sessionStorage.setItem(msgStorageKey, msgId);
+      } catch (e) {}
+    },
+    readAndClearPendingDeepLink: function (chatStorageKey, msgStorageKey) {
+      var chatId = null;
+      var msgId = null;
+      try {
+        chatId = sessionStorage.getItem(chatStorageKey);
+        msgId = sessionStorage.getItem(msgStorageKey);
+        if (chatId) sessionStorage.removeItem(chatStorageKey);
+        if (msgId) sessionStorage.removeItem(msgStorageKey);
+      } catch (e) {}
+      return { chatId: chatId, msgId: msgId };
+    },
+  };
+  var uiTransportUtils = window.KorusUiTransportUtils || {
+    apiRoot: function () {
+      return "/api/v1";
+    },
+    wsBaseUrl: function (win, loc) {
+      var cfg = win && win.__WEB_CLIENT__;
+      if (cfg && cfg.wsUrl) return String(cfg.wsUrl).replace(/\/$/, "");
+      var p = loc && loc.protocol === "https:" ? "wss:" : "ws:";
+      var host = loc && loc.host ? loc.host : "127.0.0.1:8081";
+      return p + "//" + host + "/ws";
+    },
+    buildWsUrl: function (baseUrl, accessToken) {
+      return baseUrl + "?token=" + encodeURIComponent(accessToken);
+    },
+    nextWsReconnectDelay: function (attempt) {
+      return Math.min(30000, 1000 * Math.pow(2, attempt));
+    },
+    createApiClient: function (options) {
+      var fetchImpl = options.fetchImpl || window.fetch.bind(window);
+      var getAccessToken = options.getAccessToken || function () { return null; };
+      var getRefreshToken = options.getRefreshToken || function () { return null; };
+      var isPublicAuthPath = options.isPublicAuthPath || function () { return false; };
+      var tryRefreshTokens = options.tryRefreshTokens || (async function () { return false; });
+      var onSessionExpired = options.onSessionExpired || function () {};
+      var root = options.apiRoot || "/api/v1";
+
+      async function apiFetch(path, opts) {
+        opts = opts || {};
+        var headers = Object.assign({}, opts.headers || {});
+        if (!(opts.body instanceof FormData) && !headers.Accept) {
+          headers.Accept = opts.accept || "application/json";
+        }
+        var body = opts.body;
+        if (opts.jsonBody !== undefined) {
+          headers["Content-Type"] = "application/json";
+          body = JSON.stringify(opts.jsonBody);
+        }
+        var accessToken = getAccessToken();
+        if (accessToken && !opts.noAuth) {
+          headers.Authorization = "Bearer " + accessToken;
+        }
+        var url = root + (path.startsWith("/") ? path : "/" + path);
+        var res = await fetchImpl(url, {
+          method: opts.method || "GET",
+          headers: headers,
+          body: body,
+        });
+        if (
+          res.status === 401 &&
+          !opts.noRefresh &&
+          getRefreshToken() &&
+          !isPublicAuthPath(path)
+        ) {
+          var refreshed = await tryRefreshTokens();
+          if (refreshed) {
+            return apiFetch(path, Object.assign({}, opts, { noRefresh: true }));
+          }
+          onSessionExpired();
+          throw new Error("Сессия истекла — войдите снова.");
+        }
+        return res;
+      }
+
+      async function apiJson(path, opts) {
+        var res = await apiFetch(path, opts || {});
+        var text = await res.text();
+        var parsed = null;
+        if (text) {
+          try {
+            parsed = JSON.parse(text);
+          } catch (e) {
+            parsed = text;
+          }
+        }
+        if (!res.ok) {
+          var msg =
+            parsed && typeof parsed === "object" && parsed.message
+              ? String(parsed.message)
+              : res.statusText;
+          throw new Error(msg || "Request failed");
+        }
+        return parsed;
+      }
+
+      return { apiFetch: apiFetch, apiJson: apiJson };
+    },
+  };
+  var uiMessagesUtils = window.KorusUiMessagesUtils || {
+    formatPreviewText: function (type, content, isE2eeTypeFn, e2eePlainTypeFn) {
+      var t = type || "text";
+      if (isE2eeTypeFn(t)) {
+        var base = e2eePlainTypeFn(t);
+        if (base === "image") return "🔒 Изображение";
+        if (base === "video") return "🔒 Видео";
+        if (base === "file") return "🔒 Файл";
+        return "🔒 Зашифровано";
+      }
+      if (t === "image") return "Изображение";
+      if (t === "video") return "Видео";
+      if (t === "file") return "Файл";
+      var text = String(content || "")
+        .replace(/[*_`#[\]]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (text.length > 72) text = text.slice(0, 72) + "…";
+      return text || "Сообщение";
+    },
+    formatPreviewForMessage: function (
+      message,
+      messageAttachmentKindFn,
+      messageAttachmentFileIdFn,
+      formatPreviewTextFn
+    ) {
+      if (!message) return "Сообщение";
+      if (messageAttachmentKindFn(message) && messageAttachmentFileIdFn(message)) {
+        return formatPreviewTextFn(message.type, "");
+      }
+      return formatPreviewTextFn(message.type, message.content);
+    },
+    sortMessagesAsc: function (rows) {
+      return (rows || []).slice().sort(function (a, b) {
+        return new Date(a.created_at) - new Date(b.created_at);
+      });
+    },
+    findMessageInThread: function (messages, msgId) {
+      if (!msgId || !messages || !messages.length) return null;
+      for (var i = 0; i < messages.length; i++) {
+        if (messages[i].id === msgId) return messages[i];
+      }
+      return null;
+    },
+    mergeMessageIntoThread: function (messages, fullMessage) {
+      if (!fullMessage || !fullMessage.id) return messages || [];
+      var rows = messages || [];
+      if (this.findMessageInThread(rows, fullMessage.id)) {
+        return rows.map(function (m) {
+          return m.id === fullMessage.id ? fullMessage : m;
+        });
+      }
+      return this.sortMessagesAsc(rows.concat([fullMessage]));
+    },
+    patchMessageInThread: function (messages, messageId, patch) {
+      if (!messageId || !patch) return { messages: messages || [], touched: false };
+      var touched = false;
+      var nextMessages = (messages || []).map(function (m) {
+        if (m.id !== messageId) return m;
+        touched = true;
+        return Object.assign({}, m, patch);
+      });
+      return { messages: nextMessages, touched: touched };
+    },
+    applyReactionChangeEventRows: function (rows, change, userId, reaction) {
+      var nextRows = (rows || []).slice();
+      if (change === "add") {
+        var exists = nextRows.some(function (r) {
+          return r.user_id === userId && r.reaction === reaction;
+        });
+        if (!exists) nextRows.push({ user_id: userId, reaction: reaction });
+        return nextRows;
+      }
+      return nextRows.filter(function (r) {
+        return !(r.user_id === userId && r.reaction === reaction);
+      });
+    },
+  };
+  var uiRtcUtils = window.KorusUiRtcUtils || {
+    sendRtcSignal: function (ws, chatId, payload) {
+      if (!ws || ws.readyState !== WebSocket.OPEN || !chatId || !payload) return false;
+      ws.send(
+        JSON.stringify({
+          type: "rtc_signal",
+          chatId: chatId,
+          payload: payload,
+        })
+      );
+      return true;
+    },
+    sendRtcHangups: function (ws, chatId, peerIds) {
+      if (!ws || ws.readyState !== WebSocket.OPEN || !chatId) return;
+      (peerIds || []).forEach(function (peerId) {
+        if (!peerId) return;
+        uiRtcUtils.sendRtcSignal(ws, chatId, { kind: "hangup", targetUserId: peerId });
+      });
+    },
+  };
+  var uiPwaSettingsUtils = window.KorusUiPwaSettingsUtils || {
+    getVapidPublicKey: function (win) {
+      var cfg = win && win.__WEB_CLIENT__;
+      return cfg && cfg.vapidPublicKey ? String(cfg.vapidPublicKey) : null;
+    },
+    notificationsAllowed: function (notifyPref, notificationApi) {
+      return (
+        !!notifyPref &&
+        typeof notificationApi !== "undefined" &&
+        notificationApi.permission === "granted"
+      );
+    },
+    urlBase64ToUint8Array: function (base64String) {
+      var padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+      var base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+      var raw = window.atob(base64);
+      var out = new Uint8Array(raw.length);
+      for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+      return out;
+    },
+    pushTokenFromSubscription: function (subscription) {
+      if (subscription && typeof subscription.toJSON === "function") {
+        return JSON.stringify(subscription.toJSON());
+      }
+      return JSON.stringify(subscription);
+    },
+    canUseServiceWorker: function (nav) {
+      return !!(nav && nav.serviceWorker);
+    },
+    canUseWebPush: function (nav, win) {
+      return !!(nav && nav.serviceWorker && win && win.PushManager);
+    },
+    isServiceWorkerDisabled: function (win) {
+      var cfg = win && win.__WEB_CLIENT__;
+      return !!(cfg && cfg.disableServiceWorker);
+    },
+    nextServiceWorkerUpdatePromise: function (nav) {
+      if (!nav || !nav.serviceWorker) return Promise.resolve();
+      return nav.serviceWorker
+        .getRegistration("/")
+        .then(function (reg) {
+          if (reg) return reg.update();
+        })
+        .catch(function () {});
+    },
+    registerServiceWorker: function (nav, win, callbacks) {
+      if (!nav || !nav.serviceWorker) return Promise.resolve(false);
+      var cfg = win && win.__WEB_CLIENT__;
+      if (cfg && cfg.disableServiceWorker) return Promise.resolve(false);
+      callbacks = callbacks || {};
+      return nav.serviceWorker
+        .register("/sw.js", { scope: "/" })
+        .then(function (reg) {
+          reg.update().catch(function () {});
+          if (reg.waiting && nav.serviceWorker.controller && callbacks.onUpdateReady) {
+            callbacks.onUpdateReady();
+          }
+          reg.addEventListener("updatefound", function () {
+            var installing = reg.installing;
+            if (!installing) return;
+            installing.addEventListener("statechange", function () {
+              if (
+                installing.state === "installed" &&
+                nav.serviceWorker.controller &&
+                callbacks.onUpdateReady
+              ) {
+                callbacks.onUpdateReady();
+              }
+            });
+          });
+          if (callbacks.onControllerChange) {
+            nav.serviceWorker.addEventListener("controllerchange", callbacks.onControllerChange);
+          }
+          return true;
+        })
+        .catch(function () {
+          return false;
+        });
+    },
+    applyServiceWorkerUpdate: function (nav, onNoWaiting) {
+      if (!nav || !nav.serviceWorker) return;
+      nav.serviceWorker.getRegistration("/").then(function (reg) {
+        if (reg && reg.waiting) {
+          reg.waiting.postMessage({ type: "SKIP_WAITING" });
+        } else if (onNoWaiting) {
+          onNoWaiting();
+        }
+      });
+    },
+  };
 
   function loadStyleSet() {
-    try {
-      var raw = localStorage.getItem(STYLE_KEY);
-      if (raw) {
-        var o = JSON.parse(raw);
-        if (o && (o.appearance === "light" || o.appearance === "dark")) {
-          return { appearance: o.appearance, palette: KORUS_PALETTE };
-        }
-      }
-    } catch (e) {}
-    var legacyTheme = localStorage.getItem(THEME_KEY);
-    return {
-      appearance: legacyTheme === "light" ? "light" : "dark",
-      palette: KORUS_PALETTE,
-    };
+    return uiShellUtils.loadStyleSet(STYLE_KEY, THEME_KEY, KORUS_PALETTE);
   }
 
   function saveStyleSet() {
-    try {
-      localStorage.setItem(
-        STYLE_KEY,
-        JSON.stringify({ appearance: state.appearance, palette: KORUS_PALETTE })
-      );
-      localStorage.setItem(THEME_KEY, state.appearance);
-    } catch (e) {}
+    uiShellUtils.saveStyleSet(
+      STYLE_KEY,
+      THEME_KEY,
+      state.appearance,
+      KORUS_PALETTE
+    );
   }
 
   function applyStyleSet(set) {
-    state.appearance = set.appearance === "light" ? "light" : "dark";
-    state.palette = KORUS_PALETTE;
-    document.documentElement.setAttribute("data-appearance", state.appearance);
-    document.documentElement.setAttribute("data-palette", KORUS_PALETTE);
-    document.documentElement.removeAttribute("data-theme");
-    document.documentElement.style.colorScheme = state.appearance;
-    var metaTheme = document.querySelector('meta[name="theme-color"]');
-    if (metaTheme) {
-      var rootStyle = getComputedStyle(document.documentElement);
-      var fromVar = rootStyle.getPropertyValue("--theme-color-meta").trim();
-      metaTheme.setAttribute("content", fromVar || "#7949f4");
-    }
+    var applied = uiShellUtils.applyStyleSet(document, set, KORUS_PALETTE);
+    state.appearance = applied.appearance;
+    state.palette = applied.palette;
   }
 
   function toggleAppearance() {
@@ -241,71 +613,37 @@
   }
 
   function syncNotifyPref() {
-    state.notifyPref =
-      localStorage.getItem(NOTIF_KEY) === "1" &&
-      typeof Notification !== "undefined" &&
-      Notification.permission === "granted";
-    state.soundNotify = localStorage.getItem(SOUND_NOTIF_KEY) === "1";
+    var pref = uiShellUtils.syncNotifyPref(NOTIF_KEY, SOUND_NOTIF_KEY);
+    state.notifyPref = pref.notifyPref;
+    state.soundNotify = pref.soundNotify;
   }
 
   function draftStorageKey(chatId) {
-    return DRAFT_KEY_PREFIX + chatId;
+    return uiShellUtils.draftStorageKey(DRAFT_KEY_PREFIX, chatId);
   }
 
   function loadComposerDraftForChat(chatId) {
-    if (!chatId) return "";
-    try {
-      return localStorage.getItem(draftStorageKey(chatId)) || "";
-    } catch (e) {
-      return "";
-    }
+    return uiShellUtils.loadComposerDraftForChat(DRAFT_KEY_PREFIX, chatId);
   }
 
   function saveComposerDraftForChat(chatId, text) {
-    if (!chatId) return;
-    try {
-      var key = draftStorageKey(chatId);
-      if (text && String(text).trim()) {
-        localStorage.setItem(key, text);
-      } else {
-        localStorage.removeItem(key);
-      }
-    } catch (e) {}
+    uiShellUtils.saveComposerDraftForChat(DRAFT_KEY_PREFIX, chatId, text);
   }
 
   function clearComposerDraftForChat(chatId) {
-    if (!chatId) return;
-    try {
-      localStorage.removeItem(draftStorageKey(chatId));
-    } catch (e) {}
+    uiShellUtils.clearComposerDraftForChat(DRAFT_KEY_PREFIX, chatId);
   }
 
   function composerDraftPreview(chatId) {
-    var d = loadComposerDraftForChat(chatId);
-    if (!d || !String(d).trim()) return "";
-    var t = String(d).trim().replace(/\s+/g, " ");
-    if (t.length > 48) t = t.slice(0, 48) + "…";
-    return t;
+    return uiShellUtils.composerDraftPreview(DRAFT_KEY_PREFIX, chatId);
   }
 
   function loadLastPublicLink() {
-    try {
-      var raw = sessionStorage.getItem(LAST_PUBLIC_LINK_KEY);
-      if (!raw) return null;
-      var o = JSON.parse(raw);
-      if (o && o.file_id && o.link_id) return o;
-    } catch (e) {}
-    return null;
+    return uiShellUtils.loadLastPublicLink(LAST_PUBLIC_LINK_KEY);
   }
 
   function saveLastPublicLink(link) {
-    try {
-      if (link && link.file_id && link.link_id) {
-        sessionStorage.setItem(LAST_PUBLIC_LINK_KEY, JSON.stringify(link));
-      } else {
-        sessionStorage.removeItem(LAST_PUBLIC_LINK_KEY);
-      }
-    } catch (e) {}
+    uiShellUtils.saveLastPublicLink(LAST_PUBLIC_LINK_KEY, link);
   }
 
   function persistCurrentComposerDraft() {
@@ -391,26 +729,15 @@
   }
 
   function vapidPublicKey() {
-    var cfg = window.__WEB_CLIENT__;
-    return cfg && cfg.vapidPublicKey ? String(cfg.vapidPublicKey) : null;
+    return uiPwaSettingsUtils.getVapidPublicKey(window);
   }
 
   function urlBase64ToUint8Array(base64String) {
-    var padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-    var base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-    var raw = window.atob(base64);
-    var out = new Uint8Array(raw.length);
-    for (var i = 0; i < raw.length; i++) {
-      out[i] = raw.charCodeAt(i);
-    }
-    return out;
+    return uiPwaSettingsUtils.urlBase64ToUint8Array(base64String);
   }
 
   function pushTokenFromSubscription(subscription) {
-    if (subscription && typeof subscription.toJSON === "function") {
-      return JSON.stringify(subscription.toJSON());
-    }
-    return JSON.stringify(subscription);
+    return uiPwaSettingsUtils.pushTokenFromSubscription(subscription);
   }
 
   async function resyncWebPush() {
@@ -435,7 +762,7 @@
   async function registerWebPush() {
     var vapid = vapidPublicKey();
     if (!vapid || !state.tokens) return;
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (!uiPwaSettingsUtils.canUseWebPush(navigator, window)) return;
     if (!notificationsAllowed()) return;
     try {
       var reg = await navigator.serviceWorker.ready;
@@ -463,11 +790,7 @@
   }
 
   function notificationsAllowed() {
-    return (
-      state.notifyPref &&
-      typeof Notification !== "undefined" &&
-      Notification.permission === "granted"
-    );
+    return uiPwaSettingsUtils.notificationsAllowed(state.notifyPref, window.Notification);
   }
 
   function totalUnreadCount() {
@@ -1989,13 +2312,7 @@
   }
 
   function checkForServiceWorkerUpdate() {
-    if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker
-      .getRegistration("/")
-      .then(function (reg) {
-        if (reg) return reg.update();
-      })
-      .catch(function () {});
+    uiPwaSettingsUtils.nextServiceWorkerUpdatePromise(navigator);
   }
 
   async function resetAppUiCache() {
@@ -2089,48 +2406,23 @@
   }
 
   function applyServiceWorkerUpdate() {
-    if (!("serviceWorker" in navigator)) return;
+    if (!uiPwaSettingsUtils.canUseServiceWorker(navigator)) return;
     pendingSwReload = true;
-    navigator.serviceWorker.getRegistration("/").then(function (reg) {
-      if (reg && reg.waiting) {
-        reg.waiting.postMessage({ type: "SKIP_WAITING" });
-      } else {
-        pendingSwReload = false;
-        state.swUpdateReady = false;
-        render();
-      }
+    uiPwaSettingsUtils.applyServiceWorkerUpdate(navigator, function () {
+      pendingSwReload = false;
+      state.swUpdateReady = false;
+      render();
     });
   }
 
   function registerServiceWorker() {
-    if (!("serviceWorker" in navigator)) return;
-    var cfg = window.__WEB_CLIENT__;
-    if (cfg && cfg.disableServiceWorker) return;
-    navigator.serviceWorker
-      .register("/sw.js", { scope: "/" })
-      .then(function (reg) {
-        reg.update().catch(function () {});
-        if (reg.waiting && navigator.serviceWorker.controller) {
-          markSwUpdateReady();
-        }
-        reg.addEventListener("updatefound", function () {
-          var installing = reg.installing;
-          if (!installing) return;
-          installing.addEventListener("statechange", function () {
-            if (
-              installing.state === "installed" &&
-              navigator.serviceWorker.controller
-            ) {
-              markSwUpdateReady();
-            }
-          });
-        });
-      })
-      .catch(function () {});
-    navigator.serviceWorker.addEventListener("controllerchange", function () {
-      if (!pendingSwReload) return;
-      pendingSwReload = false;
-      window.location.reload();
+    uiPwaSettingsUtils.registerServiceWorker(navigator, window, {
+      onUpdateReady: markSwUpdateReady,
+      onControllerChange: function () {
+        if (!pendingSwReload) return;
+        pendingSwReload = false;
+        window.location.reload();
+      },
     });
   }
 
@@ -2389,14 +2681,11 @@
   }
 
   function apiRoot() {
-    return "/api/v1";
+    return uiTransportUtils.apiRoot();
   }
 
   function wsBaseUrl() {
-    var cfg = window.__WEB_CLIENT__;
-    if (cfg && cfg.wsUrl) return String(cfg.wsUrl).replace(/\/$/, "");
-    var p = location.protocol === "https:" ? "wss:" : "ws:";
-    return p + "//" + location.host + "/ws";
+    return uiTransportUtils.wsBaseUrl(window, location);
   }
 
   /** ICE from /web-client-env.js (WEB_CLIENT_RTC_ICE_SERVERS) or default STUN. */
@@ -2414,6 +2703,30 @@
   }
 
   var refreshTokensPromise = null;
+  var apiClient = null;
+
+  function ensureApiClient() {
+    if (!apiClient) {
+      apiClient = uiTransportUtils.createApiClient({
+        fetchImpl: fetch.bind(window),
+        apiRoot: apiRoot(),
+        getAccessToken: function () {
+          return state.tokens && state.tokens.access_token
+            ? state.tokens.access_token
+            : null;
+        },
+        getRefreshToken: function () {
+          return state.tokens && state.tokens.refresh_token
+            ? state.tokens.refresh_token
+            : null;
+        },
+        isPublicAuthPath: isPublicAuthPath,
+        tryRefreshTokens: tryRefreshTokens,
+        onSessionExpired: sessionExpired,
+      });
+    }
+    return apiClient;
+  }
 
   async function tryRefreshTokens() {
     if (!state.tokens || !state.tokens.refresh_token) return false;
@@ -2476,62 +2789,11 @@
   }
 
   async function apiFetch(path, opts) {
-    opts = opts || {};
-    var headers = Object.assign({}, opts.headers || {});
-    if (!(opts.body instanceof FormData) && !headers.Accept) {
-      headers.Accept = opts.accept || "application/json";
-    }
-    var body = opts.body;
-    if (opts.jsonBody !== undefined) {
-      headers["Content-Type"] = "application/json";
-      body = JSON.stringify(opts.jsonBody);
-    }
-    if (state.tokens && state.tokens.access_token && !opts.noAuth) {
-      headers.Authorization = "Bearer " + state.tokens.access_token;
-    }
-    var url = apiRoot() + (path.startsWith("/") ? path : "/" + path);
-    var res = await fetch(url, {
-      method: opts.method || "GET",
-      headers: headers,
-      body: body,
-    });
-    if (
-      res.status === 401 &&
-      !opts.noRefresh &&
-      state.tokens &&
-      state.tokens.refresh_token &&
-      !isPublicAuthPath(path)
-    ) {
-      var refreshed = await tryRefreshTokens();
-      if (refreshed) {
-        return apiFetch(path, Object.assign({}, opts, { noRefresh: true }));
-      }
-      sessionExpired();
-      throw new Error("Сессия истекла — войдите снова.");
-    }
-    return res;
+    return ensureApiClient().apiFetch(path, opts || {});
   }
 
   async function apiJson(path, opts) {
-    opts = opts || {};
-    var res = await apiFetch(path, opts);
-    var text = await res.text();
-    var parsed = null;
-    if (text) {
-      try {
-        parsed = JSON.parse(text);
-      } catch (e) {
-        parsed = text;
-      }
-    }
-    if (!res.ok) {
-      var msg =
-        parsed && typeof parsed === "object" && parsed.message
-          ? String(parsed.message)
-          : res.statusText;
-      throw new Error(msg || "Request failed");
-    }
-    return parsed;
+    return ensureApiClient().apiJson(path, opts || {});
   }
 
   function loadTokens() {
@@ -2647,15 +2909,7 @@
   function sendRtcHangups() {
     try {
       if (!state.ws || state.ws.readyState !== WebSocket.OPEN || !state.selectedId) return;
-      Object.keys(state.rtcPeers).forEach(function (pid) {
-        state.ws.send(
-          JSON.stringify({
-            type: "rtc_signal",
-            chatId: state.selectedId,
-            payload: { kind: "hangup", targetUserId: pid },
-          })
-        );
-      });
+      uiRtcUtils.sendRtcHangups(state.ws, state.selectedId, Object.keys(state.rtcPeers));
     } catch (e) {}
   }
 
@@ -2689,14 +2943,7 @@
 
   function sendRtcSignal(payload, chatIdOpt) {
     var chatId = chatIdOpt || state.selectedId;
-    if (!state.ws || state.ws.readyState !== WebSocket.OPEN || !chatId) return;
-    state.ws.send(
-      JSON.stringify({
-        type: "rtc_signal",
-        chatId: chatId,
-        payload: payload,
-      })
-    );
+    uiRtcUtils.sendRtcSignal(state.ws, chatId, payload);
   }
 
   async function acceptIncomingRtcCall() {
@@ -3464,18 +3711,13 @@
 
   function applyReactionChangeEvent(data) {
     if (data.chatId !== state.selectedId) return;
-    var rows = (state.reactionsByMsg[data.messageId] || []).slice();
-    if (data.change === "add") {
-      var exists = rows.some(function (r) {
-        return r.user_id === data.userId && r.reaction === data.reaction;
-      });
-      if (!exists) rows.push({ user_id: data.userId, reaction: data.reaction });
-    } else {
-      rows = rows.filter(function (r) {
-        return !(r.user_id === data.userId && r.reaction === data.reaction);
-      });
-    }
-    state.reactionsByMsg[data.messageId] = rows;
+    var rows = state.reactionsByMsg[data.messageId] || [];
+    state.reactionsByMsg[data.messageId] = uiMessagesUtils.applyReactionChangeEventRows(
+      rows,
+      data.change,
+      data.userId,
+      data.reaction
+    );
   }
 
   function applyMessageChangeEvent(data) {
@@ -3598,23 +3840,12 @@
   }
 
   function formatPreviewText(type, content) {
-    var t = type || "text";
-    if (isE2eeType(t)) {
-      var base = e2eePlainType(t);
-      if (base === "image") return "🔒 Изображение";
-      if (base === "video") return "🔒 Видео";
-      if (base === "file") return "🔒 Файл";
-      return "🔒 Зашифровано";
-    }
-    if (t === "image") return "Изображение";
-    if (t === "video") return "Видео";
-    if (t === "file") return "Файл";
-    var s = String(content || "")
-      .replace(/[*_`#[\]]/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (s.length > 72) s = s.slice(0, 72) + "…";
-    return s || "Сообщение";
+    return uiMessagesUtils.formatPreviewText(
+      type,
+      content,
+      isE2eeType,
+      e2eePlainType
+    );
   }
 
   function setChatPreview(chatId, type, content, senderId, atMs, messageId) {
@@ -3741,9 +3972,7 @@
   }
 
   function sortMessagesAsc(rows) {
-    return rows.slice().sort(function (a, b) {
-      return new Date(a.created_at) - new Date(b.created_at);
-    });
+    return uiMessagesUtils.sortMessagesAsc(rows);
   }
 
   async function loadMediaCaps() {
@@ -4089,11 +4318,7 @@
   }
 
   function findMessageInThread(msgId) {
-    if (!msgId) return null;
-    for (var i = 0; i < state.messages.length; i++) {
-      if (state.messages[i].id === msgId) return state.messages[i];
-    }
-    return null;
+    return uiMessagesUtils.findMessageInThread(state.messages, msgId);
   }
 
   function messageFromSendEvent(data) {
@@ -4129,24 +4354,17 @@
 
   function mergeMessageIntoThread(full) {
     if (!full || !full.id) return;
-    if (findMessageInThread(full.id)) {
-      state.messages = state.messages.map(function (m) {
-        return m.id === full.id ? full : m;
-      });
-    } else {
-      state.messages = sortMessagesAsc(state.messages.concat([full]));
-    }
+    state.messages = uiMessagesUtils.mergeMessageIntoThread(state.messages, full);
   }
 
   function patchMessageInThread(messageId, patch) {
-    if (!messageId || !patch) return false;
-    var touched = false;
-    state.messages = state.messages.map(function (m) {
-      if (m.id !== messageId) return m;
-      touched = true;
-      return Object.assign({}, m, patch);
-    });
-    return touched;
+    var result = uiMessagesUtils.patchMessageInThread(
+      state.messages,
+      messageId,
+      patch
+    );
+    state.messages = result.messages;
+    return result.touched;
   }
 
   function syncPreviewIfLastMessage(chatId, messageId) {
@@ -4204,11 +4422,12 @@
   }
 
   function formatPreviewForMessage(m) {
-    if (!m) return "Сообщение";
-    if (messageAttachmentKind(m) && messageAttachmentFileId(m)) {
-      return formatPreviewText(m.type, "");
-    }
-    return formatPreviewText(m.type, m.content);
+    return uiMessagesUtils.formatPreviewForMessage(
+      m,
+      messageAttachmentKind,
+      messageAttachmentFileId,
+      formatPreviewText
+    );
   }
 
   function replySnippetForId(msgId) {
@@ -4638,7 +4857,7 @@
   function scheduleWsReconnect() {
     clearWsReconnect();
     if (state.wsManualClose || !state.tokens || !state.tokens.access_token) return;
-    var delay = Math.min(30000, 1000 * Math.pow(2, state.wsReconnectAttempt));
+    var delay = uiTransportUtils.nextWsReconnectDelay(state.wsReconnectAttempt);
     state.wsReconnectAttempt += 1;
     state.wsReconnectTimer = setTimeout(function () {
       state.wsReconnectTimer = null;
@@ -4675,7 +4894,7 @@
     }
     if (!state.tokens || !state.tokens.access_token) return;
     state.wsManualClose = false;
-    var url = wsBaseUrl() + "?token=" + encodeURIComponent(state.tokens.access_token);
+    var url = uiTransportUtils.buildWsUrl(wsBaseUrl(), state.tokens.access_token);
     state.wsState = "connecting";
     var ws = new WebSocket(url);
     state.ws = ws;
@@ -7087,10 +7306,7 @@
   }
 
   function stashPendingDeepLink(chatId, msgId) {
-    try {
-      if (chatId) sessionStorage.setItem(PENDING_CHAT_KEY, chatId);
-      if (msgId) sessionStorage.setItem(PENDING_MSG_KEY, msgId);
-    } catch (e) {}
+    uiShellUtils.stashPendingDeepLink(PENDING_CHAT_KEY, PENDING_MSG_KEY, chatId, msgId);
   }
 
   function consumePendingDeepLink() {
@@ -7098,17 +7314,13 @@
     if (fromUrl.chatId || fromUrl.msgId) {
       stashPendingDeepLink(fromUrl.chatId, fromUrl.msgId);
     }
-    var chatId = null;
-    var msgId = null;
-    try {
-      chatId = sessionStorage.getItem(PENDING_CHAT_KEY);
-      msgId = sessionStorage.getItem(PENDING_MSG_KEY);
-      if (chatId) sessionStorage.removeItem(PENDING_CHAT_KEY);
-      if (msgId) sessionStorage.removeItem(PENDING_MSG_KEY);
-    } catch (e) {}
+    var pending = uiShellUtils.readAndClearPendingDeepLink(
+      PENDING_CHAT_KEY,
+      PENDING_MSG_KEY
+    );
     return {
-      chatId: chatId || fromUrl.chatId,
-      msgId: msgId || fromUrl.msgId,
+      chatId: pending.chatId || fromUrl.chatId,
+      msgId: pending.msgId || fromUrl.msgId,
     };
   }
 
