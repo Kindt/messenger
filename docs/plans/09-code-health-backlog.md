@@ -1,6 +1,6 @@
 # Code Health Backlog — small PR series
 
-**Статус:** `in_progress`  
+**Статус:** `completed`  
 **Теги:** `[refactoring]` `[core-api]` `[workers]` `[web-client]` `[tests]`
 
 ## Цель
@@ -43,6 +43,7 @@
 
 - **Фокус:** `modules/web-client/src/main/resources/webui/app.js`
 - **Шаг:** начать мягкую декомпозицию через выделение утилитного модуля (например форматирование/TTL UI helpers) без изменения пользовательского поведения.
+- **Прогресс:** `completed` (добавлен модуль `ui-format-utils.js`; форматирование времени/TTL в `app.js` делегировано в вынесенный util с fallback).
 - **Safety checks:**
   - ручной smoke через `scripts/smoke-korus-web.ps1` / `.sh`
   - проверка базового login/chat flow в dev-стенде
