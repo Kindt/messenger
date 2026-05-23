@@ -3,6 +3,13 @@
 **Статус:** `completed`  
 **Теги:** `[refactoring]` `[web-client]` `[ui]` `[tomcat]` `[smoke]` `[tests]`
 
+## Связанный Spec-Kit пакет (parity)
+
+- `specs/002-web-client-server-parity/README.md` — точка входа по статусу и составу артефактов.
+- `specs/002-web-client-server-parity/parity-matrix.md` — baseline покрытия endpoint -> flow.
+- `specs/002-web-client-server-parity/parity-report.md` — итоговый статус и deferred runtime gates.
+- `specs/002-web-client-server-parity/runtime-gate-report.md` — шаблон operator-run отчета по `T010/T016/T022`.
+
 ## 1) Цель и рамки
 
 ### 1.1. Цель

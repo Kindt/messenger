@@ -62,3 +62,7 @@
 - **Документация** — какие docs нужно обновить
 
 Ориентир: [ROADMAP_EPICS.md](../ROADMAP_EPICS.md), [RETENTION_AND_DEEP_ARCHIVE.md](../RETENTION_AND_DEEP_ARCHIVE.md).
+
+## Связанные Spec-Kit пакеты
+
+- Для web-client parity используйте пакет `specs/002-web-client-server-parity/` (точка входа: `README.md`).
