@@ -27,3 +27,12 @@
 ## Стенд с WebSocket
 
 Профиль **`web`** в **`docker/docker-compose.dev-min.yml`** (**`scripts/dev-web-stack-up.ps1`** или **`scripts/dev-web-stack-up.sh`**: **`KORUS_*`**, проверка окружения, повтор **`docker compose`**) поднимает **ws-gateway** и **message-pipeline**; остановка того же профиля: **`scripts/dev-web-stack-down.ps1`** / **`scripts/dev-web-stack-down.sh`**. Для UI из корня — **`scripts/korus-web-up.ps1`** или **`scripts/korus-web-up.sh`** (**`-Attach` / `--attach`**, **`-Turn` / `--turn`**, **`-SkipEnsure`** / **`SKIP_KORUS_ENSURE=1`** — см. корневой **`README.md`**); остановка — **`scripts/korus-web-down.ps1`** / **`.sh`** с теми же флагами. Смоки: **`scripts/smoke-korus-web.ps1`** / **`scripts/smoke-korus-web.sh`**. Подробности: **`scripts/TEST_SERVER_READY.md`**.
+
+## Parity пакет (Spec-Kit)
+
+Для полного пакета доработки web-client до текущего серверного состояния используйте:
+
+- **`specs/002-web-client-server-parity/README.md`** (точка входа),
+- **`specs/002-web-client-server-parity/parity-matrix.md`** (baseline покрытия),
+- **`specs/002-web-client-server-parity/parity-report.md`** (итог + deferred runtime gates),
+- **`specs/002-web-client-server-parity/runtime-gate-report.md`** (operator-run шаблон фиксации `T010`/`T016`/`T022`).
