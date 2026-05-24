@@ -23,7 +23,7 @@ US3 hot-plug implementation is **code-complete and runtime-verified on QEMU**. R
 
 - [x] `./gradlew test` green (2026-05-24)
 - [x] QEMU: `scripts/smoke-us2-epic01-qemu.ps1` (T024 + hot-plug)
-- [x] Commit: `f0bad2a` on branch `001-system-review-refactoring`
+- [x] Commit: `495f480` on branch `001-system-review-refactoring` (incl. publish script)
 - [ ] **Git push** — blocked from dev host (corporate proxy → GitHub). Use `scripts/publish-spec-001-branch.ps1` or offline bundle below.
 
 ### Offline publish (if push fails)
@@ -58,3 +58,15 @@ Keep constitution v1.0.0; disable hot-plug via env:
 - run indexer in-process via existing docker compose profile
 
 No wire-format or schema rollback required.
+
+## Apply sign-off (when approvers confirm)
+
+```powershell
+.\scripts\apply-hotplug-signoff.ps1 `
+  -ArchitectureOwner "Name" `
+  -ProductOwner "Name" `
+  -OpsSre "Name" `
+  -PeerReviewer "Name"   # optional
+```
+
+Updates ADR status, constitution v1.1.0 amendment, and marks T048/T056 in `tasks.md`. Use `-WhatIf` to preview.
