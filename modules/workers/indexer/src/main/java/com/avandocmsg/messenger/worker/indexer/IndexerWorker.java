@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.worker.indexer;
 
+import com.avandocmsg.messenger.common.hotplug.GracefulShutdown;
+import com.avandocmsg.messenger.common.hotplug.HotPlugHeartbeat;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,13 +36,21 @@ public class IndexerWorker {
     private final String solrCollection;
 
     private final Connection connection;
+    private final HotPlugHeartbeat hotPlugHeartbeat;
+    private final String serviceId;
+    private final long drainTimeoutMs;
 
-    public IndexerWorker(String natsUrl, SolrClient solrClient, boolean solrEnabled, boolean cloudMode, String solrCollection)
+    public IndexerWorker(
+        String natsUrl,
+        SolrClient solrClient,
+        boolean solrEnabled,
+        boolean cloudMode,
+        String solrCollection,
+        String serviceId,
+        long heartbeatIntervalMs,
+        long drainTimeoutMs
+    )
         throws Exception {
-        this.solrClient = solrClient;
-        this.solrEnabled = solrEnabled;
-        this.cloudMode = cloudMode;
-        this.solrCollection = solrCollection;
         var options = Options.builder()
             .server(natsUrl)
             .connectionName("indexer-worker")
@@ -48,12 +58,41 @@ public class IndexerWorker {
             .maxReconnects(-1)
             .build();
         this.connection = Nats.connect(options);
+        this.solrClient = solrClient;
+        this.solrEnabled = solrEnabled;
+        this.cloudMode = cloudMode;
+        this.solrCollection = solrCollection;
+        this.serviceId = serviceId != null && !serviceId.isBlank() ? serviceId.trim() : "indexer-worker";
+        this.drainTimeoutMs = Math.max(1000L, drainTimeoutMs);
+        this.hotPlugHeartbeat = new HotPlugHeartbeat(this.connection, this.serviceId, heartbeatIntervalMs);
         log.info("Connected to NATS at {}", natsUrl);
+    }
+
+    IndexerWorker(
+        Connection connection,
+        SolrClient solrClient,
+        boolean solrEnabled,
+        boolean cloudMode,
+        String solrCollection,
+        String serviceId,
+        long heartbeatIntervalMs,
+        long drainTimeoutMs
+    ) {
+        this.connection = connection;
+        this.solrClient = solrClient;
+        this.solrEnabled = solrEnabled;
+        this.cloudMode = cloudMode;
+        this.solrCollection = solrCollection;
+        this.serviceId = serviceId != null && !serviceId.isBlank() ? serviceId.trim() : "indexer-worker";
+        this.drainTimeoutMs = Math.max(1000L, drainTimeoutMs);
+        this.hotPlugHeartbeat = new HotPlugHeartbeat(this.connection, this.serviceId, heartbeatIntervalMs);
     }
 
     public void start() {
         var dispatcher = connection.createDispatcher(this::handle);
         dispatcher.subscribe(NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP);
+        hotPlugHeartbeat.start();
+        hotPlugHeartbeat.publish("ACTIVE");
         log.info("Subscribed to {} (queue: {})", NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP);
     }
 
@@ -140,18 +179,16 @@ public class IndexerWorker {
     }
 
     public void shutdown() {
-        try {
-            connection.close();
-        } catch (Exception e) {
-            log.warn("Error closing NATS connection", e);
-        }
-        if (solrClient != null) {
-            try {
-                solrClient.close();
-            } catch (Exception e) {
-                log.warn("Error closing Solr client", e);
+        GracefulShutdown.runShutdown(
+            serviceId,
+            connection,
+            Duration.ofMillis(drainTimeoutMs),
+            () -> hotPlugHeartbeat.publish("DRAINING"),
+            () -> {
+                hotPlugHeartbeat.close();
+                closeSolrClient();
             }
-        }
+        );
     }
 
     public static void main(String[] args) {
@@ -159,6 +196,9 @@ public class IndexerWorker {
         var zk = System.getenv("SOLR_ZK");
         var solrUrl = System.getenv("SOLR_URL");
         var collection = System.getenv().getOrDefault("SOLR_COLLECTION", "messages_meta");
+        var serviceId = System.getenv().getOrDefault("SERVICE_ID", "indexer-worker");
+        var heartbeatIntervalMs = envLong("SERVICE_HEARTBEAT_INTERVAL_MS", 10000L);
+        var drainTimeoutMs = envLong("SERVICE_DRAIN_TIMEOUT_MS", 30000L);
 
         SolrClient client = null;
         boolean cloud = false;
@@ -185,13 +225,44 @@ public class IndexerWorker {
         }
 
         try {
-            var worker = new IndexerWorker(natsUrl, client, enabled, cloud, collection);
+            var worker = new IndexerWorker(
+                natsUrl,
+                client,
+                enabled,
+                cloud,
+                collection,
+                serviceId,
+                heartbeatIntervalMs,
+                drainTimeoutMs
+            );
             worker.start();
             Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));
             Thread.currentThread().join();
         } catch (Exception e) {
             log.error("Fatal error", e);
             System.exit(1);
+        }
+    }
+
+    private static long envLong(String key, long defaultValue) {
+        var raw = System.getenv(key);
+        if (raw == null || raw.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            return Long.parseLong(raw.trim());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    private void closeSolrClient() {
+        if (solrClient != null) {
+            try {
+                solrClient.close();
+            } catch (Exception e) {
+                log.warn("Error closing Solr client", e);
+            }
         }
     }
 }

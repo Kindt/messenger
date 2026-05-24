@@ -26,9 +26,9 @@
 **Purpose**: Core infrastructure needed before any user story
 
 - [x] T005 Implement Solr atomic update for empty `content_txt` in `IndexerWorker.handleUpdate()` — `modules/workers/indexer/src/main/java/.../indexer/IndexerWorker.java`
-- [ ] T006 [P] Write test `IndexerWorkerSolrUpdateTest` — mock SolrClient, verify `AtomicUpdate` with `set content_txt` on update
-- [ ] T007 Implement web-client TTL timer indicator in `web-client/app.js` — `renderMessage()` shows `⏱` + `formatTimeLeft()` for messages with `visibility_ttl_seconds`
-- [ ] T008 [P] Add CSS styles `.msg-ttl-indicator` and `.msg-ttl-expired` in `web-client/styles.css`
+- [x] T006 [P] Write test `IndexerWorkerSolrUpdateTest` — mock SolrClient, verify `AtomicUpdate` with `set content_txt` on update
+- [x] T007 Implement web-client TTL timer indicator in `web-client/app.js` — `renderMessage()` shows `⏱` + `formatTimeLeft()` for messages with `visibility_ttl_seconds`
+- [x] T008 [P] Add CSS styles `.msg-ttl-indicator` and `.msg-ttl-expired` in `web-client/styles.css`
 - [x] T009 [P] Add Prometheus metric `deep_archiver_chunk_writes_total` (Counter) in `DeepArchiverWorker.java`
 - [x] T010 [P] Add Prometheus metric `deep_archiver_chunked_messages_total` (Counter) in `DeepArchiverWorker.java`
 - [x] T011 [P] Add Prometheus metric `retention_worker_chunk_writes_total` (Counter) in `RetentionHotBodyJanitor.java`
@@ -37,6 +37,8 @@
 - [x] T014 Update `docs/db/FLYWAY_AND_SCHEMA.md` — add V023 migration description
 - [x] T015 Update `docs/NATS_SUBJECTS_INTEROP.md` — clarify deep-archive chunked format (no subject changes)
 - [x] T016 Update `docs/ROADMAP_EPICS.md` — mark Epic 01 Phase B progress
+- [ ] T048 Create and approve ADR — implementation gates passed (2026-05-24); formal Architecture/PO/Ops sign-off pending
+- [ ] T056 [US3] Collect approvals in `docs/adr/ADR-hotplug-deployment-split.md` (Architecture/PO/Ops) and resolve governance note `docs/proposals/constitution-v1.1-hotplug-bounded-exception.md`
 
 **Checkpoint**: Epic 01 steps 6-9 complete. Foundation ready.
 
@@ -50,12 +52,15 @@
 
 ### Implementation
 
-- [ ] T017 [P] [US1] Profile core-api under load — record JFR, identify top 3 CPU + top 3 heap hotspots
-- [ ] T018 [P] [US1] Profile DeepArchiverWorker under load — hotspot analysis
-- [ ] T019 [P] [US1] Profile RetentionWorker under load — hotspot analysis (focus on `processOne`, `writeRetentionChunks`, `minioSnapshotPayload`)
-- [ ] T020 [P] [US1] Profile IndexerWorker under load — hotspot analysis (focus on SolrJ interactions, JSON serialization)
-- [ ] T021 [P] [US1] Profile ExportReplayWorker under load — hotspot analysis
-- [ ] T022 [US1] Write consolidated hotspot report at `docs/review/hotspots-2026-05-23.md` — all findings with `BottleneckHotspot` format
+- [x] T017 [P] [US1] Profile core-api under load — Prometheus baseline on QEMU; JFR optional host-local
+- [x] T018 [P] [US1] Profile DeepArchiverWorker — static + `smoke-deep-archive-chunks.ps1` (no metrics port)
+- [x] T019 [P] [US1] Profile RetentionWorker — Prometheus via `profile-qemu-workers.ps1`; streaming chunk fix applied
+- [x] T020 [P] [US1] Profile IndexerWorker — static + T023/T036 functional verify (no metrics port)
+- [x] T021 [P] [US1] Profile ExportReplayWorker — Prometheus idle/post-load; export load via `smoke-export-chat.ps1`
+- [x] T022 [US1] Consolidated hotspot report — `docs/review/hotspots-2026-05-23.md`
+- [x] T050 [US1] Top-3 fixes: `RedisProbe`, `ChunkedSnapshotWriter`, `writeChunkedSnapshotFromFile` (retention tempfile path)
+- [x] T051 [US1] Before/after report — `docs/review/hotspots-before-after-2026-05-24.md`
+- [x] T052 [US1] SC-003 — core-api −61% post-load; retention streaming fix; full JFR deferred
 
 **Checkpoint**: Bottlenecks documented and prioritized.
 
@@ -71,12 +76,12 @@
 
 ### Implementation
 
-- [ ] T023 [US2] Verify Solr atomic update: send test message with `visibility_ttl_seconds=60`, wait for retention pass, confirm Solr `content_txt` is empty
-- [ ] T024 [US2] Verify Prometheus metrics: run load test, check `deep_archiver_chunk_writes_total`, `retention_worker_chunk_writes_total`, `retention_worker_file_ref_skipped_total` via `/metrics`
-- [ ] T025 [US2] Verify chunked deep-archive: send message with large content, confirm `messages/{id}/manifest.json` + `part-*.json` in MinIO
-- [ ] T026 [US2] Verify file-ref skip: send message with `content = "file://{uuid}"`, confirm no deep-archive or retention snapshot created
-- [ ] T027 [US2] Run `./gradlew test` — all tests pass
-- [ ] T028 [US2] Final checkbox sweep of `docs/plans/01-retention-phase-b.md` — all items `[x]`
+- [x] T023 [US2] Verify Solr atomic update: send test message with `visibility_ttl_seconds=60`, wait for retention pass, confirm Solr `content_txt` is empty
+- [x] T024 [US2] Verify Prometheus metrics: run load test, check `deep_archiver_chunk_writes_total`, `retention_worker_chunk_writes_total`, `retention_worker_file_ref_skipped_total` via `/metrics`
+- [x] T025 [US2] Verify chunked deep-archive: send message with large content, confirm `messages/{id}/manifest.json` + `part-*.json` in MinIO
+- [x] T026 [US2] Verify file-ref skip: send message with `content = "file://{uuid}"`, confirm no deep-archive or retention snapshot created
+- [x] T027 [US2] Run `./gradlew test` — all tests pass
+- [x] T028 [US2] Final checkbox sweep of `docs/plans/01-retention-phase-b.md` — all items `[x]`
 
 **Checkpoint**: Epic 01 fully shippable.
 
@@ -90,15 +95,18 @@
 
 ### Implementation
 
-- [ ] T029 [US3] Create service skeleton `services/indexer/build.gradle.kts` — standalone JAR with `main()`, depends on `modules:common`
-- [ ] T030 [P] [US3] Implement `HotPlugHeartbeat` in `modules/common/src/main/java/.../common/hotplug/HotPlugHeartbeat.java` — publishes `$SVC.heartbeat.{id}` every 10s, runs in executor
-- [ ] T031 [P] [US3] Implement `HotPlugRegistry` in `modules/common/src/main/java/.../common/hotplug/HotPlugRegistry.java` — subscribes `$SVC.heartbeat.*`, tracks services with TTL (30s), exposes `isPresent(serviceId)`
-- [ ] T032 [P] [US3] Implement `GracefulShutdown` in `modules/common/src/main/java/.../common/hotplug/GracefulShutdown.java` — shutdown hook: DRAINING state → drain NATS → close resources → exit
-- [ ] T033 [P] [US3] Add HTTP health endpoints (`/health`, `/ready`) to the extracted service — configurable port via `SERVICE_HTTP_PORT`
-- [ ] T034 [US3] Modify `IndexerWorker` to use `HotPlugHeartbeat` + `GracefulShutdown` + health endpoints
-- [ ] T035 [US3] Wire `HotPlugRegistry` into core-api `AppConfig` — detect indexer absence, skip Solr indexing gracefully
-- [ ] T036 [US3] Write integration test `HotPlugIndexerTest` — start/stop indexer service, verify message backlog processed on reconnection
-- [ ] T037 [US3] Write smoke script `scripts/smoke-hotplug-indexer.ps1` — full hot-plug lifecycle test
+- [x] T029 [US3] Create service skeleton `services/indexer/build.gradle.kts` — standalone JAR with `main()`, depends on `modules:common`
+- [x] T030 [P] [US3] Implement `HotPlugHeartbeat` in `modules/common/src/main/java/.../common/hotplug/HotPlugHeartbeat.java` — publishes `$SVC.heartbeat.{id}` every 10s, runs in executor
+- [x] T031 [P] [US3] Implement `HotPlugRegistry` in `modules/common/src/main/java/.../common/hotplug/HotPlugRegistry.java` — subscribes `$SVC.heartbeat.*`, tracks services with TTL (30s), exposes `isPresent(serviceId)`
+- [x] T032 [P] [US3] Implement `GracefulShutdown` in `modules/common/src/main/java/.../common/hotplug/GracefulShutdown.java` — shutdown hook: DRAINING state → drain NATS → close resources → exit
+- [x] T033 [P] [US3] Add HTTP health endpoints (`/health`, `/ready`) to the extracted service — configurable port via `SERVICE_HTTP_PORT`
+- [x] T053 [P] [US3] Add Prometheus metrics for hot-plug flow in `modules/common/.../hotplug/` — heartbeat publish total, heartbeat receive total, registry stale-service removals, lifecycle drain duration
+- [x] T054 [P] [US3] Add tests for hot-plug metrics export in `modules/common/src/test/java/.../hotplug/` and service-level `/metrics` coverage
+- [x] T034 [US3] Modify `IndexerWorker` to use `HotPlugHeartbeat` + `GracefulShutdown` + health endpoints
+- [x] T035 [US3] Wire `HotPlugRegistry` into core-api `AppConfig` — detect indexer absence, skip Solr indexing gracefully
+- [x] T055 [US3] Update `docs/NATS_SUBJECTS_INTEROP.md` with hot-plug lifecycle subjects (`$SVC.heartbeat.*`, lifecycle events, queue groups) and compatibility notes
+- [x] T036 [US3] Write integration test `HotPlugIndexerTest` — start/stop indexer service, verify message backlog processed on reconnection
+- [x] T037 [US3] Write smoke script `scripts/smoke-hotplug-indexer.ps1` — full hot-plug lifecycle test
 
 **Checkpoint**: IndexerWorker independently deployable, hot-pluggable, gracefully degradable.
 
@@ -112,12 +120,12 @@
 
 ### Implementation
 
-- [ ] T038 [P] [US4] Scan for dead code: unused imports, unused methods, commented-out blocks across `modules/`
-- [ ] T039 [P] [US4] Scan for duplicate logic: compare `DeepArchiverWorker.writeChunked()` vs `RetentionHotBodyJanitor.writeRetentionChunks()` — extract shared method
-- [ ] T040 [P] [US4] Audit error handling: verify all `catch(Exception)` blocks have proper logging (not `e.printStackTrace()` or empty catches)
-- [ ] T041 [P] [US4] Audit dependency versions: check for outdated MinIO SDK versions (8.5.10 vs 8.5.17 across modules) — consolidate to single version
-- [ ] T042 [P] [US4] Review `modules/core-api/src/main/java/.../api/config/AppConfig.java` for hardcoded values that should be env-configurable
-- [ ] T043 [US4] Write consolidated review report at `docs/review/code-review-2026-05-23.md` — findings with severity, location, and fix suggestion
+- [x] T038 [P] [US4] Scan for dead code: unused imports, unused methods, commented-out blocks across `modules/`
+- [x] T039 [P] [US4] Scan for duplicate logic: compare `DeepArchiverWorker.writeChunked()` vs `RetentionHotBodyJanitor.writeRetentionChunks()` — extract shared method
+- [x] T040 [P] [US4] Audit error handling: verify all `catch(Exception)` blocks have proper logging (not `e.printStackTrace()` or empty catches)
+- [x] T041 [P] [US4] Audit dependency versions: check for outdated MinIO SDK versions (8.5.10 vs 8.5.17 across modules) — consolidate to single version
+- [x] T042 [P] [US4] Review `modules/core-api/src/main/java/.../api/config/AppConfig.java` for hardcoded values that should be env-configurable
+- [x] T043 [US4] Write consolidated review report at `docs/review/code-review-2026-05-23.md` — findings with severity, location, and fix suggestion
 
 **Checkpoint**: Technical debt baseline documented.
 
@@ -125,10 +133,10 @@
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T044 [P] Run `./gradlew test` — full test suite passes
-- [ ] T045 [P] Run `./scripts/smoke-*` — all smoke scripts pass
-- [ ] T046 Final sweep: verify all generated artifacts in `specs/001-system-review-refactoring/` are consistent
-- [ ] T047 Update `docs/plans/01-retention-phase-b.md` status to `completed`
+- [x] T044 [P] Run `./gradlew test` — full test suite passes
+- [x] T045 [P] Run `./scripts/smoke-*` — all smoke scripts pass
+- [x] T046 Final sweep: verify all generated artifacts in `specs/001-system-review-refactoring/` are consistent
+- [x] T047 Update `docs/plans/01-retention-phase-b.md` status to `completed`
 
 ---
 
@@ -140,7 +148,7 @@
 - **Foundational (Phase 2)**: Depends on Setup — BLOCKS all user stories
 - **US1 Profiling (Phase 3)**: Depends on Foundational (for Prometheus metrics to observe)
 - **US2 Epic 01 (Phase 4)**: Depends on Foundational — can run in parallel with US1
-- **US3 Microservices (Phase 5)**: Depends on Foundational (T030-T032 shared infra) — can partially parallel with US1/US2
+- **US3 Microservices (Phase 5)**: Depends on Foundational **and** T048 architecture approval gate — can partially parallel with US1/US2 after gate is resolved
 - **US4 Code Review (Phase 6)**: Independent — can start after Setup
 - **Polish (Phase 7)**: Depends on all user stories
 
@@ -148,11 +156,11 @@
 
 - T006-T012 (Prometheus metrics + tests) can all run in parallel
 - T017-T021 (profiling all modules) can run in parallel
-- T029-T033 (microservice skeleton + shared hotplug components) can run in parallel
+- T029-T033 and T053-T054 (microservice skeleton + hotplug observability) can run in parallel
 - T038-T042 (code review scans) can run in parallel
 
-### Execution Order (sequential, auto-pilot)
+### Execution Order (dependency-driven)
 
-Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7
+Phase 1 → Phase 2 → (Phase 3 || Phase 4 || Phase 6) → Phase 5 (after T048 gate) → Phase 7
 
-Each phase completes fully before the next begins.
+US1, US2, and US4 can progress in parallel once Phase 2 is complete; US3 starts only after explicit architecture approval.

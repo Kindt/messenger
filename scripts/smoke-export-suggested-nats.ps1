@@ -14,10 +14,14 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 $deadline = (Get-Date).AddSeconds($PollSeconds)
 while ((Get-Date) -lt $deadline) {
-    & "$scriptDir\smoke-export-suggested.ps1" -BaseUrl $BaseUrl -ChatId $ChatId -Limit 5
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] NATS export.suggested -> audit" -ForegroundColor Green
-        exit 0
+    try {
+        & "$scriptDir\smoke-export-suggested.ps1" -BaseUrl $BaseUrl -ChatId $ChatId -Limit 5
+        if ($? -and ($null -eq $LASTEXITCODE -or $LASTEXITCODE -eq 0)) {
+            Write-Host "[OK] NATS export.suggested -> audit" -ForegroundColor Green
+            exit 0
+        }
+    } catch {
+        # keep polling until deadline
     }
     Start-Sleep -Seconds $PollIntervalSec
 }

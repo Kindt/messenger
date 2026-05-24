@@ -61,6 +61,11 @@ public final class NatsSubjects {
      */
     public static final String MSG_EXPORT_REPLAY_CANCEL = "msg.export.replay.cancel";
 
+    /** Hot-plug heartbeat/lifecycle subjects for extracted services (experimental; see interop docs). */
+    public static final String SVC_HEARTBEAT_PREFIX = "$SVC.heartbeat.";
+    public static final String SVC_HEARTBEAT_WILDCARD = "$SVC.heartbeat.*";
+    public static final String SVC_LIFECYCLE_PREFIX = "$SVC.lifecycle.";
+
     private NatsSubjects() {
     }
 }

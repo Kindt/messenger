@@ -682,6 +682,14 @@ button {
   font-size: 0.68rem;
 }
 
+.msg-ttl-indicator {
+  font-weight: 500;
+}
+
+.msg-ttl-expired {
+  color: var(--muted);
+}
+
 .composer-ttl-row {
   display: flex;
   align-items: center;

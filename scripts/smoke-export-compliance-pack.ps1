@@ -6,6 +6,7 @@ param(
     [switch]$CreateGroup,
     [string]$BaseUrl = "http://localhost:8080",
     [string]$WorkerMetricsUrl = "http://localhost:9193/metrics",
+    [string]$NatsUrl = "",
     [switch]$SkipSuggestCancel,
     [switch]$SkipRequestCancel,
     [switch]$SkipWorkerMetrics,
@@ -21,6 +22,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$script:ChatId = $ChatId
 $auditArg = @{}
 if ($SkipAudit) { $auditArg["SkipAudit"] = $true }
 
@@ -40,57 +42,61 @@ if (-not $SkipOpenApi) {
     }
 }
 
-if (-not $ChatId) {
+if (-not $script:ChatId) {
     Step "seed compliance chat (export-compliance-prep)" {
         $prepOut = & "$scriptDir\smoke-admin-export-compliance-prep.ps1" -BaseUrl $BaseUrl
         $line = $prepOut | Where-Object { $_ -match '^CHAT_ID=' } | Select-Object -Last 1
         if ($line) {
-            $ChatId = ($line -replace '^CHAT_ID=', '').Trim()
+            $script:ChatId = ($line -replace '^CHAT_ID=', '').Trim()
         }
-        if (-not $ChatId) {
-            $ChatId = ($prepOut | Select-Object -Last 1).ToString().Trim()
+        if (-not $script:ChatId) {
+            $script:ChatId = ($prepOut | Select-Object -Last 1).ToString().Trim()
         }
-        if (-not $ChatId) { throw "prep did not return chat id" }
+        if (-not $script:ChatId) { throw "prep did not return chat id" }
         Write-Host "Waiting 2s (retention SELECT age buffer) ..." -ForegroundColor DarkGray
         Start-Sleep -Seconds 2
-        Write-Host "Using chat $ChatId" -ForegroundColor Green
+        Write-Host "Using chat $script:ChatId" -ForegroundColor Green
     }
 }
 
 if (-not $SkipSuggestCancel) {
     Step "suggest -> export -> cancel" {
-        & "$scriptDir\smoke-export-suggest-cancel-flow.ps1" -ChatId $ChatId -BaseUrl $BaseUrl @auditArg
+        & "$scriptDir\smoke-export-suggest-cancel-flow.ps1" -ChatId $script:ChatId -BaseUrl $BaseUrl @auditArg
     }
 }
 
 if (-not $SkipRequestCancel) {
     Step "admin request -> cancel" {
-        & "$scriptDir\smoke-admin-export-request-cancel.ps1" -ChatId $ChatId -BaseUrl $BaseUrl @auditArg
+        & "$scriptDir\smoke-admin-export-request-cancel.ps1" -ChatId $script:ChatId -BaseUrl $BaseUrl @auditArg
     }
 }
 
 if (-not $SkipSuggestedNats) {
     Step "NATS export.suggested -> audit" {
-        & "$scriptDir\smoke-export-suggested-nats.ps1" -ChatId $ChatId -BaseUrl $BaseUrl
+        $args = @{ ChatId = $script:ChatId; BaseUrl = $BaseUrl }
+        if ($NatsUrl) { $args["NatsUrl"] = $NatsUrl }
+        & "$scriptDir\smoke-export-suggested-nats.ps1" @args
     }
 }
 
 if (-not $SkipRetentionSuggested) {
     Step "retention export.suggested -> audit" {
-        & "$scriptDir\smoke-retention-export-suggested.ps1" -ChatId $ChatId -BaseUrl $BaseUrl `
+        & "$scriptDir\smoke-retention-export-suggested.ps1" -ChatId $script:ChatId -BaseUrl $BaseUrl `
             -RetentionMetricsUrl $RetentionMetricsUrl
     }
 }
 
 if (-not $SkipAutoQueueNats) {
     Step "NATS export.suggested -> auto-queue" {
-        & "$scriptDir\smoke-export-auto-queue-nats.ps1" -ChatId $ChatId -BaseUrl $BaseUrl -SkipAudit:$SkipAudit
+        $args = @{ ChatId = $script:ChatId; BaseUrl = $BaseUrl; SkipAudit = $SkipAudit }
+        if ($NatsUrl) { $args["NatsUrl"] = $NatsUrl }
+        & "$scriptDir\smoke-export-auto-queue-nats.ps1" @args
     }
 }
 
 if (-not $SkipGlobalJobs) {
     Step "admin global export jobs" {
-        & "$scriptDir\smoke-admin-export-global-jobs.ps1" -ChatId $ChatId -BaseUrl $BaseUrl -Limit 20
+        & "$scriptDir\smoke-admin-export-global-jobs.ps1" -ChatId $script:ChatId -BaseUrl $BaseUrl -Limit 20
     }
 }
 
@@ -102,7 +108,7 @@ if (-not $SkipObservability) {
 
 if (-not $SkipDownload) {
     Step "compliance flow + bundle download (with file)" {
-        & "$scriptDir\smoke-export-compliance-flow.ps1" -ChatId $ChatId -BaseUrl $BaseUrl -SkipPrep -IncludeFile
+        & "$scriptDir\smoke-export-compliance-flow.ps1" -ChatId $script:ChatId -BaseUrl $BaseUrl -SkipPrep -IncludeFile
     }
 }
 
@@ -110,8 +116,9 @@ if (-not $SkipWorkerMetrics) {
     Step "worker metrics" {
         $args = @{
             WorkerMetricsUrl = $WorkerMetricsUrl
+            CoreMetricsUrl   = "$($BaseUrl.TrimEnd('/'))/api/v1/metrics/prometheus"
             BaseUrl          = $BaseUrl
-            ChatId           = $ChatId
+            ChatId           = $script:ChatId
         }
         if ($SkipAudit) { $args["SkipCancelFlow"] = $true }
         & "$scriptDir\smoke-export-worker-metrics.ps1" @args
@@ -119,4 +126,4 @@ if (-not $SkipWorkerMetrics) {
 }
 
 Write-Host ""
-Write-Host "[OK] export compliance pack finished (chat $ChatId)" -ForegroundColor Green
+Write-Host "[OK] export compliance pack finished (chat $script:ChatId)" -ForegroundColor Green

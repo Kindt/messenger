@@ -46,9 +46,19 @@
     return "⏱ " + seconds + " с";
   }
 
+  function formatTimeLeft(secondsLeft) {
+    if (secondsLeft == null || secondsLeft <= 0) return "истекло";
+    var s = Math.floor(secondsLeft);
+    if (s >= 86400) return Math.ceil(s / 86400) + " д";
+    if (s >= 3600) return Math.ceil(s / 3600) + " ч";
+    if (s >= 60) return Math.ceil(s / 60) + " мин";
+    return s + " с";
+  }
+
   global.KorusUiFormatUtils = {
     formatInstantLabel: formatInstantLabel,
     formatChatListTime: formatChatListTime,
     formatTtlLabel: formatTtlLabel,
+    formatTimeLeft: formatTimeLeft,
   };
 })(typeof window !== "undefined" ? window : globalThis);

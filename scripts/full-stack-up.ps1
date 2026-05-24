@@ -15,7 +15,7 @@ if ($Help) {
     Write-Host "Usage: .\scripts\full-stack-up.ps1 [-Build] [-SkipEnsure] [-ExportSmoke] [-ExportAutoQueue] [-WaitReady]"
     Write-Host "  -ExportSmoke applies export + retention-export compose overlays (admin suggest, dry-run retention)."
     Write-Host "  -ExportAutoQueue also enables EXPORT_AUTO_QUEUE_ON_SUGGESTED on core-api."
-    Write-Host "  -WaitReady (default with -ExportSmoke): poll health on 8080/9192/9193 after up."
+    Write-Host "  -WaitReady (default with -ExportSmoke): poll health on 8080/9192/9193 after up (push-worker is on 9194)."
     Write-Host "  Env SKIP_KORUS_ENSURE=1 skips tooling. Linux/macOS: ./scripts/full-stack-up.sh --help"
     Write-Host "  After success: hints for korus-web (attach, optional Turn), smoke, full-stack-down."
     exit 0
@@ -68,7 +68,7 @@ if ($ExportSmoke -and (-not $PSBoundParameters.ContainsKey('WaitReady') -or $Wai
 }
 
 Write-Host ""
-Write-Host "[OK] Full stack: core-api :8080, Keycloak :8081, ws-gateway :8082, export-replay :9193, retention :9192" -ForegroundColor Green
+Write-Host "[OK] Full stack: core-api :8080, Keycloak :8081, ws-gateway :8082, export-replay :9193, retention :9192, push-worker :9194" -ForegroundColor Green
 Write-Host "Web Push VAPID: .\scripts\generate-vapid.ps1  (then set keys on push-worker + korus-web WEB_CLIENT_VAPID_PUBLIC_KEY)" -ForegroundColor DarkGray
 Write-Host "Admin: http://localhost:8080/admin/  (realm avandocmsg: csadmin/csadmin or admin/admin)"
 Write-Host "korus-web same network: .\scripts\korus-web-up.ps1 -Attach -Build   (Linux/macOS: ./scripts/korus-web-up.sh --attach --build)" -ForegroundColor Green

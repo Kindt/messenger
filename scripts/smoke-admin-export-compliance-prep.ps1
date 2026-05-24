@@ -54,3 +54,5 @@ if (-not $fid) { $fid = $prep.fileId }
 Write-Host "[OK] chat_id=$cid messages=$($ids.Count) retention_patched=$($prep.retention_patched) file_id=$fid" -ForegroundColor Green
 if ($cid) { Write-Host "CHAT_ID=$cid" }
 if ($fid) { Write-Host "FILE_ID=$fid" }
+if ($cid) { Write-Output "CHAT_ID=$cid" }
+if ($fid) { Write-Output "FILE_ID=$fid" }

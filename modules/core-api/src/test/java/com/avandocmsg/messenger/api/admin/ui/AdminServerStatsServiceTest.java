@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.api.admin.ui;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.api.config.RedisProbe;
 import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -74,7 +75,8 @@ class AdminServerStatsServiceTest {
             }
         };
         NatsConnectionStatus nats = () -> false;
-        service = new AdminServerStatsService(ds, appConfig, nats);
+        var redisProbe = new RedisProbe(appConfig, null);
+        service = new AdminServerStatsService(ds, appConfig, nats, redisProbe);
     }
 
     @AfterEach

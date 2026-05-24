@@ -79,6 +79,10 @@ public class AppConfig {
         override("EXPORT_AUTO_QUEUE_ON_SUGGESTED", "export.auto.queue.on.suggested.enabled");
         override("EXPORT_AUTO_QUEUE_ACTOR_USER_ID", "export.auto.queue.actor.user.id");
         override("EXPORT_AUTO_QUEUE_COOLDOWN_MINUTES", "export.auto.queue.cooldown.minutes");
+        override("HOTPLUG_HEARTBEAT_TTL_MS", "hotplug.heartbeat.ttl.ms");
+        override("SERVICE_HEARTBEAT_TTL_MS", "hotplug.heartbeat.ttl.ms");
+        override("HOTPLUG_INDEXER_SERVICE_ID", "hotplug.indexer.service.id");
+        override("HOTPLUG_INDEXER_PRESENCE_REQUIRED", "hotplug.indexer.presence.required");
     }
 
     private void override(String envKey, String propKey) {
@@ -434,6 +438,26 @@ public class AppConfig {
         } catch (NumberFormatException e) {
             return 1440;
         }
+    }
+
+    /** Heartbeat TTL for hot-plug service presence detection (milliseconds). */
+    public long hotplugHeartbeatTtlMs() {
+        var raw = props.getProperty("hotplug.heartbeat.ttl.ms", "30000").trim();
+        try {
+            return Math.max(1000L, Long.parseLong(raw));
+        } catch (NumberFormatException e) {
+            return 30000L;
+        }
+    }
+
+    /** Service id expected for indexer hot-plug presence checks. */
+    public String hotplugIndexerServiceId() {
+        return props.getProperty("hotplug.indexer.service.id", "indexer-service").trim();
+    }
+
+    /** When true, core-api skips index events if indexer heartbeat is missing. */
+    public boolean hotplugIndexerPresenceRequired() {
+        return Boolean.parseBoolean(props.getProperty("hotplug.indexer.presence.required", "false"));
     }
 
     /**

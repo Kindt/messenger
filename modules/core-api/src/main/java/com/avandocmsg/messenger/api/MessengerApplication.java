@@ -16,6 +16,8 @@ import com.avandocmsg.messenger.api.admin.ui.ClasspathAdminStaticServlet;
 import com.avandocmsg.messenger.api.config.MinioConfig;
 import com.avandocmsg.messenger.api.config.NatsConfig;
 import com.avandocmsg.messenger.api.config.RedisConfig;
+import com.avandocmsg.messenger.api.config.RedisProbe;
+import com.avandocmsg.messenger.api.hotplug.IndexerHotPlugMonitor;
 import com.avandocmsg.messenger.api.contacts.ContactService;
 import com.avandocmsg.messenger.api.export.AdminExportComplianceSeed;
 import com.avandocmsg.messenger.api.export.ExportFileAccess;
@@ -25,6 +27,7 @@ import com.avandocmsg.messenger.api.export.ExportReplayCompleteSubscriber;
 import com.avandocmsg.messenger.api.export.ExportSuggestedHandler;
 import com.avandocmsg.messenger.api.export.ExportSuggestedSubscriber;
 import com.avandocmsg.messenger.api.metrics.ExportJobsDbCollector;
+import com.avandocmsg.messenger.api.metrics.ExportMetrics;
 import com.avandocmsg.messenger.api.crypto.CryptoProvider;
 import com.avandocmsg.messenger.api.crypto.E2EEService;
 import com.avandocmsg.messenger.api.crypto.KeyPackageRepository;
@@ -104,9 +107,11 @@ public class MessengerApplication {
     private Context ctx;
     private HotReloadWatcher watcher;
     private RedisConfig redisConfig;
+    private RedisProbe redisProbe;
     private SolrClient solrClient;
     private ExportReplayCompleteSubscriber exportCompleteSubscriber;
     private ExportSuggestedSubscriber exportSuggestedSubscriber;
+    private IndexerHotPlugMonitor indexerHotPlugMonitor;
     private final ExportSuggestedHandler exportSuggestedHandler;
 
     public MessengerApplication() {
@@ -154,12 +159,15 @@ public class MessengerApplication {
             : Optional.<ExportAutoQueueOnSuggested>empty();
         this.exportSuggestedHandler = new ExportSuggestedHandler(auditRepository, exportAutoQueue);
         ExportJobsDbCollector.registerDefault(dataSource, appConfig.exportProcessingStaleMinutes());
+        // Prime labeled export counters for Prometheus scrape before first enqueue/cancel.
+        ExportMetrics.ensureRegistered();
         if (appConfig.rateLimitAuthEnabled()) {
             this.redisConfig = new RedisConfig(appConfig);
             log.info("Auth rate limiting enabled (Redis)");
         } else {
             this.redisConfig = null;
         }
+        this.redisProbe = new RedisProbe(appConfig, redisConfig);
     }
 
     private Optional<JetStream> jetStreamOptional() {
@@ -214,6 +222,23 @@ public class MessengerApplication {
             log.info("Export suggested NATS subscriber disabled (EXPORT_SUGGESTED_SUBSCRIBER_ENABLED=false)");
         }
 
+        if (appConfig.hotplugIndexerPresenceRequired()) {
+            indexerHotPlugMonitor = new IndexerHotPlugMonitor(
+                natsConnection,
+                appConfig.hotplugHeartbeatTtlMs(),
+                appConfig.hotplugIndexerServiceId()
+            );
+            indexerHotPlugMonitor.start();
+            log.info(
+                "Indexer hot-plug presence check enabled (serviceId={}, ttlMs={})",
+                appConfig.hotplugIndexerServiceId(),
+                appConfig.hotplugHeartbeatTtlMs()
+            );
+        } else {
+            indexerHotPlugMonitor = null;
+            log.info("Indexer hot-plug presence check disabled (HOTPLUG_INDEXER_PRESENCE_REQUIRED=false)");
+        }
+
         if (appConfig.hotReloadEnabled()) {
             var libDir = Paths.get(System.getProperty("app.home", "."), "lib");
             if (Files.exists(libDir)) {
@@ -247,11 +272,12 @@ public class MessengerApplication {
         var contactService = new ContactService(contactRepository, userRepository, blockRepository);
         var natsOutbound = new NatsConnectionOutbound(natsConnection, jetStreamOptional());
         var adminManifest = AdminUiManifest.load(MessengerApplication.class.getClassLoader());
-        var adminServerStatsService = new AdminServerStatsService(dataSource, appConfig, natsOutbound);
+        var adminServerStatsService = new AdminServerStatsService(dataSource, appConfig, natsOutbound, redisProbe);
         var chatService = new ChatService(chatRepository, blockRepository, chatReadRepository,
             messageRepository, natsOutbound, this.clock, this.uuidGenerator);
         var messageService = new MessageService(messageRepository, chatRepository, blockRepository,
-            mlsService, natsOutbound, this.uuidGenerator);
+            mlsService, natsOutbound, this.uuidGenerator,
+            () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent());
         var fileService = new FileService(appConfig, fileProxy, fileRepository, messageRepository, this.uuidGenerator);
         var exportComplianceSeed = new AdminExportComplianceSeed(
             chatService, messageService, fileService, chatRepository, chatRetentionPolicyRepository);
@@ -278,7 +304,7 @@ public class MessengerApplication {
                 auditRepository, exportJobRepository, exportJobEnqueuer, exportFileAccess, this.exportSuggestedHandler,
                 exportComplianceSeed,
                 organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,
-                filePublicLinkRepository, messageSearchService, adminManifest, adminServerStatsService));
+                filePublicLinkRepository, messageSearchService, adminManifest, adminServerStatsService, redisProbe));
         Tomcat.addServlet(ctx, SERVLET_NAME, jerseyServlet);
         ctx.addServletMappingDecoded("/api/*", SERVLET_NAME);
 
@@ -309,10 +335,17 @@ public class MessengerApplication {
             exportSuggestedSubscriber.close();
             exportSuggestedSubscriber = null;
         }
+        if (indexerHotPlugMonitor != null) {
+            indexerHotPlugMonitor.close();
+            indexerHotPlugMonitor = null;
+        }
         if (watcher != null) watcher.stop();
         if (tomcat != null) tomcat.stop();
         if (redisConfig != null) {
             redisConfig.shutdown();
+        }
+        if (redisProbe != null) {
+            redisProbe.shutdown();
         }
         if (solrClient != null) {
             try {

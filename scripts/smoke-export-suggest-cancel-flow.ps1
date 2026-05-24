@@ -66,7 +66,7 @@ $jobId = $suggest.auto_queued_job_id
 if (-not $jobId) { $jobId = $suggest.autoQueuedJobId }
 
 if (-not $jobId) {
-    Write-Host "No auto_queued_job_id — POST admin export ..." -ForegroundColor Yellow
+    Write-Host "No auto_queued_job_id - POST admin export ..." -ForegroundColor Yellow
     $accepted = Invoke-WebRequest -Uri "$BaseUrl/api/v1/admin/chats/$ChatId/export" -Method Post `
         -Headers $hdr -ContentType "application/json" -Body "{}" -UseBasicParsing
     if ($accepted.StatusCode -ne 202) { throw "admin export POST failed" }

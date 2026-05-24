@@ -49,6 +49,7 @@ Write-Host "Export / compliance (full-server + overlays):" -ForegroundColor Yell
 Write-Host "  core-api metrics:    http://${apiHost}:8080/api/v1/metrics/prometheus"
 Write-Host "  export-replay:       http://${apiHost}:9193/metrics  (health :9193/health)"
 Write-Host "  retention:           http://${apiHost}:9192/metrics"
+Write-Host "  push-worker:         http://${apiHost}:9194/health  (full-server), :9193 in dev-min --profile web"
 Write-Host "  Admin -> Export compliance: seed+file / compliance flow / guide"
 Write-Host "  POST /api/v1/admin/export-compliance-prep  { include_file: true }"
 Write-Host "  .\scripts\full-stack-up.ps1 -ExportSmoke -ExportAutoQueue"

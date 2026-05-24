@@ -186,6 +186,25 @@ class MessageServiceTest {
         assertEquals(msgId.toString(), ev.messageId());
     }
 
+    @Test
+    void editMessage_skipsIndexPublishWhenIndexerUnavailable() {
+        var constrained = new MessageService(
+            msgRepo,
+            chatRepo,
+            blockRepo,
+            mlsService,
+            recordingNats,
+            UuidGenerator.standard(),
+            () -> false
+        );
+        msgRepo.messages.add(msg(chatId, userId, "original"));
+
+        var edited = constrained.editMessage(chatId, msgId, userId, "edited");
+
+        assertNotNull(edited);
+        assertNull(recordingNats.lastPayload(NatsSubjects.MSG_EVENT_INDEX));
+    }
+
     private MessageResponse msg(UUID chatId, UUID senderId, String content) {
         return new MessageResponse(msgId.toString(), chatId.toString(), senderId.toString(),
             "text", content, null, false, now, null, null, null);

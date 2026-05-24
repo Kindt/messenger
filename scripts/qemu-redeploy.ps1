@@ -57,8 +57,10 @@ if ($doServer) {
 cd /mnt/korus
 docker compose -f docker/docker-compose.full-server.yml -f docker/docker-compose.lan-publish.yml build core-api
 docker compose -f docker/docker-compose.full-server.yml -f docker/docker-compose.lan-publish.yml up -d
-for i in 1 2 3 4 5 6 7 8 9 10 12 15 18 24 30; do curl -fsS http://127.0.0.1:8080/realms/avandocmsg >/dev/null 2>&1 && break; sleep 5; done
-KEYCLOAK_URL=http://127.0.0.1:8080 sh /mnt/korus/scripts/keycloak-ensure-dev-users.sh || true
+for i in 1 2 3 4 5 6 7 8 9 10 12 15 18 24 30; do curl -fsS http://127.0.0.1:8081/realms/avandocmsg >/dev/null 2>&1 && break; sleep 5; done
+# Script can arrive with CRLF from Windows checkout; normalize before running on Linux guest.
+sed -i 's/\r$//' /mnt/korus/scripts/keycloak-ensure-dev-users.sh || true
+KEYCLOAK_URL=http://127.0.0.1:8081 /bin/sh /mnt/korus/scripts/keycloak-ensure-dev-users.sh || true
 for i in 1 2 3 4 5 6 7 8 9 10 12 15 18 24 30; do curl -fsS http://127.0.0.1:8080/api/v1/health && exit 0; sleep 5; done
 exit 1
 '@

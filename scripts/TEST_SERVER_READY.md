@@ -1,6 +1,8 @@
 # Когда готов «тестовый запуск сервера» (core-api)
 
 > Индекс smoke-сценариев и canonical-пути: `scripts/SMOKE_INDEX.md`.
+>
+> Актуальные host-порты всех режимов: `docs/PORTS_MATRIX.md`.
 
 ## Минимально работоспособный режим (health без авторизации)
 
@@ -79,12 +81,13 @@
 
 ### Полный стек одной командой (`docker-compose.full-server.yml`)
 
-Файл **`docker/docker-compose.full-server.yml`** поднимает ту же инфраструктуру, что и **dev-min**, плюс **ws-gateway**, **message-pipeline** и **retention-worker** **без** флагов **`--profile web`** / **`--profile retention`**. Сеть по умолчанию та же (**`korus_messenger_dev_min`**), что у **dev-min** — **`korus-web`** с **`docker-compose.attach.yml`** подключается так же.
+Файл **`docker/docker-compose.full-server.yml`** поднимает ту же инфраструктуру, что и **dev-min**, плюс **ws-gateway**, **message-pipeline**, **retention-worker**, **export-replay-worker** и **push-worker** **без** флагов **`--profile web`** / **`--profile retention`**. Сеть по умолчанию та же (**`korus_messenger_dev_min`**), что у **dev-min** — **`korus-web`** с **`docker-compose.attach.yml`** подключается так же.
 
 - Запуск: **`.\scripts\full-stack-up.ps1 -Build`** или **`./scripts/full-stack-up.sh --build`**
 - Остановка: **`.\scripts\full-stack-down.ps1`** или **`./scripts/full-stack-down.sh`**
 - Если поднимали **korus-web** с **`attach`** к этой сети: сначала **`korus-web-down`** с теми же **`-Attach` / `-Turn`**, затем **`full-stack-down`** (сам **full-stack-down** контейнеры **korus-web** не снимает).
 - Админка: **`http://localhost:8080/admin/`**; тестовые пользователи realm **avandocmsg** с ролью **admin**: **`csadmin`** / **`csadmin`**, **`admin`** / **`admin`**
+- Порты воркеров в full-server: **retention `9192`**, **export-replay `9193`**, **push-worker `9194`** (в **dev-min --profile web** push-worker остаётся на **`9193`**).
 
 ### Веб-клиент (`korus-web/`) и WebSocket
 

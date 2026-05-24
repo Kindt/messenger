@@ -2,10 +2,9 @@ package com.avandocmsg.messenger.api.admin.ui;
 
 import com.avandocmsg.messenger.api.admin.ui.dto.AdminServerStatsResponse;
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.api.config.RedisProbe;
 import com.avandocmsg.messenger.api.export.ExportJobStaleCounts;
 import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisURI;
 
 import javax.sql.DataSource;
 import java.lang.management.ManagementFactory;
@@ -21,11 +20,18 @@ public final class AdminServerStatsService implements AdminStatsPort {
     private final DataSource dataSource;
     private final AppConfig appConfig;
     private final NatsConnectionStatus natsConnectionStatus;
+    private final RedisProbe redisProbe;
 
-    public AdminServerStatsService(DataSource dataSource, AppConfig appConfig, NatsConnectionStatus natsConnectionStatus) {
+    public AdminServerStatsService(
+        DataSource dataSource,
+        AppConfig appConfig,
+        NatsConnectionStatus natsConnectionStatus,
+        RedisProbe redisProbe
+    ) {
         this.dataSource = dataSource;
         this.appConfig = appConfig;
         this.natsConnectionStatus = natsConnectionStatus;
+        this.redisProbe = redisProbe;
     }
 
     @Override
@@ -37,7 +43,7 @@ public final class AdminServerStatsService implements AdminStatsPort {
         long uptime = ManagementFactory.getRuntimeMXBean().getUptime();
 
         boolean dbOk = pingDatabase();
-        boolean redisOk = pingRedis();
+        boolean redisOk = redisProbe.ping();
         boolean natsOk = natsConnectionStatus.natsClientConnected();
 
         TableScan counts = countTables();
@@ -58,15 +64,6 @@ public final class AdminServerStatsService implements AdminStatsPort {
              var st = conn.prepareStatement("SELECT 1");
              var rs = st.executeQuery()) {
             return rs.next();
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private boolean pingRedis() {
-        try (var client = RedisClient.create(RedisURI.create(appConfig.redisUri()));
-             var conn = client.connect()) {
-            return "PONG".equals(conn.sync().ping());
         } catch (Exception e) {
             return false;
         }

@@ -48,3 +48,4 @@ if (-not $any) {
     exit 1
 }
 Write-Host "[OK] export suggestion audit trail present" -ForegroundColor Green
+exit 0

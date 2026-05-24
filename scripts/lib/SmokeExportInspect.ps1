@@ -20,13 +20,30 @@ function Invoke-ExportArtifactsInspect {
     $att = Invoke-RestMethod -Uri "$root/attachments?limit=100" -Headers $Headers -Method Get
     $zipBundle = $att.zip_bundle
     if ($null -eq $zipBundle) { $zipBundle = $att.zipBundle }
-    if (-not $zipBundle) {
-        throw "attachments: expected zip_bundle=true"
-    }
     $total = $att.total_count
     if ($null -eq $total) { $total = $att.totalCount }
     $fileCount = $att.file_count
     if ($null -eq $fileCount) { $fileCount = $att.fileCount }
+    if (-not $zipBundle) {
+        Write-Host "[OK] attachments zip_bundle=false total=$total page=$fileCount (json export mode)" -ForegroundColor Green
+        Write-Host "GET download?part=json ..." -ForegroundColor Cyan
+        $jsonRes = Invoke-WebRequest -Uri "$root/download?part=json" -Headers $Headers -Method Get -UseBasicParsing
+        if ($jsonRes.StatusCode -ne 200) {
+            throw "json part status $($jsonRes.StatusCode)"
+        }
+        $jsonLen = $jsonRes.RawContentLength
+        if (-not $jsonLen -and $jsonRes.Content) { $jsonLen = $jsonRes.Content.Length }
+        if ($jsonLen -lt $MinJsonBytes) {
+            throw "json part too small ($jsonLen bytes)"
+        }
+        Write-Host "[OK] json part $jsonLen bytes" -ForegroundColor Green
+        return @{
+            attachments = $att
+            manifest    = $null
+            json_bytes  = $jsonLen
+            binary_file_id = $null
+        }
+    }
     Write-Host "[OK] attachments zip_bundle=true total=$total page=$fileCount" -ForegroundColor Green
 
     Write-Host "GET download?part=manifest ..." -ForegroundColor Cyan

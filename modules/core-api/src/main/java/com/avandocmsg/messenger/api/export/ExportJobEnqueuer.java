@@ -48,14 +48,15 @@ public final class ExportJobEnqueuer {
         throws ExportEnqueueException {
         var jobId = uuidGenerator.randomUuid();
         var job = new ExportReplayJob(jobId.toString(), chatId.toString(), requestedBy.toString());
+        exportJobRepository.insertQueued(jobId, chatId, requestedBy);
         try {
             natsOutbound.publish(NatsSubjects.MSG_EXPORT_REPLAY, MAPPER.writeValueAsBytes(job));
             natsOutbound.flush(Duration.ofSeconds(2));
         } catch (Exception e) {
             log.error("Failed to publish export job {}", jobId, e);
+            exportJobRepository.markTerminal(jobId, "export_failed", null);
             throw new ExportEnqueueException("nats publish failed", e);
         }
-        exportJobRepository.insertQueued(jobId, chatId, requestedBy);
         auditRepository.record(
             requestedBy,
             "export.requested",

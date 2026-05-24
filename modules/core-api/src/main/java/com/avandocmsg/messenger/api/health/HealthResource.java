@@ -1,11 +1,10 @@
 package com.avandocmsg.messenger.api.health;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.api.config.RedisProbe;
 import com.avandocmsg.messenger.common.dto.HealthReadyResponse;
 import com.avandocmsg.messenger.common.dto.HealthResponse;
 import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisURI;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -28,12 +27,19 @@ public class HealthResource {
     private final AppConfig appConfig;
     private final DataSource dataSource;
     private final NatsConnectionStatus natsConnectionStatus;
+    private final RedisProbe redisProbe;
 
     @Inject
-    public HealthResource(AppConfig appConfig, DataSource dataSource, NatsConnectionStatus natsConnectionStatus) {
+    public HealthResource(
+        AppConfig appConfig,
+        DataSource dataSource,
+        NatsConnectionStatus natsConnectionStatus,
+        RedisProbe redisProbe
+    ) {
         this.appConfig = appConfig;
         this.dataSource = dataSource;
         this.natsConnectionStatus = natsConnectionStatus;
+        this.redisProbe = redisProbe;
     }
 
     @GET
@@ -60,19 +66,10 @@ public class HealthResource {
         } catch (Exception ignored) {
             dbOk = false;
         }
-        boolean redisOk = pingRedis();
+        boolean redisOk = redisProbe.ping();
         boolean natsOk = natsConnectionStatus.natsClientConnected();
         var body = new HealthReadyResponse(dbOk ? "ready" : "not_ready", appConfig.version(), dbOk, redisOk, natsOk);
         return dbOk ? Response.ok(body).build()
             : Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(body).build();
-    }
-
-    private boolean pingRedis() {
-        try (var client = RedisClient.create(RedisURI.create(appConfig.redisUri()));
-             var conn = client.connect()) {
-            return "PONG".equals(conn.sync().ping());
-        } catch (Exception e) {
-            return false;
-        }
     }
 }

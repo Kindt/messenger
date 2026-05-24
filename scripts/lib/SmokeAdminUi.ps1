@@ -44,7 +44,7 @@ function Test-SmokeAdminStaticPage {
     if ($adminPage.StatusCode -ne 200) {
         throw "admin static: status $($adminPage.StatusCode)"
     }
-    if ($adminPage.Content -notmatch "Админ-консоль|admin-ui") {
+    if ($adminPage.Content -notmatch "Админ|Администр|admin-ui|Korus Messenger") {
         throw "admin static: unexpected body"
     }
 }

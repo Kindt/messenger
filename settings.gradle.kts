@@ -1,6 +1,7 @@
 rootProject.name = "avandocmsg-messenger"
 
 include(
+    "services:indexer",
     "modules:common",
     "modules:core-api",
     "modules:web-client",

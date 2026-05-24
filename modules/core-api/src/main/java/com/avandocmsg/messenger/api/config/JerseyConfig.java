@@ -8,6 +8,7 @@ import com.avandocmsg.messenger.api.chats.ChatResource;
 import com.avandocmsg.messenger.api.chats.ChatService;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanResource;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanService;
+import com.avandocmsg.messenger.api.config.RedisProbe;
 import com.avandocmsg.messenger.api.config.openapi.OpenApiConfig;
 import com.avandocmsg.messenger.api.contacts.ContactResource;
 import com.avandocmsg.messenger.api.contacts.ContactService;
@@ -104,12 +105,14 @@ public class JerseyConfig extends ResourceConfig {
                         FilePublicLinkRepository filePublicLinkRepository,
                         MessageSearchService messageSearchService,
                         AdminUiManifest adminUiManifest,
-                        AdminServerStatsService adminServerStatsService) {
+                        AdminServerStatsService adminServerStatsService,
+                        RedisProbe redisProbe) {
         register(new AbstractBinder() {
             @Override
             protected void configure() {
                 bind(dataSource).to(DataSource.class);
                 bind(appConfig).to(AppConfig.class);
+                bind(redisProbe).to(RedisProbe.class);
                 bind(userMessages).to(UserMessageSource.class);
                 bind(clock).to(Clock.class);
                 bind(uuidGenerator).to(UuidGenerator.class);

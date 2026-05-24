@@ -10,13 +10,35 @@ These scripts facilitate JFR (JDK Flight Recorder) profiling of Korus Messenger 
 
 ## Usage
 
-### Profile core-api
+### Profile core-api under load
+
+```powershell
+.\scripts\profiling\load-core-api.ps1 -BaseUrl http://127.0.0.1:18080 -DurationSeconds 30
+.\scripts\profiling\measure-prometheus-heap.ps1 -MetricsUrl http://127.0.0.1:18080/api/v1/metrics/prometheus
+```
+
+For QEMU/docker: JRE images lack `jcmd`; use Prometheus scripts above. Host-local Tomcat can still use JFR:
 
 ```powershell
 .\scripts\profiling\profile-core-api.ps1 [-DurationSeconds 60] [-OutputDir ./jfr-recordings]
 ```
 
-### Profile a specific worker
+### Profile workers on QEMU
+
+```powershell
+.\scripts\profiling\profile-qemu-workers.ps1 -ApiBaseUrl http://127.0.0.1:18080
+```
+
+Requires SSH tunnel to server VM (ports 19192 retention, 19193 export-replay). deep-archiver/indexer have no host metrics port in compose — use functional smokes.
+
+After code changes to workers, rebuild on QEMU guest:
+
+```bash
+docker compose -f docker/docker-compose.full-server.yml build retention-worker deep-archiver-worker
+docker compose -f docker/docker-compose.full-server.yml up -d retention-worker deep-archiver-worker
+```
+
+(`qemu-redeploy.ps1 -ServerOnly` rebuilds **core-api** only.)
 
 ```powershell
 .\scripts\profiling\profile-worker.ps1 -WorkerName deep-archiver [-DurationSeconds 60] [-OutputDir ./jfr-recordings]

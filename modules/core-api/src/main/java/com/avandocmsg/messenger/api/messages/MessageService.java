@@ -23,9 +23,12 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Deque;
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 
 public class MessageService {
     private static final Logger log = LoggerFactory.getLogger(MessageService.class);
@@ -36,16 +39,27 @@ public class MessageService {
     private final MlsService mlsService;
     private final NatsOutboundPort natsOutbound;
     private final UuidGenerator uuidGenerator;
+    private final BooleanSupplier indexerAvailable;
+    private final Deque<MessageWorkerEvent> pendingIndexEvents = new ArrayDeque<>();
+    private static final int MAX_PENDING_INDEX_EVENTS = 2048;
 
     public MessageService(MessageRepository messageRepository, ChatRepository chatRepository,
                           BlockRepository blockRepository,
                           MlsService mlsService, NatsOutboundPort natsOutbound, UuidGenerator uuidGenerator) {
+        this(messageRepository, chatRepository, blockRepository, mlsService, natsOutbound, uuidGenerator, () -> true);
+    }
+
+    public MessageService(MessageRepository messageRepository, ChatRepository chatRepository,
+                          BlockRepository blockRepository,
+                          MlsService mlsService, NatsOutboundPort natsOutbound, UuidGenerator uuidGenerator,
+                          BooleanSupplier indexerAvailable) {
         this.messageRepository = messageRepository;
         this.chatRepository = chatRepository;
         this.blockRepository = blockRepository;
         this.mlsService = mlsService;
         this.natsOutbound = natsOutbound;
         this.uuidGenerator = uuidGenerator;
+        this.indexerAvailable = indexerAvailable != null ? indexerAvailable : () -> true;
     }
 
     /**
@@ -216,11 +230,46 @@ public class MessageService {
 
     /** Синхронизация Solr через indexer: правка / мягкое удаление вне pipeline {@code msg.send}. */
     private void publishIndexEvent(MessageWorkerEvent event) {
+        if (!indexerAvailable.getAsBoolean()) {
+            enqueuePendingIndexEvent(event);
+            log.info("Indexer service unavailable; queued {}", NatsSubjects.MSG_EVENT_INDEX);
+            return;
+        }
+        flushPendingIndexEvents();
         try {
             var data = MAPPER.writeValueAsBytes(event);
             natsOutbound.publish(NatsSubjects.MSG_EVENT_INDEX, data);
         } catch (Exception e) {
             log.warn("Failed to publish {} for message {}", NatsSubjects.MSG_EVENT_INDEX, event.messageId(), e);
+        }
+    }
+
+    private void flushPendingIndexEvents() {
+        while (true) {
+            MessageWorkerEvent pending;
+            synchronized (pendingIndexEvents) {
+                pending = pendingIndexEvents.pollFirst();
+            }
+            if (pending == null) {
+                return;
+            }
+            try {
+                var data = MAPPER.writeValueAsBytes(pending);
+                natsOutbound.publish(NatsSubjects.MSG_EVENT_INDEX, data);
+            } catch (Exception e) {
+                log.warn("Failed to publish queued {} for message {}", NatsSubjects.MSG_EVENT_INDEX, pending.messageId(), e);
+                enqueuePendingIndexEvent(pending);
+                return;
+            }
+        }
+    }
+
+    private void enqueuePendingIndexEvent(MessageWorkerEvent event) {
+        synchronized (pendingIndexEvents) {
+            if (pendingIndexEvents.size() >= MAX_PENDING_INDEX_EVENTS) {
+                pendingIndexEvents.pollFirst();
+            }
+            pendingIndexEvents.addLast(event);
         }
     }
 

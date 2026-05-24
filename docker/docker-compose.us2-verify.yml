@@ -1,0 +1,24 @@
+# Override profile for stricter US2 runtime verification on existing full-server stack.
+# Usage:
+#   docker compose -f docker/docker-compose.full-server.yml \
+#     -f docker/docker-compose.lan-publish.yml \
+#     -f docker/docker-compose.us2-verify.yml up -d core-api retention-worker archiver-worker deep-archiver-worker indexer-worker
+services:
+  core-api:
+    environment:
+      EXPORT_ADMIN_SUGGEST_ENABLED: "true"
+      EXPORT_ADMIN_EXPORT_ENABLED: "true"
+      EXPORT_SUGGESTED_SUBSCRIBER_ENABLED: "true"
+      EXPORT_AUTO_QUEUE_ON_SUGGESTED: "true"
+
+  retention-worker:
+    environment:
+      RETENTION_DRY_RUN: "false"
+      RETENTION_SCAN_INTERVAL_SECONDS: "30"
+      RETENTION_INITIAL_DELAY_SECONDS: "5"
+      RETENTION_CHUNK_THRESHOLD_BYTES: "2048"
+      RETENTION_PUBLISH_EXPORT_SUGGESTED: "true"
+
+  deep-archiver-worker:
+    environment:
+      DEEP_ARCHIVE_CHUNK_SIZE_BYTES: "2048"

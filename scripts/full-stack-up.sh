@@ -66,7 +66,7 @@ if $EXPORT_SMOKE && [[ "$WAIT_READY" == "1" ]]; then
   "${SCRIPT_DIR}/wait-stack-ready.sh" || exit 1
 fi
 
-echo "[OK] Full stack: core-api :8080, Keycloak :8081, ws-gateway :8082, export-replay :9193, retention :9192"
+echo "[OK] Full stack: core-api :8080, Keycloak :8081, ws-gateway :8082, export-replay :9193, retention :9192, push-worker :9194"
 echo "Web Push VAPID: ./scripts/generate-vapid.sh  (then set keys on push-worker + korus-web WEB_CLIENT_VAPID_PUBLIC_KEY)" >&2
 echo "Admin: http://localhost:8080/admin/  (realm avandocmsg: csadmin/csadmin or admin/admin)"
 echo "Attach korus-web: ./scripts/korus-web-up.sh --attach --build  (PowerShell: .\\scripts\\korus-web-up.ps1 -Attach -Build)"

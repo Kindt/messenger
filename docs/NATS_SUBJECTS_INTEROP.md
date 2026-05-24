@@ -20,7 +20,29 @@
 
 **Корреляция с админским аудитом (HTTP):** тот же UUID прохода, что **`RetentionAppliedEvent.pass_id`** в **`msg.event.retention`**, попадает в **`audit_events.details_json`** как **`pass_id`** (построчно **`message.retention.hot_body_cleared`** и в сводке **`message.retention.bulk_cleared`**; у сводки он же в колонке **`resource_id`**). Список событий: **`GET /api/v1/admin/audit-events`** (фильтры **`action`**, **`resource_type`**, **`resource_id`**). Подробности — **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §8.
 
-Объект MinIO **`messages/{messageId}.json`**, который пишет **`DeepArchiverWorker`**, — JSON события с **`msg.event.deep-archive`** плюс на корне поля **`snapshot_version`** и **`producer`** (см. **`ArchiveSnapshotFormat`** в **`modules/common`**); по NATS subject по-прежнему уходит только **`MessageWorkerEvent`**.
+Объект MinIO, который пишет **`DeepArchiverWorker`**, совместим по subject и может быть:
+- legacy: **`messages/{messageId}.json`** (один JSON-объект),
+- chunked: **`messages/{messageId}/manifest.json`** + **`part-*.json`** (для больших payload).
+В обоих вариантах на корне используется envelope-поля **`snapshot_version`** и **`producer`** (см. **`ArchiveSnapshotFormat`** в **`modules/common`**); по NATS subject по-прежнему уходит только **`MessageWorkerEvent`**.
+
+## Experimental: hot-plug lifecycle (Phase 5)
+
+Эти subject'ы зарезервированы контрактом hot-plug и считаются экспериментальными до завершения US3:
+
+- **`$SVC.heartbeat.{serviceId}`** — heartbeat от извлечённого сервиса в core-api (каждые 10с по умолчанию).
+- **`$SVC.heartbeat.*`** — подписка core-api для отслеживания присутствия сервисов.
+- **`$SVC.lifecycle.{serviceId}`** — опциональные lifecycle-события (`INIT`, `ACTIVE`, `DRAINING`, `STOPPED`) для диагностик и оповещений.
+- Queue group для рабочих subject-ов (`msg.event.index`, `msg.event.retention`, `msg.event.deep-archive`) сохраняется и используется для распределения нагрузки между инстансами сервиса.
+
+Поля heartbeat payload (минимум): `serviceId`, `state`, `uptimeMs`.
+
+Правила совместимости:
+
+1. Изменения payload должны быть backward-compatible минимум один minor релиз.
+2. Старые потребители должны игнорировать неизвестные поля.
+3. При отсутствии heartbeat > `SERVICE_HEARTBEAT_TTL_MS` core-api работает в degraded mode и не падает.
+
+Источник контракта для hot-plug: `specs/001-system-review-refactoring/contracts/hotplug-contract.md`.
 
 ## ws-gateway
 

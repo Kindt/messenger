@@ -4,7 +4,7 @@
 
 **Created**: 2026-05-23
 
-**Status**: Draft
+**Status**: Ready for Implementation
 
 **Input**: User description: "Запустить Spec-kit с ревью, исправлениями, рефакторингом по памяти и процессору... не закрытые доработки по функциям. возможно, выделение чего-то в виде микросервисов с горячим подключением к работающему серверу"
 
@@ -92,6 +92,9 @@ As a developer, I want a systematic review of the codebase for dead code, duplic
 - **FR-005**: Core server MUST detect the presence/absence of extracted microservices and operate with graceful degradation.
 - **FR-006**: Hot-plug (start/stop without restarting core server) MUST be supported for each extracted microservice.
 - **FR-007**: Code review findings MUST be documented with severity (critical/high/medium/low) and estimated effort.
+- **FR-008**: Hot-plug heartbeat and service presence detection flows MUST expose Prometheus metrics for publish/consume/error states.
+- **FR-009**: Any new NATS subject introduced for hot-plug lifecycle MUST be documented in `docs/NATS_SUBJECTS_INTEROP.md` before release.
+- **FR-010**: Performance optimization work MUST include a measurable implementation loop (apply fixes + rerun profiling) and a before/after comparison for SC-003.
 
 ### Key Entities
 

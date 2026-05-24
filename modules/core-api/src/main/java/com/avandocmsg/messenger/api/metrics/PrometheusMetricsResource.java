@@ -15,7 +15,8 @@ import java.io.Writer;
 /**
  * JVM + default process metrics (ТЗ п. 22, baseline observability).
  * Application counters such as {@link ApiDeniedMetrics}, {@link ApiValidationMetrics},
- * and {@link ExportMetrics} register with the same default registry and appear here.
+ * and {@link ExportMetrics} register with the same default registry and appear here
+ * once {@link ExportMetrics#ensureRegistered()} runs on each scrape.
  */
 @Path("/v1/metrics")
 public class PrometheusMetricsResource {
@@ -28,6 +29,7 @@ public class PrometheusMetricsResource {
     @Path("/prometheus")
     @Produces(MediaType.TEXT_PLAIN)
     public StreamingOutput prometheus() {
+        ExportMetrics.ensureRegistered();
         return output -> {
             Writer w = new OutputStreamWriter(output);
             TextFormat.write004(w, CollectorRegistry.defaultRegistry.metricFamilySamples());

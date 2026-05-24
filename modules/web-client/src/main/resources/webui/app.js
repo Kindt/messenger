@@ -134,6 +134,7 @@
   var CHAT_PREVIEW_HYDRATE_MORE = 12;
   var chatPreviewMoreTimer = null;
   var heartbeatTimer = null;
+  var ttlRenderTimer = null;
   var HEARTBEAT_INTERVAL_MS = 60000;
   var HEARTBEAT_WS_MIN_MS = 30000;
   var lastHeartbeatMs = 0;
@@ -186,6 +187,14 @@
       if (seconds >= 3600) return "⏱ " + Math.round(seconds / 3600) + " ч";
       if (seconds >= 60) return "⏱ " + Math.round(seconds / 60) + " мин";
       return "⏱ " + seconds + " с";
+    },
+    formatTimeLeft: function (secondsLeft) {
+      if (secondsLeft == null || secondsLeft <= 0) return "истекло";
+      var s = Math.floor(secondsLeft);
+      if (s >= 86400) return Math.ceil(s / 86400) + " д";
+      if (s >= 3600) return Math.ceil(s / 3600) + " ч";
+      if (s >= 60) return Math.ceil(s / 60) + " мин";
+      return s + " с";
     },
   };
   var uiShellUtils = window.KorusUiShellUtils || {
@@ -1109,6 +1118,14 @@
       clearInterval(heartbeatTimer);
       heartbeatTimer = null;
     }
+  }
+
+  function startTtlRenderTicker() {
+    if (ttlRenderTimer) return;
+    ttlRenderTimer = setInterval(function () {
+      if (!state.tokens || !state.messages || !state.messages.length) return;
+      scheduleRender();
+    }, 60000);
   }
 
   async function saveMyProfile() {
@@ -4336,12 +4353,16 @@
         ? new Date(data.createdAt).toISOString()
         : new Date().toISOString(),
       edited_at: null,
-      ttl_seconds:
-        data.ttl_seconds != null
-          ? data.ttl_seconds
-          : data.ttlSeconds != null
-            ? data.ttlSeconds
-            : null,
+      visibility_ttl_seconds:
+        data.visibility_ttl_seconds != null
+          ? data.visibility_ttl_seconds
+          : data.visibilityTtlSeconds != null
+            ? data.visibilityTtlSeconds
+            : data.ttl_seconds != null
+              ? data.ttl_seconds
+              : data.ttlSeconds != null
+                ? data.ttlSeconds
+                : null,
       attachment_file_id: aid,
     };
   }
@@ -4565,6 +4586,33 @@
 
   function formatTtlLabel(seconds) {
     return uiFormatUtils.formatTtlLabel(seconds);
+  }
+
+  function formatTimeLeft(secondsLeft) {
+    return uiFormatUtils.formatTimeLeft(secondsLeft);
+  }
+
+  function messageVisibilityTtlSeconds(m) {
+    if (!m) return null;
+    var raw =
+      m.visibility_ttl_seconds != null
+        ? m.visibility_ttl_seconds
+        : m.ttl_seconds != null
+          ? m.ttl_seconds
+          : m.ttlSeconds != null
+            ? m.ttlSeconds
+            : null;
+    if (raw == null) return null;
+    var parsed = parseInt(raw, 10);
+    return parsed > 0 ? parsed : null;
+  }
+
+  function messageExpiryEpochMs(m) {
+    var ttl = messageVisibilityTtlSeconds(m);
+    if (!ttl || !m || !m.created_at) return null;
+    var created = Date.parse(m.created_at);
+    if (!created || isNaN(created)) return null;
+    return created + ttl * 1000;
   }
 
   function getComposerTtlSeconds() {
@@ -5359,7 +5407,7 @@
           content: up.id,
           reply_to_msg_id: currentReplyToId(),
           client_msg_id: null,
-          ttl_seconds: getComposerTtlSeconds(),
+          visibility_ttl_seconds: getComposerTtlSeconds(),
         },
       });
       clearReplyTo();
@@ -5388,7 +5436,7 @@
           content: text,
           reply_to_msg_id: currentReplyToId(),
           client_msg_id: null,
-          ttl_seconds: getComposerTtlSeconds(),
+          visibility_ttl_seconds: getComposerTtlSeconds(),
         },
       });
       ta.value = "";
@@ -6129,12 +6177,13 @@
       var th = el("div", "thread-header");
       var thMain = el("div", "thread-header-main");
       thMain.appendChild(el("div", "thread-title", (sel && sel.title) || state.selectedId));
-      if (sel && sel.ttl_seconds) {
+      var chatTtlSeconds = messageVisibilityTtlSeconds(sel);
+      if (chatTtlSeconds) {
         thMain.appendChild(
           el(
             "div",
             "thread-subtitle",
-            "TTL сообщений в чате: " + formatTtlLabel(sel.ttl_seconds)
+            "TTL сообщений в чате: " + formatTtlLabel(chatTtlSeconds)
           )
         );
       }
@@ -6349,11 +6398,20 @@
           };
           meta.appendChild(ed);
         }
-        if (m.ttl_seconds) {
+        var ttlSeconds = messageVisibilityTtlSeconds(m);
+        var expiresAt = messageExpiryEpochMs(m);
+        var isExpired = expiresAt != null && Date.now() >= expiresAt;
+        if (ttlSeconds) {
           var ttlLbl = el("span");
-          ttlLbl.className = "msg-ttl";
-          ttlLbl.textContent = " · " + formatTtlLabel(m.ttl_seconds);
-          ttlLbl.title = "Исчезнет через " + m.ttl_seconds + " с после отправки";
+          ttlLbl.className = "msg-ttl msg-ttl-indicator" + (isExpired ? " msg-ttl-expired" : "");
+          if (isExpired) {
+            ttlLbl.textContent = " · ⏱ истекло";
+            ttlLbl.title = "Срок видимости сообщения истек";
+          } else {
+            var leftSeconds = Math.max(1, Math.ceil((expiresAt - Date.now()) / 1000));
+            ttlLbl.textContent = " · ⏱ " + formatTimeLeft(leftSeconds);
+            ttlLbl.title = "Исчезнет через " + formatTimeLeft(leftSeconds);
+          }
           meta.appendChild(ttlLbl);
         }
         art.appendChild(meta);
@@ -6373,9 +6431,9 @@
           art.appendChild(el("div", "msg-type" + (isE2eeType(m.type) ? " msg-type-e2ee" : ""), typeLbl));
         }
         var body = el("div", "msg-body md");
-        if (m.deleted) {
+        if (m.deleted || isExpired) {
           body.className = "msg-body msg-deleted-body";
-          body.textContent = "Сообщение удалено";
+          body.textContent = isExpired ? "Сообщение недоступно (TTL истек)" : "Сообщение удалено";
         } else {
           renderMessageContent(body, m);
         }
@@ -7364,6 +7422,7 @@
   function boot() {
     applyStyleSet(loadStyleSet());
     syncNotifyPref();
+    startTtlRenderTicker();
     state.networkOnline =
       typeof navigator.onLine === "boolean" ? navigator.onLine : true;
     setupConnectivityHandlers();

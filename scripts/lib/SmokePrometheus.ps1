@@ -1,4 +1,14 @@
 # Dot-source: parse simple Prometheus text exposition counters.
+using namespace System.Globalization
+
+function Try-ParsePromValue {
+    param([string]$Value)
+    $parsed = 0.0
+    if ([double]::TryParse($Value, [NumberStyles]::Float, [CultureInfo]::InvariantCulture, [ref]$parsed)) {
+        return $parsed
+    }
+    return $null
+}
 
 function Get-PrometheusGauge {
     param(
@@ -11,8 +21,9 @@ function Get-PrometheusGauge {
         if (-not $line.StartsWith($Name)) { continue }
         if ($line -match '\{') { continue }
         $parts = $line.Trim() -split '\s+'
-        if ($parts.Length -ge 2 -and [double]::TryParse($parts[-1], [ref]$null)) {
-            return [double]$parts[-1]
+        if ($parts.Length -ge 2) {
+            $num = Try-ParsePromValue -Value $parts[-1]
+            if ($null -ne $num) { return $num }
         }
     }
     return $null
@@ -41,8 +52,9 @@ function Get-PrometheusCounter {
             continue
         }
         $parts = $line.Trim() -split '\s+'
-        if ($parts.Length -ge 2 -and [double]::TryParse($parts[-1], [ref]$null)) {
-            return [double]$parts[-1]
+        if ($parts.Length -ge 2) {
+            $num = Try-ParsePromValue -Value $parts[-1]
+            if ($null -ne $num) { return $num }
         }
     }
     return $null

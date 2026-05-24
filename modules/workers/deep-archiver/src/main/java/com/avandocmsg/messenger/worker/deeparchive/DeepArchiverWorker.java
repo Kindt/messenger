@@ -1,14 +1,13 @@
 package com.avandocmsg.messenger.worker.deeparchive;
 
-import com.avandocmsg.messenger.common.dto.ChunkEntry;
-import com.avandocmsg.messenger.common.dto.DeepArchiveManifest;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.common.retention.ArchiveSnapshotEnvelopeDigest;
 import com.avandocmsg.messenger.common.retention.ArchiveSnapshotFormat;
+import com.avandocmsg.messenger.common.retention.ChunkedSnapshotWriter;
 import com.avandocmsg.messenger.common.retention.ContentAnalyzer;
-import com.avandocmsg.messenger.common.util.Sha256Hex;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.minio.BucketExistsArgs;
 import io.minio.MakeBucketArgs;
@@ -24,7 +23,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -97,14 +95,14 @@ public class DeepArchiverWorker {
             var event = MAPPER.readValue(payload, MessageWorkerEvent.class);
             log.info("Deep-archiver received messageId={} chatId={}", event.messageId(), event.chatId());
             if (minioEnabled) {
-                var contentNode = MAPPER.readTree(payload).get("content");
-                if (contentNode != null && !contentNode.isNull()
-                    && ContentAnalyzer.isFileReference(contentNode.asText())) {
+                var root = MAPPER.readTree(payload);
+                var candidateText = resolveCandidateText(event, root);
+                if (shouldSkipDeepArchiveForContent(candidateText)) {
                     log.info("Skipped deep-archive for message {}: content is file reference", event.messageId());
                     return;
                 }
                 var bytes = minioSnapshotBytesFromNatsJson(payload, MAPPER);
-                if (chunkSizeBytes > 0 && bytes.length > chunkSizeBytes) {
+                if (shouldWriteChunked(chunkSizeBytes, bytes.length)) {
                     writeChunked(event.messageId(), bytes);
                 } else {
                     var key = "messages/" + event.messageId() + ".json";
@@ -126,42 +124,18 @@ public class DeepArchiverWorker {
 
     private void writeChunked(String messageId, byte[] jsonBytes) throws Exception {
         var dir = "messages/" + messageId + "/";
-        var chunks = new ArrayList<ChunkEntry>();
-        int offset = 0;
-        int partIndex = 0;
-        while (offset < jsonBytes.length) {
-            int end = Math.min(offset + chunkSizeBytes, jsonBytes.length);
-            var partBytes = new byte[end - offset];
-            System.arraycopy(jsonBytes, offset, partBytes, 0, partBytes.length);
-            var partName = String.format(ArchiveSnapshotFormat.CHUNK_PART_FORMAT, partIndex);
-            var sha256 = Sha256Hex.of(partBytes);
-            minioClient.putObject(
-                PutObjectArgs.builder()
-                    .bucket(minioBucket)
-                    .object(dir + partName)
-                    .stream(new ByteArrayInputStream(partBytes), partBytes.length, -1)
-                    .contentType("application/json")
-                    .build()
-            );
-            chunks.add(new ChunkEntry(partName, partIndex, partBytes.length, sha256));
-            offset = end;
-            partIndex++;
-        }
-        long totalSize = jsonBytes.length;
-        var totalSha256 = Sha256Hex.of(jsonBytes);
-        var manifest = new DeepArchiveManifest(messageId, chunks.size(), chunks, totalSize, totalSha256);
-        var manifestBytes = MAPPER.writeValueAsBytes(manifest);
-        minioClient.putObject(
-            PutObjectArgs.builder()
-                .bucket(minioBucket)
-                .object(dir + ArchiveSnapshotFormat.CHUNK_MANIFEST_FILENAME)
-                .stream(new ByteArrayInputStream(manifestBytes), manifestBytes.length, -1)
-                .contentType("application/json")
-                .build()
+        int chunkCount = ChunkedSnapshotWriter.writeChunkedSnapshot(
+            minioClient,
+            minioBucket,
+            dir,
+            messageId,
+            jsonBytes,
+            chunkSizeBytes,
+            MAPPER
         );
-        log.info("Wrote {} chunks for message {} (total {} bytes)", chunks.size(), messageId, totalSize);
+        log.info("Wrote {} chunks for message {} (total {} bytes)", chunkCount, messageId, jsonBytes.length);
         DeepArchiverMetrics.chunkedMessage();
-        for (int i = 0; i < chunks.size(); i++) {
+        for (int i = 0; i < chunkCount; i++) {
             DeepArchiverMetrics.chunkWrite();
         }
     }
@@ -186,6 +160,34 @@ public class DeepArchiverWorker {
         return mapper.writeValueAsBytes(root);
     }
 
+    static String resolveCandidateText(MessageWorkerEvent event, JsonNode root) {
+        // Worker events carry searchText (safe snippet), not raw content.
+        // Keep legacy fallback for older publishers that may still emit "content".
+        String candidateText = event.searchText();
+        if ((candidateText == null || candidateText.isBlank()) && root != null && root.hasNonNull("searchText")) {
+            candidateText = root.get("searchText").asText();
+        }
+        if ((candidateText == null || candidateText.isBlank()) && root != null && root.hasNonNull("content")) {
+            candidateText = root.get("content").asText();
+        }
+        return candidateText;
+    }
+
+    static boolean shouldSkipDeepArchiveForContent(String candidateText) {
+        return candidateText != null && ContentAnalyzer.isFileReference(candidateText);
+    }
+
+    static boolean shouldWriteChunked(int chunkSizeBytes, int payloadBytes) {
+        return chunkSizeBytes > 0 && payloadBytes > chunkSizeBytes;
+    }
+
+    static int parseChunkSize(String chunkSizeEnv) {
+        if (chunkSizeEnv == null || chunkSizeEnv.isBlank()) {
+            return ArchiveSnapshotFormat.DEFAULT_CHUNK_SIZE_BYTES;
+        }
+        return Integer.parseInt(chunkSizeEnv);
+    }
+
     public static void main(String[] args) {
         var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
         var endpoint = System.getenv("MINIO_ENDPOINT");
@@ -194,9 +196,7 @@ public class DeepArchiverWorker {
         var bucket = System.getenv().getOrDefault("MINIO_BUCKET", "deep-archive");
         var region = System.getenv("MINIO_REGION");
         var chunkSizeEnv = System.getenv("DEEP_ARCHIVE_CHUNK_SIZE_BYTES");
-        int chunkSize = chunkSizeEnv != null && !chunkSizeEnv.isBlank()
-            ? Integer.parseInt(chunkSizeEnv)
-            : ArchiveSnapshotFormat.DEFAULT_CHUNK_SIZE_BYTES;
+        int chunkSize = parseChunkSize(chunkSizeEnv);
 
         MinioClient client = null;
         boolean minioOk = endpoint != null && !endpoint.isBlank()

@@ -1,12 +1,12 @@
 # Implementation Plan: System Review, Refactoring & Optimization
 
-**Branch**: `main` | **Date**: 2026-05-23 | **Spec**: [spec.md](spec.md)
+**Branch**: `001-system-review-refactoring` | **Date**: 2026-05-23 | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/001-system-review-refactoring/spec.md`
 
 ## Summary
 
-A four-track initiative: (1) profile CPU/memory hotspots across all modules, (2) complete Epic 01 Retention Phase B steps 6-9 (Solr, web-client TTL, metrics, docs), (3) extract candidate services as hot-plug microservices via NATS queue groups, (4) systematic code review and tech debt reduction.
+A five-track initiative: (1) profile CPU/memory hotspots across all modules, (2) complete Epic 01 Retention Phase B steps 6-9 (Solr, web-client TTL, metrics, docs), (3) extract candidate services as hot-plug microservices via NATS queue groups, (4) execute measurable optimization loop for SC-003 (implement + remeasure), (5) systematic code review and tech debt reduction.
 
 ## Technical Context
 
@@ -28,10 +28,10 @@ A four-track initiative: (1) profile CPU/memory hotspots across all modules, (2)
 2. **Retention & Compliance**: ✅ Met — Epic 01 completion directly addresses retention compliance.
 3. **Testability**: ✅ Met — all microservice extraction paths will have unit tests; existing H2 patterns reused.
 4. **Observability**: ✅ Met — new Prometheus metrics required for chunking, file-ref skipping, and hot-plug lifecycle.
-5. **Clean Architecture**: ⚠️ Microservice extraction reverses modular monolith direction (workers become independent). Justification: workers already communicate via NATS, not direct JVM calls. The NATS layer already provides the interface boundary; extraction just changes the deployment unit. This is NOT a circular dependency — the message flow remains unidirectional: core-api → NATS → worker.
+5. **Clean Architecture**: ⚠️ Potential conflict with modular-monolith principle. Phase 5 is allowed only as a controlled deployment split that preserves module dependency direction (`workers/*` -> `core-api` -> `common`) and requires explicit architecture approval (ADR + constitution exception or amendment) before implementation.
 6. **Infrastructure Parity**: ✅ Met — smoke tests for extracted services reuses existing MinIO/NATS/PostgreSQL stack.
 
-**All gates pass.** Complexity is justified for principle V.
+**Gate status**: Engineering gates **passed** (2026-05-24). Formal governance **pending**: ADR `docs/adr/ADR-hotplug-deployment-split.md` (status: proposed), constitution note `docs/proposals/constitution-v1.1-hotplug-bounded-exception.md` (status: ready_for_review). Sign-off pack: `docs/review/hotplug-governance-handoff-2026-05-24.md`.
 
 ## Project Structure
 
@@ -55,7 +55,8 @@ specs/001-system-review-refactoring/
 Track 1 — Profiling: no new source; profiling scripts in `scripts/profiling/`.
 Track 2 — Epic 01 completion: modifies existing files.
 Track 3 — Microservice extraction: new service modules under `services/` or extracted from `modules/workers/`.
-Track 4 — Code review: documented in `docs/review/`.
+Track 4 — Optimization loop: targeted refactors from hotspot report + before/after benchmark artifacts.
+Track 5 — Code review: documented in `docs/review/`.
 
 ## Complexity Tracking
 

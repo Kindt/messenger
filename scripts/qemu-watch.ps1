@@ -3,6 +3,8 @@ param(
     [int]$IntervalSeconds = 8,
     [int]$SshTimeoutSec = 18,
     [switch]$Once,
+    [switch]$CleanView,
+    [switch]$ShowBootstrapRaw,
     [switch]$Help
 )
 

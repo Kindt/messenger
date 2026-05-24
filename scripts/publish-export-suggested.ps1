@@ -22,6 +22,9 @@ $payload = @{
 } | ConvertTo-Json -Compress
 
 Write-Host "Publishing msg.export.suggested chatId=$ChatId via $NatsUrl ..." -ForegroundColor Cyan
-& nats --server $NatsUrl pub msg.export.suggested $payload
+$payload | & nats --server $NatsUrl pub --force-stdin --no-templates msg.export.suggested
+if ($LASTEXITCODE -ne 0) {
+    throw "nats publish failed for $NatsUrl (exit $LASTEXITCODE)"
+}
 Write-Host "[OK] Published. Check core-api audit export.suggested (and auto-queue if enabled)." -ForegroundColor Green
 Write-Host "Or use admin API: POST /api/v1/admin/chats/$ChatId/export-suggest with EXPORT_ADMIN_SUGGEST_ENABLED=true" -ForegroundColor DarkGray
