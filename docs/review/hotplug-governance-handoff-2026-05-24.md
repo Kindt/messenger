@@ -19,6 +19,23 @@ US3 hot-plug implementation is **code-complete and runtime-verified on QEMU**. R
 | Metrics | `modules/common/.../hotplug/HotPlugMetrics*.java` |
 | Full tests | `./gradlew test` green (2026-05-24) |
 
+## Engineering Verification (complete)
+
+- [x] `./gradlew test` green (2026-05-24)
+- [x] QEMU: `scripts/smoke-us2-epic01-qemu.ps1` (T024 + hot-plug)
+- [x] Commit: `f0bad2a` on branch `001-system-review-refactoring`
+- [ ] **Git push** — blocked from dev host (corporate proxy → GitHub). Use `scripts/publish-spec-001-branch.ps1` or offline bundle below.
+
+### Offline publish (if push fails)
+
+Bundle: `deploy/qemu/run/spec-001-system-review.bundle` (~247 MiB, `origin/main..HEAD`)
+
+```bash
+git clone spec-001-system-review.bundle spec-001-import
+cd spec-001-import
+git push -u origin 001-system-review-refactoring
+```
+
 ## Sign-Off Checklist (manual)
 
 Copy into ADR **Approval Checklist** when signed:
