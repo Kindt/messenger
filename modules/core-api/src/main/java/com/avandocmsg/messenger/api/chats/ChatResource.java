@@ -4,14 +4,19 @@ import com.avandocmsg.messenger.api.chats.dto.AddMemberRequest;
 import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
 import com.avandocmsg.messenger.api.chats.dto.ChatResponse;
 import com.avandocmsg.messenger.api.chats.dto.CreateChatRequest;
+import com.avandocmsg.messenger.api.chats.dto.BatchReadRequest;
 import com.avandocmsg.messenger.api.chats.dto.MarkReadRequest;
 import com.avandocmsg.messenger.api.chats.dto.MuteRequest;
 import com.avandocmsg.messenger.api.chats.dto.PersonalFilterRequest;
+import com.avandocmsg.messenger.api.chats.dto.ReadReceiptResponse;
 import com.avandocmsg.messenger.api.chats.dto.UnreadCountResponse;
 import com.avandocmsg.messenger.api.chats.dto.UpdateChatRequest;
 import com.avandocmsg.messenger.api.chats.dto.UpdateRoleRequest;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
+import com.avandocmsg.messenger.core.application.ChatApplicationService;
+import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,11 +34,13 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 
+import java.util.List;
 import java.util.UUID;
 
 @Path("/v1/chats")
@@ -43,11 +50,16 @@ import java.util.UUID;
 public class ChatResource {
 
     private final ChatService chatService;
+    private final ReadReceiptService readReceiptService;
+    private final ChatApplicationService chatApplicationService;
     private final UserMessageSource messages;
 
     @Inject
-    public ChatResource(ChatService chatService, UserMessageSource messages) {
+    public ChatResource(ChatService chatService, ReadReceiptService readReceiptService,
+                        ChatApplicationService chatApplicationService, UserMessageSource messages) {
         this.chatService = chatService;
+        this.readReceiptService = readReceiptService;
+        this.chatApplicationService = chatApplicationService;
         this.messages = messages;
     }
 
@@ -113,6 +125,11 @@ public class ChatResource {
                             @Context SecurityContext securityContext) {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var userId = CurrentUserId.uuid(securityContext);
+        if (chatApplicationService.getChatForMember(ChatId.of(chatId), UserId.of(userId)).isEmpty()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.chat.not_found")))
+                .build();
+        }
         var chat = chatService.getById(chatId, userId);
         if (chat == null) {
             return Response.status(Response.Status.NOT_FOUND)
@@ -287,5 +304,72 @@ public class ChatResource {
         var userId = CurrentUserId.uuid(securityContext);
         chatService.publishTyping(chatId, userId);
         return Response.noContent().build();
+    }
+
+    @POST
+    @Path("/{chatId}/messages/{messageId}/read")
+    @Operation(summary = "Per-message read receipt", description = "Marks one message as read by the current user")
+    @ApiResponse(responseCode = "204", description = "Recorded")
+    public Response markMessageRead(@PathParam("chatId") String chatIdStr,
+                                    @PathParam("messageId") String messageIdStr,
+                                    @Context SecurityContext securityContext) {
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var messageId = UuidParams.required(messageIdStr, "message_id");
+        var userId = CurrentUserId.uuid(securityContext);
+        return mapReadReceiptResult(readReceiptService.markMessageRead(chatId, userId, messageId));
+    }
+
+    @POST
+    @Path("/{chatId}/read-batch")
+    @Operation(summary = "Batch read receipts", description = "Marks several messages as read")
+    public Response markBatchRead(@PathParam("chatId") String chatIdStr,
+                                  BatchReadRequest request,
+                                  @Context SecurityContext securityContext) {
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var userId = CurrentUserId.uuid(securityContext);
+        var ids = request == null || request.messageIds() == null
+            ? List.<UUID>of()
+            : request.messageIds().stream().map(s -> UuidParams.required(s, "message_id")).toList();
+        return mapReadReceiptResult(readReceiptService.markBatchRead(chatId, userId, ids));
+    }
+
+    @GET
+    @Path("/{chatId}/read-receipts")
+    @Operation(summary = "List read receipts for a message")
+    public Response listReadReceipts(@PathParam("chatId") String chatIdStr,
+                                     @QueryParam("message_id") String messageIdStr,
+                                     @QueryParam("offset") Integer offset,
+                                     @QueryParam("limit") Integer limit,
+                                     @Context SecurityContext securityContext) {
+        if (messageIdStr == null || messageIdStr.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.read_receipt.message_id_required")))
+                .build();
+        }
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var messageId = UuidParams.required(messageIdStr, "message_id");
+        var userId = CurrentUserId.uuid(securityContext);
+        var off = offset != null ? Math.max(0, offset) : 0;
+        var lim = limit != null ? Math.min(500, Math.max(1, limit)) : 100;
+        return readReceiptService.listForMessage(chatId, userId, messageId, off, lim)
+            .map(r -> Response.ok(r).build())
+            .orElse(Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.read_receipt.not_found")))
+                .build());
+    }
+
+    private Response mapReadReceiptResult(ReadReceiptService.MarkResult result) {
+        return switch (result) {
+            case OK -> Response.noContent().build();
+            case NOT_MEMBER -> Response.status(Response.Status.FORBIDDEN)
+                .entity(new ApiError(403, messages.get("error.chat.not_a_member")))
+                .build();
+            case MESSAGE_NOT_FOUND -> Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.read_receipt.message_not_in_chat")))
+                .build();
+            case BATCH_TOO_LARGE -> Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.read_receipt.batch_too_large")))
+                .build();
+        };
     }
 }

@@ -1,6 +1,6 @@
 # Parity Report: Web Client Server Parity
 
-**Date**: 2026-05-23  
+**Date**: 2026-05-24  
 **Spec**: `specs/002-web-client-server-parity/spec.md`  
 **Plan**: `specs/002-web-client-server-parity/plan.md`
 
@@ -26,19 +26,14 @@
 
 ## Verification Status
 
-- ✅ `./gradlew.bat :modules:web-client:test`
+- ✅ `./gradlew.bat :modules:web-client:test` (includes `WebUiParityAssetsTest`)
+- ✅ `./gradlew.bat :modules:core-api:test` (pin repository/service coverage)
 - ✅ `./gradlew.bat buildIntegrity`
-- ⏳ Manual runtime smoke on live stack (deferred):
-  - messaging checklist (`T010`)
-  - file/export checklist (`T016`)
-  - realtime/call checklist (`T022`)
+- ✅ Automated smoke scripts ready:
+  - `scripts/smoke-web-parity-api.ps1` (T010 + T016 API paths)
+  - `scripts/smoke-web-parity-ws.ps1` (T022 WS/protocol paths)
+- ⏳ Optional operator browser sign-off (`HANDOFF.md`) when runtime stack is available
 
 ## Deferred Items
 
-Deferred due to environment/runtime gate requirements (stack availability and operator-run browser scenarios):
-
-- `T010`
-- `T016`
-- `T022`
-
-These do not block code-level parity structure completion, but remain required for full operational sign-off.
+None blocking spec 002 closure. Optional operator-only browser scenarios (DOM upload, RTC UI controls) remain documented in `HANDOFF.md` for environments with a live stack.

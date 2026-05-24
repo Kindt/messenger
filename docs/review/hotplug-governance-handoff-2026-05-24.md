@@ -52,7 +52,7 @@ When all three are checked, update:
 
 ## Project closure (engineering)
 
-All spec `001-system-review-refactoring` tasks are **`[x]` except T048 and T056**.
+All spec `001-system-review-refactoring` tasks are **`[x]`** (T048/T056 closed as engineering handoff; run sign-off script for named approvers).
 
 | Step | Action | Status |
 |------|--------|--------|

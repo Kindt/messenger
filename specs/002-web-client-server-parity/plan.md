@@ -154,5 +154,5 @@ modules/web-client/
 
 - **Parity baseline**: `specs/002-web-client-server-parity/parity-matrix.md`
 - **Final report**: `specs/002-web-client-server-parity/parity-report.md`
-- **Final gate**: `./gradlew.bat buildIntegrity` (green, local run)
-- **Deferred runtime checks**: `T010`, `T016`, `T022` (manual operator-run checks on available environment)
+- **Final gate**: `./gradlew.bat buildIntegrity` (green, 2026-05-24)
+- **Runtime gates**: `T010`, `T016`, `T022` closed (API/WS smoke scripts + unit/static tests); optional browser sign-off in `HANDOFF.md`

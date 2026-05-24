@@ -7,6 +7,7 @@ import javax.sql.DataSource;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public class AuditRepository {
@@ -116,6 +117,47 @@ public class AuditRepository {
             log.error("audit list failed", e);
         }
         return out;
+    }
+
+    public long countByAction(String action) {
+        if (dataSource == null || action == null || action.isBlank()) {
+            return 0L;
+        }
+        var sql = "SELECT COUNT(*) AS c FROM audit_events WHERE action = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, truncate64(action.trim()));
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getLong("c");
+                }
+            }
+        } catch (Exception e) {
+            log.error("audit count failed action={}", action, e);
+        }
+        return 0L;
+    }
+
+    public Optional<Instant> latestOccurredAtByAction(String action) {
+        if (dataSource == null || action == null || action.isBlank()) {
+            return Optional.empty();
+        }
+        var sql = """
+            SELECT occurred_at FROM audit_events WHERE action = ?
+            ORDER BY occurred_at DESC LIMIT 1
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, truncate64(action.trim()));
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(rs.getTimestamp("occurred_at").toInstant());
+                }
+            }
+        } catch (Exception e) {
+            log.error("audit latest failed action={}", action, e);
+        }
+        return Optional.empty();
     }
 
     private static String truncate64(String s) {

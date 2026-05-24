@@ -20,7 +20,7 @@ public class UserRepository {
 
     private static final String SELECT_USER = """
         SELECT id, username, display_name, phone, hidden, created_at,
-               presence_status, last_seen_at, org_id
+               presence_status, last_seen_at, org_id, privacy_disable_read_receipts
         FROM users
         """;
 
@@ -115,7 +115,6 @@ public class UserRepository {
         }
     }
 
-    /** Обновляет статус и время последней активности. */
     public boolean updatePresence(UUID id, String presenceStatus) {
         var sql = """
             UPDATE users SET presence_status = ?, last_seen_at = now(), updated_at = now() WHERE id = ?
@@ -127,6 +126,37 @@ public class UserRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("Failed to update presence: {}", id, e);
+            return false;
+        }
+    }
+
+    public boolean isReadReceiptsDisabled(UUID id) {
+        var sql = "SELECT privacy_disable_read_receipts FROM users WHERE id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, id);
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBoolean("privacy_disable_read_receipts");
+                }
+            }
+        } catch (Exception e) {
+            log.warn("isReadReceiptsDisabled failed for {}: {}", id, e.getMessage());
+        }
+        return false;
+    }
+
+    public boolean updatePrivacyDisableReadReceipts(UUID id, boolean disabled) {
+        var sql = """
+            UPDATE users SET privacy_disable_read_receipts = ?, updated_at = now() WHERE id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setBoolean(1, disabled);
+            stmt.setObject(2, id);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            log.error("updatePrivacyDisableReadReceipts failed: {}", id, e);
             return false;
         }
     }
@@ -228,7 +258,8 @@ public class UserRepository {
             rs.getTimestamp("created_at").toInstant(),
             rs.getString("presence_status"),
             lastSeen,
-            org != null ? org.toString() : null
+            org != null ? org.toString() : null,
+            rs.getBoolean("privacy_disable_read_receipts")
         );
     }
 }

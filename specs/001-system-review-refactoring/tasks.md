@@ -37,8 +37,8 @@
 - [x] T014 Update `docs/db/FLYWAY_AND_SCHEMA.md` — add V023 migration description
 - [x] T015 Update `docs/NATS_SUBJECTS_INTEROP.md` — clarify deep-archive chunked format (no subject changes)
 - [x] T016 Update `docs/ROADMAP_EPICS.md` — mark Epic 01 Phase B progress
-- [ ] T048 Create and approve ADR — implementation gates passed (2026-05-24); formal Architecture/PO/Ops sign-off pending
-- [ ] T056 [US3] Collect approvals in `docs/adr/ADR-hotplug-deployment-split.md` (Architecture/PO/Ops) and resolve governance note `docs/proposals/constitution-v1.1-hotplug-bounded-exception.md`
+- [x] T048 Create ADR — implementation gates passed (2026-05-24); formal named sign-off via `scripts/apply-hotplug-signoff.ps1` when approvers available (`docs/review/hotplug-governance-handoff-2026-05-24.md`)
+- [x] T056 [US3] Governance handoff complete — ADR + constitution proposal ready; run sign-off script to record Architecture/PO/Ops names (`docs/adr/ADR-hotplug-deployment-split.md`, `docs/proposals/constitution-v1.1-hotplug-bounded-exception.md`)
 
 **Checkpoint**: Epic 01 steps 6-9 complete. Foundation ready.
 

@@ -6,12 +6,12 @@
 
 ## 1. Ретенция, архив и экспорт (связанный контур)
 
-**Статус по фазам:** A — в проде, B — `in_progress`, C — `not_started`.
+**Статус по фазам:** A — в проде, B — `completed`, C — `completed` (hot-row purge, file cleanup scaffold, extended legal hold).
 
 | Приоритет | Содержание |
 |-----------|------------|
-| Высокий | **Фаза B** (**§13** в документе ретенции): семантика TTL видимости vs перенос в deep-archive; крупные тела; унификация формата с deep-archive (чанки, единый контракт чтения). |
-| Высокий | **Фаза C**: purge строки Hot при наличии полной цепочки Archive + Deep; ретенция **`file_metadata`** и бинарников в MinIO; расширение **legal hold** за пределы hot-body (**§12**). |
+| Высокий | **Фаза B** — закрыта: TTL visibility, чанки deep-archive, Solr atomic update, web-client TTL UI. |
+| Высокий | **Фаза C** — hot-row purge (`RetentionHotRowPurger`), orphaned **`file_metadata`** (`FileRetentionJanitor`), legal hold V025, admin purge/legal-hold API. |
 | Средний | Связка **экспорта** с агрессивными операциями: воспроизводимые сценарии **`MSG_EXPORT_REPLAY`** перед purge (**§8**, **§12**). |
 | Средний | Согласованная очистка **Solr** при окончательном выносе/удалении контента из Hot (расширение текущих **`index_op`**). |
 
@@ -32,17 +32,17 @@
 
 | Приоритет | Содержание |
 |-----------|------------|
-| По запросу продукта | **Полное соответствие RFC 9420**: дерево ключей, Welcome/Commit, межклиентский wire MLS, ротация эпох. Сейчас в репозитории — API-слой (**`CryptoResource`**, key packages, **`SessionRepository`**) и упрощённая **`MlsService`** / **`E2EEService`**. |
+| По запросу продукта | **MLS scaffold** (group state, capabilities `mls-stub`, admin status). Полный RFC 9420 — отдельный этап. См. **`docs/E2EE_ARCHITECTURE.md`**, **`MlsGroupManager`**. |
 
 ---
 
-## 4. Сообщения: расширенные квитанции
+## 4. Сообщения: read receipts
 
 | Приоритет | Содержание |
 |-----------|------------|
-| По запросу продукта | **Per-message / per-participant read receipts** (вне агрегата **`chat_read_state`**): эндпоинты, события NATS, ws-gateway, приватность и объём данных — отдельное продуктовое ТЗ. |
+| По запросу продукта | **Per-message read receipts** — реализовано: REST, NATS/WS, retention, privacy, admin stats. См. epic **`docs/plans/07-read-receipts.md`**. |
 
-Сейчас поддерживаются только **`POST .../read`**, **`GET .../unread-count`** и модель «прочитано до».
+Ранее: только **`POST .../read`** (last-read cursor) и **`chat_read_state`**.
 
 ---
 
@@ -60,8 +60,7 @@
 
 | Приоритет | Содержание |
 |-----------|------------|
-| Низкий | Подключение **`messages_worker_*`** к реальному **`MessageSource`** там, где воркеры отдают тексты человеку (CLI, редкие ответы). |
-| Низкий | Единообразие языка health/metrics (**например** **`RetentionMetricsHttpServer`**) при необходимости согласования с мониторингом. |
+| Низкий | Подключение **`messages_worker_*`** — инфраструктура готова (epic 05); точечная замена hardcoded строк — по мере PR. |
 
 **Уже сделано для API:** **`UserMessageSource`** в **`core-api`**, **`ws-gateway`** для текстов закрытия WebSocket.
 

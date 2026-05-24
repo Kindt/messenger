@@ -53,6 +53,7 @@
     userSearchBusy: false,
     chatPreview: {},
     typingExpireByChat: {},
+    readReceiptsByMessage: {},
     replyTo: null,
     reactionsByMsg: {},
     shouldScrollThread: false,
@@ -3798,8 +3799,30 @@
       typeof o.chat_id === "string" &&
       typeof o.user_id === "string" &&
       typeof o.ts === "number" &&
-      !o.messageId
+      !o.messageId &&
+      o.type !== "read_receipt"
     );
+  }
+
+  function isReadReceiptEvent(o) {
+    return o && o.type === "read_receipt" && o.chat_id && o.user_id;
+  }
+
+  function applyReadReceiptEvent(ev) {
+    function bump(messageId, userId) {
+      if (!messageId || !userId) return;
+      if (!state.readReceiptsByMessage[messageId]) {
+        state.readReceiptsByMessage[messageId] = {};
+      }
+      state.readReceiptsByMessage[messageId][userId] = ev.read_at || Date.now();
+    }
+    if (ev.batch_message_ids && ev.batch_message_ids.length) {
+      ev.batch_message_ids.forEach(function (mid) {
+        bump(mid, ev.user_id);
+      });
+    } else if (ev.message_id) {
+      bump(ev.message_id, ev.user_id);
+    }
   }
 
   function isE2eeType(type) {
@@ -4107,6 +4130,19 @@
       if (res.ok) {
         state.unreadByChat[chatId] = 0;
         updateDocumentTitle();
+        var ids = (state.messages || [])
+          .slice(-50)
+          .map(function (m) {
+            return m.id;
+          })
+          .filter(Boolean);
+        if (ids.length) {
+          apiFetch("/chats/" + chatId + "/read-batch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message_ids: ids }),
+          }).catch(function () {});
+        }
       }
     } catch (e) {}
   }
@@ -4979,6 +5015,12 @@
           sendHeartbeatThrottled();
           noteTyping(data.chat_id, data.user_id);
           scheduleTypingSidebarRefresh();
+          return;
+        }
+        if (isReadReceiptEvent(data)) {
+          sendHeartbeatThrottled();
+          applyReadReceiptEvent(data);
+          scheduleRender();
           return;
         }
         if (isMessageChangeEvent(data)) {
@@ -6397,6 +6439,15 @@
             openMessageVersions(m);
           };
           meta.appendChild(ed);
+        }
+        if (myId && m.sender_id === myId) {
+          var rr = state.readReceiptsByMessage[m.id];
+          var rrCount = rr ? Object.keys(rr).length : 0;
+          if (rrCount > 0) {
+            var rrEl = el("span", "msg-read-receipt-double-check", " ✓✓");
+            rrEl.title = "Прочитали: " + rrCount;
+            meta.appendChild(rrEl);
+          }
         }
         var ttlSeconds = messageVisibilityTtlSeconds(m);
         var expiresAt = messageExpiryEpochMs(m);

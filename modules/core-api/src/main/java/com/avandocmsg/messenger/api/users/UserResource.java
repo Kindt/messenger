@@ -6,6 +6,7 @@ import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.api.users.dto.SavedChatResponse;
 import com.avandocmsg.messenger.api.users.dto.UpdatePresenceRequest;
+import com.avandocmsg.messenger.api.users.dto.UpdatePrivacyRequest;
 import com.avandocmsg.messenger.api.users.dto.UpdateProfileRequest;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
@@ -110,6 +111,27 @@ public class UserResource {
         if (!userRepository.updatePresence(userId, request.presenceStatus())) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(new ApiError(500, messages.get("error.user.presence_failed")))
+                .build();
+        }
+        return userRepository.findById(userId)
+            .map(p -> Response.ok(p).build())
+            .orElse(Response.status(Response.Status.NOT_FOUND).build());
+    }
+
+    @PATCH
+    @Path("/me/privacy")
+    @Operation(summary = "Privacy settings", description = "Toggle read receipt visibility")
+    public Response updatePrivacy(UpdatePrivacyRequest request,
+                                  @Context SecurityContext securityContext) {
+        if (request == null || request.privacyDisableReadReceipts() == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.user.privacy_invalid")))
+                .build();
+        }
+        var userId = CurrentUserId.uuid(securityContext);
+        if (!userRepository.updatePrivacyDisableReadReceipts(userId, request.privacyDisableReadReceipts())) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ApiError(500, messages.get("error.user.privacy_update_failed")))
                 .build();
         }
         return userRepository.findById(userId)

@@ -42,7 +42,9 @@ public class MediaCapabilitiesResource {
             stun,
             "jitsi",
             appConfig.jitsiMeetBaseUrl(),
-            note
+            note,
+            List.of("legacy", "mls-stub"),
+            "stub"
         );
     }
 }

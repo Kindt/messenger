@@ -46,13 +46,34 @@ subprojects {
             "-Dnet.bytebuddy.experimental=true"
         )
     }
+
+    tasks.register<Test>("bundleParityTest") {
+        group = "verification"
+        description = "Bundle key parity (ru/en) for ${project.path}"
+        testClassesDirs = sourceSets["test"].output.classesDirs
+        classpath = sourceSets["test"].runtimeClasspath
+        filter {
+            isFailOnNoMatchingTests = false
+            includeTestsMatching("*BundleParityTest")
+        }
+    }
 }
 
 /** Runs `build` (compile, test, assemble) on every subproject — CI smoke / integrity gate. */
 tasks.register("buildIntegrity") {
     group = "verification"
     description = "Compile, run all unit tests, and assemble every module"
+    dependsOn("checkBundleParity")
     subprojects.forEach { sub ->
         dependsOn(sub.tasks.named("build"))
+    }
+}
+
+/** Runs ru/en bundle parity tests in every module that defines them. */
+tasks.register("checkBundleParity") {
+    group = "verification"
+    description = "Run all *BundleParityTest cases across subprojects"
+    subprojects.forEach { sub ->
+        dependsOn(sub.tasks.matching { it.name == "bundleParityTest" })
     }
 }

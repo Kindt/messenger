@@ -155,6 +155,10 @@ class AdminExportEnqueueTest {
             jobs,
             new ExportFileAccess(cfg),
             nats,
+            null,
+            null,
+            null,
+            null,
             I18nTestFixtures.messagesEn());
     }
 

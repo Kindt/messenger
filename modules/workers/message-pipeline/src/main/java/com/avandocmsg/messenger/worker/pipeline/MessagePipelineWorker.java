@@ -3,11 +3,13 @@ package com.avandocmsg.messenger.worker.pipeline;
 import com.avandocmsg.messenger.common.dto.MessageChangeEvent;
 import com.avandocmsg.messenger.common.dto.ConferenceChangeEvent;
 import com.avandocmsg.messenger.common.dto.PinChangeEvent;
+import com.avandocmsg.messenger.common.dto.ReadReceiptEvent;
 import com.avandocmsg.messenger.common.dto.ReactionChangeEvent;
 import com.avandocmsg.messenger.common.dto.MessageSendEvent;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.dto.RtcSignalEvent;
 import com.avandocmsg.messenger.common.dto.TypingEvent;
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.JetStreamMessagingSetup;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +41,7 @@ public class MessagePipelineWorker {
     private static final String REACTION_QUEUE_GROUP = "reaction-pipeline-workers";
     private static final String PIN_QUEUE_GROUP = "pin-pipeline-workers";
     private static final String CONFERENCE_QUEUE_GROUP = "conference-pipeline-workers";
+    private static final String READ_RECEIPT_QUEUE_GROUP = "read-receipt-pipeline-workers";
 
     private final DataSource dataSource;
     private final Connection natsConnection;
@@ -82,6 +85,39 @@ public class MessagePipelineWorker {
         subscribeReactionFanout();
         subscribePinFanout();
         subscribeConferenceFanout();
+        subscribeReadReceiptFanout();
+    }
+
+    private void subscribeReadReceiptFanout() {
+        var dispatcher = natsConnection.createDispatcher(this::handleReadReceiptCoreMessage);
+        dispatcher.subscribe(NatsSubjects.MSG_READ_RECEIPT, READ_RECEIPT_QUEUE_GROUP);
+        log.info("Subscribed to {} (queue: {}) for read receipts", NatsSubjects.MSG_READ_RECEIPT, READ_RECEIPT_QUEUE_GROUP);
+    }
+
+    private void handleReadReceiptCoreMessage(Message msg) {
+        try {
+            handleReadReceiptPayload(msg.getData());
+        } catch (Exception e) {
+            log.error("Read receipt fan-out failed", e);
+        }
+    }
+
+    private void handleReadReceiptPayload(byte[] raw) throws Exception {
+        var evt = MAPPER.readValue(raw, ReadReceiptEvent.class);
+        if (!ReadReceiptEvent.TYPE.equals(evt.type())) {
+            return;
+        }
+        var chatId = UUID.fromString(evt.chatId());
+        var reader = UUID.fromString(evt.userId());
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, reader)) {
+            log.warn("msg.read_receipt dropped: user {} is not an active member of chat {}", reader, chatId);
+            return;
+        }
+        var members = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, reader);
+        for (var memberId : members) {
+            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
+        }
+        log.debug("msg.read_receipt from {} in chat {} -> {} recipients", reader, chatId, members.size());
     }
 
     private void subscribeTypingFanout() {
@@ -348,6 +384,9 @@ public class MessagePipelineWorker {
     }
 
     public static void main(String[] args) {
+        var workerMessages = WorkerMessageSources.forWorker(
+            MessagePipelineWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_message_pipeline");
+        log.info("Worker i18n locale={}", workerMessages.locale());
         var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
         var dbUrl = System.getenv().getOrDefault("DB_JDBC_URL", "jdbc:postgresql://localhost:5432/avandocmsg_hot");
         var dbUser = System.getenv().getOrDefault("DB_USER", "avandocmsg");

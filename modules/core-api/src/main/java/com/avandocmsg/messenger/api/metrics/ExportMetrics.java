@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.api.metrics;
 
 import com.avandocmsg.messenger.api.export.ExportJobCancelSupport;
 import io.prometheus.client.Counter;
+import io.prometheus.client.Histogram;
 
 import java.util.List;
 
@@ -24,6 +25,22 @@ public final class ExportMetrics {
         .name("export_jobs_cancel_rejected_total")
         .labelNames("source", "reason")
         .help("Export cancel rejected (409 — not cancellable or lost race)")
+        .register();
+
+    private static final Counter COMPLETENESS_CHECKS = Counter.build()
+        .name("export_completeness_check_total")
+        .help("Export completeness validations (API-side registration mirror)")
+        .register();
+
+    private static final Counter COMPLETENESS_FAILED = Counter.build()
+        .name("export_completeness_failed_total")
+        .labelNames("reason")
+        .help("Export completeness validation failures")
+        .register();
+
+    private static final Histogram COMPLETENESS_DURATION = Histogram.build()
+        .name("export_completeness_duration_seconds")
+        .help("Export completeness validation duration")
         .register();
 
     static {
@@ -60,6 +77,18 @@ public final class ExportMetrics {
 
     public static void jobCancelRejected(String auditAction, String reason) {
         JOBS_CANCEL_REJECTED.labels(cancelSource(auditAction), reason).inc();
+    }
+
+    public static void completenessChecked() {
+        COMPLETENESS_CHECKS.inc();
+    }
+
+    public static void completenessFailed(String reason) {
+        COMPLETENESS_FAILED.labels(reason == null || reason.isBlank() ? "unknown" : reason).inc();
+    }
+
+    public static void observeCompletenessDuration(double seconds) {
+        COMPLETENESS_DURATION.observe(seconds);
     }
 
     static String enqueueSource(String trigger) {

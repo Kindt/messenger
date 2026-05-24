@@ -79,7 +79,7 @@ public class MlsService {
 
     public byte[] deriveSessionKey(UUID sessionId, UUID chatId) {
         var seed = (sessionId.toString() + ":" + chatId.toString()).getBytes(StandardCharsets.UTF_8);
-        return e2eeService.deriveKey(e2eeService.randomBytes(32), seed, "mls-session-key", 32);
+        return e2eeService.deriveKey(seed, new byte[0], "mls-session-key", 32);
     }
 
     /**

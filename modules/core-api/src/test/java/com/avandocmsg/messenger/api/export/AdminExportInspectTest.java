@@ -106,6 +106,10 @@ class AdminExportInspectTest {
             jobs,
             access,
             nats,
+            null,
+            null,
+            null,
+            null,
             I18nTestFixtures.messagesEn());
     }
 

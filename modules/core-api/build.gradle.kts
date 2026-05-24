@@ -77,3 +77,11 @@ application {
         }
     }
 }
+
+tasks.register<Test>("benchmark") {
+    group = "verification"
+    description = "Lightweight CoreApi/MLS timing guards (*BenchmarkTest)"
+    filter {
+        includeTestsMatching("*Benchmark*")
+    }
+}

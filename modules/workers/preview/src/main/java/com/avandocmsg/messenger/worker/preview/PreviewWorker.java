@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.worker.preview;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.jdbc.HikariDataSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -107,6 +108,9 @@ public class PreviewWorker {
     }
 
     public static void main(String[] args) {
+        var workerMessages = WorkerMessageSources.forWorker(
+            PreviewWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_preview");
+        log.info("Worker i18n locale={}", workerMessages.locale());
         var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
         var previewJdbc = System.getenv("PREVIEW_DB_JDBC_URL");
         var previewUser = System.getenv().getOrDefault("PREVIEW_DB_USER", System.getenv().getOrDefault("DB_USER", "avandocmsg"));

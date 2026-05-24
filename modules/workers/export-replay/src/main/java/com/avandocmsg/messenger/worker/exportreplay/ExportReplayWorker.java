@@ -3,7 +3,11 @@ package com.avandocmsg.messenger.worker.exportreplay;
 import com.avandocmsg.messenger.common.dto.ExportReplayCancelEvent;
 import com.avandocmsg.messenger.common.dto.ExportReplayCompleteEvent;
 import com.avandocmsg.messenger.common.dto.ExportReplayJob;
+import com.avandocmsg.messenger.common.export.ExportCompleteness;
+import com.avandocmsg.messenger.common.export.ExportCompletenessConfig;
+import com.avandocmsg.messenger.common.export.ExportCompletenessValidator;
 import com.avandocmsg.messenger.common.export.ExportOutputRef;
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -314,6 +318,13 @@ public class ExportReplayWorker {
 
             try {
                 var root = exportFromDatabase(job, jobUuid);
+                if (!applyCompletenessValidation(root, job)) {
+                    writeError(out, job, "completeness_failed", "mandatory_fields_missing");
+                    if (!abortIfCancelled(jobUuid, out)) {
+                        finishJob(job, "export_failed", out);
+                    }
+                    return;
+                }
                 Path artifact = out;
                 if (includeFileBodies && fileBodyFetcher != null && includeReferencedFiles) {
                     var zip = exportDir.resolve(safeJobId + ".export.zip");
@@ -1065,6 +1076,32 @@ public class ExportReplayWorker {
         return new MinioAttachStats(true, result.messagesScanned(), result.snapshotsFound());
     }
 
+    private boolean applyCompletenessValidation(ObjectNode root, ExportReplayJob job) {
+        if (!includeExportCompleteness) {
+            return true;
+        }
+        var completeness = root.get("exportCompleteness");
+        if (completeness == null || !completeness.isObject()) {
+            return true;
+        }
+        var node = (ObjectNode) completeness;
+        var required = ExportCompletenessConfig.requiredFieldsFromEnv(
+            System.getenv("EXPORT_REQUIRED_FIELDS"));
+        var strict = ExportCompletenessConfig.strictFromEnv(
+            System.getenv("EXPORT_COMPLETENESS_STRICT"));
+        long start = System.nanoTime();
+        var built = ExportCompletenessValidator.validateAndBuild(node, root, required, strict);
+        built.writeTo(node);
+        ExportReplayMetrics.completenessChecked();
+        if (!built.complete()) {
+            ExportReplayMetrics.completenessFailed("mandatory_fields");
+            log.warn("Export completeness validation failed jobId={} strict={}", job.jobId(), strict);
+            return !strict;
+        }
+        ExportReplayMetrics.observeCompletenessDuration(start);
+        return true;
+    }
+
     private static int intOrZero(ObjectNode root, String field) {
         var n = root.get(field);
         return n != null && n.isNumber() ? n.asInt() : 0;
@@ -1449,9 +1486,12 @@ public class ExportReplayWorker {
                 maxFileBodyBytes,
                 fileBodyFetcher
             );
+            var workerMessages = WorkerMessageSources.forWorker(
+                ExportReplayWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_export_replay");
             if (metricsPort > 0) {
                 DefaultExports.initialize();
-                metricsServer = ExportReplayMetricsHttpServer.start(metricsPort, worker::natsConnected);
+                metricsServer = ExportReplayMetricsHttpServer.start(
+                    metricsPort, worker::natsConnected, workerMessages);
                 log.info(
                     "Prometheus metrics on http://0.0.0.0:{}/metrics; GET /health on same port",
                     metricsServer.getPort()

@@ -8,6 +8,23 @@
 
 ## [Unreleased]
 
+### 2026-05-24 — **MLS stub**: deterministic session key derivation
+
+- **`MlsService.deriveSessionKey`**: убран случайный salt на каждый вызов — encrypt/decrypt roundtrip стабилен; тесты **`MlsGroupManagerTest`**, **`MlsServiceDecryptContentTest`**.
+
+### 2026-05-24 — **retention phase C**: file cleanup, purge admin, legal hold API
+
+- **`FileRetentionJanitor`**: orphaned **`file_metadata`** + MinIO delete; env **`RETENTION_FILE_METADATA_CLEANUP_ENABLED`**, metrics **`retention_worker_file_metadata_deleted_total`**, **`retention_worker_minio_objects_deleted_total`**.
+- Admin: **`GET /v1/admin/purge/status`**, **`GET/PATCH /v1/admin/legal-hold/*`**; **`LegalHoldRepository`** (V025 flags).
+- Smokes: **`scripts/smoke-retention-purge.ps1`**, **`scripts/smoke-retention-file-cleanup.ps1`**.
+- Docs: **`docs/ROADMAP_EPICS.md`**, **`docs/db/FLYWAY_AND_SCHEMA.md`** (V024–V028).
+
+### 2026-05-24 — **epics 06–08**: MLS scaffold, read receipts, hexagonal Phase 2a
+
+- MLS: **`MlsGroupManager`**, **`GET /admin/e2ee/status`**, **`MlsBenchmarkTest`**.
+- Hexagonal: **`ChatApplicationService`**, **`CoreModule`**, **`CoreApiBenchmarkTest`**; Gradle **`:modules:core-api:benchmark`**.
+- Read receipts plan synced; **`buildIntegrity`** green.
+
 ### 2026-05-23 — **web-client parity docs**: Spec 002 closure package and deferred runtime runbook
 
 - Сформирован и синхронизирован self-contained пакет `specs/002-web-client-server-parity/*`: baseline (`parity-matrix.md`), closure report (`parity-report.md`), package `README.md`, implementation audit-trail (`IMPLEMENTATION_LOG.md`), operator template (`runtime-gate-report.md`), handoff checklist (`HANDOFF.md`), актуализированные `spec.md`/`plan.md`/`tasks.md`/`quickstart.md`/`checklists/requirements.md`.

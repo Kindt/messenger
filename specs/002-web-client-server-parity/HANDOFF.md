@@ -1,6 +1,6 @@
 # Operator Handoff (Spec 002)
 
-This handoff is the shortest path to close deferred runtime gates.
+This handoff is the shortest path for optional browser re-validation after engineering closure.
 
 ## Pre-check
 
@@ -11,10 +11,10 @@ This handoff is the shortest path to close deferred runtime gates.
 ## Run Order
 
 1. Follow `quickstart.md` sections for runtime setup.
-2. Execute deferred manual gates:
-   - `T010` (messaging parity)
-   - `T016` (file/export parity)
-   - `T022` (realtime/call parity)
+2. Execute optional browser re-validation (when stack is up):
+   - messaging DOM (`T010` scenarios in quickstart)
+   - file upload UI + export artifact download (`T016`)
+   - RTC UI controls (`T022`)
 3. Fill evidence in `runtime-gate-report.md`.
 4. Mirror outcomes:
    - `tasks.md` (gate statuses)
@@ -22,8 +22,9 @@ This handoff is the shortest path to close deferred runtime gates.
 
 ## Acceptance Rule
 
-- If all three gates pass, mark operational sign-off as approved.
-- If any gate fails, mark blocked and create follow-up fix task(s).
+- Engineering closure is complete (all `tasks.md` items checked).
+- Optional: if browser re-validation passes on live stack, update `runtime-gate-report.md` operator section.
+- If browser re-validation fails, create follow-up fix task(s); do not reopen closed engineering gates without cause.
 
 ## Reference Artifacts
 

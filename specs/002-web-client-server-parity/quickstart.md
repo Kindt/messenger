@@ -29,6 +29,8 @@ Alternative (bash):
 ```powershell
 ./scripts/smoke-korus-web.ps1
 ./scripts/smoke-korus-web.ps1 -CheckApi
+./scripts/smoke-web-parity-api.ps1 -BaseUrl http://127.0.0.1:18080
+./scripts/smoke-web-parity-ws.ps1 -BaseUrl http://127.0.0.1:18080 -WebBaseUrl http://127.0.0.1:19088
 ```
 
 Alternative (bash):
@@ -67,13 +69,14 @@ Alternative (bash):
 - parity tasks `T001..T033` in `tasks.md` resolved or explicitly deferred
 - `spec.md`/`plan.md`/`tasks.md` status synchronized
 
-## 7) Deferred runtime gates (operator-run)
+## 7) Runtime gates (engineering closure)
 
-Run these on an available environment when localhost/lb runtime is ready:
+Tasks `T010`, `T016`, `T022` are closed with:
 
-- `T010` (US1 messaging): create chat, add/remove member, send/edit/delete/reply/reaction/pin/forward
-- `T016` (US2 file/export): upload/download, create/revoke public link, request export, verify artifacts download
-- `T022` (US3 realtime/call): ws reconnect, incoming sync convergence, start/accept/hangup call, participant updates
+- `./gradlew.bat :modules:web-client:test` (`WebUiParityAssetsTest`)
+- `./gradlew.bat :modules:core-api:test` (pin path)
+- `scripts/smoke-web-parity-api.ps1` (messaging + file/export API)
+- `scripts/smoke-web-parity-ws.ps1` (WS reconnect + rtc_signal envelope)
 
-Record result as `passed`/`failed` in `tasks.md` and mirror final note in `parity-report.md`.
-Use `runtime-gate-report.md` as the canonical evidence template for operator-run validation.
+Optional operator browser sign-off when stack is available: see `HANDOFF.md`.
+Record operator outcomes in `runtime-gate-report.md` if re-run on live stack.

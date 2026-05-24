@@ -475,4 +475,71 @@ public class AppConfig {
             return 30;
         }
     }
+
+    /** Env: {@code SECURITY_HEADERS_ENABLED}; default {@code true}. */
+    public boolean securityHeadersEnabled() {
+        return Boolean.parseBoolean(props.getProperty("security.headers.enabled", "true"));
+    }
+
+    /** Optional CSP header value. Env: {@code CSP_POLICY}. */
+    public String cspPolicy() {
+        return props.getProperty("csp.policy", "").trim();
+    }
+
+    /** CSV mandatory export completeness fields. Env: {@code EXPORT_REQUIRED_FIELDS}. */
+    public java.util.Set<String> exportRequiredFields() {
+        return com.avandocmsg.messenger.common.export.ExportCompletenessConfig.requiredFieldsFromEnv(
+            props.getProperty("export.required.fields", System.getenv("EXPORT_REQUIRED_FIELDS")));
+    }
+
+    /** Env: {@code EXPORT_COMPLETENESS_STRICT}; default {@code false}. */
+    public boolean exportCompletenessStrict() {
+        return com.avandocmsg.messenger.common.export.ExportCompletenessConfig.strictFromEnv(
+            props.getProperty("export.completeness.strict", System.getenv("EXPORT_COMPLETENESS_STRICT")));
+    }
+
+    /** General endpoint rate limit capacity. Env: {@code RATE_LIMITER_DEFAULT_CAPACITY}; default {@code 100}. */
+    public int rateLimiterDefaultCapacity() {
+        var raw = props.getProperty("rate.limiter.default.capacity", "100").trim();
+        try {
+            return Math.max(1, Integer.parseInt(raw));
+        } catch (NumberFormatException e) {
+            return 100;
+        }
+    }
+
+    /** Env: {@code RATE_LIMITER_ENABLED}; default follows auth rate limit flag. */
+    public boolean rateLimiterEnabled() {
+        var raw = props.getProperty("rate.limiter.enabled", "").trim();
+        if (!raw.isEmpty()) {
+            return Boolean.parseBoolean(raw);
+        }
+        return rateLimitAuthEnabled();
+    }
+
+    /** Max message IDs per read-batch call. Env: {@code READ_RECEIPT_BATCH_MAX}; default {@code 100}. */
+    public int readReceiptBatchMax() {
+        var raw = props.getProperty("read.receipt.batch.max", "").trim();
+        if (raw.isEmpty()) {
+            raw = System.getenv().getOrDefault("READ_RECEIPT_BATCH_MAX", "100");
+        }
+        try {
+            return Math.max(1, Math.min(500, Integer.parseInt(raw)));
+        } catch (NumberFormatException e) {
+            return 100;
+        }
+    }
+
+    /** Retention for {@code message_read_receipts}; {@code 0} disables purge. Env: {@code READ_RECEIPT_RETENTION_DAYS}. */
+    public int readReceiptRetentionDays() {
+        var raw = props.getProperty("read.receipt.retention.days", "").trim();
+        if (raw.isEmpty()) {
+            raw = System.getenv().getOrDefault("READ_RECEIPT_RETENTION_DAYS", "365");
+        }
+        try {
+            return Math.max(0, Integer.parseInt(raw));
+        } catch (NumberFormatException e) {
+            return 365;
+        }
+    }
 }

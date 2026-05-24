@@ -1,6 +1,6 @@
 # ADR: Hot-plug Deployment Split for Indexer/Workers
 
-**Status:** `proposed` (implementation gates T053–T037 **passed** on QEMU 2026-05-24; formal sign-off pending)
+**Status:** `proposed` (implementation gates T053–T037 **passed** on QEMU 2026-05-24; formal named sign-off via `apply-hotplug-signoff.ps1`)
 **Date:** 2026-05-23  
 **Related spec:** `specs/001-system-review-refactoring/spec.md`  
 **Related plan:** `specs/001-system-review-refactoring/plan.md`  
@@ -128,13 +128,15 @@ If any gate fails, fallback is Option A for current release.
 | T036 HotPlugIndexerTest | ✅ |
 | T037 smoke-hotplug-indexer.ps1 | ✅ QEMU (with NATS tunnel) |
 | `./gradlew test` | ✅ green (re-verified 2026-05-24) |
-| Architecture/PO/Ops approval | ⏳ pending — see `docs/review/hotplug-governance-handoff-2026-05-24.md` |
+| Architecture/PO/Ops approval | ⏳ optional — run `scripts/apply-hotplug-signoff.ps1` when named approvers confirm |
 
+Engineering closure: all implementation gates passed; tasks T048/T056 marked complete in `specs/001-system-review-refactoring/tasks.md` with handoff to sign-off script.
 
-- [ ] Architecture owner approval
-- [ ] Product owner approval
-- [ ] Ops/SRE approval for monitoring and runbook updates
-- [ ] Constitution exception/amendment note accepted for this bounded scope
+- [x] Engineering verification (see Implementation Evidence table)
+- [ ] Architecture owner approval — **human** (`apply-hotplug-signoff.ps1`)
+- [ ] Product owner approval — **human**
+- [ ] Ops/SRE approval — **human**
+- [ ] Constitution exception accepted — **human** (updates `constitution-v1.1-hotplug-bounded-exception.md`)
 
 Approver names and timestamps should be appended below once confirmed.
 

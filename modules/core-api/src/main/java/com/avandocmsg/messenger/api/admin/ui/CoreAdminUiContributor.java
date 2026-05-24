@@ -64,11 +64,39 @@ public final class CoreAdminUiContributor implements AdminUiContributor {
                 "/admin/ui/manifest"
             ),
             new AdminUiSectionDescriptor(
+                "core-read-receipts",
+                "Read receipts",
+                38,
+                AdminUiSectionKind.JSON_PANEL,
+                "/admin/read-receipts/stats"
+            ),
+            new AdminUiSectionDescriptor(
+                "core-e2ee-mls",
+                "E2EE / MLS",
+                39,
+                AdminUiSectionKind.JSON_PANEL,
+                "/admin/e2ee/status"
+            ),
+            new AdminUiSectionDescriptor(
                 "core-retention",
                 "Ретенция (org / chat)",
                 40,
                 AdminUiSectionKind.JSON_PANEL,
                 null
+            ),
+            new AdminUiSectionDescriptor(
+                "core-legal-hold",
+                "Legal hold (extended)",
+                41,
+                AdminUiSectionKind.JSON_PANEL,
+                null
+            ),
+            new AdminUiSectionDescriptor(
+                "core-purge-status",
+                "Purge status",
+                42,
+                AdminUiSectionKind.JSON_PANEL,
+                "/admin/purge/status"
             )
         );
     }

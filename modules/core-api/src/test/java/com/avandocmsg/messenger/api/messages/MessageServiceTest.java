@@ -159,6 +159,21 @@ class MessageServiceTest {
     }
 
     @Test
+    void pinMessage_publishesMsgPinOnNats() throws Exception {
+        msgRepo.messages.add(msg(chatId, userId, "pin-me"));
+        msgRepo.pinResult = true;
+
+        assertTrue(messageService.pinMessage(chatId, msgId, userId));
+
+        var payload = recordingNats.lastPayload(NatsSubjects.MSG_PIN);
+        assertNotNull(payload);
+        var ev = MAPPER.readValue(payload, com.avandocmsg.messenger.common.dto.PinChangeEvent.class);
+        assertEquals("pin", ev.change());
+        assertEquals(chatId.toString(), ev.chatId());
+        assertEquals(msgId.toString(), ev.messageId());
+    }
+
+    @Test
     void deleteMessage_deniedForNonSender() {
         var otherUser = UUID.randomUUID();
         msgRepo.messages.add(msg(chatId, userId, "msg"));
@@ -305,6 +320,13 @@ class MessageServiceTest {
         @Override
         public boolean delete(UUID msgId) {
             return messages.removeIf(m -> m.id().equals(msgId.toString()));
+        }
+
+        boolean pinResult = true;
+
+        @Override
+        public boolean pinMessage(UUID chatId, UUID messageId, UUID pinnedBy) {
+            return pinResult;
         }
     }
 

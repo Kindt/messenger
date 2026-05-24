@@ -862,6 +862,13 @@ button {
   color: var(--accent);
 }
 
+.msg-read-receipt-double-check {
+  margin-left: 4px;
+  color: var(--accent);
+  font-size: 0.85em;
+  cursor: default;
+}
+
 .version-row {
   margin-bottom: 12px;
   padding-bottom: 10px;

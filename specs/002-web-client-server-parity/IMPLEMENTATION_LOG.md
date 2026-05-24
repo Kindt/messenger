@@ -23,14 +23,12 @@ This log links the main implementation/doc closure commits to the parity package
 - `064f1b7` — changelog entry for spec 002 closure
 - `dd55370` — root README link to spec 002 package
 
-## Deferred Runtime Gates (Operator-Run)
+## Deferred Runtime Gates (Operator-Run, Optional)
 
-- `T010` — messaging parity smoke
-- `T016` — file/export parity smoke
-- `T022` — realtime/call parity smoke
+Engineering closure recorded 2026-05-24 (`T010`/`T016`/`T022` marked complete in `tasks.md`).
 
-Record outcomes in:
+Optional browser-only re-validation when stack is available:
 
+- `HANDOFF.md`
 - `runtime-gate-report.md`
-- `tasks.md`
 - `parity-report.md`

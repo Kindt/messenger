@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.worker.archiver;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariConfig;
@@ -184,6 +185,9 @@ public class ArchiverWorker {
     }
 
     public static void main(String[] args) {
+        var workerMessages = WorkerMessageSources.forWorker(
+            ArchiverWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_archiver");
+        log.info("Worker i18n locale={}", workerMessages.locale());
         var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
         var archiveUrl = System.getenv("ARCHIVE_JDBC_URL");
         DataSource archiveDs = null;

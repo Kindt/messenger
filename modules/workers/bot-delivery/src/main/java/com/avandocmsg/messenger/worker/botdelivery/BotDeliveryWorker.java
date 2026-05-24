@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.worker.botdelivery;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.jdbc.HikariDataSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -164,6 +165,9 @@ public class BotDeliveryWorker {
     }
 
     public static void main(String[] args) {
+        var workerMessages = WorkerMessageSources.forWorker(
+            BotDeliveryWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_bot_delivery");
+        log.info("Worker i18n locale={}", workerMessages.locale());
         var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
         var jdbcUrl = firstNonBlank(System.getenv("BOT_DB_JDBC_URL"), System.getenv("DB_JDBC_URL"));
         var user = System.getenv().getOrDefault("DB_USER", "avandocmsg");

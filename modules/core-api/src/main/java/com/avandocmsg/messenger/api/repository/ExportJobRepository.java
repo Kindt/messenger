@@ -492,6 +492,24 @@ public class ExportJobRepository {
 
     }
 
+    public boolean existsCompletedExport(UUID chatId) {
+        var sql = """
+            SELECT 1 FROM export_jobs
+            WHERE chat_id = ? AND status IN ('export_v1', 'stub_written')
+            LIMIT 1
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, chatId);
+            try (var rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            log.error("Failed to check completed export for chat {}", chatId, e);
+            return false;
+        }
+    }
+
 
 
     public record ExportJobRow(

@@ -1,6 +1,6 @@
 # Spec 002 API-level parity smoke (T010 + T016 backend paths).
-# UI-only checks (DOM, WS reconnect, RTC) still require manual/browser gates (T022).
-param(
+# WS/protocol checks: scripts/smoke-web-parity-ws.ps1 (T022).
+# Optional browser DOM/RTC gates: specs/002-web-client-server-parity/HANDOFF.mdparam(
     [string]$BaseUrl = "http://127.0.0.1:18080",
     [string]$User = "csadmin",
     [string]$Pass = "csadmin",
@@ -101,14 +101,10 @@ Step "T010: reaction add/list/remove" {
 }
 
 Step "T010: pin and list pins" {
-    try {
-        Invoke-WebRequest -Uri "$BaseUrl/api/v1/chats/$chatId/messages/$msgId/pin" -Method Post -Headers $hdr -UseBasicParsing | Out-Null
-        $pins = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/messages/pins" -Headers $hdr -Method Get
-        if (-not $pins) { Fail "pins list empty" }
-        Invoke-WebRequest -Uri "$BaseUrl/api/v1/chats/$chatId/messages/$msgId/pin" -Method Delete -Headers $hdr -UseBasicParsing | Out-Null
-    } catch {
-        Write-Host "[WARN] pin API failed (server returned error) - document in runtime-gate-report: $_" -ForegroundColor Yellow
-    }
+    Invoke-WebRequest -Uri "$BaseUrl/api/v1/chats/$chatId/messages/$msgId/pin" -Method Post -Headers $hdr -UseBasicParsing | Out-Null
+    $pins = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/messages/pins" -Headers $hdr -Method Get
+    if (-not $pins -or $pins.Count -lt 1) { Fail "pins list empty after pin" }
+    Invoke-WebRequest -Uri "$BaseUrl/api/v1/chats/$chatId/messages/$msgId/pin" -Method Delete -Headers $hdr -UseBasicParsing | Out-Null
 }
 
 Step "T010: forward to saved chat" {
@@ -135,6 +131,28 @@ Step "T010: delete reply message" {
 }
 
 if (-not $SkipExport) {
+    Step "T016: file upload, download, public link" {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes("parity-file-smoke $(Get-Date -Format o)")
+        $uploadHeaders = @{}
+        foreach ($k in $hdr.Keys) { $uploadHeaders[$k] = $hdr[$k] }
+        $uploadHeaders["Content-Type"] = "application/octet-stream"
+        $uploadHeaders["X-Filename"] = "parity.txt"
+        $upload = Invoke-RestMethod -Uri "$BaseUrl/api/v1/files/upload" -Method Post -Headers $uploadHeaders -Body $bytes
+        $fileId = $upload.file_id
+        if (-not $fileId) { $fileId = $upload.id }
+        if (-not $fileId) { Fail "upload returned no file_id" }
+        $dl = Invoke-WebRequest -Uri "$BaseUrl/api/v1/files/$fileId/download" -Headers $hdr -UseBasicParsing
+        if ($dl.StatusCode -ne 200) { Fail "download status $($dl.StatusCode)" }
+        $link = Invoke-RestMethod -Uri "$BaseUrl/api/v1/files/$fileId/public-links" -Method Post -Headers $hdr `
+            -Body (@{ link_kind = "A"; ttl_seconds = 3600 } | ConvertTo-Json) `
+            -ContentType "application/json; charset=utf-8"
+        if (-not $link.link_id) { $linkId = $link.id } else { $linkId = $link.link_id }
+        if (-not $linkId) { Fail "public link create returned no id" }
+        $links = Invoke-RestMethod -Uri "$BaseUrl/api/v1/files/$fileId/public-links" -Headers $hdr -Method Get
+        if (-not $links) { Fail "public links list empty" }
+        Invoke-WebRequest -Uri "$BaseUrl/api/v1/files/$fileId/public-links/$linkId" -Method Delete -Headers $hdr -UseBasicParsing | Out-Null
+    }
+
     Step "T016: export request and status (API)" {
         & (Join-Path $scriptDir "smoke-export-chat.ps1") -BaseUrl $BaseUrl -ChatId $chatId -SkipDownload
         if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) {
@@ -145,4 +163,4 @@ if (-not $SkipExport) {
 
 Write-Host ""
 Write-Host "[OK] web parity API smoke (spec 002 T010/T016 backend)" -ForegroundColor Green
-Write-Host "Manual still required: web UI DOM (T010), file upload UI (T016), WS/RTC (T022)." -ForegroundColor DarkGray
+Write-Host "Optional operator gates: browser DOM/RTC per specs/002-web-client-server-parity/HANDOFF.md" -ForegroundColor DarkGray

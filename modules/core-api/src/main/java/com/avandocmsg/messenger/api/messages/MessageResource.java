@@ -323,6 +323,7 @@ public class MessageResource {
 
     @POST
     @Path("/{msgId}/pin")
+    @Consumes(MediaType.WILDCARD)
     @Operation(summary = "Pin message", description = "Pin a message in the chat")
     @ApiResponse(responseCode = "201", description = "Message pinned")
     @ApiResponse(responseCode = "400", description = "Cannot pin",
@@ -349,6 +350,7 @@ public class MessageResource {
 
     @DELETE
     @Path("/{msgId}/pin")
+    @Consumes(MediaType.WILDCARD)
     @Operation(summary = "Unpin message", description = "Unpin a message from the chat")
     @ApiResponse(responseCode = "204", description = "Message unpinned")
     public Response unpinMessage(@PathParam("chatId") String chatIdStr,

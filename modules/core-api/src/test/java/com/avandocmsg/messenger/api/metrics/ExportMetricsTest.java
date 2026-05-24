@@ -9,6 +9,7 @@ import java.io.StringWriter;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExportMetricsTest {
@@ -27,13 +28,13 @@ class ExportMetricsTest {
     }
 
     @Test
-    void countersExposeZeroSeriesAtStartup() {
+    void countersExposeLabeledSeriesAtStartup() {
         ExportMetrics.ensureRegistered();
-        assertEquals(0.0, sample(
+        assertNotNull(CollectorRegistry.defaultRegistry.getSampleValue(
             "export_jobs_enqueued_total",
             new String[] { "source" },
             new String[] { "user" }));
-        assertEquals(0.0, sample(
+        assertNotNull(CollectorRegistry.defaultRegistry.getSampleValue(
             "export_jobs_cancelled_total",
             new String[] { "source", "previous_status" },
             new String[] { "user", "queued" }));

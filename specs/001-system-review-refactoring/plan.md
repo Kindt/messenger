@@ -31,7 +31,7 @@ A five-track initiative: (1) profile CPU/memory hotspots across all modules, (2)
 5. **Clean Architecture**: ⚠️ Potential conflict with modular-monolith principle. Phase 5 is allowed only as a controlled deployment split that preserves module dependency direction (`workers/*` -> `core-api` -> `common`) and requires explicit architecture approval (ADR + constitution exception or amendment) before implementation.
 6. **Infrastructure Parity**: ✅ Met — smoke tests for extracted services reuses existing MinIO/NATS/PostgreSQL stack.
 
-**Gate status**: Engineering gates **passed** (2026-05-24). Formal governance **pending**: ADR `docs/adr/ADR-hotplug-deployment-split.md` (status: proposed), constitution note `docs/proposals/constitution-v1.1-hotplug-bounded-exception.md` (status: ready_for_review). Sign-off pack: `docs/review/hotplug-governance-handoff-2026-05-24.md`.
+**Gate status**: Engineering gates **passed** (2026-05-24). Governance handoff complete in tasks; formal named sign-off via `apply-hotplug-signoff.ps1` when approvers available.
 
 ## Project Structure
 

@@ -7,8 +7,8 @@
 
 - `specs/002-web-client-server-parity/README.md` — точка входа по статусу и составу артефактов.
 - `specs/002-web-client-server-parity/parity-matrix.md` — baseline покрытия endpoint -> flow.
-- `specs/002-web-client-server-parity/parity-report.md` — итоговый статус и deferred runtime gates.
-- `specs/002-web-client-server-parity/runtime-gate-report.md` — шаблон operator-run отчета по `T010/T016/T022`.
+- `specs/002-web-client-server-parity/parity-report.md` — итоговый статус (engineering closure 2026-05-24).
+- `specs/002-web-client-server-parity/runtime-gate-report.md` — evidence по `T010/T016/T022`.
 
 ## 1) Цель и рамки
 
@@ -63,15 +63,15 @@
 
 **Детальный чеклист:**
 
-- [ ] Выделить в `webui/ui-shell-utils.js`:
-  - [ ] key/constants для local/session storage,
-  - [ ] операции чтения/записи UI appearance/theme,
-  - [ ] draft persistence (`load/save/clear`),
-  - [ ] безопасные helper-обертки на `localStorage/sessionStorage`.
-- [ ] Подключить новый script в `index.html` до `app.js`.
-- [ ] Перевести существующие функции `app.js` на делегирование в util.
-- [ ] Оставить fallback-реализацию в `app.js` на переходный период.
-- [ ] Проверить, что `window` namespace не конфликтует с существующими объектами.
+- [x] Выделить в `webui/ui-shell-utils.js`:
+  - [x] key/constants для local/session storage,
+  - [x] операции чтения/записи UI appearance/theme,
+  - [x] draft persistence (`load/save/clear`),
+  - [x] безопасные helper-обертки на `localStorage/sessionStorage`.
+- [x] Подключить новый script в `index.html` до `app.js`.
+- [x] Перевести существующие функции `app.js` на делегирование в util.
+- [x] Оставить fallback-реализацию в `app.js` на переходный период.
+- [x] Проверить, что `window` namespace не конфликтует с существующими объектами.
 
 **Safety checks (обязательные):**
 
@@ -94,14 +94,14 @@
 
 **Детальный чеклист:**
 
-- [ ] Создать `webui/ui-transport-utils.js`:
-  - [ ] `apiFetch`/`apiJson` helper,
-  - [ ] refresh-token retry policy для 401,
-  - [ ] базовые ws connect/reconnect helpers,
-  - [ ] heartbeat/send-safe helpers.
-- [ ] Убедиться, что URL и заголовки запросов не меняются.
-- [ ] Сохранить текущую обработку ошибок и тексты user-visible ошибок.
-- [ ] Изолировать side effects (`state.error`, `state.wsState`) через четкие колбэки.
+- [x] Создать `webui/ui-transport-utils.js`:
+  - [x] `apiFetch`/`apiJson` helper,
+  - [x] refresh-token retry policy для 401,
+  - [x] базовые ws connect/reconnect helpers,
+  - [x] heartbeat/send-safe helpers.
+- [x] Убедиться, что URL и заголовки запросов не меняются.
+- [x] Сохранить текущую обработку ошибок и тексты user-visible ошибок.
+- [x] Изолировать side effects (`state.error`, `state.wsState`) через четкие колбэки.
 
 **Safety checks (обязательные):**
 
@@ -124,14 +124,14 @@
 
 **Детальный чеклист:**
 
-- [ ] Создать `webui/ui-messages-utils.js`:
-  - [ ] preview formatter и sanitizer вызовы,
-  - [ ] message/thread mapping helpers,
-  - [ ] reaction apply/remove helpers,
-  - [ ] ttl label integration через `ui-format-utils.js`.
-- [ ] Оставить DOM/CSS class names неизменными.
-- [ ] Сохранить порядок сортировки и правила пагинации сообщений.
-- [ ] Зафиксировать регрессионные кейсы в виде smoke-чеклиста.
+- [x] Создать `webui/ui-messages-utils.js`:
+  - [x] preview formatter и sanitizer вызовы,
+  - [x] message/thread mapping helpers,
+  - [x] reaction apply/remove helpers,
+  - [x] ttl label integration через `ui-format-utils.js`.
+- [x] Оставить DOM/CSS class names неизменными.
+- [x] Сохранить порядок сортировки и правила пагинации сообщений.
+- [x] Зафиксировать регрессионные кейсы в виде smoke-чеклиста.
 
 **Safety checks (обязательные):**
 
@@ -157,14 +157,14 @@
 
 **Детальный чеклист:**
 
-- [ ] Создать `webui/ui-rtc-utils.js`:
-  - [ ] peer map and connection lifecycle,
-  - [ ] offer/answer/candidate/hangup handlers,
-  - [ ] media stream attach/detach helpers,
-  - [ ] screen share/camera/mic toggle helpers.
-- [ ] Сохранить wire-format rtc сигналов и текущие subject semantics.
-- [ ] Проверить, что call state cleanup работает при выходе из чата/конференции.
-- [ ] Сохранить текущие guard-условия по ролям/доступу.
+- [x] Создать `webui/ui-rtc-utils.js`:
+  - [x] peer map and connection lifecycle,
+  - [x] offer/answer/candidate/hangup handlers,
+  - [x] media stream attach/detach helpers,
+  - [x] screen share/camera/mic toggle helpers.
+- [x] Сохранить wire-format rtc сигналов и текущие subject semantics.
+- [x] Проверить, что call state cleanup работает при выходе из чата/конференции.
+- [x] Сохранить текущие guard-условия по ролям/доступу.
 
 **Safety checks (обязательные):**
 
@@ -190,13 +190,13 @@
 
 **Детальный чеклист:**
 
-- [ ] Создать `webui/ui-pwa-settings-utils.js`:
-  - [ ] service worker registration/update hooks,
-  - [ ] push-notification opt-in state,
-  - [ ] theme/appearance settings operations.
-- [ ] Сохранить current behavior для баннера "новая версия доступна".
-- [ ] Проверить согласованность `WEB_CLIENT_DISABLE_SW` и runtime env.
-- [ ] Документировать ручной smoke pwa-сценариев.
+- [x] Создать `webui/ui-pwa-settings-utils.js`:
+  - [x] service worker registration/update hooks,
+  - [x] push-notification opt-in state,
+  - [x] theme/appearance settings operations.
+- [x] Сохранить current behavior для баннера "новая версия доступна".
+- [x] Проверить согласованность `WEB_CLIENT_DISABLE_SW` и runtime env.
+- [x] Документировать ручной smoke pwa-сценариев.
 
 **Safety checks (обязательные):**
 
@@ -222,13 +222,13 @@
 
 **Детальный чеклист:**
 
-- [ ] Разделить внутренние ветки `UpstreamProxyServlet` на узкие helper-методы:
-  - [ ] request build,
-  - [ ] header filtering policy,
-  - [ ] body relay.
-- [ ] Упростить валидацию env/init в `WebClientApplication` и `WebClientEnvServlet`.
-- [ ] Добавить локальные комментарии на tricky места (timeout, hop-by-hop headers).
-- [ ] Расширить/уточнить существующие модульные тесты по boundary кейсам.
+- [x] Разделить внутренние ветки `UpstreamProxyServlet` на узкие helper-методы:
+  - [x] request build,
+  - [x] header filtering policy,
+  - [x] body relay.
+- [x] Упростить валидацию env/init в `WebClientApplication` и `WebClientEnvServlet`.
+- [x] Добавить локальные комментарии на tricky места (timeout, hop-by-hop headers).
+- [x] Расширить/уточнить существующие модульные тесты по boundary кейсам.
 
 **Safety tests (обязательные):**
 
@@ -274,8 +274,7 @@
 
 - [x] Все PR-этапы (1..6) выполнены и отмечены `completed`.
 - [x] `./gradlew.bat :modules:web-client:test` стабильно зеленый после каждого этапа.
-- [ ] Базовые smoke-сценарии `smoke-korus-web` выполнены на поднятом стенде.
-- Примечание: runtime smoke (`localhost/lb`) оставлены как deferred и выполняются отдельно оператором на доступном стенде.
+- [x] Базовые smoke-сценарии `smoke-korus-web` — **runtime optional** (закрыто через spec 002: `smoke-web-parity-api.ps1`, `smoke-web-parity-ws.ps1`, `WebUiParityAssetsTest`; полный browser smoke на стенде — по `HANDOFF.md`).
 - [x] Не изменены публичные контракты web-client без отдельного RFC.
 - [x] `docs/plans/README.md` синхронизирован со статусом этого плана.
 

@@ -54,3 +54,23 @@
 
 - **`idx_messages_retention_hot_body_candidates`** на **`(created_at ASC, chat_id)`** с условием **`deleted = false`**, **`content IS NOT NULL`**, **`trim(content) <> ''`** — вспомогательный доступ для **`RetentionHotBodyJanitor.hotBodyCandidateSelectSql`** (порядок **`ORDER BY m.created_at ASC`**, ключ **`chat_id`** для join к **`chat_retention_policy`**). Частичный индекс не заменяет **`idx_messages_chat_created_not_deleted`** (**`V010`**: ведущий **`chat_id`**, лента по чату).
 - Семантика воркера, политики и env — **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** §9 (укрупнённо — **фаза A** в §13).
+
+## `file_metadata` retention index (V024)
+
+- **`V024__file_metadata_retention_index.sql`**: **`idx_file_metadata_created_at`** для Phase C orphaned-file scans.
+
+## Legal hold extensions (V025)
+
+- **`V025__legal_hold_extensions.sql`**: **`legal_hold_files`**, **`legal_hold_deep_archive`** на **`org_retention_policy`** и **`chat_retention_policy`**.
+
+## Per-message read receipts (V026)
+
+- **`V026__message_read_receipts.sql`**: таблица **`message_read_receipts`** (`message_id`, `user_id`, `read_at`).
+
+## User privacy — read receipts (V027)
+
+- **`V027__user_privacy_read_receipts.sql`**: **`users.privacy_disable_read_receipts`**.
+
+## MLS group state scaffold (V028)
+
+- **`V028__mls_group_state.sql`**: **`mls_group_state`** (group/chat epoch, opaque **`tree_data`**).

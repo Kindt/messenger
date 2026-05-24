@@ -273,8 +273,10 @@ public class MessageRepository {
     }
 
     public boolean pinMessage(UUID chatId, UUID messageId, UUID pinnedBy) {
-        var sql = "INSERT INTO pinned_messages (chat_id, message_id, pinned_by, created_at) VALUES (?, ?, ?, now()) " +
-                  "ON CONFLICT (chat_id, message_id) DO NOTHING";
+        if (isPinned(chatId, messageId)) {
+            return false;
+        }
+        var sql = "INSERT INTO pinned_messages (chat_id, message_id, pinned_by, created_at) VALUES (?, ?, ?, now())";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
             stmt.setObject(1, chatId);
@@ -283,6 +285,21 @@ public class MessageRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("Failed to pin message {} in chat {}", messageId, chatId, e);
+            return false;
+        }
+    }
+
+    private boolean isPinned(UUID chatId, UUID messageId) {
+        var sql = "SELECT 1 FROM pinned_messages WHERE chat_id = ? AND message_id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, chatId);
+            stmt.setObject(2, messageId);
+            try (var rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            log.error("Failed to check pin state for message {} in chat {}", messageId, chatId, e);
             return false;
         }
     }

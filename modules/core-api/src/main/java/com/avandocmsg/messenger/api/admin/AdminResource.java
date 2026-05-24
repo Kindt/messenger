@@ -1,5 +1,8 @@
 package com.avandocmsg.messenger.api.admin;
 
+import com.avandocmsg.messenger.api.admin.dto.LegalHoldResponse;
+import com.avandocmsg.messenger.api.admin.dto.LegalHoldUpdateRequest;
+import com.avandocmsg.messenger.api.admin.dto.PurgeStatusResponse;
 import com.avandocmsg.messenger.api.admin.dto.AdminExportCompliancePrepRequest;
 import com.avandocmsg.messenger.api.admin.dto.AdminExportCompliancePrepResponse;
 import com.avandocmsg.messenger.api.admin.dto.AdminExportSuggestRequest;
@@ -9,6 +12,8 @@ import com.avandocmsg.messenger.api.admin.dto.ChatRetentionPolicyResponse;
 import com.avandocmsg.messenger.api.admin.dto.RetentionPolicyResponse;
 import com.avandocmsg.messenger.api.admin.dto.SetUserOrganizationRequest;
 import com.avandocmsg.messenger.api.admin.dto.UpdateRetentionPolicyRequest;
+import com.avandocmsg.messenger.api.chats.ReadReceiptService;
+import com.avandocmsg.messenger.api.mls.MlsGroupManager;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
@@ -29,6 +34,7 @@ import com.avandocmsg.messenger.api.export.dto.ExportAttachmentsListResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportCancelResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportJobListResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportJobStatusResponse;
+import com.avandocmsg.messenger.api.repository.LegalHoldRepository;
 import com.avandocmsg.messenger.api.repository.ExportJobRepository;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
@@ -64,6 +70,7 @@ import jakarta.ws.rs.core.SecurityContext;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Path("/v1/admin")
@@ -80,6 +87,10 @@ public class AdminResource {
     private final ChatRepository chatRepository;
     private final ChatRetentionPolicyRepository chatRetentionPolicyRepository;
     private final AdminExportFacade exportFacade;
+    private final ReadReceiptService readReceiptService;
+    private final MlsGroupManager mlsGroupManager;
+    private final LegalHoldRepository legalHoldRepository;
+    private final PurgeStatusService purgeStatusService;
     private final UserMessageSource messages;
 
     @Inject
@@ -94,6 +105,10 @@ public class AdminResource {
                          ExportJobRepository exportJobRepository,
                          ExportFileAccess exportFileAccess,
                          NatsOutboundPort natsOutbound,
+                         ReadReceiptService readReceiptService,
+                         MlsGroupManager mlsGroupManager,
+                         LegalHoldRepository legalHoldRepository,
+                         PurgeStatusService purgeStatusService,
                          UserMessageSource messages) {
         this.appConfig = appConfig;
         this.auditRepository = auditRepository;
@@ -113,7 +128,123 @@ public class AdminResource {
             natsOutbound,
             messages
         );
+        this.readReceiptService = readReceiptService;
+        this.mlsGroupManager = mlsGroupManager;
+        this.legalHoldRepository = legalHoldRepository;
+        this.purgeStatusService = purgeStatusService;
         this.messages = messages;
+    }
+
+    @GET
+    @Path("purge/status")
+    @Operation(summary = "Hot-row purge status (audit-derived)")
+    public Response purgeStatus() {
+        if (purgeStatusService == null) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+        }
+        return Response.ok(purgeStatusService.status()).build();
+    }
+
+    @GET
+    @Path("legal-hold/organizations/{orgId}")
+    @Operation(summary = "Extended legal-hold flags for organization")
+    public Response getOrgLegalHold(@PathParam("orgId") String orgIdStr) {
+        var orgId = UuidParams.required(orgIdStr, "org_id");
+        if (legalHoldRepository == null) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+        }
+        var row = legalHoldRepository.findOrg(orgId)
+            .orElse(new LegalHoldRepository.LegalHoldRow(false, false, false));
+        return Response.ok(toLegalHoldResponse(row)).build();
+    }
+
+    @PATCH
+    @Path("legal-hold/organizations/{orgId}")
+    @Operation(summary = "Update extended legal-hold flags for organization")
+    public Response patchOrgLegalHold(@PathParam("orgId") String orgIdStr,
+                                      LegalHoldUpdateRequest request,
+                                      @Context SecurityContext securityContext) {
+        return patchLegalHold(true, orgIdStr, request, securityContext);
+    }
+
+    @GET
+    @Path("legal-hold/chats/{chatId}")
+    @Operation(summary = "Extended legal-hold flags for chat")
+    public Response getChatLegalHold(@PathParam("chatId") String chatIdStr) {
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        if (legalHoldRepository == null) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+        }
+        var row = legalHoldRepository.findChat(chatId)
+            .orElse(new LegalHoldRepository.LegalHoldRow(false, false, false));
+        return Response.ok(toLegalHoldResponse(row)).build();
+    }
+
+    @PATCH
+    @Path("legal-hold/chats/{chatId}")
+    @Operation(summary = "Update extended legal-hold flags for chat")
+    public Response patchChatLegalHold(@PathParam("chatId") String chatIdStr,
+                                       LegalHoldUpdateRequest request,
+                                       @Context SecurityContext securityContext) {
+        return patchLegalHold(false, chatIdStr, request, securityContext);
+    }
+
+    private Response patchLegalHold(boolean org, String idStr, LegalHoldUpdateRequest request,
+                                    SecurityContext securityContext) {
+        if (legalHoldRepository == null || request == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        var id = UuidParams.required(idStr, org ? "org_id" : "chat_id");
+        var actor = CurrentUserId.uuid(securityContext);
+        var current = org
+            ? legalHoldRepository.findOrg(id).orElse(new LegalHoldRepository.LegalHoldRow(false, false, false))
+            : legalHoldRepository.findChat(id).orElse(new LegalHoldRepository.LegalHoldRow(false, false, false));
+        var next = new LegalHoldRepository.LegalHoldRow(
+            request.legalHold() != null ? request.legalHold() : current.legalHold(),
+            request.legalHoldFiles() != null ? request.legalHoldFiles() : current.legalHoldFiles(),
+            request.legalHoldDeepArchive() != null ? request.legalHoldDeepArchive() : current.legalHoldDeepArchive());
+        var ok = org
+            ? legalHoldRepository.upsertOrg(id, next, actor)
+            : legalHoldRepository.upsertChat(id, next, actor);
+        if (!ok) {
+            return Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new ApiError(502, messages.get("error.admin.save_retention_failed")))
+                .build();
+        }
+        auditRepository.record(actor, org ? "organization.legal_hold.set" : "chat.legal_hold.set",
+            org ? "organization" : "chat", id.toString(), null);
+        return Response.ok(toLegalHoldResponse(next)).build();
+    }
+
+    private static LegalHoldResponse toLegalHoldResponse(LegalHoldRepository.LegalHoldRow row) {
+        return new LegalHoldResponse(row.legalHold(), row.legalHoldFiles(), row.legalHoldDeepArchive());
+    }
+
+    @GET
+    @Path("e2ee/status")
+    @Operation(summary = "E2EE/MLS status (stub scaffold)")
+    public Response e2eeStatus() {
+        var groups = mlsGroupManager != null ? mlsGroupManager.groupCount() : 0L;
+        return Response.ok(new E2eeStatusResponse(groups, "stub", List.of("legacy", "mls-stub"))).build();
+    }
+
+    public record E2eeStatusResponse(
+        @JsonProperty("mls_group_count") long mlsGroupCount,
+        @JsonProperty("mls_status") String mlsStatus,
+        @JsonProperty("e2ee_schemes") List<String> e2eeSchemes
+    ) {
+    }
+
+    @GET
+    @Path("read-receipts/stats")
+    @Operation(summary = "Read receipt statistics")
+    public Response readReceiptStats() {
+        var total = readReceiptService.totalRows();
+        com.avandocmsg.messenger.api.metrics.ReadReceiptMetrics.setRepositorySize(total);
+        return Response.ok(new ReadReceiptStatsResponse(total)).build();
+    }
+
+    public record ReadReceiptStatsResponse(@JsonProperty("total_rows") long totalRows) {
     }
 
     @GET

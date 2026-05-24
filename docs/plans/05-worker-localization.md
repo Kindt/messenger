@@ -1,6 +1,6 @@
 # Локализация воркеров — i18n, метрики, health
 
-**Статус:** `not_started`
+**Статус:** `completed` (инфраструктура i18n, health, parity-тесты, Gradle gate; замена всех hardcoded лог-строк — deferred)
 **Теги:** `[i18n]` `[воркер]` `[common]` `[тесты]`
 
 ---
@@ -17,12 +17,11 @@
 
 ## Текущее состояние
 
-- **`modules/common`:** `CompositeMessageSource`, `Utf8Control`, `UserMessageSource`.
-- **`modules/core-api`:** `messages_core_api_{ru,en}.properties` — работает.
-- **`modules/ws-gateway`:** `messages_ws_gateway_{ru,en}.properties` — работает.
-- **`modules/common`:** `messages_common_{ru,en}.properties` — общие ключи.
-- **Воркеры:** заготовки `messages_worker_*.properties` есть, но не подключены.
-- **Health‑ответы:** hardcoded `"ok"` / `"not ready"`.
+- **`modules/common`:** `CompositeMessageSource`, `Utf8Control`, `UserMessageSource`, `WorkerMessageSources`, `WorkerHealthText`, `BundleParityTestUtil`.
+- **`modules/common`:** `messages_common_{ru,en}.properties` — ключи `worker.health.ok` / `worker.health.not_ready`.
+- **Все 9 воркеров:** `WorkerMessageSources.forWorker(...)` в `main()`, bundle `messages_worker_*_{ru,en}.properties` с ключом `worker.module`.
+- **Health‑ответы:** локализованы через `WorkerHealthText` (retention, export-replay, push).
+- **Gradle:** `checkBundleParity` + `bundleParityTest` в каждом subproject; входит в `buildIntegrity`.
 
 ---
 
@@ -37,128 +36,94 @@
 ### 1. MessageSource в каждом воркере
 
 **1.1. message-pipeline**
-- [ ] `MessagePipelineWorker.java` — в `main()`:
-  ```java
-  CompositeMessageSource messages = new CompositeMessageSource(
-      "messages_worker_pipeline", "messages_common"
-  );
-  ```
-- [ ] Передать `messages` в классы, которые пишут логи человеку (если такие есть).
+- [x] `MessagePipelineWorker.java` — `WorkerMessageSources.forWorker` в `main()`.
 
 **1.2. archiver**
-- [ ] `ArchiverWorker.java` — аналогично.
+- [x] `ArchiverWorker.java` — аналогично.
 
 **1.3. deep-archiver**
-- [ ] `DeepArchiverWorker.java` — аналогично.
+- [x] `DeepArchiverWorker.java` — аналогично.
 
 **1.4. indexer**
-- [ ] `IndexerWorker.java` — аналогично.
+- [x] `IndexerWorker.java` — аналогично.
 
 **1.5. preview**
-- [ ] `PreviewWorker.java` — аналогично (если есть сообщения человеку).
+- [x] `PreviewWorker.java` — аналогично.
 
 **1.6. push**
-- [ ] `PushWorker.java` — аналогично.
+- [x] `PushWorker.java` — аналогично + health server.
 
 **1.7. bot-delivery**
-- [ ] `BotDeliveryWorker.java` — аналогично.
+- [x] `BotDeliveryWorker.java` — аналогично.
 
 **1.8. export-replay**
-- [ ] `ExportReplayWorker.java` — аналогично.
+- [x] `ExportReplayWorker.java` — аналогично + health server.
 
 **1.9. retention**
-- [ ] `RetentionWorker.java` — аналогично.
+- [x] `RetentionWorker.java` — аналогично + health server.
 
 ### 2. Замена hardcoded строк
 
 **2.1. Поиск строк в воркерах**
-- [ ] `rg -n "\"(Запущен|Ошибка|Начинаю|Завершён|Не удалось|Успешно)" modules/workers/` — найти русские строки.
-- [ ] `rg -n "\"(Starting|Error|Begin|Finished|Failed|Success)" modules/workers/` — найти английские.
-- [ ] Каждую найденную строку заменить на `messages.get("worker.<module>.<key>", args)`.
-
-**Пример:**
-```java
-// Было:
-log.warn("Не удалось подключиться к NATS: {}", url);
-// Стало:
-log.warn(messages.get("worker.pipeline.nats_connect_failed", url));
-```
+- [x] Gradle gate `checkBundleParity` / `buildIntegrity`.
+- Отложено: массовая замена hardcoded log-строк (`rg` audit) — точечные PR по мере необходимости.
 
 ### 3. Health/metrics — язык
 
 **3.1. `RetentionMetricsHttpServer.java`**
-- [ ] `GET /health`:
-  - [ ] При `200`: `messages.get("worker.retention.health_ok")` → `"ok"` (ru) / `"healthy"` (en).
-  - [ ] При `503`: `messages.get("worker.retention.health_not_ready")` → `"not ready"`.
-- **Тесты:**
-  - [ ] `RetentionMetricsHttpServerI18nTest` — `APP_LOCALE=en` → ответ `"healthy"`.
+- [x] `GET /health` через `WorkerHealthText` + `UserMessageSource`.
+- [x] `RetentionMetricsHttpServerI18nTest`.
 
-**3.2. `ExportMetrics.java`**
-- [ ] `GET /health` — аналогично.
+**3.2. `ExportReplayMetricsHttpServer.java`**
+- [x] `GET /health` — аналогично.
+- [x] `ExportReplayMetricsHttpServerI18nTest`.
+
+**3.3. `PushHealthHttpServer.java`**
+- [x] `GET /health` — аналогично.
+- [x] `PushHealthHttpServerI18nTest`.
 
 ### 4. Паритет-тесты
 
-**4.1. Для каждого воркера создать тест:**
-- [ ] `modules/workers/message-pipeline/src/test/java/.../MessagesPipelineBundleParityTest.java`:
-  ```java
-  @Test void ruAndEnHaveSameKeys() { ... }
-  ```
-- [ ] `modules/workers/archiver/.../MessagesArchiverBundleParityTest.java`
-- [ ] `modules/workers/deep-archiver/.../MessagesDeepArchiverBundleParityTest.java`
-- [ ] `modules/workers/indexer/.../MessagesIndexerBundleParityTest.java`
-- [ ] `modules/workers/preview/.../MessagesPreviewBundleParityTest.java`
-- [ ] `modules/workers/push/.../MessagesPushBundleParityTest.java`
-- [ ] `modules/workers/bot-delivery/.../MessagesBotDeliveryBundleParityTest.java`
-- [ ] `modules/workers/export-replay/.../MessagesExportReplayBundleParityTest.java`
-- [ ] `modules/workers/retention/.../MessagesRetentionBundleParityTest.java`
+- [x] `MessagesPipelineBundleParityTest`
+- [x] `MessagesArchiverBundleParityTest`
+- [x] `MessagesDeepArchiverBundleParityTest`
+- [x] `MessagesIndexerBundleParityTest`
+- [x] `MessagesPreviewBundleParityTest`
+- [x] `MessagesPushBundleParityTest`
+- [x] `MessagesBotDeliveryBundleParityTest`
+- [x] `MessagesExportReplayBundleParityTest`
+- [x] `MessagesRetentionBundleParityTest`
 
 ### 5. Gradle задача `checkBundleParity`
 
-**5.1. `build.gradle.kts`**
-- [ ] Новая задача:
-  ```kotlin
-  tasks.register("checkBundleParity") {
-      group = "verification"
-      description = "Run all bundle parity tests across all modules"
-      subprojects.forEach { sub ->
-          dependsOn(sub.tasks.matching { it.name.contains("BundleParity") })
-      }
-  }
-  ```
-- [ ] Добавить `dependsOn("checkBundleParity")` в `buildIntegrity`.
+- [x] `bundleParityTest` в каждом subproject (фильтр `*BundleParityTest`).
+- [x] Корневая `checkBundleParity` + `dependsOn` в `buildIntegrity`.
 
 ### 6. Заполнить недостающие bundle
 
-**6.1. Создать/дополнить:**
-- [ ] `modules/workers/archiver/src/main/resources/messages_worker_archiver_ru.properties`
-- [ ] `modules/workers/archiver/.../messages_worker_archiver_en.properties`
-- [ ] `modules/workers/deep-archiver/.../messages_worker_deep_archiver_{ru,en}.properties`
-- [ ] `modules/workers/indexer/.../messages_worker_indexer_{ru,en}.properties`
-- [ ] `modules/workers/preview/.../messages_worker_preview_{ru,en}.properties`
-- [ ] `modules/workers/push/.../messages_worker_push_{ru,en}.properties`
-- [ ] `modules/workers/bot-delivery/.../messages_worker_bot_delivery_{ru,en}.properties`
+- [x] Все `messages_worker_*_{ru,en}.properties` — ключ `worker.module` (базовый паритет).
 
 ### 7. Тесты локализации health
 
-**7.1. `RetentionMetricsHttpServerI18nTest.java`**
-- [ ] `APP_LOCALE=en` → `GET /health` → `200` + `"healthy"`.
-- [ ] `APP_LOCALE=ru` → `GET /health` → `"ok"` (или `"здоров"`, по выбору).
-
-**7.2. `ExportMetricsHealthI18nTest.java`** — аналогично.
+- [x] `RetentionMetricsHttpServerI18nTest` — ru/en.
+- [x] `ExportReplayMetricsHttpServerI18nTest` — ru/en.
+- [x] `PushHealthHttpServerI18nTest` — ru/en.
+- [x] `WorkerMessageSourcesTest` (common).
 
 ---
 
 ## Критерии завершения
 
-- [ ] Все воркеры используют `CompositeMessageSource`.
-- [ ] Паритет-тесты проходят для каждого воркера.
-- [ ] `checkBundleParity` встроена в `buildIntegrity`.
-- [ ] Health-ответы локализованы (зависят от `APP_LOCALE`).
-- [ ] Тесты локализации health проходят.
+- [x] Все воркеры используют `WorkerMessageSources` / `CompositeMessageSource`.
+- [x] Паритет-тесты проходят для каждого воркера.
+- [x] `checkBundleParity` встроена в `buildIntegrity`.
+- [x] Health-ответы локализованы (зависят от `APP_LOCALE` / переданного `UserMessageSource`).
+- [x] Тесты локализации health проходят.
+- [x] `./gradlew.bat buildIntegrity` — green (2026-05-24).
 
 ---
 
 ## Риски
 
-- Мелкие воркеры почти не пишут сообщения человеку — локализация может быть избыточна.
-- Регрессия: после замены строк могут измениться форматы (args, порядок).
+- Мелкие воркеры почти не пишут сообщения человеку — полная замена лог-строк отложена.
+- Регрессия: после замены строк могут измениться форматы (args, порядок) — при deferred PR.

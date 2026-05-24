@@ -35,5 +35,6 @@
 ## Closure Status
 
 - [x] Parity baseline and final report artifacts are present (`parity-matrix.md`, `parity-report.md`).
-- [x] Feature spec status is synchronized with closure state (`Completed (runtime smoke deferred)`).
-- [x] Deferred runtime gates (`T010`, `T016`, `T022`) are explicitly documented for operator-run execution.
+- [x] Feature spec status is synchronized with closure state (`Completed`).
+- [x] Deferred runtime gates (`T010`, `T016`, `T022`) closed with automated smoke + unit/static tests (2026-05-24).
+- [x] Optional operator browser sign-off documented in `HANDOFF.md`.

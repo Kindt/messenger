@@ -26,12 +26,15 @@
 | Export compliance pack | `scripts/smoke-export-compliance-pack.sh` | `export-compliance-smoke.yml` | `.ps1`, `.cmd` |
 | Export observability | `scripts/smoke-export-observability.sh` | `export-compliance-smoke.yml` | `.ps1`, `.cmd` |
 | OpenAPI export compliance | `scripts/smoke-openapi-export-compliance.sh` | `export-compliance-smoke.yml` | `.ps1` |
-| Korus web basic smoke | `scripts/smoke-korus-web.sh` | manual | `.ps1`, `.cmd` |
+| Korus web basic smoke | `scripts/smoke-korus-web.sh` | manual (runtime) | `.ps1`, `.cmd`; optional — spec 002 parity smokes cover API/WS |
 | Auth smoke | `scripts/smoke-auth.ps1` | manual | none |
 | Stack readiness smoke | `scripts/smoke-ready.ps1` | manual | none |
 | Retention worker health smoke | `scripts/smoke-retention-worker.ps1` | manual | none |
 | US2 Epic01 (QEMU wrapper) | `scripts/smoke-us2-epic01-qemu.ps1` | manual | `smoke-us2-epic01.ps1` |
 | Hot-plug indexer lifecycle | `scripts/smoke-hotplug-indexer.ps1` | manual | requires NATS (`14222` tunnel on QEMU) |
+| Read receipts (API + WS) | `scripts/smoke-read-receipts.ps1` | manual | UI ✓✓ check optional |
+| Retention hot-row purge status | `scripts/smoke-retention-purge.ps1` | manual | requires admin token + stack |
+| Retention file cleanup metrics | `scripts/smoke-retention-file-cleanup.ps1` | manual | metrics on retention worker port |
 | Web parity API (spec 002 T010/T016 backend) | `scripts/smoke-web-parity-api.ps1` | manual | pin API may 500; UI/WS gates still manual |
 
 ## Operator utilities

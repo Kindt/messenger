@@ -1,6 +1,6 @@
 # Экспорт и комплаенс — политика полноты, GDPR
 
-**Статус:** `in_progress`
+**Статус:** `completed`
 **Теги:** `[экспорт]` `[воркер]` `[core-api]` `[аудит]` `[admin-ui]` `[web-client]`
 
 ---
@@ -43,111 +43,111 @@
 ### 1. Политика полноты выгрузки (GDPR)
 
 **1.1. Определить чеклист mandatory-полей**
-- [ ] `ExportCompleteness.java` — добавить поле `mandatoryFields: Map<String, Boolean>`:
-  - [ ] `messages`, `chat`, `chat_members`, `referenced_users`, `referenced_files`.
-  - [ ] `solr_index`, `deep_archive`, `retention_snapshots`, `gdpr_disclosures`.
+- [x] `ExportCompleteness.java` — добавить поле `mandatoryFields: Map<String, Boolean>`:
+  - [x] `messages`, `chat`, `chat_members`, `referenced_users`, `referenced_files`.
+  - [x] `solr_index`, `deep_archive`, `retention_snapshots`, `gdpr_disclosures`.
 
 **1.2. `ExportCompletenessValidator.java`** (новый класс в `modules/common/src/main/java/.../common/export/`)
-- [ ] Метод `validate(ExportCompleteness completeness) → ValidationResult`:
-  - [ ] Для каждого mandatory-поля проверить, что оно присутствует.
-  - [ ] Если отсутствует — `result.addWarning("missing_field", fieldName)`.
-  - [ ] Если `EXPORT_COMPLETENESS_STRICT=true` и отсутствует — `result.addError()`.
-- [ ] `ValidationResult.java` — `hasErrors(): boolean`, `hasWarnings(): boolean`, `getMessages(): List<String>`.
+- [x] Метод `validate(ExportCompleteness completeness) → ValidationResult`:
+  - [x] Для каждого mandatory-поля проверить, что оно присутствует.
+  - [x] Если отсутствует — `result.addWarning("missing_field", fieldName)`.
+  - [x] Если `EXPORT_COMPLETENESS_STRICT=true` и отсутствует — `result.addError()`.
+- [x] `ValidationResult.java` — `hasErrors(): boolean`, `hasWarnings(): boolean`, `getMessages(): List<String>`.
 - **Тесты:**
-  - [ ] `ExportCompletenessValidatorTest` — проверить различные сценарии полноты.
+  - [x] `ExportCompletenessValidatorTest` — проверить различные сценарии полноты.
 
 **1.3. Интеграция в `ExportReplayWorker.java`**
-- [ ] После сборки пакета вызвать `ExportCompletenessValidator.validate()`.
-- [ ] Сохранить результат в `ExportCompleteness.complete`.
-- [ ] Если `EXPORT_COMPLETENESS_STRICT=true` и `ValidationResult.hasErrors()` — пометить статус `export_failed`.
+- [x] После сборки пакета вызвать `ExportCompletenessValidator.validate()`.
+- [x] Сохранить результат в `ExportCompleteness.complete`.
+- [x] Если `EXPORT_COMPLETENESS_STRICT=true` и `ValidationResult.hasErrors()` — пометить статус `export_failed`.
 - **Тесты:**
-  - [ ] `ExportReplayWorkerCompletenessTest` — mock validator.
+  - [x] `ExportReplayWorkerCompletenessTest` — mock validator.
 
 **1.4. Env-переменные**
-- [ ] `EXPORT_REQUIRED_FIELDS` (csv: `messages,chat,referenced_users`).
-- [ ] `EXPORT_COMPLETENESS_STRICT` (default `false`).
-- [ ] `AppConfig.java` — парсинг.
+- [x] `EXPORT_REQUIRED_FIELDS` (csv: `messages,chat,referenced_users`).
+- [x] `EXPORT_COMPLETENESS_STRICT` (default `false`).
+- [x] `AppConfig.java` — парсинг.
 
 ### 2. OpenAPI: новые поля completeness
 
 **2.1. DTO с аннотациями**
-- [ ] `ExportCompleteness.java` — `@Schema(description = "Результат проверки полноты")`.
-- [ ] `ExportGdprDisclosures.java` — `@ExampleObject`.
-- [ ] `ValidationResult.java` — `@Schema`.
+- [x] `ExportCompleteness.java` — `@Schema(description = "Результат проверки полноты")`.
+- [x] `ExportGdprDisclosures.java` — `@ExampleObject`.
+- [x] `ValidationResult.java` — `@Schema`.
 - **Тесты:**
-  - [ ] `AdminExportComplianceOpenApiTest` — обновить.
+  - [x] `AdminExportComplianceOpenApiTest` — обновить.
 
 ### 3. Prometheus метрики completeness
 
 **3.1. `ExportMetrics.java` — новые счётчики**
-- [ ] `export_completeness_check_total` (Counter).
-- [ ] `export_completeness_failed_total` (Counter с label `reason`).
-- [ ] `export_completeness_duration_seconds` (Histogram).
+- [x] `export_completeness_check_total` (Counter).
+- [x] `export_completeness_failed_total` (Counter с label `reason`).
+- [x] `export_completeness_duration_seconds` (Histogram).
 - **Тесты:**
-  - [ ] `ExportMetricsTest` — проверить регистрацию.
+  - [x] `ExportMetricsTest` — проверить регистрацию.
 
 ### 4. Runbook: экспорт перед purge
 
 **4.1. Дополнить `scripts/pre-retention-export.ps1`**
-- [ ] Читать список чатов, для которых retention подходит к purge.
-- [ ] Для каждого чата: проверить наличие экспорта, если нет — запустить `POST /v1/chats/{id}/export`.
-- [ ] Дождаться завершения (poll `GET .../export/{jobId}`).
+- [x] Читать список чатов, для которых retention подходит к purge.
+- [x] Для каждого чата: проверить наличие экспорта, если нет — запустить `POST /v1/chats/{id}/export`.
+- [x] Дождаться завершения (poll `GET .../export/{jobId}`).
 
 **4.2. `docs/RETENTION_AND_DEEP_ARCHIVE.md`**
-- [ ] §8 — описать runbook: экспорт обязателен перед purge при `EXPORT_REQUIRED_BEFORE_PURGE=true`.
+- [x] §8 — описать runbook: экспорт обязателен перед purge при `EXPORT_REQUIRED_BEFORE_PURGE=true`.
 
 ### 5. Документирование для операторов
 
 **5.1. `docs/EXPORT_OPERATOR.md`**
-- [ ] Состав пакета: `export.json`, `attachments/manifest.json`, `attachments/{hash}/{file}`.
-- [ ] Срок хранения: `EXPORT_DIR` (default 30 дней).
-- [ ] Проверка полноты: `GET /v1/chats/{chatId}/export/{jobId}` → `exportCompleteness`.
-- [ ] Принудительный экспорт: скрипт `pre-retention-export.ps1`.
+- [x] Состав пакета: `export.json`, `attachments/manifest.json`, `attachments/{hash}/{file}`.
+- [x] Срок хранения: `EXPORT_DIR` (default 30 дней).
+- [x] Проверка полноты: `GET /v1/chats/{chatId}/export/{jobId}` → `exportCompleteness`.
+- [x] Принудительный экспорт: скрипт `pre-retention-export.ps1`.
 - **Файлы:**
-  - [ ] `README.md` — ссылка на `docs/EXPORT_OPERATOR.md`.
+  - [x] `README.md` — ссылка на `docs/EXPORT_OPERATOR.md`.
 
 ### 6. Admin UI для экспорта
 
 **6.1. `CoreAdminUiContributor.java` — раздел «Экспорт»**
-- [ ] `core-export` — `json_panel`.
-- [ ] `admin-ui/app.js`:
-  - [ ] Поле: ввод chatId.
-  - [ ] Кнопка «Экспортировать» → `POST /v1/chats/{chatId}/export`.
-  - [ ] Отображение статуса (poll каждый 5 сек).
-  - [ ] Кнопка «Скачать» при `status == export_v1`.
+- [x] `core-export` — `json_panel`.
+- [x] `admin-ui/app.js`:
+  - [x] Поле: ввод chatId.
+  - [x] Кнопка «Экспортировать» → `POST /v1/chats/{chatId}/export`.
+  - [x] Отображение статуса (poll каждый 5 сек).
+  - [x] Кнопка «Скачать» при `status == export_v1`.
 
 ### 7. Web-client: кнопка «Экспорт чата»
 
 **7.1. `app.js` — кнопка в UI чата**
-- [ ] В панели информации о чате (или в меню):
-  - [ ] Кнопка «Экспорт чата».
-  - [ ] При нажатии: `POST /v1/chats/{chatId}/export`.
-  - [ ] Показать progress bar (poll каждые 5 сек).
-  - [ ] По завершении: кнопка «Скачать ZIP».
-- [ ] `styles.css` — `.export-button`, `.export-progress`.
+- [x] В панели информации о чате (или в меню):
+  - [x] Кнопка «Экспорт чата».
+  - [x] При нажатии: `POST /v1/chats/{chatId}/export`.
+  - [x] Показать progress bar (poll каждые 5 сек).
+  - [x] По завершении: кнопка «Скачать ZIP».
+- [x] `styles.css` — `.export-button`, `.export-progress`.
 
 ### 8. Smoke-тесты
 
 **8.1. `scripts/smoke-export-gdpr-fulfillment.ps1`**
-- [ ] Создать чат, отправить сообщения разных типов.
-- [ ] Запустить экспорт.
-- [ ] Проверить `exportCompleteness.complete = true`.
-- [ ] Проверить все mandatory-поля.
+- [x] Создать чат, отправить сообщения разных типов.
+- [x] Запустить экспорт.
+- [x] Проверить `exportCompleteness.complete = true`.
+- [x] Проверить все mandatory-поля.
 
 **8.2. `scripts/smoke-export-web-client.ps1`**
-- [ ] Selenium/Playwright или curl: проверить, что кнопка экспорта есть в web-client UI.
+- [x] Selenium/Playwright или curl: проверить, что кнопка экспорта есть в web-client UI.
 
 ---
 
 ## Критерии завершения
 
-- [ ] `ExportCompletenessValidator` проверяет все mandatory-поля.
-- [ ] Smoke: `smoke-export-gdpr-fulfillment.ps1` — успешный прогон.
-- [ ] Web-client: кнопка «Экспорт» работает, статус отображается.
-- [ ] Admin UI: статус экспорта виден.
-- [ ] OpenAPI: документация новых полей completeness.
-- [ ] Prometheus: метрики completeness экспортируются.
-- [ ] Документация: `docs/EXPORT_OPERATOR.md`.
+- [x] `ExportCompletenessValidator` проверяет все mandatory-поля.
+- [x] Smoke: `smoke-export-gdpr-fulfillment.ps1` — успешный прогон.
+- [x] Web-client: кнопка «Экспорт» работает, статус отображается.
+- [x] Admin UI: статус экспорта виден.
+- [x] OpenAPI: документация новых полей completeness.
+- [x] Prometheus: метрики completeness экспортируются.
+- [x] Документация: `docs/EXPORT_OPERATOR.md`.
 
 ---
 

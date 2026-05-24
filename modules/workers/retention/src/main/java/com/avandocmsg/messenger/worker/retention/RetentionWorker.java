@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.retention;
 
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.minio.MinioClient;
@@ -191,6 +192,28 @@ public final class RetentionWorker {
                         jdbcUrl,
                         useAdvisoryLock
                     );
+                    RetentionHotRowPurger.purgeHotRows(
+                        dataSource,
+                        nats,
+                        platformDefaults,
+                        RetentionPlatformDefaults.purgeBatchLimitFromEnv(),
+                        RetentionPlatformDefaults.exportRequiredBeforePurgeFromEnv(),
+                        auditEnabled,
+                        jdbcQueryTimeoutSeconds,
+                        dryRun
+                    );
+                    ReadReceiptRetentionJanitor.purgeOldReceipts(
+                        dataSource, RetentionPlatformDefaults.readReceiptRetentionDaysFromEnv());
+                    FileRetentionJanitor.process(
+                        dataSource,
+                        minioClient,
+                        minioEnabled,
+                        minioDefaultBucket,
+                        RetentionPlatformDefaults.fileMetadataMinAgeDaysFromEnv(),
+                        RetentionPlatformDefaults.fileCleanupBatchLimitFromEnv(),
+                        auditEnabled,
+                        dryRun
+                    );
                 } else {
                     log.warn(
                         "Hot-body retention SQL runs on PostgreSQL only; jdbcUrl does not look like jdbc:postgresql — skipping purge pass"
@@ -352,12 +375,14 @@ public final class RetentionWorker {
             return true;
         };
 
+        var workerMessages = WorkerMessageSources.forWorker(
+            RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention");
         var metricsPort = RetentionPlatformDefaults.metricsPortFromEnv();
         RetentionMetricsHttpServer metricsServer = null;
         if (metricsPort > 0) {
             DefaultExports.initialize();
             try {
-                metricsServer = RetentionMetricsHttpServer.start(metricsPort, healthProbe);
+                metricsServer = RetentionMetricsHttpServer.start(metricsPort, healthProbe, workerMessages);
                 log.info(
                     "Prometheus metrics on http://0.0.0.0:{}/metrics; GET /health (same port) for readiness",
                     metricsServer.getPort()

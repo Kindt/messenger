@@ -6,6 +6,7 @@ import com.avandocmsg.messenger.api.auth.AuthService;
 import com.avandocmsg.messenger.api.auth.TokenValidator;
 import com.avandocmsg.messenger.api.chats.ChatResource;
 import com.avandocmsg.messenger.api.chats.ChatService;
+import com.avandocmsg.messenger.api.chats.ReadReceiptService;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanResource;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanService;
 import com.avandocmsg.messenger.api.config.RedisProbe;
@@ -47,10 +48,14 @@ import com.avandocmsg.messenger.api.filter.JwtAuthFilter;
 import com.avandocmsg.messenger.api.health.HealthResource;
 import com.avandocmsg.messenger.api.messages.MessageResource;
 import com.avandocmsg.messenger.api.messages.MessageService;
+import com.avandocmsg.messenger.api.mls.MlsGroupManager;
 import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.api.mls.SessionRepository;
+import com.avandocmsg.messenger.core.application.ChatApplicationService;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatBanRepository;
+import com.avandocmsg.messenger.api.admin.PurgeStatusService;
+import com.avandocmsg.messenger.api.repository.LegalHoldRepository;
 import com.avandocmsg.messenger.api.repository.ChatReadRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ContactRepository;
@@ -84,14 +89,15 @@ public class JerseyConfig extends ResourceConfig {
                         UserRepository userRepository,
                         ContactRepository contactRepository, ContactService contactService,
                         ChatRepository chatRepository, ChatService chatService,
-                        ChatReadRepository chatReadRepository,
+                        ChatReadRepository chatReadRepository, ReadReceiptService readReceiptService,
+                        ChatApplicationService chatApplicationService,
                         BlockRepository blockRepository,
                         MessageRepository messageRepository, MessageService messageService,
                         Connection natsConnection, NatsConnectionOutbound natsOutbound,
                         MinioClient minioClient, FileRepository fileRepository, FileService fileService,
                         ChatBanRepository chatBanRepository, ChatBanService chatBanService,
                         E2EEService e2eeService, KeyPackageRepository keyPackageRepository,
-                        SessionRepository sessionRepository, MlsService mlsService,
+                        SessionRepository sessionRepository, MlsService mlsService, MlsGroupManager mlsGroupManager,
                         FileProxy fileProxy, ConferenceService conferenceService,
                         AuditRepository auditRepository,
                         ExportJobRepository exportJobRepository,
@@ -106,7 +112,9 @@ public class JerseyConfig extends ResourceConfig {
                         MessageSearchService messageSearchService,
                         AdminUiManifest adminUiManifest,
                         AdminServerStatsService adminServerStatsService,
-                        RedisProbe redisProbe) {
+                        RedisProbe redisProbe,
+                        LegalHoldRepository legalHoldRepository,
+                        PurgeStatusService purgeStatusService) {
         register(new AbstractBinder() {
             @Override
             protected void configure() {
@@ -124,6 +132,8 @@ public class JerseyConfig extends ResourceConfig {
                 bind(contactService).to(ContactService.class);
                 bind(chatRepository).to(ChatRepository.class);
                 bind(chatService).to(ChatService.class);
+                bind(readReceiptService).to(ReadReceiptService.class);
+                bind(chatApplicationService).to(ChatApplicationService.class);
                 bind(chatReadRepository).to(ChatReadRepository.class);
                 bind(blockRepository).to(BlockRepository.class);
                 bind(messageRepository).to(MessageRepository.class);
@@ -141,6 +151,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(keyPackageRepository).to(KeyPackageRepository.class);
                 bind(sessionRepository).to(SessionRepository.class);
                 bind(mlsService).to(MlsService.class);
+                bind(mlsGroupManager).to(MlsGroupManager.class);
                 bind(conferenceService).to(ConferenceService.class);
                 bind(auditRepository).to(AuditRepository.class);
                 bind(exportJobRepository).to(ExportJobRepository.class);
@@ -156,6 +167,8 @@ public class JerseyConfig extends ResourceConfig {
                 bind(adminUiManifest).to(AdminUiManifest.class);
                 bind(adminServerStatsService).to(AdminStatsPort.class);
                 bind(adminServerStatsService).to(AdminServerStatsService.class);
+                bind(legalHoldRepository).to(LegalHoldRepository.class);
+                bind(purgeStatusService).to(PurgeStatusService.class);
             }
         });
 
@@ -189,6 +202,7 @@ public class JerseyConfig extends ResourceConfig {
         register(RequestContextMdcFilter.class);
         register(CorsPreflightFilter.class);
         register(CorsResponseFilter.class);
+        register(new SecurityHeadersFilter(appConfig));
         register(RequestContextMdcClearFilter.class);
         register(JsonMappingExceptionMapper.class);
         register(ForbiddenExceptionMapper.class);

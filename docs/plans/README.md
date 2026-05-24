@@ -6,14 +6,14 @@
 
 | № | Файл | Эпик | Приоритет | Статус |
 |---|------|------|-----------|--------|
-| 1 | `01-retention-phase-b.md` | Ретенция Фаза B — TTL, чанки, унификация deep-archive | Высокий | `in_progress` |
-| 2 | `02-retention-phase-c.md` | Ретенция Фаза C — purge hot, файлы, legal hold | Высокий | `not_started` |
-| 3 | `03-export-compliance.md` | Экспорт и комплаенс — политика полноты, GDPR | Средний | `in_progress` |
-| 4 | `04-security-timing.md` | Безопасность — timing, унификация ответов, security headers | Средний | `not_started` |
-| 5 | `05-worker-localization.md` | Локализация воркеров — i18n, метрики, health | Низкий | `not_started` |
-| 6 | `06-e2ee-mls.md` | E2EE/MLS — полное RFC 9420 | По запросу | `not_started` |
-| 7 | `07-read-receipts.md` | Per-message read receipts | По запросу | `not_started` |
-| 8 | `08-hexagonal-refactoring.md` | Ports & Adapters рефакторинг Phase 2-3 | Опционально | `not_started` |
+| 1 | `01-retention-phase-b.md` | Ретенция Фаза B — TTL, чанки, унификация deep-archive | Высокий | `completed` |
+| 2 | `02-retention-phase-c.md` | Ретенция Фаза C — purge hot, файлы, legal hold | Высокий | `completed` |
+| 3 | `03-export-compliance.md` | Экспорт и комплаенс — политика полноты, GDPR | Средний | `completed` |
+| 4 | `04-security-timing.md` | Безопасность — timing, унификация ответов, security headers | Средний | `completed` |
+| 5 | `05-worker-localization.md` | Локализация воркеров — i18n, метрики, health | Низкий | `completed` |
+| 6 | `06-e2ee-mls.md` | E2EE/MLS — scaffold + group state (RFC 9420 deferred) | По запросу | `completed` |
+| 7 | `07-read-receipts.md` | Per-message read receipts | По запросу | `completed` |
+| 8 | `08-hexagonal-refactoring.md` | Ports & Adapters Phase 2a (Chat) | Опционально | `completed` |
 | 9 | `09-code-health-backlog.md` | Серия малых PR по рефакторингу hotspot-зон | Высокий | `completed` |
 | 10 | `10-web-client-code-health-backlog.md` | Серия малых PR по оздоровлению web-client | Высокий | `completed` |
 

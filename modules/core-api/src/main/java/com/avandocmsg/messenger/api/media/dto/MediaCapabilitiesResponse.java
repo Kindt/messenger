@@ -11,5 +11,7 @@ public record MediaCapabilitiesResponse(
     @JsonProperty("stun_uris") List<String> stunUris,
     @JsonProperty("conference_provider") String conferenceProvider,
     @JsonProperty("jitsi_base_url") String jitsiBaseUrl,
-    @JsonProperty("note") String note
+    @JsonProperty("note") String note,
+    @JsonProperty("e2ee_schemes") List<String> e2eeSchemes,
+    @JsonProperty("mls_status") String mlsStatus
 ) {}

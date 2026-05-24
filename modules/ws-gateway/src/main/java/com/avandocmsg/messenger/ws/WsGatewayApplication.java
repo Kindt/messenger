@@ -48,6 +48,9 @@ public class WsGatewayApplication {
         MessagingWebSocket.natsConnection = Nats.connect(natsOptions);
         log.info("NATS connected: {}", natsUrl);
 
+        MessagingWebSocket.allowedOrigins = WsOriginPolicy.parseAllowedOrigins(
+            System.getenv("WS_ALLOWED_ORIGINS"));
+
         var tomcat = new Tomcat();
         tomcat.setPort(port);
         var connector = tomcat.getConnector();

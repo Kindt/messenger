@@ -36,6 +36,17 @@ final class RetentionMetrics {
         .help("Messages whose Hot DB body was cleared after MinIO snapshot (or debug path) and NATS publish")
         .register();
 
+    private static final Counter HOT_ROWS_PURGED = Counter.build()
+        .name("retention_worker_hot_rows_purged_total")
+        .help("Hot DB message rows deleted after hot-body pass (HOT_ROW_PURGED)")
+        .register();
+
+    private static final Counter PURGE_ERRORS = Counter.build()
+        .name("retention_worker_purge_errors_total")
+        .labelNames("reason")
+        .help("Hot-row purge failures")
+        .register();
+
     private static final Counter HOT_BODY_PROCESSING_ERRORS = Counter.build()
         .name("retention_worker_hot_body_processing_errors_total")
         .help("Exceptions while processing a single retention candidate message")
@@ -163,6 +174,14 @@ final class RetentionMetrics {
         HOT_BODY_CLEARED.inc();
     }
 
+    static void hotRowPurged() {
+        HOT_ROWS_PURGED.inc();
+    }
+
+    static void purgeError(String reason) {
+        PURGE_ERRORS.labels(reason == null || reason.isBlank() ? "unknown" : reason).inc();
+    }
+
     static void processingError() {
         HOT_BODY_PROCESSING_ERRORS.inc();
     }
@@ -218,6 +237,24 @@ final class RetentionMetrics {
 
     static void fileRefSkipped() {
         FILE_REF_SKIPPED.inc();
+    }
+
+    private static final Counter FILE_METADATA_DELETED = Counter.build()
+        .name("retention_worker_file_metadata_deleted_total")
+        .help("Orphan file_metadata rows deleted by FileRetentionJanitor")
+        .register();
+
+    private static final Counter MINIO_OBJECTS_DELETED = Counter.build()
+        .name("retention_worker_minio_objects_deleted_total")
+        .help("MinIO file objects deleted by FileRetentionJanitor")
+        .register();
+
+    static void fileMetadataDeleted() {
+        FILE_METADATA_DELETED.inc();
+    }
+
+    static void minioObjectDeleted() {
+        MINIO_OBJECTS_DELETED.inc();
     }
 
     static void observePassDurationSeconds(double seconds) {

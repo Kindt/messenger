@@ -14,31 +14,55 @@ import jakarta.websocket.OnError;
 import jakarta.websocket.OnMessage;
 import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
+import jakarta.websocket.server.HandshakeRequest;
 import jakarta.websocket.server.ServerEndpoint;
+import jakarta.websocket.server.ServerEndpointConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-@ServerEndpoint("/ws")
+@ServerEndpoint(value = "/ws", configurator = MessagingWebSocket.OriginHandshakeConfigurator.class)
 public class MessagingWebSocket {
     private static final Logger log = LoggerFactory.getLogger(MessagingWebSocket.class);
     private static final ObjectMapper WS_JSON = new ObjectMapper();
+    static final String ORIGIN_PROP = "ws.origin";
 
     static Connection natsConnection;
     static WsTokenValidator tokenValidator;
     /** Set in {@link WsGatewayApplication#main} before accepting connections. */
     static UserMessageSource messages;
+    static List<String> allowedOrigins = List.of("*");
+
+    public static final class OriginHandshakeConfigurator extends ServerEndpointConfig.Configurator {
+        @Override
+        public void modifyHandshake(ServerEndpointConfig sec, HandshakeRequest request, jakarta.websocket.HandshakeResponse response) {
+            var origins = request.getHeaders().get("Origin");
+            if (origins != null && !origins.isEmpty()) {
+                sec.getUserProperties().put(ORIGIN_PROP, origins.get(0));
+            }
+        }
+    }
 
     private final Map<Session, String> sessionUsers = new ConcurrentHashMap<>();
     private final Map<Session, Dispatcher> sessionDispatchers = new ConcurrentHashMap<>();
 
     @OnOpen
     public void onOpen(Session session) {
+        var origin = (String) session.getUserProperties().get(ORIGIN_PROP);
+        if (!WsOriginPolicy.isAllowed(origin, allowedOrigins)) {
+            try {
+                session.close(new CloseReason(() -> 4001, "origin denied"));
+            } catch (Exception e) {
+                log.warn("Failed to close WS for bad origin: {}", e.getMessage());
+            }
+            return;
+        }
         var query = session.getQueryString();
         var token = parseToken(query);
         if (token == null) {

@@ -55,6 +55,15 @@ class MessageRepositoryH2Test {
                   edited_at TIMESTAMP
                 )
                 """);
+            st.execute("""
+                CREATE TABLE pinned_messages (
+                  chat_id UUID NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+                  message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+                  pinned_by UUID NOT NULL REFERENCES users(id),
+                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (chat_id, message_id)
+                )
+                """);
         }
         try (var c = ds.getConnection();
              var ps = c.prepareStatement("INSERT INTO users (id) VALUES (?)")) {
@@ -113,6 +122,19 @@ class MessageRepositoryH2Test {
             ps.executeUpdate();
         }
         assertTrue(repo.findById(msgId).isEmpty());
+    }
+
+    @Test
+    void pinMessage_unpin_and_listPinned() throws Exception {
+        var msgId = UUID.randomUUID();
+        assertNotNull(repo.insert(msgId, chatId, senderId, "text", "pin-me", null, null, null));
+        assertTrue(repo.pinMessage(chatId, msgId, senderId));
+        assertFalse(repo.pinMessage(chatId, msgId, senderId));
+        var pinned = repo.getPinnedMessages(chatId);
+        assertEquals(1, pinned.size());
+        assertEquals(msgId.toString(), pinned.get(0).messageId());
+        assertTrue(repo.unpinMessage(chatId, msgId));
+        assertTrue(repo.getPinnedMessages(chatId).isEmpty());
     }
 
     @Test

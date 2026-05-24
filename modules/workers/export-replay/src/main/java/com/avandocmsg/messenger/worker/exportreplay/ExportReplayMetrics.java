@@ -42,6 +42,22 @@ final class ExportReplayMetrics {
         .help("NATS msg.export.replay.cancel hints received")
         .register();
 
+    private static final Counter COMPLETENESS_CHECKS = Counter.build()
+        .name("export_completeness_check_total")
+        .help("Export completeness validations run")
+        .register();
+
+    private static final Counter COMPLETENESS_FAILED = Counter.build()
+        .name("export_completeness_failed_total")
+        .labelNames("reason")
+        .help("Export completeness validation failures")
+        .register();
+
+    private static final io.prometheus.client.Histogram COMPLETENESS_DURATION = io.prometheus.client.Histogram.build()
+        .name("export_completeness_duration_seconds")
+        .help("Export completeness validation duration")
+        .register();
+
     private ExportReplayMetrics() {
     }
 
@@ -69,6 +85,18 @@ final class ExportReplayMetrics {
 
     static void cancelHint() {
         CANCEL_HINTS.inc();
+    }
+
+    static void completenessChecked() {
+        COMPLETENESS_CHECKS.inc();
+    }
+
+    static void completenessFailed(String reason) {
+        COMPLETENESS_FAILED.labels(reason == null || reason.isBlank() ? "unknown" : reason).inc();
+    }
+
+    static void observeCompletenessDuration(long startNanos) {
+        COMPLETENESS_DURATION.observe((System.nanoTime() - startNanos) / 1_000_000_000.0);
     }
 
     static String sanitizeTerminalStatus(String status) {

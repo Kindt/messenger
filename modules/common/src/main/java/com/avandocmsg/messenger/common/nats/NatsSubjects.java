@@ -66,6 +66,9 @@ public final class NatsSubjects {
     public static final String SVC_HEARTBEAT_WILDCARD = "$SVC.heartbeat.*";
     public static final String SVC_LIFECYCLE_PREFIX = "$SVC.lifecycle.";
 
+    /** Per-participant read receipt (JSON {@link com.avandocmsg.messenger.common.dto.ReadReceiptEvent}). */
+    public static final String MSG_READ_RECEIPT = "msg.read_receipt";
+
     private NatsSubjects() {
     }
 }

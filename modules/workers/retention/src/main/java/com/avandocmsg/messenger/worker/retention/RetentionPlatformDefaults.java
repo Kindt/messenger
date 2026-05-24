@@ -326,6 +326,73 @@ public record RetentionPlatformDefaults(
         return parseBool(System.getenv("RETENTION_PUBLISH_EXPORT_SUGGESTED"), false);
     }
 
+    /** Env: {@code RETENTION_HOT_ROW_PURGE_ENABLED}; default {@code false}. */
+    static boolean hotRowPurgeEnabledFromEnv() {
+        return parseBool(System.getenv("RETENTION_HOT_ROW_PURGE_ENABLED"), false);
+    }
+
+    /** Env: {@code RETENTION_PURGE_BATCH_LIMIT}; default {@code 25}. */
+    static int purgeBatchLimitFromEnv() {
+        var raw = System.getenv("RETENTION_PURGE_BATCH_LIMIT");
+        if (raw == null || raw.isBlank()) {
+            return 25;
+        }
+        try {
+            return Math.max(1, Math.min(500, Integer.parseInt(raw.trim())));
+        } catch (NumberFormatException e) {
+            return 25;
+        }
+    }
+
+    /** Env: {@code EXPORT_REQUIRED_BEFORE_PURGE}; default {@code false}. */
+    static boolean exportRequiredBeforePurgeFromEnv() {
+        return parseBool(System.getenv("EXPORT_REQUIRED_BEFORE_PURGE"), false);
+    }
+
+    /** Env: {@code READ_RECEIPT_RETENTION_DAYS}; default {@code 365}; {@code 0} disables purge. */
+    static int readReceiptRetentionDaysFromEnv() {
+        var raw = System.getenv("READ_RECEIPT_RETENTION_DAYS");
+        if (raw == null || raw.isBlank()) {
+            return 365;
+        }
+        try {
+            return Math.max(0, Integer.parseInt(raw.trim()));
+        } catch (NumberFormatException e) {
+            return 365;
+        }
+    }
+
+    /** Env: {@code RETENTION_FILE_METADATA_CLEANUP_ENABLED}; default {@code false}. */
+    static boolean fileMetadataCleanupEnabledFromEnv() {
+        return parseBool(System.getenv("RETENTION_FILE_METADATA_CLEANUP_ENABLED"), false);
+    }
+
+    /** Env: {@code RETENTION_FILE_METADATA_MIN_AGE_DAYS}; default {@code 30}. */
+    static int fileMetadataMinAgeDaysFromEnv() {
+        var raw = System.getenv("RETENTION_FILE_METADATA_MIN_AGE_DAYS");
+        if (raw == null || raw.isBlank()) {
+            return 30;
+        }
+        try {
+            return Math.max(1, Integer.parseInt(raw.trim()));
+        } catch (NumberFormatException e) {
+            return 30;
+        }
+    }
+
+    /** Env: {@code RETENTION_FILE_CLEANUP_BATCH_LIMIT}; default {@code 25}. */
+    static int fileCleanupBatchLimitFromEnv() {
+        var raw = System.getenv("RETENTION_FILE_CLEANUP_BATCH_LIMIT");
+        if (raw == null || raw.isBlank()) {
+            return 25;
+        }
+        try {
+            return Math.max(1, Math.min(500, Integer.parseInt(raw.trim())));
+        } catch (NumberFormatException e) {
+            return 25;
+        }
+    }
+
     /** Нормализация префикса: без ведущих {@code /}, с завершающим {@code /}; пусто → {@code retention/body/}. */
     public static String normalizeRetentionObjectPrefix(String raw) {
         if (raw == null || raw.isBlank()) {

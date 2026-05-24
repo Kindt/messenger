@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.worker.push;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.jdbc.HikariDataSources;
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -267,9 +268,11 @@ public class PushWorker {
             var worker = new PushWorker(natsUrl, ds, webhook);
             worker.start();
             var metricsPort = PushPlatformDefaults.metricsPort();
+            var workerMessages = WorkerMessageSources.forWorker(
+                PushWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_push");
             if (metricsPort > 0) {
                 healthServer = PushHealthHttpServer.start(metricsPort,
-                    new PushHealthProbe(worker.natsConnection(), worker.dataSource()));
+                    new PushHealthProbe(worker.natsConnection(), worker.dataSource()), workerMessages);
                 log.info("Push worker health on http://0.0.0.0:{}/health", healthServer.getPort());
             }
             PushHealthHttpServer healthRef = healthServer;

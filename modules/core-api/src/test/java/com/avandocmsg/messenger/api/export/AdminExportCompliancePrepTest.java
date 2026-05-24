@@ -88,6 +88,10 @@ class AdminExportCompliancePrepTest {
             null,
             new ExportFileAccess(cfg),
             mock(NatsOutboundPort.class),
+            null,
+            null,
+            null,
+            null,
             I18nTestFixtures.messagesEn());
     }
 

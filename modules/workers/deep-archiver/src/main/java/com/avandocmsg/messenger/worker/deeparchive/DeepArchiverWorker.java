@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.worker.deeparchive;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.common.retention.ArchiveSnapshotEnvelopeDigest;
 import com.avandocmsg.messenger.common.retention.ArchiveSnapshotFormat;
@@ -189,6 +190,9 @@ public class DeepArchiverWorker {
     }
 
     public static void main(String[] args) {
+        var workerMessages = WorkerMessageSources.forWorker(
+            DeepArchiverWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_deep_archiver");
+        log.info("Worker i18n locale={}", workerMessages.locale());
         var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
         var endpoint = System.getenv("MINIO_ENDPOINT");
         var access = System.getenv("MINIO_ACCESS_KEY");

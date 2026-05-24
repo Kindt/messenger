@@ -46,15 +46,23 @@ import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.api.search.MessageSearchService;
 import com.avandocmsg.messenger.core.adapter.messaging.NatsConnectionOutbound;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
+import com.avandocmsg.messenger.api.mls.MlsGroupManager;
+import com.avandocmsg.messenger.api.mls.MlsGroupStateRepository;
 import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.api.mls.SessionRepository;
+import com.avandocmsg.messenger.core.application.ChatApplicationService;
+import com.avandocmsg.messenger.core.bootstrap.CoreModule;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatBanRepository;
+import com.avandocmsg.messenger.api.admin.PurgeStatusService;
+import com.avandocmsg.messenger.api.repository.LegalHoldRepository;
 import com.avandocmsg.messenger.api.repository.ChatReadRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ContactRepository;
 import com.avandocmsg.messenger.api.repository.FileRepository;
+import com.avandocmsg.messenger.api.repository.MessageReadReceiptRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.api.chats.ReadReceiptService;
 import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.common.i18n.CompositeMessageSource;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
@@ -264,6 +272,7 @@ public class MessengerApplication {
         var messageSearchService = new MessageSearchService(appConfig, messageRepository, chatRepository,
             solrBinding.client(), solrBinding.cloudMode());
         var chatReadRepository = new ChatReadRepository(dataSource);
+        var messageReadReceiptRepository = new MessageReadReceiptRepository(dataSource);
 
         var authService = new AuthService(appConfig, userRepository, chatRepository, this.uuidGenerator);
         var authRateLimiter = redisConfig != null
@@ -275,6 +284,15 @@ public class MessengerApplication {
         var adminServerStatsService = new AdminServerStatsService(dataSource, appConfig, natsOutbound, redisProbe);
         var chatService = new ChatService(chatRepository, blockRepository, chatReadRepository,
             messageRepository, natsOutbound, this.clock, this.uuidGenerator);
+        var readReceiptService = new ReadReceiptService(messageReadReceiptRepository, chatRepository,
+            messageRepository, chatReadRepository, userRepository, auditRepository, natsOutbound,
+            appConfig, this.clock);
+        var mlsGroupStateRepository = new MlsGroupStateRepository(dataSource, this.clock);
+        var mlsGroupManager = new MlsGroupManager(mlsGroupStateRepository, mlsService,
+            this.uuidGenerator, this.clock);
+        var chatApplicationService = CoreModule.chatApplicationService(dataSource, chatRepository);
+        var legalHoldRepository = new LegalHoldRepository(dataSource);
+        var purgeStatusService = new PurgeStatusService(dataSource, auditRepository);
         var messageService = new MessageService(messageRepository, chatRepository, blockRepository,
             mlsService, natsOutbound, this.uuidGenerator,
             () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent());
@@ -296,15 +314,17 @@ public class MessengerApplication {
         var jerseyServlet = new ServletContainer(
             new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
                 userRepository, contactRepository, contactService,
-                chatRepository, chatService, chatReadRepository, blockRepository,
+                chatRepository, chatService, chatReadRepository, readReceiptService, chatApplicationService,
+                blockRepository,
                 messageRepository, messageService, natsConnection, natsOutbound,
                 minioClient, fileRepository, fileService,
                 chatBanRepository, chatBanService,
-                e2eeService, keyPackageRepository, sessionRepository, mlsService, fileProxy, conferenceService,
+                e2eeService, keyPackageRepository, sessionRepository, mlsService, mlsGroupManager, fileProxy, conferenceService,
                 auditRepository, exportJobRepository, exportJobEnqueuer, exportFileAccess, this.exportSuggestedHandler,
                 exportComplianceSeed,
                 organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,
-                filePublicLinkRepository, messageSearchService, adminManifest, adminServerStatsService, redisProbe));
+                filePublicLinkRepository, messageSearchService, adminManifest, adminServerStatsService, redisProbe,
+                legalHoldRepository, purgeStatusService));
         Tomcat.addServlet(ctx, SERVLET_NAME, jerseyServlet);
         ctx.addServletMappingDecoded("/api/*", SERVLET_NAME);
 
