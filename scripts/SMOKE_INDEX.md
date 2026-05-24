@@ -31,6 +31,13 @@
 | Stack readiness smoke | `scripts/smoke-ready.ps1` | manual | none |
 | Retention worker health smoke | `scripts/smoke-retention-worker.ps1` | manual | none |
 | US2 Epic01 (QEMU wrapper) | `scripts/smoke-us2-epic01-qemu.ps1` | manual | `smoke-us2-epic01.ps1` |
+| Hot-plug indexer lifecycle | `scripts/smoke-hotplug-indexer.ps1` | manual | requires NATS (`14222` tunnel on QEMU) |
+
+## Operator utilities
+
+- `scripts/stop-local-indexer.ps1` — stop orphan `:services:indexer:run` after smoke/manual runs (Windows).
+- `scripts/publish-spec-001-branch.ps1` — push branch `001-system-review-refactoring` when GitHub is reachable.
+- `scripts/apply-hotplug-signoff.ps1` — record ADR/constitution approvals (T048/T056).
 
 ## Export / retention extended scenarios
 
