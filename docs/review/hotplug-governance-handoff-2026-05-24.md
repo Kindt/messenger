@@ -50,6 +50,18 @@ When all three are checked, update:
 2. `docs/proposals/constitution-v1.1-hotplug-bounded-exception.md` → `Status: accepted`
 3. `specs/001-system-review-refactoring/tasks.md` → T048, T056 `[x]`
 
+## Project closure (engineering)
+
+All spec `001-system-review-refactoring` tasks are **`[x]` except T048 and T056**.
+
+| Step | Action | Status |
+|------|--------|--------|
+| Publish to GitHub | `.\scripts\publish-spec-001-branch.ps1` | ⏳ blocked from corp network; bundle fallback OK |
+| ADR sign-off | `.\scripts\apply-hotplug-signoff.ps1 -ArchitectureOwner ...` | ⏳ waiting for names |
+| Post-sign-off commit | `git add docs/ .specify/ specs/ && git commit` | after sign-off script |
+
+Latest HEAD: `cca5ec4` (branch `001-system-review-refactoring`, 34 commits vs `origin/main`).
+
 ## Rollback (if not approved)
 
 Keep constitution v1.0.0; disable hot-plug via env:
