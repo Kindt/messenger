@@ -5,6 +5,7 @@ import com.avandocmsg.messenger.common.hotplug.HotPlugHeartbeat;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import io.nats.client.Connection;
 import io.nats.client.Nats;
 import io.nats.client.Options;
 import io.prometheus.client.CollectorRegistry;
@@ -53,8 +54,14 @@ public final class IndexerServiceApp {
         var state = new AtomicReference<>(ServiceState.INIT);
         var stopLatch = new CountDownLatch(1);
 
-        var natsOptions = new Options.Builder().server(natsUrl).build();
+        var natsOptions = new Options.Builder()
+            .server(natsUrl)
+            .connectionTimeout(Duration.ofSeconds(5))
+            .reconnectWait(Duration.ofSeconds(2))
+            .maxReconnects(-1)
+            .build();
         var nats = Nats.connect(natsOptions);
+        awaitConnected(nats, natsUrl, Duration.ofSeconds(10));
         var heartbeat = new HotPlugHeartbeat(nats, serviceId, heartbeatIntervalMs);
         heartbeat.start();
 
@@ -84,6 +91,21 @@ public final class IndexerServiceApp {
         );
 
         stopLatch.await();
+    }
+
+    /** Visible for tests: fail fast when NATS is unreachable instead of endless reconnect logs. */
+    static void awaitConnected(Connection connection, String natsUrl, Duration timeout) throws InterruptedException {
+        var deadline = System.nanoTime() + timeout.toNanos();
+        while (connection.getStatus() != Connection.Status.CONNECTED) {
+            if (System.nanoTime() > deadline) {
+                System.err.println(
+                    "NATS not connected at " + natsUrl
+                        + " — start NATS locally or set NATS_URL "
+                        + "(QEMU tunnel example: nats://127.0.0.1:14222)");
+                System.exit(1);
+            }
+            Thread.sleep(200);
+        }
     }
 
     static HttpServer createHttpServer(int port, String serviceId, AtomicReference<ServiceState> state) throws IOException {

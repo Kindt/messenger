@@ -10,6 +10,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Stop-ProcessTree {
+    param([int]$RootPid)
+    if ($RootPid -le 0) { return }
+    & taskkill.exe /PID $RootPid /T /F 2>$null | Out-Null
+}
+
 function Fail([string]$Message) {
     Write-Host "[FAIL] $Message" -ForegroundColor Red
     exit 1
@@ -61,10 +67,16 @@ $nats = Get-UrlHostPort $NatsUrl
 
 Write-Host "Checking NATS connectivity: $($nats.Host):$($nats.Port)" -ForegroundColor Cyan
 if (-not (Test-TcpPort -HostName $nats.Host -Port $nats.Port)) {
-    Fail "NATS is not reachable at $NatsUrl"
+    Fail @"
+NATS is not reachable at $NatsUrl.
+For QEMU: start SSH tunnel first, e.g.
+  plink -N -batch -pw korus -P 12221 -L 14222:127.0.0.1:4222 korus@127.0.0.1
+Then run with -NatsUrl nats://127.0.0.1:14222
+"@
 }
 
 Push-Location $root
+$proc = $null
 try {
     $env:NATS_URL = $NatsUrl
     $env:SERVICE_HTTP_PORT = "$ServicePort"
@@ -94,10 +106,15 @@ try {
     }
 
     Write-Host "Stopping indexer service..." -ForegroundColor Cyan
-    Stop-Process -Id $proc.Id
-    Wait-Until -TimeoutSec 15 -Description "indexer process exit" -Condition { $proc.HasExited }
+    Stop-ProcessTree -RootPid $proc.Id
+    Wait-Until -TimeoutSec 15 -Description "indexer process exit" -Condition {
+        $proc.HasExited -or -not (Get-Process -Id $proc.Id -ErrorAction SilentlyContinue)
+    }
 
     Write-Host "[OK] hot-plug indexer smoke passed" -ForegroundColor Green
 } finally {
+    if ($proc -and -not $proc.HasExited) {
+        Stop-ProcessTree -RootPid $proc.Id
+    }
     Pop-Location
 }
