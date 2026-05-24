@@ -32,6 +32,7 @@
 | Retention worker health smoke | `scripts/smoke-retention-worker.ps1` | manual | none |
 | US2 Epic01 (QEMU wrapper) | `scripts/smoke-us2-epic01-qemu.ps1` | manual | `smoke-us2-epic01.ps1` |
 | Hot-plug indexer lifecycle | `scripts/smoke-hotplug-indexer.ps1` | manual | requires NATS (`14222` tunnel on QEMU) |
+| Web parity API (spec 002 T010/T016 backend) | `scripts/smoke-web-parity-api.ps1` | manual | pin API may 500; UI/WS gates still manual |
 
 ## Operator utilities
 

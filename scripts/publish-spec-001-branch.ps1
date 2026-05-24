@@ -22,16 +22,22 @@ function Write-Bundle {
 
 function Try-Push([string]$RemoteRef) {
     Write-Host "Pushing $RemoteRef ..." -ForegroundColor Cyan
-    $attempts = @(
-        @{ Label = "default proxy"; Args = @() },
-        @{ Label = "no proxy"; Args = @("-c", "http.proxy=", "-c", "https.proxy=") }
-    )
-    foreach ($a in $attempts) {
-        Write-Host "  try: $($a.Label)" -ForegroundColor DarkGray
-        & git -C $root @($a.Args) push -u origin $RemoteRef 2>&1 | ForEach-Object { Write-Host $_ }
-        if ($LASTEXITCODE -eq 0) { return $true }
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $attempts = @(
+            @{ Label = "default proxy"; Args = @() },
+            @{ Label = "no proxy"; Args = @("-c", "http.proxy=", "-c", "https.proxy=") }
+        )
+        foreach ($a in $attempts) {
+            Write-Host "  try: $($a.Label)" -ForegroundColor DarkGray
+            & git -C $root @($a.Args) push -u origin $RemoteRef 2>&1 | ForEach-Object { Write-Host $_ }
+            if ($LASTEXITCODE -eq 0) { return $true }
+        }
+        return $false
+    } finally {
+        $ErrorActionPreference = $prevEap
     }
-    return $false
 }
 
 if ($Help) {
