@@ -22,6 +22,7 @@ packages:
   - docker-compose-v2
   - curl
   - openssh-server
+  - python3-pip
 runcmd:
   - [ systemctl, enable, --now, ssh ]
   - [ systemctl, enable, --now, docker ]
@@ -29,4 +30,4 @@ runcmd:
   - [ sh, -c, "for i in 1 2 3 4 5 6 7 8 9 10 12 14 16 18 20; do mkdir -p /mnt/korus && curl -fSL http://10.0.2.2:18890/repo.tgz | tar -xzf - -C /mnt/korus && break; sleep 5; done" ]
   - [ sh, -c, "test -f /mnt/korus/docker/docker-compose.full-server.yml" ]
   - [ sh, -c, "sed -i 's/\\r$//' /mnt/korus/deploy/qemu/vm-bootstrap/*.sh && chmod +x /mnt/korus/deploy/qemu/vm-bootstrap/*.sh" ]
-  - [ sh, -c, "nohup sh /mnt/korus/deploy/qemu/vm-bootstrap/server.sh </dev/null &" ]
+  - [ sh, -c, "nohup sh /mnt/korus/deploy/qemu/vm-bootstrap/run-ansible-local.sh server </dev/null &" ]

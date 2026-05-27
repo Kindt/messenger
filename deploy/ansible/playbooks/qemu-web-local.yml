@@ -1,0 +1,17 @@
+---
+# Run on QEMU web guest after server API is up
+- name: Korus QEMU web guest deploy
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars:
+    korus_repo_root: "{{ korus_repo_root | default('/mnt/korus') }}"
+    korus_server_lan_ip: "{{ korus_server_lan_ip | default('192.168.76.10') }}"
+    korus_web_lan_ip: "{{ korus_web_lan_ip | default('192.168.76.20') }}"
+    korus_browser_ws_host: "{{ korus_qemu_host_lan_ip | default('127.0.0.1') }}"
+    korus_browser_ws_port: 19088
+    korus_web_base_url: "http://127.0.0.1:{{ korus_web_port | default(9088) }}"
+    korus_build_images: "{{ korus_build_images | default(true) | bool }}"
+  roles:
+    - common
+    - korus_web

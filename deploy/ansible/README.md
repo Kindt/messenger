@@ -35,3 +35,14 @@ Copy `group_vars/vault.example.yml` → encrypt with `ansible-vault encrypt grou
 ## CI
 
 GitHub Actions: **Deploy messaging smoke** (Ansible + acceptance) and **Playwright** job in the same workflow.
+
+## QEMU (Windows dev VMs)
+
+Two Ubuntu guests on **192.168.76.0/24** use the same Ansible roles as bare-metal two-host:
+
+| Guest | Playbook (inside VM) |
+|-------|----------------------|
+| server | `playbooks/qemu-server-local.yml` |
+| web | `playbooks/qemu-web-local.yml` |
+
+Entry point: **`deploy/qemu/vm-bootstrap/run-ansible-local.sh`**. Host redeploy: **`scripts/qemu-redeploy.ps1`**. See **`deploy/qemu/README.md`**.

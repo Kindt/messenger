@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+### 2026-05-27 — **QEMU**: bootstrap через Ansible (spec 003)
+
+- **`deploy/qemu/vm-bootstrap/run-ansible-local.sh`**: pip install Ansible в гостях, playbooks `qemu-server-local` / `qemu-web-local`.
+- Cloud-init: **`python3-pip`**, redeploy **`scripts/qemu-redeploy.ps1`** через Ansible.
+- Web `.env`: API/ws к **192.168.76.10**, browser WS через **`ws://<host-lan>:19088/ws`**.
+
 ### 2026-05-27 — **spec 003**: Docker + Ansible deploy и autotest suite
 
 - **`deploy/ansible/`**: роли `common`, `korus_server`, `korus_web`, `korus_smoke`; playbooks `ci-local.yml`, `site.yml` (two-host + smoke tag).

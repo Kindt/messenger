@@ -1,0 +1,13 @@
+---
+# Run on QEMU server guest (localhost /mnt/korus)
+- name: Korus QEMU server guest deploy
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars:
+    korus_repo_root: "{{ korus_repo_root | default('/mnt/korus') }}"
+    korus_use_lan_publish: true
+    korus_build_images: "{{ korus_build_images | default(true) | bool }}"
+  roles:
+    - common
+    - korus_server

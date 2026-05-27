@@ -41,6 +41,17 @@ ansible-playbook -i inventory/two-host/hosts.yml playbooks/site.yml --tags smoke
 ./scripts/smoke-messaging-e2e.sh --url http://127.0.0.1:8080
 ```
 
+## QEMU (Windows, две ВМ)
+
+```powershell
+.\scripts\qemu-up.ps1
+# после подъёма:
+curl http://127.0.0.1:18080/api/v1/health
+curl http://127.0.0.1:19088/health
+```
+
+Bootstrap внутри гостей: **`deploy/qemu/vm-bootstrap/run-ansible-local.sh`** → Ansible playbooks **`qemu-server-local.yml`** / **`qemu-web-local.yml`**. Redeploy: **`.\scripts\qemu-redeploy.ps1`**. См. **`deploy/qemu/README.md`**.
+
 ## Playwright (web UI)
 
 ```bash
