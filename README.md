@@ -21,7 +21,10 @@
 |----------|------------|
 | **`modules/web-client`** | Веб-клиент на **Java + встроенный Tomcat** (см. **`modules/web-client/README.md`**): статика **`webui/`**, прокси **`/api/*`** на **`WEB_CLIENT_API_UPSTREAM`**; URL WebSocket — **`WEB_CLIENT_WS_PUBLIC_URL`** (**`WebClientEnvServlet`**). Запуск: **`.\gradlew.bat :modules:web-client:run`**, порт **`WEB_CLIENT_PORT`** (9080). Образ: **`docker/Dockerfile.web-client`**. |
 | **`korus-web/`** | **Отдельное развёртывание** в Docker: **`docker compose up`** из каталога — две реплики клиента + **nginx** (балансировка HTTP, прокси **`/ws`** на ws-gateway). Опционально **`docker-compose.attach.yml`** — та же Docker-сеть, что и **`docker-compose.dev-min.yml`** (**`core-api`** / **`ws-gateway`** по именам). Подробности: **`korus-web/README.md`**, переменные — **`korus-web/.env.example`**. |
-| **`deploy/two-host/`** | **Два хоста в LAN:** машина 1 — **`scripts/server-host-up.*`** + **`docker/docker-compose.lan-publish.yml`**; машина 2 — **`scripts/web-host-up.*`** (без **`-Attach`**). Hot-swap UI: **`dev-overlay/`**, **`scripts/dev-overlay-init.*`**, **`scripts/dev-overlay-up.*`**, **`korus-web/docker-compose.hotswap.yml`**. Чеклист: **`deploy/two-host/README.md`**. |
+| **`deploy/two-host/`** | **Два хоста в LAN:** машина 1 — **`scripts/server-host-up.*`** или **Ansible** `deploy/ansible/playbooks/server-only.yml`; машина 2 — **`scripts/web-host-up.*`** или Ansible `web-only.yml`. Linux: **`deploy/ansible/playbooks/site.yml`**. Hot-swap UI: **`dev-overlay/`**, … Чеклист: **`deploy/two-host/README.md`**. |
+| **`specs/003-docker-ansible-autotest/`** | Docker + Ansible deploy, messaging E2E smokes, CI nightly, Playwright P1 — **`specs/003-docker-ansible-autotest/quickstart.md`**. |
+| **`deploy/ansible/`** | Ansible roles/playbooks для Linux/CI; acceptance: **`scripts/smoke-deploy-acceptance.sh`**. |
+| **`tests/e2e-web/`** | Playwright: login → group → message (**`npm test`** в каталоге). |
 | **`CHANGELOG.md`** | Журнал изменений |
 | **`docs/CI_AND_REPO_HYGIENE.md`** | CI, Dependabot, `.gitattributes`, локаль HTTP API (**`app.locale`** / **`APP_LOCALE`**: `ru`, `en`) |
 | **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** | Ретенция, политики, воркер hot-body, аудит |

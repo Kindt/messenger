@@ -1,0 +1,24 @@
+---
+# CI / single-host: full-server on localhost (no lan-publish)
+- name: Korus CI local deploy
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars:
+    korus_repo_root: "{{ playbook_dir }}/../../.."
+    korus_use_lan_publish: false
+    korus_build_images: true
+    korus_run_smoke: "{{ run_smoke | default(false) }}"
+  tasks:
+    - name: Common prerequisites
+      ansible.builtin.import_role:
+        name: common
+
+    - name: Deploy server stack
+      ansible.builtin.import_role:
+        name: korus_server
+
+    - name: Post-deploy smoke
+      ansible.builtin.import_role:
+        name: korus_smoke
+      when: korus_run_smoke | bool

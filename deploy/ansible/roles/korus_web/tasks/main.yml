@@ -1,0 +1,29 @@
+---
+- name: Template korus-web .env
+  ansible.builtin.template:
+    src: korus-web.env.j2
+    dest: "{{ korus_web_env_path }}"
+    mode: "0644"
+
+- name: Korus web stack up
+  ansible.builtin.shell: |
+    set -euo pipefail
+    cd "{{ korus_repo_root }}"
+    export SKIP_KORUS_ENSURE=1
+    args=()
+    if {{ korus_build_images | bool | lower }}; then args+=( --build ); fi
+    if {{ korus_web_attach | bool | lower }}; then args+=( --attach ); fi
+    bash scripts/korus-web-up.sh "${args[@]}"
+  args:
+    executable: /bin/bash
+  register: korus_web_up
+  changed_when: true
+
+- name: Wait for korus-web health
+  ansible.builtin.uri:
+    url: "{{ korus_web_base_url }}/health"
+    return_content: true
+  register: korus_web_health
+  until: korus_web_health.status == 200 and korus_web_health.content is search('ok')
+  retries: 30
+  delay: 5

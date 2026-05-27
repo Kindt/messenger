@@ -1,0 +1,28 @@
+---
+- name: Observability compose up
+  ansible.builtin.shell: |
+    set -euo pipefail
+    cd "{{ korus_repo_root }}"
+    docker compose -f deploy/observability/docker-compose.observability.yml up -d
+  args:
+    executable: /bin/bash
+  register: korus_obs_up
+  changed_when: "'Started' in korus_obs_up.stdout or 'Creating' in korus_obs_up.stdout"
+
+- name: Wait for Prometheus
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ korus_prometheus_port | default(9090) }}/-/ready"
+    status_code: 200
+  register: prom_ready
+  until: prom_ready.status == 200
+  retries: 30
+  delay: 3
+
+- name: Wait for Grafana
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ korus_grafana_port | default(3001) }}/api/health"
+    status_code: 200
+  register: grafana_ready
+  until: grafana_ready.status == 200
+  retries: 30
+  delay: 3

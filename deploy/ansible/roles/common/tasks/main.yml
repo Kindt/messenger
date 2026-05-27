@@ -1,0 +1,41 @@
+---
+- name: Verify Docker is available
+  ansible.builtin.command: docker info
+  register: korus_docker_info
+  changed_when: false
+  failed_when: korus_docker_info.rc != 0
+
+- name: Verify Docker Compose plugin
+  ansible.builtin.command: docker compose version
+  register: korus_compose_version
+  changed_when: false
+  failed_when: korus_compose_version.rc != 0
+
+- name: Ensure korus data directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /var/lib/korus
+  when: ansible_connection != 'local'
+
+- name: Configure UFW for Korus server ports
+  when:
+    - korus_configure_ufw | default(false) | bool
+    - ansible_connection != 'local'
+  block:
+    - name: Allow core-api
+      ansible.builtin.command: ufw allow 8080/tcp comment 'korus core-api'
+      changed_when: false
+    - name: Allow ws-gateway
+      ansible.builtin.command: ufw allow 8082/tcp comment 'korus ws-gateway'
+      changed_when: false
+
+- name: Configure UFW for Korus web port
+  when:
+    - korus_configure_ufw | default(false) | bool
+    - ansible_connection != 'local'
+    - korus_web_port is defined
+  ansible.builtin.command: "ufw allow {{ korus_web_port | default(9088) }}/tcp comment 'korus web'"
+  changed_when: false

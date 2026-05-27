@@ -29,3 +29,9 @@ deploy/qemu/images/*.qcow2
 deploy/qemu/run/
 deploy/qemu/tools/__pycache__/
 
+# Playwright E2E (spec 003)
+tests/e2e-web/node_modules/
+tests/e2e-web/test-results/
+tests/e2e-web/playwright-report/
+tests/e2e-web/blob-report/
+

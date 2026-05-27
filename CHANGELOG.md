@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+### 2026-05-27 — **spec 003**: Docker + Ansible deploy и autotest suite
+
+- **`deploy/ansible/`**: роли `common`, `korus_server`, `korus_web`, `korus_smoke`; playbooks `ci-local.yml`, `site.yml` (two-host + smoke tag).
+- Smokes: **`scripts/smoke-messaging-e2e.sh`** (DM, group 3 users, WS/REST deliver, read receipts), **`scripts/smoke-deploy-acceptance.sh`**, bash-канон **`smoke-ready.sh`**, **`smoke-auth.sh`**, **`smoke-web-parity-api.sh`**; lib **`scripts/lib/SmokeMessaging.sh`**, **`scripts/keycloak-ensure-smoke-users.sh`**.
+- CI: **`.github/workflows/deploy-messaging-smoke.yml`** (nightly Ansible + acceptance + Playwright job).
+- Playwright: **`tests/e2e-web/`** (`messaging-critical`, `messaging-group`).
+- Phase B scaffold: role **`observability`**, UFW в **`common`**, **`group_vars/vault.example.yml`**, **`scripts/lib/SmokeMessaging.ps1`**.
+- Spec-kit: **`specs/003-docker-ansible-autotest/`**; docs **`deploy/two-host/README.md`**, **`scripts/SMOKE_INDEX.md`**, **`docs/CI_AND_REPO_HYGIENE.md`**.
+
 ### 2026-05-24 — **MLS stub**: deterministic session key derivation
 
 - **`MlsService.deriveSessionKey`**: убран случайный salt на каждый вызов — encrypt/decrypt roundtrip стабилен; тесты **`MlsGroupManagerTest`**, **`MlsServiceDecryptContentTest`**.

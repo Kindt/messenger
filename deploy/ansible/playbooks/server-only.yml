@@ -1,0 +1,10 @@
+---
+- name: Korus server only
+  hosts: korus_server
+  gather_facts: false
+  vars:
+    korus_repo_root: "{{ playbook_dir }}/../../.."
+    korus_use_lan_publish: "{{ use_lan_publish | default(true) }}"
+  roles:
+    - common
+    - korus_server

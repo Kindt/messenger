@@ -1,0 +1,4 @@
+---
+# Two-host LAN: enable UFW rules on server/web hosts
+korus_configure_ufw: true
+korus_use_lan_publish: true

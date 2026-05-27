@@ -1,0 +1,9 @@
+---
+- name: Korus web only
+  hosts: korus_web
+  gather_facts: false
+  vars:
+    korus_repo_root: "{{ playbook_dir }}/../../.."
+  roles:
+    - common
+    - korus_web

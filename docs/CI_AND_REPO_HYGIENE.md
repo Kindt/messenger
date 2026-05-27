@@ -34,6 +34,22 @@
 - Для CI по умолчанию использовать `.sh` скрипты; `.ps1` / `.cmd` считаются совместимыми обертками для Windows.
 - Удаление smoke-скриптов допустимо только после проверки ссылок в workflow и документации.
 
+## Deploy messaging smoke (nightly)
+
+Файл **`.github/workflows/deploy-messaging-smoke.yml`**:
+
+| Элемент | Описание |
+|--------|-----------|
+| **Триггеры** | **`workflow_dispatch`**, cron **05:00 UTC** |
+| **Deploy** | Ansible **`deploy/ansible/playbooks/ci-local.yml`** (`run_smoke=true`) |
+| **Acceptance** | **`scripts/smoke-deploy-acceptance.sh`** (wait-ready, auth, **`smoke-messaging-e2e`**, web-parity-api) |
+| **Playwright** | Отдельный job **`playwright`**: full-stack + korus-web attach → **`tests/e2e-web`** |
+| **Timeout** | 90 min на job |
+
+PR gate по-прежнему только **`buildIntegrity`** в **`ci.yml`**.
+
+Spec-kit: **`specs/003-docker-ansible-autotest/`**. Playwright: **`tests/e2e-web/`**.
+
 ## `.gitattributes`
 
 - **`gradlew`** — текст с окончаниями строк **LF** (на Linux CI не должно быть «**bad interpreter**» из‑за CRLF).

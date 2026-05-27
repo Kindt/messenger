@@ -1,0 +1,9 @@
+---
+korus_compose_full_server: "{{ korus_repo_root }}/docker/docker-compose.full-server.yml"
+korus_compose_lan_publish: "{{ korus_repo_root }}/docker/docker-compose.lan-publish.yml"
+korus_use_lan_publish: false
+korus_configure_ufw: false
+korus_api_base_url: "http://127.0.0.1:{{ korus_api_port }}"
+korus_ws_url: "ws://127.0.0.1:{{ korus_ws_port }}/ws"
+# CORS for web origin (override in two-host)
+korus_cors_allowed_origins: "http://127.0.0.1:9088"

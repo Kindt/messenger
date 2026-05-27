@@ -2,12 +2,32 @@
 
 Развёртывание Korus Messenger на **двух машинах** в одной LAN: backend (полный Docker-стек) и UI (`korus-web`) отдельно. С третьего ПК в сети открывают UI по IP веб-машины.
 
+## Ansible (рекомендуется для Linux)
+
+На Linux/stage вместо ручных `server-host-up.sh` / `web-host-up.sh` можно использовать Ansible (spec **003**):
+
+```bash
+cd deploy/ansible
+# Одна машина (CI / dev):
+ansible-playbook -i inventory/local/hosts.yml playbooks/ci-local.yml -e run_smoke=true
+
+# Два хоста — отредактируйте inventory/two-host/hosts.yml (LAN IP):
+ansible-playbook -i inventory/two-host/hosts.yml playbooks/site.yml
+ansible-playbook -i inventory/two-host/hosts.yml playbooks/site.yml --tags smoke
+```
+
+Acceptance после деплоя: `./scripts/smoke-deploy-acceptance.sh` (multi-user messaging, auth, parity API).
+
+Windows: по-прежнему `scripts/server-host-up.ps1` и `scripts/web-host-up.ps1`.
+
+Подробнее: [`deploy/ansible/README.md`](../ansible/README.md), [`specs/003-docker-ansible-autotest/quickstart.md`](../../specs/003-docker-ansible-autotest/quickstart.md).
+
 ## Схема
 
 | Машина | Роль | Скрипт подъёма |
 |--------|------|----------------|
-| 1 | PostgreSQL, NATS, core-api, ws-gateway, workers | `scripts/server-host-up.ps1` / `server-host-up.sh` |
-| 2 | web-client (+ nginx lb или hot-swap) | `scripts/web-host-up.ps1` / `web-host-up.sh` |
+| 1 | PostgreSQL, NATS, core-api, ws-gateway, workers | `scripts/server-host-up.*` или Ansible `playbooks/server-only.yml` |
+| 2 | web-client (+ nginx lb или hot-swap) | `scripts/web-host-up.*` или Ansible `playbooks/web-only.yml` |
 
 На машине 2 **не** используйте `-Attach` / `--attach` — общая Docker-сеть возможна только на одном демоне.
 

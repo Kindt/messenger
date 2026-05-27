@@ -1,0 +1,136 @@
+# E2E: Ansible deploy + messaging acceptance + Playwright.
+# Manual: Actions -> Deploy messaging smoke -> Run workflow
+# Nightly: 05:00 UTC
+name: Deploy messaging smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_down:
+        description: Leave stack running after smoke
+        type: boolean
+        default: false
+      skip_playwright:
+        description: Skip Playwright E2E job
+        type: boolean
+        default: false
+  schedule:
+    - cron: "0 5 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-messaging-smoke
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v5
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: "25"
+          distribution: temurin
+          cache: gradle
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible and smoke dependencies
+        run: |
+          pip install ansible websocket-client
+          ansible --version
+
+      - name: Build images (Gradle assemble)
+        run: chmod +x gradlew && ./gradlew :modules:core-api:assemble :modules:workers:export-replay:assemble :modules:workers:retention:assemble --no-daemon -q
+
+      - name: Ansible deploy + acceptance smoke
+        run: |
+          chmod +x scripts/*.sh scripts/lib/*.sh
+          cd deploy/ansible
+          ansible-playbook -i inventory/local/hosts.yml playbooks/ci-local.yml -e run_smoke=true
+
+      - name: Stack down
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.skip_down != 'true' }}
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/full-stack-down.sh
+
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: ${{ github.event_name == 'schedule' || github.event.inputs.skip_playwright != 'true' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v5
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: "25"
+          distribution: temurin
+          cache: gradle
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install smoke dependencies
+        run: pip install websocket-client
+
+      - name: Build images (Gradle assemble)
+        run: chmod +x gradlew && ./gradlew :modules:core-api:assemble :modules:workers:web-client:assemble --no-daemon -q
+
+      - name: Full stack + korus-web up
+        run: |
+          chmod +x scripts/*.sh scripts/lib/*.sh
+          ./scripts/full-stack-up.sh --skip-ensure --build --no-wait-ready
+          ./scripts/wait-stack-ready.sh
+          bash scripts/keycloak-ensure-smoke-users.sh
+          ./scripts/korus-web-up.sh --attach --skip-ensure --build
+
+      - name: Install Playwright
+        working-directory: tests/e2e-web
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+
+      - name: Playwright E2E
+        working-directory: tests/e2e-web
+        env:
+          KORUS_WEB_URL: http://127.0.0.1:9088
+          KORUS_API_URL: http://127.0.0.1:8080
+        run: npx playwright test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: tests/e2e-web/playwright-report/
+          retention-days: 7
+
+      - name: Stack down
+        if: always()
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/korus-web-down.sh --attach || true
+          ./scripts/full-stack-down.sh || true

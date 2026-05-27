@@ -1,0 +1,50 @@
+---
+- name: Full stack up via project script
+  ansible.builtin.shell: |
+    set -euo pipefail
+    cd "{{ korus_repo_root }}"
+    export SKIP_KORUS_ENSURE=1
+    args=( )
+    if {{ korus_build_images | bool | lower }}; then args+=( --build ); fi
+    bash scripts/full-stack-up.sh --skip-ensure --no-wait-ready "${args[@]}"
+  args:
+    executable: /bin/bash
+  register: korus_server_up
+  changed_when: korus_build_images | bool
+
+- name: Wait for core-api health
+  ansible.builtin.uri:
+    url: "{{ korus_api_base_url }}/api/v1/health"
+    status_code: 200
+  register: korus_api_health
+  until: korus_api_health.status == 200
+  retries: 60
+  delay: 5
+
+- name: Wait for Keycloak realm
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8080/realms/avandocmsg"
+    status_code: 200
+  register: korus_kc_realm
+  until: korus_kc_realm.status == 200
+  retries: 40
+  delay: 5
+  ignore_errors: true
+
+- name: Ensure dev Keycloak users
+  ansible.builtin.shell: |
+    set -euo pipefail
+    cd "{{ korus_repo_root }}"
+    KEYCLOAK_URL="{{ korus_keycloak_url }}" bash scripts/keycloak-ensure-dev-users.sh
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Wait stack ready (workers)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    cd "{{ korus_repo_root }}"
+    BASE_URL="{{ korus_api_base_url }}" TIMEOUT_SEC=420 bash scripts/wait-stack-ready.sh
+  args:
+    executable: /bin/bash
+  changed_when: false

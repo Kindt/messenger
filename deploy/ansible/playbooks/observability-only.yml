@@ -1,0 +1,10 @@
+---
+- name: Korus observability stack
+  hosts: korus_server
+  gather_facts: false
+  become: false
+  vars:
+    korus_repo_root: "{{ playbook_dir }}/../../.."
+  roles:
+    - common
+    - observability

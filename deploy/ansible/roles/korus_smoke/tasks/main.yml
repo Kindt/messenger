@@ -1,0 +1,30 @@
+---
+- name: Wait stack ready script
+  ansible.builtin.shell: |
+    set -euo pipefail
+    cd "{{ korus_repo_root }}"
+    BASE_URL="{{ korus_api_base_url }}" TIMEOUT_SEC=420 bash scripts/wait-stack-ready.sh
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Ensure smoke test users
+  ansible.builtin.shell: |
+    set -euo pipefail
+    cd "{{ korus_repo_root }}"
+    BASE_URL="{{ korus_api_base_url }}" bash scripts/keycloak-ensure-smoke-users.sh
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Run deploy acceptance smoke pack
+  ansible.builtin.shell: |
+    set -euo pipefail
+    cd "{{ korus_repo_root }}"
+    BASE_URL="{{ korus_api_base_url }}" \
+    WS_URL="{{ korus_ws_url }}" \
+    SKIP_KORUS_WEB="{{ korus_skip_korus_web_smoke | default('1') }}" \
+    bash scripts/smoke-deploy-acceptance.sh
+  args:
+    executable: /bin/bash
+  changed_when: false
