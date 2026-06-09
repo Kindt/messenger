@@ -122,9 +122,15 @@ function Wait-StackReady {
     $webOk = $false
     $readyOk = $false
     while ((Get-Date) -lt $deadline) {
+        $qemuAlive = [bool](Get-Process qemu-system-x86_64 -ErrorAction SilentlyContinue)
+        if (-not $qemuAlive) {
+            return @{ Core = $coreOk; Web = $webOk; Ready = $readyOk; VmsDead = $true }
+        }
         $vm = Test-QemuVmsAlive
         if (-not $vm.All) {
-            return @{ Core = $coreOk; Web = $webOk; Ready = $readyOk; VmsDead = $true }
+            Write-Host "  waiting VMs boot (server=$($vm.Server) web=$($vm.Web)) ..." -ForegroundColor DarkGray
+            Start-Sleep -Seconds $PollSeconds
+            continue
         }
         $h = Test-CoreApiHealth $ApiUrl
         if ($h.Ok) { $coreOk = $true }
@@ -186,7 +192,9 @@ while ($true) {
         if ($LASTEXITCODE -ne 0) {
             exit 1
         }
-        Invoke-QemuRedeployIfNeeded -Reason "VM process restart with KeepDisks" | Out-Null
+        if (Wait-SshPortsReady -MaxSeconds 180) {
+            Invoke-QemuRedeployIfNeeded -Reason "VM process restart with KeepDisks" | Out-Null
+        }
         continue
     }
 
