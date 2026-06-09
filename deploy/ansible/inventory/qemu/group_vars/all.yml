@@ -8,3 +8,8 @@ korus_ws_port: 18082
 korus_use_lan_publish: false
 korus_configure_ufw: false
 korus_browser_ws_port: 19088
+# Explicit upstream for web guest → host-forwarded server API (overrides group_vars/all.yml :8080).
+korus_web_api_upstream: "http://{{ korus_server_lan_ip }}:{{ korus_api_port }}"
+# docker.io on Ubuntu cloud guests: use legacy builder; gradle:jdk25-noble has /etc/passwd root entry
+korus_docker_buildkit: "0"
+korus_compose_bake: "0"

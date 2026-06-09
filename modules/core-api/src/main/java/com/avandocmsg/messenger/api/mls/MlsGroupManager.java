@@ -117,6 +117,7 @@ public class MlsGroupManager {
         if (!groupStateRepository.save(updated)) {
             return false;
         }
+        mlsService.syncEpoch(group.chatId(), updated.epoch(), updated.treeData());
         if (wirePublisher != null) {
             wirePublisher.publishCommit(updated, memberUserId, action);
             wirePublisher.publishEpoch(updated);

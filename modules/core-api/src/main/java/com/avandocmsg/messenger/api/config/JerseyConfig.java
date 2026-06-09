@@ -39,7 +39,6 @@ import com.avandocmsg.messenger.api.media.MediaCapabilitiesResource;
 import com.avandocmsg.messenger.api.metrics.PrometheusMetricsResource;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ExportJobRepository;
-import com.avandocmsg.messenger.api.repository.FilePublicLinkRepository;
 import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
 import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
@@ -72,6 +71,7 @@ import com.avandocmsg.messenger.api.users.UserResource;
 import com.avandocmsg.messenger.core.adapter.messaging.NatsConnectionOutbound;
 import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
+import com.avandocmsg.messenger.core.port.PublicLinkPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.minio.MinioClient;
@@ -119,7 +119,7 @@ public class JerseyConfig extends ResourceConfig {
                         OrganizationRepository organizationRepository,
                         RetentionPolicyRepository retentionPolicyRepository,
                         ChatRetentionPolicyRepository chatRetentionPolicyRepository,
-                        FilePublicLinkRepository filePublicLinkRepository,
+                        PublicLinkPort publicLinkPort,
                         MessageSearchService messageSearchService,
                         AdminUiManifest adminUiManifest,
                         AdminServerStatsService adminServerStatsService,
@@ -179,7 +179,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(organizationRepository).to(OrganizationRepository.class);
                 bind(retentionPolicyRepository).to(RetentionPolicyRepository.class);
                 bind(chatRetentionPolicyRepository).to(ChatRetentionPolicyRepository.class);
-                bind(filePublicLinkRepository).to(FilePublicLinkRepository.class);
+                bind(publicLinkPort).to(PublicLinkPort.class);
                 bind(messageSearchService).to(MessageSearchService.class);
                 bind(adminUiManifest).to(AdminUiManifest.class);
                 bind(adminServerStatsService).to(AdminStatsPort.class);

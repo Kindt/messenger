@@ -1,9 +1,9 @@
 # Profiling overlay: JDK images with jcmd for JFR (dev/QEMU only).
 # Usage:
-#   docker compose -f docker/docker-compose.full-server.yml -f docker/docker-compose.profiling.yml up -d --build core-api retention-worker indexer-worker
-#   ./scripts/profiling/profile-docker-jfr.ps1 -ContainerName korus-core-api-1 -OutputName core-api
+#   docker compose -f docker/docker-compose.full-server.yml -f docker/docker-compose.profiling.yml up -d --build
+#   ./scripts/profiling/profile-docker-jfr.ps1
 #
-# Production images remain JRE (Dockerfile.core-api without .profiling suffix).
+# Production images remain JRE (Dockerfile.* without .profiling suffix).
 
 version: "3.8"
 
@@ -14,11 +14,41 @@ services:
       dockerfile: docker/Dockerfile.core-api.profiling
     image: korus/core-api:profiling
 
+  message-pipeline:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.message-pipeline.profiling
+    image: korus/message-pipeline:profiling
+
+  archiver-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.archiver-worker.profiling
+    image: korus/archiver-worker:profiling
+
+  deep-archiver-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.deep-archiver-worker.profiling
+    image: korus/deep-archiver-worker:profiling
+
   retention-worker:
     build:
       context: ..
       dockerfile: docker/Dockerfile.retention-worker.profiling
     image: korus/retention-worker:profiling
+
+  export-replay-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.export-replay-worker.profiling
+    image: korus/export-replay-worker:profiling
+
+  push-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.push-worker.profiling
+    image: korus/push-worker:profiling
 
   indexer-worker:
     build:

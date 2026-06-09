@@ -69,6 +69,17 @@ class MlsGroupManagerTest {
     }
 
     @Test
+    void removeMember_bumpsEpochAndPublishesWire() {
+        var groupId = manager.createGroup(chatId, List.of(UUID.randomUUID()));
+        wirePublisher.resetCounts();
+        var removed = UUID.randomUUID();
+        assertTrue(manager.removeMember(groupId, removed));
+        assertEquals(1, wirePublisher.commitCount);
+        assertEquals(1, wirePublisher.epochCount);
+        assertEquals(MlsCommitPayload.Action.REMOVE, wirePublisher.lastCommitAction);
+    }
+
+    @Test
     void addMember_publishesCommitAndEpoch() {
         var groupId = manager.createGroup(chatId, List.of(UUID.randomUUID()));
         wirePublisher.resetCounts();
@@ -158,6 +169,26 @@ class MlsGroupManagerTest {
                 return Optional.empty();
             }
             return Optional.of(row);
+        }
+
+        @Override
+        public Optional<MlsSession> findLatestByChatId(UUID chatId) {
+            return Optional.ofNullable(sessions.get(chatId));
+        }
+
+        @Override
+        public boolean advanceEpoch(UUID sessionId, byte[] treeHash, byte[] transcriptHash) {
+            for (var entry : sessions.entrySet()) {
+                if (entry.getValue().id().equals(sessionId)) {
+                    var prev = entry.getValue();
+                    var next = new MlsSession(
+                        prev.id(), prev.chatId(), prev.epoch() + 1, prev.cipherSuite(),
+                        treeHash, transcriptHash, prev.groupContext(), prev.createdAt(), Instant.now());
+                    sessions.put(entry.getKey(), next);
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override

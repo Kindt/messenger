@@ -13,4 +13,7 @@ korus_cors_allowed_origins: "http://127.0.0.1:9088"
 # korus_keycloak_admin_password -> KEYCLOAK_ADMIN_PASSWORD, KEYCLOAK_MASTER_PASSWORD
 # korus_jwt_secret           -> JWT_SECRET (when compose override supports it)
 # korus_coturn_secret        -> TURN credential (korus-web turn overlay / WEB_CLIENT_RTC_ICE_SERVERS)
+# korus_cors_allowed_origins -> CORS_ALLOWED_ORIGINS (stage/prod HTTPS origin)
+# korus_keycloak_issuer      -> KEYCLOAK_ISSUER (optional when Keycloak published at HTTPS)
+# korus_keycloak_jwks_url    -> KEYCLOAK_JWKS_URL (optional override)
 korus_server_env_path: "{{ korus_repo_root }}/docker/.env.korus-server"

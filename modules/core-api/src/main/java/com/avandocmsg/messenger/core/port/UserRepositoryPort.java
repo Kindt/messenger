@@ -5,7 +5,15 @@ import com.avandocmsg.messenger.core.domain.UserProfile;
 
 import java.util.Optional;
 
-/** Port for user profile reads (Phase 2c). */
+/** Port for user profile reads and writes (Phase 2c / US2). */
 public interface UserRepositoryPort {
     Optional<UserProfile> findById(UserId id);
+
+    boolean updateProfile(UserId id, String displayName, String phone);
+
+    boolean updatePresence(UserId id, String presenceStatus);
+
+    boolean updatePrivacy(UserId id, boolean disableReadReceipts);
+
+    boolean touchHeartbeat(UserId id);
 }

@@ -1,0 +1,45 @@
+---
+description: Dev/deploy runtime only inside QEMU VMs — do not install or run Docker/Ansible/stacks on the Windows host
+alwaysApply: true
+---
+
+# QEMU host isolation (dev & deploy)
+
+**Goal:** keep the Windows host clean. All runtime (Docker, Ansible, compose, Gradle `:run` stacks, smokes against live stack) runs **inside QEMU guests**, not on the host OS.
+
+## Allowed on the host
+
+- Edit repo, git, Gradle **tests/build** (`buildIntegrity`, unit tests) when they do not require a live stack
+- **QEMU lifecycle only:** `scripts/qemu-up.ps1`, `scripts/qemu-dev-up.ps1`, `scripts/qemu-down.ps1`, `scripts/qemu-redeploy.ps1`, `scripts/qemu-watch.ps1`, `scripts/qemu-logs.ps1`, `scripts/ensure-qemu-images.ps1`
+- Browser / Playwright against **forwarded ports** (API `127.0.0.1:18080`, UI `127.0.0.1:19088`)
+- Host scripts that **orchestrate VMs** (repo snapshot HTTP, cloud-init) — see `deploy/qemu/`
+
+## Forbidden on the host (use VMs instead)
+
+- `docker compose`, `docker build`, Docker Desktop install for dev stacks
+- `ansible-playbook` against real deploy targets (except docs-only dry runs)
+- `scripts/full-stack-up.ps1`, `scripts/dev-web-stack-up.ps1`, `scripts/korus-web-up.ps1`, `scripts/run-core-api-local.ps1`, `scripts/dev-infra-up.ps1`, `scripts/install-env-silent.ps1` (Docker)
+- Long-running `:modules:*:run` for server/web against host-local infra
+
+## Where runtime lives
+
+| VM | IP (guest LAN) | Role | Host ports |
+|----|----------------|------|------------|
+| `korus-server` | 192.168.76.10 | Docker full-server + Ansible `qemu-server-local` | 18080, 18082, 18081 |
+| `korus-web` | 192.168.76.20 | korus-web + Ansible `qemu-web-local` | 19088 |
+
+Bootstrap/redeploy **inside guests:** `deploy/qemu/vm-bootstrap/run-ansible-local.sh` → `deploy/ansible/playbooks/qemu-*.yml`.
+
+Docs: [`deploy/qemu/README.md`](deploy/qemu/README.md), [`deploy/ansible/README.md`](deploy/ansible/README.md).
+
+## Agent workflow
+
+1. Start stack: `.\scripts\qemu-up.ps1` (or `-KeepDisks` / `qemu-redeploy.ps1` for code refresh).
+2. Verify: `http://127.0.0.1:18080/api/v1/health`, `http://127.0.0.1:19088/`.
+3. Run smokes/ansible/docker **in the server or web guest** (SSH or documented VM paths), not on the host.
+4. If QEMU is down, **start/fix QEMU first** — do not fall back to host Docker.
+
+## Exceptions
+
+- CI / GitHub Actions (Linux runners) — not the Windows dev host.
+- Explicit user request to run something on the host despite this rule.

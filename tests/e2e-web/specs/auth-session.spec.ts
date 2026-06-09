@@ -12,12 +12,9 @@ test.describe("auth session", () => {
   test("logout returns to auth form", async ({ page, request }) => {
     await apiLogin(request, "csadmin", "csadmin");
     await uiLogin(page, "csadmin", "csadmin");
-    const logoutBtn = page.getByRole("button", { name: /Выйти|Sign out|Logout/i });
-    if (await logoutBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await logoutBtn.click();
-      await expect(page.locator("#u")).toBeVisible({ timeout: 15_000 });
-    } else {
-      test.skip(true, "Logout control not exposed in current shell layout");
-    }
+    const logoutBtn = page.locator("[data-testid=logout]");
+    await expect(logoutBtn).toBeVisible({ timeout: 5_000 });
+    await logoutBtn.click();
+    await expect(page.locator("#u")).toBeVisible({ timeout: 15_000 });
   });
 });

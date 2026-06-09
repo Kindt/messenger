@@ -101,35 +101,6 @@ public class UserRepository {
         return Optional.empty();
     }
 
-    public boolean updateProfile(UUID id, String displayName, String phone) {
-        var sql = "UPDATE users SET display_name = COALESCE(?, display_name), phone = COALESCE(?, phone), updated_at = now() WHERE id = ?";
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, displayName);
-            stmt.setString(2, phone);
-            stmt.setObject(3, id);
-            return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
-            log.error("Failed to update profile: {}", id, e);
-            return false;
-        }
-    }
-
-    public boolean updatePresence(UUID id, String presenceStatus) {
-        var sql = """
-            UPDATE users SET presence_status = ?, last_seen_at = now(), updated_at = now() WHERE id = ?
-            """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, presenceStatus);
-            stmt.setObject(2, id);
-            return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
-            log.error("Failed to update presence: {}", id, e);
-            return false;
-        }
-    }
-
     public boolean isReadReceiptsDisabled(UUID id) {
         var sql = "SELECT privacy_disable_read_receipts FROM users WHERE id = ?";
         try (var conn = dataSource.getConnection();
@@ -144,34 +115,6 @@ public class UserRepository {
             log.warn("isReadReceiptsDisabled failed for {}: {}", id, e.getMessage());
         }
         return false;
-    }
-
-    public boolean updatePrivacyDisableReadReceipts(UUID id, boolean disabled) {
-        var sql = """
-            UPDATE users SET privacy_disable_read_receipts = ?, updated_at = now() WHERE id = ?
-            """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setBoolean(1, disabled);
-            stmt.setObject(2, id);
-            return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
-            log.error("updatePrivacyDisableReadReceipts failed: {}", id, e);
-            return false;
-        }
-    }
-
-    /** Только отметка активности (например периодический heartbeat клиента). */
-    public boolean touchHeartbeat(UUID id) {
-        var sql = "UPDATE users SET last_seen_at = now(), updated_at = now() WHERE id = ?";
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, id);
-            return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
-            log.error("Failed heartbeat: {}", id, e);
-            return false;
-        }
     }
 
     public List<UserProfile> search(String query, int limit) {

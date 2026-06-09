@@ -26,7 +26,7 @@ KORUS_WEB_URL=http://127.0.0.1:9088 KORUS_API_URL=http://127.0.0.1:8080 npm test
 | `messaging-actions.spec.ts` | messages (send, reply) |
 | `files-export.spec.ts` | files, export |
 | `contacts-search.spec.ts` | contacts, search |
-| `profile-settings.spec.ts` | users, blocks |
+| `profile-settings.spec.ts` | users, blocks, devices |
 | `conference-rtc.spec.ts` | conference, media |
 | `e2ee-capabilities.spec.ts` | crypto/e2ee |
 

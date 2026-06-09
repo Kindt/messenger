@@ -181,7 +181,23 @@ public class MessageService {
         if (MlsMessageTypes.SCHEME_LEGACY.equalsIgnoreCase(request.e2eeScheme())) {
             return false;
         }
-        return MlsMessageTypes.SCHEME_MLS.equalsIgnoreCase(request.e2eeScheme());
+        if (MlsMessageTypes.SCHEME_MLS.equalsIgnoreCase(request.e2eeScheme())) {
+            return !looksClientEncrypted(request.content());
+        }
+        return false;
+    }
+
+    /** Client-pre-encrypted MLS payload (nonce + ciphertext as single Base64). */
+    static boolean looksClientEncrypted(String content) {
+        if (content == null || content.isBlank() || content.length() < 32) {
+            return false;
+        }
+        try {
+            var decoded = Base64.getDecoder().decode(content.trim());
+            return decoded.length >= 28;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     static boolean isE2eeType(String type) {

@@ -17,12 +17,26 @@ These scripts facilitate JFR (JDK Flight Recorder) profiling of Korus Messenger 
 .\scripts\profiling\measure-prometheus-heap.ps1 -MetricsUrl http://127.0.0.1:18080/api/v1/metrics/prometheus
 ```
 
-For QEMU/docker: JRE images lack `jcmd`; use Prometheus scripts above, or the **profiling compose overlay** (JDK images):
+For QEMU/docker: JRE images lack `jcmd`; use Prometheus scripts above, or the **profiling compose overlay** (JDK images, 8 targets):
 
 ```powershell
-docker compose -f docker/docker-compose.full-server.yml -f docker/docker-compose.profiling.yml up -d --build core-api retention-worker
-.\scripts\profiling\profile-docker-jfr.ps1 -ContainerName <compose_project>-core-api-1 -OutputName core-api -DurationSeconds 60
+docker compose -f docker/docker-compose.full-server.yml -f docker/docker-compose.profiling.yml up -d --build
+.\scripts\profiling\profile-docker-jfr.ps1 -DurationSeconds 60
 ```
+
+Single service (auto-detect container by compose service name):
+
+```powershell
+.\scripts\profiling\profile-docker-jfr.ps1 -Service message-pipeline -DurationSeconds 60
+```
+
+Explicit container name (when auto-detect is ambiguous):
+
+```powershell
+.\scripts\profiling\profile-docker-jfr.ps1 -ContainerName korus-core-api-1 -OutputName core-api -DurationSeconds 60
+```
+
+Profiling overlay services: `core-api`, `message-pipeline`, `archiver-worker`, `deep-archiver-worker`, `retention-worker`, `export-replay-worker`, `push-worker`, `indexer-worker`.
 
 Host-local Tomcat can still use JFR:
 
@@ -51,7 +65,7 @@ docker compose -f docker/docker-compose.full-server.yml up -d retention-worker d
 .\scripts\profiling\profile-worker.ps1 -WorkerName deep-archiver [-DurationSeconds 60] [-OutputDir ./jfr-recordings]
 ```
 
-Supported WorkerName values: `deep-archiver`, `retention`, `indexer`, `export-replay`, `archiver`.
+Supported WorkerName values: `deep-archiver`, `retention`, `indexer`, `export-replay`, `archiver`, `message-pipeline`, `push`.
 
 ## Analysis
 

@@ -7,19 +7,6 @@ ROLE="${1:?usage: run-ansible-local.sh server|web}"
 REPO="${KORUS_REPO_ROOT:-/mnt/korus}"
 ANSIBLE_DIR="$REPO/deploy/ansible"
 LOG="${KORUS_BOOTSTRAP_LOG:-/var/log/korus-bootstrap.log}"
-DEBUG_INGEST="${KORUS_DEBUG_INGEST:-http://10.0.2.2:7900/ingest/8837d83b-b660-47bd-8b4a-b8fceb452d46}"
-
-debug_agent_log() {
-  _hyp="$1"
-  _msg="$2"
-  _ts="$(($(date +%s) * 1000))"
-  echo "DEBUG[$_hyp] $_msg"
-  curl -fsS -m 2 -X POST "$DEBUG_INGEST" \
-    -H "Content-Type: application/json" \
-    -H "X-Debug-Session-Id: baea72" \
-    -d "{\"sessionId\":\"baea72\",\"hypothesisId\":\"$_hyp\",\"location\":\"run-ansible-local.sh\",\"message\":\"$_msg\",\"timestamp\":$_ts,\"runId\":\"clean-build\",\"data\":{\"role\":\"$ROLE\",\"build\":\"$BUILD\"}}" \
-    2>/dev/null || true
-}
 
 if ! { : >>"$LOG"; } 2>/dev/null; then
   LOG="${TMPDIR:-/tmp}/korus-bootstrap.log"
@@ -27,23 +14,28 @@ fi
 HOST_GW="${KORUS_QEMU_HOST_GW:-10.0.2.2}"
 BUILD="${KORUS_BUILD:-0}"
 
+if [ "${KORUS_TRUNCATE_BOOTSTRAP_LOG:-0}" = "1" ]; then
+  : >"$LOG" 2>/dev/null || true
+fi
+
 exec >>"$LOG" 2>&1
 echo "=== run-ansible-local.sh $ROLE $(date -Iseconds) repo=$REPO build=$BUILD ==="
-debug_agent_log "ALL" "ansible bootstrap start role=$ROLE build=$BUILD"
+
+if [ -f "$REPO/deploy/qemu/vm-bootstrap/korus-guest-deps.sh" ]; then
+  sh "$REPO/deploy/qemu/vm-bootstrap/korus-guest-deps.sh"
+fi
 
 wait_repo() {
   local marker="$1"
   local i
   for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
     if [ -f "$REPO/$marker" ]; then
-      debug_agent_log "A" "repo marker found: $marker"
       return 0
     fi
     echo "waiting for repo at $REPO ($marker)..."
     sleep 3
   done
   echo "ERROR: repo not ready at $REPO ($marker missing)"
-  debug_agent_log "A" "repo not ready marker=$marker"
   exit 1
 }
 
@@ -54,16 +46,44 @@ ansible_env() {
   export ANSIBLE_CONFIG="${ANSIBLE_CONFIG:-/tmp/korus-ansible.cfg}"
   cp "$ANSIBLE_DIR/ansible.cfg" "$ANSIBLE_CONFIG" 2>/dev/null || true
   chmod 644 "$ANSIBLE_CONFIG" 2>/dev/null || true
+  if [ -f "$REPO/deploy/qemu/vm-bootstrap/korus-plain-build-env.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$REPO/deploy/qemu/vm-bootstrap/korus-plain-build-env.sh"
+  fi
+}
+
+ensure_guest_packages() {
+  if [ -f "$REPO/deploy/qemu/vm-bootstrap/korus-guest-deps.sh" ]; then
+    sh "$REPO/deploy/qemu/vm-bootstrap/korus-guest-deps.sh"
+    return 0
+  fi
+  echo "WARN: korus-guest-deps.sh missing; install python3-pip/docker manually"
+}
+
+pip_install() {
+  if command -v pip3 >/dev/null 2>&1; then
+    pip3 "$@"
+  else
+    python3 -m pip "$@"
+  fi
 }
 
 ensure_ansible() {
+  if [ -f "$REPO/deploy/qemu/vm-bootstrap/korus-guest-deps.sh" ]; then
+    sh "$REPO/deploy/qemu/vm-bootstrap/korus-guest-deps.sh"
+  else
+    ensure_guest_packages
+  fi
   if command -v ansible-playbook >/dev/null 2>&1; then
     return 0
   fi
   echo "installing ansible via pip..."
-  if pip3 install --break-system-packages ansible websocket-client 2>/dev/null; then
+  # #region agent log
+  echo "ensure_ansible: pip3=$(command -v pip3 2>/dev/null || echo missing) python3=$(command -v python3 2>/dev/null || echo missing)"
+  # #endregion
+  if pip_install install --break-system-packages ansible websocket-client 2>/dev/null; then
     :
-  elif pip3 install --user ansible websocket-client; then
+  elif pip_install install --user ansible websocket-client; then
     export PATH="$HOME/.local/bin:$PATH"
   else
     echo "ERROR: pip install ansible failed"
@@ -82,21 +102,27 @@ normalize_scripts() {
 }
 
 wait_server_api() {
+  # First server docker compose build on QEMU can take 30–45 min; old loop (~7 min) caused web to fail early.
+  local max_sec="${KORUS_WAIT_SERVER_SEC:-5400}"
+  local elapsed=0
   local url
-  for url in \
-    "http://${KORUS_QEMU_SERVER_IP:-192.168.76.10}:8080/api/v1/health" \
-    "http://${HOST_GW}:18080/api/v1/health"; do
-    local i
-    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 24 30; do
+  while [ "$elapsed" -lt "$max_sec" ]; do
+    for url in \
+      "http://${KORUS_QEMU_SERVER_IP:-192.168.76.10}:8080/api/v1/health" \
+      "http://${HOST_GW}:18080/api/v1/health"; do
       if curl -fsS --max-time 5 "$url" >/dev/null 2>&1; then
-        echo "server API ready: $url"
+        echo "server API ready: $url (after ${elapsed}s)"
         return 0
       fi
-      echo "waiting for server API at $url..."
-      sleep 10
     done
+    echo "waiting for server API (${elapsed}s / ${max_sec}s)..."
+    sleep 10
+    elapsed=$((elapsed + 10))
   done
-  echo "ERROR: server API not reachable from web guest"
+  # #region agent log
+  echo "wait_server_api: TIMEOUT after ${max_sec}s"
+  # #endregion
+  echo "ERROR: server API not reachable from web guest (waited ${max_sec}s)"
   exit 1
 }
 
@@ -107,9 +133,7 @@ fetch_host_lan_ip() {
 
 case "$ROLE" in
   server)
-    debug_agent_log "A" "server wait_repo begin"
     wait_repo "docker/docker-compose.full-server.yml"
-    debug_agent_log "A" "server repo ready"
     normalize_scripts
     ensure_ansible
     ansible_env
@@ -117,23 +141,17 @@ case "$ROLE" in
     extra=""
     if [ "$BUILD" = "1" ]; then
       extra="-e korus_build_images=true"
-      debug_agent_log "B" "server full build KORUS_BUILD=1 gradle+docker"
     else
       extra="-e korus_build_images=false"
     fi
-    debug_agent_log "E" "server ansible-playbook start"
     # shellcheck disable=SC2086
     ansible-playbook -i inventory/qemu/localhost.yml playbooks/qemu-server-local.yml \
       -e "korus_repo_root=$REPO" $extra
-    debug_agent_log "E" "server ansible-playbook done exit=$?"
     echo "=== QEMU server ansible deploy done ==="
     ;;
   web)
-    debug_agent_log "D" "web wait_repo begin"
     wait_repo "korus-web/docker-compose.yml"
-    debug_agent_log "D" "web wait_server_api begin"
     wait_server_api
-    debug_agent_log "D" "web server API ready"
     normalize_scripts
     ensure_ansible
     ansible_env
@@ -149,12 +167,10 @@ case "$ROLE" in
     else
       extra="-e korus_build_images=false"
     fi
-    debug_agent_log "E" "web ansible-playbook start"
     # shellcheck disable=SC2086
     ansible-playbook -i inventory/qemu/localhost.yml playbooks/qemu-web-local.yml \
       -e "korus_repo_root=$REPO" \
       -e "korus_qemu_host_lan_ip=$LAN_IP" $extra
-    debug_agent_log "E" "web ansible-playbook done exit=$?"
     echo "=== QEMU web ansible deploy done ==="
     ;;
   *)

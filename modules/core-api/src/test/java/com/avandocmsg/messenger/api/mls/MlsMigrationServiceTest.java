@@ -49,6 +49,29 @@ class MlsMigrationServiceTest {
     }
 
     @Test
+    void batchMigrateToMls_migratesPendingChats() {
+        var member = UUID.randomUUID();
+        var chat2 = UUID.randomUUID();
+        chatRepository.members.put(chatId, List.of(new ChatMemberResponse(
+            member.toString(), "alice", "Alice", "member", false, false, Instant.now())));
+        chatRepository.members.put(chat2, List.of(new ChatMemberResponse(
+            member.toString(), "bob", "Bob", "member", false, false, Instant.now())));
+        var batchService = new MlsMigrationService(null, groupManager, chatRepository) {
+            @Override
+            List<UUID> listPendingChatIds(int limit) {
+                return List.of(chatId, chat2);
+            }
+        };
+
+        var result = batchService.batchMigrateToMls(10);
+
+        assertEquals(2, result.migratedCount());
+        assertEquals(0, result.failedCount());
+        assertTrue(groupManager.findGroupByChatId(chatId).isPresent());
+        assertTrue(groupManager.findGroupByChatId(chat2).isPresent());
+    }
+
+    @Test
     void migrateToMls_idempotentWhenGroupExists() {
         var member = UUID.randomUUID();
         chatRepository.members.put(chatId, List.of(new ChatMemberResponse(

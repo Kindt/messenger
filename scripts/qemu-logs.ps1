@@ -3,6 +3,7 @@ param(
     [ValidateSet("server", "web", "all")]
     [string]$Role = "all",
     [int]$Tail = 20,
+    [int]$SshTimeoutSec = 25,
     [switch]$Follow,
     [switch]$Help
 )
@@ -16,13 +17,11 @@ if ($Help) {
 $Root = Split-Path -Parent $PSScriptRoot
 $RunDir = Join-Path $Root "deploy\qemu\run"
 $Plink = "${env:ProgramFiles}\PuTTY\plink.exe"
+. (Join-Path $Root "deploy\qemu\lib\Update-KorusGuestRepo.ps1")
 
 function Get-HostKeyFromSerial {
-    param([string]$SerialPath)
-    if (-not (Test-Path $SerialPath)) { return $null }
-    $m = Select-String -Path $SerialPath -Pattern "256 SHA256:([A-Za-z0-9+/=]+)\s+root@.*\(ED25519\)" | Select-Object -Last 1
-    if ($m) { return "ssh-ed25519 255 SHA256:$($m.Matches[0].Groups[1].Value)" }
-    return $null
+    param([string]$SerialPath, [string]$Role, [int]$SshPort)
+    return Get-KorusEd25519HostKey -SerialPath $SerialPath -Role $Role -SshPort $SshPort
 }
 
 function Show-SerialTail {
@@ -45,7 +44,8 @@ function Show-Bootstrap {
     param(
         [string]$Name,
         [int]$Port,
-        [string]$HostKey
+        [string]$HostKey,
+        [int]$SshTimeout
     )
     Write-Host "`n=== bootstrap: $Name (SSH :$Port) ===" -ForegroundColor Cyan
     if (-not (Test-Path $Plink)) {
@@ -61,7 +61,7 @@ function Show-Bootstrap {
         param($Plink, $HostKey, $Port, $Cmd)
         & $Plink -batch -hostkey $HostKey -pw korus -P $Port "korus@127.0.0.1" $Cmd 2>&1
     } -ArgumentList $Plink, $HostKey, $Port, $cmd
-    $done = Wait-Job $job -Timeout 25
+    $done = Wait-Job $job -Timeout $SshTimeoutSec
     if (-not $done) {
         Stop-Job $job -Force
         Remove-Job $job -Force
@@ -93,7 +93,8 @@ Get-Process qemu-system-x86_64 -ErrorAction SilentlyContinue | ForEach-Object {
     $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine
     $n = if ($cmd -match "-name\s+(\S+)") { $Matches[1] } else { "?" }
     $a = if ($cmd -match "-accel\s+(\S+)") { $Matches[1] } else { "?" }
-    Write-Host "  $n PID=$($_.Id) accel=$a RAM=$([int]($_.WS/1MB))MB"
+    $d = if ($cmd -match "-display\s+(\S+)") { ($Matches[1] -split ',')[0] } else { "none" }
+    Write-Host "  $n PID=$($_.Id) accel=$a display=$d RAM=$([int]($_.WS/1MB))MB"
 }
 if (-not (Get-Process qemu-system-x86_64 -ErrorAction SilentlyContinue)) {
     Write-Host "  No QEMU VMs running" -ForegroundColor Yellow
@@ -103,8 +104,8 @@ $roles = if ($Role -eq "all") { @("server", "web") } else { @($Role) }
 foreach ($r in $roles) {
     Show-SerialTail -Name $r
     $port = if ($r -eq "server") { 12221 } else { 12222 }
-    $hk = Get-HostKeyFromSerial -SerialPath (Join-Path $RunDir "$r-serial.log")
-    Show-Bootstrap -Name $r -Port $port -HostKey $hk
+    $hk = Get-HostKeyFromSerial -SerialPath (Join-Path $RunDir "$r-serial.log") -Role $r -SshPort $port
+    Show-Bootstrap -Name $r -Port $port -HostKey $hk -SshTimeout $SshTimeoutSec
 }
 
 Write-Host "`nHealth:" -ForegroundColor Cyan

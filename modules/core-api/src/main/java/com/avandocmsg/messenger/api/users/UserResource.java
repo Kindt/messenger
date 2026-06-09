@@ -2,8 +2,6 @@ package com.avandocmsg.messenger.api.users;
 
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.api.users.dto.SavedChatResponse;
 import com.avandocmsg.messenger.api.users.dto.UpdatePresenceRequest;
 import com.avandocmsg.messenger.api.users.dto.UpdatePrivacyRequest;
@@ -36,16 +34,11 @@ public class UserResource {
 
     private static final Set<String> PRESENCE_ALLOWED = Set.of("online", "away", "dnd", "offline");
 
-    private final UserRepository userRepository;
-    private final ChatRepository chatRepository;
     private final UserApplicationService userApplicationService;
     private final UserMessageSource messages;
 
     @Inject
-    public UserResource(UserRepository userRepository, ChatRepository chatRepository,
-                        UserApplicationService userApplicationService, UserMessageSource messages) {
-        this.userRepository = userRepository;
-        this.chatRepository = chatRepository;
+    public UserResource(UserApplicationService userApplicationService, UserMessageSource messages) {
         this.userApplicationService = userApplicationService;
         this.messages = messages;
     }
@@ -55,8 +48,8 @@ public class UserResource {
     @Operation(summary = "Id чата «Хранилище» (раздел 30 ТЗ)", description = "Появляется после первого логина/регистрации")
     public Response savedChat(@Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        return chatRepository.findSavedVaultChatId(userId)
-            .map(id -> Response.ok(new SavedChatResponse(id.toString())).build())
+        return userApplicationService.getSavedChatId(UserId.of(userId))
+            .map(id -> Response.ok(new SavedChatResponse(id.value().toString())).build())
             .orElse(Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.user.saved_chat_not_found")))
                 .build());
@@ -102,11 +95,12 @@ public class UserResource {
     public Response updateProfile(UpdateProfileRequest request,
                                    @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var updated = userRepository.updateProfile(userId, request.displayName(), request.phone());
-        if (updated) {
-            var profile = userRepository.findById(userId);
-            return profile.map(p -> Response.ok(p).build())
-                .orElse(Response.status(Response.Status.NOT_FOUND).build());
+        var profile = userApplicationService
+            .updateProfile(UserId.of(userId), request.displayName(), request.phone())
+            .map(UserDomainMapper::toResponse)
+            .orElse(null);
+        if (profile != null) {
+            return Response.ok(profile).build();
         }
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
             .entity(new ApiError(500, messages.get("error.user.profile_update_failed")))
@@ -126,14 +120,13 @@ public class UserResource {
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
-        if (!userRepository.updatePresence(userId, request.presenceStatus())) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(new ApiError(500, messages.get("error.user.presence_failed")))
-                .build();
-        }
-        return userRepository.findById(userId)
+        return userApplicationService
+            .updatePresence(UserId.of(userId), request.presenceStatus())
+            .map(UserDomainMapper::toResponse)
             .map(p -> Response.ok(p).build())
-            .orElse(Response.status(Response.Status.NOT_FOUND).build());
+            .orElse(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ApiError(500, messages.get("error.user.presence_failed")))
+                .build());
     }
 
     @PATCH
@@ -147,14 +140,13 @@ public class UserResource {
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
-        if (!userRepository.updatePrivacyDisableReadReceipts(userId, request.privacyDisableReadReceipts())) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(new ApiError(500, messages.get("error.user.privacy_update_failed")))
-                .build();
-        }
-        return userRepository.findById(userId)
+        return userApplicationService
+            .updatePrivacy(UserId.of(userId), request.privacyDisableReadReceipts())
+            .map(UserDomainMapper::toResponse)
             .map(p -> Response.ok(p).build())
-            .orElse(Response.status(Response.Status.NOT_FOUND).build());
+            .orElse(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ApiError(500, messages.get("error.user.privacy_update_failed")))
+                .build());
     }
 
     @POST
@@ -162,7 +154,7 @@ public class UserResource {
     @Operation(summary = "Heartbeat", description = "Обновляет last_seen_at; вызывайте периодически при активном клиенте")
     public Response heartbeat(@Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        userRepository.touchHeartbeat(userId);
+        userApplicationService.touchHeartbeat(UserId.of(userId));
         return Response.noContent().build();
     }
 }

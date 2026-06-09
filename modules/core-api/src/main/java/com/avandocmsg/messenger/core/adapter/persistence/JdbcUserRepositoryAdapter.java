@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-/** JDBC adapter for {@link UserRepositoryPort} (single-user profile read). */
+/** JDBC adapter for {@link UserRepositoryPort}. */
 public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
     private static final String SELECT_USER = """
         SELECT id, username, display_name, phone, hidden, created_at,
@@ -42,6 +42,77 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
             return Optional.empty();
         }
         return Optional.empty();
+    }
+
+    @Override
+    public boolean updateProfile(UserId id, String displayName, String phone) {
+        if (dataSource == null) {
+            return false;
+        }
+        var sql = """
+            UPDATE users SET display_name = COALESCE(?, display_name), phone = COALESCE(?, phone), updated_at = now()
+            WHERE id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, displayName);
+            stmt.setString(2, phone);
+            stmt.setObject(3, id.value());
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean updatePresence(UserId id, String presenceStatus) {
+        if (dataSource == null) {
+            return false;
+        }
+        var sql = """
+            UPDATE users SET presence_status = ?, last_seen_at = now(), updated_at = now() WHERE id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, presenceStatus);
+            stmt.setObject(2, id.value());
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean updatePrivacy(UserId id, boolean disableReadReceipts) {
+        if (dataSource == null) {
+            return false;
+        }
+        var sql = """
+            UPDATE users SET privacy_disable_read_receipts = ?, updated_at = now() WHERE id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setBoolean(1, disableReadReceipts);
+            stmt.setObject(2, id.value());
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean touchHeartbeat(UserId id) {
+        if (dataSource == null) {
+            return false;
+        }
+        var sql = "UPDATE users SET last_seen_at = now(), updated_at = now() WHERE id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, id.value());
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static UserProfile mapRow(java.sql.ResultSet rs) throws Exception {

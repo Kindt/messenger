@@ -1097,6 +1097,17 @@
     if (state.e2eePlaintextCache[msgId]) {
       return state.e2eePlaintextCache[msgId];
     }
+    if (isMlsCapabilitiesActive()) {
+      var msg = findCachedMessage(chatId, msgId);
+      if (msg && msg.content) {
+        var clientPlain = await mlsClientDecrypt(msg.content, chatId);
+        if (clientPlain) {
+          state.e2eePlaintextCache[msgId] = clientPlain;
+          return clientPlain;
+        }
+      }
+      return null;
+    }
     try {
       var r = await apiJson(
         "/chats/" + chatId + "/messages/" + msgId + "/plaintext-preview",
@@ -2163,8 +2174,6 @@
           "Export attachments: " + manifest.files.length + " file(s)";
       }
     } catch (e) {}
-  }
-    URL.revokeObjectURL(url);
   }
 
   async function loadBlockedUsers() {
@@ -4138,9 +4147,81 @@
     return !!(type && String(type).indexOf("e2ee-") === 0);
   }
 
-  function preferredE2eeScheme() {
+  function isMlsCapabilitiesActive() {
     var caps = state.mediaCaps;
-    if (caps && caps.mls_status === "active") return "mls";
+    return !!(caps && caps.mls_status === "active");
+  }
+
+  function preferredE2eeScheme() {
+    if (isMlsCapabilitiesActive()) return "mls";
+    return null;
+  }
+
+  function mlsBytesToBase64(bytes) {
+    var bin = "";
+    bytes.forEach(function (b) {
+      bin += String.fromCharCode(b);
+    });
+    return btoa(bin);
+  }
+
+  function mlsGenerateKeyPackage() {
+    var pk = new Uint8Array(32);
+    var sk = new Uint8Array(32);
+    crypto.getRandomValues(pk);
+    crypto.getRandomValues(sk);
+    return {
+      cipher_suite: "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519",
+      protocol_version: "mls10",
+      uploadPayload: {
+        public_key_base64: mlsBytesToBase64(pk),
+        signature_key_base64: mlsBytesToBase64(sk),
+        cipher_suite: "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519",
+        protocol_version: "mls10",
+      },
+    };
+  }
+
+  var mlsClientKeyPackage = null;
+
+  async function mlsEnsureKeyPackage() {
+    if (mlsClientKeyPackage) return mlsClientKeyPackage;
+    mlsClientKeyPackage = mlsGenerateKeyPackage();
+    if (!state.tokens) return mlsClientKeyPackage;
+    try {
+      await apiJson("/e2ee/key-packages", {
+        method: "POST",
+        jsonBody: mlsClientKeyPackage.uploadPayload,
+      });
+    } catch (e) {}
+    return mlsClientKeyPackage;
+  }
+
+  async function mlsClientEncrypt(plaintext, chatId) {
+    if (!isMlsCapabilitiesActive() || plaintext == null) return null;
+    if (window.KorusMlsWasm && typeof window.KorusMlsWasm.encrypt === "function") {
+      try {
+        return await window.KorusMlsWasm.encrypt(String(plaintext), chatId);
+      } catch (e) {}
+    }
+    return null;
+  }
+
+  async function mlsClientDecrypt(contentBase64, chatId) {
+    if (!isMlsCapabilitiesActive() || !contentBase64) return null;
+    if (window.KorusMlsWasm && typeof window.KorusMlsWasm.decrypt === "function") {
+      try {
+        return await window.KorusMlsWasm.decrypt(String(contentBase64), chatId);
+      } catch (e) {}
+    }
+    return null;
+  }
+
+  function findCachedMessage(chatId, msgId) {
+    var rows = state.messagesByChat[chatId] || state.messages || [];
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i] && rows[i].id === msgId) return rows[i];
+    }
     return null;
   }
 
@@ -5314,12 +5395,19 @@
     }
     if (isE2eeType(t)) {
       var chatId = m.chat_id || state.selectedId;
-      var p = el("p", "msg-e2ee-body", "Расшифровка…");
+      var p = el(
+        "p",
+        "msg-e2ee-body",
+        isMlsCapabilitiesActive() ? "Расшифровка на клиенте (MLS)…" : "Расшифровка…"
+      );
       bodyEl.appendChild(p);
       loadE2eePlaintext(chatId, m.id).then(function (text) {
         if (text) {
           p.textContent = text;
           p.className = "msg-e2ee-body msg-e2ee-decrypted";
+        } else if (isMlsCapabilitiesActive()) {
+          p.textContent =
+            "Зашифровано (MLS). Серверное превью отключено — требуется клиентская расшифровка.";
         } else {
           p.textContent =
             "Зашифровано (E2EE). Превью недоступно (старая запись или нет сессии).";
@@ -5850,7 +5938,10 @@
           visibility_ttl_seconds: getComposerTtlSeconds(),
         };
       var scheme = preferredE2eeScheme();
-      if (scheme) body.e2ee_scheme = scheme;
+      if (scheme) {
+        body.e2ee_scheme = scheme;
+        if (scheme === "mls") await mlsEnsureKeyPackage();
+      }
       var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
         method: "POST",
         jsonBody: body,
@@ -5882,7 +5973,14 @@
           visibility_ttl_seconds: getComposerTtlSeconds(),
         };
       var scheme = preferredE2eeScheme();
-      if (scheme) body.e2ee_scheme = scheme;
+      if (scheme) {
+        body.e2ee_scheme = scheme;
+        if (scheme === "mls") {
+          await mlsEnsureKeyPackage();
+          var enc = await mlsClientEncrypt(text, state.selectedId);
+          if (enc) body.content = enc;
+        }
+      }
       var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
         method: "POST",
         jsonBody: body,
@@ -6353,6 +6451,7 @@
     hdrR.appendChild(ws);
     var lo = el("button", "btn btn-ghost", L("common.logout"));
     lo.type = "button";
+    lo.setAttribute("data-testid", "logout");
     lo.onclick = function () {
       logout();
     };
@@ -7156,6 +7255,7 @@
       var filePick = document.createElement("input");
       filePick.type = "file";
       filePick.id = "msgFilePick";
+      filePick.setAttribute("data-testid", "file-attach-input");
       filePick.style.display = "none";
       filePick.accept = "image/*,video/*,*/*";
       var maxHint =
@@ -7164,6 +7264,7 @@
           : "";
       var bFile = el("button", "btn btn-ghost btn-icon", "Файл");
       bFile.type = "button";
+      bFile.setAttribute("data-testid", "file-attach");
       bFile.title = "Прикрепить файл" + maxHint;
       bFile.disabled = state.busy;
       bFile.onclick = function () {

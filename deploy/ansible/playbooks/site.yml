@@ -54,6 +54,8 @@
          if (hostvars[groups['korus_web'][0]]['korus_tls_enabled'] | default(false) | bool)
          else 'http://' ~ hostvars[groups['korus_web'][0]]['ansible_host'] ~ ':' ~ (korus_web_port | string) }}
     korus_skip_korus_web_smoke: "0"
+    korus_tls_enabled: "{{ hostvars[groups['korus_web'][0]]['korus_tls_enabled'] | default(false) }}"
+    korus_tls_domain: "{{ hostvars[groups['korus_web'][0]]['korus_tls_domain'] | default('') }}"
   tasks:
     - name: Post-deploy acceptance
       ansible.builtin.import_role:

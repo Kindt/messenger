@@ -28,3 +28,22 @@
   args:
     executable: /bin/bash
   changed_when: false
+
+- name: Run TLS redirect smoke (when TLS enabled)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    cd "{{ korus_repo_root }}"
+    pwsh -NoProfile -File scripts/smoke-tls-redirect.ps1 \
+      -HttpUrl "http://{{ korus_tls_domain }}" \
+      -HttpsUrl "https://{{ korus_tls_domain }}" \
+      -ExpectedCertSubject "{{ korus_tls_domain }}"
+  args:
+    executable: /bin/bash
+  changed_when: false
+  when:
+    - korus_tls_enabled | default(false) | bool
+    - korus_tls_domain is defined
+    - korus_run_tls_smoke | default(true) | bool
+  tags:
+    - smoke
+    - tls_smoke

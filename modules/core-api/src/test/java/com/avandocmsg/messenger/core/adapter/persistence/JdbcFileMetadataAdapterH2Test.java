@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
 import com.avandocmsg.messenger.core.domain.FileId;
+import com.avandocmsg.messenger.core.domain.UserId;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.AfterEach;
@@ -69,5 +70,15 @@ class JdbcFileMetadataAdapterH2Test {
         assertEquals("text/plain", file.mimeType());
         assertEquals(128, file.size());
         assertEquals(ownerId, file.uploadedBy().value());
+    }
+
+    @Test
+    void insert_and_delete_roundTrip() {
+        var newId = FileId.of(UUID.randomUUID());
+        var inserted = adapter.insert(newId, "new.txt", "text/plain", 10, UserId.of(ownerId)).orElseThrow();
+        assertEquals("new.txt", inserted.filename());
+        assertTrue(adapter.findById(newId).isPresent());
+        assertTrue(adapter.delete(newId));
+        assertTrue(adapter.findById(newId).isEmpty());
     }
 }

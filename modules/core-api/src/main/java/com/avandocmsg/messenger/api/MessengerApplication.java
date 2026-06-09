@@ -50,7 +50,9 @@ import com.avandocmsg.messenger.api.mls.MlsGroupManager;
 import com.avandocmsg.messenger.api.mls.MlsGroupStateRepository;
 import com.avandocmsg.messenger.api.mls.MlsMigrationService;
 import com.avandocmsg.messenger.api.mls.MlsService;
+import com.avandocmsg.messenger.api.mls.MlsWireHandler;
 import com.avandocmsg.messenger.api.mls.MlsWirePublisher;
+import com.avandocmsg.messenger.api.mls.MlsWireSubscriber;
 import com.avandocmsg.messenger.api.mls.SessionRepository;
 import com.avandocmsg.messenger.core.application.ChatApplicationService;
 import com.avandocmsg.messenger.core.application.FileApplicationService;
@@ -124,6 +126,7 @@ public class MessengerApplication {
     private SolrClient solrClient;
     private ExportReplayCompleteSubscriber exportCompleteSubscriber;
     private ExportSuggestedSubscriber exportSuggestedSubscriber;
+    private MlsWireSubscriber mlsWireSubscriber;
     private IndexerHotPlugMonitor indexerHotPlugMonitor;
     private final ExportSuggestedHandler exportSuggestedHandler;
 
@@ -235,6 +238,16 @@ public class MessengerApplication {
             log.info("Export suggested NATS subscriber disabled (EXPORT_SUGGESTED_SUBSCRIBER_ENABLED=false)");
         }
 
+        if (appConfig.mlsWireEnabled() && appConfig.mlsWireSubscriberEnabled()) {
+            var mlsGroupStateRepository = new MlsGroupStateRepository(dataSource, clock);
+            var mlsWireHandler = new MlsWireHandler(mlsGroupStateRepository, mlsService, clock);
+            mlsWireSubscriber = new MlsWireSubscriber(natsConnection, mlsWireHandler);
+            mlsWireSubscriber.start();
+        } else {
+            mlsWireSubscriber = null;
+            log.info("MLS wire NATS subscriber disabled (MLS_WIRE_SUBSCRIBER_ENABLED=false or wire off)");
+        }
+
         if (appConfig.hotplugIndexerPresenceRequired()) {
             indexerHotPlugMonitor = new IndexerHotPlugMonitor(
                 natsConnection,
@@ -300,14 +313,17 @@ public class MessengerApplication {
         var chatApplicationService = CoreModule.chatApplicationService(dataSource, chatRepository);
         var messageApplicationService = CoreModule.messageApplicationService(dataSource, chatRepository);
         var userApplicationService = CoreModule.userApplicationService(dataSource);
-        var fileApplicationService = CoreModule.fileApplicationService(dataSource, messageRepository);
-        var organizationApplicationService = CoreModule.organizationApplicationService(dataSource);
+        var objectStoragePort = CoreModule.objectStoragePort(appConfig, minioClient, fileProxy);
+        var fileApplicationService = CoreModule.fileApplicationService(
+            dataSource, messageRepository, objectStoragePort, this.uuidGenerator, appConfig);
+        var organizationApplicationService = CoreModule.organizationApplicationService(dataSource, this.uuidGenerator);
+        var publicLinkPort = CoreModule.publicLinkPort(filePublicLinkRepository);
         var legalHoldRepository = new LegalHoldRepository(dataSource);
         var purgeStatusService = new PurgeStatusService(dataSource, auditRepository);
         var messageService = new MessageService(messageRepository, chatRepository, blockRepository,
             mlsService, mlsMigrationService, natsOutbound, this.uuidGenerator,
             () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent());
-        var fileService = new FileService(appConfig, fileProxy, fileRepository, messageRepository, this.uuidGenerator);
+        var fileService = new FileService(fileApplicationService, messageRepository);
         var exportComplianceSeed = new AdminExportComplianceSeed(
             chatService, messageService, fileService, chatRepository, chatRetentionPolicyRepository);
         var chatBanService = new ChatBanService(chatBanRepository, chatRepository);
@@ -338,7 +354,7 @@ public class MessengerApplication {
                 auditRepository, exportJobRepository, exportJobEnqueuer, exportFileAccess, this.exportSuggestedHandler,
                 exportComplianceSeed,
                 organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,
-                filePublicLinkRepository, messageSearchService, adminManifest, adminServerStatsService, redisProbe,
+                publicLinkPort, messageSearchService, adminManifest, adminServerStatsService, redisProbe,
                 legalHoldRepository, purgeStatusService));
         Tomcat.addServlet(ctx, SERVLET_NAME, jerseyServlet);
         ctx.addServletMappingDecoded("/api/*", SERVLET_NAME);
@@ -369,6 +385,10 @@ public class MessengerApplication {
         if (exportSuggestedSubscriber != null) {
             exportSuggestedSubscriber.close();
             exportSuggestedSubscriber = null;
+        }
+        if (mlsWireSubscriber != null) {
+            mlsWireSubscriber.close();
+            mlsWireSubscriber = null;
         }
         if (indexerHotPlugMonitor != null) {
             indexerHotPlugMonitor.close();

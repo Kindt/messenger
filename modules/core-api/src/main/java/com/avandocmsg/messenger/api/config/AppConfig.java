@@ -85,6 +85,7 @@ public class AppConfig {
         override("HOTPLUG_INDEXER_PRESENCE_REQUIRED", "hotplug.indexer.presence.required");
         override("MLS_STATUS", "mls.status");
         override("MLS_WIRE_ENABLED", "mls.wire.enabled");
+        override("MLS_WIRE_SUBSCRIBER_ENABLED", "mls.wire.subscriber.enabled");
     }
 
     private void override(String envKey, String propKey) {
@@ -548,6 +549,11 @@ public class AppConfig {
     /** RFC 9420 phase-1 MLS wire codec enabled. Env: {@code MLS_WIRE_ENABLED}; default {@code true}. */
     public boolean mlsWireEnabled() {
         return Boolean.parseBoolean(props.getProperty("mls.wire.enabled", "true"));
+    }
+
+    /** Subscribe to {@code mls.*} NATS subjects. Env: {@code MLS_WIRE_SUBSCRIBER_ENABLED}; default {@code true}. */
+    public boolean mlsWireSubscriberEnabled() {
+        return Boolean.parseBoolean(props.getProperty("mls.wire.subscriber.enabled", "true"));
     }
 
     /**

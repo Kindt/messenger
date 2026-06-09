@@ -1,6 +1,6 @@
 # E2EE/MLS — RFC 9420 phase 1 (wire codec)
 
-**Статус:** `in_progress` — Phase 1 wire + migration (2026-06-09)
+**Статус:** Phase 1 `completed` (2026-06-09); Phase 2 hybrid `in progress` — server KMLS + client WASM hook per `docs/adr/ADR-e2ee-mls-library.md`
 **Теги:** `[e2ee]` `[core-api]` `[криптография]` `[web-client]` `[безопасность]`
 
 ---
@@ -74,3 +74,38 @@
 ## Риски
 
 Полный MLS остаётся высокорисковым; phase 1 — controlled wire + migration boundary before OpenMLS adoption.
+
+---
+
+## Phase 2 — hybrid MLS (2026-06-09)
+
+| Область | Артефакты |
+|---------|-----------|
+| ADR | Hybrid: server Java KMLS + browser WASM hook; product sign-off gate |
+| Server crypto | `MlsService.syncEpoch`, epoch-aware encrypt/decrypt |
+| NATS consumer | `MlsWireSubscriber` + `MlsWireHandler` on `mls.welcome/commit/epoch` |
+| Membership | `MlsGroupManager.bumpEpoch` → session epoch rotation + wire publish |
+| Migration batch | `MlsMigrationService.batchMigrateToMls`, `POST /admin/e2ee/migrate-batch` |
+| Web client | `app.js` — `mlsClientEncrypt/Decrypt`, key package upload, no `/plaintext-preview` when MLS active |
+| Security gate | `specs/004-deferred-phase2-closure/quickstart.md` § US7 |
+| E2E | `tests/e2e-web/specs/e2ee-capabilities.spec.ts` — browser MLS flow |
+
+### Шаги phase 2
+
+- [x] T130 ADR hybrid + sign-off gate
+- [x] T140 `MlsService` real encrypt/decrypt + epoch sync
+- [x] T141 NATS consumer `MlsWireSubscriber`
+- [x] T142 Membership epoch rotation (add/remove)
+- [x] T150–T151 Client MLS hook + key package generation in `app.js`
+- [x] T160–T161 Client encrypt send path; restrict plaintext-preview
+- [x] T165 Batch migration job
+- [x] T169 Security review gate in quickstart
+- [x] T170 Playwright e2ee-capabilities extension
+
+### Отложено (phase 3)
+
+- Bundled `KorusMlsWasm` (full client-side encrypt/decrypt without server assist)
+- OpenMLS Java binding
+- External MLS interop suite
+
+**Cross-ref**: spec 004 US7 (T130–T169) — full OpenMLS client encrypt, batch migration, Playwright browser MLS (`e2ee-capabilities.spec.ts` T170). ADR: `docs/adr/ADR-e2ee-mls-library.md`.

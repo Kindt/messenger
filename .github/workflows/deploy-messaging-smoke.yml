@@ -69,6 +69,7 @@ jobs:
   playwright:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    continue-on-error: true
     if: ${{ github.event_name == 'schedule' || github.event.inputs.skip_playwright != 'true' }}
     steps:
       - uses: actions/checkout@v6

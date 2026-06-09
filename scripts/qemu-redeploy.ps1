@@ -102,7 +102,7 @@ $doWeb = -not $ServerOnly
 
 if ($doServer) {
 
-    $hk = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "server-serial.log") -Role server
+    $hk = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "server-serial.log") -Role server -SshPort 12221
 
     if (-not $hk) { throw "server SSH host key not in serial log yet" }
 
@@ -111,19 +111,15 @@ if ($doServer) {
     Write-Host "Ansible redeploy on server guest..." -ForegroundColor Yellow
 
     $serverCmd = @'
-
+set -euo pipefail
 export KORUS_BUILD=1 KORUS_REPO_ROOT=/mnt/korus
-
 sed -i 's/\r$//' /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
-
 chmod +x /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
-
-sudo env KORUS_BUILD=1 KORUS_REPO_ROOT=/mnt/korus sh /mnt/korus/deploy/qemu/vm-bootstrap/run-ansible-local.sh server
-
+sudo sh /mnt/korus/deploy/qemu/vm-bootstrap/korus-guest-deps.sh
+sudo sh /mnt/korus/deploy/qemu/vm-bootstrap/korus-console-setup.sh server
+sudo env KORUS_BUILD=1 KORUS_REPO_ROOT=/mnt/korus KORUS_TRUNCATE_BOOTSTRAP_LOG=1 sh /mnt/korus/deploy/qemu/vm-bootstrap/run-ansible-local.sh server
 for i in 1 2 3 4 5 6 7 8 9 10 12 15 18 24 30 36 42 48 54 60 72 84 96 108 120; do curl -fsS http://127.0.0.1:8080/api/v1/health 2>/dev/null && exit 0; sleep 5; done
-
 exit 1
-
 '@
 
     Invoke-RemoteSh -HostKey $hk -Port 12221 -Script $serverCmd
@@ -136,7 +132,7 @@ exit 1
 
 if ($doWeb) {
 
-    $hk = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "web-serial.log") -Role web
+    $hk = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "web-serial.log") -Role web -SshPort 12222
 
     if (-not $hk) { throw "web SSH host key not in serial log yet" }
 
@@ -145,17 +141,14 @@ if ($doWeb) {
     Write-Host "Ansible redeploy on web guest..." -ForegroundColor Yellow
 
     $webCmd = @'
-
+set -euo pipefail
 export KORUS_BUILD=1 KORUS_REPO_ROOT=/mnt/korus
-
 sed -i 's/\r$//' /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
-
 chmod +x /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
-
-sudo env KORUS_BUILD=1 KORUS_REPO_ROOT=/mnt/korus sh /mnt/korus/deploy/qemu/vm-bootstrap/run-ansible-local.sh web
-
+sudo sh /mnt/korus/deploy/qemu/vm-bootstrap/korus-guest-deps.sh
+sudo sh /mnt/korus/deploy/qemu/vm-bootstrap/korus-console-setup.sh web
+sudo env KORUS_BUILD=1 KORUS_REPO_ROOT=/mnt/korus KORUS_TRUNCATE_BOOTSTRAP_LOG=1 sh /mnt/korus/deploy/qemu/vm-bootstrap/run-ansible-local.sh web
 curl -fsS http://127.0.0.1:9088/health 2>/dev/null || exit 1
-
 '@
 
     Invoke-RemoteSh -HostKey $hk -Port 12222 -Script $webCmd

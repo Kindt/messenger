@@ -48,16 +48,28 @@ if [[ ! -f "$COMPOSE" ]]; then
 fi
 
 cd "$ROOT"
-echo "cd $ROOT" >&2
+# Limit parallel compose builds by default — avoids OOM on 8–10G RAM hosts during redeploy.
+export COMPOSE_PARALLEL_LIMIT="${COMPOSE_PARALLEL_LIMIT:-1}"
+if [ "${KORUS_QEMU_CONSOLE:-0}" = "1" ]; then
+  export BUILDKIT_PROGRESS="${BUILDKIT_PROGRESS:-plain}"
+  export COMPOSE_ANSI="${COMPOSE_ANSI:-never}"
+fi
+echo "cd $ROOT"
 compose_args=(-f "$COMPOSE")
 if $EXPORT_SMOKE; then
   while IFS= read -r arg; do
     compose_args+=("$arg")
   done < <(korus_export_smoke_compose_args "$ROOT" "$( $EXPORT_AUTO_QUEUE && echo 1 || echo 0 )")
 fi
-compose_args+=(up -d)
-$BUILD && compose_args+=(--build)
-echo "docker compose ${compose_args[*]}" >&2
+if $BUILD && [ "${KORUS_QEMU_CONSOLE:-0}" = "1" ]; then
+  echo "QEMU: docker compose build with COMPOSE_PARALLEL_LIMIT=${COMPOSE_PARALLEL_LIMIT} (10G RAM — avoid OOM from parallel Gradle)"
+  COMPOSE_PARALLEL_LIMIT="${COMPOSE_PARALLEL_LIMIT}" korus_compose_file_retry "$COMPOSE" build || exit 1
+  compose_args+=(up -d)
+else
+  compose_args+=(up -d)
+  $BUILD && compose_args+=(--build)
+fi
+echo "docker compose ${compose_args[*]}"
 korus_compose_up_multi_retry "${compose_args[@]}" || exit 1
 
 echo ""

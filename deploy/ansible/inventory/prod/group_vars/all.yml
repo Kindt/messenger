@@ -1,0 +1,20 @@
+---
+# Production: TLS termination on web host; secrets via encrypted group_vars/vault.yml.
+korus_configure_ufw: true
+korus_use_lan_publish: true
+korus_server_lan_ip: "10.0.2.10"
+korus_web_lan_ip: "10.0.2.20"
+
+korus_tls_enabled: true
+korus_tls_domain: "messenger.example.com"
+korus_tls_use_letsencrypt: false
+korus_tls_cert_path: "/etc/ssl/korus/fullchain.pem"
+korus_tls_key_path: "/etc/ssl/korus/privkey.pem"
+korus_tls_proxy_api: true
+
+korus_cors_allowed_origins: "https://messenger.example.com"
+
+# Optional: set korus_keycloak_https: true when Keycloak is published at HTTPS on korus_tls_domain.
+# Default compose issuer (http://keycloak:8080/realms/...) remains for internal JWT validation.
+# korus_keycloak_issuer: "https://messenger.example.com/realms/avandocmsg"
+# korus_keycloak_jwks_url: "https://messenger.example.com/realms/avandocmsg/protocol/openid-connect/certs"

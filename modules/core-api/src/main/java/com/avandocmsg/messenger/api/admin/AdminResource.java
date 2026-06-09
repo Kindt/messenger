@@ -22,7 +22,6 @@ import com.avandocmsg.messenger.api.filter.UserPrincipal;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
-import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.api.export.AdminExportComplianceSeed;
 import com.avandocmsg.messenger.api.export.ExportFileAccess;
@@ -40,6 +39,7 @@ import com.avandocmsg.messenger.api.repository.ExportJobRepository;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
 import com.avandocmsg.messenger.core.domain.OrganizationId;
+import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -85,7 +85,6 @@ public class AdminResource {
 
     private final AppConfig appConfig;
     private final AuditRepository auditRepository;
-    private final OrganizationRepository organizationRepository;
     private final OrganizationApplicationService organizationApplicationService;
     private final RetentionPolicyRepository retentionPolicyRepository;
     private final ChatRepository chatRepository;
@@ -100,7 +99,6 @@ public class AdminResource {
 
     @Inject
     public AdminResource(AppConfig appConfig, AuditRepository auditRepository,
-                         OrganizationRepository organizationRepository,
                          OrganizationApplicationService organizationApplicationService,
                          RetentionPolicyRepository retentionPolicyRepository,
                          ChatRepository chatRepository,
@@ -119,7 +117,6 @@ public class AdminResource {
                          UserMessageSource messages) {
         this.appConfig = appConfig;
         this.auditRepository = auditRepository;
-        this.organizationRepository = organizationRepository;
         this.organizationApplicationService = organizationApplicationService;
         this.retentionPolicyRepository = retentionPolicyRepository;
         this.chatRepository = chatRepository;
@@ -227,6 +224,33 @@ public class AdminResource {
 
     private static LegalHoldResponse toLegalHoldResponse(LegalHoldRepository.LegalHoldRow row) {
         return new LegalHoldResponse(row.legalHold(), row.legalHoldFiles(), row.legalHoldDeepArchive());
+    }
+
+    @POST
+    @Path("e2ee/migrate-batch")
+    @Operation(summary = "Batch migrate legacy E2EE chats to MLS")
+    public Response migrateBatch(@QueryParam("limit") @DefaultValue("50") int limit) {
+        if (mlsMigrationService == null) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                .entity(new ApiError(503, messages.get("error.message.send_failed")))
+                .build();
+        }
+        var result = mlsMigrationService.batchMigrateToMls(limit);
+        return Response.ok(new BatchMigrationResponse(
+            result.migratedCount(),
+            result.failedCount(),
+            result.remainingPending(),
+            result.migratedChatIds(),
+            result.failedChatIds())).build();
+    }
+
+    public record BatchMigrationResponse(
+        @JsonProperty("migrated_count") int migratedCount,
+        @JsonProperty("failed_count") int failedCount,
+        @JsonProperty("remaining_pending") long remainingPending,
+        @JsonProperty("migrated_chat_ids") List<UUID> migratedChatIds,
+        @JsonProperty("failed_chat_ids") List<UUID> failedChatIds
+    ) {
     }
 
     @GET
@@ -666,7 +690,7 @@ public class AdminResource {
                 .build();
         }
         var orgId = UuidParams.required(orgIdStr, "org_id");
-        if (!organizationRepository.exists(orgId)) {
+        if (!organizationApplicationService.exists(OrganizationId.of(orgId))) {
             return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.org_not_found"))).build();
         }
         var actor = CurrentUserId.uuid(securityContext);
@@ -701,10 +725,10 @@ public class AdminResource {
     @Path("organizations")
     @Operation(summary = "Список организаций (multi-tenant, ТЗ п. 23)", security = @SecurityRequirement(name = "bearerAuth"))
     public Response listOrganizations() {
-        var rows = organizationRepository.listAll();
+        var rows = organizationApplicationService.listAll();
         var out = new ArrayList<OrganizationJson>();
         for (var o : rows) {
-            out.add(new OrganizationJson(o.id(), o.name(), o.createdAt()));
+            out.add(new OrganizationJson(o.id().value().toString(), o.name(), o.createdAt()));
         }
         return Response.ok(out).build();
     }
@@ -717,17 +741,18 @@ public class AdminResource {
         if (request.name() == null || request.name().isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST).entity(new ApiError(400, messages.get("error.admin.name_required"))).build();
         }
-        var org = organizationRepository.create(request.name());
-        if (org == null) {
+        var org = organizationApplicationService.create(request.name());
+        if (org.isEmpty()) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(new ApiError(500, messages.get("error.admin.org_create_failed")))
                 .build();
         }
+        var created = org.get();
         var actor = CurrentUserId.uuid(securityContext);
-        auditRepository.record(actor, "organization.create", "organization", org.id(),
-            organizationCreateAuditDetails(org.name()));
+        auditRepository.record(actor, "organization.create", "organization", created.id().value().toString(),
+            organizationCreateAuditDetails(created.name()));
         return Response.status(Response.Status.CREATED)
-            .entity(new OrganizationJson(org.id(), org.name(), org.createdAt()))
+            .entity(new OrganizationJson(created.id().value().toString(), created.name(), created.createdAt()))
             .build();
     }
 
@@ -737,12 +762,12 @@ public class AdminResource {
     public Response deleteOrganization(@PathParam("orgId") String orgIdStr,
                                        @Context SecurityContext securityContext) {
         var orgId = UuidParams.required(orgIdStr, "org_id");
-        var orgRow = organizationRepository.findById(orgId);
+        var orgRow = organizationApplicationService.findById(OrganizationId.of(orgId));
         if (orgRow.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.org_not_found"))).build();
         }
         var orgName = orgRow.get().name();
-        if (!organizationRepository.deleteIfUnused(orgId)) {
+        if (!organizationApplicationService.deleteIfUnused(OrganizationId.of(orgId))) {
             return Response.status(Response.Status.CONFLICT)
                 .entity(new ApiError(409, messages.get("error.admin.org_has_users")))
                 .build();
@@ -764,7 +789,7 @@ public class AdminResource {
         }
         var orgId = UuidParams.required(request.orgId(), "org_id");
         var userId = UuidParams.required(userIdStr, "user_id");
-        var ok = organizationRepository.setUserOrg(userId, orgId);
+        var ok = organizationApplicationService.setUserOrg(UserId.of(userId), OrganizationId.of(orgId));
         if (!ok) {
             return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.user_not_updated"))).build();
         }

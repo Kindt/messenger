@@ -74,3 +74,26 @@
 - [x] T074 `playbooks/site.yml` includes `tls` role when `korus_tls_enabled`
 - [x] T075 `deploy/ansible/README.md` prod vault/TLS checklist
 - [x] T076 `scripts/smoke-tls-redirect.ps1` (HTTP→HTTPS + cert subject; `-SkipTls` for dev)
+
+---
+
+## Phase 9 — Prod TLS rollout (spec 004 US1 cross-ref)
+
+Cross-reference: `specs/004-deferred-phase2-closure/` (US1 tasks T020–T026, contract `contracts/tls-deploy-contract.md`).
+
+- [x] T080 `inventory/prod/` hosts + group_vars (mirror stage; BYO cert default, optional certbot)
+- [x] T081 Vault + CORS in `korus-server.env.j2`; WSS + optional RTC in `korus-web.env.j2`
+- [x] T082 Role `tls`: certbot renew hook, UFW 80/443 operator notes
+- [x] T083 `korus_smoke` integrates `smoke-tls-redirect.ps1` (`--tags tls_smoke` optional)
+
+---
+
+## Phase 9 — Prod TLS rollout (spec 004 US1)
+
+Cross-ref: [specs/004-deferred-phase2-closure/spec.md](../004-deferred-phase2-closure/spec.md)
+
+- [ ] T080 `inventory/prod/` hosts and group_vars (BYO-cert example)
+- [ ] T081 `CORS_ALLOWED_ORIGINS` in korus-server env template
+- [ ] T082 `wss://` in korus-web env when `korus_tls_enabled`
+- [ ] T083 `korus_smoke` optional `tls_smoke` tag → `smoke-tls-redirect.ps1`
+- [ ] T084 Ops/security sign-off documented in spec 004 quickstart

@@ -12,7 +12,7 @@ import com.avandocmsg.messenger.api.metrics.ApiDeniedMetrics;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
-import com.avandocmsg.messenger.api.repository.FilePublicLinkRepository;
+import com.avandocmsg.messenger.core.port.PublicLinkPort;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.core.application.FileApplicationService;
@@ -84,7 +84,7 @@ public class FileResource {
     private final FileService fileService;
     private final FileApplicationService fileApplicationService;
     private final AppConfig appConfig;
-    private final FilePublicLinkRepository filePublicLinkRepository;
+    private final PublicLinkPort publicLinkPort;
     private final AuditRepository auditRepository;
     private final Clock clock;
     private final UserMessageSource messages;
@@ -92,12 +92,12 @@ public class FileResource {
     @Inject
     public FileResource(FileService fileService, FileApplicationService fileApplicationService,
                           AppConfig appConfig,
-                          FilePublicLinkRepository filePublicLinkRepository,
+                          PublicLinkPort publicLinkPort,
                           AuditRepository auditRepository, Clock clock, UserMessageSource messages) {
         this.fileService = fileService;
         this.fileApplicationService = fileApplicationService;
         this.appConfig = appConfig;
-        this.filePublicLinkRepository = filePublicLinkRepository;
+        this.publicLinkPort = publicLinkPort;
         this.auditRepository = auditRepository;
         this.clock = clock;
         this.messages = messages;
@@ -248,18 +248,20 @@ public class FileResource {
                              @Context SecurityContext securityContext) {
         var fid = UuidParams.required(fileId, "file_id");
         var userId = CurrentUserId.uuid(securityContext);
-        var info = fileService.getInfo(fileId);
-        if (info == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
-        if (!fileService.mayViewFile(info, fid, userId)) {
+        var fileIdDomain = FileId.of(fid);
+        var meta = fileApplicationService.getMetadataForUser(UserId.of(userId), fileIdDomain);
+        if (meta.isEmpty()) {
+            if (fileApplicationService.findById(fileIdDomain).isEmpty()) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
             ApiDeniedMetrics.fileAccessDenied();
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.file.not_allowed")))
                 .type(MediaType.APPLICATION_JSON)
                 .build();
         }
-        var stream = fileService.download(fileId);
+        var info = FileDomainMapper.toResponse(meta.get());
+        var stream = fileApplicationService.download(fileIdDomain);
         if (stream == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
@@ -279,21 +281,21 @@ public class FileResource {
         content = @Content(schema = @Schema(implementation = ApiError.class)))
     public Response delete(@PathParam("fileId") String fileId,
                            @Context SecurityContext securityContext) {
-        UuidParams.required(fileId, "file_id");
+        var fid = UuidParams.required(fileId, "file_id");
         var userId = CurrentUserId.uuid(securityContext);
-        var info = fileService.getInfo(fileId);
-        if (info == null) {
+        var fileIdDomain = FileId.of(fid);
+        var meta = fileApplicationService.findById(fileIdDomain);
+        if (meta.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.file.not_found")))
                 .build();
         }
-        if (!info.uploadedBy().equals(userId.toString())) {
+        if (!meta.get().uploadedBy().value().equals(userId)) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.file.not_allowed")))
                 .build();
         }
-        var ok = fileService.delete(fileId);
-        if (!ok) {
+        if (!fileApplicationService.delete(fileIdDomain)) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.file.not_found")))
                 .build();
@@ -309,7 +311,10 @@ public class FileResource {
     public Response listMyPublicLinks(@QueryParam("limit") @DefaultValue("50") int limit,
                                       @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var links = filePublicLinkRepository.listActiveByOwner(userId, limit);
+        var links = publicLinkPort.listByOwner(UserId.of(userId), limit).stream()
+            .map(e -> new OwnerPublicLinkSummary(
+                e.id(), e.fileId(), e.linkKind(), e.expiresAt(), e.createdAt(), e.filename()))
+            .toList();
         return Response.ok(links).build();
     }
 
@@ -328,7 +333,9 @@ public class FileResource {
                 .entity(new ApiError(403, messages.get("error.file.not_allowed")))
                 .build();
         }
-        var links = filePublicLinkRepository.listActiveByFileAndOwner(fileId, userId);
+        var links = publicLinkPort.listByFileAndOwner(FileId.of(fileId), UserId.of(userId)).stream()
+            .map(e -> new PublicLinkSummary(e.id(), e.linkKind(), e.expiresAt(), e.createdAt()))
+            .toList();
         return Response.ok(links).build();
     }
 
@@ -361,7 +368,7 @@ public class FileResource {
             ? request.ttlSeconds()
             : appConfig.filePublicLinkDefaultTtlSeconds();
         var expires = clock.instant().plus(ttlSec, ChronoUnit.SECONDS);
-        var created = filePublicLinkRepository.insert(fileId, userId, kind, request.password(), expires);
+        var created = publicLinkPort.createLink(FileId.of(fileId), UserId.of(userId), kind, request.password(), expires);
         if (created.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(new ApiError(400, messages.get("error.file.link_create_kind_c_password")))
@@ -389,7 +396,7 @@ public class FileResource {
         if (meta == null || !meta.uploadedBy().equals(userId.toString())) {
             return Response.status(Response.Status.FORBIDDEN).entity(new ApiError(403, messages.get("error.file.not_allowed"))).build();
         }
-        if (!filePublicLinkRepository.revoke(userId, fileId, linkId)) {
+        if (!publicLinkPort.revokeLink(UserId.of(userId), FileId.of(fileId), linkId)) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.file.link_not_found_revoked")))
                 .build();
@@ -428,8 +435,8 @@ public class FileResource {
         if (rawToken == null || rawToken.isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
-        var hash = FilePublicLinkRepository.sha256Hex(rawToken);
-        var resolved = filePublicLinkRepository.findValidByTokenHash(hash);
+        var hash = publicLinkPort.sha256Hex(rawToken);
+        var resolved = publicLinkPort.findValidByTokenHash(hash);
         if (resolved.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
@@ -449,7 +456,7 @@ public class FileResource {
                 break;
             case 'C':
                 if (password == null || link.passwordHash() == null
-                    || !link.passwordHash().equals(FilePublicLinkRepository.sha256Hex(password))) {
+                    || !link.passwordHash().equals(publicLinkPort.sha256Hex(password))) {
                     return Response.status(Response.Status.FORBIDDEN).entity(new ApiError(403, messages.get("error.file.password_required"))).build();
                 }
                 break;

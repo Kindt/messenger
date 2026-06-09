@@ -9,11 +9,16 @@
   ansible.builtin.shell: |
     set -euo pipefail
     cd "{{ korus_repo_root }}"
+    # shellcheck source=/dev/null
+    . "{{ korus_repo_root }}/deploy/qemu/vm-bootstrap/korus-plain-build-env.sh"
     export SKIP_KORUS_ENSURE=1
+    export DOCKER_BUILDKIT={{ korus_docker_buildkit | default('1') }}
+    export COMPOSE_BAKE={{ korus_compose_bake | default('1') }}
     args=()
     if {{ korus_build_images | bool | lower }}; then args+=( --build ); fi
     if {{ korus_web_attach | bool | lower }}; then args+=( --attach ); fi
-    bash scripts/korus-web-up.sh "${args[@]}"
+    stdbuf -oL -eL bash scripts/korus-web-up.sh "${args[@]}" 2>&1 \
+      | stdbuf -oL tee -a /var/log/korus-bootstrap.log
   args:
     executable: /bin/bash
   register: korus_web_up

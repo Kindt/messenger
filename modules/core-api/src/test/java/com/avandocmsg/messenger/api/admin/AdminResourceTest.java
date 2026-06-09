@@ -8,7 +8,6 @@ import com.avandocmsg.messenger.api.params.InvalidUuidParameterException;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
-import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.api.export.AdminExportComplianceSeed;
 import com.avandocmsg.messenger.api.export.ExportFileAccess;
@@ -41,8 +40,7 @@ class AdminResourceTest {
             }
         };
         var resource = new AdminResource(cfg, new AuditRepository(null),
-            new OrganizationRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
-            CoreModule.organizationApplicationService(null),
+            CoreModule.organizationApplicationService(null, UuidGenerator.standard()),
             new RetentionPolicyRepository(null),
             new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
             new ChatRetentionPolicyRepository(null),
@@ -169,8 +167,7 @@ class AdminResourceTest {
             }
         };
         return new AdminResource(cfg, new AuditRepository(null),
-            new OrganizationRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
-            CoreModule.organizationApplicationService(null),
+            CoreModule.organizationApplicationService(null, UuidGenerator.standard()),
             new RetentionPolicyRepository(null),
             new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
             new ChatRetentionPolicyRepository(null),

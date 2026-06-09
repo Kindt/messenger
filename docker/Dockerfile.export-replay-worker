@@ -1,8 +1,8 @@
 # Воркер экспорта чата по NATS msg.export.replay (см. docs/NATS_SUBJECTS_INTEROP.md).
-FROM gradle:jdk25 AS builder
+FROM gradle:jdk25-noble AS builder
 WORKDIR /app
 COPY . .
-RUN gradle :modules:workers:export-replay:installDist --no-daemon -x test
+RUN gradle --console=plain :modules:workers:export-replay:installDist --no-daemon -x test
 
 FROM eclipse-temurin:25-jre
 RUN apt-get update \

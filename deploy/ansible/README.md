@@ -7,6 +7,7 @@ Idempotent Linux deployment over existing Docker Compose stacks.
 - `inventory/local/` — single node (CI, dev)
 - `inventory/two-host/` — server + web LAN topology
 - `inventory/stage/` — prod-like stage (TLS enabled example vars)
+- `inventory/prod/` — production two-host (TLS + vault; BYO cert default)
 - `playbooks/ci-local.yml` — full-server on localhost
 - `playbooks/site.yml` — two-host site + optional `--tags smoke`
 
@@ -47,7 +48,7 @@ Windows dev: continue using `scripts/full-stack-up.ps1` and `scripts/server-host
 
 ### TLS checklist (stage / prod)
 
-1. Use `inventory/stage/` or set in your inventory `group_vars/all.yml`:
+1. Use `inventory/stage/` or `inventory/prod/`, or set in your inventory `group_vars/all.yml`:
    - `korus_tls_enabled: true`
    - `korus_tls_domain` — public DNS name
    - `korus_tls_use_letsencrypt: true` **or** BYO paths via `korus_tls_cert_path` / `korus_tls_key_path`
@@ -58,7 +59,11 @@ Windows dev: continue using `scripts/full-stack-up.ps1` and `scripts/server-host
    Default cert paths: `/etc/letsencrypt/live/<domain>/fullchain.pem` and `privkey.pem`.
 3. Deploy: `ansible-playbook -i inventory/stage/hosts.yml playbooks/site.yml --ask-vault-pass`
 4. Role `tls` installs host nginx, templates `korus-tls.conf.j2` (443 → web lb, optional `/api/` upstream), HTTP → HTTPS redirect.
-5. Post-deploy smoke (from control node or operator workstation):
+5. Post-deploy smoke via playbook tag or operator workstation:
+   ```bash
+   ansible-playbook -i inventory/prod/hosts.yml playbooks/site.yml --tags tls_smoke --ask-vault-pass
+   ```
+   Or manually:
    ```powershell
    .\scripts\smoke-tls-redirect.ps1 -HttpUrl http://messenger.example.com `
      -HttpsUrl https://messenger.example.com `

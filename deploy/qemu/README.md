@@ -41,14 +41,17 @@ Bootstrap и redeploy внутри ВМ — **`deploy/qemu/vm-bootstrap/run-ansi
 Из корня репозитория:
 
 ```powershell
-.\scripts\qemu-up.ps1
+# Рекомендуется для отладки: GTK-окна ВМ + live-монитор в отдельном окне
+.\scripts\qemu-dev-up.ps1
+
+# Или вручную:
+.\scripts\qemu-up.ps1 -Graphical
+.\scripts\qemu-watch.ps1 -NewWindow
 ```
 
-Только установить QEMU в `deploy\qemu\tools\qemu` (без ВМ):
+Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_DISPLAY=none`
 
-```powershell
-.\scripts\qemu-up.ps1 -InstallQemuOnly
-```
+Установить только QEMU (без ВМ): `.\scripts\qemu-up.ps1 -InstallQemuOnly`
 
 Остановка:
 
@@ -63,6 +66,25 @@ Bootstrap и redeploy внутри ВМ — **`deploy/qemu/vm-bootstrap/run-ansi
 - Acceptance smokes (на хосте с Docker или через SSH-туннели): см. `specs/003-docker-ansible-autotest/quickstart.md`
 
 Логи: `deploy\qemu\run\server-serial.log`, `web-serial.log`; в гостях: **`/var/log/korus-bootstrap.log`**
+
+### Визуальный мониторинг и отладка
+
+| Команда | Назначение |
+|---------|------------|
+| `.\scripts\qemu-dev-up.ps1` | GTK-окна обеих ВМ + `qemu-watch` в новом окне |
+| `.\scripts\qemu-watch.ps1 -NewWindow` | Live dashboard: serial, bootstrap, docker, health |
+| `.\scripts\qemu-logs.ps1` | Снимок состояния (serial + SSH bootstrap + health) |
+| `.\scripts\qemu-logs.ps1 -Follow` | Tail `server-serial.log` |
+| `.\scripts\qemu-up.ps1 -Graphical` | Только поднять ВМ с GTK (`-Display gtk\|sdl\|default`) |
+| `$env:KORUS_QEMU_DISPLAY=gtk` | То же для любого вызова `qemu-up` |
+
+При `-Graphical` / `gtk`: если GTK недоступен, `Start-KorusVm` автоматически пробует `sdl`, затем `default`.
+
+**Ansible `skipping` на server — норма для QEMU** (скрыто: `display_skipped_hosts = False`). В GTK — live-лог как `docker compose build` / `gradle --console=plain`: `Step N/M`, `> Task :...`, `| container | ...`.
+
+В GTK-окне: загрузка ядра, затем **live docker/gradle build** вместо login prompt. Если видите `login:` — `.\scripts\qemu-console-on.ps1`.
+
+| `.\scripts\qemu-console-on.ps1` | Включить вывод bootstrap в уже запущенных GTK-окнах |
 
 ## Устранение неполадок
 

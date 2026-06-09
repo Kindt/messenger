@@ -1,0 +1,73 @@
+# Ops Sign-Off Log: Spec 004
+
+**Date**: 2026-06-09  
+**Environment**: local dev / QEMU (stage prod gates marked pending)
+
+## Automated verification (engineering)
+
+| Check | Command | Result | Notes |
+|-------|---------|--------|-------|
+| Full build + tests | `.\gradlew.bat buildIntegrity --no-daemon --max-workers=1` | **PASS** (2026-06-09) | Windows: use `--max-workers=1` |
+| E2EE unit | `.\gradlew.bat :modules:core-api:test --tests "*Mls*"` | **PASS** (2026-06-09) | 17 tests |
+| TLS smoke (dev) | `.\scripts\smoke-tls-redirect.ps1 -SkipTls` | **PASS** | HTTP-only path |
+| Hex write unit | `.\gradlew.bat :modules:core-api:test --tests "*ApplicationServiceTest*"` | PASS | User/Org/File |
+| Playwright full-stack | `npx playwright test` @ `http://127.0.0.1:9088` | pending | Requires QEMU stack up |
+
+## US1 — Stage/prod TLS (ops)
+
+| # | Gate | Owner | Status |
+|---|------|-------|--------|
+| 1 | DNS → stage host | Ops | ⏳ pending real host |
+| 2 | `ansible-vault encrypt group_vars/vault.yml` | Ops | ⏳ pending |
+| 3 | `ansible-playbook -i inventory/stage playbooks/site.yml --ask-vault-pass` | Ops | ⏳ pending |
+| 4 | `smoke-tls-redirect.ps1` with real `-HttpUrl`/`-HttpsUrl` | Ops | ⏳ pending |
+| 5 | `ansible-playbook ... --tags tls_smoke` (prod inventory) | Ops | ⏳ pending |
+
+**Local dev**: `.\scripts\smoke-tls-redirect.ps1 -SkipTls` → exit 0 (HTTP-only path documented).
+
+## US7 — E2EE security review
+
+| # | Check | Automated | Human sign-off |
+|---|-------|-----------|----------------|
+| 1 | ADR hybrid (T130) | doc present | ⏳ Product + Engineering |
+| 2 | `/plaintext-preview` → 403 when MLS active | unit/API tests | ⏳ Security |
+| 3 | Client skips plaintext-preview when MLS active | code review `app.js` | ⏳ Security |
+| 4 | NATS `mls.*` consumer staging | config `MLS_WIRE_SUBSCRIBER_ENABLED` | ⏳ Ops |
+| 5 | `POST /admin/e2ee/migrate-batch` staging | — | ⏳ Ops |
+| 6 | `GET /admin/e2ee/status` sane counts | — | ⏳ Ops |
+| 7 | Legacy `e2ee_scheme=legacy` unchanged | unit tests | ✅ automated |
+| 8 | Playwright `e2ee-capabilities.spec.ts` | pending stack | ⏳ QA |
+
+**Prod enable**: `MLS_STATUS=active` only after rows 1–8 signed below.
+
+## US6 — Hotplug governance
+
+| Role | Name | Date | Status |
+|------|------|------|--------|
+| Architecture Owner | _pending_ | | ⏳ |
+| Product Owner | _pending_ | | ⏳ |
+| Ops/SRE | _pending_ | | ⏳ |
+
+Run when names confirmed:
+
+```powershell
+.\scripts\apply-hotplug-signoff.ps1 `
+  -ArchitectureOwner "<name>" `
+  -ProductOwner "<name>" `
+  -OpsSre "<name>"
+```
+
+## US5 — Playwright operator gate
+
+Update [runtime-gate-report.md](../../002-web-client-server-parity/runtime-gate-report.md) after full-stack run.
+
+---
+
+### Signatures (fill after gates pass)
+
+| Gate | Signed by | Date |
+|------|-----------|------|
+| Stage TLS | | |
+| E2EE security (8/8) | | |
+| Hotplug ADR | | |
+| Playwright full-stack | | |

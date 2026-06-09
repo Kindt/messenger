@@ -24,6 +24,25 @@ public class SessionRepository {
         this.uuidGenerator = uuidGenerator;
     }
 
+    public Optional<MlsSession> findLatestByChatId(UUID chatId) {
+        var sql = """
+            SELECT id, chat_id, epoch, cipher_suite, tree_hash, confirmed_transcript_hash, group_context, created_at, updated_at
+            FROM e2ee_sessions WHERE chat_id = ? ORDER BY epoch DESC LIMIT 1
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, chatId);
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapSession(rs));
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to find latest session for chat {}", chatId, e);
+        }
+        return Optional.empty();
+    }
+
     public Optional<MlsSession> findByChatId(UUID chatId, long epoch) {
         var sql = "SELECT id, chat_id, epoch, cipher_suite, tree_hash, confirmed_transcript_hash, group_context, created_at, updated_at " +
                   "FROM e2ee_sessions WHERE chat_id = ? AND epoch = ?";

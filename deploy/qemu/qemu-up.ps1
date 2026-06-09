@@ -2,16 +2,23 @@ param(
     [switch]$InstallQemuOnly,
     [switch]$SkipQemuInstall,
     [switch]$KeepDisks,
+    [switch]$Graphical,
+    [ValidateSet("", "none", "gtk", "sdl", "default")]
+    [string]$Display = "",
     [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
+if ($Graphical -and -not $Display) { $Display = "gtk" }
+if ($Display) { $env:KORUS_QEMU_DISPLAY = $Display }
+if (-not $env:KORUS_DEBUG_SESSION) { $env:KORUS_DEBUG_SESSION = "6eddca" }
+. (Join-Path $PSScriptRoot "lib\Get-KorusQemuDisplayMode.ps1")
 . (Join-Path $PSScriptRoot "lib\Write-KorusDebugLog.ps1")
 Write-KorusDebugLog -Location "qemu-up.ps1:start" -Message "qemu-up begin" -HypothesisId "ALL" -Data @{
     KeepDisks = [bool]$KeepDisks; SkipQemuInstall = [bool]$SkipQemuInstall
 }
 if ($Help) {
-    Write-Host "Usage: .\deploy\qemu\qemu-up.ps1 [-InstallQemuOnly] [-SkipQemuInstall] [-KeepDisks]"
+    Write-Host "Usage: .\deploy\qemu\qemu-up.ps1 [-InstallQemuOnly] [-SkipQemuInstall] [-KeepDisks] [-Graphical] [-Display none|gtk|sdl|default]"
     exit 0
 }
 
@@ -39,7 +46,7 @@ if (-not $KeepDisks) {
 . (Join-Path $lib "Start-KorusRepoHttp.ps1")
 $lanIp = Write-KorusQemuLanHostInfo -RunDir $runDir
 $repoHttp = Start-KorusRepoHttp
-Write-KorusDebugLog -Location "qemu-up.ps1:repo-http" -Message "repo HTTP started" -HypothesisId "A" -Data @{ lanIp = $lanIp; repoHttp = ($repoHttp | Out-String).Trim() }
+Write-KorusDebugLog -Location "qemu-up.ps1:repo-http" -Message "repo HTTP started" -HypothesisId "H3" -Data @{ lanIp = $lanIp; repoHttp = ($repoHttp | Out-String).Trim() }
 
 . (Join-Path $lib "Start-KorusVm.ps1")
 Write-KorusDebugLog -Location "qemu-up.ps1:vm" -Message "starting server VM" -HypothesisId "B"
@@ -51,14 +58,14 @@ for ($i = 1; $i -le 60; $i++) {
     if ($tcp.TcpTestSucceeded) {
         $sshReady = $true
         Write-Host "  SSH on :12221 ready (${i}0s)" -ForegroundColor DarkGray
-        Write-KorusDebugLog -Location "qemu-up.ps1:ssh" -Message "server SSH ready" -HypothesisId "C" -Data @{ waitSec = ($i * 10) }
+        Write-KorusDebugLog -Location "qemu-up.ps1:ssh" -Message "server SSH ready" -HypothesisId "H2" -Data @{ waitSec = ($i * 10) }
         break
     }
     Start-Sleep -Seconds 10
 }
 if (-not $sshReady) {
     Write-Warning "Server SSH not ready after 10 min; starting web VM anyway"
-    Write-KorusDebugLog -Location "qemu-up.ps1:ssh" -Message "server SSH timeout" -HypothesisId "C" -Data @{ waitSec = 600 }
+    Write-KorusDebugLog -Location "qemu-up.ps1:ssh" -Message "server SSH timeout" -HypothesisId "H2" -Data @{ waitSec = 600 }
 }
 Write-KorusDebugLog -Location "qemu-up.ps1:vm" -Message "starting web VM" -HypothesisId "D"
 Start-KorusQemuVm -Role web | Out-Null
@@ -77,4 +84,9 @@ Write-Host "    UI   http://${lanIp}:19088/"
 Write-Host "  SSH:  ssh korus@127.0.0.1 -p 12221 / -p 12222  (pass: korus)"
 Write-Host "  Ports bind 0.0.0.0 on host; allow 18080,18082,19088 in Windows Firewall for LAN clients."
 Write-Host "  Logs: deploy\qemu\run\*-serial.log  (guest: /var/log/korus-bootstrap.log)"
+$disp = Get-KorusQemuDisplayMode
+if ($disp -ne "none") {
+    Write-Host "  Display: $disp (GTK/SDL windows for korus-server / korus-web)"
+}
+Write-Host "  Monitor: .\scripts\qemu-watch.ps1 -NewWindow"
 Write-Host "  Stop: .\scripts\qemu-down.ps1"

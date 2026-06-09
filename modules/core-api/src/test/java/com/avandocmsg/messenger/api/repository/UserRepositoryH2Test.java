@@ -62,29 +62,4 @@ class UserRepositoryH2Test {
         assertEquals(id.toString(), byName.id());
     }
 
-    @Test
-    void updateProfile_updatesFields() {
-        var id = UUID.randomUUID();
-        assertTrue(repo.create(id, "bob", "Bob"));
-        assertTrue(repo.updateProfile(id, "Robert", "+100"));
-        var p = repo.findById(id).orElseThrow();
-        assertEquals("Robert", p.displayName());
-        assertEquals("+100", p.phone());
-    }
-
-    @Test
-    void updatePresence_and_touchHeartbeat() {
-        var id = UUID.randomUUID();
-        assertTrue(repo.create(id, "carol", "Carol"));
-        assertTrue(repo.updatePresence(id, "online"));
-        var afterPresence = repo.findById(id).orElseThrow();
-        assertEquals("online", afterPresence.presenceStatus());
-        assertNotNull(afterPresence.lastSeenAt());
-        var seenAfterPresence = afterPresence.lastSeenAt();
-        assertTrue(repo.touchHeartbeat(id));
-        var afterHb = repo.findById(id).orElseThrow();
-        assertNotNull(afterHb.lastSeenAt());
-        assertFalse(afterHb.lastSeenAt().isBefore(seenAfterPresence));
-    }
-
 }

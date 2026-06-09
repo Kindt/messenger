@@ -144,6 +144,11 @@ public class MessageResource {
     public Response plaintextPreview(@PathParam("chatId") String chatIdStr,
                                      @PathParam("msgId") String msgIdStr,
                                      @Context SecurityContext securityContext) {
+        if ("active".equalsIgnoreCase(appConfig.mlsStatus())) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(new ApiError(403, messages.get("error.message.plaintext_preview_disabled")))
+                .build();
+        }
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var msgId = UuidParams.required(msgIdStr, "message_id");
         var userId = CurrentUserId.uuid(securityContext);

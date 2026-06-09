@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
 import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.AfterEach;
@@ -36,6 +37,7 @@ class JdbcUserRepositoryAdapterH2Test {
                   phone VARCHAR(20),
                   hidden BOOLEAN NOT NULL DEFAULT false,
                   created_at TIMESTAMP NOT NULL,
+                  updated_at TIMESTAMP,
                   presence_status VARCHAR(16) NOT NULL DEFAULT 'offline',
                   last_seen_at TIMESTAMP,
                   org_id UUID,
@@ -78,5 +80,31 @@ class JdbcUserRepositoryAdapterH2Test {
         assertEquals("Hex User", profile.displayName());
         assertEquals("+42", profile.phone());
         assertTrue(profile.privacyDisableReadReceipts());
+    }
+
+    @Test
+    void updateProfile_changesDisplayNameAndPhone() {
+        assertTrue(adapter.updateProfile(UserId.of(userId), "Renamed", "+99"));
+        var profile = adapter.findById(UserId.of(userId)).orElseThrow();
+        assertEquals("Renamed", profile.displayName());
+        assertEquals("+99", profile.phone());
+    }
+
+    @Test
+    void updatePresence_changesStatus() {
+        assertTrue(adapter.updatePresence(UserId.of(userId), "away"));
+        assertEquals("away", adapter.findById(UserId.of(userId)).orElseThrow().presenceStatus());
+    }
+
+    @Test
+    void updatePrivacy_togglesReadReceipts() {
+        assertTrue(adapter.updatePrivacy(UserId.of(userId), false));
+        assertFalse(adapter.findById(UserId.of(userId)).orElseThrow().privacyDisableReadReceipts());
+    }
+
+    @Test
+    void touchHeartbeat_updatesLastSeen() {
+        assertTrue(adapter.touchHeartbeat(UserId.of(userId)));
+        assertNotNull(adapter.findById(UserId.of(userId)).orElseThrow().lastSeenAt());
     }
 }

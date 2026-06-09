@@ -25,8 +25,10 @@ $script:KorusQemuLanOctets = "192.168.76"
 $script:KorusQemuServerIp = "192.168.76.10"
 $script:KorusQemuWebIp = "192.168.76.20"
 
-$script:KorusQemuCloudImageUrl = "https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img"
-$script:KorusQemuCloudImage = Join-Path $script:KorusQemuImagesDir "ubuntu-24.04-minimal-cloudimg-amd64.img"
+$script:KorusQemuCloudImageUrl = "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
+$script:KorusQemuCloudImage = Join-Path $script:KorusQemuImagesDir "ubuntu-24.04-server-cloudimg-amd64.img"
 
 $script:KorusQemuWingetId = "SoftwareFreedomConservancy.QEMU"
 $script:KorusQemuInstallerUrl = "https://qemu.weilnetz.de/w64/2026/qemu-w64-setup-20260422.exe"
+
+# Display: none (default) | gtk | sdl | default — set KORUS_QEMU_DISPLAY or qemu-up -Graphical

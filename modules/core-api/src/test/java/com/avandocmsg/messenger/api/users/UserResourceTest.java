@@ -16,7 +16,7 @@ class UserResourceTest {
 
     @Test
     void getById_invalidPathId_throwsInvalidUuidParameterException() {
-        var resource = new UserResource(null, null, null, I18nTestFixtures.messagesEn());
+        var resource = new UserResource(null, I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.getById("not-a-uuid", userSecurityContext()));
     }

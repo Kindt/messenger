@@ -121,6 +121,8 @@
 - [x] Тесты локализации health проходят.
 - [x] `./gradlew.bat buildIntegrity` — green (2026-05-24).
 
+**Cross-ref**: spec 004 Phase 2 closure — worker i18n gates remain in `buildIntegrity`; no further worker localization tasks open.
+
 ---
 
 ## Риски

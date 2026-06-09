@@ -4,7 +4,7 @@ function Get-KorusCloudImage {
     if (Test-Path $KorusQemuCloudImage) {
         return $KorusQemuCloudImage
     }
-    Write-Host "Downloading Ubuntu 24.04 minimal cloud image (one-time, ~250 MiB)..." -ForegroundColor Cyan
+    Write-Host "Downloading Ubuntu 24.04 server cloud image (one-time, ~400 MiB)..." -ForegroundColor Cyan
     Write-Host "  URL: $KorusQemuCloudImageUrl" -ForegroundColor DarkGray
     $partial = "$KorusQemuCloudImage.partial"
     if (Test-Path $partial) { Remove-Item $partial -Force }

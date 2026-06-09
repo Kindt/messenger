@@ -11,3 +11,5 @@ korus_tls_use_letsencrypt: true
 korus_tls_cert_path: "/etc/letsencrypt/live/{{ korus_tls_domain }}/fullchain.pem"
 korus_tls_key_path: "/etc/letsencrypt/live/{{ korus_tls_domain }}/privkey.pem"
 korus_tls_proxy_api: true
+
+korus_cors_allowed_origins: "https://messenger.stage.example.com"

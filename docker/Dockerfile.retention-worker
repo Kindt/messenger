@@ -1,8 +1,8 @@
 # Пакетный воркер ретенции Hot DB (см. docs/RETENTION_AND_DEEP_ARCHIVE.md).
-FROM gradle:jdk25 AS builder
+FROM gradle:jdk25-noble AS builder
 WORKDIR /app
 COPY . .
-RUN gradle :modules:workers:retention:installDist --no-daemon -x test
+RUN gradle --console=plain :modules:workers:retention:installDist --no-daemon -x test
 
 FROM eclipse-temurin:25-jre
 RUN apt-get update \

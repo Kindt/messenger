@@ -24,4 +24,32 @@ test.describe("profile and settings", () => {
     });
     expect(res.ok()).toBeTruthy();
   });
+
+  test("device register API upserts push token", async ({ request }) => {
+    await ensureSmokeUsers(request);
+    const token = await apiLogin(request, "smoke_user_a", "smokepass123");
+    const deviceName = `playwright-${Date.now()}`;
+    const register = await request.post(`${apiBase()}/api/v1/me/devices`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        device_name: deviceName,
+        push_provider: "web",
+        push_token: `e2e-token-${Date.now()}`,
+      },
+    });
+    expect(register.ok()).toBeTruthy();
+    const body = await register.json();
+    expect(body.device_name || body.deviceName).toBe(deviceName);
+
+    const list = await request.get(`${apiBase()}/api/v1/me/devices`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(list.ok()).toBeTruthy();
+    const devices = await list.json();
+    const items = devices.devices || devices.items || devices;
+    expect(Array.isArray(items)).toBeTruthy();
+    expect(items.some((d: { device_name?: string; deviceName?: string }) =>
+      (d.device_name || d.deviceName) === deviceName
+    )).toBeTruthy();
+  });
 });

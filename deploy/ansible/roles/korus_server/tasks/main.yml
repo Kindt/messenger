@@ -10,12 +10,27 @@
     or korus_keycloak_admin_password is defined
     or korus_jwt_secret is defined
     or korus_coturn_secret is defined
+    or korus_cors_allowed_origins is defined
+    or korus_keycloak_issuer is defined
+    or korus_keycloak_jwks_url is defined
+
+- name: Log QEMU build phase (skips above are expected on localhost)
+  ansible.builtin.shell: |
+    printf '\n>>> Starting full-stack-up.sh%s (Gradle+Docker build, 15-30 min on first boot)\n' \
+      "{{ ' --build' if korus_build_images | bool else '' }}" >> /var/log/korus-bootstrap.log
+  args:
+    executable: /bin/bash
+  changed_when: false
 
 - name: Full stack up via project script
   ansible.builtin.shell: |
     set -euo pipefail
     cd "{{ korus_repo_root }}"
+    # shellcheck source=/dev/null
+    . "{{ korus_repo_root }}/deploy/qemu/vm-bootstrap/korus-plain-build-env.sh"
     export SKIP_KORUS_ENSURE=1
+    export DOCKER_BUILDKIT={{ korus_docker_buildkit | default('1') }}
+    export COMPOSE_BAKE={{ korus_compose_bake | default('1') }}
     if [[ -f "{{ korus_server_env_path }}" ]]; then
       set -a
       # shellcheck source=/dev/null
@@ -24,7 +39,8 @@
     fi
     args=( )
     if {{ korus_build_images | bool | lower }}; then args+=( --build ); fi
-    bash scripts/full-stack-up.sh --skip-ensure --no-wait-ready "${args[@]}"
+    stdbuf -oL -eL bash scripts/full-stack-up.sh --skip-ensure --no-wait-ready "${args[@]}" 2>&1 \
+      | stdbuf -oL tee -a /var/log/korus-bootstrap.log
   args:
     executable: /bin/bash
   register: korus_server_up

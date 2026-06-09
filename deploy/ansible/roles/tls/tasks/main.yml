@@ -54,3 +54,22 @@
         name: nginx
         state: started
         enabled: true
+
+    - name: Note UFW for TLS (HTTP/HTTPS on web host)
+      ansible.builtin.debug:
+        msg: >-
+          TLS enabled: role common opens korus_web_port only. On the web host
+          also allow 80/tcp and 443/tcp before certbot/Let's Encrypt, e.g.
+          ufw allow 80/tcp comment 'korus tls http' &&
+          ufw allow 443/tcp comment 'korus tls https'.
+          See deploy/ansible/README.md TLS checklist.
+
+    - name: Deploy certbot renew hook (reload nginx after renewal)
+      ansible.builtin.copy:
+        dest: /etc/letsencrypt/renewal-hooks/deploy/korus-reload-nginx.sh
+        mode: "0755"
+        content: |
+          #!/bin/sh
+          # Ansible role tls — reload nginx after certbot renew (spec 004 US1)
+          systemctl reload nginx 2>/dev/null || nginx -s reload
+      when: korus_tls_use_letsencrypt | default(false) | bool

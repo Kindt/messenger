@@ -1,6 +1,6 @@
 # Ports & Adapters рефакторинг (Phase 2a–2e)
 
-**Статус:** `completed` (Phase 2a 2026-05-24; Phase 2b message read 2026-06-09; Phases 2c–2e user/file/org read 2026-06-09)
+**Статус:** `completed` (Phase 2a 2026-05-24; Phase 2b message read 2026-06-09; Phases 2c–2e read 2026-06-09; write-path + US3 tail 2026-06-09)
 **Теги:** `[рефакторинг]` `[core-api]` `[архитектура]` `[тесты]` `[CI]`
 
 ---
@@ -20,10 +20,14 @@ Phase **2a (Chat)**: domain, port, JDBC adapter, application service, compositio
 | 2c | User | `UserProfile` | `UserRepositoryPort` | `JdbcUserRepositoryAdapter` | `UserApplicationService` | `UserResource.me`, `getById` |
 | 2d | File | `StoredFile`, `FileId` | `FileMetadataPort` | `JdbcFileMetadataAdapter` | `FileApplicationService` | `FileResource.getInfo` |
 | 2e | Organization | `Organization`, `OrganizationId` | `OrganizationRepositoryPort` | `JdbcOrganizationRepositoryAdapter` | `OrganizationApplicationService` | `AdminResource` GET org retention |
+| 2f | Saved chat | `ChatId` | `SavedChatPort` | `JdbcSavedChatAdapter` | `UserApplicationService.getSavedChatId` | `UserResource` GET `/me/saved-chat` |
+| 2g | Public links | `CreatedPublicLink`, `ResolvedPublicLink` | `PublicLinkPort` | `FilePublicLinkPortAdapter` | — | `FileResource` public-link paths |
+
+**Write path (US2):** User PATCH/presence/privacy/heartbeat, Organization CRUD, File upload/download/delete — application services + ports; legacy `UserRepository` write methods removed.
 
 **Bootstrap:** `CoreModule`, `MessengerApplication`, `JerseyConfig` (HK2 bind).
 
-**Tests:** application service tests, JDBC adapter H2 tests per aggregate; `CoreApiBenchmarkTest` — chat + user read benchmarks.
+**Tests:** application service tests, JDBC adapter H2 tests per aggregate; `CoreApiBenchmarkTest` — chat, user, file metadata, organization read benchmarks.
 
 **Gradle / CI:** `:modules:core-api:benchmark`; CI benchmark job (non-blocking).
 
@@ -73,8 +77,17 @@ Phase **2a (Chat)**: domain, port, JDBC adapter, application service, compositio
 
 - [x] `CoreApiBenchmarkTest` — 1000× `getChatForMember` < 500ms
 - [x] `CoreApiBenchmarkTest` — 1000× `getProfileForViewer` < 500ms
+- [x] `CoreApiBenchmarkTest` — 1000× `getMetadataForUser` < 500ms
+- [x] `CoreApiBenchmarkTest` — 1000× `findById` (org) < 500ms
 - [x] `./gradlew :modules:core-api:benchmark`
-- [x] CI benchmark job (continue-on-error; artifact diff deferred)
+- [x] CI benchmark job (continue-on-error; see artifact note below)
+
+### CI benchmark artifacts
+
+The non-blocking benchmark step in `.github/workflows/ci.yml` (`./gradlew :modules:core-api:benchmark`) does **not** upload Gradle outputs by default. To retain timing evidence for regressions:
+
+- Locally: `./gradlew :modules:core-api:benchmark` writes reports under `modules/core-api/build/reports/benchmark/` (keep with release notes when investigating drift).
+- CI: add an optional `actions/upload-artifact` step (name e.g. `core-api-benchmark`, `retention-days: 14`) if team wants historical p50/avg diffs — deferred until write-path benchmarks land (US3 T072).
 
 ---
 
@@ -84,10 +97,13 @@ Phase **2a (Chat)**: domain, port, JDBC adapter, application service, compositio
 - [x] Listed REST resources use hexagonal ACL for GET read paths.
 - [x] Existing tests green (`buildIntegrity`).
 - [x] Benchmark task registered.
-- Отложено: полное освобождение `api.*` от business logic (legacy repositories/services for write/list paths).
+- [x] Write-path migration completed (US2); US3 tail: saved-chat + public links on ports.
+- Отложено: auth registration / Keycloak upsert в legacy `UserRepository`; `ChatRepository.ensureSavedVaultChat` до выделения write-port.
 
 ---
 
 ## Риски
 
-Поэтапная миграция снижает риск; не удалять `api.repository.*` до завершения write-path migration.
+**Cross-ref**: spec 004 US2/US3 — write-path migration (User/Org/File ports) tracked in `specs/004-deferred-phase2-closure/tasks.md` T040–T074; read paths above remain baseline.
+
+---

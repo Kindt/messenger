@@ -1,8 +1,8 @@
 # Воркер fan-out msg.send → msg.deliver.* (см. docs/NATS_SUBJECTS_INTEROP.md).
-FROM gradle:jdk25 AS builder
+FROM gradle:jdk25-noble AS builder
 WORKDIR /app
 COPY . .
-RUN gradle :modules:workers:message-pipeline:installDist --no-daemon -x test
+RUN gradle --console=plain :modules:workers:message-pipeline:installDist --no-daemon -x test
 
 FROM eclipse-temurin:25-jre
 WORKDIR /app

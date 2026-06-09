@@ -1,6 +1,7 @@
 # E2EE / MLS architecture (engineering baseline)
 
-**Status:** Phase 1 — Bouncy Castle incremental RFC 9420 wire codec (OpenMLS Java deferred — no mature binding).
+**Status:** Phase 1 — Bouncy Castle incremental RFC 9420 wire codec (OpenMLS Java deferred — no mature binding).  
+**ADR:** `docs/adr/ADR-e2ee-mls-library.md` (`accepted` 2026-06-09).
 
 ## Current stack
 

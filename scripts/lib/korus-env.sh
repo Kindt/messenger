@@ -58,7 +58,11 @@ korus_compose_up_retry() {
 korus_compose_up_multi_retry() {
   local i
   for i in 1 2; do
-    if docker compose "$@"; then
+    if [ "${KORUS_QEMU_CONSOLE:-0}" = "1" ]; then
+      if stdbuf -oL -eL docker compose "$@"; then
+        return 0
+      fi
+    elif docker compose "$@"; then
       return 0
     fi
     sleep 10

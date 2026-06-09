@@ -16,7 +16,7 @@
 - **Vault/TLS Phase B**: Ansible role **`tls`**, stage inventory, **`scripts/smoke-tls-redirect.ps1`**, vault secrets wiring.
 - **Hexagonal 2c–2e**: User, File metadata, Organization application services + JDBC adapters.
 - **Playwright parity**: 7 new specs + `fixtures/ui.ts` (`data-testid` selectors); README matrix updated.
-- **E2EE RFC 9420 phase 1**: KMLS wire codec, NATS `mls.*`, `MlsMigrationService`, `e2ee_scheme=mls`, capabilities `mls_status=active`.
+- **E2EE RFC 9420 phase 1**: KMLS wire codec, NATS `mls.*`, `MlsMigrationService`, `e2ee_scheme=mls`, capabilities `mls_status=active`; ADR **`docs/adr/ADR-e2ee-mls-library.md`** (BC wire phase 1, OpenMLS deferred).
 
 ### 2026-06-09 — Backlog closure: WIP conferences/i18n, parity sweep, roadmap, hexagonal 2b
 

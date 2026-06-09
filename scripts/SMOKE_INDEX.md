@@ -38,15 +38,15 @@
 | Retention hot-row purge status | `scripts/smoke-retention-purge.ps1` | manual | requires admin token + stack |
 | Retention file cleanup metrics | `scripts/smoke-retention-file-cleanup.ps1` | manual | metrics on retention worker port |
 | Web parity API (spec 002 T010/T016 backend) | `scripts/smoke-web-parity-api.sh` | manual | `.ps1`; pin API may 500; UI/WS gates still manual |
-| **TLS redirect (spec 003 Phase B)** | `scripts/smoke-tls-redirect.ps1` | manual | stage/prod with `korus_tls_enabled`; `-SkipTls` for dev |
-| **Playwright parity matrix** | `tests/e2e-web/` (9 specs) | `deploy-messaging-smoke.yml` | optional nightly job |
+| **TLS redirect (spec 003 Phase B / 004 US1)** | `scripts/smoke-tls-redirect.ps1` | manual; Ansible `--tags tls_smoke` via `korus_smoke` role | stage/prod with `korus_tls_enabled`; `-SkipTls` for dev |
+| **Playwright parity matrix** | `tests/e2e-web/` (9 specs) | `deploy-messaging-smoke.yml` (optional nightly job, `continue-on-error`) | spec 004 US5 T110–T115; operator template `specs/002-web-client-server-parity/runtime-gate-report.md` |
 
 ## Operator utilities
 
 - `scripts/ensure-qemu-images.ps1` — download Ubuntu cloud image if missing (OS images are not in git)
 - `scripts/stop-local-indexer.ps1` — stop orphan `:services:indexer:run` after smoke/manual runs (Windows).
 - `scripts/publish-spec-001-branch.ps1` — push branch `001-system-review-refactoring` when GitHub is reachable.
-- `scripts/apply-hotplug-signoff.ps1` — record ADR/constitution approvals (T048/T056).
+- `scripts/apply-hotplug-signoff.ps1` — record ADR/constitution approvals with **real approver names** (T048/T056, spec 004 T180); see `docs/adr/ADR-hotplug-deployment-split.md` Approval Log section.
 - `scripts/profiling/profile-docker-jfr.ps1` — JFR inside JDK profiling containers (`docker-compose.profiling.yml`).
 
 ## Export / retention extended scenarios

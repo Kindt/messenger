@@ -1,0 +1,9 @@
+FROM gradle:jdk25-noble AS builder
+WORKDIR /app
+COPY . .
+RUN gradle --console=plain :modules:workers:deep-archiver:installDist --no-daemon -x test
+
+FROM eclipse-temurin:25-jdk
+WORKDIR /app
+COPY --from=builder /app/modules/workers/deep-archiver/build/install/deep-archiver /app/deep-archiver
+ENTRYPOINT ["/app/deep-archiver/bin/deep-archiver"]

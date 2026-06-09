@@ -8,8 +8,10 @@ import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
-import com.avandocmsg.messenger.api.repository.FileRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcFileMetadataAdapter;
+import com.avandocmsg.messenger.core.adapter.storage.FileProxyObjectStorageAdapter;
+import com.avandocmsg.messenger.core.application.FileApplicationService;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.zaxxer.hikari.HikariConfig;
@@ -128,14 +130,19 @@ class AdminExportComplianceSeedH2Test {
         var uuidGen = UuidGenerator.standard();
         var chatRepository = new ChatRepository(ds, clock, uuidGen);
         var messageRepository = new MessageRepository(ds, clock);
-        var fileRepository = new FileRepository(ds);
         var appConfig = new AppConfig() {
             @Override
             public long mediaMaxUploadBytes() {
                 return 10_000_000L;
             }
         };
-        var fileService = new FileService(appConfig, fileProxy, fileRepository, messageRepository, uuidGen);
+        var fileApplicationService = new FileApplicationService(
+            new JdbcFileMetadataAdapter(ds),
+            messageRepository,
+            new FileProxyObjectStorageAdapter(fileProxy),
+            uuidGen,
+            appConfig.mediaMaxUploadBytes());
+        var fileService = new FileService(fileApplicationService, messageRepository);
         var messageService = new MessageService(
             messageRepository,
             chatRepository,

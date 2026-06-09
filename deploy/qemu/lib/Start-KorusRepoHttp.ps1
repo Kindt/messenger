@@ -1,8 +1,5 @@
-function Start-KorusRepoHttp {
+function Stop-KorusRepoHttp {
     . (Join-Path $PSScriptRoot "..\config.ps1")
-    . (Join-Path $PSScriptRoot "New-KorusRepoSnapshot.ps1")
-    New-KorusRepoSnapshot | Out-Null
-
     $pidFile = Join-Path $KorusQemuRunDir "repo-http.pid"
     if (Test-Path $pidFile) {
         $old = (Get-Content $pidFile -Raw).Trim()
@@ -11,6 +8,15 @@ function Start-KorusRepoHttp {
         }
         Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
     }
+    Start-Sleep -Milliseconds 300
+}
+
+function Start-KorusRepoHttp {
+    . (Join-Path $PSScriptRoot "..\config.ps1")
+    . (Join-Path $PSScriptRoot "New-KorusRepoSnapshot.ps1")
+
+    Stop-KorusRepoHttp
+    New-KorusRepoSnapshot | Out-Null
 
     if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
         throw "python not found (required for repo HTTP on host)"
@@ -21,6 +27,7 @@ function Start-KorusRepoHttp {
     $proc = Start-Process -FilePath python -ArgumentList @(
         "-m", "http.server", "$port", "--bind", "0.0.0.0", "--directory", $KorusQemuRunDir
     ) -PassThru -WindowStyle Hidden
+    $pidFile = Join-Path $KorusQemuRunDir "repo-http.pid"
     $proc.Id | Set-Content -Path $pidFile -Encoding ascii
     return $proc.Id
 }

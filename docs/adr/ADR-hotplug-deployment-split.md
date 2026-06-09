@@ -140,6 +140,27 @@ Engineering closure: all implementation gates passed; tasks T048/T056 marked com
 
 Approver names and timestamps should be appended below once confirmed.
 
+### Recording real approver names
+
+Do **not** edit the Approval Log table by hand unless the sign-off script is unavailable.
+
+1. Collect written approval from Architecture Owner, Product Owner, and Ops/SRE (peer reviewer optional).
+2. Run from repo root with **real full names** (not role placeholders):
+
+```powershell
+.\scripts\apply-hotplug-signoff.ps1 `
+  -ArchitectureOwner "Jane Doe" `
+  -ProductOwner "John Smith" `
+  -OpsSre "Alex Rivera" `
+  -PeerReviewer "Sam Chen" `
+  -Date "2026-06-09"
+```
+
+3. Review the diff in `docs/adr/ADR-hotplug-deployment-split.md` — the **Name** column must show the people above, not generic team labels.
+4. Commit ADR + constitution + tasks updates in one docs commit after all reviewers confirm.
+
+Use `-WhatIf` to preview replacements without writing files.
+
 ## Approval Log
 
 | Role | Name | Decision | Date | Notes |

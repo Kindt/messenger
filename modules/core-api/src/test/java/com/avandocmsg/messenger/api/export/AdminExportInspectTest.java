@@ -96,8 +96,8 @@ class AdminExportInspectTest {
         var nats = mock(NatsOutboundPort.class);
         var enqueuer = new ExportJobEnqueuer(jobs, audit, nats, UuidGenerator.standard());
         return new AdminResource(cfg, audit,
-            new OrganizationRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
-            com.avandocmsg.messenger.core.bootstrap.CoreModule.organizationApplicationService(null),
+            com.avandocmsg.messenger.core.bootstrap.CoreModule.organizationApplicationService(
+                null, UuidGenerator.standard()),
             new RetentionPolicyRepository(null),
             new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
             new ChatRetentionPolicyRepository(null),

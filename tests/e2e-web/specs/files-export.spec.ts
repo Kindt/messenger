@@ -33,4 +33,26 @@ test.describe("files and export parity", () => {
     await uiOpenChatByTitle(page, title);
     await expect(page.locator("[data-testid=message-composer]")).toBeVisible();
   });
+
+  test("upload file via DOM composer attach", async ({ page, request }) => {
+    await ensureSmokeUsers(request);
+    const tokenA = await apiLogin(request, "smoke_user_a", "smokepass123");
+    const tokenB = await apiLogin(request, "smoke_user_b", "smokepass123");
+    const idB = await apiMeId(request, tokenB);
+    const title = `e2e-dom-upload-${Date.now()}`;
+    await apiCreateGroup(request, tokenA, title, [idB]);
+
+    await uiLogin(page, "smoke_user_a", "smokepass123");
+    await uiOpenChatByTitle(page, title);
+    const fileName = `dom-upload-${Date.now()}.txt`;
+    const fileBody = "playwright DOM file upload";
+    await page.locator("[data-testid=file-attach-input]").setInputFiles({
+      name: fileName,
+      mimeType: "text/plain",
+      buffer: Buffer.from(fileBody),
+    });
+    await expect(page.getByRole("button", { name: /Скачать файл|Download file/i })).toBeVisible({
+      timeout: 30_000,
+    });
+  });
 });
