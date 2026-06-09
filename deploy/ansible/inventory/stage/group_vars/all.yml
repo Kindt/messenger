@@ -1,0 +1,13 @@
+---
+# Stage: TLS termination on web host; UFW + LAN publish like two-host.
+korus_configure_ufw: true
+korus_use_lan_publish: true
+korus_server_lan_ip: "10.0.1.10"
+korus_web_lan_ip: "10.0.1.20"
+
+korus_tls_enabled: true
+korus_tls_domain: "messenger.stage.example.com"
+korus_tls_use_letsencrypt: true
+korus_tls_cert_path: "/etc/letsencrypt/live/{{ korus_tls_domain }}/fullchain.pem"
+korus_tls_key_path: "/etc/letsencrypt/live/{{ korus_tls_domain }}/privkey.pem"
+korus_tls_proxy_api: true

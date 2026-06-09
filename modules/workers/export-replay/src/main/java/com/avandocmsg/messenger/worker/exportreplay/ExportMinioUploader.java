@@ -3,6 +3,8 @@ package com.avandocmsg.messenger.worker.exportreplay;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import org.slf4j.Logger;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
@@ -15,10 +17,12 @@ final class ExportMinioUploader {
 
     private final MinioClient client;
     private final String bucket;
+    private final UserMessageSource workerMessages;
 
-    ExportMinioUploader(MinioClient client, String bucket) {
+    ExportMinioUploader(MinioClient client, String bucket, UserMessageSource workerMessages) {
         this.client = client;
         this.bucket = bucket;
+        this.workerMessages = workerMessages;
     }
 
     void upload(Path localFile, String objectKey) throws Exception {
@@ -34,10 +38,10 @@ final class ExportMinioUploader {
                 .contentType(contentType)
                 .build());
         }
-        log.info("Uploaded export to MinIO bucket={} key={} bytes={}", bucket, objectKey, size);
+        log.info(workerMessages.format("worker.export_replay.minio_uploaded", bucket, objectKey, size));
     }
 
-    static ExportMinioUploader fromEnv() {
+    static ExportMinioUploader fromEnv(UserMessageSource workerMessages) {
         var endpoint = System.getenv("MINIO_ENDPOINT");
         var accessKey = System.getenv("MINIO_ACCESS_KEY");
         var secretKey = System.getenv("MINIO_SECRET_KEY");
@@ -49,6 +53,6 @@ final class ExportMinioUploader {
             .endpoint(endpoint)
             .credentials(accessKey, secretKey)
             .build();
-        return new ExportMinioUploader(client, bucket);
+        return new ExportMinioUploader(client, bucket, workerMessages);
     }
 }

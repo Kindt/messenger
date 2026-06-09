@@ -22,7 +22,9 @@
   gather_facts: false
   vars:
     korus_repo_root: "{{ playbook_dir }}/../../.."
-    korus_web_base_url: "http://{{ korus_web_lan_ip }}:{{ korus_web_port }}"
+    korus_web_base_url: >-
+      {{ 'https://' ~ korus_tls_domain if (korus_tls_enabled | default(false) | bool)
+         else 'http://' ~ korus_web_lan_ip ~ ':' ~ (korus_web_port | string) }}
   tasks:
     - name: Common prerequisites
       ansible.builtin.import_role:
@@ -34,6 +36,12 @@
         name: korus_web
       tags: [web]
 
+    - name: TLS reverse proxy
+      ansible.builtin.import_role:
+        name: tls
+      tags: [web, tls]
+      when: korus_tls_enabled | default(false) | bool
+
 - name: Smoke from control node
   hosts: localhost
   gather_facts: false
@@ -41,7 +49,10 @@
     korus_repo_root: "{{ playbook_dir }}/../../.."
     korus_api_base_url: "http://{{ hostvars[groups['korus_server'][0]]['ansible_host'] }}:{{ korus_api_port }}"
     korus_ws_url: "ws://{{ hostvars[groups['korus_server'][0]]['ansible_host'] }}:{{ korus_ws_port }}/ws"
-    korus_web_base_url: "http://{{ hostvars[groups['korus_web'][0]]['ansible_host'] }}:{{ korus_web_port }}"
+    korus_web_base_url: >-
+      {{ 'https://' ~ hostvars[groups['korus_web'][0]]['korus_tls_domain']
+         if (hostvars[groups['korus_web'][0]]['korus_tls_enabled'] | default(false) | bool)
+         else 'http://' ~ hostvars[groups['korus_web'][0]]['ansible_host'] ~ ':' ~ (korus_web_port | string) }}
     korus_skip_korus_web_smoke: "0"
   tasks:
     - name: Post-deploy acceptance

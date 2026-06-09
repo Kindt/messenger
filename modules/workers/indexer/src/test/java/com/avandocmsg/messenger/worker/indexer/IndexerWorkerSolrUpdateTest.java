@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.indexer;
 
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import io.nats.client.Connection;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.common.SolrInputDocument;
@@ -21,6 +22,8 @@ class IndexerWorkerSolrUpdateTest {
     void clearContentTxt_usesAtomicSetEmptyString() throws Exception {
         var nats = mock(Connection.class);
         var solr = mock(SolrClient.class);
+        var workerMessages = WorkerMessageSources.forWorker(
+            IndexerWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_indexer");
         var worker = new IndexerWorker(
             nats,
             solr,
@@ -29,7 +32,8 @@ class IndexerWorkerSolrUpdateTest {
             "messages_meta",
             "indexer-test",
             1000L,
-            1000L
+            1000L,
+            workerMessages
         );
 
         Method method = IndexerWorker.class.getDeclaredMethod("clearContentTxt", String.class);

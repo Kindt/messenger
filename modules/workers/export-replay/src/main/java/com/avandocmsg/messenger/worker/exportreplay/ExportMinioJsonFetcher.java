@@ -7,6 +7,8 @@ import io.minio.MinioClient;
 import io.minio.StatObjectArgs;
 import io.minio.errors.ErrorResponseException;
 import org.slf4j.Logger;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
@@ -25,7 +27,8 @@ final class ExportMinioJsonFetcher {
         String bucket,
         String objectKey,
         String messageId,
-        String source
+        String source,
+        UserMessageSource workerMessages
     ) {
         if (objectKey == null || objectKey.isBlank()) {
             return Optional.empty();
@@ -46,11 +49,11 @@ final class ExportMinioJsonFetcher {
             if ("NoSuchKey".equals(e.errorResponse().code())) {
                 return Optional.empty();
             }
-            log.debug("MinIO stat/get failed source={} messageId={} key={}: {}", source, messageId, objectKey, e.getMessage());
+            log.debug(workerMessages.format("worker.export_replay.minio_stat_failed", source, messageId, objectKey, e.getMessage()));
             return Optional.empty();
         } catch (Exception e) {
-            log.warn("MinIO read failed source={} messageId={} bucket={} key={}: {}",
-                source, messageId, bucket, objectKey, e.getMessage());
+            log.warn(workerMessages.format("worker.export_replay.minio_read_failed",
+                source, messageId, bucket, objectKey, e.getMessage()));
             return Optional.empty();
         }
     }

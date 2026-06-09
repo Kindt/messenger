@@ -3,6 +3,8 @@ package com.avandocmsg.messenger.worker.exportreplay;
 
 
 import org.slf4j.Logger;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+
 
 import org.slf4j.LoggerFactory;
 
@@ -23,13 +25,13 @@ final class ExportJobStore {
 
 
     private final DataSource dataSource;
+    private final UserMessageSource workerMessages;
 
 
 
-    ExportJobStore(DataSource dataSource) {
-
+    ExportJobStore(DataSource dataSource, UserMessageSource workerMessages) {
         this.dataSource = dataSource;
-
+        this.workerMessages = workerMessages;
     }
 
 
@@ -51,7 +53,7 @@ final class ExportJobStore {
             stmt.setObject(1, jobId);
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            log.warn("export_jobs markProcessingIfQueued failed jobId={}: {}", jobId, e.getMessage());
+            log.warn(workerMessages.format("worker.export_replay.job_store.mark_failed", jobId, e.getMessage()));
             return false;
         }
     }
@@ -77,7 +79,7 @@ final class ExportJobStore {
                 }
             }
         } catch (Exception e) {
-            log.warn("export_jobs loadStatus failed jobId={}: {}", jobId, e.getMessage());
+            log.warn(workerMessages.format("worker.export_replay.job_store.load_failed", jobId, e.getMessage()));
         }
         return java.util.Optional.empty();
     }
@@ -130,13 +132,13 @@ final class ExportJobStore {
 
             if (n == 0) {
 
-                log.warn("export_jobs row not found for jobId={}", jobId);
+                log.warn(workerMessages.format("worker.export_replay.job_store.not_found", jobId));
 
             }
 
         } catch (Exception e) {
 
-            log.warn("export_jobs update failed jobId={} status={}: {}", jobId, status, e.getMessage());
+            log.warn(workerMessages.format("worker.export_replay.job_store.update_failed", jobId, status, e.getMessage()));
 
         }
 

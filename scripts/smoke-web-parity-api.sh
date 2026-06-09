@@ -46,5 +46,16 @@ smoke_curl_json POST "${BASE_URL%/}/api/v1/chats/${CHAT}/messages/${MSG}/pin" "$
 pins=$(smoke_curl_json GET "${BASE_URL%/}/api/v1/chats/${CHAT}/messages/pins" "$TOKEN") || smoke_fail "pins"
 [[ -n "$pins" && "$pins" != "[]" ]] || smoke_fail "pins empty"
 
+smoke_step "standalone conference (Telemost)"
+body='{"title":"parity-meet"}'
+CONF=$(smoke_curl_json POST "${BASE_URL%/}/api/v1/conferences" "$TOKEN" "$body") || smoke_fail "create conference"
+echo "$CONF" | grep -q '"join_url"' || smoke_fail "join_url missing"
+CONF_ID=$(echo "$CONF" | python3 -c 'import json,sys; print(json.load(sys.stdin)["conference_id"])')
+ROOM=$(echo "$CONF" | python3 -c 'import json,sys; print(json.load(sys.stdin)["room_slug"])')
+smoke_curl_json POST "${BASE_URL%/}/api/v1/conferences/${CONF_ID}/join" "$TOKEN" >/dev/null || smoke_fail "join"
+smoke_curl_json GET "${BASE_URL%/}/api/v1/conferences/by-room/${ROOM}" "$TOKEN" >/dev/null || smoke_fail "by-room"
+smoke_curl_json POST "${BASE_URL%/}/api/v1/conferences/${CONF_ID}/leave" "$TOKEN" >/dev/null || smoke_fail "leave"
+smoke_curl_json POST "${BASE_URL%/}/api/v1/conferences/${CONF_ID}/end" "$TOKEN" >/dev/null || smoke_fail "end"
+
 echo ""
 echo "[OK] smoke-web-parity-api (spec 002 T010 subset)"

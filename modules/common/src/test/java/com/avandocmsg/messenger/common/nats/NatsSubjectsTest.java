@@ -23,6 +23,9 @@ class NatsSubjectsTest {
         assertEquals("msg.export.suggested", NatsSubjects.MSG_EXPORT_SUGGESTED);
         assertEquals("msg.export.replay.cancel", NatsSubjects.MSG_EXPORT_REPLAY_CANCEL);
         assertEquals("msg.read_receipt", NatsSubjects.MSG_READ_RECEIPT);
+        assertEquals("mls.welcome", NatsSubjects.MLS_WELCOME);
+        assertEquals("mls.commit", NatsSubjects.MLS_COMMIT);
+        assertEquals("mls.epoch", NatsSubjects.MLS_EPOCH);
         assertEquals("$SVC.heartbeat.", NatsSubjects.SVC_HEARTBEAT_PREFIX);
         assertEquals("$SVC.heartbeat.*", NatsSubjects.SVC_HEARTBEAT_WILDCARD);
         assertEquals("$SVC.lifecycle.", NatsSubjects.SVC_LIFECYCLE_PREFIX);

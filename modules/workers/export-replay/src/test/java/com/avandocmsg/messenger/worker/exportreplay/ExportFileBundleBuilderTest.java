@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.worker.exportreplay;
 
 import com.avandocmsg.messenger.common.export.ExportOutputRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -37,7 +38,7 @@ class ExportFileBundleBuilderTest {
                 return Optional.of(new OpenResult(new ByteArrayInputStream(bytes), bytes.length, "application/pdf"));
             }
         };
-        var stats = ExportFileBundleBuilder.build(root, zip, fetcher, 10, 1_000_000);
+        var stats = ExportFileBundleBuilder.build(root, zip, fetcher, 10, 1_000_000, WorkerMessageSources.forWorker(ExportReplayWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_export_replay"));
         assertEquals(1, stats.includedCount());
         assertTrue(Files.exists(zip));
         try (var zis = new ZipInputStream(Files.newInputStream(zip))) {

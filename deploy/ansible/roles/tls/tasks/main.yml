@@ -1,0 +1,56 @@
+---
+- name: TLS role skipped (korus_tls_enabled=false)
+  ansible.builtin.debug:
+    msg: "TLS reverse proxy disabled; HTTP-only dev/QEMU path unchanged."
+  when: not (korus_tls_enabled | default(false) | bool)
+
+- name: Deploy nginx TLS reverse proxy
+  when: korus_tls_enabled | default(false) | bool
+  block:
+    - name: Note Let's Encrypt certbot (obtain certs before first deploy)
+      ansible.builtin.debug:
+        msg: >-
+          korus_tls_use_letsencrypt=true: obtain certs on the host first, e.g.
+          certbot certonly --nginx -d {{ korus_tls_domain }}.
+          Cert paths default to /etc/letsencrypt/live/{{ korus_tls_domain }}/.
+          For BYO certs set korus_tls_use_letsencrypt=false and
+          korus_tls_cert_path / korus_tls_key_path to your PEM files.
+      when: korus_tls_use_letsencrypt | default(false) | bool
+
+    - name: Note BYO certificate paths
+      ansible.builtin.debug:
+        msg: >-
+          korus_tls_use_letsencrypt=false: ensure {{ korus_tls_cert_path }} and
+          {{ korus_tls_key_path }} exist before nginx reload.
+      when: not (korus_tls_use_letsencrypt | default(false) | bool)
+
+    - name: Install nginx
+      ansible.builtin.package:
+        name: nginx
+        state: present
+
+    - name: Ensure nginx sites-enabled directory exists
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled
+        state: directory
+        mode: "0755"
+
+    - name: Deploy Korus TLS nginx site
+      ansible.builtin.template:
+        src: korus-tls.conf.j2
+        dest: "{{ korus_tls_nginx_site_path }}"
+        mode: "0644"
+      notify: Reload nginx
+
+    - name: Enable Korus TLS nginx site
+      ansible.builtin.file:
+        src: "{{ korus_tls_nginx_site_path }}"
+        dest: "/etc/nginx/sites-enabled/{{ korus_tls_nginx_site_name }}.conf"
+        state: link
+      notify: Reload nginx
+
+    - name: Ensure nginx is enabled and running
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true

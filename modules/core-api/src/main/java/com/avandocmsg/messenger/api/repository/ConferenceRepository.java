@@ -101,6 +101,28 @@ public class ConferenceRepository {
         return 0;
     }
 
+    public Optional<ConferenceResponse> findActiveByRoomSlug(String roomSlug) {
+        if (roomSlug == null || roomSlug.isBlank()) {
+            return Optional.empty();
+        }
+        var sql = """
+            SELECT id, chat_id, title, status, room_slug, created_at, ended_at
+            FROM conferences WHERE room_slug = ? AND status = 'active'
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, roomSlug.trim());
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(enrich(mapRow(rs)));
+                }
+            }
+        } catch (Exception e) {
+            log.error("findActiveByRoomSlug {}", roomSlug, e);
+        }
+        return Optional.empty();
+    }
+
     public Optional<ConferenceResponse> findById(UUID conferenceId) {
         var sql = """
             SELECT id, chat_id, title, status, room_slug, created_at, ended_at

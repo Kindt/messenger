@@ -3,6 +3,7 @@ package com.avandocmsg.messenger.worker.exportreplay;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.minio.MinioClient;
 
 import javax.sql.DataSource;
@@ -24,20 +25,23 @@ final class ExportRetentionSnapshotReader {
     private final String bucket;
     private final String objectPrefix;
     private final boolean tryDefaultKeyWhenNotInLog;
+    private final UserMessageSource workerMessages;
 
     ExportRetentionSnapshotReader(
         MinioClient client,
         String bucket,
         String objectPrefix,
-        boolean tryDefaultKeyWhenNotInLog
+        boolean tryDefaultKeyWhenNotInLog,
+        UserMessageSource workerMessages
     ) {
         this.client = client;
         this.bucket = bucket;
         this.objectPrefix = normalizePrefix(objectPrefix);
         this.tryDefaultKeyWhenNotInLog = tryDefaultKeyWhenNotInLog;
+        this.workerMessages = workerMessages;
     }
 
-    static ExportRetentionSnapshotReader fromEnv() {
+    static ExportRetentionSnapshotReader fromEnv(UserMessageSource workerMessages) {
         var endpoint = System.getenv("MINIO_ENDPOINT");
         var accessKey = System.getenv("MINIO_ACCESS_KEY");
         var secretKey = System.getenv("MINIO_SECRET_KEY");
@@ -61,7 +65,7 @@ final class ExportRetentionSnapshotReader {
             .endpoint(endpoint)
             .credentials(accessKey, secretKey)
             .build();
-        return new ExportRetentionSnapshotReader(client, bucket.trim(), prefix, tryDefault);
+        return new ExportRetentionSnapshotReader(client, bucket.trim(), prefix, tryDefault, workerMessages);
     }
 
     static String defaultObjectKey(String prefix, String messageId) {
@@ -113,7 +117,7 @@ final class ExportRetentionSnapshotReader {
             if (key == null) {
                 continue;
             }
-            var snap = ExportMinioJsonFetcher.fetchSnapshot(client, bucket, key, messageId, SOURCE);
+            var snap = ExportMinioJsonFetcher.fetchSnapshot(client, bucket, key, messageId, SOURCE, workerMessages);
             if (snap.isPresent()) {
                 snapshots.add(snap.get());
                 found++;

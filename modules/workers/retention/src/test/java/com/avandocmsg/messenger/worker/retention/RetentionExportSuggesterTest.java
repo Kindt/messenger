@@ -4,6 +4,9 @@ import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.nats.client.Connection;
 import io.prometheus.client.CollectorRegistry;
+
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -37,7 +40,7 @@ class RetentionExportSuggesterTest {
                 return defaultValue(method.getReturnType());
             });
 
-        RetentionExportSuggester.publishForChatCounts(nats, Map.of(chatId, 2));
+        RetentionExportSuggester.publishForChatCounts(nats, Map.of(chatId, 2), WorkerMessageSources.forWorker(RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention"));
 
         assertEquals(1, publishCount.get());
         var suggested = CollectorRegistry.defaultRegistry.getSampleValue(

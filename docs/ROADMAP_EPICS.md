@@ -12,8 +12,8 @@
 |-----------|------------|
 | Высокий | **Фаза B** — закрыта: TTL visibility, чанки deep-archive, Solr atomic update, web-client TTL UI. |
 | Высокий | **Фаза C** — hot-row purge (`RetentionHotRowPurger`), orphaned **`file_metadata`** (`FileRetentionJanitor`), legal hold V025, admin purge/legal-hold API. |
-| Средний | Связка **экспорта** с агрессивными операциями: воспроизводимые сценарии **`MSG_EXPORT_REPLAY`** перед purge (**§8**, **§12**). |
-| Средний | Согласованная очистка **Solr** при окончательном выносе/удалении контента из Hot (расширение текущих **`index_op`**). |
+| Средний | Связка **экспорта** с агрессивными операциями: smoke **`scripts/smoke-export-replay-before-purge.ps1`**; purge gate — только **`export_v1`**. |
+| Средний | Solr validation: smoke **`scripts/smoke-retention-solr-clear.ps1`**; метрики **`indexer_solr_*_total`**. |
 
 **Источник этапов:** **`docs/RETENTION_AND_DEEP_ARCHIVE.md`** (**§10**, **§13**).
 
@@ -50,7 +50,7 @@
 
 | Приоритет | Содержание |
 |-----------|------------|
-| Средний | Углубление защиты от перечисления: timing, унификация ответов там, где это не ломает клиентов — по политике продукта. |
+| Средний | Углубление защиты от перечисления: **`scripts/audit-timing.ps1`**, **`TimingNormalization`**, отчёт **`docs/SECURITY_AUDIT.md`**. |
 
 Базово: rate limit на **`/auth`**, поиск пользователей с учётом блокировок.
 

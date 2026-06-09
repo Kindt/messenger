@@ -1,0 +1,9 @@
+---
+korus_tls_enabled: false
+korus_tls_domain: "_"
+korus_tls_cert_path: "/etc/ssl/korus/{{ korus_tls_domain }}.crt"
+korus_tls_key_path: "/etc/ssl/korus/{{ korus_tls_domain }}.key"
+korus_tls_use_letsencrypt: false
+korus_tls_proxy_api: true
+korus_tls_nginx_site_name: korus-tls
+korus_tls_nginx_site_path: "/etc/nginx/sites-available/{{ korus_tls_nginx_site_name }}.conf"

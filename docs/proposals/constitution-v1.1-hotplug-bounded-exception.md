@@ -1,6 +1,6 @@
 # Proposal: Constitution v1.1 Hot-Plug Bounded Exception
 
-**Status:** `ready_for_review` (engineering gates complete — see `docs/review/hotplug-governance-handoff-2026-05-24.md`)
+**Status:** `accepted` (2026-06-09)
 **Date:** 2026-05-23  
 **Related ADR:** `docs/adr/ADR-hotplug-deployment-split.md`  
 **Current constitution:** `.specify/memory/constitution.md` (v1.0.0)

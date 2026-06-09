@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.worker.push;
 
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
@@ -20,18 +22,20 @@ public final class WebPushDelivery {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final PushService pushService;
+    private final UserMessageSource workerMessages;
 
-    private WebPushDelivery(PushService pushService) {
+    private WebPushDelivery(PushService pushService, UserMessageSource workerMessages) {
         this.pushService = pushService;
+        this.workerMessages = workerMessages;
     }
 
-    public static WebPushDelivery fromEnvironment() {
+    public static WebPushDelivery fromEnvironment(UserMessageSource workerMessages) {
         var publicKey = readEnv("PUSH_VAPID_PUBLIC_KEY");
         var privateKey = readEnv("PUSH_VAPID_PRIVATE_KEY");
         var subject = readEnv("PUSH_VAPID_SUBJECT");
         if (publicKey.isEmpty() || privateKey.isEmpty()) {
-            log.info("Web Push disabled: set PUSH_VAPID_PUBLIC_KEY and PUSH_VAPID_PRIVATE_KEY");
-            return disabled();
+            log.info(workerMessages.get("worker.push.web_disabled"));
+            return disabled(workerMessages);
         }
         if (subject.isEmpty()) {
             subject = "mailto:notify@localhost";
@@ -41,16 +45,16 @@ public final class WebPushDelivery {
             service.setPublicKey(Utils.loadPublicKey(publicKey));
             service.setPrivateKey(Utils.loadPrivateKey(privateKey));
             service.setSubject(subject);
-            log.info("Web Push enabled (subject={})", subject);
-            return new WebPushDelivery(service);
+            log.info(workerMessages.format("worker.push.web_enabled", subject));
+            return new WebPushDelivery(service, workerMessages);
         } catch (GeneralSecurityException e) {
-            log.error("Web Push disabled: invalid VAPID keys", e);
-            return disabled();
+            log.error(workerMessages.get("worker.push.web_invalid_keys"), e);
+            return disabled(workerMessages);
         }
     }
 
-    public static WebPushDelivery disabled() {
-        return new WebPushDelivery(null);
+    public static WebPushDelivery disabled(UserMessageSource workerMessages) {
+        return new WebPushDelivery(null, workerMessages);
     }
 
     public boolean isEnabled() {
@@ -67,7 +71,7 @@ public final class WebPushDelivery {
         }
         var subscription = WebPushSubscriptionParser.parse(pushToken);
         if (subscription.isEmpty()) {
-            log.debug("Skip web push: token is not a PushSubscription JSON");
+            log.debug(workerMessages.get("worker.push.skip_not_subscription"));
             return WebPushSendResult.FAILED;
         }
         try {
@@ -81,10 +85,10 @@ public final class WebPushDelivery {
             return WebPushSendResult.SENT;
         } catch (Exception e) {
             if (WebPushErrors.isExpiredSubscription(e)) {
-                log.info("Web push subscription expired (410)");
+                log.info(workerMessages.get("worker.push.subscription_expired"));
                 return WebPushSendResult.EXPIRED;
             }
-            log.warn("Web push delivery failed: {}", e.getMessage());
+            log.warn(workerMessages.format("worker.push.delivery_failed", e.getMessage()));
             return WebPushSendResult.FAILED;
         }
     }

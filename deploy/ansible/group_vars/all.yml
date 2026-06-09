@@ -7,3 +7,5 @@ korus_api_port: 8080
 korus_ws_port: 8082
 korus_web_port: 9088
 korus_keycloak_url: "http://127.0.0.1:8081"
+# TLS reverse proxy (roles/tls); false keeps HTTP-only dev/QEMU/CI path.
+korus_tls_enabled: false

@@ -146,6 +146,7 @@ class AdminExportEnqueueTest {
         var enqueuer = new ExportJobEnqueuer(jobs, audit, nats, UuidGenerator.standard());
         return new AdminResource(cfg, audit,
             new OrganizationRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
+            com.avandocmsg.messenger.core.bootstrap.CoreModule.organizationApplicationService(null),
             new RetentionPolicyRepository(null),
             chats,
             new ChatRetentionPolicyRepository(null),
@@ -155,6 +156,7 @@ class AdminExportEnqueueTest {
             jobs,
             new ExportFileAccess(cfg),
             nats,
+            null,
             null,
             null,
             null,

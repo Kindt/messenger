@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.worker.deeparchive;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.common.retention.ArchiveSnapshotEnvelopeDigest;
@@ -49,17 +50,20 @@ public class DeepArchiverWorker {
     private final String minioBucket;
     private final boolean minioEnabled;
     private final int chunkSizeBytes;
+    private final UserMessageSource workerMessages;
 
-    public DeepArchiverWorker(String natsUrl, MinioClient minioClient, String minioBucket, boolean minioEnabled) throws Exception {
-        this(natsUrl, minioClient, minioBucket, minioEnabled, ArchiveSnapshotFormat.DEFAULT_CHUNK_SIZE_BYTES);
+    public DeepArchiverWorker(String natsUrl, MinioClient minioClient, String minioBucket, boolean minioEnabled,
+                                UserMessageSource workerMessages) throws Exception {
+        this(natsUrl, minioClient, minioBucket, minioEnabled, ArchiveSnapshotFormat.DEFAULT_CHUNK_SIZE_BYTES, workerMessages);
     }
 
     public DeepArchiverWorker(String natsUrl, MinioClient minioClient, String minioBucket, boolean minioEnabled,
-                               int chunkSizeBytes) throws Exception {
+                               int chunkSizeBytes, UserMessageSource workerMessages) throws Exception {
         this.minioClient = minioClient;
         this.minioBucket = minioBucket;
         this.minioEnabled = minioEnabled;
         this.chunkSizeBytes = chunkSizeBytes;
+        this.workerMessages = workerMessages;
         var options = Options.builder()
             .server(natsUrl)
             .connectionName("deep-archiver-worker")
@@ -67,26 +71,26 @@ public class DeepArchiverWorker {
             .maxReconnects(-1)
             .build();
         this.connection = Nats.connect(options);
-        log.info("Connected to NATS at {}", natsUrl);
+        log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }
 
     public void start() throws Exception {
         if (minioEnabled) {
             ensureBucket();
-            log.info("MinIO deep-archive writes enabled bucket={}", minioBucket);
+            log.info(workerMessages.format("worker.deep_archiver.minio_enabled", minioBucket));
         } else {
-            log.info("MinIO not configured (set MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY); logging receipt INFO only");
+            log.info(workerMessages.get("worker.deep_archiver.minio_disabled"));
         }
         var dispatcher = connection.createDispatcher(this::handle);
         dispatcher.subscribe(NatsSubjects.MSG_EVENT_DEEP_ARCHIVE, QUEUE_GROUP);
-        log.info("Subscribed to {} (queue: {})", NatsSubjects.MSG_EVENT_DEEP_ARCHIVE, QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_DEEP_ARCHIVE, QUEUE_GROUP));
     }
 
     private void ensureBucket() throws Exception {
         var exists = minioClient.bucketExists(BucketExistsArgs.builder().bucket(minioBucket).build());
         if (!exists) {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(minioBucket).build());
-            log.info("Created MinIO bucket {}", minioBucket);
+            log.info(workerMessages.format("worker.deep_archiver.bucket_created", minioBucket));
         }
     }
 
@@ -94,12 +98,12 @@ public class DeepArchiverWorker {
         try {
             var payload = new String(msg.getData(), StandardCharsets.UTF_8);
             var event = MAPPER.readValue(payload, MessageWorkerEvent.class);
-            log.info("Deep-archiver received messageId={} chatId={}", event.messageId(), event.chatId());
+            log.info(workerMessages.format("worker.deep_archiver.received", event.messageId(), event.chatId()));
             if (minioEnabled) {
                 var root = MAPPER.readTree(payload);
                 var candidateText = resolveCandidateText(event, root);
                 if (shouldSkipDeepArchiveForContent(candidateText)) {
-                    log.info("Skipped deep-archive for message {}: content is file reference", event.messageId());
+                    log.info(workerMessages.format("worker.deep_archiver.skipped_file_ref", event.messageId()));
                     return;
                 }
                 var bytes = minioSnapshotBytesFromNatsJson(payload, MAPPER);
@@ -115,11 +119,11 @@ public class DeepArchiverWorker {
                             .contentType("application/json")
                             .build()
                     );
-                    log.debug("Stored deep-archive object {}", key);
+                    log.debug(workerMessages.format("worker.deep_archiver.stored_object", key));
                 }
             }
         } catch (Exception e) {
-            log.error("Failed to handle deep-archiver message", e);
+            log.error(workerMessages.get("worker.deep_archiver.handle_failed"), e);
         }
     }
 
@@ -134,7 +138,7 @@ public class DeepArchiverWorker {
             chunkSizeBytes,
             MAPPER
         );
-        log.info("Wrote {} chunks for message {} (total {} bytes)", chunkCount, messageId, jsonBytes.length);
+        log.info(workerMessages.format("worker.deep_archiver.wrote_chunks", chunkCount, messageId, jsonBytes.length));
         DeepArchiverMetrics.chunkedMessage();
         for (int i = 0; i < chunkCount; i++) {
             DeepArchiverMetrics.chunkWrite();
@@ -145,7 +149,7 @@ public class DeepArchiverWorker {
         try {
             connection.close();
         } catch (Exception e) {
-            log.warn("Error closing NATS connection", e);
+            log.warn(workerMessages.get("worker.common.nats_close_error"), e);
         }
     }
 
@@ -192,7 +196,7 @@ public class DeepArchiverWorker {
     public static void main(String[] args) {
         var workerMessages = WorkerMessageSources.forWorker(
             DeepArchiverWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_deep_archiver");
-        log.info("Worker i18n locale={}", workerMessages.locale());
+        log.info(workerMessages.format("worker.common.locale", workerMessages.locale()));
         var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
         var endpoint = System.getenv("MINIO_ENDPOINT");
         var access = System.getenv("MINIO_ACCESS_KEY");
@@ -217,12 +221,12 @@ public class DeepArchiverWorker {
         }
 
         try {
-            var worker = new DeepArchiverWorker(natsUrl, client, bucket, minioOk, chunkSize);
+            var worker = new DeepArchiverWorker(natsUrl, client, bucket, minioOk, chunkSize, workerMessages);
             worker.start();
             Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));
             Thread.currentThread().join();
         } catch (Exception e) {
-            log.error("Fatal error", e);
+            log.error(workerMessages.get("worker.common.fatal_error"), e);
             System.exit(1);
         }
     }

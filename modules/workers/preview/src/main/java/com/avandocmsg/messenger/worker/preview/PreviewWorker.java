@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.worker.preview;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.jdbc.HikariDataSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
@@ -32,11 +33,13 @@ public class PreviewWorker {
     private final LinkPreviewFetcher fetcher;
     private final TtlStringCache cache;
     private final String previewTestUrl;
+    private final UserMessageSource workerMessages;
 
     public PreviewWorker(String natsUrl, DataSource previewDataSource, LinkPreviewFetcher fetcher, TtlStringCache cache,
-                         String previewTestUrl) throws Exception {
+                         String previewTestUrl, UserMessageSource workerMessages) throws Exception {
         this.previewDataSource = previewDataSource;
-        this.contentLoader = previewDataSource != null ? new MessageContentLoader(previewDataSource) : null;
+        this.workerMessages = workerMessages;
+        this.contentLoader = previewDataSource != null ? new MessageContentLoader(previewDataSource, workerMessages) : null;
         this.fetcher = fetcher;
         this.cache = cache;
         this.previewTestUrl = previewTestUrl != null && !previewTestUrl.isBlank() ? previewTestUrl.trim() : null;
@@ -47,13 +50,13 @@ public class PreviewWorker {
             .maxReconnects(-1)
             .build();
         this.connection = Nats.connect(options);
-        log.info("Connected to NATS at {}", natsUrl);
+        log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }
 
     public void start() {
         var dispatcher = connection.createDispatcher(this::handle);
         dispatcher.subscribe(NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP);
-        log.info("Subscribed to {} (queue: {})", NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP));
     }
 
     private void handle(io.nats.client.Message msg) {
@@ -62,7 +65,7 @@ public class PreviewWorker {
             var event = MAPPER.readValue(payload, MessageWorkerEvent.class);
             resolveAndFetch(event);
         } catch (Exception e) {
-            log.error("Failed to handle preview message", e);
+            log.error(workerMessages.get("worker.preview.handle_failed"), e);
         }
     }
 
@@ -90,19 +93,19 @@ public class PreviewWorker {
         }
         var cached = cache.get(targetUrl);
         if (cached.isPresent()) {
-            log.debug("Preview cache hit messageId={} url={} title={}", event.messageId(), targetUrl, cached.get());
+            log.debug(workerMessages.format("worker.preview.cache_hit", event.messageId(), targetUrl, cached.get()));
             return;
         }
         var title = fetcher.fetchPreviewTitle(targetUrl).orElse("(no title)");
         cache.put(targetUrl, title);
-        log.info("Link preview messageId={} url={} title={}", event.messageId(), targetUrl, title);
+        log.info(workerMessages.format("worker.preview.link_preview", event.messageId(), targetUrl, title));
     }
 
     public void shutdown() {
         try {
             connection.close();
         } catch (Exception e) {
-            log.warn("Error closing NATS connection", e);
+            log.warn(workerMessages.get("worker.common.nats_close_error"), e);
         }
         HikariDataSources.closeQuietly(previewDataSource);
     }
@@ -110,7 +113,7 @@ public class PreviewWorker {
     public static void main(String[] args) {
         var workerMessages = WorkerMessageSources.forWorker(
             PreviewWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_preview");
-        log.info("Worker i18n locale={}", workerMessages.locale());
+        log.info(workerMessages.format("worker.common.locale", workerMessages.locale()));
         var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
         var previewJdbc = System.getenv("PREVIEW_DB_JDBC_URL");
         var previewUser = System.getenv().getOrDefault("PREVIEW_DB_USER", System.getenv().getOrDefault("DB_USER", "avandocmsg"));
@@ -123,15 +126,16 @@ public class PreviewWorker {
 
         var previewDs = HikariDataSources.createOptionalPool(previewJdbc, previewUser, previewPassword, 5, "preview-hot");
         var cache = new TtlStringCache(Duration.ofSeconds(ttlSec));
-        var fetcher = new LinkPreviewFetcher(Duration.ofMillis(timeoutMs), Duration.ofMillis(timeoutMs), maxBytes);
+        var fetcher = new LinkPreviewFetcher(
+            Duration.ofMillis(timeoutMs), Duration.ofMillis(timeoutMs), maxBytes, workerMessages);
 
         try {
-            var worker = new PreviewWorker(natsUrl, previewDs, fetcher, cache, testUrl);
+            var worker = new PreviewWorker(natsUrl, previewDs, fetcher, cache, testUrl, workerMessages);
             worker.start();
             Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));
             Thread.currentThread().join();
         } catch (Exception e) {
-            log.error("Fatal error", e);
+            log.error(workerMessages.get("worker.common.fatal_error"), e);
             System.exit(1);
         }
     }

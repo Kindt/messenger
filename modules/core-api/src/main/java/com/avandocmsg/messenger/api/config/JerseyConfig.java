@@ -49,9 +49,15 @@ import com.avandocmsg.messenger.api.health.HealthResource;
 import com.avandocmsg.messenger.api.messages.MessageResource;
 import com.avandocmsg.messenger.api.messages.MessageService;
 import com.avandocmsg.messenger.api.mls.MlsGroupManager;
+import com.avandocmsg.messenger.api.mls.MlsMigrationService;
 import com.avandocmsg.messenger.api.mls.MlsService;
+import com.avandocmsg.messenger.api.mls.MlsWirePublisher;
 import com.avandocmsg.messenger.api.mls.SessionRepository;
 import com.avandocmsg.messenger.core.application.ChatApplicationService;
+import com.avandocmsg.messenger.core.application.FileApplicationService;
+import com.avandocmsg.messenger.core.application.MessageApplicationService;
+import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
+import com.avandocmsg.messenger.core.application.UserApplicationService;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatBanRepository;
 import com.avandocmsg.messenger.api.admin.PurgeStatusService;
@@ -91,6 +97,10 @@ public class JerseyConfig extends ResourceConfig {
                         ChatRepository chatRepository, ChatService chatService,
                         ChatReadRepository chatReadRepository, ReadReceiptService readReceiptService,
                         ChatApplicationService chatApplicationService,
+                        MessageApplicationService messageApplicationService,
+                        UserApplicationService userApplicationService,
+                        FileApplicationService fileApplicationService,
+                        OrganizationApplicationService organizationApplicationService,
                         BlockRepository blockRepository,
                         MessageRepository messageRepository, MessageService messageService,
                         Connection natsConnection, NatsConnectionOutbound natsOutbound,
@@ -98,6 +108,7 @@ public class JerseyConfig extends ResourceConfig {
                         ChatBanRepository chatBanRepository, ChatBanService chatBanService,
                         E2EEService e2eeService, KeyPackageRepository keyPackageRepository,
                         SessionRepository sessionRepository, MlsService mlsService, MlsGroupManager mlsGroupManager,
+                        MlsMigrationService mlsMigrationService, MlsWirePublisher mlsWirePublisher,
                         FileProxy fileProxy, ConferenceService conferenceService,
                         AuditRepository auditRepository,
                         ExportJobRepository exportJobRepository,
@@ -134,6 +145,10 @@ public class JerseyConfig extends ResourceConfig {
                 bind(chatService).to(ChatService.class);
                 bind(readReceiptService).to(ReadReceiptService.class);
                 bind(chatApplicationService).to(ChatApplicationService.class);
+                bind(messageApplicationService).to(MessageApplicationService.class);
+                bind(userApplicationService).to(UserApplicationService.class);
+                bind(fileApplicationService).to(FileApplicationService.class);
+                bind(organizationApplicationService).to(OrganizationApplicationService.class);
                 bind(chatReadRepository).to(ChatReadRepository.class);
                 bind(blockRepository).to(BlockRepository.class);
                 bind(messageRepository).to(MessageRepository.class);
@@ -152,6 +167,8 @@ public class JerseyConfig extends ResourceConfig {
                 bind(sessionRepository).to(SessionRepository.class);
                 bind(mlsService).to(MlsService.class);
                 bind(mlsGroupManager).to(MlsGroupManager.class);
+                bind(mlsMigrationService).to(MlsMigrationService.class);
+                bind(mlsWirePublisher).to(MlsWirePublisher.class);
                 bind(conferenceService).to(ConferenceService.class);
                 bind(auditRepository).to(AuditRepository.class);
                 bind(exportJobRepository).to(ExportJobRepository.class);

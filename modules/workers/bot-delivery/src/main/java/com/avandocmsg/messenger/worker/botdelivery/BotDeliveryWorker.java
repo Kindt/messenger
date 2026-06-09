@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.worker.botdelivery;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.jdbc.HikariDataSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
@@ -41,15 +42,17 @@ public class BotDeliveryWorker {
     private final HttpClient httpClient;
     private final String fallbackWebhookUrl;
     private final boolean subscriptionsEnabled;
+    private final UserMessageSource workerMessages;
 
     private final ConcurrentHashMap<String, Boolean> delivered = new ConcurrentHashMap<>();
 
     public BotDeliveryWorker(String natsUrl, DataSource dataSource, String fallbackWebhookUrl,
-                             boolean subscriptionsEnabled) throws Exception {
+                             boolean subscriptionsEnabled, UserMessageSource workerMessages) throws Exception {
         this.dataSource = dataSource;
         this.fallbackWebhookUrl =
             fallbackWebhookUrl != null && !fallbackWebhookUrl.isBlank() ? fallbackWebhookUrl.trim() : null;
         this.subscriptionsEnabled = subscriptionsEnabled;
+        this.workerMessages = workerMessages;
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
         var options = Options.builder()
             .server(natsUrl)
@@ -58,14 +61,17 @@ public class BotDeliveryWorker {
             .maxReconnects(-1)
             .build();
         this.connection = Nats.connect(options);
-        log.info("Connected to NATS at {}", natsUrl);
+        log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }
 
     public void start() {
         var dispatcher = connection.createDispatcher(this::handle);
         dispatcher.subscribe(NatsSubjects.MSG_EVENT_BOT, QUEUE_GROUP);
-        log.info("Subscribed to {} (queue: {}) {}", NatsSubjects.MSG_EVENT_BOT, QUEUE_GROUP,
-            subscriptionsEnabled ? "(per-chat subscriptions enabled)" : "(fallback BOT_WEBHOOK_URL only)");
+        var modeHint = subscriptionsEnabled
+            ? "(per-chat subscriptions enabled)"
+            : "(fallback BOT_WEBHOOK_URL only)";
+        log.info(workerMessages.format("worker.common.subscribed_extra",
+            NatsSubjects.MSG_EVENT_BOT, QUEUE_GROUP, modeHint));
     }
 
     private void handle(io.nats.client.Message msg) {
@@ -74,14 +80,14 @@ public class BotDeliveryWorker {
             var event = MAPPER.readValue(payload, MessageWorkerEvent.class);
             var urls = resolveWebhookUrls(event);
             if (urls.isEmpty()) {
-                log.warn("No bot webhook targets for chatId={} messageId={}", event.chatId(), event.messageId());
+                log.warn(workerMessages.format("worker.bot_delivery.no_webhook_targets", event.chatId(), event.messageId()));
                 return;
             }
             for (var url : urls) {
                 deliver(url, event);
             }
         } catch (Exception e) {
-            log.error("Failed to handle bot-delivery message", e);
+            log.error(workerMessages.get("worker.bot_delivery.handle_failed"), e);
         }
     }
 
@@ -113,7 +119,7 @@ public class BotDeliveryWorker {
         var dedupKey = event.messageId() + "|" + webhookUrl;
         var first = delivered.putIfAbsent(dedupKey, Boolean.TRUE) == null;
         if (!first) {
-            log.warn("Duplicate bot delivery (at-least-once) messageId={} webhook={}", event.messageId(), webhookUrl);
+            log.warn(workerMessages.format("worker.bot_delivery.duplicate_delivery", event.messageId(), webhookUrl));
         }
         var json = buildPayload(event);
         var req = HttpRequest.newBuilder(URI.create(webhookUrl))
@@ -122,7 +128,8 @@ public class BotDeliveryWorker {
             .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
             .build();
         var resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        log.info("Bot webhook status={} messageId={} url={}", resp.statusCode(), event.messageId(), webhookUrl);
+        log.info(workerMessages.format("worker.bot_delivery.webhook_status",
+            resp.statusCode(), event.messageId(), webhookUrl));
     }
 
     private static String buildPayload(MessageWorkerEvent event) {
@@ -147,19 +154,20 @@ public class BotDeliveryWorker {
         try {
             connection.close();
         } catch (Exception e) {
-            log.warn("Error closing NATS connection", e);
+            log.warn(workerMessages.get("worker.common.nats_close_error"), e);
         }
         HikariDataSources.closeQuietly(dataSource);
     }
 
-    static boolean detectSubscriptionsTable(DataSource ds) {
+    static boolean detectSubscriptionsTable(DataSource ds, UserMessageSource workerMessages) {
         try (var c = ds.getConnection()) {
             var md = c.getMetaData();
             try (var rs = md.getTables(c.getSchema(), null, SUBSCRIPTIONS_TABLE, new String[]{"TABLE"})) {
                 return rs.next();
             }
         } catch (SQLException e) {
-            LoggerFactory.getLogger(BotDeliveryWorker.class).warn("Could not inspect schema for {}", SUBSCRIPTIONS_TABLE, e);
+            LoggerFactory.getLogger(BotDeliveryWorker.class)
+                .warn(workerMessages.format("worker.common.schema_inspect_failed", SUBSCRIPTIONS_TABLE), e);
             return false;
         }
     }
@@ -167,7 +175,7 @@ public class BotDeliveryWorker {
     public static void main(String[] args) {
         var workerMessages = WorkerMessageSources.forWorker(
             BotDeliveryWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_bot_delivery");
-        log.info("Worker i18n locale={}", workerMessages.locale());
+        log.info(workerMessages.format("worker.common.locale", workerMessages.locale()));
         var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
         var jdbcUrl = firstNonBlank(System.getenv("BOT_DB_JDBC_URL"), System.getenv("DB_JDBC_URL"));
         var user = System.getenv().getOrDefault("DB_USER", "avandocmsg");
@@ -176,18 +184,20 @@ public class BotDeliveryWorker {
 
         var ds = HikariDataSources.createOptionalPool(jdbcUrl, user, password, 5, "bot-delivery-db");
         if (ds == null) {
-            log.error("Set DB_JDBC_URL or BOT_DB_JDBC_URL for BotDeliveryWorker");
+            log.error(workerMessages.format("worker.common.db_url_required",
+                workerMessages.get("worker.bot_delivery.db_url_required"),
+                workerMessages.get("worker.bot_delivery.worker_name")));
             System.exit(2);
         }
-        var subs = detectSubscriptionsTable(ds);
+        var subs = detectSubscriptionsTable(ds, workerMessages);
 
         try {
-            var worker = new BotDeliveryWorker(natsUrl, ds, fallback, subs);
+            var worker = new BotDeliveryWorker(natsUrl, ds, fallback, subs, workerMessages);
             worker.start();
             Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));
             Thread.currentThread().join();
         } catch (Exception e) {
-            log.error("Fatal error", e);
+            log.error(workerMessages.get("worker.common.fatal_error"), e);
             System.exit(1);
         }
     }

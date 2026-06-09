@@ -1,6 +1,9 @@
 package com.avandocmsg.messenger.worker.retention;
 
 import io.nats.client.Connection;
+
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
@@ -55,7 +58,8 @@ class RetentionHotBodyJanitorDryRunTest {
             Long.MAX_VALUE,
             true,
             "",
-            false
+            false,
+            WorkerMessageSources.forWorker(RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention")
         );
 
         assertEquals(0, cleared);
@@ -99,7 +103,8 @@ class RetentionHotBodyJanitorDryRunTest {
             Long.MAX_VALUE,
             true,
             "",
-            false
+            false,
+            WorkerMessageSources.forWorker(RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention")
         );
         assertEquals(0, cleared);
         assertEquals(0, publishCount.get());
@@ -143,7 +148,8 @@ class RetentionHotBodyJanitorDryRunTest {
             Long.MAX_VALUE,
             true,
             "",
-            false
+            false,
+            WorkerMessageSources.forWorker(RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention")
         );
 
         assertEquals(1, setQueryTimeoutCalls.get());

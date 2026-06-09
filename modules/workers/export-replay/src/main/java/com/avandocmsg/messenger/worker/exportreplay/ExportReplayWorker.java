@@ -7,6 +7,7 @@ import com.avandocmsg.messenger.common.export.ExportCompleteness;
 import com.avandocmsg.messenger.common.export.ExportCompletenessConfig;
 import com.avandocmsg.messenger.common.export.ExportCompletenessValidator;
 import com.avandocmsg.messenger.common.export.ExportOutputRef;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -153,6 +154,7 @@ public class ExportReplayWorker {
     private final ExportFileBodyFetcher fileBodyFetcher;
     private final int cancelCheckEveryRows;
     private final long debugDelayMs;
+    private final UserMessageSource workerMessages;
 
     public ExportReplayWorker(
         String natsUrl,
@@ -192,7 +194,8 @@ public class ExportReplayWorker {
         boolean includeFileBodies,
         int maxFileBodies,
         long maxFileBodyBytes,
-        ExportFileBodyFetcher fileBodyFetcher
+        ExportFileBodyFetcher fileBodyFetcher,
+        UserMessageSource workerMessages
     ) throws Exception {
         this.exportDir = exportDir;
         this.publishComplete = publishComplete;
@@ -231,17 +234,18 @@ public class ExportReplayWorker {
         this.sqlMessageReactions = ExportMessageLoader.buildMessageReactionsSql(messageTtlFilterApplied);
         this.sqlPinnedMessages = ExportMessageLoader.buildPinnedMessagesSql(messageTtlFilterApplied);
         this.sqlReferencedUsers = ExportMessageLoader.buildReferencedUsersSql(messageTtlFilterApplied);
-        this.jobStore = dataSource != null ? new ExportJobStore(dataSource) : null;
-        this.auditWriter = dataSource != null ? new ExportAuditWriter(dataSource) : null;
+        this.jobStore = dataSource != null ? new ExportJobStore(dataSource, workerMessages) : null;
+        this.auditWriter = dataSource != null ? new ExportAuditWriter(dataSource, workerMessages) : null;
         this.minioUploader = minioUploader;
         this.includeFileBodies = includeFileBodies;
         this.maxFileBodies = maxFileBodies > 0 ? maxFileBodies : 500;
         this.maxFileBodyBytes = maxFileBodyBytes > 0 ? maxFileBodyBytes : 52_428_800L;
         this.fileBodyFetcher = fileBodyFetcher;
+        this.workerMessages = workerMessages;
         this.cancelCheckEveryRows = parsePositiveInt(System.getenv("EXPORT_REPLAY_CANCEL_CHECK_EVERY_ROWS"), 500);
         this.debugDelayMs = parseNonNegativeLong(System.getenv("EXPORT_REPLAY_DEBUG_DELAY_MS"), 0L);
         if (this.debugDelayMs > 0) {
-            log.warn("EXPORT_REPLAY_DEBUG_DELAY_MS={} — dev/smoke only; export will pause after processing", this.debugDelayMs);
+            log.warn(workerMessages.format("worker.export_replay.debug_delay_warn", this.debugDelayMs));
         }
         var options = Options.builder()
             .server(natsUrl)
@@ -250,7 +254,7 @@ public class ExportReplayWorker {
             .maxReconnects(-1)
             .build();
         this.connection = Nats.connect(options);
-        log.info("Connected to NATS at {}", natsUrl);
+        log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }
 
     public void start() throws Exception {
@@ -258,11 +262,7 @@ public class ExportReplayWorker {
         var dispatcher = connection.createDispatcher(this::handle);
         dispatcher.subscribe(NatsSubjects.MSG_EXPORT_REPLAY, QUEUE_GROUP);
         dispatcher.subscribe(NatsSubjects.MSG_EXPORT_REPLAY_CANCEL, QUEUE_GROUP, this::onCancelHint);
-        log.info(
-            "Subscribed to {} (queue: {}) exportDir={} dbExport={} maxMessages={} includeVersions={} maxVersionRows={} "
-                + "includeReactions={} maxReactionRows={} includePins={} maxPinnedRows={} includeChat={} includeChatMembers={} "
-                + "maxChatMemberRows={} includeReferencedUsers={} maxReferencedUserRows={} includeReferencedFiles={} "
-                + "maxFileIdsFromContent={} maxReferencedFileRows={} messageTtlFilter={}",
+        log.info(workerMessages.format("worker.export_replay.subscribed",
             NatsSubjects.MSG_EXPORT_REPLAY,
             QUEUE_GROUP,
             exportDir,
@@ -283,7 +283,7 @@ public class ExportReplayWorker {
             maxFileIdsFromContent,
             maxReferencedFileRows,
             messageTtlFilterApplied
-        );
+        ));
     }
 
     private void handle(io.nats.client.Message msg) {
@@ -291,7 +291,7 @@ public class ExportReplayWorker {
             var payload = new String(msg.getData(), StandardCharsets.UTF_8);
             var job = MAPPER.readValue(payload, ExportReplayJob.class);
             if (job.jobId() == null || job.jobId().isBlank() || job.chatId() == null || job.chatId().isBlank()) {
-                log.warn("Invalid export job payload: {}", payload);
+                log.warn(workerMessages.format("worker.export_replay.invalid_payload", payload));
                 ExportReplayMetrics.jobSkipped("invalid_payload");
                 return;
             }
@@ -300,14 +300,14 @@ public class ExportReplayWorker {
 
             if (dataSource == null) {
                 writeStub(out, job);
-                log.info("Export replay stub written jobId={} path={}", job.jobId(), out.toAbsolutePath());
+                log.info(workerMessages.format("worker.export_replay.stub_written", job.jobId(), out.toAbsolutePath()));
                 finishJob(job, "stub_written", out);
                 return;
             }
 
             var jobUuid = parseJobId(job.jobId());
             if (jobStore != null && jobUuid != null && !jobStore.markProcessingIfQueued(jobUuid)) {
-                log.info("Export job {} skipped (not queued — cancelled or duplicate)", job.jobId());
+                log.info(workerMessages.format("worker.export_replay.job_skipped", job.jobId()));
                 ExportReplayMetrics.jobSkipped("not_queued");
                 return;
             }
@@ -329,11 +329,11 @@ public class ExportReplayWorker {
                 if (includeFileBodies && fileBodyFetcher != null && includeReferencedFiles) {
                     var zip = exportDir.resolve(safeJobId + ".export.zip");
                     try {
-                        ExportFileBundleBuilder.build(root, zip, fileBodyFetcher, maxFileBodies, maxFileBodyBytes);
+                        ExportFileBundleBuilder.build(root, zip, fileBodyFetcher, maxFileBodies, maxFileBodyBytes, workerMessages);
                         artifact = zip;
                         Files.deleteIfExists(out);
                     } catch (IOException zipErr) {
-                        log.warn("Export zip bundle failed jobId={}, keeping JSON: {}", job.jobId(), zipErr.getMessage());
+                        log.warn(workerMessages.format("worker.export_replay.zip_failed", job.jobId(), zipErr.getMessage()));
                         Files.writeString(
                             out,
                             MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(root),
@@ -347,41 +347,30 @@ public class ExportReplayWorker {
                         StandardCharsets.UTF_8
                     );
                 }
-                log.info(
-                    "Export replay v1 written jobId={} path={} bundle={} messageCount={} versionRows={} reactionRows={} pinnedRows={} "
-                        + "chatMemberRows={} referencedUserRows={} referencedFileRows={} fileBodiesIncluded={}",
+                log.info(workerMessages.format("worker.export_replay.export_written",
                     job.jobId(),
                     artifact.toAbsolutePath(),
-                    ExportOutputRef.isZipBundlePath(artifact.getFileName().toString()),
-                    root.path("messageCount").asInt(0),
-                    intOrZero(root, "messageVersionCount"),
-                    intOrZero(root, "reactionCount"),
-                    intOrZero(root, "pinnedCount"),
-                    intOrZero(root, "chatMemberCount"),
-                    intOrZero(root, "referencedUserCount"),
-                    intOrZero(root, "referencedFileCount"),
-                    root.path("fileBodies").path("includedCount").asInt(0)
-                );
+                    root.path("messageCount").asInt(0)));
                 if (!abortIfCancelled(jobUuid, artifact, out)) {
                     finishJob(job, "export_v1", artifact);
                 }
             } catch (ExportCancelledException e) {
                 abortIfCancelled(e.jobId(), out);
             } catch (IllegalArgumentException e) {
-                log.warn("Export job invalid chat UUID jobId={} chatId={}", job.jobId(), job.chatId());
+                log.warn(workerMessages.format("worker.export_replay.invalid_chat_uuid", job.jobId(), job.chatId()));
                 writeError(out, job, "invalid_chat_id", e.getMessage());
                 if (!abortIfCancelled(jobUuid, out)) {
                     finishJob(job, "export_failed", out);
                 }
             } catch (SQLException e) {
-                log.error("Export DB query failed jobId={}", job.jobId(), e);
+                log.error(workerMessages.format("worker.export_replay.db_query_failed", job.jobId()), e);
                 writeError(out, job, "db_error", "query_failed");
                 if (!abortIfCancelled(jobUuid, out)) {
                     finishJob(job, "export_failed", out);
                 }
             }
         } catch (Exception e) {
-            log.error("Failed to handle export-replay message", e);
+            log.error(workerMessages.get("worker.export_replay.handle_failed"), e);
         }
     }
 
@@ -389,12 +378,12 @@ public class ExportReplayWorker {
         if (debugDelayMs <= 0) {
             return;
         }
-        log.info("Export job {} debug delay {} ms (EXPORT_REPLAY_DEBUG_DELAY_MS)", jobId, debugDelayMs);
+        log.info(workerMessages.format("worker.export_replay.debug_delay", jobId, debugDelayMs));
         try {
             Thread.sleep(debugDelayMs);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.warn("Export debug delay interrupted jobId={}", jobId);
+            log.warn(workerMessages.format("worker.export_replay.debug_delay_interrupted", jobId));
         }
     }
 
@@ -402,7 +391,7 @@ public class ExportReplayWorker {
         ExportReplayMetrics.cancelHint();
         try {
             var event = MAPPER.readValue(msg.getData(), ExportReplayCancelEvent.class);
-            log.debug("Export cancel hint jobId={} chatId={}", event.jobId(), event.chatId());
+            log.debug(workerMessages.format("worker.export_replay.cancel_hint", event.jobId(), event.chatId()));
         } catch (Exception e) {
             log.trace("Ignoring invalid export cancel hint: {}", e.getMessage());
         }
@@ -434,7 +423,7 @@ public class ExportReplayWorker {
                 }
             }
         }
-        log.info("Export job {} aborted — status export_cancelled", jobUuid);
+        log.info(workerMessages.format("worker.export_replay.job_aborted", jobUuid));
         ExportReplayMetrics.jobCancelled();
         return true;
     }
@@ -449,7 +438,7 @@ public class ExportReplayWorker {
         var requester = parseUserId(job.requestedBy());
         if (jobStore != null && jobUuid != null) {
             if (jobStore.isCancelled(jobUuid)) {
-                log.info("Export job {} cancelled, not applying terminal status {}", job.jobId(), status);
+                log.info(workerMessages.format("worker.export_replay.job_cancelled", job.jobId(), status));
                 return;
             }
             jobStore.markTerminal(jobUuid, status, pathStr, messageTtlFilterApplied);
@@ -475,7 +464,7 @@ public class ExportReplayWorker {
                 minioUploader.upload(out, key);
                 return ExportOutputRef.minioStoredPath(key);
             } catch (Exception e) {
-                log.warn("MinIO export upload failed jobId={}, using local path: {}", job.jobId(), e.getMessage());
+                log.warn(workerMessages.format("worker.export_replay.minio_upload_failed", job.jobId(), e.getMessage()));
             }
         }
         return out.toAbsolutePath().toString();
@@ -575,7 +564,7 @@ public class ExportReplayWorker {
                     } else {
                         root.putNull("chat");
                         root.put("chatMissing", true);
-                        log.warn("Export job: no chats row for chatId={} jobId={}", job.chatId(), job.jobId());
+                        log.warn(workerMessages.format("worker.export_replay.no_chats_row", job.chatId(), job.jobId()));
                     }
                 }
             }
@@ -978,7 +967,7 @@ public class ExportReplayWorker {
             }
             return new SolrAttachStats(true, result.numFound(), result.exported());
         } catch (Exception e) {
-            log.warn("Solr index export failed chatId={}: {}", chatId, e.getMessage());
+            log.warn(workerMessages.format("worker.export_replay.solr_failed", chatId, e.getMessage()));
             root.put("includeSolrIndex", false);
             root.put("solrIndexError", e.getMessage());
             return new SolrAttachStats(true, 0, 0);
@@ -1095,7 +1084,7 @@ public class ExportReplayWorker {
         ExportReplayMetrics.completenessChecked();
         if (!built.complete()) {
             ExportReplayMetrics.completenessFailed("mandatory_fields");
-            log.warn("Export completeness validation failed jobId={} strict={}", job.jobId(), strict);
+            log.warn(workerMessages.format("worker.export_replay.completeness_failed", job.jobId(), strict));
             return !strict;
         }
         ExportReplayMetrics.observeCompletenessDuration(start);
@@ -1323,9 +1312,9 @@ public class ExportReplayWorker {
                 messageTtlFilterApplied
             );
             connection.publish(NatsSubjects.MSG_EXPORT_REPLAY_COMPLETE, MAPPER.writeValueAsBytes(done));
-            log.debug("Published {} status={}", NatsSubjects.MSG_EXPORT_REPLAY_COMPLETE, status);
+            log.debug(workerMessages.format("worker.export_replay.published_complete", NatsSubjects.MSG_EXPORT_REPLAY_COMPLETE, status));
         } catch (Exception e) {
-            log.warn("Failed to publish {}", NatsSubjects.MSG_EXPORT_REPLAY_COMPLETE, e);
+            log.warn(workerMessages.format("worker.common.publish_failed_simple", NatsSubjects.MSG_EXPORT_REPLAY_COMPLETE), e);
         }
     }
 
@@ -1333,11 +1322,14 @@ public class ExportReplayWorker {
         try {
             connection.close();
         } catch (Exception e) {
-            log.warn("Error closing NATS connection", e);
+            log.warn(workerMessages.get("worker.common.nats_close_error"), e);
         }
     }
 
     public static void main(String[] args) {
+        var workerMessages = WorkerMessageSources.forWorker(
+            ExportReplayWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_export_replay");
+        log.info(workerMessages.format("worker.common.locale", workerMessages.locale()));
         var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
         var dir = Path.of(System.getenv().getOrDefault("EXPORT_DIR", "export-output"));
         var publishComplete = Boolean.parseBoolean(System.getenv().getOrDefault("EXPORT_PUBLISH_COMPLETE", "false"));
@@ -1360,9 +1352,9 @@ public class ExportReplayWorker {
         var messageTtlFilterApplied = Boolean.parseBoolean(
             System.getenv().getOrDefault("EXPORT_REPLAY_APPLY_MESSAGE_TTL_FILTER", "true"));
         var minioUpload = Boolean.parseBoolean(System.getenv().getOrDefault("EXPORT_REPLAY_MINIO_UPLOAD", "false"));
-        var minioUploader = minioUpload ? ExportMinioUploader.fromEnv() : null;
+        var minioUploader = minioUpload ? ExportMinioUploader.fromEnv(workerMessages) : null;
         if (minioUpload && minioUploader == null) {
-            log.warn("EXPORT_REPLAY_MINIO_UPLOAD=true but MinIO env incomplete (MINIO_ENDPOINT, keys)");
+            log.warn(workerMessages.get("worker.export_replay.minio_upload_enabled"));
         }
         var queryTimeout = parseNonNegativeIntWithDefaultBlank(
             System.getenv("EXPORT_REPLAY_QUERY_TIMEOUT_SECONDS"),
@@ -1379,22 +1371,22 @@ public class ExportReplayWorker {
             System.getenv("EXPORT_REPLAY_MAX_DEEP_ARCHIVE_SNAPSHOTS"), 500);
         var deepArchiveReader = includeDeepArchive ? ExportDeepArchiveReader.fromEnv() : null;
         if (includeDeepArchive && deepArchiveReader == null) {
-            log.warn("EXPORT_REPLAY_INCLUDE_DEEP_ARCHIVE=true but MinIO env incomplete");
+            log.warn(workerMessages.get("worker.export_replay.deep_archive_minio_incomplete"));
         }
         var includeRetentionSnapshots = Boolean.parseBoolean(
             System.getenv().getOrDefault("EXPORT_REPLAY_INCLUDE_RETENTION_SNAPSHOTS", "false"));
         var maxRetentionSnapshots = parsePositiveInt(
             System.getenv("EXPORT_REPLAY_MAX_RETENTION_SNAPSHOTS"), 500);
-        var retentionSnapshotReader = includeRetentionSnapshots ? ExportRetentionSnapshotReader.fromEnv() : null;
+        var retentionSnapshotReader = includeRetentionSnapshots ? ExportRetentionSnapshotReader.fromEnv(workerMessages) : null;
         if (includeRetentionSnapshots && retentionSnapshotReader == null) {
-            log.warn("EXPORT_REPLAY_INCLUDE_RETENTION_SNAPSHOTS=true but MinIO env incomplete");
+            log.warn(workerMessages.get("worker.export_replay.retention_snapshots_minio_incomplete"));
         }
         var includeSolrIndex = Boolean.parseBoolean(
             System.getenv().getOrDefault("EXPORT_REPLAY_INCLUDE_SOLR_INDEX", "false"));
         var maxSolrDocs = parsePositiveInt(System.getenv("EXPORT_REPLAY_MAX_SOLR_DOCS"), 10_000);
         var solrReader = includeSolrIndex ? ExportSolrReader.fromEnv() : null;
         if (includeSolrIndex && solrReader == null) {
-            log.warn("EXPORT_REPLAY_INCLUDE_SOLR_INDEX=true but SOLR_URL/SOLR_ZK not set");
+            log.warn(workerMessages.get("worker.export_replay.solr_not_set"));
         }
         var includeFileBodies = Boolean.parseBoolean(
             System.getenv().getOrDefault("EXPORT_REPLAY_INCLUDE_FILE_BODIES", "false"));
@@ -1402,7 +1394,7 @@ public class ExportReplayWorker {
         var maxFileBodyBytes = parsePositiveLong(System.getenv("EXPORT_REPLAY_MAX_FILE_BODY_BYTES"), 52_428_800L);
         ExportFileBodyFetcher fileBodyFetcher = includeFileBodies ? ExportFileBodyFetcher.Minio.fromEnv() : null;
         if (includeFileBodies && fileBodyFetcher == null) {
-            log.warn("EXPORT_REPLAY_INCLUDE_FILE_BODIES=true but MinIO env incomplete");
+            log.warn(workerMessages.get("worker.export_replay.file_bodies_minio_incomplete"));
         }
 
         com.zaxxer.hikari.HikariDataSource ds = null;
@@ -1416,30 +1408,8 @@ public class ExportReplayWorker {
             cfg.setMaximumPoolSize(2);
             cfg.setPoolName("export-replay-worker");
             ds = new com.zaxxer.hikari.HikariDataSource(cfg);
-            log.info(
-                "DB export enabled JDBC URL configured maxMessages={} includeVersions={} maxVersionRows={} "
-                    + "includeReactions={} maxReactionRows={} includePins={} maxPinnedRows={} includeChat={} "
-                    + "includeChatMembers={} maxChatMemberRows={} includeReferencedUsers={} maxReferencedUserRows={} "
-                    + "includeReferencedFiles={} maxFileIdsFromContent={} maxReferencedFileRows={} queryTimeoutSec={}",
-                maxMessages,
-                includeVersions,
-                maxVersionRows,
-                includeReactions,
-                maxReactionRows,
-                includePins,
-                maxPinnedRows,
-                includeChat,
-                includeChatMembers,
-                maxChatMemberRows,
-                includeReferencedUsers,
-                maxReferencedUserRows,
-                includeReferencedFiles,
-                maxFileIdsFromContent,
-                maxReferencedFileRows,
-                queryTimeout
-            );
         } else {
-            log.warn("DB_JDBC_URL not set: export-replay writes stub JSON only");
+            log.warn(workerMessages.get("worker.export_replay.db_stub_only"));
         }
 
         var metricsPort = ExportPlatformDefaults.metricsPortFromEnv();
@@ -1484,18 +1454,14 @@ public class ExportReplayWorker {
                 includeFileBodies,
                 maxFileBodies,
                 maxFileBodyBytes,
-                fileBodyFetcher
+                fileBodyFetcher,
+                workerMessages
             );
-            var workerMessages = WorkerMessageSources.forWorker(
-                ExportReplayWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_export_replay");
             if (metricsPort > 0) {
                 DefaultExports.initialize();
                 metricsServer = ExportReplayMetricsHttpServer.start(
                     metricsPort, worker::natsConnected, workerMessages);
-                log.info(
-                    "Prometheus metrics on http://0.0.0.0:{}/metrics; GET /health on same port",
-                    metricsServer.getPort()
-                );
+                log.info(workerMessages.format("worker.export_replay.metrics_url", metricsServer.getPort()));
             }
             worker.start();
             var finalDs = ds;
@@ -1511,7 +1477,7 @@ public class ExportReplayWorker {
             }));
             Thread.currentThread().join();
         } catch (Exception e) {
-            log.error("Fatal error", e);
+            log.error(workerMessages.get("worker.common.fatal_error"), e);
             if (metricsServer != null) {
                 metricsServer.close();
             }

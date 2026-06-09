@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { apiCreateGroup, apiLogin, apiMeId, ensureSmokeUsers } from "../fixtures/auth";
+import { uiLogin } from "../fixtures/ui";
 
 test.describe("messaging group (3 users)", () => {
   test("API setup group; user A sends; titles visible in list", async ({ page, request }) => {
@@ -13,10 +14,7 @@ test.describe("messaging group (3 users)", () => {
     const title = `e2e-group-3u-${Date.now()}`;
     await apiCreateGroup(request, tokenA, title, [idB, idC]);
 
-    await page.goto("/");
-    await page.locator("#u").fill("smoke_user_a");
-    await page.locator("#p").fill("smokepass123");
-    await page.getByRole("button", { name: "Войти" }).click();
+    await uiLogin(page, "smoke_user_a", "smokepass123");
 
     await expect(page.getByRole("button", { name: new RegExp(title) }).first()).toBeVisible({
       timeout: 30_000,

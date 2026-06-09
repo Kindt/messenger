@@ -62,7 +62,11 @@
           return apiFetch(path, Object.assign({}, opts, { noRefresh: true }));
         }
         onSessionExpired();
-        throw new Error("Сессия истекла — войдите снова.");
+        throw new Error(
+          global.KorusI18n
+            ? global.KorusI18n.t("errors.sessionExpired")
+            : "Сессия истекла — войдите снова."
+        );
       }
       return res;
     }
@@ -83,7 +87,11 @@
           parsed && typeof parsed === "object" && parsed.message
             ? String(parsed.message)
             : res.statusText;
-        throw new Error(msg || "Request failed");
+        throw new Error(
+          global.KorusI18n
+            ? global.KorusI18n.translateError(msg)
+            : msg || "Request failed"
+        );
       }
       return parsed;
     }

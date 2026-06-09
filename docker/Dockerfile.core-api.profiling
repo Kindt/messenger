@@ -1,0 +1,13 @@
+FROM gradle:jdk25 AS builder
+WORKDIR /app
+COPY . .
+RUN gradle :modules:core-api:distTar --no-daemon -x test
+
+FROM eclipse-temurin:25-jdk
+WORKDIR /app
+COPY --from=builder /app/modules/core-api/build/distributions/core-api.tar .
+RUN tar xf core-api.tar && rm core-api.tar
+EXPOSE 8080
+ENV APP_HOME=/app/core-api
+ENV HOT_RELOAD=false
+ENTRYPOINT ["/app/core-api/bin/core-api"]

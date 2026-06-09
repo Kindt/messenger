@@ -8,6 +8,27 @@
 
 ## [Unreleased]
 
+### 2026-06-09 — Deferred backlog (post-backlog plan)
+
+- **Hotplug governance**: ADR accepted, constitution v1.1 Bounded Deployment Split Exception.
+- **Worker i18n logs**: all 9 workers — operational logs via `WorkerMessageSources` + bundle keys (ru/en).
+- **JFR Docker**: profiling Dockerfiles (`*.profiling`), `docker-compose.profiling.yml`, **`scripts/profiling/profile-docker-jfr.ps1`**.
+- **Vault/TLS Phase B**: Ansible role **`tls`**, stage inventory, **`scripts/smoke-tls-redirect.ps1`**, vault secrets wiring.
+- **Hexagonal 2c–2e**: User, File metadata, Organization application services + JDBC adapters.
+- **Playwright parity**: 7 new specs + `fixtures/ui.ts` (`data-testid` selectors); README matrix updated.
+- **E2EE RFC 9420 phase 1**: KMLS wire codec, NATS `mls.*`, `MlsMigrationService`, `e2ee_scheme=mls`, capabilities `mls_status=active`.
+
+### 2026-06-09 — Backlog closure: WIP conferences/i18n, parity sweep, roadmap, hexagonal 2b
+
+- **Conference API**: `POST /v1/conferences`, `GET /v1/conferences/by-room/{roomSlug}`; localized `conference.default_title`; tests **`ConferenceServiceTest`**, **`ConferenceResourceTest`**.
+- **Web-client i18n**: `ui-i18n.js`, `locales/en.js`, `locales/ru.js`; parity REST wiring (read receipts, file metadata/auth-link, export attachments, in-chat conference).
+- **QEMU debug**: `Write-KorusDebugLog.ps1` gated by **`KORUS_DEBUG_LOG=1`**.
+- **Retention/export**: purge gate requires **`export_v1`** only; **`ExportJobRepository.findLatestCompletedExport`**, **`isExportSufficientForPurge`**.
+- **Indexer**: Prometheus **`indexer_solr_*_total`** metrics.
+- **Security**: **`TimingNormalization`**, **`scripts/audit-timing.ps1`**, **`docs/SECURITY_AUDIT.md`** (generated on run).
+- **Hexagonal Phase 2b**: **`MessageApplicationService`**, **`JdbcMessageRepositoryAdapter`**; **`MessageResource.get`** delegation.
+- **Smokes**: **`scripts/smoke-export-replay-before-purge.ps1`**, **`scripts/smoke-retention-solr-clear.ps1`**.
+
 ### 2026-05-27 — **QEMU**: bootstrap через Ansible (spec 003)
 
 - **`deploy/qemu/vm-bootstrap/run-ansible-local.sh`**: pip install Ansible в гостях, playbooks `qemu-server-local` / `qemu-web-local`.

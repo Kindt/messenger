@@ -38,7 +38,7 @@
 
 Во всём REST API составные поля в JSON — **snake_case** (например **`user_id`**, **`display_name`**, **`reply_to_msg_id`**, **`database_ok`**). Внутренний обмен по NATS (**JetStream / subjects**) использует отдельные DTO без этого переименования.
 
-**Чаты и группы:** уже есть **`POST /api/v1/chats`** с типами **`p2p`** и **`group`**, участники, баны, сообщения. **Фото/видео:** загрузка **`POST /api/v1/files/upload`**, лимиты и STUN — **`GET /api/v1/media/capabilities`**. **Видеозвонки:** **`POST /api/v1/chats/{chat_id}/conferences`** → в ответе **`join_url`** (Jitsi по умолчанию); для своего сервера задайте **`JITSI_MEET_BASE_URL`**. **Активность:** **`PATCH .../users/me/presence`**, **`POST .../users/me/heartbeat`**.
+**Видеозвонки:** **`POST /api/v1/chats/{chat_id}/conferences`** или standalone **`POST /api/v1/conferences`** (Telemost-style группа + **`join_url`**); lookup по комнате — **`GET /api/v1/conferences/by-room/{roomSlug}`**; для своего сервера задайте **`JITSI_MEET_BASE_URL`**. **Web-client i18n:** **`/ui-i18n.js`**, locale **`ru`/`en`** в settings.
 
 **Тестовые учётные записи realm `avandocmsg`** (после импорта `keycloak/avandocmsg-realm.json`):
 

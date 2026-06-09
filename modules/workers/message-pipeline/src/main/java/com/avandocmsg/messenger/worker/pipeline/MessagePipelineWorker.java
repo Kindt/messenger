@@ -9,6 +9,7 @@ import com.avandocmsg.messenger.common.dto.MessageSendEvent;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.dto.RtcSignalEvent;
 import com.avandocmsg.messenger.common.dto.TypingEvent;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.JetStreamMessagingSetup;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
@@ -46,10 +47,13 @@ public class MessagePipelineWorker {
     private final DataSource dataSource;
     private final Connection natsConnection;
     private final boolean jetStreamEnabled;
+    private final UserMessageSource workerMessages;
 
-    public MessagePipelineWorker(String natsUrl, DataSource dataSource, boolean jetStreamEnabled) throws Exception {
+    public MessagePipelineWorker(String natsUrl, DataSource dataSource, boolean jetStreamEnabled,
+                                 UserMessageSource workerMessages) throws Exception {
         this.dataSource = dataSource;
         this.jetStreamEnabled = jetStreamEnabled;
+        this.workerMessages = workerMessages;
         var options = Options.builder()
             .server(natsUrl)
             .connectionName("message-pipeline-worker")
@@ -57,7 +61,7 @@ public class MessagePipelineWorker {
             .maxReconnects(-1)
             .build();
         this.natsConnection = Nats.connect(options);
-        log.info("Connected to NATS at {} (JetStream mode: {})", natsUrl, jetStreamEnabled);
+        log.info(workerMessages.format("worker.common.connected_nats_jetstream", natsUrl, jetStreamEnabled));
     }
 
     public void start() throws Exception {
@@ -73,11 +77,11 @@ public class MessagePipelineWorker {
                 .build();
             JetStreamSubscription sub = js.subscribe(NatsSubjects.MSG_SEND, QUEUE_GROUP, dispatcher,
                 this::handleJetStreamMessage, false, opts);
-            log.info("JetStream subscribed to {} queue {} (consumer {}). Waiting...", sub.getSubject(), QUEUE_GROUP, "pipeline-msg-send");
+            log.info(workerMessages.format("worker.common.subscribed_jetstream", sub.getSubject(), QUEUE_GROUP, "pipeline-msg-send"));
         } else {
             var dispatcher = natsConnection.createDispatcher(this::handleCoreMessage);
             dispatcher.subscribe(NatsSubjects.MSG_SEND, QUEUE_GROUP);
-            log.info("Subscribed to {} (queue: {}). Waiting for messages...", NatsSubjects.MSG_SEND, QUEUE_GROUP);
+            log.info(workerMessages.format("worker.common.subscribed_waiting", NatsSubjects.MSG_SEND, QUEUE_GROUP));
         }
         subscribeRtcFanout();
         subscribeTypingFanout();
@@ -91,14 +95,14 @@ public class MessagePipelineWorker {
     private void subscribeReadReceiptFanout() {
         var dispatcher = natsConnection.createDispatcher(this::handleReadReceiptCoreMessage);
         dispatcher.subscribe(NatsSubjects.MSG_READ_RECEIPT, READ_RECEIPT_QUEUE_GROUP);
-        log.info("Subscribed to {} (queue: {}) for read receipts", NatsSubjects.MSG_READ_RECEIPT, READ_RECEIPT_QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed_for", NatsSubjects.MSG_READ_RECEIPT, READ_RECEIPT_QUEUE_GROUP, "read receipts"));
     }
 
     private void handleReadReceiptCoreMessage(Message msg) {
         try {
             handleReadReceiptPayload(msg.getData());
         } catch (Exception e) {
-            log.error("Read receipt fan-out failed", e);
+            log.error(workerMessages.get("worker.pipeline.read_receipt_fanout_failed"), e);
         }
     }
 
@@ -109,34 +113,34 @@ public class MessagePipelineWorker {
         }
         var chatId = UUID.fromString(evt.chatId());
         var reader = UUID.fromString(evt.userId());
-        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, reader)) {
-            log.warn("msg.read_receipt dropped: user {} is not an active member of chat {}", reader, chatId);
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, reader, workerMessages)) {
+            log.warn(workerMessages.format("worker.pipeline.read_receipt_dropped", reader, chatId));
             return;
         }
-        var members = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, reader);
+        var members = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, reader, workerMessages);
         for (var memberId : members) {
             natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
         }
-        log.debug("msg.read_receipt from {} in chat {} -> {} recipients", reader, chatId, members.size());
+        log.debug(workerMessages.format("worker.pipeline.read_receipt_debug", reader, chatId, members.size()));
     }
 
     private void subscribeTypingFanout() {
         var typingDispatcher = natsConnection.createDispatcher(this::handleTypingCoreMessage);
         typingDispatcher.subscribe(NatsSubjects.MSG_TYPING, TYPING_QUEUE_GROUP);
-        log.info("Subscribed to {} (queue: {}) for typing", NatsSubjects.MSG_TYPING, TYPING_QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed_for", NatsSubjects.MSG_TYPING, TYPING_QUEUE_GROUP, "typing"));
     }
 
     private void subscribeChangeFanout() {
         var changeDispatcher = natsConnection.createDispatcher(this::handleChangeCoreMessage);
         changeDispatcher.subscribe(NatsSubjects.MSG_CHANGE, CHANGE_QUEUE_GROUP);
-        log.info("Subscribed to {} (queue: {}) for message change", NatsSubjects.MSG_CHANGE, CHANGE_QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed_for", NatsSubjects.MSG_CHANGE, CHANGE_QUEUE_GROUP, "message change"));
     }
 
     private void handleChangeCoreMessage(Message msg) {
         try {
             handleChangePayload(msg.getData());
         } catch (Exception e) {
-            log.error("Message change fan-out failed", e);
+            log.error(workerMessages.get("worker.pipeline.change_fanout_failed"), e);
         }
     }
 
@@ -144,12 +148,12 @@ public class MessagePipelineWorker {
         var evt = MAPPER.readValue(raw, MessageChangeEvent.class);
         var chatId = UUID.fromString(evt.chatId());
         var sender = UUID.fromString(evt.senderId());
-        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, sender)) {
-            log.warn("msg.change dropped: user {} is not an active member of chat {}", sender, chatId);
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, sender, workerMessages)) {
+            log.warn(workerMessages.format("worker.pipeline.change_dropped", sender, chatId));
             return;
         }
         var members = new java.util.ArrayList<>(
-            PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, sender));
+            PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, sender, workerMessages));
         var authorId = sender.toString();
         if (!members.contains(authorId)) {
             members.add(authorId);
@@ -157,20 +161,20 @@ public class MessagePipelineWorker {
         for (var memberId : members) {
             natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
         }
-        log.debug("msg.change {} in chat {} -> {} recipients", evt.change(), chatId, members.size());
+        log.debug(workerMessages.format("worker.pipeline.change_debug", evt.change(), chatId, members.size()));
     }
 
     private void subscribeReactionFanout() {
         var reactionDispatcher = natsConnection.createDispatcher(this::handleReactionCoreMessage);
         reactionDispatcher.subscribe(NatsSubjects.MSG_REACTION, REACTION_QUEUE_GROUP);
-        log.info("Subscribed to {} (queue: {}) for reactions", NatsSubjects.MSG_REACTION, REACTION_QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed_for", NatsSubjects.MSG_REACTION, REACTION_QUEUE_GROUP, "reactions"));
     }
 
     private void handleReactionCoreMessage(Message msg) {
         try {
             handleReactionPayload(msg.getData());
         } catch (Exception e) {
-            log.error("Reaction fan-out failed", e);
+            log.error(workerMessages.get("worker.pipeline.reaction_fanout_failed"), e);
         }
     }
 
@@ -178,12 +182,12 @@ public class MessagePipelineWorker {
         var evt = MAPPER.readValue(raw, ReactionChangeEvent.class);
         var chatId = UUID.fromString(evt.chatId());
         var actor = UUID.fromString(evt.userId());
-        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, actor)) {
-            log.warn("msg.reaction dropped: user {} is not an active member of chat {}", actor, chatId);
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, actor, workerMessages)) {
+            log.warn(workerMessages.format("worker.pipeline.reaction_dropped", actor, chatId));
             return;
         }
         var members = new java.util.ArrayList<>(
-            PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, actor));
+            PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, actor, workerMessages));
         var actorId = actor.toString();
         if (!members.contains(actorId)) {
             members.add(actorId);
@@ -191,21 +195,21 @@ public class MessagePipelineWorker {
         for (var memberId : members) {
             natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
         }
-        log.debug("msg.reaction {} on {} in chat {} -> {} recipients",
-            evt.change(), evt.messageId(), chatId, members.size());
+        log.debug(workerMessages.format("worker.pipeline.reaction_debug",
+            evt.change(), evt.messageId(), chatId, members.size()));
     }
 
     private void subscribePinFanout() {
         var pinDispatcher = natsConnection.createDispatcher(this::handlePinCoreMessage);
         pinDispatcher.subscribe(NatsSubjects.MSG_PIN, PIN_QUEUE_GROUP);
-        log.info("Subscribed to {} (queue: {}) for pins", NatsSubjects.MSG_PIN, PIN_QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed_for", NatsSubjects.MSG_PIN, PIN_QUEUE_GROUP, "pins"));
     }
 
     private void handlePinCoreMessage(Message msg) {
         try {
             handlePinPayload(msg.getData());
         } catch (Exception e) {
-            log.error("Pin fan-out failed", e);
+            log.error(workerMessages.get("worker.pipeline.pin_fanout_failed"), e);
         }
     }
 
@@ -213,29 +217,29 @@ public class MessagePipelineWorker {
         var evt = MAPPER.readValue(raw, PinChangeEvent.class);
         var chatId = UUID.fromString(evt.chatId());
         var actor = UUID.fromString(evt.pinnedBy());
-        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, actor)) {
-            log.warn("msg.pin dropped: user {} is not an active member of chat {}", actor, chatId);
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, actor, workerMessages)) {
+            log.warn(workerMessages.format("worker.pipeline.pin_dropped", actor, chatId));
             return;
         }
-        var members = PipelineFanoutLogic.loadAllChatMemberUserIds(dataSource, chatId);
+        var members = PipelineFanoutLogic.loadAllChatMemberUserIds(dataSource, chatId, workerMessages);
         for (var memberId : members) {
             natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
         }
-        log.debug("msg.pin {} on {} in chat {} -> {} recipients",
-            evt.change(), evt.messageId(), chatId, members.size());
+        log.debug(workerMessages.format("worker.pipeline.pin_debug",
+            evt.change(), evt.messageId(), chatId, members.size()));
     }
 
     private void subscribeConferenceFanout() {
         var confDispatcher = natsConnection.createDispatcher(this::handleConferenceCoreMessage);
         confDispatcher.subscribe(NatsSubjects.MSG_CONFERENCE, CONFERENCE_QUEUE_GROUP);
-        log.info("Subscribed to {} (queue: {}) for conferences", NatsSubjects.MSG_CONFERENCE, CONFERENCE_QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed_for", NatsSubjects.MSG_CONFERENCE, CONFERENCE_QUEUE_GROUP, "conferences"));
     }
 
     private void handleConferenceCoreMessage(Message msg) {
         try {
             handleConferencePayload(msg.getData());
         } catch (Exception e) {
-            log.error("Conference fan-out failed", e);
+            log.error(workerMessages.get("worker.pipeline.conference_fanout_failed"), e);
         }
     }
 
@@ -243,23 +247,23 @@ public class MessagePipelineWorker {
         var evt = MAPPER.readValue(raw, ConferenceChangeEvent.class);
         var chatId = UUID.fromString(evt.chatId());
         var actor = UUID.fromString(evt.actorId());
-        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, actor)) {
-            log.warn("msg.conference dropped: user {} is not an active member of chat {}", actor, chatId);
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, actor, workerMessages)) {
+            log.warn(workerMessages.format("worker.pipeline.conference_dropped", actor, chatId));
             return;
         }
-        var members = PipelineFanoutLogic.loadAllChatMemberUserIds(dataSource, chatId);
+        var members = PipelineFanoutLogic.loadAllChatMemberUserIds(dataSource, chatId, workerMessages);
         for (var memberId : members) {
             natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
         }
-        log.debug("msg.conference {} {} in chat {} -> {} recipients",
-            evt.change(), evt.conferenceId(), chatId, members.size());
+        log.debug(workerMessages.format("worker.pipeline.conference_debug",
+            evt.change(), evt.conferenceId(), chatId, members.size()));
     }
 
     private void handleTypingCoreMessage(Message msg) {
         try {
             handleTypingPayload(msg.getData());
         } catch (Exception e) {
-            log.error("Typing fan-out failed", e);
+            log.error(workerMessages.get("worker.pipeline.typing_fanout_failed"), e);
         }
     }
 
@@ -267,28 +271,28 @@ public class MessagePipelineWorker {
         var evt = MAPPER.readValue(raw, TypingEvent.class);
         var chatId = UUID.fromString(evt.chatId());
         var sender = UUID.fromString(evt.userId());
-        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, sender)) {
-            log.warn("msg.typing dropped: user {} is not an active member of chat {}", sender, chatId);
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, sender, workerMessages)) {
+            log.warn(workerMessages.format("worker.pipeline.typing_dropped", sender, chatId));
             return;
         }
-        var members = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, sender);
+        var members = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, sender, workerMessages);
         for (var memberId : members) {
             natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
         }
-        log.debug("msg.typing from {} in chat {} -> {} recipients", sender, chatId, members.size());
+        log.debug(workerMessages.format("worker.pipeline.typing_debug", sender, chatId, members.size()));
     }
 
     private void subscribeRtcFanout() {
         var rtcDispatcher = natsConnection.createDispatcher(this::handleRtcCoreMessage);
         rtcDispatcher.subscribe(NatsSubjects.RTC_SIGNAL, RTC_QUEUE_GROUP);
-        log.info("Subscribed to {} (queue: {}) for WebRTC signaling", NatsSubjects.RTC_SIGNAL, RTC_QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed_for", NatsSubjects.RTC_SIGNAL, RTC_QUEUE_GROUP, "WebRTC signaling"));
     }
 
     private void handleRtcCoreMessage(Message msg) {
         try {
             handleRtcPayload(msg.getData());
         } catch (Exception e) {
-            log.error("RTC fan-out failed", e);
+            log.error(workerMessages.get("worker.pipeline.rtc_fanout_failed"), e);
         }
     }
 
@@ -299,23 +303,23 @@ public class MessagePipelineWorker {
         }
         var chatId = UUID.fromString(evt.chatId());
         var sender = UUID.fromString(evt.fromUserId());
-        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, sender)) {
-            log.warn("rtc.signal dropped: sender {} is not an active member of chat {}", sender, chatId);
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, sender, workerMessages)) {
+            log.warn(workerMessages.format("worker.pipeline.rtc_dropped", sender, chatId));
             return;
         }
         var out = MAPPER.writeValueAsBytes(evt);
-        var members = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, sender);
+        var members = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, sender, workerMessages);
         for (var memberId : members) {
             natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, out);
         }
-        log.debug("rtc.signal from {} in chat {} -> {} recipients", sender, chatId, members.size());
+        log.debug(workerMessages.format("worker.pipeline.rtc_debug", sender, chatId, members.size()));
     }
 
     private void handleCoreMessage(Message msg) {
         try {
             handleIncomingPayload(msg.getData(), false);
         } catch (Exception e) {
-            log.error("Failed to process message", e);
+            log.error(workerMessages.get("worker.common.process_message_failed"), e);
         }
     }
 
@@ -324,11 +328,11 @@ public class MessagePipelineWorker {
             handleIncomingPayload(msg.getData(), true);
             msg.ack();
         } catch (Exception e) {
-            log.error("JetStream pipeline failed", e);
+            log.error(workerMessages.get("worker.pipeline.jetstream_failed"), e);
             try {
                 msg.nak();
             } catch (Exception nakEx) {
-                log.warn("nak() failed", nakEx);
+                log.warn(workerMessages.get("worker.common.nak_failed"), nakEx);
             }
         }
     }
@@ -340,21 +344,21 @@ public class MessagePipelineWorker {
         try {
             var payload = new String(raw, StandardCharsets.UTF_8);
             var event = MAPPER.readValue(payload, MessageSendEvent.class);
-            log.debug("Received msg.send: {} in chat {}", event.messageId(), event.chatId());
+            log.debug(workerMessages.format("worker.pipeline.received_send", event.messageId(), event.chatId()));
 
             var memberIds = PipelineFanoutLogic.loadRecipientUserIds(dataSource,
-                UUID.fromString(event.chatId()), UUID.fromString(event.senderId()));
+                UUID.fromString(event.chatId()), UUID.fromString(event.senderId()), workerMessages);
             for (var memberId : memberIds) {
                 var deliverSubject = NatsSubjects.MSG_DELIVER_PREFIX + memberId;
                 natsConnection.publish(deliverSubject, raw);
-                log.debug("Fanned out to {}", deliverSubject);
+                log.debug(workerMessages.format("worker.pipeline.fanned_out", deliverSubject));
             }
 
-            log.info("Processed message {} fanned out to {} members", event.messageId(), memberIds.size());
+            log.info(workerMessages.format("worker.pipeline.processed", event.messageId(), memberIds.size()));
             try {
                 publishDownstreamEvents(event);
             } catch (Exception e) {
-                log.error("Fan-out ok but failed to publish msg.event.* for {}", event.messageId(), e);
+                log.error(workerMessages.format("worker.pipeline.downstream_publish_failed", event.messageId()), e);
                 if (jetStreamMsg) {
                     throw e;
                 }
@@ -363,7 +367,7 @@ public class MessagePipelineWorker {
             if (jetStreamMsg) {
                 throw e;
             }
-            log.error("Failed to process message", e);
+            log.error(workerMessages.get("worker.common.process_message_failed"), e);
         }
     }
 
@@ -379,14 +383,14 @@ public class MessagePipelineWorker {
         try {
             natsConnection.close();
         } catch (Exception e) {
-            log.warn("Error closing NATS connection", e);
+            log.warn(workerMessages.get("worker.common.nats_close_error"), e);
         }
     }
 
     public static void main(String[] args) {
         var workerMessages = WorkerMessageSources.forWorker(
             MessagePipelineWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_message_pipeline");
-        log.info("Worker i18n locale={}", workerMessages.locale());
+        log.info(workerMessages.format("worker.common.locale", workerMessages.locale()));
         var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
         var dbUrl = System.getenv().getOrDefault("DB_JDBC_URL", "jdbc:postgresql://localhost:5432/avandocmsg_hot");
         var dbUser = System.getenv().getOrDefault("DB_USER", "avandocmsg");
@@ -401,12 +405,12 @@ public class MessagePipelineWorker {
         var ds = new HikariDataSource(config);
 
         try {
-            var worker = new MessagePipelineWorker(natsUrl, ds, jetStreamEnabled);
+            var worker = new MessagePipelineWorker(natsUrl, ds, jetStreamEnabled, workerMessages);
             worker.start();
             Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));
             Thread.currentThread().join();
         } catch (Exception e) {
-            log.error("Fatal error", e);
+            log.error(workerMessages.get("worker.common.fatal_error"), e);
             System.exit(1);
         }
     }

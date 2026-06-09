@@ -1,7 +1,4 @@
 ---
 korus_web_dir: "{{ korus_repo_root }}/korus-web"
 korus_web_env_path: "{{ korus_web_dir }}/.env"
-korus_server_lan_ip: "{{ hostvars[groups['korus_server'][0]]['ansible_host'] | default('127.0.0.1') }}"
-korus_web_lan_ip: "{{ ansible_host | default('127.0.0.1') }}"
-korus_web_base_url: "http://127.0.0.1:{{ korus_web_port }}"
 korus_web_attach: false

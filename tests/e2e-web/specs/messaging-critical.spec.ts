@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { apiCreateGroup, apiLogin, apiMeId, ensureSmokeUsers } from "../fixtures/auth";
+import { uiLogin, uiOpenChatByTitle, uiSendMessage } from "../fixtures/ui";
 
 test.describe("messaging critical path", () => {
   test("login via UI, send message in group chat", async ({ page, request }) => {
@@ -11,23 +12,9 @@ test.describe("messaging critical path", () => {
     const groupTitle = `e2e-playwright-${Date.now()}`;
     await apiCreateGroup(request, tokenA, groupTitle, [idB]);
 
-    await page.goto("/");
-    await page.locator("#u").fill("csadmin");
-    await page.locator("#p").fill("csadmin");
-    await page.getByRole("button", { name: "Войти" }).click();
-
-    await expect(page.getByPlaceholder("Сообщение… (Shift+Enter — строка, перетащите файл)")).toBeVisible({
-      timeout: 30_000,
-    });
-
-    const chatButton = page.getByRole("button", { name: new RegExp(groupTitle) });
-    await chatButton.first().click({ timeout: 15_000 });
-
+    await uiLogin(page, "csadmin", "csadmin");
+    await uiOpenChatByTitle(page, groupTitle);
     const marker = `playwright-msg-${Date.now()}`;
-    const textarea = page.getByPlaceholder("Сообщение… (Shift+Enter — строка, перетащите файл)");
-    await textarea.fill(marker);
-    await textarea.press("Enter");
-
-    await expect(page.getByText(marker)).toBeVisible({ timeout: 20_000 });
+    await uiSendMessage(page, marker);
   });
 });

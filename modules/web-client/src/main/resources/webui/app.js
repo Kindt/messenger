@@ -1,6 +1,175 @@
 (function () {
   "use strict";
 
+  var i18n = window.KorusI18n || {
+    t: function (key) {
+      return key;
+    },
+    translateError: function (msg) {
+      return msg || "Ошибка";
+    },
+    init: function () {},
+    getLocale: function () {
+      return "ru";
+    },
+    setLocale: function () {},
+    supportedLocales: function () {
+      return ["ru"];
+    },
+  };
+
+  function L(key, params) {
+    return i18n.t(key, params);
+  }
+
+  function localErr(msg) {
+    return i18n.translateError(msg);
+  }
+
+  function localMediaErr(msg) {
+    return i18n.translateMediaError ? i18n.translateMediaError(msg) : localErr(msg);
+  }
+
+  function meshCallChatReady() {
+    return !!(state.selectedId && state.selectedId !== state.savedChatId && state.tokens);
+  }
+
+  function conferenceIsTracked(conf) {
+    return !!(conf && conf.conference_id);
+  }
+
+  function listUserActiveConferences() {
+    var seen = {};
+    var list = [];
+    var map = state.activeConferenceByChat || {};
+    Object.keys(map).forEach(function (chatId) {
+      var c = map[chatId];
+      if (c && c.conference_id && c.status === "active" && !seen[c.conference_id]) {
+        seen[c.conference_id] = true;
+        list.push(c);
+      }
+    });
+    if (state.chatConferences) {
+      state.chatConferences.forEach(function (c) {
+        if (c && c.conference_id && c.status === "active" && !seen[c.conference_id]) {
+          seen[c.conference_id] = true;
+          list.push(c);
+        }
+      });
+    }
+    return list;
+  }
+
+  function ensureCallPanelOpen() {
+    state.callPanelOpen = true;
+  }
+
+  function parseMemberIdList(raw) {
+    return (raw || "")
+      .split(/[,;\s]+/)
+      .map(function (s) {
+        return s.trim();
+      })
+      .filter(function (s) {
+        return /^[0-9a-f-]{36}$/i.test(s);
+      });
+  }
+
+  function parseConferenceLinkInput(raw) {
+    raw = (raw || "").trim();
+    if (!raw) return { uuid: null, slug: null, url: null };
+    if (/^[0-9a-f-]{36}$/i.test(raw)) return { uuid: raw, slug: null, url: null };
+    var cleaned = raw.replace(/#.*$/, "").replace(/\/+$/, "");
+    var url = cleaned.indexOf("http") === 0 ? cleaned : null;
+    var slug = url ? url.split("/").pop() : cleaned.split("/").pop();
+    return { uuid: null, slug: slug || null, url: url };
+  }
+
+  function buildGuestJitsiUrl(slug) {
+    var base =
+      state.mediaCaps && state.mediaCaps.jitsi_base_url
+        ? String(state.mediaCaps.jitsi_base_url).replace(/\/+$/, "")
+        : "https://meet.jit.si";
+    return base + "/" + encodeURIComponent(slug);
+  }
+
+  function copyConferenceLinkToClipboard(url, silent) {
+    if (!url) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(
+        function () {
+          state.statusMessage = L("conference.linkCopied");
+          render();
+        },
+        function () {
+          if (!silent) {
+            state.error = L("conference.linkCopyFailed");
+            render();
+          }
+        }
+      );
+      return;
+    }
+    if (!silent) {
+      state.error = L("conference.clipboardUnavailable");
+      render();
+    }
+  }
+
+  function meetingAppDeepLink(conf) {
+    if (!conf || !conf.room_slug) return "";
+    try {
+      return (
+        window.location.origin +
+        window.location.pathname +
+        "?meet=" +
+        encodeURIComponent(conf.room_slug)
+      );
+    } catch (e) {
+      return "";
+    }
+  }
+
+  async function postMeetingInviteMessage(chatId, conf) {
+    if (!chatId || !conf || !conf.join_url || !state.tokens) return;
+    var label = (conf.title && conf.title.trim()) || L("conference.defaultMeetingTitle");
+    var appLink = meetingAppDeepLink(conf);
+    var text = L("conference.inviteMessage", {
+      title: label,
+      url: conf.join_url,
+      appLink: appLink,
+    });
+    await apiJson("/chats/" + chatId + "/messages", {
+      method: "POST",
+      jsonBody: { type: "text", content: text },
+    });
+  }
+
+  async function inviteMembersToMeetingChat(conf) {
+    if (!conferenceIsTracked(conf) || !conf.chat_id || !state.tokens) return;
+    var raw = window.prompt(L("conference.inviteMembersPrompt")) || "";
+    var ids = parseMemberIdList(raw);
+    if (!ids.length) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      for (var i = 0; i < ids.length; i++) {
+        await apiJson("/chats/" + conf.chat_id + "/members", {
+          method: "POST",
+          jsonBody: { user_id: ids[i] },
+        });
+      }
+      state.statusMessage = L("conference.membersInvited");
+      await refreshChats();
+    } catch (e) {
+      state.error = localErr(e.message) || L("conference.inviteMembersFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
   const TOKEN_KEY = "korus_web_tokens";
   const THEME_KEY = "korus_web_theme";
   const STYLE_KEY = "korus_web_style";
@@ -8,6 +177,8 @@
   const NOTIF_KEY = "korus_web_notify";
   const PENDING_CHAT_KEY = "korus_pending_chat";
   const PENDING_MSG_KEY = "korus_pending_msg";
+  const PENDING_MEET_KEY = "korus_pending_meet";
+  const PENDING_CONF_KEY = "korus_pending_conf";
   const LAST_PUBLIC_LINK_KEY = "korus_last_public_link";
   const DRAFT_KEY_PREFIX = "korus_draft_";
   const SOUND_NOTIF_KEY = "korus_sound_notify";
@@ -29,7 +200,7 @@
     wsReconnectAttempt: 0,
     sidebarSearch: "",
     callPanelOpen: false,
-    callMode: "mesh",
+    callMode: "jitsi",
     activeConference: null,
     activeConferenceByChat: {},
     chatConferences: null,
@@ -376,7 +547,7 @@
             return apiFetch(path, Object.assign({}, opts, { noRefresh: true }));
           }
           onSessionExpired();
-          throw new Error("Сессия истекла — войдите снова.");
+          throw new Error(L("errors.sessionExpired"));
         }
         return res;
       }
@@ -397,7 +568,7 @@
             parsed && typeof parsed === "object" && parsed.message
               ? String(parsed.message)
               : res.statusText;
-          throw new Error(msg || "Request failed");
+          throw new Error(localErr(msg));
         }
         return parsed;
       }
@@ -883,7 +1054,7 @@
 
   async function deleteServerKeyPackage(kpId) {
     if (!kpId || !state.tokens) return;
-    if (!window.confirm("Удалить key package на сервере?")) return;
+    if (!window.confirm(L("common.deleteKeyPackage"))) return;
     state.busy = true;
     state.error = null;
     render();
@@ -1269,11 +1440,11 @@
     var leavingSelf = userId === meId;
     if (
       !leavingSelf &&
-      !window.confirm("Исключить участника из группы?")
+      !window.confirm(L("common.removeMember"))
     ) {
       return;
     }
-    if (leavingSelf && !window.confirm("Выйти из группы?")) {
+    if (leavingSelf && !window.confirm(L("common.leaveGroup"))) {
       return;
     }
     state.busy = true;
@@ -1324,22 +1495,7 @@
 
   function copyConferenceLink() {
     if (!state.activeConference || !state.activeConference.join_url) return;
-    var url = state.activeConference.join_url;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(
-        function () {
-          state.statusMessage = "Ссылка на конференцию скопирована";
-          render();
-        },
-        function () {
-          state.error = "Не удалось скопировать ссылку";
-          render();
-        }
-      );
-      return;
-    }
-    state.error = "Буфер обмена недоступен";
-    render();
+    copyConferenceLinkToClipboard(state.activeConference.join_url, false);
   }
 
   async function loadChatMembersModal() {
@@ -1584,20 +1740,80 @@
   }
 
   async function joinJitsiConference(conf) {
-    if (!conf || !conf.conference_id) return;
-    state.conferenceBusy = true;
-    state.error = null;
-    render();
-    try {
-      await apiJson("/conferences/" + conf.conference_id + "/join", { method: "POST" });
+    if (!conf) return;
+    ensureCallPanelOpen();
+    state.callMode = "jitsi";
+    if (conf.conference_id) {
+      state.conferenceBusy = true;
+      state.error = null;
+      render();
+      try {
+        await apiJson("/conferences/" + conf.conference_id + "/join", { method: "POST" });
+        stopMeshCallMedia();
+        state.activeConference = conf;
+        state.callMode = "jitsi";
+        await loadActiveConferences();
+        if (state.selectedId) await loadChatConferences();
+        await loadConferenceParticipants(conf.conference_id);
+      } catch (e) {
+        state.error = localErr(e.message) || L("conference.joinFailed");
+      } finally {
+        state.conferenceBusy = false;
+        render();
+      }
+      return;
+    }
+    if (conf.join_url) {
       stopMeshCallMedia();
       state.activeConference = conf;
       state.callMode = "jitsi";
-      await loadChatConferences();
-      await loadActiveConferences();
-      await loadConferenceParticipants(conf.conference_id);
+      render();
+    }
+  }
+
+  async function joinConferenceByLink() {
+    if (!state.tokens) return;
+    var raw = window.prompt(L("conference.pasteLinkPrompt")) || "";
+    var parsed = parseConferenceLinkInput(raw);
+    if (!parsed.uuid && !parsed.slug) return;
+    state.error = null;
+    ensureCallPanelOpen();
+    state.conferenceBusy = true;
+    render();
+    try {
+      if (parsed.uuid) {
+        var byId = await apiJson("/conferences/" + parsed.uuid, { method: "GET" });
+        await joinJitsiConference(byId);
+        return;
+      }
+      try {
+        var byRoom = await apiJson(
+          "/conferences/by-room/" + encodeURIComponent(parsed.slug),
+          { method: "GET" }
+        );
+        await joinJitsiConference(byRoom);
+        return;
+      } catch (lookupErr) {
+        var known = null;
+        listUserActiveConferences().forEach(function (c) {
+          if (known) return;
+          if (parsed.url && c.join_url === parsed.url) known = c;
+          else if (c.room_slug === parsed.slug) known = c;
+        });
+        if (known) {
+          await joinJitsiConference(known);
+          return;
+        }
+      }
+      await joinJitsiConference({
+        join_url: parsed.url || buildGuestJitsiUrl(parsed.slug),
+        title: L("conference.guestMeeting"),
+        status: "active",
+        room_slug: parsed.slug,
+      });
     } catch (e) {
-      state.error = e.message || "Не удалось войти в конференцию";
+      state.error = localErr(e.message) || L("conference.joinFailed");
+      render();
     } finally {
       state.conferenceBusy = false;
       render();
@@ -1606,6 +1822,13 @@
 
   async function leaveActiveConference() {
     if (!state.activeConference || !state.tokens) return;
+    if (!conferenceIsTracked(state.activeConference)) {
+      state.activeConference = null;
+      clearConferenceParticipants();
+      clearJitsiIframe();
+      render();
+      return;
+    }
     var id = state.activeConference.conference_id;
     state.activeConference = null;
     clearConferenceParticipants();
@@ -1614,7 +1837,7 @@
       await apiJson("/conferences/" + id + "/leave", { method: "POST" });
     } catch (e) {}
     if (state.callMode === "jitsi") {
-      state.callMode = "mesh";
+      state.callMode = "jitsi";
     }
     await loadChatConferences();
     await loadActiveConferences();
@@ -1623,6 +1846,10 @@
 
   async function endActiveConference() {
     if (!state.activeConference || !state.tokens) return;
+    if (!conferenceIsTracked(state.activeConference)) {
+      await leaveActiveConference();
+      return;
+    }
     var id = state.activeConference.conference_id;
     state.busy = true;
     state.error = null;
@@ -1630,35 +1857,84 @@
     try {
       await apiJson("/conferences/" + id + "/end", { method: "POST" });
       state.activeConference = null;
-      state.callMode = "mesh";
+      state.callMode = "jitsi";
       clearConferenceParticipants();
       clearJitsiIframe();
       if (state.selectedId) setActiveConferenceForChat(state.selectedId, null);
       await loadChatConferences();
       await loadActiveConferences();
     } catch (e) {
-      state.error = e.message || "Не удалось завершить конференцию";
+      state.error = localErr(e.message) || L("conference.endFailed");
     } finally {
       state.busy = false;
       render();
     }
   }
 
-  async function createChatConference() {
-    if (!state.selectedId || !state.tokens) return;
-    var title = window.prompt("Название конференции (необязательно)") || "";
+  async function createConferenceInChat() {
+    if (!state.tokens || !state.selectedId) return;
+    var title = window.prompt(L("conference.titlePrompt")) || "";
     state.conferenceBusy = true;
     state.error = null;
+    ensureCallPanelOpen();
     render();
     try {
       var conf = await apiJson("/chats/" + state.selectedId + "/conferences", {
         method: "POST",
         jsonBody: { title: title.trim() || null },
       });
+      await loadActiveConferences();
       await loadChatConferences();
-      if (conf) await joinJitsiConference(conf);
+      if (conf) {
+        await joinJitsiConference(conf);
+        copyConferenceLinkToClipboard(conf.join_url, true);
+        state.statusMessage = L("conference.created");
+      }
     } catch (e) {
-      state.error = e.message || "Не удалось создать конференцию";
+      state.error = localErr(e.message) || L("conference.createFailed");
+    } finally {
+      state.conferenceBusy = false;
+      render();
+    }
+  }
+
+  async function createConference() {
+    if (!state.tokens) return;
+    var title = window.prompt(L("conference.titlePrompt")) || "";
+    var memberRaw = window.prompt(L("conference.inviteMembersPrompt")) || "";
+    var memberIds = parseMemberIdList(memberRaw);
+    state.conferenceBusy = true;
+    state.error = null;
+    ensureCallPanelOpen();
+    render();
+    try {
+      var conf = await apiJson("/conferences", {
+        method: "POST",
+        jsonBody: {
+          title: title.trim() || null,
+          member_ids: memberIds.length ? memberIds : null,
+        },
+      });
+      if (conf && conf.chat_id) {
+        try {
+          await postMeetingInviteMessage(conf.chat_id, conf);
+        } catch (postErr) {}
+        if (conf.chat_id !== state.selectedId) {
+          try {
+            await openChatById(conf.chat_id);
+          } catch (openErr) {}
+        }
+      }
+      await loadActiveConferences();
+      await loadChatConferences();
+      if (conf) {
+        await joinJitsiConference(conf);
+        copyConferenceLinkToClipboard(conf.join_url, true);
+        state.statusMessage = L("conference.created");
+        render();
+      }
+    } catch (e) {
+      state.error = localErr(e.message) || L("conference.createFailed");
     } finally {
       state.conferenceBusy = false;
       render();
@@ -1668,17 +1944,13 @@
   async function switchCallMode(mode) {
     if (mode === state.callMode) return;
     if (mode === "jitsi") {
-      if (state.activeConference) {
-        state.callMode = "jitsi";
-        stopMeshCallMedia();
-        render();
-        return;
-      }
-      if (state.chatConferences && state.chatConferences.length) {
-        await joinJitsiConference(state.chatConferences[0]);
-        return;
-      }
-      state.error = "Создайте или выберите конференцию Jitsi";
+      stopMeshCallMedia();
+      state.callMode = "jitsi";
+      render();
+      return;
+    }
+    if (!meshCallChatReady()) {
+      state.error = L("conference.meshNeedsChat");
       render();
       return;
     }
@@ -1695,7 +1967,7 @@
         beginRtcMesh();
       }, 120);
     } catch (e) {
-      state.error = e.message || "WebRTC mesh недоступен";
+      state.error = localErr(e.message) || L("conference.meshUnavailable");
     }
     render();
   }
@@ -1801,7 +2073,12 @@
             }
             var status = st && st.status;
             if (status === "export_v1" || status === "stub_written") {
-              return downloadExportArtifact(chatId, jobId).then(resolve).catch(reject);
+              return previewExportAttachments(chatId, jobId)
+                .then(function () {
+                  return downloadExportArtifact(chatId, jobId);
+                })
+                .then(resolve)
+                .catch(reject);
             }
             if (status === "export_failed") {
               reject(new Error("Экспорт завершился с ошибкой"));
@@ -1860,16 +2137,33 @@
     }
   }
 
-  async function downloadExportArtifact(chatId, jobId) {
-    var res = await apiFetch("/chats/" + chatId + "/export/" + jobId + "/download");
+  async function downloadExportArtifact(chatId, jobId, part) {
+    var suffix = part ? "?part=" + encodeURIComponent(part) : "";
+    var res = await apiFetch("/chats/" + chatId + "/export/" + jobId + "/download" + suffix);
+    if (!res.ok) throw new Error("Export download failed");
     var blob = await res.blob();
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url;
-    a.download = "korus-export-" + chatId.slice(0, 8) + ".zip";
+    var ext = part === "json" ? ".json" : part === "manifest" ? "-manifest.json" : ".zip";
+    a.download = "korus-export-" + chatId.slice(0, 8) + ext;
     document.body.appendChild(a);
     a.click();
     a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function previewExportAttachments(chatId, jobId) {
+    try {
+      var manifest = await apiJson("/chats/" + chatId + "/export/" + jobId + "/attachments", {
+        method: "GET",
+      });
+      if (manifest && manifest.files && manifest.files.length) {
+        state.statusMessage =
+          "Export attachments: " + manifest.files.length + " file(s)";
+      }
+    } catch (e) {}
+  }
     URL.revokeObjectURL(url);
   }
 
@@ -1908,7 +2202,7 @@
 
   async function blockUser(userId) {
     if (!userId || !state.tokens) return;
-    if (!window.confirm("Заблокировать этого пользователя?")) return;
+    if (!window.confirm(L("common.blockUser"))) return;
     state.busy = true;
     state.error = null;
     render();
@@ -1947,7 +2241,7 @@
     if (!deviceName || !state.tokens) return;
     if (
       deviceName === WEB_DEVICE_NAME &&
-      !window.confirm("Отключить Web Push на этом браузере?")
+      !window.confirm(L("common.disablePush"))
     ) {
       return;
     }
@@ -1971,7 +2265,7 @@
 
   async function deleteOwnFile(fileId) {
     if (!fileId || !state.tokens) return;
-    if (!window.confirm("Удалить файл с сервера? Сообщение в чате останется.")) return;
+    if (!window.confirm(L("common.deleteFile"))) return;
     state.busy = true;
     state.error = null;
     render();
@@ -2334,7 +2628,7 @@
   }
 
   async function resetAppUiCache() {
-    if (!window.confirm("Сбросить кэш UI (Service Worker и статика)? Страница перезагрузится.")) {
+    if (!window.confirm(L("common.resetUiCache"))) {
       return;
     }
     state.busy = true;
@@ -2530,7 +2824,7 @@
   }
 
   async function wipeLocalKeyPackage() {
-    if (!window.confirm("Удалить локально сохранённый приватный ключ?")) return;
+    if (!window.confirm(L("common.deleteLocalKey"))) return;
     try {
       await idbDelete(IDB_KEY_LOCAL_KP);
       state.localKeyPackageMeta = null;
@@ -3057,7 +3351,7 @@
 
   async function revokeFilePublicLink(fileId, linkId) {
     if (!fileId || !linkId || !state.tokens) return;
-    if (!window.confirm("Отозвать эту публичную ссылку?")) return;
+    if (!window.confirm(L("common.revokePublicLink"))) return;
     state.busy = true;
     state.error = null;
     render();
@@ -3158,7 +3452,11 @@
       var token = r && r.access_token;
       if (!token) throw new Error("Сервер не вернул access_token");
       var pubUrl =
-        window.location.origin + "/api/v1/files/pub/" + encodeURIComponent(token);
+        kind === "B"
+          ? window.location.origin +
+            "/api/v1/files/auth-link/" +
+            encodeURIComponent(token)
+          : window.location.origin + "/api/v1/files/pub/" + encodeURIComponent(token);
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(pubUrl);
         state.statusMessage = "Публичная ссылка (" + kind + ") скопирована";
@@ -3243,7 +3541,7 @@
         audio: true,
       });
     } catch (e) {
-      state.error = "Камера/микрофон: " + (e.message || "доступ запрещён");
+      state.error = localMediaErr(e.message);
       throw e;
     }
   }
@@ -3479,20 +3777,31 @@
   async function toggleCallPanel() {
     state.callPanelOpen = !state.callPanelOpen;
     if (!state.callPanelOpen) {
-      if (state.activeConference) {
+      if (state.activeConference && conferenceIsTracked(state.activeConference)) {
         await leaveActiveConference();
+      } else if (state.activeConference) {
+        state.activeConference = null;
+        clearJitsiIframe();
       }
       stopMeshCallMedia();
       render();
       return;
     }
     try {
+      await loadActiveConferences();
       await loadChatConferences();
-      if (state.callMode === "jitsi" && state.activeConference) {
+      if (!meshCallChatReady() && state.callMode === "mesh") {
+        state.callMode = "jitsi";
+      }
+      if (state.callMode === "jitsi") {
         render();
         return;
       }
-      state.callMode = "mesh";
+      if (!meshCallChatReady()) {
+        state.callMode = "jitsi";
+        render();
+        return;
+      }
       await ensureCallStream();
       await loadRtcPeerIds();
       startThumbCapture();
@@ -3708,7 +4017,7 @@
         state.activeConference.conference_id === data.conference_id
       ) {
         state.activeConference = null;
-        if (state.callMode === "jitsi") state.callMode = "mesh";
+        clearJitsiIframe();
       }
       state.statusMessage = "Конференция завершена";
     }
@@ -3827,6 +4136,12 @@
 
   function isE2eeType(type) {
     return !!(type && String(type).indexOf("e2ee-") === 0);
+  }
+
+  function preferredE2eeScheme() {
+    var caps = state.mediaCaps;
+    if (caps && caps.mls_status === "active") return "mls";
+    return null;
   }
 
   function e2eePlainType(type) {
@@ -4123,10 +4438,24 @@
     await loadActiveConferences();
   }
 
-  async function markChatRead(chatId) {
+  async function markChatRead(chatId, upToMessageId) {
     if (!state.tokens || !chatId) return;
     try {
-      var res = await apiFetch("/chats/" + chatId + "/read", { method: "POST" });
+      var body = null;
+      if (upToMessageId) {
+        body = JSON.stringify({ up_to_message_id: upToMessageId });
+      } else if (state.messages && state.messages.length) {
+        var last = state.messages[state.messages.length - 1];
+        if (last && last.id) {
+          body = JSON.stringify({ up_to_message_id: last.id });
+          upToMessageId = last.id;
+        }
+      }
+      var res = await apiFetch("/chats/" + chatId + "/read", {
+        method: "POST",
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body || undefined,
+      });
       if (res.ok) {
         state.unreadByChat[chatId] = 0;
         updateDocumentTitle();
@@ -4143,8 +4472,63 @@
             body: JSON.stringify({ message_ids: ids }),
           }).catch(function () {});
         }
+        if (upToMessageId) {
+          markMessageRead(chatId, upToMessageId).catch(function () {});
+        }
       }
     } catch (e) {}
+  }
+
+  async function markMessageRead(chatId, messageId) {
+    if (!state.tokens || !chatId || !messageId) return;
+    try {
+      await apiFetch("/chats/" + chatId + "/messages/" + messageId + "/read", {
+        method: "POST",
+      });
+    } catch (e) {}
+  }
+
+  async function hydrateReadReceiptsForThread(chatId) {
+    if (!state.tokens || !chatId || !state.messages || !state.messages.length) return;
+    var myId = jwtSub(state.tokens.access_token);
+    var own = state.messages.filter(function (m) {
+      return m && m.id && m.sender_id === myId && !m.deleted;
+    });
+    await Promise.all(
+      own.slice(-30).map(function (m) {
+        return apiJson(
+          "/chats/" + chatId + "/read-receipts?message_id=" + encodeURIComponent(m.id),
+          { method: "GET" }
+        )
+          .then(function (row) {
+            if (!row || !row.read_by) return;
+            if (!state.readReceiptsByMessage[m.id]) {
+              state.readReceiptsByMessage[m.id] = {};
+            }
+            row.read_by.forEach(function (u) {
+              if (u && u.user_id) {
+                state.readReceiptsByMessage[m.id][u.user_id] =
+                  u.read_at || Date.now();
+              }
+            });
+          })
+          .catch(function () {});
+      })
+    );
+  }
+
+  function showReadReceiptPopup(messageId) {
+    var rr = state.readReceiptsByMessage[messageId];
+    if (!rr) {
+      window.alert(L("readReceipts.none"));
+      return;
+    }
+    var ids = Object.keys(rr);
+    if (!ids.length) {
+      window.alert(L("readReceipts.none"));
+      return;
+    }
+    window.alert(L("readReceipts.title") + ":\n" + ids.join("\n"));
   }
 
   function scheduleUserSearch() {
@@ -4193,6 +4577,7 @@
     syncPreviewFromThread(chatId);
     await loadReactionsForThread(chatId);
     await loadPinnedMessages(chatId);
+    await hydrateReadReceiptsForThread(chatId);
     var liveConf = activeConferenceInChat(chatId);
     if (liveConf && liveConf.conference_id) {
       loadConferenceParticipants(liveConf.conference_id).catch(function () {});
@@ -4271,7 +4656,7 @@
 
   async function deleteMessageConfirm(m) {
     if (!state.selectedId || !m || m.deleted) return;
-    if (!window.confirm("Удалить сообщение?")) return;
+    if (!window.confirm(L("common.deleteMessage"))) return;
     var res = await apiFetch("/chats/" + state.selectedId + "/messages/" + m.id, {
       method: "DELETE",
     });
@@ -4839,8 +5224,22 @@
     return parsed;
   }
 
+  async function fetchFileMetadata(fileId) {
+    if (!fileId || !state.tokens) return null;
+    try {
+      return await apiJson("/files/" + fileId, { method: "GET" });
+    } catch (e) {
+      return null;
+    }
+  }
+
   async function attachAuthenticatedImage(fileId, imgEl) {
     try {
+      var meta = await fetchFileMetadata(fileId);
+      if (meta && meta.filename) {
+        imgEl.alt = meta.filename;
+        imgEl.title = meta.filename;
+      }
       var res = await apiFetch("/files/" + fileId + "/download", {
         method: "GET",
         headers: { Accept: "*/*" },
@@ -5152,27 +5551,21 @@
     outer.appendChild(brand);
     var card = el("div", "auth-card");
     card.appendChild(
-      el("h2", null, state.authTab === "register" ? "Регистрация" : "Вход")
+      el("h2", null, state.authTab === "register" ? L("auth.register") : L("auth.login"))
     );
-    card.appendChild(
-      el(
-        "p",
-        "auth-hint",
-        "Учётная запись в Keycloak (логин и пароль). После регистрации выполняется вход."
-      )
-    );
+    card.appendChild(el("p", "auth-hint", L("auth.hint")));
     if (state.error) {
       card.appendChild(el("div", "error-banner", state.error));
     }
     var tabs = el("div", "tabs");
-    var tLogin = el("button", state.authTab === "login" ? "active" : "", "Вход");
+    var tLogin = el("button", state.authTab === "login" ? "active" : "", L("auth.login"));
     tLogin.type = "button";
     tLogin.onclick = function () {
       state.authTab = "login";
       state.error = null;
       render();
     };
-    var tReg = el("button", state.authTab === "register" ? "active" : "", "Регистрация");
+    var tReg = el("button", state.authTab === "register" ? "active" : "", L("auth.register"));
     tReg.type = "button";
     tReg.onclick = function () {
       state.authTab = "register";
@@ -5193,9 +5586,18 @@
     if (state.authTab === "register") {
       form.appendChild(field("d", "Отображаемое имя", "text", null, false, null, null));
     }
-    var submit = el("button", "btn btn-primary", state.busy ? "…" : state.authTab === "login" ? "Войти" : "Создать аккаунт");
+    var submit = el(
+      "button",
+      "btn btn-primary",
+      state.busy
+        ? "…"
+        : state.authTab === "login"
+          ? L("auth.loginSubmit")
+          : L("auth.registerSubmit")
+    );
     submit.type = "submit";
     submit.disabled = state.busy;
+    submit.setAttribute("data-testid", "auth-submit");
     submit.style.width = "100%";
     submit.style.marginTop = "8px";
     form.appendChild(submit);
@@ -5232,11 +5634,11 @@
     render();
     try {
       if (!u || !p) {
-        throw new Error("Укажите логин и пароль");
+        throw new Error(L("auth.usernamePasswordRequired"));
       }
       if (state.authTab === "register") {
         if (p.length < 8) {
-          throw new Error("Пароль: не менее 8 символов");
+          throw new Error(L("auth.passwordMinLength"));
         }
         await apiJson("/auth/register", {
           method: "POST",
@@ -5258,16 +5660,14 @@
       });
       await initAfterLogin();
     } catch (err) {
-      var msg = (err && err.message) || "Ошибка";
+      var msg = localErr(err && err.message);
       if (
         state.authTab === "register" &&
         (msg.indexOf("недоступ") !== -1 || msg.indexOf("unavailable") !== -1)
       ) {
-        msg =
-          "Регистрация недоступна (Keycloak). Попробуйте позже или обратитесь к администратору.";
+        msg = L("auth.registerUnavailable");
       } else if (state.authTab === "register" && msg.indexOf("Неверные") !== -1) {
-        msg =
-          "Аккаунт создан, но вход не удался. Проверьте пароль (политика Keycloak) или войдите вручную.";
+        msg = L("auth.registerLoginFailed");
       }
       state.error = msg;
     } finally {
@@ -5442,15 +5842,18 @@
     try {
       var up = await uploadChatFile(file);
       var msgType = messageTypeForMime((up && up.mime_type) || file.type);
-      var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
-        method: "POST",
-        jsonBody: {
+      var body = {
           type: msgType,
           content: up.id,
           reply_to_msg_id: currentReplyToId(),
           client_msg_id: null,
           visibility_ttl_seconds: getComposerTtlSeconds(),
-        },
+        };
+      var scheme = preferredE2eeScheme();
+      if (scheme) body.e2ee_scheme = scheme;
+      var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
+        method: "POST",
+        jsonBody: body,
       });
       clearReplyTo();
       await afterLocalSend(state.selectedId, sent);
@@ -5471,15 +5874,18 @@
     state.error = null;
     render();
     try {
-      var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
-        method: "POST",
-        jsonBody: {
+      var body = {
           type: "text",
           content: text,
           reply_to_msg_id: currentReplyToId(),
           client_msg_id: null,
           visibility_ttl_seconds: getComposerTtlSeconds(),
-        },
+        };
+      var scheme = preferredE2eeScheme();
+      if (scheme) body.e2ee_scheme = scheme;
+      var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
+        method: "POST",
+        jsonBody: body,
       });
       ta.value = "";
       clearComposerDraftForChat(state.selectedId);
@@ -5529,46 +5935,77 @@
     modeBar.appendChild(bMesh);
     modeBar.appendChild(bJitsi);
     panel.appendChild(modeBar);
-    if (state.selectedId && state.selectedId !== state.savedChatId) {
+    if (state.tokens) {
       var confSec = el("div", "call-conferences");
       var confHead = el("div", "call-conferences-head");
       var confTitle = el("div", "call-conferences-title");
-      confTitle.textContent = "Конференции чата";
+      confTitle.textContent = L("conference.sectionTitle");
       confHead.appendChild(confTitle);
       var bRefConf = el("button", "btn btn-ghost btn-sm", "↻");
       bRefConf.type = "button";
-      bRefConf.title = "Обновить список";
+      bRefConf.title = L("conference.refreshList");
       bRefConf.disabled = state.conferenceBusy || state.busy;
       bRefConf.onclick = function () {
-        loadChatConferences().then(render).catch(function () {
-          render();
-        });
+        loadActiveConferences()
+          .then(function () {
+            return loadChatConferences();
+          })
+          .then(render)
+          .catch(function () {
+            render();
+          });
       };
       confHead.appendChild(bRefConf);
       confSec.appendChild(confHead);
+      confSec.appendChild(el("p", "call-hint", L("conference.inviteHint")));
+      var confActions = el("div", "call-conferences-actions");
       var bNewConf = el(
         "button",
-        "btn btn-ghost btn-sm",
-        state.conferenceBusy ? "Создание…" : "+ Создать"
+        "btn btn-primary btn-sm",
+        state.conferenceBusy ? L("conference.creating") : L("conference.create")
       );
       bNewConf.type = "button";
       bNewConf.disabled = state.conferenceBusy || state.busy;
       bNewConf.onclick = function () {
-        createChatConference();
+        createConference();
       };
-      confSec.appendChild(bNewConf);
-      if (state.chatConferences && state.chatConferences.length) {
-        state.chatConferences.forEach(function (c) {
+      var bJoinLink = el("button", "btn btn-ghost btn-sm", L("conference.joinByLink"));
+      bJoinLink.type = "button";
+      bJoinLink.disabled = state.conferenceBusy || state.busy;
+      bJoinLink.onclick = function () {
+        joinConferenceByLink();
+      };
+      confActions.appendChild(bNewConf);
+      if (state.selectedId && state.selectedId !== state.savedChatId) {
+        var bChatConf = el(
+          "button",
+          "btn btn-ghost btn-sm",
+          L("conference.startInChat")
+        );
+        bChatConf.type = "button";
+        bChatConf.disabled = state.conferenceBusy || state.busy;
+        bChatConf.onclick = function () {
+          createConferenceInChat();
+        };
+        confActions.appendChild(bChatConf);
+      }
+      confActions.appendChild(bJoinLink);
+      confSec.appendChild(confActions);
+      var confList = listUserActiveConferences();
+      if (confList.length) {
+        confList.forEach(function (c) {
           var row = el("div", "call-conf-row");
-          var label =
-            (c.title && c.title.trim() ? c.title : c.room_slug || c.conference_id.slice(0, 8)) +
+          var chatLabel = c.chat_id ? chatTitleById(c.chat_id) : "";
+          var baseTitle =
+            (c.title && c.title.trim() ? c.title : c.room_slug || (c.conference_id || "").slice(0, 8)) +
+            (chatLabel ? " · " + chatLabel : "") +
             conferenceParticipantsLabel(c.participant_count) +
             (state.activeConference &&
             state.activeConference.conference_id === c.conference_id
-              ? " · в эфире"
+              ? " · " + L("conference.live")
               : "");
-          row.appendChild(el("span", "call-conf-label", label));
-          var bJoin = el("button", "btn btn-ghost btn-sm", "Войти");
+          row.appendChild(el("span", "call-conf-label", baseTitle));
+          var bJoin = el("button", "btn btn-ghost btn-sm", L("conference.join"));
           bJoin.type = "button";
           bJoin.disabled = state.conferenceBusy;
           bJoin.onclick = function () {
@@ -5578,58 +6015,64 @@
           confSec.appendChild(row);
         });
       } else {
-        confSec.appendChild(el("p", "call-conf-empty", "Нет активных конференций."));
+        confSec.appendChild(el("p", "call-conf-empty", L("conference.noneActive")));
       }
       panel.appendChild(confSec);
     }
+    if (state.callMode === "mesh" && !meshCallChatReady()) {
+      panel.appendChild(el("p", "call-hint call-hint-warn", L("conference.meshNeedsChatHint")));
+    }
     if (state.callMode === "jitsi" && state.activeConference && state.activeConference.join_url) {
       var jHint = el("p", "call-hint");
-      jHint.textContent =
-        "Jitsi (" +
-        (state.mediaCaps && state.mediaCaps.jitsi_base_url
-          ? state.mediaCaps.jitsi_base_url
-          : "meet.jit.si") +
-        "). Учёт входа на сервере — POST join.";
+      jHint.textContent = L("conference.jitsiHint", {
+        host:
+          state.mediaCaps && state.mediaCaps.jitsi_base_url
+            ? state.mediaCaps.jitsi_base_url
+            : "meet.jit.si",
+      });
       panel.appendChild(jHint);
       if (
-        state.activeConference &&
+        conferenceIsTracked(state.activeConference) &&
+        state.activeConference.conference_id &&
         state.conferenceParticipantsConfId !== state.activeConference.conference_id
       ) {
         loadConferenceParticipants(state.activeConference.conference_id)
           .then(render)
           .catch(function () {});
       }
-      var partSec = el("div", "call-participants");
-      var partHead = el("div", "call-participants-head");
-      partHead.appendChild(el("span", "call-participants-title", "В звонке"));
-      var bPartRef = el("button", "btn btn-ghost btn-sm", "↻");
-      bPartRef.type = "button";
-      bPartRef.title = "Обновить список участников";
-      bPartRef.onclick = function () {
-        loadConferenceParticipants(state.activeConference.conference_id)
-          .then(render)
-          .catch(function () {
-            render();
+      if (conferenceIsTracked(state.activeConference)) {
+        var partSec = el("div", "call-participants");
+        var partHead = el("div", "call-participants-head");
+        partHead.appendChild(el("span", "call-participants-title", L("conference.participantsTitle")));
+        var bPartRef = el("button", "btn btn-ghost btn-sm", "↻");
+        bPartRef.type = "button";
+        bPartRef.title = L("conference.refreshParticipants");
+        bPartRef.onclick = function () {
+          loadConferenceParticipants(state.activeConference.conference_id)
+            .then(render)
+            .catch(function () {
+              render();
+            });
+        };
+        partHead.appendChild(bPartRef);
+        partSec.appendChild(partHead);
+        var partList = el("ul", "call-participants-list");
+        var participants = state.conferenceParticipantsList;
+        if (participants && participants.length) {
+          participants.forEach(function (p) {
+            var li = el("li", "call-participant-row", conferenceParticipantLabel(p));
+            partList.appendChild(li);
           });
-      };
-      partHead.appendChild(bPartRef);
-      partSec.appendChild(partHead);
-      var partList = el("ul", "call-participants-list");
-      var participants = state.conferenceParticipantsList;
-      if (participants && participants.length) {
-        participants.forEach(function (p) {
-          var li = el("li", "call-participant-row", conferenceParticipantLabel(p));
-          partList.appendChild(li);
-        });
-      } else if (participants && !participants.length) {
-        partList.appendChild(
-          el("li", "call-participant-row call-participant-empty", "Пока никого")
-        );
-      } else {
-        partList.appendChild(el("li", "call-participant-row call-participant-empty", "…"));
+        } else if (participants && !participants.length) {
+          partList.appendChild(
+            el("li", "call-participant-row call-participant-empty", L("conference.noParticipants"))
+          );
+        } else {
+          partList.appendChild(el("li", "call-participant-row call-participant-empty", "…"));
+        }
+        partSec.appendChild(partList);
+        panel.appendChild(partSec);
       }
-      partSec.appendChild(partList);
-      panel.appendChild(partSec);
       var jWrap = el("div", "call-jitsi-wrap");
       var iframe = getOrCreateJitsiIframe();
       if (iframe.src !== state.activeConference.join_url) {
@@ -5638,26 +6081,53 @@
       jWrap.appendChild(iframe);
       panel.appendChild(jWrap);
       var jBar = el("div", "call-toolbar");
-      var bCopy = el("button", "btn btn-ghost", "Ссылка");
+      var bCopy = el("button", "btn btn-ghost", L("conference.copyLink"));
       bCopy.type = "button";
-      bCopy.title = "Скопировать join_url";
+      bCopy.title = L("conference.copyLinkHint");
       bCopy.onclick = function () {
         copyConferenceLink();
       };
-      var bReload = el("button", "btn btn-ghost", "↻ Jitsi");
+      var bReload = el("button", "btn btn-ghost", L("conference.reloadJitsi"));
       bReload.type = "button";
-      bReload.title = "Перезагрузить встроенный Jitsi";
+      bReload.title = L("conference.reloadJitsiHint");
       bReload.onclick = function () {
         reloadJitsiIframe();
       };
-      var bLeave = el("button", "btn btn-ghost", "Выйти");
+      if (conferenceIsTracked(state.activeConference)) {
+        var bInvite = el("button", "btn btn-ghost", L("conference.inviteMembers"));
+        bInvite.type = "button";
+        bInvite.disabled = state.busy;
+        bInvite.onclick = function () {
+          inviteMembersToMeetingChat(state.activeConference);
+        };
+        jBar.appendChild(bInvite);
+        var bRepost = el("button", "btn btn-ghost", L("conference.repostInvite"));
+        bRepost.type = "button";
+        bRepost.disabled = state.busy;
+        bRepost.onclick = function () {
+          postMeetingInviteMessage(state.activeConference.chat_id, state.activeConference)
+            .then(function () {
+              state.statusMessage = L("conference.invitePosted");
+              render();
+            })
+            .catch(function (e) {
+              state.error = localErr(e.message) || L("conference.invitePostFailed");
+              render();
+            });
+        };
+        jBar.appendChild(bRepost);
+      }
+      var bLeave = el("button", "btn btn-ghost", L("conference.leave"));
       bLeave.type = "button";
       bLeave.onclick = function () {
         leaveActiveConference();
       };
-      var bEnd = el("button", "btn btn-ghost", "Завершить для всех");
+      var bEnd = el("button", "btn btn-ghost", L("conference.endAll"));
       bEnd.type = "button";
-      bEnd.disabled = state.busy;
+      bEnd.disabled = state.busy || !conferenceIsTracked(state.activeConference);
+      bEnd.title = conferenceIsTracked(state.activeConference)
+        ? ""
+        : L("conference.endGuestHint");
       bEnd.onclick = function () {
         endActiveConference();
       };
@@ -5764,7 +6234,7 @@
     var shell = el("div", "app-shell messenger-shell" + (state.callPanelOpen ? " call-open" : ""));
     if (state.networkOnline === false) {
       var netBanner = el("div", "network-banner");
-      netBanner.textContent = "Нет сети — API и чаты недоступны до восстановления соединения";
+      netBanner.textContent = L("errors.networkOffline");
       shell.appendChild(netBanner);
     }
     if (state.swUpdateReady) {
@@ -5869,18 +6339,19 @@
     var ws = el("span", "ws-status " + (wsConnected ? "connected" : "disconnected"));
     ws.title = wsBaseUrl();
     ws.textContent =
-      "WS " +
+      L("ws.prefix") +
+      " " +
       (state.wsState === "open"
-        ? "онлайн"
+        ? L("ws.online")
         : state.wsState === "connecting"
-          ? "…"
+          ? L("ws.connecting")
           : state.wsState === "reconnecting"
-            ? "переподкл."
+            ? L("ws.reconnecting")
           : state.wsState === "error"
-            ? "ошибка"
-            : "нет");
+            ? L("ws.error")
+            : L("ws.offline"));
     hdrR.appendChild(ws);
-    var lo = el("button", "btn btn-ghost", "Выйти");
+    var lo = el("button", "btn btn-ghost", L("common.logout"));
     lo.type = "button";
     lo.onclick = function () {
       logout();
@@ -6445,7 +6916,12 @@
           var rrCount = rr ? Object.keys(rr).length : 0;
           if (rrCount > 0) {
             var rrEl = el("span", "msg-read-receipt-double-check", " ✓✓");
-            rrEl.title = "Прочитали: " + rrCount;
+            rrEl.title = L("readReceipts.title") + ": " + rrCount;
+            rrEl.style.cursor = "pointer";
+            rrEl.onclick = function (ev) {
+              ev.stopPropagation();
+              showReadReceiptPopup(m.id);
+            };
             meta.appendChild(rrEl);
           }
         }
@@ -6727,6 +7203,7 @@
       comp.appendChild(ttlRow);
       var ta = el("textarea");
       ta.id = "msgdraft";
+      ta.setAttribute("data-testid", "message-composer");
       ta.rows = 3;
       ta.placeholder = "Сообщение… (Shift+Enter — строка, перетащите файл)";
       ta.value = loadComposerDraftForChat(state.selectedId);
@@ -6769,6 +7246,22 @@
       };
       rowTheme.appendChild(bTheme);
       sBody.appendChild(rowTheme);
+      var rowLocale = el("div", "settings-row");
+      rowLocale.appendChild(el("span", null, L("settings.locale")));
+      ["ru", "en"].forEach(function (code) {
+        var bLoc = el(
+          "button",
+          "btn btn-ghost btn-sm" + (i18n.getLocale() === code ? " active" : ""),
+          code === "ru" ? L("settings.localeRu") : L("settings.localeEn")
+        );
+        bLoc.type = "button";
+        bLoc.onclick = function () {
+          i18n.setLocale(code);
+          render();
+        };
+        rowLocale.appendChild(bLoc);
+      });
+      sBody.appendChild(rowLocale);
       sBody.appendChild(
         el(
           "p",
@@ -7400,17 +7893,21 @@
       var params = new URLSearchParams(window.location.search);
       var chatId = params.has("chat") ? params.get("chat") : null;
       var msgId = params.has("msg") ? params.get("msg") : null;
-      var changed = params.has("chat") || params.has("msg");
+      var meet = params.has("meet") ? params.get("meet") : null;
+      var conf = params.has("conf") ? params.get("conf") : null;
+      var changed = params.has("chat") || params.has("msg") || params.has("meet") || params.has("conf");
       if (params.has("chat")) params.delete("chat");
       if (params.has("msg")) params.delete("msg");
+      if (params.has("meet")) params.delete("meet");
+      if (params.has("conf")) params.delete("conf");
       if (changed && window.history && window.history.replaceState) {
         var q = params.toString();
         var path = window.location.pathname + (q ? "?" + q : "");
         window.history.replaceState(null, "", path);
       }
-      return { chatId: chatId, msgId: msgId };
+      return { chatId: chatId, msgId: msgId, meet: meet, conf: conf };
     } catch (e) {
-      return { chatId: null, msgId: null };
+      return { chatId: null, msgId: null, meet: null, conf: null };
     }
   }
 
@@ -7439,6 +7936,57 @@
     return pending.msgId || null;
   }
 
+  function stashPendingMeetingDeepLink(fromUrl) {
+    if (fromUrl && fromUrl.meet) {
+      try {
+        sessionStorage.setItem(PENDING_MEET_KEY, fromUrl.meet);
+      } catch (e) {}
+    }
+    if (fromUrl && fromUrl.conf) {
+      try {
+        sessionStorage.setItem(PENDING_CONF_KEY, fromUrl.conf);
+      } catch (e) {}
+    }
+  }
+
+  async function consumePendingMeetingDeepLink() {
+    var fromUrl = stripDeepLinkFromUrl();
+    stashPendingMeetingDeepLink(fromUrl);
+    var meet = null;
+    var confId = null;
+    try {
+      meet = sessionStorage.getItem(PENDING_MEET_KEY);
+      confId = sessionStorage.getItem(PENDING_CONF_KEY);
+      sessionStorage.removeItem(PENDING_MEET_KEY);
+      sessionStorage.removeItem(PENDING_CONF_KEY);
+    } catch (e) {}
+    if (!meet && !confId) return;
+    ensureCallPanelOpen();
+    if (confId) {
+      try {
+        var byId = await apiJson("/conferences/" + confId, { method: "GET" });
+        await joinJitsiConference(byId);
+        return;
+      } catch (e) {}
+    }
+    if (meet) {
+      try {
+        var byRoom = await apiJson(
+          "/conferences/by-room/" + encodeURIComponent(meet),
+          { method: "GET" }
+        );
+        await joinJitsiConference(byRoom);
+        return;
+      } catch (e) {}
+      await joinJitsiConference({
+        join_url: buildGuestJitsiUrl(meet),
+        title: L("conference.guestMeeting"),
+        status: "active",
+        room_slug: meet,
+      });
+    }
+  }
+
   async function initAfterLogin() {
     try {
       state.lastPublicLink = loadLastPublicLink();
@@ -7462,6 +8010,7 @@
           }
         }
       }
+      await consumePendingMeetingDeepLink();
     } catch (err) {
       state.error = err.message;
     }
@@ -7471,6 +8020,7 @@
   }
 
   function boot() {
+    i18n.init();
     applyStyleSet(loadStyleSet());
     syncNotifyPref();
     startTtlRenderTicker();
@@ -7488,7 +8038,7 @@
         .then(function (ok) {
           if (!ok) {
             clearTokens();
-            state.error = "Сессия истекла — войдите снова.";
+            state.error = L("errors.sessionExpired");
             updateDocumentTitle();
             render();
             return;
@@ -7505,6 +8055,7 @@
       if (pendingUrl.chatId || pendingUrl.msgId) {
         stashPendingDeepLink(pendingUrl.chatId, pendingUrl.msgId);
       }
+      stashPendingMeetingDeepLink(pendingUrl);
       updateDocumentTitle();
       render();
     }

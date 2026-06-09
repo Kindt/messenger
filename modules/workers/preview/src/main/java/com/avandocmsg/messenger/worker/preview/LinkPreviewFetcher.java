@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.worker.preview;
 
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import org.jsoup.Jsoup;
@@ -20,9 +22,12 @@ final class LinkPreviewFetcher {
 
     private final OkHttpClient http;
     private final int maxBodyBytes;
+    private final UserMessageSource workerMessages;
 
-    LinkPreviewFetcher(Duration connectTimeout, Duration readTimeout, int maxBodyBytes) {
+    LinkPreviewFetcher(Duration connectTimeout, Duration readTimeout, int maxBodyBytes,
+                         UserMessageSource workerMessages) {
         this.maxBodyBytes = Math.max(1024, maxBodyBytes);
+        this.workerMessages = workerMessages;
         this.http = new OkHttpClient.Builder()
             .connectTimeout(connectTimeout.toMillis(), TimeUnit.MILLISECONDS)
             .readTimeout(readTimeout.toMillis(), TimeUnit.MILLISECONDS)
@@ -37,14 +42,14 @@ final class LinkPreviewFetcher {
             uri = SsrfGuard.parseHttpUri(rawUrl);
             SsrfGuard.validateHostAllowed(uri.getHost());
         } catch (IOException e) {
-            log.debug("Preview URL rejected: {}", e.getMessage());
+            log.debug(workerMessages.format("worker.preview.url_rejected", e.getMessage()));
             return Optional.empty();
         }
         String canonical = uri.toString();
         Request request = new Request.Builder().url(canonical).get().build();
         try (var response = http.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                log.debug("Preview HTTP status {} for {}", response.code(), canonical);
+                log.debug(workerMessages.format("worker.preview.http_status", response.code(), canonical));
                 return Optional.empty();
             }
             try (var peeked = response.peekBody(maxBodyBytes)) {
@@ -53,7 +58,7 @@ final class LinkPreviewFetcher {
                 return Optional.ofNullable(extractTitle(html));
             }
         } catch (IOException e) {
-            log.debug("Preview fetch failed for {}", canonical, e);
+            log.debug(workerMessages.format("worker.preview.fetch_failed", canonical), e);
             return Optional.empty();
         }
     }

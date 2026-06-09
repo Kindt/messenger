@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.api.mls;
 
 import com.avandocmsg.messenger.api.crypto.E2EEService;
 import com.avandocmsg.messenger.api.mls.dto.EncryptedMessage;
+import com.avandocmsg.messenger.api.mls.wire.MlsCommitPayload;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class MlsGroupManagerTest {
 
     private InMemoryGroupStateRepository groupStateRepository;
+    private RecordingWirePublisher wirePublisher;
     private MlsGroupManager manager;
     private UUID chatId;
 
@@ -25,10 +27,11 @@ class MlsGroupManagerTest {
     void setUp() {
         chatId = UUID.randomUUID();
         groupStateRepository = new InMemoryGroupStateRepository();
+        wirePublisher = new RecordingWirePublisher();
         var sessionRepository = new StubSessionRepository();
         var mlsService = new MlsService(sessionRepository, new E2EEService());
         var clock = Clock.fixed(Instant.parse("2026-05-24T12:00:00Z"), ZoneOffset.UTC);
-        manager = new MlsGroupManager(groupStateRepository, mlsService, UuidGenerator.standard(), clock);
+        manager = new MlsGroupManager(groupStateRepository, mlsService, UuidGenerator.standard(), clock, wirePublisher);
     }
 
     @Test
@@ -56,6 +59,60 @@ class MlsGroupManagerTest {
         assertTrue(manager.addMember(groupId, UUID.randomUUID()));
         var after = manager.findGroup(groupId).orElseThrow().epoch();
         assertEquals(before + 1, after);
+    }
+
+    @Test
+    void createGroup_publishesWelcome() {
+        var members = List.of(UUID.randomUUID(), UUID.randomUUID());
+        manager.createGroup(chatId, members);
+        assertEquals(1, wirePublisher.welcomeCount);
+    }
+
+    @Test
+    void addMember_publishesCommitAndEpoch() {
+        var groupId = manager.createGroup(chatId, List.of(UUID.randomUUID()));
+        wirePublisher.resetCounts();
+        var newMember = UUID.randomUUID();
+        assertTrue(manager.addMember(groupId, newMember));
+        assertEquals(1, wirePublisher.commitCount);
+        assertEquals(1, wirePublisher.epochCount);
+        assertEquals(MlsCommitPayload.Action.ADD, wirePublisher.lastCommitAction);
+        assertEquals(newMember, wirePublisher.lastCommitMember);
+    }
+
+    static final class RecordingWirePublisher extends MlsWirePublisher {
+        int welcomeCount;
+        int commitCount;
+        int epochCount;
+        MlsCommitPayload.Action lastCommitAction;
+        UUID lastCommitMember;
+
+        RecordingWirePublisher() {
+            super(null, null);
+        }
+
+        void resetCounts() {
+            welcomeCount = 0;
+            commitCount = 0;
+            epochCount = 0;
+        }
+
+        @Override
+        public void publishWelcome(MlsGroupState state, List<UUID> memberUserIds, String cipherSuite) {
+            welcomeCount++;
+        }
+
+        @Override
+        public void publishCommit(MlsGroupState state, UUID memberUserId, MlsCommitPayload.Action action) {
+            commitCount++;
+            lastCommitAction = action;
+            lastCommitMember = memberUserId;
+        }
+
+        @Override
+        public void publishEpoch(MlsGroupState state) {
+            epochCount++;
+        }
     }
 
     static final class InMemoryGroupStateRepository extends MlsGroupStateRepository {

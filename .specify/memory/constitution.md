@@ -17,6 +17,14 @@ Every NATS consumer/publisher MUST have at least one Prometheus metric (counter,
 ### V. Clean Architecture, Modular Monolith
 The project follows a modular monolith with strict dependency direction: `workers/*` → `core-api` → `common`. No circular module dependencies. Business logic lives in services, not in JAX-RS resources. Persistence goes through repositories, never direct JDBC in resources. Shared DTOs live in `modules/common`.
 
+> **Bounded Deployment Split Exception**  
+> Selected workers may run as separate deployable processes when all conditions are met:
+> (1) compile-time dependency direction remains unchanged;  
+> (2) all integration stays contract-first via documented NATS subjects/payloads;  
+> (3) core-api supports graceful degradation if worker is absent;  
+> (4) observability and smoke-test parity are provided;  
+> (5) scope is explicitly approved via ADR and is feature-bounded.
+
 ### VI. Infrastructure Parity
 Production-like infrastructure (PostgreSQL, MinIO, NATS, Redis, Solr) is required for manual smoke tests. CI runs unit + integration tests against H2 / embedded servers. Smoke scripts in `scripts/` MUST pass before any release. Environment variables with sensible defaults are the universal configuration mechanism — no hardcoded secrets or URLs in source.
 
@@ -59,4 +67,4 @@ This constitution supersedes ad-hoc practices. Amendments require:
 
 All PRs and reviews MUST verify compliance with this constitution. Complexity MUST be justified — simpler alternatives considered and documented.
 
-**Version**: 1.0.0 | **Ratified**: 2026-05-23 | **Last Amended**: 2026-05-23
+**Version**: 1.1.0 | **Ratified**: 2026-05-23 | **Last Amended**: 2026-06-09

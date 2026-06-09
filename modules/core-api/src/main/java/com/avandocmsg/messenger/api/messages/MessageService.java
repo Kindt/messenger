@@ -5,6 +5,8 @@ import com.avandocmsg.messenger.api.messages.dto.MessageVersionResponse;
 import com.avandocmsg.messenger.api.messages.dto.PinnedMessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.ReactionResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
+import com.avandocmsg.messenger.api.mls.MlsMessageTypes;
+import com.avandocmsg.messenger.api.mls.MlsMigrationService;
 import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
@@ -37,6 +39,7 @@ public class MessageService {
     private final ChatRepository chatRepository;
     private final BlockRepository blockRepository;
     private final MlsService mlsService;
+    private final MlsMigrationService mlsMigrationService;
     private final NatsOutboundPort natsOutbound;
     private final UuidGenerator uuidGenerator;
     private final BooleanSupplier indexerAvailable;
@@ -46,17 +49,27 @@ public class MessageService {
     public MessageService(MessageRepository messageRepository, ChatRepository chatRepository,
                           BlockRepository blockRepository,
                           MlsService mlsService, NatsOutboundPort natsOutbound, UuidGenerator uuidGenerator) {
-        this(messageRepository, chatRepository, blockRepository, mlsService, natsOutbound, uuidGenerator, () -> true);
+        this(messageRepository, chatRepository, blockRepository, mlsService, null, natsOutbound, uuidGenerator, () -> true);
     }
 
     public MessageService(MessageRepository messageRepository, ChatRepository chatRepository,
                           BlockRepository blockRepository,
                           MlsService mlsService, NatsOutboundPort natsOutbound, UuidGenerator uuidGenerator,
                           BooleanSupplier indexerAvailable) {
+        this(messageRepository, chatRepository, blockRepository, mlsService, null, natsOutbound, uuidGenerator,
+            indexerAvailable);
+    }
+
+    public MessageService(MessageRepository messageRepository, ChatRepository chatRepository,
+                          BlockRepository blockRepository,
+                          MlsService mlsService, MlsMigrationService mlsMigrationService,
+                          NatsOutboundPort natsOutbound, UuidGenerator uuidGenerator,
+                          BooleanSupplier indexerAvailable) {
         this.messageRepository = messageRepository;
         this.chatRepository = chatRepository;
         this.blockRepository = blockRepository;
         this.mlsService = mlsService;
+        this.mlsMigrationService = mlsMigrationService;
         this.natsOutbound = natsOutbound;
         this.uuidGenerator = uuidGenerator;
         this.indexerAvailable = indexerAvailable != null ? indexerAvailable : () -> true;
@@ -127,7 +140,14 @@ public class MessageService {
         }
         var attachmentFileId = parseAttachmentFileId(request.type(), request.content());
         var content = request.content();
-        var encrypted = mlsService.encrypt(chatId, senderId, content);
+        if (usesMlsScheme(request)) {
+            if (mlsMigrationService != null) {
+                mlsMigrationService.migrateToMls(chatId);
+            }
+        }
+        var encrypted = shouldServerEncrypt(request)
+            ? mlsService.encrypt(chatId, senderId, content)
+            : null;
         if (encrypted != null) {
             content = combinedCiphertextBase64(encrypted);
         }
@@ -143,6 +163,25 @@ public class MessageService {
     private String typeForEncrypted(String type, com.avandocmsg.messenger.api.mls.dto.EncryptedMessage encrypted) {
         if (encrypted == null) return type != null ? type : "text";
         return "e2ee-" + (type != null ? type : "text");
+    }
+
+    static boolean usesMlsScheme(SendMessageRequest request) {
+        return request != null
+            && request.e2eeScheme() != null
+            && MlsMessageTypes.SCHEME_MLS.equalsIgnoreCase(request.e2eeScheme());
+    }
+
+    static boolean shouldServerEncrypt(SendMessageRequest request) {
+        if (request == null) {
+            return true;
+        }
+        if (request.e2eeScheme() == null || request.e2eeScheme().isBlank()) {
+            return true;
+        }
+        if (MlsMessageTypes.SCHEME_LEGACY.equalsIgnoreCase(request.e2eeScheme())) {
+            return false;
+        }
+        return MlsMessageTypes.SCHEME_MLS.equalsIgnoreCase(request.e2eeScheme());
     }
 
     static boolean isE2eeType(String type) {

@@ -48,9 +48,14 @@ import com.avandocmsg.messenger.core.adapter.messaging.NatsConnectionOutbound;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.avandocmsg.messenger.api.mls.MlsGroupManager;
 import com.avandocmsg.messenger.api.mls.MlsGroupStateRepository;
+import com.avandocmsg.messenger.api.mls.MlsMigrationService;
 import com.avandocmsg.messenger.api.mls.MlsService;
+import com.avandocmsg.messenger.api.mls.MlsWirePublisher;
 import com.avandocmsg.messenger.api.mls.SessionRepository;
 import com.avandocmsg.messenger.core.application.ChatApplicationService;
+import com.avandocmsg.messenger.core.application.FileApplicationService;
+import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
+import com.avandocmsg.messenger.core.application.UserApplicationService;
 import com.avandocmsg.messenger.core.bootstrap.CoreModule;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatBanRepository;
@@ -288,13 +293,19 @@ public class MessengerApplication {
             messageRepository, chatReadRepository, userRepository, auditRepository, natsOutbound,
             appConfig, this.clock);
         var mlsGroupStateRepository = new MlsGroupStateRepository(dataSource, this.clock);
+        var mlsWirePublisher = new MlsWirePublisher(natsOutbound, appConfig);
         var mlsGroupManager = new MlsGroupManager(mlsGroupStateRepository, mlsService,
-            this.uuidGenerator, this.clock);
+            this.uuidGenerator, this.clock, mlsWirePublisher);
+        var mlsMigrationService = new MlsMigrationService(dataSource, mlsGroupManager, chatRepository);
         var chatApplicationService = CoreModule.chatApplicationService(dataSource, chatRepository);
+        var messageApplicationService = CoreModule.messageApplicationService(dataSource, chatRepository);
+        var userApplicationService = CoreModule.userApplicationService(dataSource);
+        var fileApplicationService = CoreModule.fileApplicationService(dataSource, messageRepository);
+        var organizationApplicationService = CoreModule.organizationApplicationService(dataSource);
         var legalHoldRepository = new LegalHoldRepository(dataSource);
         var purgeStatusService = new PurgeStatusService(dataSource, auditRepository);
         var messageService = new MessageService(messageRepository, chatRepository, blockRepository,
-            mlsService, natsOutbound, this.uuidGenerator,
+            mlsService, mlsMigrationService, natsOutbound, this.uuidGenerator,
             () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent());
         var fileService = new FileService(appConfig, fileProxy, fileRepository, messageRepository, this.uuidGenerator);
         var exportComplianceSeed = new AdminExportComplianceSeed(
@@ -302,8 +313,6 @@ public class MessengerApplication {
         var chatBanService = new ChatBanService(chatBanRepository, chatRepository);
         var conferenceRepository = new com.avandocmsg.messenger.api.repository.ConferenceRepository(dataSource, appConfig,
             this.uuidGenerator);
-        var conferenceService = new com.avandocmsg.messenger.api.conference.ConferenceService(
-            conferenceRepository, chatRepository, natsOutbound);
 
         UserMessageSource userMessages = new CompositeMessageSource(appConfig.locale(),
             MessengerApplication.class.getClassLoader(),
@@ -311,15 +320,21 @@ public class MessengerApplication {
                 "com.avandocmsg.messenger.i18n.messages_core_api",
                 "com.avandocmsg.messenger.i18n.messages_common"));
 
+        var conferenceService = new com.avandocmsg.messenger.api.conference.ConferenceService(
+            conferenceRepository, chatRepository, chatService, natsOutbound, userMessages);
+
         var jerseyServlet = new ServletContainer(
             new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
                 userRepository, contactRepository, contactService,
                 chatRepository, chatService, chatReadRepository, readReceiptService, chatApplicationService,
+                messageApplicationService, userApplicationService, fileApplicationService,
+                organizationApplicationService,
                 blockRepository,
                 messageRepository, messageService, natsConnection, natsOutbound,
                 minioClient, fileRepository, fileService,
                 chatBanRepository, chatBanService,
-                e2eeService, keyPackageRepository, sessionRepository, mlsService, mlsGroupManager, fileProxy, conferenceService,
+                e2eeService, keyPackageRepository, sessionRepository, mlsService, mlsGroupManager,
+                mlsMigrationService, mlsWirePublisher, fileProxy, conferenceService,
                 auditRepository, exportJobRepository, exportJobEnqueuer, exportFileAccess, this.exportSuggestedHandler,
                 exportComplianceSeed,
                 organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,

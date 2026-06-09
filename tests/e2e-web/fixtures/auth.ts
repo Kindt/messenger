@@ -2,6 +2,8 @@ import { APIRequestContext } from "@playwright/test";
 
 const apiBase = () => process.env.KORUS_API_URL || "http://127.0.0.1:8080";
 
+export { apiBase };
+
 export async function apiLogin(
   request: APIRequestContext,
   username: string,
@@ -47,6 +49,7 @@ export async function ensureSmokeUsers(request: APIRequestContext): Promise<void
   const users = [
     { u: "smoke_user_a", d: "Smoke User A" },
     { u: "smoke_user_b", d: "Smoke User B" },
+    { u: "smoke_user_c", d: "Smoke User C" },
   ];
   for (const { u, d } of users) {
     const res = await request.post(`${apiBase()}/api/v1/auth/register`, {

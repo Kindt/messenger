@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.retention;
 
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -67,6 +68,7 @@ public final class RetentionWorker {
     private final AtomicBoolean shutdownRequested;
     /** Single-thread scheduler for hot-body passes; {@code null} until {@link #run()} when enabled. */
     private volatile ScheduledExecutorService scanExecutor;
+    private final UserMessageSource workerMessages;
 
     RetentionWorker(
         boolean enabled,
@@ -93,7 +95,8 @@ public final class RetentionWorker {
         long minioMultipartThresholdBytes,
         boolean dryRun,
         boolean useAdvisoryLock,
-        AtomicBoolean shutdownRequested
+        AtomicBoolean shutdownRequested,
+        UserMessageSource workerMessages
     ) {
         this.enabled = enabled;
         this.scanIntervalSeconds = Math.max(5, scanIntervalSeconds);
@@ -120,21 +123,21 @@ public final class RetentionWorker {
         this.dryRun = dryRun;
         this.useAdvisoryLock = useAdvisoryLock;
         this.shutdownRequested = shutdownRequested;
+        this.workerMessages = workerMessages;
     }
 
     void run() throws Exception {
         if (!enabled) {
-            log.info("Retention worker disabled (RETENTION_WORKER_ENABLED=false); idle. See docs/RETENTION_AND_DEEP_ARCHIVE.md");
+            log.info(workerMessages.get("worker.retention.disabled"));
             Thread.currentThread().join();
             return;
         }
         if (dataSource == null || nats == null) {
-            log.error("RETENTION_WORKER_ENABLED=true requires DB_JDBC_URL and NATS_URL");
+            log.error(workerMessages.get("worker.retention.requires_db_nats"));
             System.exit(1);
             return;
         }
-        log.info(
-            "Retention worker enabled: interval={}s initialDelay={}s batchLimit={} requireMinio={} useAppliedLog={} auditEnabled={} bulkAuditMinCleared={} retentionMinioBucket={} retentionObjectPrefix={} skipSnapshotIfDeepExists={} minioDefaultBucket={} postgresOnlyHotBody={} jdbcQueryTimeoutSeconds={} interMessageDelayMs={} snapshotTempfileThresholdBytes={} minioMultipartThresholdBytes={} dryRun={} useAdvisoryLock={}",
+        log.info(workerMessages.format("worker.retention.enabled_config",
             scanIntervalSeconds,
             initialDelaySeconds,
             batchLimit,
@@ -153,9 +156,9 @@ public final class RetentionWorker {
             minioMultipartThresholdBytes,
             dryRun,
             useAdvisoryLock
-        );
+        ));
         if (initialDelaySeconds > 0) {
-            log.info("Retention worker: first scan scheduled after {}s initial delay", initialDelaySeconds);
+            log.info(workerMessages.format("worker.retention.first_scan_delay", initialDelaySeconds));
         }
         scanExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
             var t = new Thread(r, "retention-worker-scan");
@@ -190,7 +193,8 @@ public final class RetentionWorker {
                         minioMultipartThresholdBytes,
                         dryRun,
                         jdbcUrl,
-                        useAdvisoryLock
+                        useAdvisoryLock,
+                        workerMessages
                     );
                     RetentionHotRowPurger.purgeHotRows(
                         dataSource,
@@ -200,10 +204,11 @@ public final class RetentionWorker {
                         RetentionPlatformDefaults.exportRequiredBeforePurgeFromEnv(),
                         auditEnabled,
                         jdbcQueryTimeoutSeconds,
-                        dryRun
+                        dryRun,
+                        workerMessages
                     );
                     ReadReceiptRetentionJanitor.purgeOldReceipts(
-                        dataSource, RetentionPlatformDefaults.readReceiptRetentionDaysFromEnv());
+                        dataSource, RetentionPlatformDefaults.readReceiptRetentionDaysFromEnv(), workerMessages);
                     FileRetentionJanitor.process(
                         dataSource,
                         minioClient,
@@ -212,15 +217,14 @@ public final class RetentionWorker {
                         RetentionPlatformDefaults.fileMetadataMinAgeDaysFromEnv(),
                         RetentionPlatformDefaults.fileCleanupBatchLimitFromEnv(),
                         auditEnabled,
-                        dryRun
+                        dryRun,
+                        workerMessages
                     );
                 } else {
-                    log.warn(
-                        "Hot-body retention SQL runs on PostgreSQL only; jdbcUrl does not look like jdbc:postgresql — skipping purge pass"
-                    );
+                    log.warn(workerMessages.get("worker.retention.postgres_skip"));
                 }
             } catch (Exception e) {
-                log.error("Retention scan pass failed", e);
+                log.error(workerMessages.get("worker.retention.scan_failed"), e);
             }
         };
         scanExecutor.scheduleWithFixedDelay(
@@ -244,15 +248,18 @@ public final class RetentionWorker {
              var st = conn.prepareStatement("SELECT 1");
              var rs = st.executeQuery()) {
             if (rs.next()) {
-                log.debug("Hot DB ping OK");
+                log.debug(workerMessages.get("worker.retention.db_ping_ok"));
             }
         } catch (SQLException e) {
             RetentionMetrics.dbPingFailed();
-            log.warn("Hot DB ping failed: {}", e.getMessage());
+            log.warn(workerMessages.format("worker.retention.db_ping_failed", e.getMessage()));
         }
     }
 
     public static void main(String[] args) {
+        var workerMessages = WorkerMessageSources.forWorker(
+            RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention");
+        log.info(workerMessages.format("worker.common.locale", workerMessages.locale()));
         var enabled = Boolean.parseBoolean(System.getenv().getOrDefault("RETENTION_WORKER_ENABLED", "false"));
         var interval = parsePositiveInt(System.getenv("RETENTION_SCAN_INTERVAL_SECONDS"), 3600);
         var jdbcUrl = System.getenv("DB_JDBC_URL");
@@ -262,7 +269,7 @@ public final class RetentionWorker {
         var minioOk = false;
         if (enabled) {
             if (jdbcUrl == null || jdbcUrl.isBlank()) {
-                log.error("RETENTION_WORKER_ENABLED=true requires DB_JDBC_URL");
+                log.error(workerMessages.get("worker.retention.requires_db"));
                 System.exit(1);
             }
             var user = System.getenv().getOrDefault("DB_USER", "avandocmsg");
@@ -284,9 +291,9 @@ public final class RetentionWorker {
                     .maxReconnects(-1)
                     .build();
                 nats = Nats.connect(options);
-                log.info("Connected to NATS at {}", natsUrl);
+                log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
             } catch (Exception e) {
-                log.error("Failed to connect NATS", e);
+                log.error(workerMessages.get("worker.common.nats_connect_failed"), e);
                 System.exit(1);
             }
 
@@ -326,13 +333,11 @@ public final class RetentionWorker {
         var snapshotTempfileThresholdBytes = RetentionPlatformDefaults.snapshotTempfileThresholdBytesFromEnv();
         var minioMultipartThresholdBytes = RetentionPlatformDefaults.minioMultipartThresholdBytesFromEnv();
         if (dryRun) {
-            log.warn(
-                "RETENTION_DRY_RUN=true: hot-body passes are read-only (SELECT candidates only; no UPDATE messages, MinIO put/stat on mutation path, retention_hot_body_applied, audit_events, or NATS msg.event.index / msg.event.retention). See docs/RETENTION_AND_DEEP_ARCHIVE.md §9."
-            );
+            log.warn(workerMessages.get("worker.retention.dry_run_warn"));
         }
 
         if (enabled && minioOk && minioClient != null && RetentionPlatformDefaults.ensureMinioBucketFromEnv()) {
-            RetentionMinioBootstrap.ensureBucketExists(minioClient, retentionBucket);
+            RetentionMinioBootstrap.ensureBucketExists(minioClient, retentionBucket, workerMessages);
         }
 
         final var healthDs = ds;
@@ -375,20 +380,16 @@ public final class RetentionWorker {
             return true;
         };
 
-        var workerMessages = WorkerMessageSources.forWorker(
-            RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention");
+
         var metricsPort = RetentionPlatformDefaults.metricsPortFromEnv();
         RetentionMetricsHttpServer metricsServer = null;
         if (metricsPort > 0) {
             DefaultExports.initialize();
             try {
                 metricsServer = RetentionMetricsHttpServer.start(metricsPort, healthProbe, workerMessages);
-                log.info(
-                    "Prometheus metrics on http://0.0.0.0:{}/metrics; GET /health (same port) for readiness",
-                    metricsServer.getPort()
-                );
+                log.info(workerMessages.format("worker.retention.metrics_url", metricsServer.getPort()));
             } catch (IOException e) {
-                log.error("Failed to start Prometheus metrics HTTP server on port {}", metricsPort, e);
+                log.error(workerMessages.format("worker.retention.metrics_start_failed", metricsPort), e);
                 System.exit(1);
             }
         }
@@ -420,7 +421,8 @@ public final class RetentionWorker {
             minioMultipartThresholdBytes,
             dryRun,
             useAdvisoryLock,
-            shutdownRequested
+            shutdownRequested,
+            workerMessages
         );
         var metricsServerFinal = metricsServer;
         final Connection natsShutdown = nats;
@@ -429,9 +431,9 @@ public final class RetentionWorker {
             if (!hookStarted.compareAndSet(false, true)) {
                 return;
             }
-            log.info("Retention worker: graceful shutdown started");
+            log.info(workerMessages.get("worker.retention.shutdown_started"));
             shutdownRequested.set(true);
-            RetentionShutdown.shutdownScanExecutorQuietly(worker.scanExecutor, RetentionShutdown.DEFAULT_EXECUTOR_AWAIT_SECONDS);
+            RetentionShutdown.shutdownScanExecutorQuietly(worker.scanExecutor, RetentionShutdown.DEFAULT_EXECUTOR_AWAIT_SECONDS, workerMessages);
             List<AutoCloseable> closeInOrder = new ArrayList<>(3);
             if (metricsServerFinal != null) {
                 closeInOrder.add(metricsServerFinal);
@@ -442,16 +444,16 @@ public final class RetentionWorker {
             if (dsShutdown instanceof HikariDataSource h) {
                 closeInOrder.add(h);
             }
-            RetentionShutdown.runCloseables(closeInOrder);
-            log.info("Retention worker: graceful shutdown complete");
+            RetentionShutdown.runCloseables(closeInOrder, workerMessages);
+            log.info(workerMessages.get("worker.retention.shutdown_complete"));
         }, "retention-worker-shutdown"));
         try {
             worker.run();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.info("Interrupted");
+            log.info(workerMessages.get("worker.common.interrupted"));
         } catch (Exception e) {
-            log.error("Retention worker failed", e);
+            log.error(workerMessages.get("worker.retention.failed"), e);
             System.exit(1);
         }
     }

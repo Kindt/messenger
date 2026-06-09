@@ -1,6 +1,6 @@
 # Локализация воркеров — i18n, метрики, health
 
-**Статус:** `completed` (инфраструктура i18n, health, parity-тесты, Gradle gate; замена всех hardcoded лог-строк — deferred)
+**Статус:** `completed` (инфраструктура i18n, health, parity-тесты, Gradle gate, замена hardcoded log-строк во всех воркерах)
 **Теги:** `[i18n]` `[воркер]` `[common]` `[тесты]`
 
 ---
@@ -66,7 +66,7 @@
 
 **2.1. Поиск строк в воркерах**
 - [x] Gradle gate `checkBundleParity` / `buildIntegrity`.
-- Отложено: массовая замена hardcoded log-строк (`rg` audit) — точечные PR по мере необходимости.
+- [x] Массовая замена hardcoded log-строк во всех 9 воркерах и janitor/helper-классах (`worker.common.*` + `worker.<module>.*`).
 
 ### 3. Health/metrics — язык
 

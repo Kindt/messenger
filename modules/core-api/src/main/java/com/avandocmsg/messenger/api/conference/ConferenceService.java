@@ -3,9 +3,11 @@ package com.avandocmsg.messenger.api.conference;
 import com.avandocmsg.messenger.api.conference.dto.ConferenceParticipantResponse;
 import com.avandocmsg.messenger.api.conference.dto.ConferenceResponse;
 import com.avandocmsg.messenger.api.conference.dto.CreateConferenceRequest;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.api.chats.ChatService;
 import com.avandocmsg.messenger.api.repository.ConferenceRepository;
+import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.common.dto.ConferenceChangeEvent;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,13 +24,50 @@ public class ConferenceService {
 
     private final ConferenceRepository conferenceRepository;
     private final ChatRepository chatRepository;
+    private final ChatService chatService;
     private final NatsOutboundPort natsOutbound;
+    private final UserMessageSource messages;
 
     public ConferenceService(ConferenceRepository conferenceRepository, ChatRepository chatRepository,
-                             NatsOutboundPort natsOutbound) {
+                             ChatService chatService, NatsOutboundPort natsOutbound,
+                             UserMessageSource messages) {
         this.conferenceRepository = conferenceRepository;
         this.chatRepository = chatRepository;
+        this.chatService = chatService;
         this.natsOutbound = natsOutbound;
+        this.messages = messages;
+    }
+
+    /** Встреча «как в Телемосте»: группа-контейнер + конференция + join_url для приглашений. */
+    public Optional<ConferenceResponse> createStandalone(UUID userId, CreateConferenceRequest request) {
+        var title = request != null && request.title() != null && !request.title().isBlank()
+            ? request.title().trim()
+            : defaultMeetingTitle();
+        var chat = chatService.createGroup(title, userId, request != null ? request.memberIds() : null);
+        if (chat == null) {
+            log.warn("Failed to create meeting group for user {}", userId);
+            return Optional.empty();
+        }
+        return create(UUID.fromString(chat.id()), userId, new CreateConferenceRequest(title, null));
+    }
+
+    public Optional<ConferenceResponse> getByRoomSlug(UUID userId, String roomSlug) {
+        if (roomSlug == null || roomSlug.isBlank()) {
+            return Optional.empty();
+        }
+        var conf = conferenceRepository.findActiveByRoomSlug(roomSlug.trim());
+        if (conf.isEmpty()) {
+            return Optional.empty();
+        }
+        var chatId = UUID.fromString(conf.get().chatId());
+        if (chatRepository.getMemberRole(chatId, userId) == null) {
+            return Optional.empty();
+        }
+        return conf;
+    }
+
+    private String defaultMeetingTitle() {
+        return messages.get("conference.default_title");
     }
 
     public Optional<ConferenceResponse> create(UUID chatId, UUID userId, CreateConferenceRequest request) {

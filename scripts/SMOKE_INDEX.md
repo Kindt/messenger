@@ -38,12 +38,15 @@
 | Retention hot-row purge status | `scripts/smoke-retention-purge.ps1` | manual | requires admin token + stack |
 | Retention file cleanup metrics | `scripts/smoke-retention-file-cleanup.ps1` | manual | metrics on retention worker port |
 | Web parity API (spec 002 T010/T016 backend) | `scripts/smoke-web-parity-api.sh` | manual | `.ps1`; pin API may 500; UI/WS gates still manual |
+| **TLS redirect (spec 003 Phase B)** | `scripts/smoke-tls-redirect.ps1` | manual | stage/prod with `korus_tls_enabled`; `-SkipTls` for dev |
+| **Playwright parity matrix** | `tests/e2e-web/` (9 specs) | `deploy-messaging-smoke.yml` | optional nightly job |
 
 ## Operator utilities
 
 - `scripts/stop-local-indexer.ps1` — stop orphan `:services:indexer:run` after smoke/manual runs (Windows).
 - `scripts/publish-spec-001-branch.ps1` — push branch `001-system-review-refactoring` when GitHub is reachable.
 - `scripts/apply-hotplug-signoff.ps1` — record ADR/constitution approvals (T048/T056).
+- `scripts/profiling/profile-docker-jfr.ps1` — JFR inside JDK profiling containers (`docker-compose.profiling.yml`).
 
 ## Export / retention extended scenarios
 
@@ -55,6 +58,9 @@
 - `scripts/smoke-export-suggested.sh` / `.ps1`
 - `scripts/smoke-export-suggested-nats.sh` / `.ps1`
 - `scripts/smoke-export-suggest-flow.sh` / `.ps1`
+- `scripts/smoke-export-replay-before-purge.ps1` — export_v1 gate before purge (ROADMAP §1)
+- `scripts/smoke-retention-solr-clear.ps1` — Solr content_txt clear after retention (ROADMAP §1)
+- `scripts/audit-timing.ps1` — timing audit → `docs/SECURITY_AUDIT.md` (ROADMAP §5)
 - `scripts/smoke-export-suggest-cancel-flow.sh` / `.ps1`
 - `scripts/smoke-export-auto-queue-nats.sh` / `.ps1`
 - `scripts/smoke-retention-export-suggested.sh` / `.ps1`

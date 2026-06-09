@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.retention;
 
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +13,7 @@ final class ReadReceiptRetentionJanitor {
     private ReadReceiptRetentionJanitor() {
     }
 
-    static int purgeOldReceipts(DataSource dataSource, int retentionDays) {
+    static int purgeOldReceipts(DataSource dataSource, int retentionDays, UserMessageSource workerMessages) {
         if (dataSource == null || retentionDays <= 0) {
             return 0;
         }
@@ -25,11 +26,11 @@ final class ReadReceiptRetentionJanitor {
             stmt.setInt(1, retentionDays);
             var deleted = stmt.executeUpdate();
             if (deleted > 0) {
-                log.info("Read receipt retention purge: deleted={} days={}", deleted, retentionDays);
+                log.info(workerMessages.format("worker.retention.read_receipt.purged", deleted, retentionDays));
             }
             return deleted;
         } catch (Exception e) {
-            log.warn("Read receipt retention purge failed: {}", e.getMessage());
+            log.warn(workerMessages.format("worker.retention.read_receipt.failed", e.getMessage()));
             return 0;
         }
     }

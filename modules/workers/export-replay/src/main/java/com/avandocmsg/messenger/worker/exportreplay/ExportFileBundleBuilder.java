@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
@@ -33,7 +35,8 @@ final class ExportFileBundleBuilder {
         Path zipPath,
         ExportFileBodyFetcher fetcher,
         int maxFiles,
-        long maxBytesPerFile
+        long maxBytesPerFile,
+        UserMessageSource workerMessages
     ) throws IOException {
         Files.createDirectories(zipPath.getParent());
         var manifestEntries = MAPPER.createArrayNode();
@@ -44,7 +47,7 @@ final class ExportFileBundleBuilder {
             var files = exportRoot.path("referencedFiles");
             if (files.isArray()) {
                 var counts = collectAttachments(
-                    (ArrayNode) files, fetcher, maxFiles, maxBytesPerFile, zos, manifestEntries);
+                    (ArrayNode) files, fetcher, maxFiles, maxBytesPerFile, zos, manifestEntries, workerMessages);
                 included = counts.included();
                 skipped = counts.skipped();
                 includedBytes = counts.includedBytes();
@@ -62,13 +65,8 @@ final class ExportFileBundleBuilder {
             zos.putNextEntry(new ZipEntry(ExportOutputRef.ZIP_JSON_ENTRY));
             zos.write(jsonBytes);
             zos.closeEntry();
-            log.info(
-                "Built export zip {} attachmentsIncluded={} skipped={} bytes={}",
-                zipPath.getFileName(),
-                included,
-                skipped,
-                includedBytes
-            );
+            log.info(workerMessages.format("worker.export_replay.zip_built",
+                zipPath.getFileName(), included, skipped, includedBytes));
             return stats;
         }
     }
@@ -101,7 +99,8 @@ final class ExportFileBundleBuilder {
         int maxFiles,
         long maxBytesPerFile,
         ZipOutputStream zos,
-        ArrayNode manifestEntries
+        ArrayNode manifestEntries,
+        UserMessageSource workerMessages
     ) throws IOException {
         int included = 0;
         int skipped = 0;
@@ -155,7 +154,7 @@ final class ExportFileBundleBuilder {
                 manifestRow.put("sha256", sha256);
             } catch (Exception e) {
                 skipped++;
-                log.debug("Attachment skip fileId={}: {}", id, e.getMessage());
+                log.debug(workerMessages.format("worker.export_replay.attachment_skip", id, e.getMessage()));
             }
         }
         return new AttachCounts(included, skipped, includedBytes);

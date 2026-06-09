@@ -10,6 +10,9 @@ import com.avandocmsg.messenger.api.users.dto.UpdatePrivacyRequest;
 import com.avandocmsg.messenger.api.users.dto.UpdateProfileRequest;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+import com.avandocmsg.messenger.core.application.UserApplicationService;
+import com.avandocmsg.messenger.core.application.UserDomainMapper;
+import com.avandocmsg.messenger.core.domain.UserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
@@ -35,12 +38,15 @@ public class UserResource {
 
     private final UserRepository userRepository;
     private final ChatRepository chatRepository;
+    private final UserApplicationService userApplicationService;
     private final UserMessageSource messages;
 
     @Inject
-    public UserResource(UserRepository userRepository, ChatRepository chatRepository, UserMessageSource messages) {
+    public UserResource(UserRepository userRepository, ChatRepository chatRepository,
+                        UserApplicationService userApplicationService, UserMessageSource messages) {
         this.userRepository = userRepository;
         this.chatRepository = chatRepository;
+        this.userApplicationService = userApplicationService;
         this.messages = messages;
     }
 
@@ -61,21 +67,33 @@ public class UserResource {
     @Operation(summary = "Текущий профиль")
     public Response me(@Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var profile = userRepository.findById(userId);
-        return profile.map(p -> Response.ok(p).build())
-            .orElse(Response.status(Response.Status.NOT_FOUND)
+        var profile = userApplicationService
+            .getProfileForViewer(UserId.of(userId), UserId.of(userId))
+            .map(UserDomainMapper::toResponse)
+            .orElse(null);
+        if (profile == null) {
+            return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.user.not_found")))
-                .build());
+                .build();
+        }
+        return Response.ok(profile).build();
     }
 
     @GET
     @Path("/{id}")
-    public Response getById(@PathParam("id") String id) {
-        var profile = userRepository.findById(UuidParams.required(id, "user_id"));
-        return profile.map(p -> Response.ok(p).build())
-            .orElse(Response.status(Response.Status.NOT_FOUND)
+    public Response getById(@PathParam("id") String id, @Context SecurityContext securityContext) {
+        var viewerId = CurrentUserId.uuid(securityContext);
+        var targetId = UuidParams.required(id, "user_id");
+        var profile = userApplicationService
+            .getProfileForViewer(UserId.of(viewerId), UserId.of(targetId))
+            .map(UserDomainMapper::toResponse)
+            .orElse(null);
+        if (profile == null) {
+            return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.user.not_found")))
-                .build());
+                .build();
+        }
+        return Response.ok(profile).build();
     }
 
     @PATCH

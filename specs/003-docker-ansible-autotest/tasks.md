@@ -62,3 +62,15 @@
 - [x] T062 `group_vars/vault.example.yml`
 - [x] T063 Playwright job in `deploy-messaging-smoke.yml`
 - [x] T064 `scripts/lib/SmokeMessaging.ps1`
+
+---
+
+## Phase 8 — Prod vault / TLS (E3 Phase B)
+
+- [x] T070 Expand `group_vars/vault.example.yml` (db, minio, keycloak, jwt, coturn)
+- [x] T071 `inventory/stage/` with `korus_tls_enabled: true` example vars
+- [x] T072 Role `tls`: nginx 443 reverse proxy, certbot/BYO cert notes, HTTP redirect
+- [x] T073 Wire vault secrets → `korus_server` env template + `korus_server.yml` comments
+- [x] T074 `playbooks/site.yml` includes `tls` role when `korus_tls_enabled`
+- [x] T075 `deploy/ansible/README.md` prod vault/TLS checklist
+- [x] T076 `scripts/smoke-tls-redirect.ps1` (HTTP→HTTPS + cert subject; `-SkipTls` for dev)

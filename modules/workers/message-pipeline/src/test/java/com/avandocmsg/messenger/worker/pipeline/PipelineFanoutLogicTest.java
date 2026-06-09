@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.pipeline;
 
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.AfterEach;
@@ -21,6 +22,7 @@ class PipelineFanoutLogicTest {
     private final UUID bannedMember = UUID.randomUUID();
 
     private HikariDataSource ds;
+    private com.avandocmsg.messenger.common.i18n.UserMessageSource workerMessages;
 
     @BeforeEach
     void initH2() throws Exception {
@@ -28,6 +30,8 @@ class PipelineFanoutLogicTest {
         cfg.setJdbcUrl("jdbc:h2:mem:fanout_" + UUID.randomUUID().toString().replace("-", "") + ";DB_CLOSE_DELAY=-1");
         cfg.setMaximumPoolSize(10);
         ds = new HikariDataSource(cfg);
+        workerMessages = WorkerMessageSources.forWorker(
+            MessagePipelineWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_message_pipeline");
         try (var c = ds.getConnection(); Statement st = c.createStatement()) {
             st.execute("CREATE TABLE chat_members (chat_id UUID NOT NULL, user_id UUID NOT NULL, banned BOOLEAN NOT NULL DEFAULT FALSE)");
             st.execute("CREATE TABLE blocks (blocker_id UUID NOT NULL, blocked_id UUID NOT NULL, PRIMARY KEY (blocker_id, blocked_id))");
@@ -69,7 +73,7 @@ class PipelineFanoutLogicTest {
     @Test
     void loadRecipientUserIds_excludesSenderAndBanned() {
         DataSource dataSource = ds;
-        var ids = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, senderId);
+        var ids = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, senderId, workerMessages);
         assertEquals(2, ids.size());
         assertTrue(ids.contains(memberA.toString()));
         assertTrue(ids.contains(memberB.toString()));
@@ -81,7 +85,7 @@ class PipelineFanoutLogicTest {
     void loadRecipientUserIds_excludesRecipientBlockedWithSender() throws Exception {
         insertBlock(senderId, memberA);
 
-        var ids = PipelineFanoutLogic.loadRecipientUserIds(ds, chatId, senderId);
+        var ids = PipelineFanoutLogic.loadRecipientUserIds(ds, chatId, senderId, workerMessages);
         assertEquals(1, ids.size());
         assertTrue(ids.contains(memberB.toString()));
         assertFalse(ids.contains(memberA.toString()));
@@ -95,6 +99,6 @@ class PipelineFanoutLogicTest {
         var soloChat = UUID.randomUUID();
         insert(soloChat, senderId, false);
 
-        assertTrue(PipelineFanoutLogic.loadRecipientUserIds(ds, soloChat, senderId).isEmpty());
+        assertTrue(PipelineFanoutLogic.loadRecipientUserIds(ds, soloChat, senderId, workerMessages).isEmpty());
     }
 }

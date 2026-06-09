@@ -1,0 +1,27 @@
+# Profiling overlay: JDK images with jcmd for JFR (dev/QEMU only).
+# Usage:
+#   docker compose -f docker/docker-compose.full-server.yml -f docker/docker-compose.profiling.yml up -d --build core-api retention-worker indexer-worker
+#   ./scripts/profiling/profile-docker-jfr.ps1 -ContainerName korus-core-api-1 -OutputName core-api
+#
+# Production images remain JRE (Dockerfile.core-api without .profiling suffix).
+
+version: "3.8"
+
+services:
+  core-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.core-api.profiling
+    image: korus/core-api:profiling
+
+  retention-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.retention-worker.profiling
+    image: korus/retention-worker:profiling
+
+  indexer-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.indexer-worker.profiling
+    image: korus/indexer-worker:profiling

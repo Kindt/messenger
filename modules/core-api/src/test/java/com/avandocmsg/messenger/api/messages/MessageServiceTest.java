@@ -53,7 +53,7 @@ class MessageServiceTest {
         chatRepo.bannedUsers.add(bannedUserId);
 
         var result = messageService.sendMessage(chatId, bannedUserId,
-            new SendMessageRequest("text", "hello", null, null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null, null), null);
 
         assertNull(result);
     }
@@ -61,7 +61,7 @@ class MessageServiceTest {
     @Test
     void sendMessage_allowsNonBannedUser() {
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null, null), null);
 
         assertNotNull(result);
         assertEquals("text", result.type());
@@ -75,7 +75,7 @@ class MessageServiceTest {
         blockRepo.blockedPairs.add(userId.toString() + ":" + peer);
 
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null, null), null);
 
         assertNull(result);
         assertTrue(messageService.sendBlockedReason(chatId, userId).isPresent());
@@ -86,7 +86,7 @@ class MessageServiceTest {
         mlsService.encryptResult = "encrypted_hello";
 
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null, null), null);
 
         assertNotNull(result);
         assertEquals("e2ee-text", result.type());
@@ -96,7 +96,7 @@ class MessageServiceTest {
     void sendMessage_passesTtlToRepository() {
         msgRepo.lastInsertVisibilityTtl = null;
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, 120, null), null);
+            new SendMessageRequest("text", "hello", null, null, 120, null, null), null);
 
         assertNotNull(result);
         assertEquals(120, msgRepo.lastInsertVisibilityTtl);
@@ -108,7 +108,7 @@ class MessageServiceTest {
         var replyId = UUID.randomUUID();
         msgRepo.lastInsertReplyTo = null;
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", replyId.toString(), null, null, null), replyId);
+            new SendMessageRequest("text", "hello", replyId.toString(), null, null, null, null), replyId);
 
         assertNotNull(result);
         assertEquals(replyId, msgRepo.lastInsertReplyTo);
@@ -430,7 +430,7 @@ class MessageServiceTest {
         var fileId = UUID.randomUUID();
         mlsService.encryptResult = "encrypted_blob";
         var sent = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("e2ee-file", fileId.toString(), null, null, null, null), null);
+            new SendMessageRequest("e2ee-file", fileId.toString(), null, null, null, null, null), null);
         assertNotNull(sent);
         assertEquals(fileId.toString(), sent.attachmentFileId());
         assertEquals(1, msgRepo.messages.size());

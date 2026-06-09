@@ -1,75 +1,76 @@
-# E2EE/MLS — scaffold + group state (RFC 9420 deferred)
+# E2EE/MLS — RFC 9420 phase 1 (wire codec)
 
-**Статус:** `completed` (engineering closure 2026-05-24; full RFC 9420 deferred)
+**Статус:** `in_progress` — Phase 1 wire + migration (2026-06-09)
 **Теги:** `[e2ee]` `[core-api]` `[криптография]` `[web-client]` `[безопасность]`
 
 ---
 
-## Цель (scope closure)
+## Цель (phase 1)
 
-Инженерное закрытие эпика: архитектурное решение, хранение группового состояния, admin observability, capabilities/fallback, benchmark guard. **Полный RFC 9420** (Welcome/Commit wire, OpenMLS interop, миграция legacy→MLS) — отдельный продуктовый этап.
+Инкрементальный RFC 9420 wire-контур: KMLS codec (BC), NATS `mls.*`, migration API, capabilities/admin, web `e2ee_scheme=mls`. Полный OpenMLS — deferred.
 
 ---
 
-## Реализовано
+## Реализовано (phase 0 + phase 1)
 
 | Область | Артефакты |
 |---------|-----------|
-| Архитектура | `docs/E2EE_ARCHITECTURE.md` — stub + roadmap |
-| Миграция | `V028__mls_group_state.sql` |
-| Group layer | `MlsGroupState`, `MlsGroupStateRepository`, `MlsGroupManager` |
-| Crypto stub | `MlsService` + legacy `E2EEService` |
-| Capabilities | `MediaCapabilitiesResource` — `e2ee_schemes`, `mls_status: stub` |
-| Admin | `GET /admin/e2ee/status`, раздел `core-e2ee-mls` |
-| Тесты | `MlsGroupManagerTest`, `MlsBenchmarkTest` |
+| Архитектура | `docs/E2EE_ARCHITECTURE.md` — decision matrix, interop |
+| Wire codec | `MlsWireCodec`, `MlsWelcomePayload`, `MlsCommitPayload`, `MlsEpochPayload` |
+| NATS | `NatsSubjects.MLS_WELCOME/COMMIT/EPOCH`, `MlsWirePublisher` |
+| Group layer | `MlsGroupManager` — welcome on create, commit/epoch on membership |
+| Migration | `MlsMigrationService.migrateToMls`, pending count in admin |
+| Send path | `SendMessageRequest.e2ee_scheme`, `MlsMessageTypes` |
+| Capabilities | `MediaCapabilitiesResource` — `mls_status` from `MLS_STATUS` |
+| Admin | `GET /admin/e2ee/status` — real counts |
+| Web | `app.js` — `e2ee_scheme=mls` when `mls_status=active` |
+| Тесты | `MlsWireCodecTest`, `MlsGroupManagerTest`, `MlsMigrationServiceTest`, `MlsBenchmarkTest` |
 
 ---
 
 ## Шаги (статус)
 
 ### 1. Архитектурное решение — [x]
-- [x] `docs/E2EE_ARCHITECTURE.md` — решение: stub + phased RFC 9420
-- [x] Bouncy Castle (существующая зависимость); OpenMLS — deferred
+- [x] `docs/E2EE_ARCHITECTURE.md` — BC incremental wire; OpenMLS deferred
+- [x] Decision matrix + self/legacy interop
 
 ### 2. Дерево ключей (scaffold) — [x]
-- [x] `MlsGroupManager` — create/add/remove/encrypt/decrypt (delegates to `MlsService`)
-- [x] `MlsGroupStateRepository`
-- [x] `V028__mls_group_state.sql`
-- [x] `MlsGroupManagerTest`
+- [x] `MlsGroupManager`, `MlsGroupStateRepository`, `V028__mls_group_state.sql`
 
-### 3. Welcome / Commit — отложено (следующий эпик)
+### 3. Welcome / Commit wire — [x] phase 1
+- [x] `MlsWireCodec` (KMLS structured bytes)
+- [x] NATS `mls.welcome`, `mls.commit`, `mls.epoch`
+- [x] `MlsWirePublisher` from `MlsGroupManager`
 
-Wire-format Welcome/Commit, NATS `mls.*` — не входит в engineering closure 2026-05-24.
+### 4. Wire-протокол — [x] partial
+- [x] `e2ee_scheme=mls` on send
+- [x] Message types `e2ee-mls-welcome`, `e2ee-mls-commit` constants
+- [x] Web-client advertises `e2ee_scheme=mls` when active
+- Отложено: client-side MLS encrypt (full OpenMLS)
 
-### 4. Wire-протокол — partial [x]
+### 5–6. Миграция — [x] partial
+- [x] `MlsMigrationService.migrateToMls(chatId)`
+- [x] Admin pending migrations count
+- Отложено: automatic batch migration job
 
-- [x] Legacy `e2ee-*` + capabilities `mls-stub`
-- Отложено: `e2ee_scheme=mls` end-to-end в web-client
+### 7. Admin UI — [x]
+- [x] `core-e2ee-mls` → `/admin/e2ee/status` with real metrics
 
-### 5–8. Ротация, миграция, NATS fan-out — отложено
-
-Epoch bump on membership только в scaffold.
-
-### 9. Admin UI — [x]
-- [x] `core-e2ee-mls` → `/admin/e2ee/status`
-
-### 10. Benchmark — [x]
-- [x] `MlsBenchmarkTest` (100 encrypt, budget 200ms avg stub)
-
-### 11. OpenAPI — [x] existing crypto endpoints documented
+### 8. Benchmark — [x]
+- [x] `MlsBenchmarkTest` — avg budget + p50 &lt; 50ms
 
 ---
 
-## Критерии завершения (engineering)
+## Критерии phase 1
 
-- [x] Group state persisted; admin status endpoint works.
-- [x] Legacy E2EE continues to work (`e2ee-*` types).
-- [x] Capabilities advertise `legacy` + `mls-stub`.
-- [x] Benchmark guard in CI (`:modules:core-api:benchmark`, non-blocking).
-- Отложено: Full RFC 9420 interop (не требуется для epic closure).
+- [x] Wire codec round-trip tests pass.
+- [x] NATS subjects documented in `NATS_SUBJECTS_INTEROP.md`.
+- [x] Legacy E2EE continues (`e2ee_scheme=legacy`).
+- [x] Capabilities/admin reflect `MLS_STATUS` / wire flag.
+- Отложено: Full OpenMLS interop with external clients.
 
 ---
 
-## Риски (unchanged)
+## Риски
 
-Полный MLS остаётся высокорисковым; текущий closure — controlled stub с чёткой границей.
+Полный MLS остаётся высокорисковым; phase 1 — controlled wire + migration boundary before OpenMLS adoption.

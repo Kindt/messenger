@@ -94,6 +94,33 @@ public class ExportJobRepository {
         return Optional.empty();
     }
 
+    /** Latest terminal export job for a chat ({@code export_v1} only). */
+    public Optional<ExportJobRow> findLatestCompletedExport(UUID chatId) {
+        var sql = """
+            SELECT id, chat_id, requested_by, status, output_path, message_ttl_filter_applied,
+                   created_at, updated_at, completed_at
+            FROM export_jobs WHERE chat_id = ? AND status = 'export_v1'
+            ORDER BY completed_at DESC NULLS LAST, created_at DESC
+            LIMIT 1
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, chatId);
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapRow(rs));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("find latest completed export chat {}: {}", chatId, e.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    public boolean isExportSufficientForPurge(UUID chatId) {
+        return findLatestCompletedExport(chatId).isPresent();
+    }
+
     /**
      * Blocks a new auto-queue when a job is pending or a non-failed job was created within {@code cooldownMinutes}.
      * {@code cooldownMinutes <= 0} — only {@code queued}/{@code processing} block.
@@ -495,7 +522,7 @@ public class ExportJobRepository {
     public boolean existsCompletedExport(UUID chatId) {
         var sql = """
             SELECT 1 FROM export_jobs
-            WHERE chat_id = ? AND status IN ('export_v1', 'stub_written')
+            WHERE chat_id = ? AND status = 'export_v1'
             LIMIT 1
             """;
         try (var conn = dataSource.getConnection();

@@ -10,6 +10,11 @@ import com.avandocmsg.messenger.api.messages.dto.ReactionRequest;
 import com.avandocmsg.messenger.api.messages.dto.ReactionResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.core.application.MessageApplicationService;
+import com.avandocmsg.messenger.core.application.MessageDomainMapper;
+import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.MessageId;
+import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.api.metrics.ApiDeniedMetrics;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
@@ -46,12 +51,17 @@ import java.util.UUID;
 public class MessageResource {
 
     private final MessageService messageService;
+    private final MessageApplicationService messageApplicationService;
     private final AppConfig appConfig;
     private final UserMessageSource messages;
 
     @Inject
-    public MessageResource(MessageService messageService, AppConfig appConfig, UserMessageSource messages) {
+    public MessageResource(MessageService messageService,
+                             MessageApplicationService messageApplicationService,
+                             AppConfig appConfig,
+                             UserMessageSource messages) {
         this.messageService = messageService;
+        this.messageApplicationService = messageApplicationService;
         this.appConfig = appConfig;
         this.messages = messages;
     }
@@ -159,7 +169,10 @@ public class MessageResource {
         var userId = CurrentUserId.uuid(securityContext);
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var msgId = UuidParams.required(msgIdStr, "message_id");
-        var msg = messageService.getMessage(chatId, msgId, userId);
+        var msg = messageApplicationService
+            .getMessageForMember(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId))
+            .map(MessageDomainMapper::toResponse)
+            .orElse(null);
         if (msg == null) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.message.not_found")))

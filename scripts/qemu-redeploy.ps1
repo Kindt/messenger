@@ -118,9 +118,9 @@ sed -i 's/\r$//' /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
 
 chmod +x /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
 
-sh /mnt/korus/deploy/qemu/vm-bootstrap/run-ansible-local.sh server
+sudo env KORUS_BUILD=1 KORUS_REPO_ROOT=/mnt/korus sh /mnt/korus/deploy/qemu/vm-bootstrap/run-ansible-local.sh server
 
-for i in 1 2 3 4 5 6 7 8 9 10 12 15 18 24 30; do curl -fsS http://127.0.0.1:8080/api/v1/health && exit 0; sleep 5; done
+for i in 1 2 3 4 5 6 7 8 9 10 12 15 18 24 30 36 42 48 54 60 72 84 96 108 120; do curl -fsS http://127.0.0.1:8080/api/v1/health 2>/dev/null && exit 0; sleep 5; done
 
 exit 1
 
@@ -152,9 +152,9 @@ sed -i 's/\r$//' /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
 
 chmod +x /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
 
-sh /mnt/korus/deploy/qemu/vm-bootstrap/run-ansible-local.sh web
+sudo env KORUS_BUILD=1 KORUS_REPO_ROOT=/mnt/korus sh /mnt/korus/deploy/qemu/vm-bootstrap/run-ansible-local.sh web
 
-curl -fsS http://127.0.0.1:9088/health || exit 1
+curl -fsS http://127.0.0.1:9088/health 2>/dev/null || exit 1
 
 '@
 

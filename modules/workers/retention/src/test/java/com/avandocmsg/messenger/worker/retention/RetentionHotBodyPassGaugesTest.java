@@ -2,6 +2,9 @@ package com.avandocmsg.messenger.worker.retention;
 
 import io.nats.client.Connection;
 import io.prometheus.client.CollectorRegistry;
+
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
@@ -67,7 +70,8 @@ class RetentionHotBodyPassGaugesTest {
             Long.MAX_VALUE,
             true,
             "",
-            false
+            false,
+            WorkerMessageSources.forWorker(RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention")
         );
 
         assertEquals(0, cleared);
@@ -113,7 +117,8 @@ class RetentionHotBodyPassGaugesTest {
             Long.MAX_VALUE,
             true,
             "",
-            false
+            false,
+            WorkerMessageSources.forWorker(RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention")
         );
         Double epochAfterDryRun = sample(EPOCH);
         assertNotNull(epochAfterDryRun);
@@ -139,7 +144,8 @@ class RetentionHotBodyPassGaugesTest {
             Long.MAX_VALUE,
             false,
             "",
-            false
+            false,
+            WorkerMessageSources.forWorker(RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention")
         );
 
         assertEquals(epochAfterDryRun, sample(EPOCH), 0.001);
@@ -179,7 +185,8 @@ class RetentionHotBodyPassGaugesTest {
             Long.MAX_VALUE,
             true,
             "",
-            false
+            false,
+            WorkerMessageSources.forWorker(RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention")
         );
         Double epochAfterDryRun = sample(EPOCH);
         assertNotNull(epochAfterDryRun);
@@ -210,7 +217,8 @@ class RetentionHotBodyPassGaugesTest {
             Long.MAX_VALUE,
             false,
             "jdbc:postgresql://localhost/hot",
-            true
+            true,
+            WorkerMessageSources.forWorker(RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention")
         );
 
         assertEquals(epochAfterDryRun, sample(EPOCH), 0.001);

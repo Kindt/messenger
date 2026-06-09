@@ -1,8 +1,15 @@
 # Example secrets for prod/stage. Copy to vault.yml and encrypt:
+#   cp deploy/ansible/group_vars/vault.example.yml deploy/ansible/group_vars/vault.yml
 #   ansible-vault encrypt deploy/ansible/group_vars/vault.yml
 #
-# ansible-playbook ... --ask-vault-pass
+# Run playbooks with:
+#   ansible-playbook ... --ask-vault-pass
+#   ansible-playbook ... --vault-password-file ~/.ansible/korus-vault.pass
+#
+# Map to compose / env (see group_vars/korus_server.yml and roles/korus_server/templates/korus-server.env.j2):
 #
 # korus_db_password: "CHANGE_ME"
 # korus_minio_secret_key: "CHANGE_ME"
 # korus_keycloak_admin_password: "CHANGE_ME"
+# korus_jwt_secret: "CHANGE_ME"
+# korus_coturn_secret: "CHANGE_ME"

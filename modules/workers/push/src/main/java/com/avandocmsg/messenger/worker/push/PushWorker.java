@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.worker.push;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.jdbc.HikariDataSources;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,16 +43,20 @@ public class PushWorker {
     private final HttpClient httpClient;
     private final String pushWebhookUrl;
     private final WebPushDelivery webPushDelivery;
+    private final UserMessageSource workerMessages;
 
-    public PushWorker(String natsUrl, DataSource dataSource, String pushWebhookUrl) throws Exception {
-        this(natsUrl, dataSource, pushWebhookUrl, WebPushDelivery.fromEnvironment());
+    public PushWorker(String natsUrl, DataSource dataSource, String pushWebhookUrl,
+                      UserMessageSource workerMessages) throws Exception {
+        this(natsUrl, dataSource, pushWebhookUrl, WebPushDelivery.fromEnvironment(workerMessages), workerMessages);
     }
 
-    PushWorker(String natsUrl, DataSource dataSource, String pushWebhookUrl, WebPushDelivery webPushDelivery)
+    PushWorker(String natsUrl, DataSource dataSource, String pushWebhookUrl, WebPushDelivery webPushDelivery,
+               UserMessageSource workerMessages)
         throws Exception {
         this.dataSource = dataSource;
         this.pushWebhookUrl = pushWebhookUrl != null && !pushWebhookUrl.isBlank() ? pushWebhookUrl.trim() : null;
-        this.webPushDelivery = webPushDelivery != null ? webPushDelivery : WebPushDelivery.disabled();
+        this.webPushDelivery = webPushDelivery != null ? webPushDelivery : WebPushDelivery.disabled(workerMessages);
+        this.workerMessages = workerMessages;
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
         var options = Options.builder()
             .server(natsUrl)
@@ -60,13 +65,13 @@ public class PushWorker {
             .maxReconnects(-1)
             .build();
         this.connection = Nats.connect(options);
-        log.info("Connected to NATS at {}", natsUrl);
+        log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }
 
     public void start() {
         var dispatcher = connection.createDispatcher(this::handle);
         dispatcher.subscribe(NatsSubjects.MSG_EVENT_PUSH, QUEUE_GROUP);
-        log.info("Subscribed to {} (queue: {})", NatsSubjects.MSG_EVENT_PUSH, QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_PUSH, QUEUE_GROUP));
     }
 
     private void handle(io.nats.client.Message msg) {
@@ -74,17 +79,18 @@ public class PushWorker {
             var payload = new String(msg.getData(), StandardCharsets.UTF_8);
             var event = MAPPER.readValue(payload, MessageWorkerEvent.class);
             var devices = loadTargetDevices(event);
-            log.info("Push targets messageId={} chatId={} deviceRows={}", event.messageId(), event.chatId(),
-                devices.size());
+            log.info(workerMessages.format("worker.push.targets",
+                event.messageId(), event.chatId(), devices.size()));
             for (var d : devices) {
-                log.debug("Push token row userId={} provider={} tokenPrefix={}", d.userId(), d.provider(),
-                    maskToken(d.token()));
+                log.debug(workerMessages.format("worker.push.token_row",
+                    d.userId(), d.provider(), maskToken(d.token())));
             }
+            deliverWebPush(event, devices);
             if (pushWebhookUrl != null) {
                 postWebhook(event, devices);
             }
         } catch (Exception e) {
-            log.error("Failed to handle push message", e);
+            log.error(workerMessages.get("worker.push.handle_failed"), e);
         }
     }
 
@@ -98,7 +104,7 @@ public class PushWorker {
                 chatTitle = loadChatTitle(UUID.fromString(event.chatId()));
             }
         } catch (Exception e) {
-            log.debug("Chat title lookup failed: {}", e.getMessage());
+            log.debug(workerMessages.format("worker.push.chat_title_failed", e.getMessage()));
         }
         var preview = PushNotificationPreview.forEvent(event, chatTitle);
         var sent = 0;
@@ -119,8 +125,8 @@ public class PushWorker {
             }
         }
         if (sent > 0 || failed > 0 || expired > 0) {
-            log.info("Web push messageId={} sent={} failed={} expired={}", event.messageId(), sent, failed,
-                expired);
+            log.info(workerMessages.format("worker.push.web_push_summary",
+                event.messageId(), sent, failed, expired));
         }
     }
 
@@ -138,10 +144,10 @@ public class PushWorker {
             stmt.setString(2, pushToken);
             var n = stmt.executeUpdate();
             if (n > 0) {
-                log.info("Cleared expired web push token for userId={}", userId);
+                log.info(workerMessages.format("worker.push.token_cleared", userId));
             }
         } catch (Exception e) {
-            log.warn("Failed to clear push token for userId={}: {}", userId, e.getMessage());
+            log.warn(workerMessages.format("worker.push.token_clear_failed", userId, e.getMessage()));
         }
     }
 
@@ -167,7 +173,7 @@ public class PushWorker {
             .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
             .build();
         var resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        log.info("PUSH_WEBHOOK_URL status={} messageId={}", resp.statusCode(), event.messageId());
+        log.info(workerMessages.format("worker.push.webhook_status", resp.statusCode(), event.messageId()));
     }
 
     private String buildWebhookPayload(MessageWorkerEvent event, List<DeviceRow> devices) {
@@ -245,12 +251,15 @@ public class PushWorker {
         try {
             connection.close();
         } catch (Exception e) {
-            log.warn("Error closing NATS connection", e);
+            log.warn(workerMessages.get("worker.common.nats_close_error"), e);
         }
         HikariDataSources.closeQuietly(dataSource);
     }
 
     public static void main(String[] args) {
+        var workerMessages = WorkerMessageSources.forWorker(
+            PushWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_push");
+        log.info(workerMessages.format("worker.common.locale", workerMessages.locale()));
         var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
         var jdbcUrl = firstNonBlank(System.getenv("PUSH_DB_JDBC_URL"), System.getenv("DB_JDBC_URL"));
         var user = System.getenv().getOrDefault("DB_USER", "avandocmsg");
@@ -259,21 +268,21 @@ public class PushWorker {
 
         var ds = HikariDataSources.createOptionalPool(jdbcUrl, user, password, 8, "push-worker-db");
         if (ds == null) {
-            log.error("Set DB_JDBC_URL or PUSH_DB_JDBC_URL for PushWorker");
+            log.error(workerMessages.format("worker.common.db_url_required",
+                workerMessages.get("worker.push.db_url_required"),
+                workerMessages.get("worker.push.worker_name")));
             System.exit(2);
         }
 
         PushHealthHttpServer healthServer = null;
         try {
-            var worker = new PushWorker(natsUrl, ds, webhook);
+            var worker = new PushWorker(natsUrl, ds, webhook, workerMessages);
             worker.start();
             var metricsPort = PushPlatformDefaults.metricsPort();
-            var workerMessages = WorkerMessageSources.forWorker(
-                PushWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_push");
             if (metricsPort > 0) {
                 healthServer = PushHealthHttpServer.start(metricsPort,
                     new PushHealthProbe(worker.natsConnection(), worker.dataSource()), workerMessages);
-                log.info("Push worker health on http://0.0.0.0:{}/health", healthServer.getPort());
+                log.info(workerMessages.format("worker.push.health_url", healthServer.getPort()));
             }
             PushHealthHttpServer healthRef = healthServer;
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -284,7 +293,7 @@ public class PushWorker {
             }));
             Thread.currentThread().join();
         } catch (Exception e) {
-            log.error("Fatal error", e);
+            log.error(workerMessages.get("worker.common.fatal_error"), e);
             System.exit(1);
         }
     }

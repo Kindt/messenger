@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.worker.pipeline;
 
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +24,8 @@ public final class PipelineFanoutLogic {
      * Members of {@code chatId} eligible for delivery (not {@code excludeSenderId}, not banned,
      * not blocked with {@code excludeSenderId} in either direction).
      */
-    public static List<String> loadRecipientUserIds(DataSource dataSource, UUID chatId, UUID excludeSenderId) {
+    public static List<String> loadRecipientUserIds(DataSource dataSource, UUID chatId, UUID excludeSenderId,
+                                                    UserMessageSource workerMessages) {
         var sql = """
             SELECT cm.user_id FROM chat_members cm
             WHERE cm.chat_id = ? AND cm.user_id != ? AND cm.banned = false
@@ -42,7 +45,7 @@ public final class PipelineFanoutLogic {
                 }
             }
         } catch (Exception e) {
-            log.error("Failed to get chat members for {}", chatId, e);
+            log.error(workerMessages.format("worker.common.members_load_failed", chatId), e);
         }
         return result;
     }
@@ -50,7 +53,8 @@ public final class PipelineFanoutLogic {
     /**
      * Whether {@code userId} is an active (non-banned) member of {@code chatId}.
      */
-    public static List<String> loadAllChatMemberUserIds(DataSource dataSource, UUID chatId) {
+    public static List<String> loadAllChatMemberUserIds(DataSource dataSource, UUID chatId,
+                                                        UserMessageSource workerMessages) {
         var sql = """
             SELECT cm.user_id FROM chat_members cm
             WHERE cm.chat_id = ? AND cm.banned = false
@@ -65,12 +69,13 @@ public final class PipelineFanoutLogic {
                 }
             }
         } catch (Exception e) {
-            log.error("Failed to list chat members for {}", chatId, e);
+            log.error(workerMessages.format("worker.common.members_list_failed", chatId), e);
         }
         return result;
     }
 
-    public static boolean isChatMember(DataSource dataSource, UUID chatId, UUID userId) {
+    public static boolean isChatMember(DataSource dataSource, UUID chatId, UUID userId,
+                                       UserMessageSource workerMessages) {
         var sql = """
             SELECT 1 FROM chat_members
             WHERE chat_id = ? AND user_id = ? AND banned = false
@@ -84,7 +89,7 @@ public final class PipelineFanoutLogic {
                 return rs.next();
             }
         } catch (Exception e) {
-            log.error("Failed to check chat membership for {} in {}", userId, chatId, e);
+            log.error(workerMessages.format("worker.common.membership_check_failed", userId, chatId), e);
             return false;
         }
     }

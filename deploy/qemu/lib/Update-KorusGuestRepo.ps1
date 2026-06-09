@@ -31,7 +31,11 @@ function Update-KorusGuestRepo {
     if (-not (Test-Path $Plink)) {
         throw "PuTTY plink not found at $Plink"
     }
-    $cmd = 'sudo mkdir -p /mnt/korus && curl -fSL http://10.0.2.2:18890/repo.tgz | sudo tar -xzf - -C /mnt/korus && echo repo-updated'
+    $cmd = @'
+sudo mkdir -p /mnt/korus && curl -fsSL http://10.0.2.2:18890/repo.tgz 2>/dev/null | sudo tar -xzf - -C /mnt/korus
+sudo find /mnt/korus -name '*.sh' -exec sed -i 's/\r$//' {} \;
+echo repo-updated
+'@
     Invoke-PlinkShell -Plink $Plink -HostKey $HostKey -Port $SshPort -Script $cmd
 }
 

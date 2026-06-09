@@ -69,6 +69,24 @@ public final class NatsSubjects {
     /** Per-participant read receipt (JSON {@link com.avandocmsg.messenger.common.dto.ReadReceiptEvent}). */
     public static final String MSG_READ_RECEIPT = "msg.read_receipt";
 
+    /**
+     * MLS Welcome wire payload (binary KMLS envelope — {@link com.avandocmsg.messenger.api.mls.wire.MlsWireCodec}).
+     * Публикует core-api {@code MlsWirePublisher} при создании MLS-группы.
+     */
+    public static final String MLS_WELCOME = "mls.welcome";
+
+    /**
+     * MLS Commit wire payload (binary KMLS envelope).
+     * Публикует core-api при add/remove участника группы.
+     */
+    public static final String MLS_COMMIT = "mls.commit";
+
+    /**
+     * MLS epoch bump notification (binary KMLS envelope).
+     * Публикует core-api после commit / смены эпохи.
+     */
+    public static final String MLS_EPOCH = "mls.epoch";
+
     private NatsSubjects() {
     }
 }

@@ -15,6 +15,10 @@ import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.FilePublicLinkRepository;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+import com.avandocmsg.messenger.core.application.FileApplicationService;
+import com.avandocmsg.messenger.core.application.FileDomainMapper;
+import com.avandocmsg.messenger.core.domain.FileId;
+import com.avandocmsg.messenger.core.domain.UserId;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -78,6 +82,7 @@ public class FileResource {
     }
 
     private final FileService fileService;
+    private final FileApplicationService fileApplicationService;
     private final AppConfig appConfig;
     private final FilePublicLinkRepository filePublicLinkRepository;
     private final AuditRepository auditRepository;
@@ -85,10 +90,12 @@ public class FileResource {
     private final UserMessageSource messages;
 
     @Inject
-    public FileResource(FileService fileService, AppConfig appConfig,
+    public FileResource(FileService fileService, FileApplicationService fileApplicationService,
+                          AppConfig appConfig,
                           FilePublicLinkRepository filePublicLinkRepository,
                           AuditRepository auditRepository, Clock clock, UserMessageSource messages) {
         this.fileService = fileService;
+        this.fileApplicationService = fileApplicationService;
         this.appConfig = appConfig;
         this.filePublicLinkRepository = filePublicLinkRepository;
         this.auditRepository = auditRepository;
@@ -193,13 +200,17 @@ public class FileResource {
                             @Context SecurityContext securityContext) {
         var fid = UuidParams.required(fileId, "file_id");
         var userId = CurrentUserId.uuid(securityContext);
-        var info = fileService.getInfo(fileId);
-        if (info == null) {
+        var fileIdDomain = FileId.of(fid);
+        if (fileApplicationService.findById(fileIdDomain).isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.file.not_found")))
                 .build();
         }
-        if (!fileService.mayViewFile(info, fid, userId)) {
+        var info = fileApplicationService
+            .getMetadataForUser(UserId.of(userId), fileIdDomain)
+            .map(FileDomainMapper::toResponse)
+            .orElse(null);
+        if (info == null) {
             ApiDeniedMetrics.fileAccessDenied();
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.file.not_allowed")))

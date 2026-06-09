@@ -3,6 +3,7 @@ package com.avandocmsg.messenger.worker.retention;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.nats.client.Connection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +21,11 @@ final class RetentionExportSuggester {
     private RetentionExportSuggester() {
     }
 
-    static void publishForChatCounts(Connection nats, Map<UUID, Integer> candidateCountByChatId) {
+    static void publishForChatCounts(
+        Connection nats,
+        Map<UUID, Integer> candidateCountByChatId,
+        UserMessageSource workerMessages
+    ) {
         if (nats == null || candidateCountByChatId == null || candidateCountByChatId.isEmpty()) {
             return;
         }
@@ -38,14 +43,10 @@ final class RetentionExportSuggester {
                 );
                 nats.publish(NatsSubjects.MSG_EXPORT_SUGGESTED, MAPPER.writeValueAsBytes(event));
                 RetentionMetrics.exportSuggestedPublished();
-                log.debug(
-                    "Published {} chatId={} candidates={}",
-                    NatsSubjects.MSG_EXPORT_SUGGESTED,
-                    entry.getKey(),
-                    entry.getValue()
-                );
+                log.debug(workerMessages.format("worker.retention.export_suggest_published",
+                    NatsSubjects.MSG_EXPORT_SUGGESTED, entry.getKey(), entry.getValue()));
             } catch (Exception e) {
-                log.warn("Failed to publish {} chatId={}: {}", NatsSubjects.MSG_EXPORT_SUGGESTED, entry.getKey(), e.getMessage());
+                log.warn(workerMessages.format("worker.retention.export_suggest_publish_failed", NatsSubjects.MSG_EXPORT_SUGGESTED, entry.getKey(), e.getMessage()));
             }
         }
     }

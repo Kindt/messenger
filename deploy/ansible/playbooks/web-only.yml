@@ -4,6 +4,16 @@
   gather_facts: false
   vars:
     korus_repo_root: "{{ playbook_dir }}/../../.."
-  roles:
-    - common
-    - korus_web
+  tasks:
+    - name: Common prerequisites
+      ansible.builtin.import_role:
+        name: common
+
+    - name: Deploy web stack
+      ansible.builtin.import_role:
+        name: korus_web
+
+    - name: TLS reverse proxy
+      ansible.builtin.import_role:
+        name: tls
+      when: korus_tls_enabled | default(false) | bool

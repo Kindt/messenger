@@ -2,6 +2,8 @@ package com.avandocmsg.messenger.worker.exportreplay;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
@@ -13,9 +15,11 @@ final class ExportAuditWriter {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final DataSource dataSource;
+    private final UserMessageSource workerMessages;
 
-    ExportAuditWriter(DataSource dataSource) {
+    ExportAuditWriter(DataSource dataSource, UserMessageSource workerMessages) {
         this.dataSource = dataSource;
+        this.workerMessages = workerMessages;
     }
 
     void recordCompleted(UUID actorUserId, String jobId, String chatId, String status, String outputPath) {
@@ -41,7 +45,7 @@ final class ExportAuditWriter {
                 stmt.executeUpdate();
             }
         } catch (Exception e) {
-            log.warn("export.completed audit insert failed jobId={}: {}", jobId, e.getMessage());
+            log.warn(workerMessages.format("worker.export_replay.audit_insert_failed", jobId, e.getMessage()));
         }
     }
 }

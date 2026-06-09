@@ -67,8 +67,8 @@ $constText = $constText -replace '\*\*Version\*\*: 1\.0\.0 \| \*\*Ratified\*\*: 
 Set-FileText $constitution $constText
 
 $tasksText = Get-Content $tasks -Raw
-$tasksText = $tasksText -replace '- \[ \] T048[^\r\n]*', "- [x] T048 Create and approve ADR — accepted $Date ($ArchitectureOwner, $ProductOwner, $OpsSre)"
-$tasksText = $tasksText -replace '- \[ \] T056[^\r\n]*', "- [x] T056 [US3] Collect approvals in ADR and constitution exception — accepted $Date"
+$tasksText = $tasksText -replace '- \[ \] T048[^\r\n]*', "- [x] T048 Create and approve ADR - accepted $Date ($ArchitectureOwner, $ProductOwner, $OpsSre)"
+$tasksText = $tasksText -replace '- \[ \] T056[^\r\n]*', "- [x] T056 [US3] Collect approvals in ADR and constitution exception - accepted $Date"
 Set-FileText $tasks $tasksText
 
 Write-Host "[OK] Hot-plug governance sign-off recorded ($Date)" -ForegroundColor Green

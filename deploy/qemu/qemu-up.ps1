@@ -6,12 +6,17 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "lib\Write-KorusDebugLog.ps1")
+Write-KorusDebugLog -Location "qemu-up.ps1:start" -Message "qemu-up begin" -HypothesisId "ALL" -Data @{
+    KeepDisks = [bool]$KeepDisks; SkipQemuInstall = [bool]$SkipQemuInstall
+}
 if ($Help) {
     Write-Host "Usage: .\deploy\qemu\qemu-up.ps1 [-InstallQemuOnly] [-SkipQemuInstall] [-KeepDisks]"
     exit 0
 }
 
 $lib = Join-Path $PSScriptRoot "lib"
+$runDir = Join-Path $PSScriptRoot "run"
 . (Join-Path $lib "Resolve-Qemu.ps1")
 
 if (-not $SkipQemuInstall -and -not (Resolve-KorusQemu)) {
@@ -24,16 +29,20 @@ if (-not (Resolve-KorusQemu)) {
 
 if (-not $KeepDisks) {
     . (Join-Path $lib "Reset-KorusVmDisks.ps1")
+    Write-KorusDebugLog -Location "qemu-up.ps1:disks" -Message "resetting VM disks" -HypothesisId "A"
     Reset-KorusVmDisks
+    Remove-Item (Join-Path $runDir "ssh-hostkeys.ps1") -Force -ErrorAction SilentlyContinue
+    Write-KorusDebugLog -Location "qemu-up.ps1:disks" -Message "disks reset, ssh cache cleared" -HypothesisId "C"
 }
 
 . (Join-Path $lib "Get-KorusLanHostIp.ps1")
 . (Join-Path $lib "Start-KorusRepoHttp.ps1")
-$runDir = Join-Path $PSScriptRoot "run"
 $lanIp = Write-KorusQemuLanHostInfo -RunDir $runDir
-Start-KorusRepoHttp | Out-Null
+$repoHttp = Start-KorusRepoHttp
+Write-KorusDebugLog -Location "qemu-up.ps1:repo-http" -Message "repo HTTP started" -HypothesisId "A" -Data @{ lanIp = $lanIp; repoHttp = ($repoHttp | Out-String).Trim() }
 
 . (Join-Path $lib "Start-KorusVm.ps1")
+Write-KorusDebugLog -Location "qemu-up.ps1:vm" -Message "starting server VM" -HypothesisId "B"
 Start-KorusQemuVm -Role server | Out-Null
 Write-Host "Waiting for server SSH (cloud-init) before web VM..." -ForegroundColor DarkGray
 $sshReady = $false
@@ -42,14 +51,21 @@ for ($i = 1; $i -le 60; $i++) {
     if ($tcp.TcpTestSucceeded) {
         $sshReady = $true
         Write-Host "  SSH on :12221 ready (${i}0s)" -ForegroundColor DarkGray
+        Write-KorusDebugLog -Location "qemu-up.ps1:ssh" -Message "server SSH ready" -HypothesisId "C" -Data @{ waitSec = ($i * 10) }
         break
     }
     Start-Sleep -Seconds 10
 }
 if (-not $sshReady) {
     Write-Warning "Server SSH not ready after 10 min; starting web VM anyway"
+    Write-KorusDebugLog -Location "qemu-up.ps1:ssh" -Message "server SSH timeout" -HypothesisId "C" -Data @{ waitSec = 600 }
 }
+Write-KorusDebugLog -Location "qemu-up.ps1:vm" -Message "starting web VM" -HypothesisId "D"
 Start-KorusQemuVm -Role web | Out-Null
+
+Write-KorusDebugLog -Location "qemu-up.ps1:end" -Message "both VMs started, bootstrap async on guests" -HypothesisId "ALL" -Data @{
+    note = "cloud-init runs KORUS_BUILD=1 ansible in background; monitor /var/log/korus-bootstrap.log"
+}
 
 Write-Host ""
 Write-Host "[OK] QEMU VMs started (server first, then web)" -ForegroundColor Green

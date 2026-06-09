@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.worker.retention;
 
 import io.minio.MinioClient;
 import io.minio.RemoveObjectArgs;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,7 +69,8 @@ final class FileRetentionJanitor {
         int minAgeDays,
         int batchLimit,
         boolean auditEnabled,
-        boolean dryRun
+        boolean dryRun,
+        UserMessageSource workerMessages
     ) throws Exception {
         if (!RetentionPlatformDefaults.fileMetadataCleanupEnabledFromEnv()) {
             return 0;
@@ -81,17 +83,17 @@ final class FileRetentionJanitor {
             return 0;
         }
         if (dryRun) {
-            log.info("File retention dry-run: candidates={}", candidates.size());
+            log.info(workerMessages.format("worker.retention.file.dry_run", candidates.size()));
             return 0;
         }
         int deleted = 0;
         for (var c : candidates) {
-            if (deleteOne(dataSource, minioClient, minioEnabled, minioBucket, c, auditEnabled)) {
+            if (deleteOne(dataSource, minioClient, minioEnabled, minioBucket, c, auditEnabled, workerMessages)) {
                 deleted++;
             }
         }
         if (deleted > 0) {
-            log.info("File retention pass: deleted={}", deleted);
+            log.info(workerMessages.format("worker.retention.file.deleted", deleted));
         }
         return deleted;
     }
@@ -120,7 +122,8 @@ final class FileRetentionJanitor {
         boolean minioEnabled,
         String minioBucket,
         Candidate c,
-        boolean auditEnabled
+        boolean auditEnabled,
+        UserMessageSource workerMessages
     ) throws Exception {
         var objectName = c.fileId() + "/" + (c.filename() != null && !c.filename().isBlank() ? c.filename() : "file");
         if (minioEnabled && minioClient != null && minioBucket != null && !minioBucket.isBlank()) {
@@ -132,7 +135,7 @@ final class FileRetentionJanitor {
                 RetentionMetrics.minioObjectDeleted();
             } catch (Exception e) {
                 RetentionMetrics.purgeError("minio_delete");
-                log.warn("MinIO delete failed fileId={} key={}: {}", c.fileId(), objectName, e.getMessage());
+                log.warn(workerMessages.format("worker.retention.file.minio_delete_failed", c.fileId(), objectName, e.getMessage()));
                 return false;
             }
         }

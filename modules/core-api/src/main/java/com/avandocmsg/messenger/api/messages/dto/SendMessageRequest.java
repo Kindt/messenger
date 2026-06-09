@@ -13,5 +13,7 @@ public record SendMessageRequest(
     @Schema(description = "Срок видимости сообщения в секундах (скрытие из ленты после истечения); null = без TTL", example = "3600")
     @JsonProperty("visibility_ttl_seconds") @JsonAlias("ttl_seconds") Integer visibilityTtlSeconds,
     @Schema(description = "Срок переноса тела в deep-archive в секундах; null = без archive TTL", example = "86400")
-    @JsonProperty("archive_ttl_seconds") Integer archiveTtlSeconds
+    @JsonProperty("archive_ttl_seconds") Integer archiveTtlSeconds,
+    @Schema(description = "E2EE scheme: mls (RFC 9420 wire) or legacy (client-side X25519)", example = "mls")
+    @JsonProperty("e2ee_scheme") String e2eeScheme
 ) {}

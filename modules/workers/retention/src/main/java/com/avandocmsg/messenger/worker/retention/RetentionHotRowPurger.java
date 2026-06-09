@@ -4,6 +4,7 @@ import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.nats.client.Connection;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +60,7 @@ final class RetentionHotRowPurger {
 
     private static final String EXISTS_EXPORT = """
         SELECT 1 FROM export_jobs
-        WHERE chat_id = ? AND status IN ('export_v1', 'stub_written')
+        WHERE chat_id = ? AND status = 'export_v1'
         LIMIT 1
         """;
 
@@ -83,7 +84,8 @@ final class RetentionHotRowPurger {
         boolean exportRequiredBeforePurge,
         boolean auditEnabled,
         int jdbcQueryTimeoutSeconds,
-        boolean dryRun
+        boolean dryRun,
+        UserMessageSource workerMessages
     ) throws Exception {
         if (!RetentionPlatformDefaults.hotRowPurgeEnabledFromEnv()) {
             return 0;
@@ -93,7 +95,7 @@ final class RetentionHotRowPurger {
             return 0;
         }
         if (dryRun) {
-            log.info("Retention hot-row purge dry-run: candidates={}", candidates.size());
+            log.info(workerMessages.format("worker.retention.hot_row.dry_run", candidates.size()));
             return 0;
         }
         var skippedChats = new HashSet<UUID>();
@@ -118,7 +120,7 @@ final class RetentionHotRowPurger {
             }
         }
         if (purged > 0) {
-            log.info("Retention hot-row purge pass: purged={}", purged);
+            log.info(workerMessages.format("worker.retention.hot_row.purged", purged));
         }
         return purged;
     }

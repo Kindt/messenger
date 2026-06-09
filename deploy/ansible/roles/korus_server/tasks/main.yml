@@ -1,9 +1,27 @@
 ---
+- name: Template server secrets env from vault
+  ansible.builtin.template:
+    src: korus-server.env.j2
+    dest: "{{ korus_server_env_path }}"
+    mode: "0600"
+  when: >
+    korus_db_password is defined
+    or korus_minio_secret_key is defined
+    or korus_keycloak_admin_password is defined
+    or korus_jwt_secret is defined
+    or korus_coturn_secret is defined
+
 - name: Full stack up via project script
   ansible.builtin.shell: |
     set -euo pipefail
     cd "{{ korus_repo_root }}"
     export SKIP_KORUS_ENSURE=1
+    if [[ -f "{{ korus_server_env_path }}" ]]; then
+      set -a
+      # shellcheck source=/dev/null
+      source "{{ korus_server_env_path }}"
+      set +a
+    fi
     args=( )
     if {{ korus_build_images | bool | lower }}; then args+=( --build ); fi
     bash scripts/full-stack-up.sh --skip-ensure --no-wait-ready "${args[@]}"

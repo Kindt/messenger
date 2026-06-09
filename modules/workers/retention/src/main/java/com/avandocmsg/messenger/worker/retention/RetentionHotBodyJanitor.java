@@ -14,6 +14,7 @@ import io.minio.PutObjectArgs;
 import io.minio.StatObjectArgs;
 import io.minio.UploadObjectArgs;
 import io.minio.errors.ErrorResponseException;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.nats.client.Connection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,11 @@ import java.util.UUID;
  */
 final class RetentionHotBodyJanitor {
     private static final Logger log = LoggerFactory.getLogger(RetentionHotBodyJanitor.class);
+    private static final ThreadLocal<UserMessageSource> LOG_MESSAGES = new ThreadLocal<>();
+
+    private static UserMessageSource logMessages() {
+        return LOG_MESSAGES.get();
+    }
     private static final ObjectMapper MAPPER = new ObjectMapper();
     /** Согласовано с {@code AuditRepository} / админским аудитом; массовые операции воркера. */
     private static final String AUDIT_ACTION_HOT_BODY_CLEARED = "message.retention.hot_body_cleared";
@@ -136,9 +142,11 @@ final class RetentionHotBodyJanitor {
         long minioMultipartThresholdBytes,
         boolean dryRun,
         String jdbcUrl,
-        boolean useAdvisoryLock
+        boolean useAdvisoryLock,
+        UserMessageSource workerMessages
     ) throws Exception {
         long passStartNanos = System.nanoTime();
+        LOG_MESSAGES.set(workerMessages);
         UUID passUuid = UUID.randomUUID();
         String passId = passUuid.toString();
         java.sql.Connection passJdbcConn = null;
@@ -148,7 +156,7 @@ final class RetentionHotBodyJanitor {
         int passClearedCountForGauge = 0;
         try {
             if (requireMinio && !minioEnabled) {
-                log.debug("Hot-body retention skipped: RETENTION_REQUIRE_MINIO=true and MinIO is not configured");
+                log.debug(workerMessages.get("worker.retention.hot_body.minio_required_skip"));
                 RetentionMetrics.passSkippedMinioRequired();
                 RetentionMetrics.observePassCandidates(0);
                 return 0;
@@ -159,9 +167,7 @@ final class RetentionHotBodyJanitor {
                 passJdbcConn = dataSource.getConnection();
                 advisoryLockHeld = trySessionAdvisoryLock(passJdbcConn, jdbcQueryTimeoutSeconds);
                 if (!advisoryLockHeld) {
-                    log.info(
-                        "Retention hot-body pass skipped: PostgreSQL advisory session lock not acquired (another replica may hold RetentionAdvisoryLockIds); no candidate SELECT this pass"
-                    );
+                    log.info(workerMessages.get("worker.retention.hot_body.advisory_lock_skip"));
                     RetentionMetrics.passSkippedAdvisoryLock();
                     RetentionMetrics.observePassCandidates(0);
                     return 0;
@@ -179,12 +185,8 @@ final class RetentionHotBodyJanitor {
             RetentionMetrics.observePassCandidates(batch.size());
             if (dryRun) {
                 int wouldClear = batch.size();
-                log.info(
-                    "Retention hot-body dry-run pass: pass_id={} candidates={} would_clear={} dry_run=true",
-                    passId,
-                    batch.size(),
-                    wouldClear
-                );
+                log.info(workerMessages.format("worker.retention.hot_body.dry_run_pass",
+                    passId, batch.size(), wouldClear));
                 publishExportSuggestedIfEnabled(nats, batch);
                 RetentionMetrics.dryRunPassCompleted();
                 recordPassCompletionGauges = true;
@@ -226,24 +228,19 @@ final class RetentionHotBodyJanitor {
                 } catch (Exception e) {
                     errors++;
                     RetentionMetrics.processingError();
-                    log.warn("Retention hot-body failed messageId={}: {}", c.id(), e.getMessage());
+                    log.warn(workerMessages.format("worker.retention.hot_body.message_failed", c.id(), e.getMessage()));
                 }
                 boolean hasMore = i < batch.size() - 1;
                 if (hasMore && interMessageDelayMs > 0) {
                     if (RetentionInterMessageSleep.sleepQuiet(interMessageDelayMs)) {
-                        log.warn(
-                            "Retention hot-body pass interrupted during inter-message delay ({} ms); stopping pass early (cleared={}, errors={}, remainingCandidates≈{})",
-                            interMessageDelayMs,
-                            done,
-                            errors,
-                            batch.size() - i - 1
-                        );
+                        log.warn(workerMessages.format("worker.retention.hot_body.interrupted",
+                            interMessageDelayMs, done, errors, batch.size() - i - 1));
                         break;
                     }
                 }
             }
             if (done > 0) {
-                log.info("Retention hot-body pass: cleared {} message(s)", done);
+                log.info(workerMessages.format("worker.retention.hot_body.pass_cleared", done));
             }
             long durationMs = (System.nanoTime() - passStartNanos) / 1_000_000L;
             if (RetentionBulkAudit.shouldRecordSummary(done, bulkAuditMinCleared)) {
@@ -267,20 +264,21 @@ final class RetentionHotBodyJanitor {
                 try {
                     releaseSessionAdvisoryLock(passJdbcConn, jdbcQueryTimeoutSeconds);
                 } catch (SQLException e) {
-                    log.warn("Retention hot-body: pg_advisory_unlock failed: {}", e.getMessage());
+                    log.warn(workerMessages.format("worker.retention.hot_body.advisory_unlock_failed", e.getMessage()));
                 }
             }
             if (passJdbcConn != null) {
                 try {
                     passJdbcConn.close();
                 } catch (SQLException e) {
-                    log.warn("Retention hot-body: failed closing pass JDBC connection: {}", e.getMessage());
+                    log.warn(workerMessages.format("worker.retention.hot_body.jdbc_close_failed", e.getMessage()));
                 }
             }
             RetentionMetrics.observePassDurationSeconds((System.nanoTime() - passStartNanos) / 1_000_000_000.0);
             if (recordPassCompletionGauges) {
                 RetentionMetrics.recordHotBodyPassCompletionGauges(Instant.now().getEpochSecond(), passClearedCountForGauge);
             }
+            LOG_MESSAGES.remove();
         }
     }
 
@@ -298,7 +296,7 @@ final class RetentionHotBodyJanitor {
             applyStatementQueryTimeout(st, jdbcQueryTimeoutSeconds);
             try (var rs = st.executeQuery(RetentionAdvisoryLockIds.unlockQuery())) {
                 if (rs.next() && !rs.getBoolean(1)) {
-                    log.debug("Retention hot-body: pg_advisory_unlock returned false (session did not hold the lock)");
+                    log.debug(logMessages().get("worker.retention.hot_body.advisory_unlock_false"));
                 }
             }
         }
@@ -411,7 +409,7 @@ final class RetentionHotBodyJanitor {
         }
         if (updated == 0) {
             RetentionMetrics.rowNotUpdated();
-            log.debug("Retention skip messageId={}: row not updated (race or already cleared)", c.id());
+            log.debug(logMessages().format("worker.retention.hot_body.row_race_skip", c.id()));
             return false;
         }
         var evt = MessageWorkerEvent.fromPersistedMessage(
@@ -475,17 +473,17 @@ final class RetentionHotBodyJanitor {
             if ("NoSuchKey".equals(code) || "NoSuchObject".equals(code)) {
                 return false;
             }
-            log.debug("Retention statObject unexpected response bucket={} key={}: {}", bucket, objectKey, e.getMessage());
+            log.debug(logMessages().format("worker.retention.hot_body.stat_unexpected", bucket, objectKey, e.getMessage()));
             return false;
         } catch (Exception e) {
-            log.debug("Retention statObject failed bucket={} key={}: {}", bucket, objectKey, e.getMessage());
+            log.debug(logMessages().format("worker.retention.hot_body.stat_failed", bucket, objectKey, e.getMessage()));
             return false;
         }
     }
 
     private static void publishExportSuggestedIfEnabled(Connection nats, List<Candidate> batch) {
         if (RetentionPlatformDefaults.publishExportSuggestedFromEnv() && nats != null && !batch.isEmpty()) {
-            RetentionExportSuggester.publishForChatCounts(nats, candidateCountByChatId(batch));
+            RetentionExportSuggester.publishForChatCounts(nats, candidateCountByChatId(batch), logMessages());
         }
     }
 
@@ -552,7 +550,7 @@ final class RetentionHotBodyJanitor {
             }
         } catch (Exception e) {
             RetentionMetrics.auditInsertFailed();
-            log.warn("Retention bulk audit insert failed passId={}: {}", passId, e.getMessage());
+            log.warn(logMessages().format("worker.retention.hot_body.bulk_audit_failed", passId, e.getMessage()));
         }
     }
 
@@ -599,7 +597,7 @@ final class RetentionHotBodyJanitor {
             }
         } catch (Exception e) {
             RetentionMetrics.auditInsertFailed();
-            log.warn("Retention audit insert failed messageId={}: {}", messageId, e.getMessage());
+            log.warn(logMessages().format("worker.retention.hot_body.audit_failed", messageId, e.getMessage()));
         }
     }
 
@@ -676,7 +674,7 @@ final class RetentionHotBodyJanitor {
             int contentUtf8Bytes
         ) throws Exception {
             if (shouldSkipSnapshotForContent(candidate.content())) {
-                log.debug("Retention skip snapshot for message {}: content is file reference", candidate.id());
+                log.debug(logMessages().format("worker.retention.hot_body.skip_file_ref", candidate.id()));
                 RetentionMetrics.minioSnapshotSkippedExisting("file_ref");
                 RetentionMetrics.fileRefSkipped();
                 return new SnapshotStoreResult(null, null);
@@ -818,7 +816,7 @@ final class RetentionHotBodyJanitor {
                     try {
                         Files.deleteIfExists(tmp);
                     } catch (Exception delEx) {
-                        log.warn("Retention failed to delete temp snapshot file {}: {}", tmp, delEx.getMessage());
+                        log.warn(logMessages().format("worker.retention.hot_body.temp_delete_failed", tmp, delEx.getMessage()));
                     }
                 }
             }

@@ -14,6 +14,7 @@ import com.avandocmsg.messenger.api.admin.dto.SetUserOrganizationRequest;
 import com.avandocmsg.messenger.api.admin.dto.UpdateRetentionPolicyRequest;
 import com.avandocmsg.messenger.api.chats.ReadReceiptService;
 import com.avandocmsg.messenger.api.mls.MlsGroupManager;
+import com.avandocmsg.messenger.api.mls.MlsMigrationService;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
@@ -37,6 +38,8 @@ import com.avandocmsg.messenger.api.export.dto.ExportJobStatusResponse;
 import com.avandocmsg.messenger.api.repository.LegalHoldRepository;
 import com.avandocmsg.messenger.api.repository.ExportJobRepository;
 import com.avandocmsg.messenger.common.dto.ApiError;
+import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
+import com.avandocmsg.messenger.core.domain.OrganizationId;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -83,12 +86,14 @@ public class AdminResource {
     private final AppConfig appConfig;
     private final AuditRepository auditRepository;
     private final OrganizationRepository organizationRepository;
+    private final OrganizationApplicationService organizationApplicationService;
     private final RetentionPolicyRepository retentionPolicyRepository;
     private final ChatRepository chatRepository;
     private final ChatRetentionPolicyRepository chatRetentionPolicyRepository;
     private final AdminExportFacade exportFacade;
     private final ReadReceiptService readReceiptService;
     private final MlsGroupManager mlsGroupManager;
+    private final MlsMigrationService mlsMigrationService;
     private final LegalHoldRepository legalHoldRepository;
     private final PurgeStatusService purgeStatusService;
     private final UserMessageSource messages;
@@ -96,6 +101,7 @@ public class AdminResource {
     @Inject
     public AdminResource(AppConfig appConfig, AuditRepository auditRepository,
                          OrganizationRepository organizationRepository,
+                         OrganizationApplicationService organizationApplicationService,
                          RetentionPolicyRepository retentionPolicyRepository,
                          ChatRepository chatRepository,
                          ChatRetentionPolicyRepository chatRetentionPolicyRepository,
@@ -107,12 +113,14 @@ public class AdminResource {
                          NatsOutboundPort natsOutbound,
                          ReadReceiptService readReceiptService,
                          MlsGroupManager mlsGroupManager,
+                         MlsMigrationService mlsMigrationService,
                          LegalHoldRepository legalHoldRepository,
                          PurgeStatusService purgeStatusService,
                          UserMessageSource messages) {
         this.appConfig = appConfig;
         this.auditRepository = auditRepository;
         this.organizationRepository = organizationRepository;
+        this.organizationApplicationService = organizationApplicationService;
         this.retentionPolicyRepository = retentionPolicyRepository;
         this.chatRepository = chatRepository;
         this.chatRetentionPolicyRepository = chatRetentionPolicyRepository;
@@ -130,6 +138,7 @@ public class AdminResource {
         );
         this.readReceiptService = readReceiptService;
         this.mlsGroupManager = mlsGroupManager;
+        this.mlsMigrationService = mlsMigrationService;
         this.legalHoldRepository = legalHoldRepository;
         this.purgeStatusService = purgeStatusService;
         this.messages = messages;
@@ -222,14 +231,20 @@ public class AdminResource {
 
     @GET
     @Path("e2ee/status")
-    @Operation(summary = "E2EE/MLS status (stub scaffold)")
+    @Operation(summary = "E2EE/MLS status")
     public Response e2eeStatus() {
         var groups = mlsGroupManager != null ? mlsGroupManager.groupCount() : 0L;
-        return Response.ok(new E2eeStatusResponse(groups, "stub", List.of("legacy", "mls-stub"))).build();
+        var pending = mlsMigrationService != null ? mlsMigrationService.pendingMigrationCount() : 0L;
+        return Response.ok(new E2eeStatusResponse(
+            groups,
+            pending,
+            appConfig.mlsStatus(),
+            appConfig.e2eeSchemes())).build();
     }
 
     public record E2eeStatusResponse(
         @JsonProperty("mls_group_count") long mlsGroupCount,
+        @JsonProperty("pending_migrations_count") long pendingMigrationsCount,
         @JsonProperty("mls_status") String mlsStatus,
         @JsonProperty("e2ee_schemes") List<String> e2eeSchemes
     ) {
@@ -516,7 +531,8 @@ public class AdminResource {
         security = @SecurityRequirement(name = "bearerAuth"))
     public Response getOrganizationRetention(@PathParam("orgId") String orgIdStr) {
         var orgId = UuidParams.required(orgIdStr, "org_id");
-        if (!organizationRepository.exists(orgId)) {
+        if (!organizationApplicationService.exists(OrganizationId.of(orgId))
+            || organizationApplicationService.findById(OrganizationId.of(orgId)).isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.org_not_found"))).build();
         }
         var stored = retentionPolicyRepository.findByOrgId(orgId);

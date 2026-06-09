@@ -1,8 +1,10 @@
 ---
-# QEMU virtual LAN (deploy/qemu/config.ps1): server 192.168.76.10, web 192.168.76.20
-korus_server_lan_ip: "192.168.76.10"
-korus_web_lan_ip: "192.168.76.20"
-korus_use_lan_publish: true
+# QEMU user netdev: each guest is 10.0.2.15; host port-forwards are reachable at 10.0.2.2
+# (192.168.76.x in README is target topology — not wired in Start-KorusVm.ps1 yet)
+korus_server_lan_ip: "10.0.2.2"
+korus_web_lan_ip: "10.0.2.15"
+korus_api_port: 18080
+korus_ws_port: 18082
+korus_use_lan_publish: false
 korus_configure_ufw: false
-# Browser on Windows host uses port forwards (19088), not guest :9088
 korus_browser_ws_port: 19088

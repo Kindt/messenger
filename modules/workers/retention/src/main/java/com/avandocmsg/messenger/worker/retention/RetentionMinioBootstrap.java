@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.worker.retention;
 
 import io.minio.BucketExistsArgs;
 import io.minio.MakeBucketArgs;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.minio.MinioClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +16,7 @@ final class RetentionMinioBootstrap {
     private RetentionMinioBootstrap() {
     }
 
-    static void ensureBucketExists(MinioClient client, String bucket) {
+    static void ensureBucketExists(MinioClient client, String bucket, UserMessageSource workerMessages) {
         if (client == null || bucket == null || bucket.isBlank()) {
             return;
         }
@@ -23,10 +24,10 @@ final class RetentionMinioBootstrap {
             var exists = client.bucketExists(BucketExistsArgs.builder().bucket(bucket).build());
             if (!exists) {
                 client.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
-                log.info("Created MinIO bucket {} for retention snapshots", bucket);
+                log.info(workerMessages.format("worker.retention.minio_bucket_created", bucket));
             }
         } catch (Exception e) {
-            log.warn("Retention MinIO bucket ensure failed bucket={}: {}", bucket, e.getMessage());
+            log.warn(workerMessages.format("worker.retention.minio_bucket_failed", bucket, e.getMessage()));
         }
     }
 }

@@ -5,5 +5,12 @@ korus_use_lan_publish: false
 korus_configure_ufw: false
 korus_api_base_url: "http://127.0.0.1:{{ korus_api_port }}"
 korus_ws_url: "ws://127.0.0.1:{{ korus_ws_port }}/ws"
-# CORS for web origin (override in two-host)
+# CORS for web origin (override in two-host / stage TLS)
 korus_cors_allowed_origins: "http://127.0.0.1:9088"
+# Prod secrets from ansible-vault (group_vars/vault.yml); templated to korus_server_env_path.
+# korus_db_password          -> DB_PASSWORD, POSTGRES_PASSWORD, KC_DB_PASSWORD
+# korus_minio_secret_key     -> MINIO_SECRET_KEY, MINIO_ROOT_PASSWORD
+# korus_keycloak_admin_password -> KEYCLOAK_ADMIN_PASSWORD, KEYCLOAK_MASTER_PASSWORD
+# korus_jwt_secret           -> JWT_SECRET (when compose override supports it)
+# korus_coturn_secret        -> TURN credential (korus-web turn overlay / WEB_CLIENT_RTC_ICE_SERVERS)
+korus_server_env_path: "{{ korus_repo_root }}/docker/.env.korus-server"

@@ -83,6 +83,8 @@ public class AppConfig {
         override("SERVICE_HEARTBEAT_TTL_MS", "hotplug.heartbeat.ttl.ms");
         override("HOTPLUG_INDEXER_SERVICE_ID", "hotplug.indexer.service.id");
         override("HOTPLUG_INDEXER_PRESENCE_REQUIRED", "hotplug.indexer.presence.required");
+        override("MLS_STATUS", "mls.status");
+        override("MLS_WIRE_ENABLED", "mls.wire.enabled");
     }
 
     private void override(String envKey, String propKey) {
@@ -541,5 +543,28 @@ public class AppConfig {
         } catch (NumberFormatException e) {
             return 365;
         }
+    }
+
+    /** RFC 9420 phase-1 MLS wire codec enabled. Env: {@code MLS_WIRE_ENABLED}; default {@code true}. */
+    public boolean mlsWireEnabled() {
+        return Boolean.parseBoolean(props.getProperty("mls.wire.enabled", "true"));
+    }
+
+    /**
+     * MLS rollout status for capabilities/admin. Env: {@code MLS_STATUS};
+     * default {@code active} when wire enabled, else {@code stub}.
+     */
+    public String mlsStatus() {
+        var configured = props.getProperty("mls.status", "").trim();
+        if (!configured.isEmpty()) {
+            return configured;
+        }
+        return mlsWireEnabled() ? "active" : "stub";
+    }
+
+    public List<String> e2eeSchemes() {
+        return mlsWireEnabled()
+            ? List.of("legacy", "mls")
+            : List.of("legacy", "mls-stub");
     }
 }

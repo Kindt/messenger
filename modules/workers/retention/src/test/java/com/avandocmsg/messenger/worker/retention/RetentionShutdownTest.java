@@ -1,5 +1,8 @@
 package com.avandocmsg.messenger.worker.retention;
 
+
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -14,7 +17,8 @@ class RetentionShutdownTest {
     void runCloseables_invokesInOrder() throws Exception {
         var order = new ArrayList<Integer>();
         RetentionShutdown.runCloseables(
-            List.of(() -> order.add(1), () -> order.add(2), () -> order.add(3))
+            List.of(() -> order.add(1), () -> order.add(2), () -> order.add(3)),
+            WorkerMessageSources.forWorker(RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention")
         );
         assertEquals(List.of(1, 2, 3), order);
     }
@@ -29,7 +33,8 @@ class RetentionShutdownTest {
                     throw new RuntimeException("boom");
                 },
                 () -> order.add(3)
-            )
+            ),
+            WorkerMessageSources.forWorker(RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention")
         );
         assertEquals(List.of(1, 3), order);
     }
@@ -42,7 +47,7 @@ class RetentionShutdownTest {
         list.add(() -> {
             n.incrementAndGet();
         });
-        RetentionShutdown.runCloseables(list);
+        RetentionShutdown.runCloseables(list, WorkerMessageSources.forWorker(RetentionWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_retention"));
         assertEquals(1, n.get());
     }
 }

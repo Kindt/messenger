@@ -11,19 +11,19 @@ Baseline inventory of non-admin server resources against current `modules/web-cl
 | Domain | Server Resource | Endpoint Family | Status | Notes |
 |---|---|---|---|---|
 | auth | `AuthResource` | `/v1/auth/login|register|refresh|logout` | covered | Full auth + refresh session flow present in web-client. |
-| chats | `ChatResource` | `/v1/chats/*` | partial | Core chat/member/read/unread/typing covered; needs explicit parity sweep for all member/role/bans edge paths. |
-| messages | `MessageResource` | `/v1/chats/{chatId}/messages/*` | partial | Send/edit/delete/reactions/pin/forward present; versions/plaintext-preview require explicit gap verification. |
-| files | `FileResource` | `/v1/files/*` | partial | Upload/download/public links present; public auth-link and message-ref flows need parity checklist confirmation. |
-| export | `ExportResource` | `/v1/chats/{chatId}/export/*` | partial | Request/status/download integrated; full attachments/cancel state transitions require parity sweep. |
+| chats | `ChatResource` | `/v1/chats/*` | covered | Read receipts REST hydrate + `up_to_message_id` on `/read`; member/ban flows wired. |
+| messages | `MessageResource` | `/v1/chats/{chatId}/messages/*` | covered | All REST paths wired; static asserts for `/versions`, `/plaintext-preview`. |
+| files | `FileResource` | `/v1/files/*` | covered | Metadata GET, kind-B auth-link URL, upload/download/public links. |
+| export | `ExportResource` | `/v1/chats/{chatId}/export/*` | covered | Request/status/cancel/download + `/attachments` preview. |
 | contacts | `ContactResource` | `/v1/contacts/*` | covered | Contact list/import/delete flows present. |
 | search | `SearchResource` | `/v1/search/users|messages` | covered | Sidebar/global search flows present. |
 | users | `UserResource` | `/v1/users/me*` | covered | Profile/presence/heartbeat/saved-chat flows present. |
-| blocks | `BlocksResource` | `/v1/blocks/*` | partial | Block list/updates appear in settings flow; needs endpoint-level parity confirmation. |
+| blocks | `BlocksResource` | `/v1/blocks/*` | covered | Settings block list/add/remove wired. |
 | devices | `DeviceResource` | `/v1/me/devices/*` | covered | Device and push registration/removal mapped. |
-| conference | `ConferenceResource` | `/v1/chats/{chatId}/conferences*`, `/v1/conferences/*` | partial | Active conference/call flows present; join/leave/end edge handling needs parity verification. |
+| conference | `ConferenceResource` | `/v1/chats/{chatId}/conferences*`, `/v1/conferences/*` | covered | Standalone + in-chat create, by-room lookup, join/leave/end. |
 | media | `MediaCapabilitiesResource` | `/v1/media/capabilities` | covered | Capability load integrated. |
 | health | `HealthResource` | `/v1/health`, `/v1/health/ready` | covered | Version/health checks integrated. |
-| crypto/e2ee | `CryptoResource` | `/v1/e2ee/*` | partial | Key package and decrypt helpers present; parity checklist needed for all key-package lifecycle endpoints. |
+| crypto/e2ee | `CryptoResource` | `/v1/e2ee/*` | covered | Key package lifecycle REST wired; decrypt via plaintext-preview. |
 | metrics | `PrometheusMetricsResource` | `/v1/metrics/prometheus` | missing (out of scope) | Not a user flow target for web-client parity. |
 
 ## Explicit Exclusions (frozen)
@@ -36,6 +36,4 @@ These are excluded from this feature scope unless separately requested.
 
 ## Priority Gaps for Next Phases
 
-1. Message/chat endpoint-by-endpoint parity sweep (`partial` domains).
-2. File/export operational parity sweep (`partial` domains).
-3. Realtime/call convergence hardening (`partial` conference + message event races).
+None blocking spec 002 engineering closure (2026-06-09). Optional: browser operator sign-off per `HANDOFF.md`.

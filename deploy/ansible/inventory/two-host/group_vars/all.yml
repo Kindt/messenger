@@ -2,3 +2,5 @@
 # Two-host LAN: enable UFW rules on server/web hosts
 korus_configure_ufw: true
 korus_use_lan_publish: true
+korus_server_lan_ip: "192.168.76.10"
+korus_web_lan_ip: "192.168.76.20"

@@ -14,6 +14,7 @@ import com.avandocmsg.messenger.api.export.AdminExportComplianceSeed;
 import com.avandocmsg.messenger.api.export.ExportFileAccess;
 import com.avandocmsg.messenger.api.export.ExportJobEnqueuer;
 import com.avandocmsg.messenger.api.export.ExportSuggestedHandler;
+import com.avandocmsg.messenger.core.bootstrap.CoreModule;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,6 +42,7 @@ class AdminResourceTest {
         };
         var resource = new AdminResource(cfg, new AuditRepository(null),
             new OrganizationRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
+            CoreModule.organizationApplicationService(null),
             new RetentionPolicyRepository(null),
             new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
             new ChatRetentionPolicyRepository(null),
@@ -50,6 +52,7 @@ class AdminResourceTest {
             null,
             new ExportFileAccess(cfg),
             mock(NatsOutboundPort.class),
+            null,
             null,
             null,
             null,
@@ -167,6 +170,7 @@ class AdminResourceTest {
         };
         return new AdminResource(cfg, new AuditRepository(null),
             new OrganizationRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
+            CoreModule.organizationApplicationService(null),
             new RetentionPolicyRepository(null),
             new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
             new ChatRetentionPolicyRepository(null),
@@ -176,6 +180,7 @@ class AdminResourceTest {
             null,
             new ExportFileAccess(cfg),
             mock(NatsOutboundPort.class),
+            null,
             null,
             null,
             null,

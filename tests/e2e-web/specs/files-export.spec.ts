@@ -1,0 +1,36 @@
+import { test, expect } from "@playwright/test";
+import { apiBase, apiCreateGroup, apiLogin, apiMeId, ensureSmokeUsers } from "../fixtures/auth";
+import { uiLogin, uiOpenChatByTitle, uiSendMessage } from "../fixtures/ui";
+
+test.describe("files and export parity", () => {
+  test("upload file via API; export job requested", async ({ page, request }) => {
+    await ensureSmokeUsers(request);
+    const tokenA = await apiLogin(request, "smoke_user_a", "smokepass123");
+    const tokenB = await apiLogin(request, "smoke_user_b", "smokepass123");
+    const idB = await apiMeId(request, tokenB);
+    const title = `e2e-files-${Date.now()}`;
+    const chatId = await apiCreateGroup(request, tokenA, title, [idB]);
+
+    const upload = await request.post(`${apiBase()}/api/v1/files/upload`, {
+      headers: { Authorization: `Bearer ${tokenA}` },
+      multipart: {
+        file: {
+          name: "parity.txt",
+          mimeType: "text/plain",
+          buffer: Buffer.from("playwright parity file"),
+        },
+      },
+    });
+    expect(upload.ok()).toBeTruthy();
+
+    const exportRes = await request.post(`${apiBase()}/api/v1/chats/${chatId}/export`, {
+      headers: { Authorization: `Bearer ${tokenA}` },
+      data: {},
+    });
+    expect([200, 202, 409]).toContain(exportRes.status());
+
+    await uiLogin(page, "smoke_user_a", "smokepass123");
+    await uiOpenChatByTitle(page, title);
+    await expect(page.locator("[data-testid=message-composer]")).toBeVisible();
+  });
+});

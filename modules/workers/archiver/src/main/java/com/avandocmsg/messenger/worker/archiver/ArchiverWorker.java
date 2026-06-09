@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.worker.archiver;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,10 +32,13 @@ public class ArchiverWorker {
     private final Connection connection;
     private final DataSource archiveDataSource;
     private final boolean archiveEnabled;
+    private final UserMessageSource workerMessages;
 
-    public ArchiverWorker(String natsUrl, DataSource archiveDataSource, boolean archiveEnabled) throws Exception {
+    public ArchiverWorker(String natsUrl, DataSource archiveDataSource, boolean archiveEnabled,
+                          UserMessageSource workerMessages) throws Exception {
         this.archiveDataSource = archiveDataSource;
         this.archiveEnabled = archiveEnabled;
+        this.workerMessages = workerMessages;
         var options = Options.builder()
             .server(natsUrl)
             .connectionName("archiver-worker")
@@ -42,18 +46,18 @@ public class ArchiverWorker {
             .maxReconnects(-1)
             .build();
         this.connection = Nats.connect(options);
-        log.info("Connected to NATS at {}", natsUrl);
+        log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }
 
     public void start() throws Exception {
         if (archiveEnabled) {
             ensureArchiveTable();
         } else {
-            log.info("Archive DB disabled (ARCHIVE_JDBC_URL not set); metadata is not written; deep-archive handoff is still published per event.");
+            log.info(workerMessages.get("worker.archiver.archive_db_disabled"));
         }
         var dispatcher = connection.createDispatcher(this::handle);
         dispatcher.subscribe(NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP);
-        log.info("Subscribed to {} (queue: {})", NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP));
     }
 
     private void ensureArchiveTable() throws Exception {
@@ -101,7 +105,7 @@ public class ArchiverWorker {
                 publishDeepArchive(deepPayload, event.messageId());
             }
         } catch (Exception e) {
-            log.error("Failed to handle archiver message", e);
+            log.error(workerMessages.get("worker.archiver.handle_failed"), e);
         }
     }
 
@@ -115,7 +119,7 @@ public class ArchiverWorker {
             stmt.setObject(1, UUID.fromString(messageId));
             stmt.executeUpdate();
         } catch (Exception e) {
-            log.warn("Archive delete failed for messageId={}", messageId, e);
+            log.warn(workerMessages.format("worker.archiver.delete_failed", messageId), e);
         }
     }
 
@@ -159,7 +163,7 @@ public class ArchiverWorker {
             stmt.executeUpdate();
             return true;
         } catch (Exception e) {
-            log.error("Archive DB upsert failed for messageId={}", event.messageId(), e);
+            log.error(workerMessages.format("worker.archiver.upsert_failed", event.messageId()), e);
             return false;
         }
     }
@@ -167,9 +171,9 @@ public class ArchiverWorker {
     private void publishDeepArchive(byte[] jsonPayload, String messageId) {
         try {
             connection.publish(NatsSubjects.MSG_EVENT_DEEP_ARCHIVE, jsonPayload);
-            log.debug("Published deep-archive handoff messageId={}", messageId);
+            log.debug(workerMessages.format("worker.archiver.deep_handoff_published", messageId));
         } catch (Exception e) {
-            log.error("Failed to publish {} for messageId={}", NatsSubjects.MSG_EVENT_DEEP_ARCHIVE, messageId, e);
+            log.error(workerMessages.format("worker.common.publish_failed", NatsSubjects.MSG_EVENT_DEEP_ARCHIVE, messageId), e);
         }
     }
 
@@ -177,7 +181,7 @@ public class ArchiverWorker {
         try {
             connection.close();
         } catch (Exception e) {
-            log.warn("Error closing NATS connection", e);
+            log.warn(workerMessages.get("worker.common.nats_close_error"), e);
         }
         if (archiveDataSource instanceof HikariDataSource h) {
             h.close();
@@ -187,7 +191,7 @@ public class ArchiverWorker {
     public static void main(String[] args) {
         var workerMessages = WorkerMessageSources.forWorker(
             ArchiverWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_archiver");
-        log.info("Worker i18n locale={}", workerMessages.locale());
+        log.info(workerMessages.format("worker.common.locale", workerMessages.locale()));
         var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
         var archiveUrl = System.getenv("ARCHIVE_JDBC_URL");
         DataSource archiveDs = null;
@@ -204,12 +208,12 @@ public class ArchiverWorker {
         }
 
         try {
-            var worker = new ArchiverWorker(natsUrl, archiveDs, archiveEnabled);
+            var worker = new ArchiverWorker(natsUrl, archiveDs, archiveEnabled, workerMessages);
             worker.start();
             Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));
             Thread.currentThread().join();
         } catch (Exception e) {
-            log.error("Fatal error", e);
+            log.error(workerMessages.get("worker.common.fatal_error"), e);
             System.exit(1);
         }
     }

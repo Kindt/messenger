@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Statement;
@@ -38,7 +39,8 @@ class ExportJobStoreH2Test {
                 """);
             st.execute("INSERT INTO export_jobs (id, status) VALUES ('" + jobId + "', 'queued')");
         }
-        store = new ExportJobStore(ds);
+        store = new ExportJobStore(ds, WorkerMessageSources.forWorker(
+            ExportReplayWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_export_replay"));
     }
 
     @AfterEach

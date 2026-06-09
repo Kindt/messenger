@@ -113,6 +113,8 @@ class ConferenceRepositoryH2Test {
         assertEquals("active", row.status());
         assertEquals(slug, row.roomSlug());
         assertTrue(row.joinUrl().endsWith("/" + slug));
+        assertEquals(confId.toString(), repo.findActiveByRoomSlug(slug).orElseThrow().conferenceId());
+        assertTrue(repo.findActiveByRoomSlug("missing").isEmpty());
 
         assertEquals(1, repo.listForChat(chatId, false).size());
         assertEquals(1, repo.listForChat(chatId, true).size());

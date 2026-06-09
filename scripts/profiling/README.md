@@ -17,7 +17,14 @@ These scripts facilitate JFR (JDK Flight Recorder) profiling of Korus Messenger 
 .\scripts\profiling\measure-prometheus-heap.ps1 -MetricsUrl http://127.0.0.1:18080/api/v1/metrics/prometheus
 ```
 
-For QEMU/docker: JRE images lack `jcmd`; use Prometheus scripts above. Host-local Tomcat can still use JFR:
+For QEMU/docker: JRE images lack `jcmd`; use Prometheus scripts above, or the **profiling compose overlay** (JDK images):
+
+```powershell
+docker compose -f docker/docker-compose.full-server.yml -f docker/docker-compose.profiling.yml up -d --build core-api retention-worker
+.\scripts\profiling\profile-docker-jfr.ps1 -ContainerName <compose_project>-core-api-1 -OutputName core-api -DurationSeconds 60
+```
+
+Host-local Tomcat can still use JFR:
 
 ```powershell
 .\scripts\profiling\profile-core-api.ps1 [-DurationSeconds 60] [-OutputDir ./jfr-recordings]

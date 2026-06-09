@@ -45,13 +45,43 @@ public class ConferenceResource {
     }
 
     @POST
+    @Path("conferences")
+    @Operation(summary = "Создать встречу",
+        description = "Создаёт группу-встречу и конференцию Jitsi с join_url для приглашения участников")
+    public Response createStandalone(CreateConferenceRequest request,
+                                     @Context SecurityContext securityContext) {
+        if (request == null) {
+            request = new CreateConferenceRequest(null, null);
+        }
+        var userId = CurrentUserId.uuid(securityContext);
+        var created = conferenceService.createStandalone(userId, request);
+        return created.map(c -> Response.status(Response.Status.CREATED).entity(c).build())
+            .orElse(Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.conference.cannot_create")))
+                .build());
+    }
+
+    @GET
+    @Path("conferences/by-room/{roomSlug}")
+    @Operation(summary = "Найти активную конференцию по имени комнаты Jitsi")
+    public Response getByRoom(@PathParam("roomSlug") String roomSlug,
+                              @Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        return conferenceService.getByRoomSlug(userId, roomSlug)
+            .map(c -> Response.ok(c).build())
+            .orElse(Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.conference.not_found")))
+                .build());
+    }
+
+    @POST
     @Path("chats/{chatId}/conferences")
     @Operation(summary = "Создать конференцию в чате")
     public Response create(@PathParam("chatId") String chatId,
                            CreateConferenceRequest request,
                            @Context SecurityContext securityContext) {
         if (request == null) {
-            request = new CreateConferenceRequest(null);
+            request = new CreateConferenceRequest(null, null);
         }
         var userId = CurrentUserId.uuid(securityContext);
         var cid = UuidParams.required(chatId, "chat_id");

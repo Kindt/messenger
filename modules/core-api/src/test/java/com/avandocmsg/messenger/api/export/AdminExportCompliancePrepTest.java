@@ -79,6 +79,7 @@ class AdminExportCompliancePrepTest {
         var audit = new AuditRepository(null);
         return new AdminResource(cfg, audit,
             new OrganizationRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
+            com.avandocmsg.messenger.core.bootstrap.CoreModule.organizationApplicationService(null),
             new RetentionPolicyRepository(null),
             new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
             new ChatRetentionPolicyRepository(null),
@@ -88,6 +89,7 @@ class AdminExportCompliancePrepTest {
             null,
             new ExportFileAccess(cfg),
             mock(NatsOutboundPort.class),
+            null,
             null,
             null,
             null,

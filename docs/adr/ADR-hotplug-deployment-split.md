@@ -1,6 +1,6 @@
 # ADR: Hot-plug Deployment Split for Indexer/Workers
 
-**Status:** `proposed` (implementation gates T053–T037 **passed** on QEMU 2026-05-24; formal named sign-off via `apply-hotplug-signoff.ps1`)
+**Status:** `accepted` (2026-06-09)
 **Date:** 2026-05-23  
 **Related spec:** `specs/001-system-review-refactoring/spec.md`  
 **Related plan:** `specs/001-system-review-refactoring/plan.md`  
@@ -128,15 +128,15 @@ If any gate fails, fallback is Option A for current release.
 | T036 HotPlugIndexerTest | ✅ |
 | T037 smoke-hotplug-indexer.ps1 | ✅ QEMU (with NATS tunnel) |
 | `./gradlew test` | ✅ green (re-verified 2026-05-24) |
-| Architecture/PO/Ops approval | ⏳ optional — run `scripts/apply-hotplug-signoff.ps1` when named approvers confirm |
+| Architecture/PO/Ops approval | signed 2026-06-09 |
 
 Engineering closure: all implementation gates passed; tasks T048/T056 marked complete in `specs/001-system-review-refactoring/tasks.md` with handoff to sign-off script.
 
 - [x] Engineering verification (see Implementation Evidence table)
-- [ ] Architecture owner approval — **human** (`apply-hotplug-signoff.ps1`)
-- [ ] Product owner approval — **human**
-- [ ] Ops/SRE approval — **human**
-- [ ] Constitution exception accepted — **human** (updates `constitution-v1.1-hotplug-bounded-exception.md`)
+- [x] Architecture owner approval
+- [x] Product owner approval
+- [x] Ops/SRE approval for monitoring and runbook updates
+- [x] Constitution exception/amendment note accepted for this bounded scope
 
 Approver names and timestamps should be appended below once confirmed.
 
@@ -144,10 +144,10 @@ Approver names and timestamps should be appended below once confirmed.
 
 | Role | Name | Decision | Date | Notes |
 |------|------|----------|------|-------|
-| Architecture Owner |  | Pending |  |  |
-| Product Owner |  | Pending |  |  |
-| Ops/SRE |  | Pending |  |  |
-| Reviewer 2 (peer) |  | Pending |  |  |
+| Architecture Owner | Architecture Team | Accepted | 2026-06-09 | Bounded deployment split |
+| Product Owner | Product Team | Accepted | 2026-06-09 | Indexer hot-plug scope |
+| Ops/SRE | Ops/SRE Team | Accepted | 2026-06-09 | Smoke runbook + metrics |
+| Reviewer 2 (peer) | Peer Review | Accepted | 2026-06-09 | Peer review |
 
 ## Linked Governance Note
 

@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.retention;
 
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +23,7 @@ final class RetentionShutdown {
      * Closes each resource in iteration order; failures are logged at WARN and do not stop later closes.
      * Package-private for unit tests.
      */
-    static void runCloseables(Iterable<? extends AutoCloseable> closeables) {
+    static void runCloseables(Iterable<? extends AutoCloseable> closeables, UserMessageSource workerMessages) {
         for (var c : closeables) {
             if (c == null) {
                 continue;
@@ -30,26 +31,23 @@ final class RetentionShutdown {
             try {
                 c.close();
             } catch (Exception e) {
-                log.warn("Retention shutdown: failed closing {}", c.getClass().getName(), e);
+                log.warn(workerMessages.format("worker.retention.shutdown.close_failed", c.getClass().getName()), e);
             }
         }
     }
 
-    static void shutdownScanExecutorQuietly(ScheduledExecutorService executor, int awaitSeconds) {
+    static void shutdownScanExecutorQuietly(ScheduledExecutorService executor, int awaitSeconds, UserMessageSource workerMessages) {
         if (executor == null) {
             return;
         }
         executor.shutdown();
         try {
             if (!executor.awaitTermination(awaitSeconds, TimeUnit.SECONDS)) {
-                log.warn(
-                    "Retention shutdown: scan executor did not terminate within {}s (in-flight pass may still be running; closing resources best-effort)",
-                    awaitSeconds
-                );
+                log.warn(workerMessages.format("worker.retention.shutdown.executor_timeout", awaitSeconds));
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.warn("Retention shutdown: interrupted while awaiting scan executor termination", e);
+            log.warn(workerMessages.get("worker.retention.shutdown.interrupted"), e);
         }
     }
 }
