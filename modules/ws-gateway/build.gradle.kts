@@ -14,7 +14,7 @@ dependencies {
     implementation("jakarta.websocket:jakarta.websocket-api:2.2.0")
     implementation("jakarta.websocket:jakarta.websocket-client-api:2.2.0")
 
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.0")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0")
     implementation("io.nats:jnats:2.17.4")
     implementation("com.nimbusds:nimbus-jose-jwt:9.37.3")
