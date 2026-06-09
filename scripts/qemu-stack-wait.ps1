@@ -40,6 +40,7 @@ function Test-Stack {
 }
 
 $redeployed = $false
+$script:StackWaitRetried = $false
 $deadline = (Get-Date).AddMinutes($MaxMinutes)
 $minute = 0
 while ((Get-Date) -lt $deadline) {
@@ -59,6 +60,14 @@ while ((Get-Date) -lt $deadline) {
         if ($LASTEXITCODE -eq 0) { $redeployed = $true }
     }
     if (-not $qemu) {
+        if (-not $script:StackWaitRetried) {
+            $script:StackWaitRetried = $true
+            Write-Host "[WARN] QEMU exited - restarting with KeepDisks (TCG)..." -ForegroundColor Yellow
+            $env:KORUS_QEMU_FORCE_TCG = "1"
+            & (Join-Path $Root "scripts\qemu-up.ps1") -KeepDisks
+            Start-Sleep -Seconds 30
+            continue
+        }
         Write-Host "[FAIL] QEMU process exited" -ForegroundColor Red
         exit 2
     }
