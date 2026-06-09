@@ -39,7 +39,10 @@ function Start-KorusQemuVm {
     }
 
     $whpx = Test-KorusWhpxAvailable
-    if ($whpx.Ok) {
+    if ($env:KORUS_QEMU_FORCE_TCG -eq "1") {
+        $accelArgs = @("-accel", "tcg")
+        $whpx = @{ Ok = $false; Mode = "tcg"; Message = "KORUS_QEMU_FORCE_TCG=1" }
+    } elseif ($whpx.Ok) {
         # host/max often crash WHPX on Windows ("Unexpected VP exit code 4"); qemu64 is stable
         $accelArgs = @("-accel", "whpx", "-cpu", "qemu64")
     } else {
