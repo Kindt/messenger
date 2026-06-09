@@ -1,6 +1,7 @@
 # Poll QEMU stack every minute; optional redeploy when SSH is up but API is not.
 param(
     [int]$MaxMinutes = 50,
+    [int]$MinMinutesBeforeRedeploy = 15,
     [switch]$RedeployWhenSshUp,
     [switch]$Help
 )
@@ -52,8 +53,8 @@ while ((Get-Date) -lt $deadline) {
         Write-Host "[OK] Stack ready" -ForegroundColor Green
         exit 0
     }
-    if ($RedeployWhenSshUp -and -not $redeployed -and $ssh -and -not $s.Core) {
-        Write-Host "[$ts] SSH up, API down — running qemu-redeploy..." -ForegroundColor Yellow
+    if ($RedeployWhenSshUp -and -not $redeployed -and $minute -ge $MinMinutesBeforeRedeploy -and $ssh -and -not $s.Core) {
+        Write-Host "[$ts] SSH up, API down - running qemu-redeploy..." -ForegroundColor Yellow
         & (Join-Path $Root "scripts\qemu-redeploy.ps1")
         if ($LASTEXITCODE -eq 0) { $redeployed = $true }
     }

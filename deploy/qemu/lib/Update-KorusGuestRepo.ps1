@@ -99,22 +99,25 @@ function Get-KorusEd25519HostKey {
         [string]$Role = "",
         [int]$SshPort = 0
     )
-    if (Test-Path $SerialPath) {
-        $m = Select-String -Path $SerialPath -Pattern "256 SHA256:([A-Za-z0-9+/=]+)\s+root@.*\(ED25519\)" |
-            Select-Object -Last 1
-        if ($m) {
-            $hk = "ssh-ed25519 255 SHA256:$($m.Matches[0].Groups[1].Value)"
-            $runDir = Split-Path -Parent $SerialPath
-            if ($Role) { Save-KorusSshHostKey -RunDir $runDir -Role $Role -HostKey $hk }
-            return $hk
-        }
-    }
     $runDir = if ($SerialPath) { Split-Path -Parent $SerialPath } else { $null }
     $cache = if ($runDir) { Join-Path $runDir "ssh-hostkeys.ps1" } else { $null }
     if ($cache -and (Test-Path $cache) -and $Role) {
         . $cache
         if ($script:KorusQemuSshHostKeys -and $script:KorusQemuSshHostKeys[$Role]) {
             return $script:KorusQemuSshHostKeys[$Role]
+        }
+    }
+    if (Test-Path $SerialPath) {
+        $m = Select-String -Path $SerialPath -Pattern "256 SHA256:([A-Za-z0-9+/=]+)\s+root@.*\(ED25519\)" |
+            Select-Object -Last 1
+        if (-not $m) {
+            $m = Select-String -Path $SerialPath -Pattern "SHA256:([A-Za-z0-9+/=]+)\s+root@" |
+                Select-Object -Last 1
+        }
+        if ($m) {
+            $hk = "ssh-ed25519 255 SHA256:$($m.Matches[0].Groups[1].Value)"
+            if ($Role) { Save-KorusSshHostKey -RunDir $runDir -Role $Role -HostKey $hk }
+            return $hk
         }
     }
     if ($SshPort -gt 0 -and $Role) {
