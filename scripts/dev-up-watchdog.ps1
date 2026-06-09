@@ -8,6 +8,7 @@ param(
     [string]$Display = "",
     [int]$MaxWaitMinutes = 25,
     [int]$MaxRedeployAttempts = 2,
+    [int]$PollSeconds = 60,
     [switch]$Help
 )
 
@@ -103,6 +104,14 @@ function Invoke-QemuRedeployIfNeeded {
 function Test-QemuVmsAlive {
     $server = Test-QemuVmPid "server"
     $web = Test-QemuVmPid "web"
+    if (-not $server) {
+        $s = Test-NetConnection -ComputerName 127.0.0.1 -Port 12221 -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+        if ($s.TcpTestSucceeded) { $server = $true }
+    }
+    if (-not $web) {
+        $w = Test-NetConnection -ComputerName 127.0.0.1 -Port 12222 -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+        if ($w.TcpTestSucceeded) { $web = $true }
+    }
     return @{ Server = $server; Web = $web; All = ($server -and $web) }
 }
 
@@ -136,7 +145,7 @@ function Wait-StackReady {
             coreStatus = $h.Status; coreErr = $h.Error
         }
         Write-Host "  waiting core=$coreOk web=$webOk ready=$readyOk ..." -ForegroundColor DarkGray
-        Start-Sleep -Seconds 15
+        Start-Sleep -Seconds $PollSeconds
     }
     return @{ Core = $coreOk; Web = $webOk; Ready = $readyOk; VmsDead = $false }
 }

@@ -20,8 +20,6 @@ package_update: false
 runcmd:
   - [ sh, -c, "sed -i 's/^Components: main$/Components: main universe restricted multiverse/' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null; export DEBIAN_FRONTEND=noninteractive; apt-get update -qq && apt-get install -y curl openssh-server || true" ]
   - [ systemctl, enable, --now, ssh ]
-  - [ systemctl, enable, --now, docker ]
-  - [ sh, -c, "usermod -aG docker korus || true" ]
   - [ sh, -c, "for i in 1 2 3 4 5 6 7 8 9 10 12 14 16 18 20; do mkdir -p /mnt/korus && curl -fSL http://10.0.2.2:18890/repo.tgz | tar -xzf - -C /mnt/korus && break; sleep 5; done" ]
   - [ sh, -c, "test -f /mnt/korus/korus-web/docker-compose.yml" ]
   - [ sh, -c, "find /mnt/korus -name '*.sh' -exec sed -i 's/\\r$//' {} \\; && chmod +x /mnt/korus/deploy/qemu/vm-bootstrap/*.sh" ]

@@ -11,7 +11,7 @@
 | E2EE unit | `.\gradlew.bat :modules:core-api:test --tests "*Mls*"` | **PASS** (2026-06-09) | 17 tests |
 | TLS smoke (dev) | `.\scripts\smoke-tls-redirect.ps1 -SkipTls` | **PASS** | HTTP-only path |
 | Hex write unit | `.\gradlew.bat :modules:core-api:test --tests "*ApplicationServiceTest*"` | PASS | User/Org/File |
-| Playwright full-stack | `npx playwright test` @ `http://127.0.0.1:9088` | pending | Requires QEMU stack up |
+| Playwright full-stack | `npx playwright test` @ `http://127.0.0.1:19088` | pending | Requires QEMU stack up |
 
 ## US1 — Stage/prod TLS (ops)
 

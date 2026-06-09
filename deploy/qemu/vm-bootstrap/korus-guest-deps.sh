@@ -75,6 +75,7 @@ install_docker_apt() {
   log "korus-guest-deps: installing docker.io via apt"
   if run_apt apt-get install -y docker.io docker-compose-v2 >>"$APT_LOG" 2>&1; then
     run_apt systemctl enable --now docker 2>/dev/null || true
+    id korus >/dev/null 2>&1 && run_apt usermod -aG docker korus 2>/dev/null || true
     log "korus-guest-deps: docker installed"
     return 0
   fi

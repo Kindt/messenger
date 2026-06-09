@@ -78,6 +78,23 @@ function Invoke-RemoteSh {
 
 }
 
+function Wait-KorusEd25519HostKey {
+    param(
+        [string]$SerialPath,
+        [string]$Role,
+        [int]$SshPort,
+        [int]$MaxMinutes = 15
+    )
+    $deadline = (Get-Date).AddMinutes($MaxMinutes)
+    while ((Get-Date) -lt $deadline) {
+        $hk = Get-KorusEd25519HostKey -SerialPath $SerialPath -Role $Role -SshPort $SshPort
+        if ($hk) { return $hk }
+        Write-Host "  waiting SSH host key ($Role, port $SshPort)..." -ForegroundColor DarkGray
+        Start-Sleep -Seconds 30
+    }
+    throw "$Role SSH host key not available after ${MaxMinutes}m (see $SerialPath)"
+}
+
 
 
 if (-not (Get-Process qemu-system-x86_64 -ErrorAction SilentlyContinue)) {
@@ -102,7 +119,7 @@ $doWeb = -not $ServerOnly
 
 if ($doServer) {
 
-    $hk = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "server-serial.log") -Role server -SshPort 12221
+    $hk = Wait-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "server-serial.log") -Role server -SshPort 12221
 
     if (-not $hk) { throw "server SSH host key not in serial log yet" }
 
@@ -132,7 +149,7 @@ exit 1
 
 if ($doWeb) {
 
-    $hk = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "web-serial.log") -Role web -SshPort 12222
+    $hk = Wait-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "web-serial.log") -Role web -SshPort 12222
 
     if (-not $hk) { throw "web SSH host key not in serial log yet" }
 

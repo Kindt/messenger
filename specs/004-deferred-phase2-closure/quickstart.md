@@ -50,7 +50,7 @@ docker compose -f docker/docker-compose.yml -f docker/docker-compose.profiling.y
 # Recommended: US8 QEMU stable first
 cd tests/e2e-web
 npm ci
-$env:PLAYWRIGHT_BASE_URL = "http://127.0.0.1:9088"
+$env:PLAYWRIGHT_BASE_URL = "http://127.0.0.1:19088"
 npx playwright test
 ```
 
@@ -68,7 +68,7 @@ Operator sign-off: [HANDOFF.md](../../002-web-client-server-parity/HANDOFF.md) â
 .\gradlew.bat :modules:core-api:test --tests "*Mls*"
 cd tests/e2e-web
 npm ci
-$env:PLAYWRIGHT_BASE_URL = "http://127.0.0.1:9088"
+$env:PLAYWRIGHT_BASE_URL = "http://127.0.0.1:19088"
 npx playwright test specs/e2ee-capabilities.spec.ts
 ```
 
