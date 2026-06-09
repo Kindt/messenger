@@ -33,7 +33,8 @@ Bootstrap и redeploy внутри ВМ — **`deploy/qemu/vm-bootstrap/run-ansi
 - **Python 3** + **pycdlib** (для ISO cloud-init; при первом запуске: `python -m pip install pycdlib`)
 - **~13 ГБ RAM** на хост (см. `RESOURCES.md`)
 - **Виртуализация**: WHPX (Windows) — скрипт включает `-accel whpx`; при ошибке см. `lib/Start-KorusVm.ps1`
-- Первый запуск скачивает cloud image (~300 МБ) и собирает Docker-стеки **внутри ВМ** через Ansible (долго)
+- **Cloud image Ubuntu 24.04** — **не хранится в git** (~250 МБ). При первом `qemu-up` скачивается автоматически; вручную: `.\scripts\ensure-qemu-images.ps1` (см. [`images/README.md`](images/README.md))
+- Первый запуск собирает Docker-стеки **внутри ВМ** через Ansible (долго)
 
 ## Запуск
 
@@ -67,7 +68,8 @@ Bootstrap и redeploy внутри ВМ — **`deploy/qemu/vm-bootstrap/run-ansi
 
 1. **QEMU не найден** — PowerShell **от администратора**: `.\deploy\qemu\install-qemu.ps1`
 2. **WHPX failed** — включите виртуализацию в BIOS.
-3. **Ansible/pip в ВМ** — cloud-init ставит `python3-pip`; bootstrap ставит `ansible` через pip. Смотрите `/var/log/korus-bootstrap.log`.
-4. **Пересборка** — `.\scripts\qemu-down.ps1` затем `.\scripts\qemu-up.ps1` или `.\scripts\qemu-redeploy.ps1 -KeepDisks` не сбрасывает диски: `qemu-up.ps1 -KeepDisks`.
+3. **Нет cloud image** — `.\scripts\ensure-qemu-images.ps1` или повторный `.\scripts\qemu-up.ps1` (скачивание при отсутствии `.img`).
+4. **Ansible/pip в ВМ** — cloud-init ставит `python3-pip`; bootstrap ставит `ansible` через pip. Смотрите `/var/log/korus-bootstrap.log`.
+5. **Пересборка** — `.\scripts\qemu-down.ps1` затем `.\scripts\qemu-up.ps1` или `.\scripts\qemu-redeploy.ps1 -KeepDisks` не сбрасывает диски: `qemu-up.ps1 -KeepDisks`.
 
 См. также: [`deploy/ansible/README.md`](../ansible/README.md), [`specs/003-docker-ansible-autotest/quickstart.md`](../../specs/003-docker-ansible-autotest/quickstart.md).

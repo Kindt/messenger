@@ -5,7 +5,7 @@ function Start-KorusQemuVm {
     )
     . (Join-Path $PSScriptRoot "..\config.ps1")
     . (Join-Path $PSScriptRoot "Resolve-Qemu.ps1")
-    . (Join-Path $PSScriptRoot "Get-AlpineImage.ps1")
+    . (Join-Path $PSScriptRoot "Get-KorusCloudImage.ps1")
     . (Join-Path $PSScriptRoot "New-CidataIso.ps1")
     . (Join-Path $PSScriptRoot "Test-KorusWhpx.ps1")
 

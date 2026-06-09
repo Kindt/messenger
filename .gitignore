@@ -23,8 +23,10 @@ korus-web/.env
 dev-overlay/webui/*
 !dev-overlay/webui/.gitkeep
 
-# QEMU local tools/images/runtime
+# QEMU local tools/images/runtime (OS images downloaded by scripts/ensure-qemu-images.ps1)
 deploy/qemu/tools/
+deploy/qemu/images/*.img
+deploy/qemu/images/*.img.partial
 deploy/qemu/images/*.qcow2
 deploy/qemu/run/
 deploy/qemu/tools/__pycache__/

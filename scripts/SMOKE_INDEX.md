@@ -43,6 +43,7 @@
 
 ## Operator utilities
 
+- `scripts/ensure-qemu-images.ps1` — download Ubuntu cloud image if missing (OS images are not in git)
 - `scripts/stop-local-indexer.ps1` — stop orphan `:services:indexer:run` after smoke/manual runs (Windows).
 - `scripts/publish-spec-001-branch.ps1` — push branch `001-system-review-refactoring` when GitHub is reachable.
 - `scripts/apply-hotplug-signoff.ps1` — record ADR/constitution approvals (T048/T056).
