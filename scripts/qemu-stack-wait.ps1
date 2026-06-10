@@ -62,8 +62,8 @@ while ((Get-Date) -lt $deadline) {
     if (-not $qemu) {
         if (-not $script:StackWaitRetried) {
             $script:StackWaitRetried = $true
-            Write-Host "[WARN] QEMU exited - restarting with KeepDisks (TCG)..." -ForegroundColor Yellow
-            $env:KORUS_QEMU_FORCE_TCG = "1"
+            Write-Host "[WARN] QEMU exited - restarting with KeepDisks..." -ForegroundColor Yellow
+            Remove-Item Env:KORUS_QEMU_FORCE_TCG -ErrorAction SilentlyContinue
             & (Join-Path $Root "scripts\qemu-up.ps1") -KeepDisks
             Start-Sleep -Seconds 30
             continue

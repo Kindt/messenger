@@ -26,7 +26,7 @@ function Start-KorusRepoHttp {
     }
 
     Stop-KorusRepoHttp
-    New-KorusRepoSnapshot | Out-Null
+    New-KorusRepoSnapshot -StopRepoHttp | Out-Null
 
     if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
         throw "python not found (required for repo HTTP on host)"

@@ -1,9 +1,12 @@
 function New-KorusRepoSnapshot {
+    param(
+        [switch]$StopRepoHttp
+    )
     . (Join-Path $PSScriptRoot "..\config.ps1")
     $archive = Join-Path $KorusQemuRunDir "repo.tgz"
     $staging = Join-Path $KorusQemuRunDir "repo.staging.tgz"
     $pidFile = Join-Path $KorusQemuRunDir "repo-http.pid"
-    if (Test-Path $pidFile) {
+    if ($StopRepoHttp -and (Test-Path $pidFile)) {
         $old = (Get-Content $pidFile -Raw).Trim()
         if ($old -match '^\d+$') {
             Stop-Process -Id ([int]$old) -Force -ErrorAction SilentlyContinue
@@ -14,6 +17,13 @@ function New-KorusRepoSnapshot {
     New-Item -ItemType Directory -Force -Path $KorusQemuRunDir | Out-Null
     if (Test-Path $staging) {
         Remove-Item -Force $staging
+    }
+    if (Test-Path $archive) {
+        $age = (Get-Date) - (Get-Item $archive).LastWriteTime
+        if ($age.TotalMinutes -lt 30) {
+            Write-Host "  Reusing repo.tgz ($([math]::Round((Get-Item $archive).Length / 1MB, 1)) MiB, age $([int]$age.TotalMinutes)m)" -ForegroundColor DarkGray
+            return $archive
+        }
     }
     Write-Host "Packing repo snapshot (exclude .git, images, build caches)..." -ForegroundColor Cyan
     $tar = Get-Command tar -ErrorAction Stop

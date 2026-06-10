@@ -89,9 +89,10 @@ Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_
 ## Устранение неполадок
 
 1. **QEMU не найден** — PowerShell **от администратора**: `.\deploy\qemu\install-qemu.ps1`
-2. **WHPX failed** — включите виртуализацию в BIOS.
-3. **Нет cloud image** — `.\scripts\ensure-qemu-images.ps1` или повторный `.\scripts\qemu-up.ps1` (скачивание при отсутствии `.img`).
-4. **Ansible/pip в ВМ** — cloud-init ставит `python3-pip`; bootstrap ставит `ansible` через pip. Смотрите `/var/log/korus-bootstrap.log`.
-5. **Пересборка** — `.\scripts\qemu-down.ps1` затем `.\scripts\qemu-up.ps1` или `.\scripts\qemu-redeploy.ps1 -KeepDisks` не сбрасывает диски: `qemu-up.ps1 -KeepDisks`.
+2. **WHPX failed** — `.\scripts\qemu-fast-up.ps1` (elevated) или `.\deploy\qemu\enable-fast-mode.ps1`. По умолчанию: `-accel whpx,kernel-irqchip=off -cpu qemu64`. Принудительно TCG: `$env:KORUS_QEMU_FORCE_TCG='1'`.
+3. **«VM падает» через 5–15 мин** — часто не WHPX, а обрыв `repo.tgz` (redeploy/restart HTTP) или watchdog до фиксов в ветке 004. Не запускайте `qemu-redeploy` пока cloud-init не завершился; используйте `qemu-stack-wait.ps1`. Предупреждение `Failed to get performance monitoring features` в whpx-probe.err — **не ошибка**.
+4. **Нет cloud image** — `.\scripts\ensure-qemu-images.ps1` или повторный `.\scripts\qemu-up.ps1` (скачивание при отсутствии `.img`).
+5. **Ansible/pip в ВМ** — cloud-init ставит `python3-pip`; bootstrap ставит `ansible` через pip. Смотрите `/var/log/korus-bootstrap.log`.
+6. **Пересборка** — `.\scripts\qemu-down.ps1` затем `.\scripts\qemu-up.ps1` или `.\scripts\qemu-redeploy.ps1 -KeepDisks` не сбрасывает диски: `qemu-up.ps1 -KeepDisks`.
 
 См. также: [`deploy/ansible/README.md`](../ansible/README.md), [`specs/003-docker-ansible-autotest/quickstart.md`](../../specs/003-docker-ansible-autotest/quickstart.md).

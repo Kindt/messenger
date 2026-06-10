@@ -9,7 +9,7 @@ $script:KorusQemuRepoHttpPort = 18890
 # Guest resources — see deploy/qemu/RESOURCES.md for sizing breakdown
 # Server: 14 containers (full-server); Web: 2x Tomcat + nginx
 $script:KorusQemuServerMemoryMb = 10240
-$script:KorusQemuServerSmp = 2
+$script:KorusQemuServerSmp = 4
 $script:KorusQemuWebMemoryMb = 3072
 $script:KorusQemuWebSmp = 1
 # Legacy alias (server); prefer role-specific settings in Start-KorusVm.ps1

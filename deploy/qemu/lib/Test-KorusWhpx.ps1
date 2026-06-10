@@ -2,6 +2,13 @@ function Test-KorusWhpxAvailable {
     . (Join-Path $PSScriptRoot "..\config.ps1")
     . (Join-Path $PSScriptRoot "Resolve-Qemu.ps1")
 
+    if ($script:KorusWhpxProbeCache -and $script:KorusWhpxProbeCacheTime) {
+        $age = ((Get-Date) - $script:KorusWhpxProbeCacheTime).TotalSeconds
+        if ($age -lt 300) {
+            return $script:KorusWhpxProbeCache
+        }
+    }
+
     $qemu = Resolve-KorusQemu
     if (-not $qemu) {
         return [PSCustomObject]@{
@@ -36,15 +43,19 @@ function Test-KorusWhpxAvailable {
         }
 
     if (-not $failed -and $stderr -notmatch "failed to initialize whpx") {
-        return [PSCustomObject]@{
+        $script:KorusWhpxProbeCache = [PSCustomObject]@{
             Ok      = $true
             Mode    = "whpx"
             Message = "WHPX accelerator available"
         }
+        $script:KorusWhpxProbeCacheTime = Get-Date
+        return $script:KorusWhpxProbeCache
     }
-    return [PSCustomObject]@{
+    $script:KorusWhpxProbeCache = [PSCustomObject]@{
         Ok      = $false
         Mode    = "tcg"
         Message = "WHPX not available (will use TCG)"
     }
+    $script:KorusWhpxProbeCacheTime = Get-Date
+    return $script:KorusWhpxProbeCache
 }

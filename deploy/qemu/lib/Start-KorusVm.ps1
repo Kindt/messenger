@@ -43,8 +43,10 @@ function Start-KorusQemuVm {
         $accelArgs = @("-accel", "tcg")
         $whpx = @{ Ok = $false; Mode = "tcg"; Message = "KORUS_QEMU_FORCE_TCG=1" }
     } elseif ($whpx.Ok) {
-        # host/max often crash WHPX on Windows ("Unexpected VP exit code 4"); qemu64 is stable
-        $accelArgs = @("-accel", "whpx", "-cpu", "qemu64")
+        # host/max often crash WHPX on Windows ("Unexpected VP exit code 4"); qemu64 is stable.
+        # kernel-irqchip=off avoids common WHPX instability on Windows 10/11.
+        $whpxAccel = if ($env:KORUS_QEMU_WHPX_KERNEL_IRQCHIP -eq "on") { "whpx" } else { "whpx,kernel-irqchip=off" }
+        $accelArgs = @("-accel", $whpxAccel, "-cpu", "qemu64")
     } else {
         $accelArgs = @("-accel", "tcg")
         Write-Warning "$($whpx.Message). Run: .\scripts\qemu-fast-up.ps1 (elevated) for WHPX."
