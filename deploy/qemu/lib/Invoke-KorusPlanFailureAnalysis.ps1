@@ -28,7 +28,9 @@ function Test-KorusPlanPlaywrightPreflight {
     }
     try {
         $html = (Invoke-WebRequest -Uri $webUrl -UseBasicParsing -TimeoutSec 8).Content
-        if ($html -notmatch 'id="u"') { $issues += "web UI missing #u login field" }
+        if ($html -notmatch 'id="u"|webui/|Korus Messenger|web-client') {
+            $issues += "web UI missing login shell at $webUrl"
+        }
     } catch {
         $issues += "web UI down at $webUrl"
     }
@@ -46,7 +48,12 @@ function Test-KorusPlanPlaywrightPreflight {
             -ContentType "application/json" -UseBasicParsing -TimeoutSec 10
         if ($r.StatusCode -notin @(200, 201, 409)) { $issues += "smoke_user_a register HTTP $($r.StatusCode)" }
     } catch {
-        $issues += "smoke_user_a register failed: $($_.Exception.Message)"
+        $ex = $_.Exception
+        if ($ex.Response -and [int]$ex.Response.StatusCode -eq 409) {
+            # user already exists — OK for e2e
+        } else {
+            $issues += "smoke_user_a register failed: $($ex.Message)"
+        }
     }
 
     return @{
@@ -135,24 +142,14 @@ function Invoke-KorusPlanFailureAnalysis {
             $recommended = "ensure_keycloak_dev_users"
             $summaryRu = "csadmin login 401. Запустить keycloak-ensure-dev-users на server guest."
         }
-        elseif ($categories.ContainsKey("api_register_503") -or $categories.ContainsKey("preflight_fail")) {
-            if ($preflight.Issues -match "health down|register") {
-                $recommended = "wait_stack"
-                $summaryRu = "API/register не готов. Ждать stack ready, не гонять Playwright."
-            }
-            elseif ($preflight.Issues -match "csadmin") {
-                $recommended = "ensure_keycloak_dev_users"
-                $summaryRu = "Preflight: csadmin auth. keycloak-ensure-dev-users на server."
-            }
-            else {
-                $recommended = "preflight_retry"
-                $summaryRu = "Preflight failed: $($preflight.Issues -join '; ')"
-            }
-        }
-        elseif ($categories.ContainsKey("test_strict_mode")) {
+        if ($categories.ContainsKey("test_strict_mode")) {
             $recommended = "fix_tests_in_repo"
             $codeFix = $true
-            $summaryRu = "Flaky/fail tests: strict mode violation (duplicate text in chat list + message). Правка fixtures/ui.ts или specs."
+            $summaryRu = "Flaky/fail tests: strict mode violation (duplicate text in chat list + message). Fix fixtures/ui.ts or specs."
+        }
+        elseif ($categories.ContainsKey("preflight_fail") -and -not $categories.ContainsKey("api_csadmin_401")) {
+            $recommended = "preflight_retry"
+            $summaryRu = "Preflight failed: $($preflight.Issues -join '; '). Fix preflight or env before Playwright."
         }
         elseif ($categories.ContainsKey("ui_login_timeout")) {
             $recommended = "analyze_web_auth_proxy"

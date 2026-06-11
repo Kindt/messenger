@@ -261,6 +261,11 @@ function Resolve-PlanFailureNextPhase {
                 $State.pendingRemediation = 'fix_tests_in_repo'
             }
         }
+        'preflight_retry' {
+            $State.phase = 'running_playwright'
+            $State.playwrightRunning = $false
+            $State.pendingRemediation = ''
+        }
         default {
             $State.phase = 'blocked'
             $State.blocked = $true
