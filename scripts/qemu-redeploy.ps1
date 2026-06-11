@@ -154,7 +154,7 @@ nohup sudo bash -c '
   sh /mnt/korus/deploy/qemu/vm-bootstrap/korus-guest-deps.sh
   env KORUS_TRUNCATE_BOOTSTRAP_LOG=1 sh /mnt/korus/deploy/qemu/vm-bootstrap/run-ansible-local.sh server
   touch /var/run/korus-redeploy.done
-' >>/var/log/korus-redeploy-host.log 2>&1 &
+' >>/tmp/korus-redeploy-host.log 2>&1 &
 echo redeploy-nohup-started
 '@
 
@@ -169,8 +169,10 @@ echo redeploy-nohup-started
             $code = curl.exe -sS -m 8 -o NUL -w "%{http_code}" "http://127.0.0.1:18080/api/v1/health/ready" 2>$null
             if ($code -match '^2') { $ok = $true; break }
         } catch {}
-        $done = Invoke-RemoteSh -HostKey $hk -Port 12221 -Script "test -f /var/run/korus-redeploy.done && echo done || echo pending" 2>$null
-        if ($done -match 'done' -and $code -match '^2') { $ok = $true; break }
+        try {
+            $done = Invoke-RemoteSh -HostKey $hk -Port 12221 -Script "test -f /var/run/korus-redeploy.done && echo done || echo pending"
+            if ($done -match 'done' -and $code -match '^2') { $ok = $true; break }
+        } catch {}
     }
     if (-not $ok) { throw "server redeploy did not become ready within 90m (see guest /var/log/korus-bootstrap.log)" }
 
