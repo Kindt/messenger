@@ -1,6 +1,7 @@
 function New-KorusRepoSnapshot {
     param(
-        [switch]$StopRepoHttp
+        [switch]$StopRepoHttp,
+        [switch]$Force
     )
     . (Join-Path $PSScriptRoot "..\config.ps1")
     $archive = Join-Path $KorusQemuRunDir "repo.tgz"
@@ -18,7 +19,7 @@ function New-KorusRepoSnapshot {
     if (Test-Path $staging) {
         Remove-Item -Force $staging
     }
-    if (Test-Path $archive) {
+    if (-not $Force -and (Test-Path $archive)) {
         $age = (Get-Date) - (Get-Item $archive).LastWriteTime
         if ($age.TotalMinutes -lt 30) {
             Write-Host "  Reusing repo.tgz ($([math]::Round((Get-Item $archive).Length / 1MB, 1)) MiB, age $([int]$age.TotalMinutes)m)" -ForegroundColor DarkGray

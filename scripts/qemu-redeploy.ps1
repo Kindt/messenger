@@ -110,6 +110,7 @@ if (-not (Test-KorusQemuStackRunning -RunDir $RunDir)) {
 Write-Host "=== Korus QEMU redeploy (Ansible) $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" -ForegroundColor Cyan
 
 Start-KorusRepoHttp | Out-Null
+New-KorusRepoSnapshot -Force | Out-Null
 Start-KorusDockerImageCacheBackground | Out-Null
 
 $doServer = -not $WebOnly
