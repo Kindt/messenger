@@ -158,6 +158,7 @@ $bootstrapStates = @()
 $serverBootstrapText = ""
 $webBootstrapText = ""
 $serverHostKey = ""
+$webHostKey = ""
 $serverBootstrapTail = if ($NoRemediate) { $BootstrapTail } else { [Math]::Max($BootstrapTail, 12) }
 
 foreach ($role in @("server", "web")) {
@@ -181,6 +182,7 @@ foreach ($role in @("server", "web")) {
         $serverHostKey = $hk
     } elseif ($role -eq "web") {
         $webBootstrapText = $bs.Text
+        $webHostKey = $hk
     }
     [void]$sb.AppendLine("bootstrap-${role}:")
     if ($bs.Lines.Count -eq 0) {
@@ -205,7 +207,8 @@ else { $activity = "VM booting" }
 
 . (Join-Path $Root "deploy\qemu\lib\Get-KorusQemuLoadingState.ps1")
 $loadingState = Get-KorusQemuLoadingState -ServerBootstrapText $serverBootstrapText `
-    -WebBootstrapText $webBootstrapText -Activity $activity -BootstrapStates $bootstrapStates
+    -WebBootstrapText $webBootstrapText -Activity $activity -BootstrapStates $bootstrapStates `
+    -ServerHostKey $serverHostKey -WebHostKey $webHostKey
 if ($loadingState.Loading) {
     $activity = "loading: $($loadingState.Kind) ($($loadingState.Detail))"
 }
@@ -221,7 +224,7 @@ if (-not $NoRemediate) {
     $rem = Invoke-KorusQemuAutoRemediate -RunDir $RunDir -Root $Root -Health $h `
         -Activity $activity -BootstrapStates $bootstrapStates `
         -ServerBootstrapText $serverBootstrapText -WebBootstrapText $webBootstrapText `
-        -ServerHostKey $serverHostKey `
+        -ServerHostKey $serverHostKey -WebHostKey $webHostKey `
         -GuestFixAfterMinutes $StuckGuestFixMinutes `
         -RestartAfterMinutes $StuckRestartMinutes `
         -CooldownMinutes $RemediateCooldownMinutes

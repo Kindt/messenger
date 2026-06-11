@@ -66,7 +66,7 @@ $Plink = "${env:ProgramFiles}\PuTTY\plink.exe"
 . (Join-Path $Lib "Korus-DockerImageCache.ps1")
 . (Join-Path $Lib "Test-KorusQemuProcess.ps1")
 
-$lanIp = Read-KorusQemuLanHostIp -RunDir $RunDir
+$lanIp = Write-KorusQemuLanHostInfo -RunDir $RunDir
 
 Write-Host "LAN host IP for web WS: $lanIp" -ForegroundColor DarkGray
 

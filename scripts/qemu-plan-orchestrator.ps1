@@ -3,6 +3,7 @@
 param(
     [int]$IntervalSeconds = 60,
     [int]$MaxWaitMinutes = 90,
+    [int]$MaxAcceptanceMinutes = 120,
     [switch]$SkipVmUp,
     [switch]$Help
 )
@@ -10,7 +11,7 @@ param(
 $ErrorActionPreference = "Continue"
 if ($Help) {
     Write-Host @"
-Usage: .\scripts\qemu-plan-orchestrator.ps1 [-IntervalSeconds 60] [-MaxWaitMinutes 90] [-SkipVmUp]
+Usage: .\scripts\qemu-plan-orchestrator.ps1 [-IntervalSeconds 60] [-MaxWaitMinutes 90] [-MaxAcceptanceMinutes 120] [-SkipVmUp]
 
 Runs full acceptance plan with per-minute chat output and auto-remediate.
 Stop: Ctrl+C or .\scripts\stop-qemu-plan-orchestrator.ps1
@@ -100,10 +101,18 @@ function Test-KorusStackReady {
 
 function Invoke-PlanSmoke {
     . (Join-Path $Root "deploy\qemu\lib\Get-KorusLanHostIp.ps1")
-    $lan = Read-KorusQemuLanHostIp -RunDir $RunDir
+    $lan = Write-KorusQemuLanHostInfo -RunDir $RunDir
     Log "phase smoke ExpectWsHost=$lan"
     & (Join-Path $Root "scripts\smoke-korus-web.ps1") -WebBaseUrl 'http://127.0.0.1:19088' -CheckApi -ExpectWsHost $lan
     return ($LASTEXITCODE -eq 0)
+}
+
+function Get-PlanSmokeFailureKind {
+    if (-not (Test-KorusStackReady -Snap $null)) { return 'stack_down' }
+    . (Join-Path $Root "deploy\qemu\lib\Get-KorusLanHostIp.ps1")
+    Write-KorusQemuLanHostInfo -RunDir $RunDir | Out-Null
+    if (Test-KorusWebClientWsHostMismatch -RunDir $RunDir) { return 'ws_url' }
+    return 'other'
 }
 
 function Invoke-PlanPlaywright {
@@ -155,19 +164,29 @@ if (-not $SkipVmUp) {
     }
 }
 
-$deadline = (Get-Date).AddMinutes($MaxWaitMinutes)
+$stackDeadline = (Get-Date).AddMinutes($MaxWaitMinutes)
+$acceptanceDeadline = (Get-Date).AddMinutes($MaxAcceptanceMinutes)
 $first = $true
 
 while ($true) {
     if (-not $first) { Start-Sleep -Seconds $IntervalSeconds }
     $first = $false
 
-    if ((Get-Date) -gt $deadline -and $state.phase -eq 'waiting_stack') {
+    $stackReadyNow = Test-KorusStackReady -Snap $null
+    if ((Get-Date) -gt $stackDeadline -and $state.phase -eq 'waiting_stack' -and -not $stackReadyNow) {
         $state.phase = 'failed'
         $state.lastError = "timeout ${MaxWaitMinutes}m waiting stack"
         Set-PlanState $state
-        Log "FAILED timeout"
+        Log "FAILED stack wait timeout"
         Emit-PlanChatTick -Phase 'failed' -SummaryRu "Timeout ${MaxWaitMinutes}m stack not ready." -Detail 'Check status-remediate.log bootstrap.'
+        exit 1
+    }
+    if ((Get-Date) -gt $acceptanceDeadline -and $state.phase -in @('running_smoke', 'running_playwright', 'writing_report', 'remediating_web')) {
+        $state.phase = 'failed'
+        $state.lastError = "timeout ${MaxAcceptanceMinutes}m acceptance phase"
+        Set-PlanState $state
+        Log "FAILED acceptance timeout phase=$($state.phase)"
+        Emit-PlanChatTick -Phase 'failed' -SummaryRu "Timeout ${MaxAcceptanceMinutes}m acceptance (smoke/Playwright/report)." -Detail $state.lastError
         exit 1
     }
 
@@ -220,13 +239,40 @@ while ($true) {
                     Write-Output "--- PLAN: smoke OK ---"
                     Emit-PlanChatTick -Phase 'running_playwright' -SummaryRu 'Smoke passed. Running Playwright.'
                 } else {
-                    $state.lastError = 'smoke failed'
-                    $state.phase = 'waiting_stack'
-                    Log "smoke FAIL -> waiting_stack"
-                    Write-Output "--- PLAN: smoke FAIL, redeploy server ---"
-                    Start-KorusQemuGuestRedeploy -Role server -RunDir $RunDir -Root $Root -Reason 'smoke failed' | Out-Null
+                    $failKind = Get-PlanSmokeFailureKind
+                    $state.lastError = "smoke failed ($failKind)"
+                    if ($failKind -eq 'ws_url') {
+                        Log "smoke FAIL wsUrl -> web redeploy, retry smoke"
+                        Write-Output "--- PLAN: smoke FAIL wsUrl, redeploy web ---"
+                        Start-KorusQemuGuestRedeploy -Role web -RunDir $RunDir -Root $Root -Reason 'smoke wsUrl mismatch' | Out-Null
+                        $state.phase = 'remediating_web'
+                    } elseif ($failKind -eq 'stack_down') {
+                        $state.phase = 'waiting_stack'
+                        Log "smoke FAIL stack down -> waiting_stack"
+                        Write-Output "--- PLAN: smoke FAIL, stack down ---"
+                    } else {
+                        Log "smoke FAIL other -> retry smoke (stack ready)"
+                        Write-Output "--- PLAN: smoke FAIL (stack ready), retry next tick ---"
+                        $state.phase = 'running_smoke'
+                    }
                 }
                 Set-PlanState $state
+            }
+        }
+        'remediating_web' {
+            . (Join-Path $Root "deploy\qemu\lib\Get-KorusLanHostIp.ps1")
+            if (Test-KorusStackReady -Snap @{ stackReady = [bool]$snap.stackReady }) {
+                if (-not (Test-KorusWebClientWsHostMismatch -RunDir $RunDir)) {
+                    Log "web wsUrl fixed -> smoke"
+                    $state.phase = 'running_smoke'
+                    $state.smokeRunning = $false
+                    $state.lastError = ''
+                    Set-PlanState $state
+                    Write-Output "--- PLAN: web wsUrl OK, retry smoke ---"
+                    Emit-PlanChatTick -Phase 'running_smoke' -SummaryRu 'Web redeploy done, wsUrl OK. Retry smoke.'
+                } else {
+                    Write-Output "--- PLAN: waiting web redeploy (wsUrl still wrong) ---"
+                }
             }
         }
         'running_playwright' {
@@ -275,8 +321,22 @@ while ($true) {
             exit 0
         }
         'failed' {
-            Emit-PlanChatTick -Phase 'failed' -SummaryRu "Plan failed: $($state.lastError). Auto-remediate continues."
-            $state.phase = 'waiting_stack'
+            if (Test-KorusStackReady -Snap @{ stackReady = [bool]$snap.stackReady }) {
+                Emit-PlanChatTick -Phase 'failed' -SummaryRu "Plan failed: $($state.lastError). Stack ready, resume acceptance."
+                if ($state.lastError -match 'smoke|wsUrl|ws_url') {
+                    $state.phase = 'running_smoke'
+                } elseif ($state.lastError -match 'playwright') {
+                    $state.phase = 'running_playwright'
+                } else {
+                    $state.phase = 'writing_report'
+                }
+                $state.smokeRunning = $false
+                $state.playwrightRunning = $false
+                $state.reportRunning = $false
+            } else {
+                Emit-PlanChatTick -Phase 'failed' -SummaryRu "Plan failed: $($state.lastError). Auto-remediate continues."
+                $state.phase = 'waiting_stack'
+            }
             Set-PlanState $state
         }
     }

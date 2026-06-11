@@ -132,8 +132,19 @@ wait_server_api() {
 }
 
 fetch_host_lan_ip() {
-  curl -fsS --max-time 5 "http://${HOST_GW}:${KORUS_QEMU_REPO_HTTP_PORT:-18890}/host-lan-ip.txt" 2>/dev/null \
-    | tr -d '\r\n' || true
+  local ip=""
+  local i
+  for i in 1 2 3 4 5 6; do
+    ip="$(curl -fsS --max-time 5 "http://${HOST_GW}:${KORUS_QEMU_REPO_HTTP_PORT:-18890}/host-lan-ip.txt" 2>/dev/null \
+      | tr -d '\r\n' || true)"
+    if [ -n "$ip" ]; then
+      echo "$ip"
+      return 0
+    fi
+    echo "waiting for host-lan-ip.txt from repo HTTP (${i}/6)..."
+    sleep 3
+  done
+  echo ""
 }
 
 case "$ROLE" in

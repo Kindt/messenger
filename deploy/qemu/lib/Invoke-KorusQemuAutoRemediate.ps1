@@ -11,6 +11,7 @@ function Invoke-KorusQemuAutoRemediate {
         [string]$ServerBootstrapText = "",
         [string]$WebBootstrapText = "",
         [string]$ServerHostKey = "",
+        [string]$WebHostKey = "",
         [int]$GuestFixAfterMinutes = 8,
         [int]$RestartAfterMinutes = 15,
         [int]$CooldownMinutes = 8
@@ -38,6 +39,7 @@ function Invoke-KorusQemuAutoRemediate {
             guestFixAt                = $null
             lastRestartAt             = $null
             lastServerRedeployAt      = $null
+            lastWebRedeployAt         = $null
             bootstrapErrorFingerprint = ""
             bootstrapErrorSince       = $null
             lastOrphanSweepAt         = $null
@@ -67,6 +69,7 @@ function Invoke-KorusQemuAutoRemediate {
                 guestFixAt                = $o.guestFixAt
                 lastRestartAt             = $o.lastRestartAt
                 lastServerRedeployAt      = $o.lastServerRedeployAt
+                lastWebRedeployAt         = $o.lastWebRedeployAt
                 bootstrapErrorFingerprint = [string]$o.bootstrapErrorFingerprint
                 bootstrapErrorSince       = $o.bootstrapErrorSince
                 lastOrphanSweepAt         = $o.lastOrphanSweepAt
@@ -283,13 +286,30 @@ fi
         return $r.Started
     }
 
+    . (Join-Path $Root "deploy\qemu\lib\Get-KorusLanHostIp.ps1")
+
+    $state = Get-RemState
     $stackReady = $Health.Core -and $Health.Web -and $Health.Ready
     if ($stackReady) {
+        Write-KorusQemuLanHostInfo -RunDir $RunDir | Out-Null
+        if (Test-KorusWebClientWsHostMismatch -RunDir $RunDir) {
+            $wsLan = Read-KorusQemuLanHostIp -RunDir $RunDir
+            if (Test-CooldownOk -LastAt $state.lastWebRedeployAt -Minutes 10) {
+                Write-RemLog "ACTION web redeploy wsUrl mismatch expected=$wsLan"
+                $rd = Start-KorusQemuGuestRedeploy -Role web -RunDir $RunDir -Root $Root -Reason "wsUrl mismatch expect $wsLan"
+                if ($rd.Summary) { $actions.Add($rd.Summary) | Out-Null }
+                $state.lastWebRedeployAt = (Get-Date).ToString("o")
+                Set-RemState $state
+                return @{ Actions = @($actions); Summary = ($actions -join "; ") }
+            }
+            $actions.Add("wsUrl mismatch (web redeploy cooldown)") | Out-Null
+            Set-RemState $state
+            return @{ Actions = @($actions); Summary = ($actions -join "; ") }
+        }
         if (Test-Path $StatePath) { Remove-Item $StatePath -Force -ErrorAction SilentlyContinue }
         return @{ Actions = @(); Summary = "" }
     }
 
-    $state = Get-RemState
     $serverPidNow = 0
     $serverPidFile = Join-Path $RunDir "server.pid"
     if (Test-Path $serverPidFile) {
@@ -307,7 +327,8 @@ fi
     }
 
     $loadingState = Get-KorusQemuLoadingState -ServerBootstrapText $ServerBootstrapText `
-        -WebBootstrapText $WebBootstrapText -Activity $Activity -BootstrapStates $BootstrapStates
+        -WebBootstrapText $WebBootstrapText -Activity $Activity -BootstrapStates $BootstrapStates `
+        -ServerHostKey $ServerHostKey -WebHostKey $WebHostKey
     if ($loadingState.Loading) {
         $actions.Add("loading $($loadingState.Kind): wait ($($loadingState.Detail))") | Out-Null
         Write-RemLog "WAIT loading kind=$($loadingState.Kind) detail=$($loadingState.Detail)"
