@@ -282,6 +282,21 @@ if ($state.phase -eq 'completed') {
     $state.playwrightOk = $false
     $state.reportOk = $false
 }
+if ($state.phase -in @('failed', 'blocked') -and (Test-KorusStackReady -Snap $null)) {
+    Log "resume from $($state.phase): stack ready"
+    $state.blocked = $false
+    $state.failureRepeatCount = 0
+    $state.lastFailureFingerprint = ''
+    $state.pendingRemediation = ''
+    if ($state.smokeOk) {
+        $state.phase = 'running_playwright'
+        $state.playwrightRunning = $false
+        $state.lastError = ''
+    } else {
+        $state.phase = 'running_smoke'
+        $state.smokeRunning = $false
+    }
+}
 Set-PlanState $state
 
 if (-not $SkipVmUp) {
