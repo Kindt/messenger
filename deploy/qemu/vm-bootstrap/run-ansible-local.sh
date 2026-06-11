@@ -26,8 +26,14 @@ if [ -f "$REPO/deploy/qemu/vm-bootstrap/korus-guest-deps.sh" ]; then
 fi
 
 if [ -f "$REPO/deploy/qemu/vm-bootstrap/korus-docker-image-load.sh" ]; then
-  KORUS_DOCKER_CACHE_ATTEMPTS="${KORUS_DOCKER_CACHE_ATTEMPTS:-24}" \
-    sh "$REPO/deploy/qemu/vm-bootstrap/korus-docker-image-load.sh" || true
+  cache_url="http://${HOST_GW}:${KORUS_QEMU_REPO_HTTP_PORT:-18890}/docker-base-images.tar"
+  cache_code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$cache_url" 2>/dev/null || echo 000)
+  if [ "$cache_code" = "404" ] || [ "$cache_code" = "000" ]; then
+    echo "korus-docker-image-load: skip (host tar HTTP $cache_code)"
+  else
+    KORUS_DOCKER_CACHE_ATTEMPTS="${KORUS_DOCKER_CACHE_ATTEMPTS:-24}" \
+      sh "$REPO/deploy/qemu/vm-bootstrap/korus-docker-image-load.sh" || true
+  fi
 fi
 
 wait_repo() {
