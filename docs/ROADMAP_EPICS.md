@@ -32,7 +32,7 @@
 
 | Приоритет | Содержание |
 |-----------|------------|
-| По запросу продукта | **MLS scaffold** (group state, capabilities `mls-stub`, admin status). Полный RFC 9420 — отдельный этап. См. **`docs/E2EE_ARCHITECTURE.md`**, **`MlsGroupManager`**. |
+| По запросу продукта | **MLS**: wire + client Web Crypto encrypt (`korus-mls-wasm.js`); полный OpenMLS / external interop — отдельный этап. См. **`docs/E2EE_ARCHITECTURE.md`**, **`docs/review/e2ee-wasm-spike-2026-06-10.md`**. |
 
 ---
 

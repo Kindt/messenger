@@ -1,9 +1,14 @@
 package com.avandocmsg.messenger.api.crypto;
 
 import com.avandocmsg.messenger.api.crypto.dto.KeyPackageResponse;
+import com.avandocmsg.messenger.api.crypto.dto.MlsSessionInfoResponse;
 import com.avandocmsg.messenger.api.crypto.dto.UploadKeyPackageRequest;
+import com.avandocmsg.messenger.api.mls.MlsMigrationService;
+import com.avandocmsg.messenger.api.mls.MlsService;
+import com.avandocmsg.messenger.api.mls.SessionRepository;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
+import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,13 +42,23 @@ public class CryptoResource {
 
     private final E2EEService e2eeService;
     private final KeyPackageRepository keyPackageRepository;
+    private final MlsService mlsService;
+    private final MlsMigrationService mlsMigrationService;
+    private final SessionRepository sessionRepository;
+    private final ChatRepository chatRepository;
     private final UserMessageSource messages;
 
     @Inject
     public CryptoResource(E2EEService e2eeService, KeyPackageRepository keyPackageRepository,
+                          MlsService mlsService, MlsMigrationService mlsMigrationService,
+                          SessionRepository sessionRepository, ChatRepository chatRepository,
                           UserMessageSource messages) {
         this.e2eeService = e2eeService;
         this.keyPackageRepository = keyPackageRepository;
+        this.mlsService = mlsService;
+        this.mlsMigrationService = mlsMigrationService;
+        this.sessionRepository = sessionRepository;
+        this.chatRepository = chatRepository;
         this.messages = messages;
     }
 
@@ -86,6 +101,42 @@ public class CryptoResource {
     public Response deleteKeyPackage(@PathParam("kpId") String kpIdStr) {
         keyPackageRepository.delete(UuidParams.required(kpIdStr, "key_package_id"));
         return Response.noContent().build();
+    }
+
+    @GET
+    @Path("/mls/session/{chatId}")
+    @Operation(summary = "MLS session for chat",
+        description = "Returns session_id and epoch for client-side MLS encrypt (chat members only)")
+    @ApiResponse(responseCode = "200", description = "Session info",
+        content = @Content(schema = @Schema(implementation = MlsSessionInfoResponse.class)))
+    public Response getMlsSession(@PathParam("chatId") String chatIdStr,
+                                @Context SecurityContext securityContext) {
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var userId = CurrentUserId.uuid(securityContext);
+        var role = chatRepository.getMemberRole(chatId, userId);
+        if (role == null || chatRepository.isMemberBanned(chatId, userId)) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(new ApiError(403, messages.get("error.message.not_member")))
+                .build();
+        }
+        if (mlsMigrationService != null) {
+            mlsMigrationService.migrateToMls(chatId);
+        }
+        var sessionIdOpt = mlsService.ensureSession(chatId);
+        if (sessionIdOpt.isEmpty()) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ApiError(500, messages.get("error.crypto.mls_session_failed")))
+                .build();
+        }
+        var sessionOpt = sessionRepository.findLatestByChatId(chatId);
+        if (sessionOpt.isEmpty()) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ApiError(500, messages.get("error.crypto.mls_session_failed")))
+                .build();
+        }
+        var session = sessionOpt.get();
+        return Response.ok(new MlsSessionInfoResponse(
+            session.id().toString(), session.epoch())).build();
     }
 
     @POST

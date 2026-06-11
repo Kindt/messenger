@@ -6,6 +6,8 @@ param(
     [string]$WebBaseUrl = "http://localhost:9088",
     # Check lb -> web-client -> core-api (needs WEB_CLIENT_API_UPSTREAM).
     [switch]$CheckApi,
+    # QEMU: wsUrl in web-client-env.js should use ws:// and host LAN IP (not 127.0.0.1 inside guest-only URL).
+    [string]$ExpectWsHost = "",
     [switch]$Help
 )
 $ErrorActionPreference = "Stop"
@@ -49,6 +51,14 @@ try {
     if ($e.StatusCode -ne 200) { Fail "web-client-env.js status $($e.StatusCode)" }
     if ($e.Content -notmatch "__WEB_CLIENT__") { Fail "web-client-env.js missing __WEB_CLIENT__" }
     if ($e.Content -notmatch 'wsUrl\s*:') { Fail "web-client-env.js missing wsUrl" }
+    if ($WebBaseUrl -match ':19088' -and $e.Content -notmatch 'ws://') {
+        Fail "QEMU web-client-env.js wsUrl should be ws:// for browser WS on host port 19088"
+    }
+    if ($ExpectWsHost) {
+        if ($e.Content -notmatch [regex]::Escape($ExpectWsHost)) {
+            Fail "web-client-env.js wsUrl missing expected host $ExpectWsHost"
+        }
+    }
     if ($e.Content -notmatch 'iceServersJson\s*:') { Fail "web-client-env.js missing iceServersJson" }
     if ($e.Content -notmatch 'iceServersJson\s*:\s*(null|")') {
         Fail "web-client-env.js iceServersJson must be null or a JSON string"

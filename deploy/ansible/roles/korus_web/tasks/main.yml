@@ -32,3 +32,20 @@
   until: korus_web_health.status == 200 and korus_web_health.content is search('ok')
   retries: 30
   delay: 5
+
+- name: Verify web-client-env.js wsUrl and iceServersJson keys
+  ansible.builtin.uri:
+    url: "{{ korus_web_base_url }}/web-client-env.js"
+    return_content: true
+  register: korus_web_env_js
+  failed_when: >
+    korus_web_env_js.status != 200 or
+    'wsUrl' not in korus_web_env_js.content or
+    'iceServersJson' not in korus_web_env_js.content
+
+- name: Verify browser wsUrl uses expected LAN host (QEMU)
+  when: korus_browser_ws_host is defined and (korus_browser_ws_host | string) | length > 0
+  ansible.builtin.assert:
+    that:
+      - korus_browser_ws_host in korus_web_env_js.content
+    fail_msg: "web-client-env.js wsUrl missing korus_browser_ws_host={{ korus_browser_ws_host }}"

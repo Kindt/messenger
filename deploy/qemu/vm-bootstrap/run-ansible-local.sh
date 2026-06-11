@@ -25,6 +25,11 @@ if [ -f "$REPO/deploy/qemu/vm-bootstrap/korus-guest-deps.sh" ]; then
   sh "$REPO/deploy/qemu/vm-bootstrap/korus-guest-deps.sh"
 fi
 
+if [ -f "$REPO/deploy/qemu/vm-bootstrap/korus-docker-image-load.sh" ]; then
+  KORUS_DOCKER_CACHE_ATTEMPTS="${KORUS_DOCKER_CACHE_ATTEMPTS:-24}" \
+    sh "$REPO/deploy/qemu/vm-bootstrap/korus-docker-image-load.sh" || true
+fi
+
 wait_repo() {
   local marker="$1"
   local i

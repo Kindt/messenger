@@ -11,6 +11,17 @@
 - Сессия: при **401** — автоматический **`POST /auth/refresh`** и повтор запроса; при обрыве WebSocket — переподключение с backoff (индикатор **WS переподкл.**).
 - Вложения: кнопка **Файл** в композере — **`POST /files/upload`** (multipart), сообщение с типом **image** / **video** / **file** и **`content`** = **file_id**; превью картинок и скачивание через API с JWT.
 
+## QEMU dev (Windows, recommended)
+
+```powershell
+.\scripts\qemu-dev-up.ps1
+# UI http://127.0.0.1:19088 , API http://127.0.0.1:18080/api/v1/health
+.\scripts\qemu-redeploy.ps1 -WebOnly
+.\scripts\smoke-korus-web.ps1 -WebBaseUrl http://127.0.0.1:19088 -CheckApi
+```
+
+Playwright: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:19088`, `KORUS_API_URL=http://127.0.0.1:18080` — см. [`deploy/qemu/README.md`](../../deploy/qemu/README.md) (golden path).
+
 ## Локально
 
 ```bash

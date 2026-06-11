@@ -59,11 +59,43 @@ Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_
 .\scripts\qemu-down.ps1
 ```
 
+**Co-hosted VMs:** на одном хосте могут работать QEMU ВМ других проектов. `qemu-down`, auto-remediate и orphan-sweep трогают **только** процессы с `korus-server` / `korus-web` или qcow2 из `deploy/qemu/images/` — не все `qemu-system-x86_64`.
+
 ## URL после подъёма
 
 - API (через проброс с server VM): http://127.0.0.1:18080/api/v1/health  
 - UI (через web VM): http://127.0.0.1:19088/  
 - Acceptance smokes (на хосте с Docker или через SSH-туннели): см. `specs/003-docker-ansible-autotest/quickstart.md`
+
+## Golden path (web-client dev + Playwright)
+
+```powershell
+# 1) Поднять ВМ (первый раз долго: cloud-init + Ansible + docker build в гостях)
+.\scripts\qemu-dev-up.ps1
+# или headless: .\scripts\qemu-up.ps1
+
+# 2) Обновить код в гостях без сброса дисков
+.\scripts\qemu-redeploy.ps1
+.\scripts\qemu-redeploy.ps1 -WebOnly
+
+# 3) Дождаться стека (опционально)
+.\scripts\qemu-stack-wait.ps1
+
+# 4) Smokes с хоста
+.\scripts\smoke-korus-web.ps1 -WebBaseUrl http://127.0.0.1:19088 -CheckApi
+# Optional: assert wsUrl contains Windows LAN IP (see deploy/qemu/lib/Get-KorusLanHostIp.ps1)
+.\scripts\smoke-korus-web.ps1 -WebBaseUrl http://127.0.0.1:19088 -ExpectWsHost 192.168.x.x
+
+# 5) Playwright (API через прокси UI)
+cd tests\e2e-web
+npm ci
+$env:PLAYWRIGHT_BASE_URL = "http://127.0.0.1:19088"
+$env:KORUS_API_URL = "http://127.0.0.1:18080"
+npx playwright test
+```
+
+Поминутные отчёты в чат + auto-fix/restart: `.\scripts\qemu-chat-watch.ps1` (loop → `AGENT_LOOP_TICK_qemu_chat`). Полный план (stack → smoke → Playwright → gate report): `.\scripts\qemu-plan-orchestrator.ps1` (`AGENT_LOOP_TICK_qemu_plan`). При активном docker pull/gradle/build auto-remediate **ждёт**, не redeploy/restart. Stop: `.\scripts\stop-qemu-plan-orchestrator.ps1`.
+Предзагрузка Docker-образов: `.\scripts\preload-qemu-docker-images.ps1`.
 
 Логи: `deploy\qemu\run\server-serial.log`, `web-serial.log`; в гостях: **`/var/log/korus-bootstrap.log`**
 

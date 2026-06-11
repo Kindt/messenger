@@ -43,4 +43,29 @@ test.describe("messaging actions", () => {
     await uiOpenChatByTitle(page, title);
     await expect(page.getByText("reply body")).toBeVisible({ timeout: 20_000 });
   });
+
+  test("reply via UI composer", async ({ page, request }) => {
+    await ensureSmokeUsers(request);
+    const tokenA = await apiLogin(request, "smoke_user_a", "smokepass123");
+    const tokenB = await apiLogin(request, "smoke_user_b", "smokepass123");
+    const idB = await apiMeId(request, tokenB);
+    const title = `e2e-ui-reply-${Date.now()}`;
+    const chatId = await apiCreateGroup(request, tokenA, title, [idB]);
+    const parentText = `parent-${Date.now()}`;
+    await request.post(`${apiBase()}/api/v1/chats/${chatId}/messages`, {
+      headers: { Authorization: `Bearer ${tokenA}` },
+      data: { type: "text", content: parentText },
+    });
+
+    await uiLogin(page, "smoke_user_b", "smokepass123");
+    await uiOpenChatByTitle(page, title);
+    await expect(page.getByText(parentText)).toBeVisible({ timeout: 20_000 });
+
+    await page.locator("[data-testid=message-reply-button]").first().click();
+    const replyText = `ui-reply-${Date.now()}`;
+    const composer = page.locator("[data-testid=message-composer]");
+    await composer.fill(replyText);
+    await composer.press("Enter");
+    await expect(page.getByText(replyText)).toBeVisible({ timeout: 20_000 });
+  });
 });

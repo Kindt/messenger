@@ -98,6 +98,12 @@ fi
 
 install_docker_apt || true
 
+if command -v docker >/dev/null 2>&1; then
+  if [ -f /mnt/korus/deploy/qemu/vm-bootstrap/korus-docker-image-load.sh ]; then
+    sh /mnt/korus/deploy/qemu/vm-bootstrap/korus-docker-image-load.sh || true
+  fi
+fi
+
 log "korus-guest-deps: pip3=$(command -v pip3 2>/dev/null || echo missing) docker=$(command -v docker 2>/dev/null || echo missing)"
 
 if ! command -v pip3 >/dev/null 2>&1 && ! python3 -m pip --version >/dev/null 2>&1; then

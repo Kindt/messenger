@@ -4,7 +4,7 @@ param(
     [switch]$Headless,
     [ValidateSet("", "gtk", "sdl", "default")]
     [string]$Display = "",
-    [switch]$NoWatch,
+    [switch]$OpenWatch,
     [switch]$WatchOnly,
     [switch]$WithWatchdog,
     [switch]$Help
@@ -23,15 +23,17 @@ if ($Help) {
     Write-Host @"
 Usage: .\scripts\qemu-dev-up.ps1 [-KeepDisks] [-Headless] [-Display gtk|sdl|default] [-WithWatchdog] [-NoWatch] [-WatchOnly]
 
-Default: GTK windows for both VMs + qemu-watch in a new PowerShell window.
+Default: GTK windows for both VMs (no extra PowerShell monitor window).
 
-  .\scripts\qemu-dev-up.ps1                    # graphical up + monitor
+  .\scripts\qemu-dev-up.ps1                    # graphical up
+  .\scripts\qemu-dev-up.ps1 -OpenWatch           # + qemu-watch in new window (optional)
   .\scripts\qemu-dev-up.ps1 -KeepDisks         # reuse disks, redeploy via watchdog path
   .\scripts\qemu-dev-up.ps1 -WithWatchdog       # dev-up-watchdog instead of qemu-up only
   .\scripts\qemu-dev-up.ps1 -WatchOnly          # open monitor only (VMs already running)
   .\scripts\qemu-dev-up.ps1 -Headless           # no GTK (same as -Display none)
 
 Also:
+  .\scripts\start-qemu-status-loop.ps1        # minute status to log, no window
   .\scripts\qemu-logs.ps1 -Follow               # tail server serial
   .\scripts\qemu-down.ps1                       # stop all VMs
 "@
@@ -71,7 +73,7 @@ Write-Host "=== Korus dev up (QEMU + monitor) ===" -ForegroundColor Cyan
 & (Join-Path $Root "scripts\qemu-up.ps1") @upArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-if (-not $NoWatch) {
+if ($OpenWatch) {
     & (Join-Path $Root "scripts\qemu-watch.ps1") -NewWindow
 }
 

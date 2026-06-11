@@ -34,6 +34,10 @@ class WebUiParityAssetsTest {
             "ui-messages-utils.js",
             "ui-rtc-utils.js",
             "ui-pwa-settings-utils.js",
+            "korus-mls-wasm.js",
+            "ui-export-utils.js",
+            "ui-e2ee-mls.js",
+            "ui-e2ee-utils.js",
             "app.js"
         );
         var last = -1;
@@ -48,16 +52,27 @@ class WebUiParityAssetsTest {
     @Test
     void appJs_wiresMessagingFileExportAndReconnectParityPaths() throws Exception {
         var app = readResource("webui/app.js");
+        var exportUtils = readResource("webui/ui-export-utils.js");
         assertTrue(app.contains("/messages/") && app.contains("/pin"), "message pin path");
         assertTrue(app.contains("/reactions"), "message reactions path");
         assertTrue(app.contains("/forward"), "message forward path");
         assertTrue(app.contains("/versions"), "message versions path");
-        assertTrue(app.contains("/plaintext-preview"), "plaintext-preview path");
+        var e2eeUtils = readResource("webui/ui-e2ee-utils.js");
+        assertTrue(e2eeUtils.contains("/plaintext-preview"), "plaintext-preview path in ui-e2ee-utils");
         assertTrue(app.contains("/public-links"), "file public-link paths");
         assertTrue(app.contains("/files/") && app.contains("fetchFileMetadata"), "file metadata path");
         assertTrue(app.contains("auth-link"), "auth-link path");
-        assertTrue(app.contains("/export"), "chat export paths");
-        assertTrue(app.contains("/attachments"), "export attachments path");
+        assertTrue(exportUtils.contains("/export"), "chat export paths in ui-export-utils");
+        assertTrue(app.contains("KorusUiExportUtils"), "export utils delegation");
+        assertTrue(app.contains("KorusUiE2eeMls"), "e2ee mls utils delegation");
+        assertTrue(app.contains("KorusUiE2eeUtils"), "e2ee utils delegation");
+        assertTrue(app.contains("message-reply-button"), "reply button testid");
+        assertTrue(app.contains("mesh-webrtc-button"), "mesh webrtc testid");
+        assertTrue(app.contains("KorusMlsWasmFactory"), "mls wasm factory");
+        assertTrue(app.contains("chat-export-button"), "export button testid");
+        var mlsWasm = readResource("webui/korus-mls-wasm.js");
+        assertTrue(mlsWasm.contains("/e2ee/mls/session/"), "mls session API for client encrypt");
+        assertTrue(exportUtils.contains("/attachments"), "export attachments path");
         assertTrue(app.contains("/read-receipts"), "read receipts REST path");
         assertTrue(app.contains("createConferenceInChat"), "in-chat conference path");
         assertTrue(app.contains("scheduleWsReconnect"), "ws reconnect scheduler");

@@ -1,0 +1,22 @@
+{
+  "stack_ready": "Стек готов: API, UI и database_ok.",
+  "vms_down": "Korus QEMU не запущены.",
+  "core_down_web_up": "API (18080) недоступен, UI (19088) отвечает — проблема server VM.",
+  "core_down_loading": "API недоступен, на server идёт загрузка/сборка — ждём.",
+  "stack_down": "API и UI не отвечают — стек поднимается или server не готов.",
+  "not_ready": "API отвечает, database_ok=false.",
+  "bootstrap_error": "Ошибки bootstrap на госте.",
+  "keycloak_409": "Keycloak HTTP 409 в bootstrap.",
+  "ansible_failed": "Ansible FAILED на server.",
+  "disk_or_memory": "Диск или память на server.",
+  "pull_stuck": "Docker pull завис или очень долгий.",
+  "build_running": "Gradle/docker build в процессе (норма).",
+  "ssh_busy": "SSH на госте медленный.",
+  "loading_docker_pull": "Загрузка Docker-образов (pull) — ждём.",
+  "loading_gradle": "Gradle/build — ждём.",
+  "loading_docker_build": "Docker build — ждём.",
+  "loading_image_cache_load": "Загрузка docker image cache в гость — ждём.",
+  "loading_repo_sync": "Синхронизация repo snapshot в гость — ждём.",
+  "loading_ansible": "Ansible playbook — ждём.",
+  "loading_none": "Загрузка/сборка — ждём."
+}

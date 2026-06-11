@@ -14,6 +14,14 @@ token() {
     | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p'
 }
 
+kc_put_ok() {
+  code="$1"
+  case "$code" in
+    200|201|204|409) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 fix_user() {
   user="$1"
   email="$2"
@@ -27,12 +35,20 @@ fix_user() {
     echo "keycloak-ensure: user $user not found, skip"
     return 0
   fi
-  curl -fsS -X PUT "$KC_BASE/admin/realms/$REALM/users/$id" \
+  code=$(curl -sS -o /dev/null -w "%{http_code}" -X PUT "$KC_BASE/admin/realms/$REALM/users/$id" \
     -H "Authorization: Bearer $tok" -H "Content-Type: application/json" \
-    -d "{\"email\":\"$email\",\"emailVerified\":true,\"firstName\":\"$first\",\"lastName\":\"$last\",\"enabled\":true}" >/dev/null
-  curl -fsS -X PUT "$KC_BASE/admin/realms/$REALM/users/$id/reset-password" \
+    -d "{\"email\":\"$email\",\"emailVerified\":true,\"firstName\":\"$first\",\"lastName\":\"$last\",\"enabled\":true}")
+  if ! kc_put_ok "$code"; then
+    echo "keycloak-ensure: update user $user failed http $code"
+    return 1
+  fi
+  code=$(curl -sS -o /dev/null -w "%{http_code}" -X PUT "$KC_BASE/admin/realms/$REALM/users/$id/reset-password" \
     -H "Authorization: Bearer $tok" -H "Content-Type: application/json" \
-    -d "{\"type\":\"password\",\"value\":\"$pass\",\"temporary\":false}" >/dev/null
+    -d "{\"type\":\"password\",\"value\":\"$pass\",\"temporary\":false}")
+  if ! kc_put_ok "$code"; then
+    echo "keycloak-ensure: reset-password $user failed http $code"
+    return 1
+  fi
   echo "keycloak-ensure: ok $user ($email)"
 }
 

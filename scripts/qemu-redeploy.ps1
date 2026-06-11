@@ -1,4 +1,4 @@
-# Push current workspace to running QEMU guests and redeploy via Ansible (spec 003).
+﻿# Push current workspace to running QEMU guests and redeploy via Ansible (spec 003).
 
 param(
 
@@ -63,6 +63,8 @@ $Plink = "${env:ProgramFiles}\PuTTY\plink.exe"
 . (Join-Path $Lib "Update-KorusGuestRepo.ps1")
 
 . (Join-Path $Lib "Get-KorusLanHostIp.ps1")
+. (Join-Path $Lib "Korus-DockerImageCache.ps1")
+. (Join-Path $Lib "Test-KorusQemuProcess.ps1")
 
 $lanIp = Read-KorusQemuLanHostIp -RunDir $RunDir
 
@@ -97,9 +99,9 @@ function Wait-KorusEd25519HostKey {
 
 
 
-if (-not (Get-Process qemu-system-x86_64 -ErrorAction SilentlyContinue)) {
+if (-not (Test-KorusQemuStackRunning -RunDir $RunDir)) {
 
-    Write-Error "No QEMU VMs running. Start with: .\scripts\qemu-up.ps1 -KeepDisks"
+    Write-Error "No Korus QEMU VMs running (server.pid/web.pid). Start with: .\scripts\qemu-up.ps1 -KeepDisks"
 
 }
 
@@ -108,8 +110,7 @@ if (-not (Get-Process qemu-system-x86_64 -ErrorAction SilentlyContinue)) {
 Write-Host "=== Korus QEMU redeploy (Ansible) $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" -ForegroundColor Cyan
 
 Start-KorusRepoHttp | Out-Null
-
-
+Start-KorusDockerImageCacheBackground | Out-Null
 
 $doServer = -not $WebOnly
 

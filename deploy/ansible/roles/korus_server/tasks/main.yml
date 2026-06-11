@@ -73,6 +73,7 @@
   args:
     executable: /bin/bash
   changed_when: false
+  failed_when: false
 
 - name: Wait stack ready (workers)
   ansible.builtin.shell: |

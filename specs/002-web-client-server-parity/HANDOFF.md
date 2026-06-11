@@ -23,6 +23,7 @@ This handoff is the shortest path for optional browser re-validation after engin
 ## Acceptance Rule
 
 - Engineering closure is complete (all `tasks.md` items checked).
+- QEMU golden path: `deploy/qemu/README.md`; auto report: `.\scripts\write-runtime-gate-report.ps1 -WebBaseUrl http://127.0.0.1:19088 -ApiBaseUrl http://127.0.0.1:18080`
 - Optional: if browser re-validation passes on live stack, update `runtime-gate-report.md` operator section.
 - If browser re-validation fails, create follow-up fix task(s); do not reopen closed engineering gates without cause.
 

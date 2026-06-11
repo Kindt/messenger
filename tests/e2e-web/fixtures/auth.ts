@@ -45,6 +45,36 @@ export async function apiCreateGroup(
   return (body.id || body.chat_id) as string;
 }
 
+export async function apiSendMessage(
+  request: APIRequestContext,
+  token: string,
+  chatId: string,
+  text: string
+): Promise<void> {
+  const res = await request.post(`${apiBase()}/api/v1/chats/${chatId}/messages`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { type: "text", content: text },
+  });
+  if (!res.ok()) {
+    throw new Error(`send message failed: ${res.status()} ${await res.text()}`);
+  }
+}
+
+/** Group with at least one message — avoids empty chat list in MLS/API tests. */
+export async function apiEnsureGroupWithMessage(
+  request: APIRequestContext,
+  titlePrefix = "e2e-seed"
+): Promise<{ chatId: string; token: string; title: string }> {
+  await ensureSmokeUsers(request);
+  const tokenA = await apiLogin(request, "smoke_user_a", "smokepass123");
+  const tokenB = await apiLogin(request, "smoke_user_b", "smokepass123");
+  const idB = await apiMeId(request, tokenB);
+  const title = `${titlePrefix}-${Date.now()}`;
+  const chatId = await apiCreateGroup(request, tokenA, title, [idB]);
+  await apiSendMessage(request, tokenA, chatId, "seed message for e2e");
+  return { chatId, token: tokenA, title };
+}
+
 export async function ensureSmokeUsers(request: APIRequestContext): Promise<void> {
   const users = [
     { u: "smoke_user_a", d: "Smoke User A" },

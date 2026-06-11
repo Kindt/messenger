@@ -10,7 +10,7 @@ class CryptoResourceTest {
 
     @Test
     void deleteKeyPackage_invalidId_throwsInvalidUuidParameterException() {
-        var resource = new CryptoResource(null, null, I18nTestFixtures.messagesEn());
+        var resource = new CryptoResource(null, null, null, null, null, null, I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.deleteKeyPackage("not-a-uuid"));
     }

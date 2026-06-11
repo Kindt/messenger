@@ -1,0 +1,15 @@
+---
+description: QEMU minute chat reports and auto-remediate
+globs: deploy/qemu/**,scripts/qemu-*.ps1
+---
+
+# QEMU chat-watch
+
+When monitoring Korus QEMU for the user:
+
+1. Run `.\scripts\qemu-chat-watch.ps1` once, then `.\scripts\qemu-status-loop.ps1` in a Cursor **background terminal** (not hidden `start-qemu-status-loop`).
+2. On `AGENT_LOOP_TICK_qemu_chat`, read `deploy/qemu/run/status-minute.snapshot.json` and post **summaryRu** + **issues** in Russian (2–5 lines).
+3. Auto-remediate runs inside `qemu-status-minute.ps1` (docker pull, bootstrap errors, background `qemu-redeploy -ServerOnly`). Do not duplicate unless remediate is empty and severity=high.
+4. **Never** `qemu-down` without user request. **Never** kill non-Korus `qemu-system-x86_64` (co-hosted VMs).
+
+Logs: `status-minute.log`, `status-remediate.log`, `*-serial.log`.

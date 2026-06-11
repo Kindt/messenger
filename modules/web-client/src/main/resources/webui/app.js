@@ -1092,35 +1092,6 @@
     }
   }
 
-  async function loadE2eePlaintext(chatId, msgId) {
-    if (!chatId || !msgId) return null;
-    if (state.e2eePlaintextCache[msgId]) {
-      return state.e2eePlaintextCache[msgId];
-    }
-    if (isMlsCapabilitiesActive()) {
-      var msg = findCachedMessage(chatId, msgId);
-      if (msg && msg.content) {
-        var clientPlain = await mlsClientDecrypt(msg.content, chatId);
-        if (clientPlain) {
-          state.e2eePlaintextCache[msgId] = clientPlain;
-          return clientPlain;
-        }
-      }
-      return null;
-    }
-    try {
-      var r = await apiJson(
-        "/chats/" + chatId + "/messages/" + msgId + "/plaintext-preview",
-        { method: "GET" }
-      );
-      var text = r && r.plaintext ? String(r.plaintext) : null;
-      if (text) state.e2eePlaintextCache[msgId] = text;
-      return text;
-    } catch (e) {
-      return null;
-    }
-  }
-
   async function loadMyDevices() {
     if (!state.tokens) return;
     try {
@@ -2011,169 +1982,6 @@
       state.busy = false;
       render();
     }
-  }
-
-  async function startChatExport() {
-    if (!state.selectedId || state.exportBusy) {
-      if (state.exportBusy) {
-        state.statusMessage = "Уже выполняется другой экспорт";
-        render();
-      }
-      return;
-    }
-    var chatId = state.selectedId;
-    state.exportBusy = true;
-    state.exportProgressLabel = null;
-    state.error = null;
-    state.statusMessage = null;
-    render();
-    try {
-      var accepted = await apiJson("/chats/" + chatId + "/export", {
-        method: "POST",
-      });
-      var jobId = accepted && accepted.job_id;
-      if (!jobId) throw new Error("Сервер не вернул job_id");
-      state.exportJobId = jobId;
-      state.exportJobChatId = chatId;
-      state.statusMessage =
-        "Экспорт запущен — можно перейти в другой чат; скачивание начнётся автоматически";
-      render();
-      pollExportUntilReady(jobId, chatId)
-        .then(function () {
-          state.statusMessage = "Экспорт готов, архив скачан";
-        })
-        .catch(function (e) {
-          var msg = (e && e.message) || "Экспорт не удался";
-          if (msg.indexOf("отмен") !== -1) {
-            state.statusMessage = msg;
-          } else {
-            state.error = msg;
-          }
-        })
-        .finally(function () {
-          state.exportBusy = false;
-          state.exportJobId = null;
-          state.exportJobChatId = null;
-          state.exportProgressLabel = null;
-          render();
-        });
-    } catch (e) {
-      state.error = e.message || "Экспорт не удался";
-      state.exportBusy = false;
-      state.exportProgressLabel = null;
-      render();
-    }
-  }
-
-  function pollExportUntilReady(jobId, chatId) {
-    if (!chatId) chatId = state.selectedId;
-    var attempts = 0;
-    var gen = ++exportPollGeneration;
-    return new Promise(function (resolve, reject) {
-      function tick() {
-        if (gen !== exportPollGeneration) {
-          reject(new Error("Экспорт отменён"));
-          return;
-        }
-        attempts++;
-        apiJson("/chats/" + chatId + "/export/" + jobId, { method: "GET" })
-          .then(function (st) {
-            if (gen !== exportPollGeneration) {
-              reject(new Error("Экспорт отменён"));
-              return;
-            }
-            var status = st && st.status;
-            if (status === "export_v1" || status === "stub_written") {
-              return previewExportAttachments(chatId, jobId)
-                .then(function () {
-                  return downloadExportArtifact(chatId, jobId);
-                })
-                .then(resolve)
-                .catch(reject);
-            }
-            if (status === "export_failed") {
-              reject(new Error("Экспорт завершился с ошибкой"));
-              return;
-            }
-            if (status === "export_cancelled") {
-              reject(new Error("Экспорт отменён"));
-              return;
-            }
-            if (attempts >= 60) {
-              reject(new Error("Таймаут ожидания экспорта"));
-              return;
-            }
-            if (
-              state.exportJobId === jobId &&
-              state.exportJobChatId === chatId &&
-              gen === exportPollGeneration
-            ) {
-              var statusLabel =
-                status === "queued"
-                  ? "в очереди"
-                  : status === "processing"
-                    ? "обработка"
-                    : status || "ожидание";
-              state.exportProgressLabel = statusLabel + " (" + attempts + "/60)";
-              scheduleRender();
-            }
-            setTimeout(tick, 2000);
-          })
-          .catch(reject);
-      }
-      tick();
-    });
-  }
-
-  async function cancelChatExport() {
-    if (!state.exportBusy || !state.exportJobId || !state.exportJobChatId) return;
-    var jobId = state.exportJobId;
-    var chatId = state.exportJobChatId;
-    state.busy = true;
-    state.error = null;
-    render();
-    try {
-      await apiFetch("/chats/" + chatId + "/export/" + jobId, { method: "DELETE" });
-      exportPollGeneration++;
-      state.statusMessage = "Экспорт отменён";
-    } catch (e) {
-      state.error = e.message || "Не удалось отменить экспорт";
-    } finally {
-      state.exportBusy = false;
-      state.exportJobId = null;
-      state.exportJobChatId = null;
-      state.exportProgressLabel = null;
-      state.busy = false;
-      render();
-    }
-  }
-
-  async function downloadExportArtifact(chatId, jobId, part) {
-    var suffix = part ? "?part=" + encodeURIComponent(part) : "";
-    var res = await apiFetch("/chats/" + chatId + "/export/" + jobId + "/download" + suffix);
-    if (!res.ok) throw new Error("Export download failed");
-    var blob = await res.blob();
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    var ext = part === "json" ? ".json" : part === "manifest" ? "-manifest.json" : ".zip";
-    a.download = "korus-export-" + chatId.slice(0, 8) + ext;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  async function previewExportAttachments(chatId, jobId) {
-    try {
-      var manifest = await apiJson("/chats/" + chatId + "/export/" + jobId + "/attachments", {
-        method: "GET",
-      });
-      if (manifest && manifest.files && manifest.files.length) {
-        state.statusMessage =
-          "Export attachments: " + manifest.files.length + " file(s)";
-      }
-    } catch (e) {}
   }
 
   async function loadBlockedUsers() {
@@ -3115,6 +2923,60 @@
 
   async function apiJson(path, opts) {
     return ensureApiClient().apiJson(path, opts || {});
+  }
+
+  var exportPollGenerationRef = { value: exportPollGeneration };
+  var korusMlsWasmInstance = null;
+  function getKorusMlsWasm() {
+    if (!korusMlsWasmInstance && window.KorusMlsWasmFactory) {
+      korusMlsWasmInstance = window.KorusMlsWasmFactory(apiJson);
+      window.KorusMlsWasm = korusMlsWasmInstance;
+    }
+    return korusMlsWasmInstance;
+  }
+  var uiExportUtils = window.KorusUiExportUtils({
+    getState: function () {
+      return state;
+    },
+    setState: function (patch) {
+      Object.assign(state, patch);
+    },
+    apiJson: apiJson,
+    apiFetch: apiFetch,
+    scheduleRender: scheduleRender,
+    exportPollGenerationRef: exportPollGenerationRef,
+  });
+  var uiE2eeMls = window.KorusUiE2eeMls({
+    apiJson: apiJson,
+    getState: function () {
+      return state;
+    },
+    getMlsWasm: getKorusMlsWasm,
+  });
+  var uiE2eeUtils = window.KorusUiE2eeUtils({
+    getState: function () {
+      return state;
+    },
+    setStateField: function (cacheKey, msgId, text) {
+      if (cacheKey === "e2eePlaintextCache") state.e2eePlaintextCache[msgId] = text;
+    },
+    apiJson: apiJson,
+    isMlsActive: isMlsCapabilitiesActive,
+    mlsClientDecrypt: function (content, chatId) {
+      return uiE2eeMls.mlsClientDecrypt(content, chatId);
+    },
+    findCachedMessage: findCachedMessage,
+  });
+
+  async function loadE2eePlaintext(chatId, msgId) {
+    return uiE2eeUtils.loadE2eePlaintext(chatId, msgId);
+  }
+
+  function startChatExport() {
+    return uiExportUtils.startChatExport();
+  }
+  function cancelChatExport() {
+    return uiExportUtils.cancelChatExport();
   }
 
   function loadTokens() {
@@ -4148,8 +4010,7 @@
   }
 
   function isMlsCapabilitiesActive() {
-    var caps = state.mediaCaps;
-    return !!(caps && caps.mls_status === "active");
+    return uiE2eeMls.isMlsCapabilitiesActive();
   }
 
   function preferredE2eeScheme() {
@@ -4157,64 +4018,16 @@
     return null;
   }
 
-  function mlsBytesToBase64(bytes) {
-    var bin = "";
-    bytes.forEach(function (b) {
-      bin += String.fromCharCode(b);
-    });
-    return btoa(bin);
-  }
-
-  function mlsGenerateKeyPackage() {
-    var pk = new Uint8Array(32);
-    var sk = new Uint8Array(32);
-    crypto.getRandomValues(pk);
-    crypto.getRandomValues(sk);
-    return {
-      cipher_suite: "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519",
-      protocol_version: "mls10",
-      uploadPayload: {
-        public_key_base64: mlsBytesToBase64(pk),
-        signature_key_base64: mlsBytesToBase64(sk),
-        cipher_suite: "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519",
-        protocol_version: "mls10",
-      },
-    };
-  }
-
-  var mlsClientKeyPackage = null;
-
   async function mlsEnsureKeyPackage() {
-    if (mlsClientKeyPackage) return mlsClientKeyPackage;
-    mlsClientKeyPackage = mlsGenerateKeyPackage();
-    if (!state.tokens) return mlsClientKeyPackage;
-    try {
-      await apiJson("/e2ee/key-packages", {
-        method: "POST",
-        jsonBody: mlsClientKeyPackage.uploadPayload,
-      });
-    } catch (e) {}
-    return mlsClientKeyPackage;
+    return uiE2eeMls.mlsEnsureKeyPackage();
   }
 
   async function mlsClientEncrypt(plaintext, chatId) {
-    if (!isMlsCapabilitiesActive() || plaintext == null) return null;
-    if (window.KorusMlsWasm && typeof window.KorusMlsWasm.encrypt === "function") {
-      try {
-        return await window.KorusMlsWasm.encrypt(String(plaintext), chatId);
-      } catch (e) {}
-    }
-    return null;
+    return uiE2eeMls.mlsClientEncrypt(plaintext, chatId);
   }
 
   async function mlsClientDecrypt(contentBase64, chatId) {
-    if (!isMlsCapabilitiesActive() || !contentBase64) return null;
-    if (window.KorusMlsWasm && typeof window.KorusMlsWasm.decrypt === "function") {
-      try {
-        return await window.KorusMlsWasm.decrypt(String(contentBase64), chatId);
-      } catch (e) {}
-    }
-    return null;
+    return uiE2eeMls.mlsClientDecrypt(contentBase64, chatId);
   }
 
   function findCachedMessage(chatId, msgId) {
@@ -5978,7 +5791,10 @@
         if (scheme === "mls") {
           await mlsEnsureKeyPackage();
           var enc = await mlsClientEncrypt(text, state.selectedId);
-          if (enc) body.content = enc;
+          if (!enc) {
+            throw new Error("MLS client encrypt failed — reload page or check browser crypto support");
+          }
+          body.content = enc;
         }
       }
       var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
@@ -6001,7 +5817,9 @@
     if (!state.callPanelOpen) return;
     var panel = el("aside", "call-panel");
     var ph = el("div", "call-panel-head");
-    ph.appendChild(el("span", "call-panel-title", "Видео / конференция"));
+    var titleSpan = el("span", "call-panel-title", "Видео / конференция");
+    titleSpan.setAttribute("data-testid", "call-panel-title");
+    ph.appendChild(titleSpan);
     var cl = el("button", "btn btn-ghost btn-sm", "Свернуть");
     cl.type = "button";
     cl.onclick = function () {
@@ -6016,6 +5834,7 @@
       "Mesh WebRTC"
     );
     bMesh.type = "button";
+    bMesh.setAttribute("data-testid", "mesh-webrtc-button");
     bMesh.disabled = state.conferenceBusy;
     bMesh.onclick = function () {
       switchCallMode("mesh");
@@ -6389,6 +6208,7 @@
     var hdrR = el("div", "app-header-right");
     var callBtn = el("button", "btn btn-ghost", state.callPanelOpen ? "Скрыть видео" : "Видео / конференция");
     callBtn.type = "button";
+    callBtn.setAttribute("data-testid", "call-panel-toggle");
     callBtn.onclick = function () {
       toggleCallPanel();
     };
@@ -6852,6 +6672,7 @@
           "btn btn-ghost btn-sm",
           exportThisChat ? "Отмена экспорта" : state.exportBusy ? "Экспорт…" : "Экспорт"
         );
+        bExp.setAttribute("data-testid", "chat-export-button");
         bExp.type = "button";
         bExp.disabled = state.busy || (state.exportBusy && !exportThisChat);
         bExp.onclick = function () {
@@ -7089,6 +6910,7 @@
           var actions = el("div", "msg-actions");
           var bReply = el("button", "btn btn-ghost btn-sm", "Ответить");
           bReply.type = "button";
+          bReply.setAttribute("data-testid", "message-reply-button");
           bReply.onclick = function () {
             setReplyTo(m);
           };

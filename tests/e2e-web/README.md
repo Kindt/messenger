@@ -29,8 +29,11 @@ KORUS_WEB_URL=http://127.0.0.1:9088 KORUS_API_URL=http://127.0.0.1:8080 npm test
 | `profile-settings.spec.ts` | users, blocks, devices |
 | `conference-rtc.spec.ts` | conference, media |
 | `e2ee-capabilities.spec.ts` | crypto/e2ee |
+| `e2ee-browser-roundtrip.spec.ts` | browser MLS send when `mls_status=active` |
 
-Selectors use stable `data-testid` (`auth-submit`, `message-composer`) and `#u` / `#p` — not locale-specific button labels.
+QEMU: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:19088`, `KORUS_API_URL=http://127.0.0.1:18080`. Server guest needs `MLS_STATUS=active` for MLS specs.
+
+Selectors use stable `data-testid` (`auth-submit`, `message-composer`, `chat-export-button`) and `#u` / `#p` — not locale-specific button labels.
 
 ## CI
 

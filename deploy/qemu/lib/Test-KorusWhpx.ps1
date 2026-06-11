@@ -1,4 +1,4 @@
-function Test-KorusWhpxAvailable {
+﻿function Test-KorusWhpxAvailable {
     . (Join-Path $PSScriptRoot "..\config.ps1")
     . (Join-Path $PSScriptRoot "Resolve-Qemu.ps1")
 
@@ -23,6 +23,7 @@ function Test-KorusWhpxAvailable {
     if (Test-Path $errFile) { Remove-Item -Force $errFile }
 
     $proc = Start-Process -FilePath $qemu -ArgumentList @(
+        "-name", "korus-whpx-probe",
         "-accel", "whpx", "-machine", "none", "-display", "none", "-serial", "null"
     ) -PassThru -WindowStyle Hidden -RedirectStandardError $errFile
 
@@ -37,7 +38,7 @@ function Test-KorusWhpxAvailable {
         Where-Object { $_.Id -ne $proc.Id } |
         ForEach-Object {
             $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)").CommandLine
-            if ($cmd -match "-machine none -display none -serial null") {
+            if ($cmd -match "korus-whpx-probe") {
                 Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
             }
         }

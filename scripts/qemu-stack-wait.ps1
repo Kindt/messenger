@@ -1,8 +1,9 @@
-# Poll QEMU stack every minute; optional redeploy when SSH is up but API is not.
+﻿# Poll QEMU stack every minute; optional redeploy when SSH is up but API is not.
 param(
     [int]$MaxMinutes = 50,
     [int]$MinMinutesBeforeRedeploy = 15,
     [switch]$RedeployWhenSshUp,
+    [switch]$OneLine,
     [switch]$Help
 )
 $ErrorActionPreference = "Stop"
@@ -10,8 +11,11 @@ $ApiUrl = "http://127.0.0.1:18080"
 $WebUrl = "http://127.0.0.1:19088/"
 $Root = Split-Path -Parent $PSScriptRoot
 
+$QemuRunDir = Join-Path $Root "deploy\qemu\run"
+. (Join-Path $Root "deploy\qemu\lib\Test-KorusQemuProcess.ps1")
+
 if ($Help) {
-    Write-Host "Usage: .\scripts\qemu-stack-wait.ps1 [-MaxMinutes 50] [-RedeployWhenSshUp]"
+    Write-Host "Usage: .\scripts\qemu-stack-wait.ps1 [-MaxMinutes 50] [-RedeployWhenSshUp] [-OneLine]"
     exit 0
 }
 
@@ -45,11 +49,18 @@ $deadline = (Get-Date).AddMinutes($MaxMinutes)
 $minute = 0
 while ((Get-Date) -lt $deadline) {
     $minute++
-    $qemu = [bool](Get-Process qemu-system-x86_64 -ErrorAction SilentlyContinue)
+    $qemu = Test-KorusQemuStackRunning -RunDir $QemuRunDir
     $ssh = (Test-Ssh 12221) -and (Test-Ssh 12222)
     $s = Test-Stack
     $ts = Get-Date -Format "HH:mm:ss"
-    Write-Host "[$ts] min=$minute qemu=$qemu ssh=$ssh core=$($s.Core) web=$($s.Web) ready=$($s.Ready)"
+    $statusScript = Join-Path $Root "scripts\qemu-status-minute.ps1"
+    if ($OneLine) {
+        Write-Host "[$ts] min=$minute qemu=$qemu ssh=$ssh core=$($s.Core) web=$($s.Web) ready=$($s.Ready)"
+    } elseif (Test-Path $statusScript) {
+        & $statusScript -Once
+    } else {
+        Write-Host "[$ts] min=$minute qemu=$qemu ssh=$ssh core=$($s.Core) web=$($s.Web) ready=$($s.Ready)"
+    }
     if ($s.Core -and $s.Web -and $s.Ready) {
         Write-Host "[OK] Stack ready" -ForegroundColor Green
         exit 0

@@ -34,6 +34,9 @@ if (-not (Resolve-KorusQemu)) {
     Write-Error "QEMU required. Run: .\deploy\qemu\install-qemu.ps1"
 }
 
+. (Join-Path $lib "Korus-DockerImageCache.ps1")
+Start-KorusDockerImageCacheBackground | Out-Null
+
 if (-not $KeepDisks) {
     . (Join-Path $lib "Reset-KorusVmDisks.ps1")
     Write-KorusDebugLog -Location "qemu-up.ps1:disks" -Message "resetting VM disks" -HypothesisId "A"

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { apiBase, apiLogin } from "../fixtures/auth";
+import { apiBase, apiEnsureGroupWithMessage, apiLogin } from "../fixtures/auth";
 
 test.describe("e2ee capabilities", () => {
   test("capabilities advertise e2ee schemes", async ({ request }) => {
@@ -75,21 +75,7 @@ test.describe("e2ee capabilities", () => {
       test.skip();
       return;
     }
-    const token = await apiLogin(request, "csadmin", "csadmin");
-    const chatsRes = await request.get(`${apiBase()}/api/v1/chats`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!chatsRes.ok()) {
-      test.skip();
-      return;
-    }
-    const chats = await chatsRes.json();
-    const chatList = Array.isArray(chats) ? chats : chats.chats || [];
-    if (chatList.length === 0) {
-      test.skip();
-      return;
-    }
-    const chatId = chatList[0].id || chatList[0].chat_id;
+    const { chatId, token } = await apiEnsureGroupWithMessage(request, "e2e-mls-send");
     const sendRes = await request.post(`${apiBase()}/api/v1/chats/${chatId}/messages`, {
       headers: { Authorization: `Bearer ${token}` },
       data: {
