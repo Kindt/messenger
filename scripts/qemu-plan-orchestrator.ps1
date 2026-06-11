@@ -124,7 +124,8 @@ function Invoke-PlanPlaywright {
             npm ci 2>&1 | ForEach-Object { Log "  npm: $_" }
             if ($LASTEXITCODE -ne 0) { return $false }
         }
-        $env:PLAYWRIGHT_BASE_URL = 'http://127.0.0.1:19088'
+        $env:KORUS_WEB_URL = 'http://127.0.0.1:19088'
+        $env:PLAYWRIGHT_BASE_URL = $env:KORUS_WEB_URL
         $env:KORUS_API_URL = 'http://127.0.0.1:18080'
         $pwLog = Join-Path $RunDir "playwright-orchestrator.log"
         npx playwright test 2>&1 | Tee-Object -FilePath $pwLog | ForEach-Object { Log "  pw: $_" }

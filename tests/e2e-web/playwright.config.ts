@@ -1,6 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const webBase = process.env.KORUS_WEB_URL || "http://127.0.0.1:9088";
+const webBase =
+  process.env.KORUS_WEB_URL ||
+  process.env.PLAYWRIGHT_BASE_URL ||
+  "http://127.0.0.1:9088";
 const apiBase = process.env.KORUS_API_URL || "http://127.0.0.1:8080";
 
 export default defineConfig({
