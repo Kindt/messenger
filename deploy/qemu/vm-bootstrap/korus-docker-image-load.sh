@@ -48,7 +48,7 @@ while [ "$attempt" -lt "$MAX_ATTEMPTS" ]; do
     exit 1
   fi
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$CACHE_URL" 2>/dev/null || echo 000)
-  if [ "$code" = "404" ] && [ "$attempt" -ge 3 ]; then
+  if [ "$code" = "404" ]; then
     log "korus-docker-image-load: host tar missing (HTTP 404); guest will pull from registry"
     rm -f "$CACHE_TMP" 2>/dev/null || true
     exit 0
