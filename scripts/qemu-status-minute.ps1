@@ -90,8 +90,8 @@ function Get-BootstrapSnippet {
     Remove-Job $job -Force | Out-Null
     $text = ($out | ForEach-Object { "$_" }) -join "`n"
     $state = "running"
-    if ($text -match "server stack up done|web stack up done") { $state = "complete" }
-    elseif ($text -match "gradle|installDist|distTar|Building|DONE") { $state = "gradle" }
+    if ($text -match "server stack up done|web stack up done|QEMU server ansible deploy done|QEMU web ansible deploy done") { $state = "complete" }
+    elseif ($text -match "gradle|Gradle|installDist|distTar|:runDist|:build|docker build|Step [0-9]+/[0-9]+") { $state = "gradle" }
     elseif ($text -match "waiting for server API") { $state = "wait-api" }
     elseif ($text -match "Downloading|Extracting|Pulling|Pull complete|Download complete") { $state = "docker-pull" }
     elseif ($text -match "ERROR|failed|no space") {

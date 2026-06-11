@@ -116,7 +116,21 @@ $doServer = -not $WebOnly
 
 $doWeb = -not $ServerOnly
 
-
+$lockRoles = @()
+if ($doServer) { $lockRoles += "server" }
+if ($doWeb) { $lockRoles += "web" }
+foreach ($lockRole in $lockRoles) {
+    $lock = Join-Path $RunDir "qemu-redeploy-$lockRole.lock"
+    if (Test-Path $lock) {
+        $age = ((Get-Date) - (Get-Item $lock).LastWriteTime).TotalMinutes
+        if ($age -lt 25) {
+            Write-Error "qemu-redeploy-$lockRole already running (${age}m). See deploy\qemu\run\status-remediate.log"
+        }
+        Remove-Item $lock -Force -ErrorAction SilentlyContinue
+    }
+    Set-Content -Path $lock -Value ((Get-Date).ToString("o")) -Encoding ascii
+}
+try {
 
 if ($doServer) {
 
@@ -191,5 +205,10 @@ foreach ($u in @("http://127.0.0.1:18080/api/v1/health", "http://127.0.0.1:19088
 
     else { Write-Host "  [--] $u -> $c" -ForegroundColor Yellow }
 
+}
+} finally {
+    foreach ($lockRole in $lockRoles) {
+        Remove-Item (Join-Path $RunDir "qemu-redeploy-$lockRole.lock") -Force -ErrorAction SilentlyContinue
+    }
 }
 
