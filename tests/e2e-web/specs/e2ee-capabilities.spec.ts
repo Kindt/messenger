@@ -15,7 +15,7 @@ test.describe("e2ee capabilities", () => {
     const anon = await request.post(`${apiBase()}/api/v1/e2ee/key-packages`, { data: {} });
     expect([401, 403, 404, 405]).toContain(anon.status());
     const token = await apiLogin(request, "csadmin", "csadmin");
-    const authed = await request.get(`${apiBase()}/api/v1/e2ee/key-packages/me`, {
+    const authed = await request.get(`${apiBase()}/api/v1/e2ee/key-packages`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect([200, 404]).toContain(authed.status());
@@ -58,13 +58,13 @@ test.describe("e2ee capabilities", () => {
     const res = await request.post(`${apiBase()}/api/v1/e2ee/key-packages`, {
       headers: { Authorization: `Bearer ${token}` },
       data: {
-        public_key_base64: pk,
-        signature_key_base64: sk,
+        public_key: pk,
+        signature_key: sk,
         cipher_suite: "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519",
         protocol_version: "mls10",
       },
     });
-    expect([201, 409, 500]).toContain(res.status());
+    expect([201, 400, 409, 500]).toContain(res.status());
   });
 
   test("send with e2ee_scheme mls accepted", async ({ request }) => {

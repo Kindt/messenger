@@ -23,6 +23,7 @@ import com.avandocmsg.messenger.api.admin.ui.AdminUiManifest;
 import com.avandocmsg.messenger.api.admin.ui.AdminConsoleRedirectResource;
 import com.avandocmsg.messenger.api.admin.ui.AdminUiResource;
 import com.avandocmsg.messenger.api.blocks.BlocksResource;
+import com.avandocmsg.messenger.api.conference.ChatConferenceResource;
 import com.avandocmsg.messenger.api.conference.ConferenceResource;
 import com.avandocmsg.messenger.api.conference.ConferenceService;
 import com.avandocmsg.messenger.api.export.AdminExportComplianceSeed;
@@ -208,6 +209,7 @@ public class JerseyConfig extends ResourceConfig {
         register(DeviceResource.class);
         register(ExportResource.class);
         register(ConferenceResource.class);
+        register(ChatConferenceResource.class);
         register(MediaCapabilitiesResource.class);
         register(PrometheusMetricsResource.class);
 

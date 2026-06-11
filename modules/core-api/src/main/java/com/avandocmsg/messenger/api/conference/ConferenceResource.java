@@ -17,11 +17,9 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
-import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -74,42 +72,12 @@ public class ConferenceResource {
                 .build());
     }
 
-    @POST
-    @Path("chats/{chatId}/conferences")
-    @Operation(summary = "Создать конференцию в чате")
-    public Response create(@PathParam("chatId") String chatId,
-                           CreateConferenceRequest request,
-                           @Context SecurityContext securityContext) {
-        if (request == null) {
-            request = new CreateConferenceRequest(null, null);
-        }
-        var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var created = conferenceService.create(cid, userId, request);
-        return created.map(c -> Response.status(Response.Status.CREATED).entity(c).build())
-            .orElse(Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.conference.not_member_or_chat")))
-                .build());
-    }
-
     @GET
     @Path("conferences/active")
     @Operation(summary = "Активные конференции", description = "По одной активной конференции на каждый чат, где пользователь — участник")
     public Response listActive(@Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
         return Response.ok(conferenceService.listActiveForUser(userId)).build();
-    }
-
-    @GET
-    @Path("chats/{chatId}/conferences")
-    @Operation(summary = "Список конференций чата")
-    public Response list(@PathParam("chatId") String chatId,
-                         @QueryParam("active_only") @DefaultValue("true") boolean activeOnly,
-                         @Context SecurityContext securityContext) {
-        var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var list = conferenceService.listForChat(cid, userId, activeOnly);
-        return Response.ok(list).build();
     }
 
     @GET

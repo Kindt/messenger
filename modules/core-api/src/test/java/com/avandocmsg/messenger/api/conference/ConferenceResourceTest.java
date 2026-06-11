@@ -60,7 +60,7 @@ class ConferenceResourceTest {
 
     @Test
     void create_invalidChatId_throwsInvalidUuidParameterException() {
-        var resource = new ConferenceResource(null, I18nTestFixtures.messagesEn());
+        var resource = new ChatConferenceResource(null, I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.create("not-a-uuid", new CreateConferenceRequest(null, null), userSecurityContext()));
     }
@@ -74,7 +74,7 @@ class ConferenceResourceTest {
 
     @Test
     void list_invalidChatId_throwsInvalidUuidParameterException() {
-        var resource = new ConferenceResource(null, I18nTestFixtures.messagesEn());
+        var resource = new ChatConferenceResource(null, I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.list("not-a-uuid", true, userSecurityContext()));
     }

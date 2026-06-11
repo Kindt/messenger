@@ -11,6 +11,7 @@ export default defineConfig({
   timeout: 120_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
+  workers: process.env.CI ? undefined : 1,
   retries: process.env.CI ? 1 : 0,
   use: {
     baseURL: webBase,

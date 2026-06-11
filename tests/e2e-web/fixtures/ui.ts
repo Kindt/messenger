@@ -6,7 +6,7 @@ export async function uiLogin(page: Page, username: string, password: string): P
   await page.locator("#u").fill(username);
   await page.locator("#p").fill(password);
   await page.locator("[data-testid=auth-submit]").click();
-  await expect(page.locator("[data-testid=message-composer]")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator("[data-testid=logout]")).toBeVisible({ timeout: 30_000 });
 }
 
 export async function uiOpenChatByTitle(page: Page, title: string): Promise<void> {
