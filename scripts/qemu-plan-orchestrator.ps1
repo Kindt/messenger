@@ -22,6 +22,7 @@ Stop: Ctrl+C or .\scripts\stop-qemu-plan-orchestrator.ps1
 $Root = Split-Path -Parent $PSScriptRoot
 $RunDir = Join-Path $Root "deploy\qemu\run"
 . (Join-Path $Root "deploy\qemu\lib\Start-KorusQemuGuestRedeploy.ps1")
+. (Join-Path $Root "deploy\qemu\lib\Invoke-KorusPlanFailureAnalysis.ps1")
 $StatePath = Join-Path $RunDir "plan-orchestrator.json"
 $LogPath = Join-Path $RunDir "plan-orchestrator.log"
 $PidPath = Join-Path $RunDir "plan-orchestrator.pid"
@@ -46,6 +47,11 @@ function Get-PlanState {
         smokeRunning      = $false
         playwrightRunning = $false
         reportRunning     = $false
+        failureSource     = ''
+        lastFailureFingerprint = ''
+        failureRepeatCount   = 0
+        pendingRemediation   = ''
+        blocked              = $false
     }
     if (-not (Test-Path $StatePath)) { return $def }
     try {
@@ -60,6 +66,11 @@ function Get-PlanState {
             smokeRunning      = [bool]$o.smokeRunning
             playwrightRunning = [bool]$o.playwrightRunning
             reportRunning     = [bool]$o.reportRunning
+            failureSource     = [string]$o.failureSource
+            lastFailureFingerprint = [string]$o.lastFailureFingerprint
+            failureRepeatCount     = [int]$o.failureRepeatCount
+            pendingRemediation     = [string]$o.pendingRemediation
+            blocked                = [bool]$o.blocked
         }
     } catch {
         return $def
@@ -103,7 +114,9 @@ function Invoke-PlanSmoke {
     . (Join-Path $Root "deploy\qemu\lib\Get-KorusLanHostIp.ps1")
     $lan = Write-KorusQemuLanHostInfo -RunDir $RunDir
     Log "phase smoke ExpectWsHost=$lan"
-    & (Join-Path $Root "scripts\smoke-korus-web.ps1") -WebBaseUrl 'http://127.0.0.1:19088' -CheckApi -ExpectWsHost $lan
+    $smokeLog = Join-Path $RunDir "smoke-last.log"
+    & (Join-Path $Root "scripts\smoke-korus-web.ps1") -WebBaseUrl 'http://127.0.0.1:19088' -CheckApi -ExpectWsHost $lan `
+        2>&1 | Tee-Object -FilePath $smokeLog | ForEach-Object { Log "  smoke: $_" }
     return ($LASTEXITCODE -eq 0)
 }
 
@@ -117,19 +130,34 @@ function Get-PlanSmokeFailureKind {
 
 function Invoke-PlanPlaywright {
     Log "phase playwright"
+    $env:KORUS_WEB_URL = 'http://127.0.0.1:19088'
+    $env:PLAYWRIGHT_BASE_URL = $env:KORUS_WEB_URL
+    $env:KORUS_API_URL = 'http://127.0.0.1:18080'
+
+    $pre = Test-KorusPlanPlaywrightPreflight -Root $Root -RunDir $RunDir
+    if (-not $pre.Ok) {
+        Log "playwright preflight FAIL: $($pre.Issues -join '; ')"
+        $analysis = Invoke-KorusPlanFailureAnalysis -Kind playwright -RunDir $RunDir -Root $Root `
+            -LastError ("preflight: " + ($pre.Issues -join "; "))
+        return @{ Ok = $false; SkippedRun = $true; Analysis = $analysis }
+    }
+    Log "playwright preflight OK web=$($pre.WebUrl) api=$($pre.ApiUrl)"
+
     $e2e = Join-Path $Root "tests\e2e-web"
     Push-Location $e2e
     try {
         if (-not (Test-Path node_modules)) {
             npm ci 2>&1 | ForEach-Object { Log "  npm: $_" }
-            if ($LASTEXITCODE -ne 0) { return $false }
+            if ($LASTEXITCODE -ne 0) { return @{ Ok = $false; SkippedRun = $false; Analysis = $null } }
         }
-        $env:KORUS_WEB_URL = 'http://127.0.0.1:19088'
-        $env:PLAYWRIGHT_BASE_URL = $env:KORUS_WEB_URL
-        $env:KORUS_API_URL = 'http://127.0.0.1:18080'
         $pwLog = Join-Path $RunDir "playwright-orchestrator.log"
         npx playwright test 2>&1 | Tee-Object -FilePath $pwLog | ForEach-Object { Log "  pw: $_" }
-        return ($LASTEXITCODE -eq 0)
+        $ok = ($LASTEXITCODE -eq 0)
+        $analysis = $null
+        if (-not $ok) {
+            $analysis = Invoke-KorusPlanFailureAnalysis -Kind playwright -RunDir $RunDir -Root $Root -LastError "exit=$LASTEXITCODE"
+        }
+        return @{ Ok = $ok; SkippedRun = $false; Analysis = $analysis }
     } finally {
         Pop-Location
     }
@@ -139,7 +167,108 @@ function Invoke-PlanGateReport {
     Log "phase gate-report"
     & (Join-Path $Root "scripts\write-runtime-gate-report.ps1") `
         -WebBaseUrl 'http://127.0.0.1:19088' -ApiBaseUrl 'http://127.0.0.1:18080'
-    return ($LASTEXITCODE -eq 0)
+    $ok = ($LASTEXITCODE -eq 0)
+    if (-not $ok) {
+        Invoke-KorusPlanFailureAnalysis -Kind gate_report -RunDir $RunDir -Root $Root -LastError "exit=$LASTEXITCODE" | Out-Null
+    }
+    return $ok
+}
+
+function Register-PlanFailure {
+    param(
+        [hashtable]$State,
+        [string]$Source,
+        [hashtable]$Analysis
+    )
+    $fp = [string]$Analysis.fingerprint
+    if ($fp -eq $State.lastFailureFingerprint) {
+        $State.failureRepeatCount = [int]$State.failureRepeatCount + 1
+    } else {
+        $State.lastFailureFingerprint = $fp
+        $State.failureRepeatCount = 1
+    }
+    $State.failureSource = $Source
+    $State.lastError = [string]$Analysis.summaryRu
+    Log "FAIL-ANALYSIS $Source fp=$fp repeat=$($State.failureRepeatCount) action=$($Analysis.recommendedAction)"
+    Log "  summary: $($Analysis.summaryRu)"
+    foreach ($s in $Analysis.sampleErrors) { Log "  sample: $s" }
+    Emit-PlanChatTick -Phase 'analyze_failure' -SummaryRu $Analysis.summaryRu `
+        -Detail ("action=$($Analysis.recommendedAction) repeat=$($State.failureRepeatCount) fp=$fp")
+    return $State
+}
+
+function Resolve-PlanFailureNextPhase {
+    param(
+        [hashtable]$State,
+        [hashtable]$Analysis
+    )
+    $action = [string]$Analysis.recommendedAction
+    $repeat = [int]$State.failureRepeatCount
+    $codeFix = [bool]$Analysis.codeFixRequired
+
+    if ($codeFix -and $repeat -ge 2) {
+        $State.blocked = $true
+        $State.phase = 'blocked'
+        $State.pendingRemediation = 'fix_tests_in_repo'
+        Log "BLOCKED code fix required (same fp x$repeat)"
+        return $State
+    }
+    if ($repeat -ge 3 -and $action -notin @('wait_stack', 'redeploy_web', 'wait_stack_or_redeploy_server')) {
+        $State.blocked = $true
+        $State.phase = 'blocked'
+        Log "BLOCKED same failure x$repeat without progress"
+        return $State
+    }
+
+    switch ($action) {
+        'ensure_keycloak_dev_users' {
+            if ($State.pendingRemediation -ne 'ensure_keycloak_dev_users') {
+                Invoke-KorusPlanFailureRemediate -Action ensure_keycloak_dev_users -RunDir $RunDir -Root $Root `
+                    -Reason $Analysis.summaryRu | Out-Null
+                $State.pendingRemediation = 'ensure_keycloak_dev_users'
+            }
+            $State.phase = 'remediating_auth'
+        }
+        'redeploy_web' {
+            Invoke-KorusPlanFailureRemediate -Action redeploy_web -RunDir $RunDir -Root $Root -Reason $Analysis.summaryRu | Out-Null
+            $State.pendingRemediation = 'redeploy_web'
+            $State.phase = 'remediating_web'
+        }
+        'wait_stack' {
+            $State.phase = 'waiting_stack'
+            $State.pendingRemediation = ''
+        }
+        'wait_stack_or_redeploy_server' {
+            Invoke-KorusPlanFailureRemediate -Action wait_stack_or_redeploy_server -RunDir $RunDir -Root $Root `
+                -Reason $Analysis.summaryRu | Out-Null
+            $State.phase = 'waiting_stack'
+            $State.pendingRemediation = 'redeploy_server'
+        }
+        'fix_playwright_env' {
+            Invoke-KorusPlanFailureRemediate -Action fix_playwright_env -RunDir $RunDir -Root $Root | Out-Null
+            $State.phase = 'running_playwright'
+            $State.playwrightRunning = $false
+            $State.pendingRemediation = ''
+        }
+        'fix_tests_in_repo' {
+            if ($repeat -lt 2) {
+                $State.phase = 'running_playwright'
+                $State.playwrightRunning = $false
+                $State.pendingRemediation = 'await_code_fix'
+            } else {
+                $State.blocked = $true
+                $State.phase = 'blocked'
+                $State.pendingRemediation = 'fix_tests_in_repo'
+            }
+        }
+        default {
+            $State.phase = 'blocked'
+            $State.blocked = $true
+            $State.pendingRemediation = $action
+        }
+    }
+    Set-PlanState $State
+    return $State
 }
 
 if (-not (Test-Path $RunDir)) { New-Item -ItemType Directory -Path $RunDir -Force | Out-Null }
@@ -182,7 +311,7 @@ while ($true) {
         Emit-PlanChatTick -Phase 'failed' -SummaryRu "Timeout ${MaxWaitMinutes}m stack not ready." -Detail 'Check status-remediate.log bootstrap.'
         exit 1
     }
-    if ((Get-Date) -gt $acceptanceDeadline -and $state.phase -in @('running_smoke', 'running_playwright', 'writing_report', 'remediating_web')) {
+    if ((Get-Date) -gt $acceptanceDeadline -and $state.phase -in @('running_smoke', 'running_playwright', 'writing_report', 'remediating_web', 'remediating_auth', 'analyze_failure')) {
         $state.phase = 'failed'
         $state.lastError = "timeout ${MaxAcceptanceMinutes}m acceptance phase"
         Set-PlanState $state
@@ -241,20 +370,18 @@ while ($true) {
                     Emit-PlanChatTick -Phase 'running_playwright' -SummaryRu 'Smoke passed. Running Playwright.'
                 } else {
                     $failKind = Get-PlanSmokeFailureKind
-                    $state.lastError = "smoke failed ($failKind)"
-                    if ($failKind -eq 'ws_url') {
-                        Log "smoke FAIL wsUrl -> web redeploy, retry smoke"
-                        Write-Output "--- PLAN: smoke FAIL wsUrl, redeploy web ---"
-                        Start-KorusQemuGuestRedeploy -Role web -RunDir $RunDir -Root $Root -Reason 'smoke wsUrl mismatch' | Out-Null
+                    $analysis = Invoke-KorusPlanFailureAnalysis -Kind smoke -RunDir $RunDir -Root $Root -LastError $failKind
+                    $state = Register-PlanFailure -State $state -Source smoke -Analysis $analysis
+                    if ($failKind -eq 'ws_url' -or $analysis.recommendedAction -eq 'redeploy_web') {
+                        Log "smoke FAIL wsUrl -> analyze + web redeploy"
+                        Invoke-KorusPlanFailureRemediate -Action redeploy_web -RunDir $RunDir -Root $Root -Reason 'smoke wsUrl' | Out-Null
                         $state.phase = 'remediating_web'
-                    } elseif ($failKind -eq 'stack_down') {
+                        $state.pendingRemediation = 'redeploy_web'
+                    } elseif ($failKind -eq 'stack_down' -or $analysis.recommendedAction -eq 'wait_stack_or_redeploy_server') {
                         $state.phase = 'waiting_stack'
                         Log "smoke FAIL stack down -> waiting_stack"
-                        Write-Output "--- PLAN: smoke FAIL, stack down ---"
                     } else {
-                        Log "smoke FAIL other -> retry smoke (stack ready)"
-                        Write-Output "--- PLAN: smoke FAIL (stack ready), retry next tick ---"
-                        $state.phase = 'running_smoke'
+                        $state = Resolve-PlanFailureNextPhase -State $state -Analysis $analysis
                     }
                 }
                 Set-PlanState $state
@@ -276,22 +403,42 @@ while ($true) {
                 }
             }
         }
+        'remediating_auth' {
+            $pre = Test-KorusPlanPlaywrightPreflight -Root $Root -RunDir $RunDir
+            if ($pre.Ok) {
+                Log "auth remediate OK -> playwright"
+                $state.phase = 'running_playwright'
+                $state.playwrightRunning = $false
+                $state.pendingRemediation = ''
+                $state.failureRepeatCount = 0
+                $state.lastFailureFingerprint = ''
+                Set-PlanState $state
+            } else {
+                Write-Output "--- PLAN: waiting auth remediate (csadmin preflight still failing) ---"
+            }
+        }
         'running_playwright' {
             if (-not $state.playwrightRunning) {
                 $state.playwrightRunning = $true
                 Set-PlanState $state
-                $ok = Invoke-PlanPlaywright
-                $state.playwrightOk = $ok
+                $result = Invoke-PlanPlaywright
+                $state.playwrightOk = [bool]$result.Ok
                 $state.playwrightRunning = $false
-                if ($ok) {
+                if ($result.Ok) {
                     $state.phase = 'writing_report'
                     $state.lastError = ''
+                    $state.blocked = $false
+                    $state.failureRepeatCount = 0
+                    $state.lastFailureFingerprint = ''
                     Log "playwright OK"
                 } else {
-                    $state.lastError = 'playwright failed'
-                    $state.phase = 'failed'
-                    Log "playwright FAIL"
-                    Emit-PlanChatTick -Phase 'failed' -SummaryRu 'Playwright failed. See playwright-orchestrator.log'
+                    $analysis = $result.Analysis
+                    if (-not $analysis) {
+                        $analysis = Invoke-KorusPlanFailureAnalysis -Kind playwright -RunDir $RunDir -Root $Root `
+                            -LastError "playwright failed"
+                    }
+                    $state = Register-PlanFailure -State $state -Source playwright -Analysis $analysis
+                    $state = Resolve-PlanFailureNextPhase -State $state -Analysis $analysis
                 }
                 Set-PlanState $state
             }
@@ -306,12 +453,14 @@ while ($true) {
             if ($ok) {
                 $state.phase = 'completed'
                 $state.lastError = ''
+                $state.blocked = $false
                 Log "COMPLETED"
                 Write-Output "--- PLAN: COMPLETED ---"
                 Emit-PlanChatTick -Phase 'completed' -SummaryRu 'Plan done: stack smoke Playwright runtime-gate-report.'
             } else {
-                $state.lastError = 'gate report failed'
-                $state.phase = 'failed'
+                $analysis = Invoke-KorusPlanFailureAnalysis -Kind gate_report -RunDir $RunDir -Root $Root -LastError 'gate report failed'
+                $state = Register-PlanFailure -State $state -Source gate_report -Analysis $analysis
+                $state = Resolve-PlanFailureNextPhase -State $state -Analysis $analysis
                 Log "gate report FAIL"
             }
             Set-PlanState $state
@@ -321,23 +470,27 @@ while ($true) {
             Emit-PlanChatTick -Phase 'completed' -SummaryRu 'Plan already completed successfully.'
             exit 0
         }
-        'failed' {
-            if (Test-KorusStackReady -Snap @{ stackReady = [bool]$snap.stackReady }) {
-                Emit-PlanChatTick -Phase 'failed' -SummaryRu "Plan failed: $($state.lastError). Stack ready, resume acceptance."
-                if ($state.lastError -match 'smoke|wsUrl|ws_url') {
-                    $state.phase = 'running_smoke'
-                } elseif ($state.lastError -match 'playwright') {
-                    $state.phase = 'running_playwright'
-                } else {
-                    $state.phase = 'writing_report'
-                }
-                $state.smokeRunning = $false
-                $state.playwrightRunning = $false
-                $state.reportRunning = $false
-            } else {
-                Emit-PlanChatTick -Phase 'failed' -SummaryRu "Plan failed: $($state.lastError). Auto-remediate continues."
-                $state.phase = 'waiting_stack'
+        'blocked' {
+            $analysisPath = Get-KorusPlanFailureAnalysisPath -RunDir $RunDir
+            $detail = $state.lastError
+            if (Test-Path $analysisPath) {
+                try {
+                    $a = Get-Content $analysisPath -Raw | ConvertFrom-Json
+                    $detail = [string]$a.summaryRu
+                } catch { }
             }
+            Emit-PlanChatTick -Phase 'blocked' -SummaryRu "Blocked: $detail" `
+                -Detail "Fix required (pending=$($state.pendingRemediation)). See plan-failure-analysis.json. No blind retry."
+            Write-Output "--- PLAN BLOCKED: $detail ---"
+        }
+        'analyze_failure' {
+            Write-Output "--- PLAN: analyze_failure (should transition on next action tick) ---"
+        }
+        'failed' {
+            # Legacy: route to analyze instead of blind retry
+            Log "legacy failed phase -> blocked/analyze"
+            $state.phase = 'blocked'
+            $state.blocked = $true
             Set-PlanState $state
         }
     }

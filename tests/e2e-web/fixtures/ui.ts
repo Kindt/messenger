@@ -17,7 +17,9 @@ export async function uiSendMessage(page: Page, text: string): Promise<void> {
   const composer = page.locator("[data-testid=message-composer]");
   await composer.fill(text);
   await composer.press("Enter");
-  await expect(page.getByText(text)).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator(".msg-body").getByText(text, { exact: true }).first()).toBeVisible({
+    timeout: 20_000,
+  });
 }
 
 export const composer = (page: Page) => page.locator("[data-testid=message-composer]");
