@@ -246,10 +246,9 @@ function Test-KorusBootstrapNoiseError {
 
     if ($LoadingState.Loading) { return $true }
 
-    if ($BootstrapText -match 'curl: \(22\).*404' -and $BootstrapText -match '8080|health|api/v1') {
-
-        return $true
-
+    if ($BootstrapText -match 'curl: \(22\).*404') {
+        if ($BootstrapText -match 'korus-docker-image-load|docker-base-images|18890|:18890') { return $true }
+        if ($BootstrapText -match '8080|health|api/v1') { return $true }
     }
 
     return $false

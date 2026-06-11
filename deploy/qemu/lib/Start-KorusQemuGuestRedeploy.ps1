@@ -12,7 +12,7 @@ function Start-KorusQemuGuestRedeploy {
     $lock = Join-Path $RunDir "qemu-redeploy-$Role.lock"
     if (Test-Path $lock) {
         $age = ((Get-Date) - (Get-Item $lock).LastWriteTime).TotalMinutes
-        if ($age -lt 25) { return @{ Started = $false; Summary = "redeploy-$Role already running (${age}m)" } }
+        if ($age -lt 45) { return @{ Started = $false; Summary = "redeploy-$Role already running (${age}m)" } }
         Remove-Item $lock -Force -ErrorAction SilentlyContinue
     }
 

@@ -166,12 +166,23 @@ fi
     }
 
     function Test-RestartInProgress {
-        # Lock file only вЂ” scanning Win32_Process blocks the minute loop for minutes on Windows.
+        # Lock file only — scanning Win32_Process blocks the minute loop for minutes on Windows.
         $lock = Join-Path $RunDir "qemu-auto-restart.lock"
         if (-not (Test-Path $lock)) { return $false }
         $age = ((Get-Date) - (Get-Item $lock).LastWriteTime).TotalMinutes
         if ($age -lt 20) { return $true }
         Remove-Item $lock -Force -ErrorAction SilentlyContinue
+        return $false
+    }
+
+    function Test-KorusRedeployLockActive {
+        param([int]$MaxAgeMin = 45)
+        foreach ($role in @("server", "web")) {
+            $lock = Join-Path $RunDir "qemu-redeploy-$role.lock"
+            if (-not (Test-Path $lock)) { continue }
+            $age = ((Get-Date) - (Get-Item $lock).LastWriteTime).TotalMinutes
+            if ($age -lt $MaxAgeMin) { return $true }
+        }
         return $false
     }
 
@@ -355,8 +366,10 @@ fi
         return @{ Actions = $actions; Summary = ($actions -join "; ") }
     }
 
+    $redeployActive = Test-KorusRedeployLockActive
+
     $pullStuck = ($Activity -eq "docker pull") -or ($BootstrapStates -contains "docker-pull") -or ($loadingState.Kind -eq 'docker-pull')
-    if ($pullStuck -and $korusQemuUp -and -not $loadingState.Loading) {
+    if ($pullStuck -and $korusQemuUp -and -not $loadingState.Loading -and -not $redeployActive) {
         $fp = Get-PullFingerprintFromText -Text $ServerBootstrapText
         if ($fp) {
             if ($state.pullFingerprint -ne $fp) {
@@ -397,6 +410,10 @@ fi
     $sshServerUp = Test-NetConnection -ComputerName 127.0.0.1 -Port 12221 -WarningAction SilentlyContinue -ErrorAction SilentlyContinue |
         ForEach-Object { [bool]$_.TcpTestSucceeded }
     if ($korusQemuUp -and $coreDown -and $sshServerUp -and -not $loadingState.Loading -and ($bootstrapErr -or $Health.Web)) {
+        if ($redeployActive) {
+            $actions.Add("redeploy lock active (skip restart/redeploy)") | Out-Null
+            Write-RemLog "SKIP remediate: qemu-redeploy lock active"
+        } else {
         $errFp = ""
         if ($ServerBootstrapText) {
             $errLines = @($ServerBootstrapText -split "`n" | Where-Object {
@@ -425,6 +442,7 @@ fi
         }
         elseif ($bootstrapErr -or $coreDown) {
             $actions.Add("server stack down ${errMin}m (redeploy at 3m, VM restart at 12m)") | Out-Null
+        }
         }
     }
 

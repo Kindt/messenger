@@ -123,7 +123,7 @@ foreach ($lockRole in $lockRoles) {
     $lock = Join-Path $RunDir "qemu-redeploy-$lockRole.lock"
     if (Test-Path $lock) {
         $age = ((Get-Date) - (Get-Item $lock).LastWriteTime).TotalMinutes
-        if ($age -lt 25) {
+        if ($age -lt 45) {
             Write-Error "qemu-redeploy-$lockRole already running (${age}m). See deploy\qemu\run\status-remediate.log"
         }
         Remove-Item $lock -Force -ErrorAction SilentlyContinue
