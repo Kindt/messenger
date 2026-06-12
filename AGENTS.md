@@ -388,7 +388,8 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 - **wsUrl mismatch**: web client embeds LAN IP; при смене IP хоста — `qemu-redeploy -WebOnly` или auto-remediate; smoke с `-ExpectWsHost` падает до fix.
 - **Repo HTTP** (`repo.tgz` на `:18890`) — обрыв во время redeploy рвёт bootstrap; не redeploy пока cloud-init не завершился.
 - Serial/bootstrap логи: guest **`/var/log/korus-bootstrap.log`**, host **`deploy/qemu/run/*-serial.log`**.
-- **Redeploy-цикл агента:** monitor → diagnose → fix → `qemu-redeploy-monitored.ps1` → **commit**; stale lock при мёртвом stack; VM-death в wait-loop — не ждать HTTP вслепую (правило `qemu-redeploy-monitor.mdc`).
+- **Redeploy-цикл агента:** monitor → diagnose → fix → `qemu-redeploy-monitored.ps1` → **commit**; stale lock при мёртвом stack; VM-death в wait-loop — не ждать HTTP вслепую; `golden-path.no-auto-restart` на время monitored run; SSH settle 90s после `qemu-up` (правило `qemu-redeploy-monitor.mdc`).
+- **VM падают ~10 мин в server redeploy** (WHPX/host load): цикл retry через monitored script; при повторе — `KORUS_QEMU_FORCE_TCG=1` или проверка RAM (~13 ГБ).
 
 ### Playwright / US9
 

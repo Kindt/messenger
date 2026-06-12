@@ -24,6 +24,8 @@ When bringing up or refreshing the Korus QEMU stack (server API `:18080`, web UI
    - False `[OK] web` without expected assets → redeploy web or enable hotswap
 3. **Fix** — minimal diff in scripts/lib; no host Docker
 4. **Restart** — `.\scripts\qemu-redeploy-monitored.ps1` (preferred) or `qemu-up -KeepDisks` then `qemu-redeploy.ps1 -ServerOnly` / `-WebOnly`
+   - Script sets `golden-path.no-auto-restart` (blocks `qemu-auto-restart` from minute-status)
+   - After fresh `qemu-up`: wait SSH 12221/12222 + 90s settle before redeploy
 5. **Commit** — after each fix+restart cycle that changes repo files (user-requested pattern); message: what broke and what fixed
 
 ## Preferred entrypoints

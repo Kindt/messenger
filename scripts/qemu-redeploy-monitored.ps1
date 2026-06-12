@@ -26,9 +26,13 @@ Logs: deploy\qemu\run\redeploy-monitored.log
 $Root = Split-Path -Parent $PSScriptRoot
 $RunDir = Join-Path $Root "deploy\qemu\run"
 $LogPath = Join-Path $RunDir "redeploy-monitored.log"
+$GoldenLock = Join-Path $RunDir "golden-path.no-auto-restart"
 $Lib = Join-Path $Root "deploy\qemu\lib"
 
 . (Join-Path $Lib "Test-KorusQemuProcess.ps1")
+
+Set-Content -Path $GoldenLock -Value ((Get-Date).ToString("o")) -Encoding ascii
+Write-Host "golden-path lock: skip auto-restart during monitored redeploy" -ForegroundColor DarkGray
 
 function Write-MonLog {
     param([string]$Message, [string]$Color = "DarkGray")
@@ -62,19 +66,52 @@ function Test-KorusHostUiReady {
     } catch { return $false }
 }
 
-function Ensure-KorusStackUp {
-    if (Test-KorusQemuStackRunning -RunDir $RunDir) { return }
-    Write-MonLog "no Korus QEMU VMs; starting qemu-up -KeepDisks" "Yellow"
-    & (Join-Path $Root "scripts\qemu-up.ps1") -KeepDisks
-    $deadline = (Get-Date).AddMinutes(8)
+function Test-KorusSshReady {
+    foreach ($port in @(12221, 12222)) {
+        $r = Test-NetConnection -ComputerName 127.0.0.1 -Port $port -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+        if (-not $r.TcpTestSucceeded) { return $false }
+    }
+    return $true
+}
+
+function Wait-KorusBootstrapReady {
+    $deadline = (Get-Date).AddMinutes(15)
     while ((Get-Date) -lt $deadline) {
-        Start-Sleep -Seconds 15
-        if (Test-KorusQemuStackRunning -RunDir $RunDir) {
-            Write-MonLog "QEMU stack running" "Green"
+        if (-not (Test-KorusQemuStackRunning -RunDir $RunDir)) {
+            throw "VM died during bootstrap SSH wait"
+        }
+        if (Test-KorusSshReady) {
+            Write-MonLog "SSH 12221/12222 ready; settling 90s before redeploy" "Green"
+            Start-Sleep -Seconds 90
+            if (-not (Test-KorusQemuStackRunning -RunDir $RunDir)) {
+                throw "VM died during post-SSH settle"
+            }
             return
         }
+        Start-Sleep -Seconds 15
     }
-    throw "QEMU stack did not start within 8m"
+    throw "guest SSH not ready within 15m (cloud-init?)"
+}
+
+function Ensure-KorusStackUp {
+    $started = $false
+    if (-not (Test-KorusQemuStackRunning -RunDir $RunDir)) {
+        Write-MonLog "no Korus QEMU VMs; starting qemu-up -KeepDisks" "Yellow"
+        & (Join-Path $Root "scripts\qemu-up.ps1") -KeepDisks
+        $started = $true
+        $deadline = (Get-Date).AddMinutes(8)
+        while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 15
+            if (Test-KorusQemuStackRunning -RunDir $RunDir) { break }
+        }
+        if (-not (Test-KorusQemuStackRunning -RunDir $RunDir)) {
+            throw "QEMU stack did not start within 8m"
+        }
+        Write-MonLog "QEMU stack running" "Green"
+    }
+    if ($started -or -not (Test-KorusSshReady)) {
+        Wait-KorusBootstrapReady
+    }
 }
 
 function Invoke-KorusRedeployStep {
@@ -135,6 +172,7 @@ while ($cycle -lt $MaxCycles) {
         }
 
         Write-MonLog "=== monitored redeploy SUCCESS ===" "Green"
+        Remove-Item $GoldenLock -Force -ErrorAction SilentlyContinue
         exit 0
     } catch {
         Write-MonLog "cycle $cycle failed: $($_.Exception.Message)" "Red"
@@ -143,8 +181,10 @@ while ($cycle -lt $MaxCycles) {
         }
         if ($cycle -ge $MaxCycles) {
             Write-MonLog "max cycles reached; see $LogPath and deploy\qemu\run\*-serial.log" "Red"
+            Remove-Item $GoldenLock -Force -ErrorAction SilentlyContinue
             throw
         }
         Start-Sleep -Seconds 10
     }
 }
+Remove-Item $GoldenLock -Force -ErrorAction SilentlyContinue
