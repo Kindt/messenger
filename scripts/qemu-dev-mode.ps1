@@ -7,6 +7,7 @@ param(
     [switch]$EnableHotswap,
     [ValidateSet("server", "web", "both")]
     [string]$Target = "server",
+    [int]$MaxCycles = 5,
     [switch]$Help
 )
 
@@ -95,11 +96,12 @@ switch ($Mode) {
         exit $LASTEXITCODE
     }
     "monitored" {
-        $mArgs = @("-Target", $Target)
-        if ($EnableHotswap) { $mArgs += "-EnableHotswap" }
-        if ($Force) { $mArgs += "-Force" }
-        if ($Rebuild) { $mArgs += "-Rebuild" }
-        & (Join-Path $Root "scripts\qemu-redeploy-monitored.ps1") @mArgs
+        $monitored = Join-Path $Root "scripts\qemu-redeploy-monitored.ps1"
+        $mParams = @{ Target = $Target; MaxCycles = $MaxCycles }
+        if ($EnableHotswap) { $mParams.EnableHotswap = $true }
+        if ($Force) { $mParams.Force = $true }
+        if ($Rebuild) { $mParams.Rebuild = $true }
+        & $monitored @mParams
         exit $LASTEXITCODE
     }
 }
