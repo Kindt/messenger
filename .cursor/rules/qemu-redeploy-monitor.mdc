@@ -1,0 +1,43 @@
+---
+description: QEMU redeploy monitor-fix-restart loop with commit per cycle
+globs:
+  - scripts/qemu*.ps1
+  - deploy/qemu/**
+  - AGENTS.md
+---
+
+# QEMU redeploy: monitor → fix → restart → commit
+
+When bringing up or refreshing the Korus QEMU stack (server API `:18080`, web UI `:19088`):
+
+## Cycle (repeat until green or blocked)
+
+1. **Monitor** — before and during every redeploy:
+   - `Test-KorusQemuStackRunning` (VM PIDs alive)
+   - `http://127.0.0.1:18080/api/v1/health` and `/ready`
+   - `http://127.0.0.1:19088/`
+   - `deploy/qemu/run/*-serial.log`, `redeploy-monitored.log`, guest `/var/log/korus-bootstrap.log` (via plink)
+2. **Diagnose** on error or hang (>20 min no progress, VM died, plink abort, stale lock):
+   - Stale `qemu-redeploy-*.lock` when stack down or age ≥45m → remove
+   - VM died mid-wait → `qemu-up -KeepDisks`, do not blind-wait HTTP
+   - `Software caused connection abort` → retry plink (`Update-KorusGuestRepo`); if VM dead, restart VMs first
+   - False `[OK] web` without expected assets → redeploy web or enable hotswap
+3. **Fix** — minimal diff in scripts/lib; no host Docker
+4. **Restart** — `.\scripts\qemu-redeploy-monitored.ps1` (preferred) or `qemu-up -KeepDisks` then `qemu-redeploy.ps1 -ServerOnly` / `-WebOnly`
+5. **Commit** — after each fix+restart cycle that changes repo files (user-requested pattern); message: what broke and what fixed
+
+## Preferred entrypoints
+
+```powershell
+.\scripts\qemu-up.ps1 -KeepDisks
+.\scripts\qemu-redeploy-monitored.ps1 -Target server    # API up (~20-25 min)
+.\scripts\qemu-redeploy-monitored.ps1 -Target web       # UI up
+.\scripts\qemu-redeploy-monitored.ps1 -Target both -EnableHotswap
+```
+
+## Constraints
+
+- **Never** `qemu-down` without user request
+- **Never** kill non-Korus `qemu-system-x86_64`
+- Runtime only in QEMU guests (see `qemu-host-isolation.mdc`)
+- Report status in Russian: VM alive?, API code, UI code, last log line, next action

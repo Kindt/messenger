@@ -98,7 +98,7 @@ korus_messenger/
 | `modules/web-client/.../webui/` | UI: `app.js`, locales, E2EE WASM hooks |
 | `deploy/qemu/run/` | runtime-артефакты: логи, `inner-tier-status.json`, orchestrator state |
 | `specs/00N-*` | feature specs (001 review, 002 parity, 003 deploy, 004 closure) |
-| `.cursor/rules/` | правила агента (QEMU isolation, speckit plan, chat-watch) |
+| `.cursor/rules/` | правила агента (QEMU isolation, redeploy-monitor, speckit plan, chat-watch) |
 
 ### Gradle-модули
 
@@ -366,7 +366,7 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 | Область | Предпочтение |
 |---------|--------------|
 | **Язык** | Ответы пользователю — **русский**; идентификаторы/код/логи — как в репозитории |
-| **Коммиты** | Только по явной просьбе; не amend/push без запроса |
+| **Коммиты** | По умолчанию — только по явной просьбе; **QEMU redeploy-цикл** — коммит после каждого fix+restart (см. `qemu-redeploy-monitor.mdc`) |
 | **Scope** | Минимальный diff; не трогать unrelated code |
 | **Runtime Windows** | **QEMU only** — не Docker/Ansible на хосте ([qemu-host-isolation](.cursor/rules/qemu-host-isolation.mdc)) |
 | **Acceptance** | Inner tier (`playwright-dev-loop -Tier …`) **до** full orchestrator |
@@ -388,6 +388,7 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 - **wsUrl mismatch**: web client embeds LAN IP; при смене IP хоста — `qemu-redeploy -WebOnly` или auto-remediate; smoke с `-ExpectWsHost` падает до fix.
 - **Repo HTTP** (`repo.tgz` на `:18890`) — обрыв во время redeploy рвёт bootstrap; не redeploy пока cloud-init не завершился.
 - Serial/bootstrap логи: guest **`/var/log/korus-bootstrap.log`**, host **`deploy/qemu/run/*-serial.log`**.
+- **Redeploy-цикл агента:** monitor → diagnose → fix → `qemu-redeploy-monitored.ps1` → **commit**; stale lock при мёртвом stack; VM-death в wait-loop — не ждать HTTP вслепую (правило `qemu-redeploy-monitor.mdc`).
 
 ### Playwright / US9
 

@@ -124,9 +124,11 @@ foreach ($lockRole in $lockRoles) {
     $lock = Join-Path $RunDir "qemu-redeploy-$lockRole.lock"
     if (Test-Path $lock) {
         $age = ((Get-Date) - (Get-Item $lock).LastWriteTime).TotalMinutes
-        if ($age -lt 45) {
+        $stackUp = Test-KorusQemuStackRunning -RunDir $RunDir
+        if ($age -lt 45 -and $stackUp) {
             Write-Error "qemu-redeploy-$lockRole already running (${age}m). See deploy\qemu\run\status-remediate.log"
         }
+        Write-Host "Removing stale qemu-redeploy-$lockRole lock (age $([math]::Round($age,1))m stackUp=$stackUp)" -ForegroundColor Yellow
         Remove-Item $lock -Force -ErrorAction SilentlyContinue
     }
     Set-Content -Path $lock -Value ((Get-Date).ToString("o")) -Encoding ascii
@@ -165,6 +167,9 @@ echo redeploy-nohup-started
     $ok = $false
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Seconds 20
+        if (-not (Test-KorusQemuStackRunning -RunDir $RunDir)) {
+            throw "QEMU VM(s) died during server redeploy wait; restart: .\scripts\qemu-up.ps1 -KeepDisks"
+        }
         try {
             $code = curl.exe -sS -m 8 -o NUL -w "%{http_code}" "http://127.0.0.1:18080/api/v1/health/ready" 2>$null
             if ($code -match '^2') { $ok = $true; break }
@@ -197,13 +202,38 @@ set -euo pipefail
 export KORUS_BUILD=1 KORUS_REPO_ROOT=/mnt/korus
 sed -i 's/\r$//' /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
 chmod +x /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
-sudo sh /mnt/korus/deploy/qemu/vm-bootstrap/korus-guest-deps.sh
-sudo sh /mnt/korus/deploy/qemu/vm-bootstrap/korus-console-setup.sh web
-sudo env KORUS_BUILD=1 KORUS_REPO_ROOT=/mnt/korus KORUS_TRUNCATE_BOOTSTRAP_LOG=1 sh /mnt/korus/deploy/qemu/vm-bootstrap/run-ansible-local.sh web
-curl -fsS http://127.0.0.1:9088/health 2>/dev/null || exit 1
+rm -f /var/run/korus-redeploy.done
+nohup sudo bash -c '
+  export KORUS_BUILD=1 KORUS_REPO_ROOT=/mnt/korus
+  sh /mnt/korus/deploy/qemu/vm-bootstrap/korus-guest-deps.sh
+  sh /mnt/korus/deploy/qemu/vm-bootstrap/korus-console-setup.sh web
+  env KORUS_TRUNCATE_BOOTSTRAP_LOG=1 sh /mnt/korus/deploy/qemu/vm-bootstrap/run-ansible-local.sh web
+  touch /var/run/korus-redeploy.done
+' >>/tmp/korus-redeploy-host.log 2>&1 &
+echo redeploy-nohup-started
 '@
 
     Invoke-RemoteSh -HostKey $hk -Port 12222 -Script $webCmd
+
+    Write-Host "Waiting for web redeploy (guest nohup)..." -ForegroundColor Yellow
+    $deadline = (Get-Date).AddMinutes(45)
+    $ok = $false
+    while ((Get-Date) -lt $deadline) {
+        Start-Sleep -Seconds 20
+        if (-not (Test-KorusQemuStackRunning -RunDir $RunDir)) {
+            throw "QEMU VM(s) died during web redeploy wait; restart: .\scripts\qemu-up.ps1 -KeepDisks"
+        }
+        $code = "000"
+        try {
+            $code = curl.exe -sS -m 8 -o NUL -w "%{http_code}" "http://127.0.0.1:19088/" 2>$null
+            if ($code -match '^2') { $ok = $true; break }
+        } catch {}
+        try {
+            $done = Invoke-RemoteSh -HostKey $hk -Port 12222 -Script "test -f /var/run/korus-redeploy.done && echo done || echo pending"
+            if ($done -match 'done' -and $code -match '^2') { $ok = $true; break }
+        } catch {}
+    }
+    if (-not $ok) { throw "web redeploy did not become ready within 45m (see guest /var/log/korus-bootstrap.log)" }
 
     Write-Host "[OK] web stack redeployed (Ansible)" -ForegroundColor Green
 
