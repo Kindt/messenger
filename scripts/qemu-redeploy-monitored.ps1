@@ -3,6 +3,8 @@ param(
     [ValidateSet("server", "web", "both")]
     [string]$Target = "server",
     [switch]$EnableHotswap,
+    [switch]$Rebuild,
+    [switch]$Force,
     [int]$MaxCycles = 5,
     [switch]$Help
 )
@@ -12,10 +14,11 @@ $ErrorActionPreference = "Stop"
 if ($Help) {
     Write-Host @"
 
-Monitored QEMU redeploy: ensure VMs up, redeploy, detect hangs/VM death, retry.
+Monitored QEMU redeploy: ensure VMs up, redeploy (sync default), detect hangs/VM death, retry.
 
   .\scripts\qemu-redeploy-monitored.ps1 -Target server
   .\scripts\qemu-redeploy-monitored.ps1 -Target both -EnableHotswap
+  .\scripts\qemu-redeploy-monitored.ps1 -Target server -Rebuild
 
 Logs: deploy\qemu\run\redeploy-monitored.log
 
@@ -27,18 +30,36 @@ $Root = Split-Path -Parent $PSScriptRoot
 $RunDir = Join-Path $Root "deploy\qemu\run"
 $LogPath = Join-Path $RunDir "redeploy-monitored.log"
 $GoldenLock = Join-Path $RunDir "golden-path.no-auto-restart"
+$TcgStateFile = Join-Path $RunDir "redeploy-monitored-tcg.json"
 $Lib = Join-Path $Root "deploy\qemu\lib"
 
 . (Join-Path $Lib "Test-KorusQemuProcess.ps1")
+. (Join-Path $Lib "Get-KorusQemuHostHealth.ps1")
+. (Join-Path $Lib "Get-KorusGuestBootstrapPhase.ps1")
+. (Join-Path $Lib "Update-KorusGuestRepo.ps1")
 
 Set-Content -Path $GoldenLock -Value ((Get-Date).ToString("o")) -Encoding ascii
 Write-Host "golden-path lock: skip auto-restart during monitored redeploy" -ForegroundColor DarkGray
+
+$script:UseTcgFallback = $false
+if (Test-Path $TcgStateFile) {
+    try {
+        $tcgState = Get-Content $TcgStateFile -Raw | ConvertFrom-Json
+        $script:UseTcgFallback = [bool]$tcgState.useTcg
+    } catch { }
+}
 
 function Write-MonLog {
     param([string]$Message, [string]$Color = "DarkGray")
     $line = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Message"
     Add-Content -Path $LogPath -Value $line -Encoding ascii
     Write-Host $line -ForegroundColor $Color
+}
+
+function Set-MonTcgState {
+    param([bool]$UseTcg)
+    $script:UseTcgFallback = $UseTcg
+    @{ useTcg = $UseTcg; at = (Get-Date).ToString("o") } | ConvertTo-Json | Set-Content -Path $TcgStateFile -Encoding ascii
 }
 
 function Clear-KorusRedeployLocks {
@@ -50,20 +71,6 @@ function Clear-KorusRedeployLocks {
             Write-MonLog "cleared qemu-redeploy-$role.lock (age ${age}m)" "Yellow"
         }
     }
-}
-
-function Test-KorusHostApiReady {
-    try {
-        $code = curl.exe -sS -m 8 -o NUL -w "%{http_code}" "http://127.0.0.1:18080/api/v1/health" 2>$null
-        return ($code -match '^2')
-    } catch { return $false }
-}
-
-function Test-KorusHostUiReady {
-    try {
-        $code = curl.exe -sS -m 8 -o NUL -w "%{http_code}" "http://127.0.0.1:19088/" 2>$null
-        return ($code -match '^2')
-    } catch { return $false }
 }
 
 function Test-KorusSshReady {
@@ -94,9 +101,16 @@ function Wait-KorusBootstrapReady {
 }
 
 function Ensure-KorusStackUp {
+    param([datetime]$CycleStarted)
     $started = $false
     if (-not (Test-KorusQemuStackRunning -RunDir $RunDir)) {
-        Write-MonLog "no Korus QEMU VMs; starting qemu-up -KeepDisks" "Yellow"
+        if ($script:UseTcgFallback) {
+            $env:KORUS_QEMU_FORCE_TCG = '1'
+            Write-MonLog "starting qemu-up -KeepDisks with KORUS_QEMU_FORCE_TCG=1" "Yellow"
+        } else {
+            Remove-Item Env:KORUS_QEMU_FORCE_TCG -ErrorAction SilentlyContinue
+            Write-MonLog "no Korus QEMU VMs; starting qemu-up -KeepDisks" "Yellow"
+        }
         & (Join-Path $Root "scripts\qemu-up.ps1") -KeepDisks
         $started = $true
         $deadline = (Get-Date).AddMinutes(8)
@@ -116,13 +130,16 @@ function Ensure-KorusStackUp {
 
 function Invoke-KorusRedeployStep {
     param([string]$Step)
-    $args = @()
+    $redeployArgs = @()
     switch ($Step) {
-        "server" { $args += "-ServerOnly" }
-        "web"    { $args += "-WebOnly" }
+        "server" { $redeployArgs += "-ServerOnly" }
+        "web"    { $redeployArgs += "-WebOnly" }
     }
-    Write-MonLog "starting qemu-redeploy.ps1 $($args -join ' ')" "Cyan"
-    & (Join-Path $Root "scripts\qemu-redeploy.ps1") @args
+    if ($Rebuild) { $redeployArgs += "-Rebuild" }
+    if ($Force) { $redeployArgs += "-Force" }
+    $mode = if ($Rebuild) { "rebuild" } else { "sync" }
+    Write-MonLog "starting qemu-redeploy.ps1 $($redeployArgs -join ' ') mode=$mode" "Cyan"
+    & (Join-Path $Root "scripts\qemu-redeploy.ps1") @redeployArgs
 }
 
 function Test-TargetReady {
@@ -134,6 +151,17 @@ function Test-TargetReady {
     }
 }
 
+function Write-GuestPhaseSnapshot {
+    param([string]$Step)
+    $serial = if ($Step -eq "server") { "server-serial.log" } else { "web-serial.log" }
+    $port = if ($Step -eq "server") { 12221 } else { 12222 }
+    $hk = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir $serial) -Role $Step -SshPort $port
+    if (-not $hk) { return }
+    $tail = Get-KorusGuestBootstrapTail -HostKey $hk -Port $port
+    $phase = Get-KorusGuestBootstrapPhase -BootstrapText $tail
+    Write-MonLog "guest $Step phase=$phase" "DarkGray"
+}
+
 $steps = @()
 switch ($Target) {
     "server" { $steps = @("server") }
@@ -141,18 +169,20 @@ switch ($Target) {
     "both"   { $steps = @("server", "web") }
 }
 
-Write-MonLog "=== monitored redeploy target=$Target maxCycles=$MaxCycles ===" "Cyan"
+$modeLabel = if ($Rebuild) { "rebuild" } else { "sync" }
+Write-MonLog "=== monitored redeploy target=$Target mode=$modeLabel maxCycles=$MaxCycles ===" "Cyan"
 
 $cycle = 0
 while ($cycle -lt $MaxCycles) {
     $cycle++
+    $cycleStarted = Get-Date
     Write-MonLog "--- cycle $cycle/$MaxCycles ---" "Cyan"
     try {
-        Ensure-KorusStackUp
+        Ensure-KorusStackUp -CycleStarted $cycleStarted
         Clear-KorusRedeployLocks
 
         foreach ($step in $steps) {
-            if (Test-TargetReady -Step $step) {
+            if (-not $Force -and (Test-TargetReady -Step $step)) {
                 Write-MonLog "$step already ready on host; skip redeploy" "Green"
                 continue
             }
@@ -160,6 +190,7 @@ while ($cycle -lt $MaxCycles) {
                 throw "VM died before $step redeploy"
             }
             Invoke-KorusRedeployStep -Step $step
+            Write-GuestPhaseSnapshot -Step $step
             if (-not (Test-TargetReady -Step $step)) {
                 throw "$step redeploy finished but host check failed"
             }
@@ -173,14 +204,21 @@ while ($cycle -lt $MaxCycles) {
 
         Write-MonLog "=== monitored redeploy SUCCESS ===" "Green"
         Remove-Item $GoldenLock -Force -ErrorAction SilentlyContinue
+        Remove-Item $TcgStateFile -Force -ErrorAction SilentlyContinue
         exit 0
     } catch {
         Write-MonLog "cycle $cycle failed: $($_.Exception.Message)" "Red"
-        if (-not (Test-KorusQemuStackRunning -RunDir $RunDir)) {
+        $vmDead = -not (Test-KorusQemuStackRunning -RunDir $RunDir)
+        if ($vmDead) {
+            $elapsedMin = ((Get-Date) - $cycleStarted).TotalMinutes
+            if (-not $script:UseTcgFallback -and $elapsedMin -lt 15) {
+                Set-MonTcgState -UseTcg $true
+                Write-MonLog "VM died <15m; next cycle uses TCG fallback" "Yellow"
+            }
             Write-MonLog "VMs down; will qemu-up on next cycle" "Yellow"
         }
         if ($cycle -ge $MaxCycles) {
-            Write-MonLog "max cycles reached; see $LogPath and deploy\qemu\run\*-serial.log" "Red"
+            Write-MonLog "max cycles reached; see $LogPath" "Red"
             Remove-Item $GoldenLock -Force -ErrorAction SilentlyContinue
             throw
         }

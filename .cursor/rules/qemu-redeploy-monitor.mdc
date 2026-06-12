@@ -10,31 +10,38 @@ globs:
 
 When bringing up or refreshing the Korus QEMU stack (server API `:18080`, web UI `:19088`):
 
+## Decision tree (prefer `qemu-dev-mode.ps1`)
+
+```
+.\scripts\qemu-dev-mode.ps1 -Mode status
+
+ready (API+UI)?     → sync-ui / playwright-dev-loop
+API down, UI up?    → -Mode sync-api   (NOT rebuild)
+both down?          → -Mode warm       → sync-api
+UI static iterate?  → enable-hotswap once → sync-ui
+Dockerfile/Gradle?  → -Mode rebuild-api / rebuild-web (explicit only)
+stop?               → -Mode stop (user request only)
+```
+
+Default redeploy = **sync** (`KORUS_BUILD=0`). Full build only with `-Rebuild` or `rebuild-*` modes.
+
 ## Cycle (repeat until green or blocked)
 
-1. **Monitor** — before and during every redeploy:
-   - `Test-KorusQemuStackRunning` (VM PIDs alive)
-   - `http://127.0.0.1:18080/api/v1/health` and `/ready`
-   - `http://127.0.0.1:19088/`
-   - `deploy/qemu/run/*-serial.log`, `redeploy-monitored.log`, guest `/var/log/korus-bootstrap.log` (via plink)
-2. **Diagnose** on error or hang (>20 min no progress, VM died, plink abort, stale lock):
-   - Stale `qemu-redeploy-*.lock` when stack down or age ≥45m → remove
-   - VM died mid-wait → `qemu-up -KeepDisks`, do not blind-wait HTTP
-   - `Software caused connection abort` → retry plink (`Update-KorusGuestRepo`); if VM dead, restart VMs first
-   - False `[OK] web` without expected assets → redeploy web or enable hotswap
-3. **Fix** — minimal diff in scripts/lib; no host Docker
-4. **Restart** — `.\scripts\qemu-redeploy-monitored.ps1` (preferred) or `qemu-up -KeepDisks` then `qemu-redeploy.ps1 -ServerOnly` / `-WebOnly`
-   - Script sets `golden-path.no-auto-restart` (blocks `qemu-auto-restart` from minute-status)
-   - After fresh `qemu-up`: wait SSH 12221/12222 + 90s settle before redeploy
-5. **Commit** — after each fix+restart cycle that changes repo files (user-requested pattern); message: what broke and what fixed
+1. **Monitor** — `qemu-dev-mode -Mode status`, guest bootstrap phase in redeploy wait-loop
+2. **Diagnose** — VM died / stale lock / gradle stuck >45m (phase log, not blind HTTP)
+3. **Fix** — minimal diff; TCG fallback in monitored after VM death <15m
+4. **Restart** — `qemu-redeploy-monitored.ps1` (sync default) or `qemu-dev-mode -Mode monitored`
+5. **Commit** — after each fix+restart cycle that changes repo files
 
 ## Preferred entrypoints
 
 ```powershell
-.\scripts\qemu-up.ps1 -KeepDisks
-.\scripts\qemu-redeploy-monitored.ps1 -Target server    # API up (~20-25 min)
-.\scripts\qemu-redeploy-monitored.ps1 -Target web       # UI up
+.\scripts\qemu-dev-mode.ps1 -Mode warm
+.\scripts\qemu-dev-mode.ps1 -Mode sync-api
+.\scripts\qemu-dev-mode.ps1 -Mode sync-ui
+.\scripts\qemu-redeploy-monitored.ps1 -Target server
 .\scripts\qemu-redeploy-monitored.ps1 -Target both -EnableHotswap
+.\scripts\qemu-redeploy.ps1 -ServerOnly -Rebuild   # rare, slow
 ```
 
 ## Constraints
@@ -42,4 +49,4 @@ When bringing up or refreshing the Korus QEMU stack (server API `:18080`, web UI
 - **Never** `qemu-down` without user request
 - **Never** kill non-Korus `qemu-system-x86_64`
 - Runtime only in QEMU guests (see `qemu-host-isolation.mdc`)
-- Report status in Russian: VM alive?, API code, UI code, last log line, next action
+- Report status in Russian: VM alive?, API/UI codes, guest phase, next action

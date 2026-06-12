@@ -75,6 +75,15 @@ if ($SyncWebUi) {
     if (-not (Test-Path $syncScript)) {
         Write-Error "missing $syncScript"
     }
+    . (Join-Path $Root "deploy\qemu\lib\Test-KorusWebHotswap.ps1")
+    . (Join-Path $Root "deploy\qemu\lib\Update-KorusGuestRepo.ps1")
+    . (Join-Path $Root "deploy\qemu\lib\Test-KorusQemuProcess.ps1")
+    if (Test-KorusQemuStackRunning -RunDir $RunDir) {
+        $whk = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "web-serial.log") -Role web -SshPort 12222
+        if ($whk -and -not (Test-KorusGuestWebHotswapActive -HostKey $whk)) {
+            Write-Host "[!!] hotswap off — run: .\scripts\qemu-dev-mode.ps1 -Mode enable-hotswap" -ForegroundColor Yellow
+        }
+    }
     Write-Host "SyncWebUi: qemu-web-sync.ps1" -ForegroundColor Cyan
     & $syncScript
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

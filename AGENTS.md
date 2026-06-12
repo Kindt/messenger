@@ -332,9 +332,11 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 | `korus-web` | 192.168.76.20 | 19088 |
 
 ```powershell
-# Headless
-.\scripts\qemu-up.ps1 -KeepDisks
-.\scripts\qemu-stack-wait.ps1
+# Headless (preferred facade)
+.\scripts\qemu-dev-mode.ps1 -Mode warm
+.\scripts\qemu-dev-mode.ps1 -Mode status
+.\scripts\qemu-dev-mode.ps1 -Mode sync-api    # default sync, not full build
+.\scripts\qemu-dev-mode.ps1 -Mode sync-ui     # after enable-hotswap
 
 # Inner loop
 .\scripts\playwright-dev-loop.ps1 -Tier all-inner
@@ -388,7 +390,7 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 - **wsUrl mismatch**: web client embeds LAN IP; при смене IP хоста — `qemu-redeploy -WebOnly` или auto-remediate; smoke с `-ExpectWsHost` падает до fix.
 - **Repo HTTP** (`repo.tgz` на `:18890`) — обрыв во время redeploy рвёт bootstrap; не redeploy пока cloud-init не завершился.
 - Serial/bootstrap логи: guest **`/var/log/korus-bootstrap.log`**, host **`deploy/qemu/run/*-serial.log`**.
-- **Redeploy-цикл агента:** monitor → diagnose → fix → `qemu-redeploy-monitored.ps1` → **commit**; stale lock при мёртвом stack; VM-death в wait-loop — не ждать HTTP вслепую; `golden-path.no-auto-restart` на время monitored run; SSH settle 90s после `qemu-up` (правило `qemu-redeploy-monitor.mdc`).
+- **Redeploy-цикл агента:** `qemu-dev-mode.ps1 -Mode status` → sync-api / sync-ui (default **без** build); `-Rebuild` только явно; monitor → fix → `qemu-redeploy-monitored.ps1` → **commit**; golden-path lock; guest bootstrap phase в wait-loop (правило `qemu-redeploy-monitor.mdc`, дизайн `docs/plans/2026-06-12-qemu-dev-modes-stabilization-design.md`).
 - **VM падают ~10 мин в server redeploy** (WHPX/host load): цикл retry через monitored script; при повторе — `KORUS_QEMU_FORCE_TCG=1` или проверка RAM (~13 ГБ).
 
 ### Playwright / US9

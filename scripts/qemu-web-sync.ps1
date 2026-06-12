@@ -1,4 +1,4 @@
-# Fast webui sync to QEMU web guest (~5-15s). Requires hotswap or overlay path on guest.
+# Fast webui sync to QEMU web guest (~5-15s). Requires hotswap for instant browser refresh.
 param(
     [switch]$SkipTailwind,
     [switch]$Help
@@ -12,7 +12,7 @@ Usage: .\scripts\qemu-web-sync.ps1 [-SkipTailwind]
 Packs modules/web-client/.../webui -> deploy/qemu/run/webui.tgz (~KiB, not 180 MiB repo.tgz).
 Guest extracts to /mnt/korus/.../webui. With hotswap enabled, refresh browser (no container restart).
 
-Prereq: qemu-up, web guest SSH; hotswap enabled via .\scripts\qemu-web-hotswap.ps1 -Enable
+Prereq: qemu-up, web guest SSH; hotswap: .\scripts\qemu-web-hotswap.ps1 -Enable
 "@
     exit 0
 }
@@ -25,13 +25,20 @@ $Plink = "${env:ProgramFiles}\PuTTY\plink.exe"
 . (Join-Path $QemuRoot "lib\Test-KorusQemuProcess.ps1")
 . (Join-Path $QemuRoot "lib\Sync-KorusGuestWebui.ps1")
 . (Join-Path $QemuRoot "lib\Update-KorusGuestRepo.ps1")
+. (Join-Path $QemuRoot "lib\Test-KorusWebHotswap.ps1")
 
 if (-not (Test-KorusQemuStackRunning -RunDir $RunDir)) {
-    Write-Error "QEMU not running. Start: .\scripts\qemu-up.ps1 -KeepDisks"
+    Write-Error "QEMU not running. Start: .\scripts\qemu-dev-mode.ps1 -Mode warm"
 }
 
 $hk = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "web-serial.log") -Role web -SshPort 12222
 if (-not $hk) { throw "web SSH host key not ready (see deploy/qemu/run/web-serial.log)" }
+
+$hotswap = Test-KorusGuestWebHotswapActive -HostKey $hk
+if (-not $hotswap) {
+    Write-Host "[!!] hotswap not active — sync updates guest files but browser may need redeploy" -ForegroundColor Yellow
+    Write-Host "     Enable: .\scripts\qemu-dev-mode.ps1 -Mode enable-hotswap" -ForegroundColor Yellow
+}
 
 Write-Host "=== webui sync $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" -ForegroundColor Cyan
 $sw = [System.Diagnostics.Stopwatch]::StartNew()

@@ -74,9 +74,11 @@ Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_
 .\scripts\qemu-dev-up.ps1
 # или headless: .\scripts\qemu-up.ps1
 
-# 2) Обновить код в гостях без сброса дисков
-.\scripts\qemu-redeploy.ps1
-.\scripts\qemu-redeploy.ps1 -WebOnly
+# 2) Обновить код в гостях без сброса дисков (sync = без docker build)
+.\scripts\qemu-dev-mode.ps1 -Mode status
+.\scripts\qemu-dev-mode.ps1 -Mode sync-api      # backend ~3–8 мин
+.\scripts\qemu-dev-mode.ps1 -Mode sync-web      # web Tomcat ~3–8 мин
+.\scripts\qemu-redeploy.ps1 -ServerOnly -Rebuild   # только Dockerfile/Gradle (20–90 мин)
 
 ### Быстрый цикл UI (hot-swap, ~10 с вместо ~15–25 мин redeploy)
 
@@ -97,10 +99,14 @@ Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_
 
 | Сценарий | Команда | Время |
 |----------|---------|-------|
-| API / backend | `qemu-redeploy.ps1 -ServerOnly` | ~20–25 мин |
-| Первый web / Java web-client | `qemu-redeploy.ps1 -WebOnly` | ~15–25 мин |
-| UI JS/CSS/Tailwind | `qemu-web-sync.ps1` | ~5–15 с |
-| Включить hotswap | `qemu-web-hotswap.ps1 -Enable` | ~1–3 мин |
+| Статус / фаза guest | `qemu-dev-mode.ps1 -Mode status` | сек |
+| Warm boot | `qemu-dev-mode.ps1 -Mode warm` | 2–8 мин |
+| API / backend (sync) | `qemu-dev-mode.ps1 -Mode sync-api` | ~3–8 мин |
+| API full rebuild | `qemu-dev-mode.ps1 -Mode rebuild-api` | 20–90 мин |
+| Web sync | `qemu-dev-mode.ps1 -Mode sync-web` | ~3–8 мин |
+| UI JS/CSS/Tailwind | `qemu-dev-mode.ps1 -Mode sync-ui` | ~5–15 с |
+| Включить hotswap | `qemu-web-hotswap.ps1 -Enable` или `-Status` | ~1–3 мин |
+| Остановка | `qemu-dev-mode.ps1 -Mode stop` | сек |
 
 # 3) Дождаться стека (опционально)
 .\scripts\qemu-stack-wait.ps1

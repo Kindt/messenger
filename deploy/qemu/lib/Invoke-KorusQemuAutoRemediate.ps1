@@ -246,8 +246,12 @@ fi
         }
         $goldenLock = Join-Path $RunDir "golden-path.no-auto-restart"
         if (Test-Path $goldenLock) {
-            Write-RemLog "SKIP restart golden-path lock active ($Trigger)"
-            return @{ Started = $false; Summary = "golden-path lock: skip restart" }
+            $gAge = ((Get-Date) - (Get-Item $goldenLock).LastWriteTime).TotalMinutes
+            if ($gAge -lt 120) {
+                Write-RemLog "SKIP restart golden-path lock active (${gAge}m, $Trigger)"
+                return @{ Started = $false; Summary = "golden-path lock: skip restart" }
+            }
+            Write-RemLog "golden-path lock expired (${gAge}m), restart allowed"
         }
 
         . (Join-Path $Root "deploy\qemu\lib\Invoke-KorusQemuPreRestartAnalysis.ps1")

@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+### 2026-06-12 — QEMU dev modes: sync default, facade, bootstrap phase
+
+- **`qemu-redeploy.ps1`**: default `KORUS_BUILD=0` (sync); `-Rebuild` for full docker build; `-Force` skips ready preflight; guest bootstrap phase in wait-loop.
+- **`scripts/qemu-dev-mode.ps1`**: unified entrypoint (`warm`, `sync-api`, `sync-ui`, `rebuild-*`, `status`, `stop`, `monitored`).
+- **`Get-KorusGuestBootstrapPhase`**, **`Get-KorusQemuDevStatus`**: guest phase + host health for monitoring.
+- **`qemu-redeploy-monitored.ps1`**: sync default, TCG fallback on early VM death, `-Rebuild`/`-Force`.
+- **`qemu-web-hotswap.ps1 -Status`**: hotswap/tailwind diagnostics; sync preflight warns if hotswap off.
+- Auto-remediate: golden-path lock TTL 120m.
+
 ### 2026-06-12 — QEMU webui hot-swap (fast dev loop)
 
 - **`korus-web/docker-compose.hotswap-qemu.yml`**: bind-mount `modules/web-client/.../webui` on web guest.
