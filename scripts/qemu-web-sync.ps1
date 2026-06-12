@@ -36,7 +36,7 @@ if (-not $hk) { throw "web SSH host key not ready (see deploy/qemu/run/web-seria
 
 $hotswap = Test-KorusGuestWebHotswapActive -HostKey $hk
 if (-not $hotswap) {
-    Write-Host "[!!] hotswap not active — sync updates guest files but browser may need redeploy" -ForegroundColor Yellow
+    Write-Host "[!!] hotswap not active - sync updates guest files but browser may need redeploy" -ForegroundColor Yellow
     Write-Host "     Enable: .\scripts\qemu-dev-mode.ps1 -Mode enable-hotswap" -ForegroundColor Yellow
 }
 
@@ -44,4 +44,4 @@ Write-Host "=== webui sync $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" -Foreg
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 Sync-KorusGuestWebui -SshPort 12222 -HostKey $hk -Plink $Plink -SkipTailwind:$SkipTailwind | Out-Null
 $sw.Stop()
-Write-Host "[OK] webui synced in $([math]::Round($sw.Elapsed.TotalSeconds, 1))s — refresh http://127.0.0.1:19088/" -ForegroundColor Green
+Write-Host "[OK] webui synced in $([math]::Round($sw.Elapsed.TotalSeconds, 1))s - refresh http://127.0.0.1:19088/" -ForegroundColor Green

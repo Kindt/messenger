@@ -42,10 +42,10 @@ function Enable-KorusGuestWebHotswap {
     $cmd = @'
 set -euo pipefail
 cd /mnt/korus/korus-web
-test -f .env || { echo "missing korus-web/.env — run qemu-redeploy -WebOnly once first"; exit 1; }
+test -f .env || { echo "missing korus-web/.env - run qemu-redeploy -WebOnly once first"; exit 1; }
 test -f docker-compose.hotswap-qemu.yml || { echo "missing docker-compose.hotswap-qemu.yml"; exit 1; }
-docker compose --env-file .env -f docker-compose.yml down 2>/dev/null || true
-docker compose --env-file .env -f docker-compose.hotswap-qemu.yml up -d --no-build
+sudo docker compose --env-file .env -f docker-compose.yml down 2>/dev/null || true
+sudo docker compose --env-file .env -f docker-compose.hotswap-qemu.yml up -d --no-build
 curl -fsS http://127.0.0.1:9088/health
 echo hotswap-enabled
 '@

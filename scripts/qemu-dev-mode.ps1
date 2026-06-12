@@ -64,27 +64,27 @@ switch ($Mode) {
         exit $LASTEXITCODE
     }
     "sync-api" {
-        $args = @("-ServerOnly")
-        if ($Force) { $args += "-Force" }
-        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @args
+        $redeployArgs = @("-ServerOnly")
+        if ($Force) { $redeployArgs += "-Force" }
+        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @redeployArgs
         exit $LASTEXITCODE
     }
     "sync-web" {
-        $args = @("-WebOnly")
-        if ($Force) { $args += "-Force" }
-        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @args
+        $redeployArgs = @("-WebOnly")
+        if ($Force) { $redeployArgs += "-Force" }
+        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @redeployArgs
         exit $LASTEXITCODE
     }
     "rebuild-api" {
-        $args = @("-ServerOnly", "-Rebuild")
-        if ($Force) { $args += "-Force" }
-        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @args
+        $redeployArgs = @("-ServerOnly", "-Rebuild")
+        if ($Force) { $redeployArgs += "-Force" }
+        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @redeployArgs
         exit $LASTEXITCODE
     }
     "rebuild-web" {
-        $args = @("-WebOnly", "-Rebuild")
-        if ($Force) { $args += "-Force" }
-        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @args
+        $redeployArgs = @("-WebOnly", "-Rebuild")
+        if ($Force) { $redeployArgs += "-Force" }
+        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @redeployArgs
         exit $LASTEXITCODE
     }
     "sync-ui" {

@@ -81,7 +81,7 @@ if ($SyncWebUi) {
     if (Test-KorusQemuStackRunning -RunDir $RunDir) {
         $whk = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "web-serial.log") -Role web -SshPort 12222
         if ($whk -and -not (Test-KorusGuestWebHotswapActive -HostKey $whk)) {
-            Write-Host "[!!] hotswap off — run: .\scripts\qemu-dev-mode.ps1 -Mode enable-hotswap" -ForegroundColor Yellow
+            Write-Host "[!!] hotswap off - run: .\scripts\qemu-dev-mode.ps1 -Mode enable-hotswap" -ForegroundColor Yellow
         }
     }
     Write-Host "SyncWebUi: qemu-web-sync.ps1" -ForegroundColor Cyan

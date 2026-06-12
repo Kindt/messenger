@@ -76,5 +76,5 @@ try {
     Write-Host "Hotswap enable failed. Run sync-web first: .\scripts\qemu-dev-mode.ps1 -Mode sync-web" -ForegroundColor Red
     throw
 }
-Write-Host "[OK] Hotswap enabled — use .\scripts\qemu-web-sync.ps1 for fast UI iterations" -ForegroundColor Green
+Write-Host "[OK] Hotswap enabled - use .\scripts\qemu-web-sync.ps1 for fast UI iterations" -ForegroundColor Green
 Write-Host "  UI: http://127.0.0.1:19088/" -ForegroundColor DarkGray

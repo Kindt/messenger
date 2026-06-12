@@ -10,7 +10,7 @@ function Test-KorusGuestWebHotswapActive {
         $out = Invoke-PlinkShell -Plink $Plink -HostKey $HostKey -Port $SshPort -Script @'
 cd /mnt/korus/korus-web 2>/dev/null || exit 1
 test -f docker-compose.hotswap-qemu.yml || exit 1
-ids=$(docker compose --env-file .env -f docker-compose.hotswap-qemu.yml ps -q 2>/dev/null)
+ids=$(sudo docker compose --env-file .env -f docker-compose.hotswap-qemu.yml ps -q 2>/dev/null)
 test -n "$ids" && echo hotswap-active || echo hotswap-off
 '@
         return ($out -match 'hotswap-active')

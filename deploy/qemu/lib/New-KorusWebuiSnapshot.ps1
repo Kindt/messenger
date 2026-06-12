@@ -13,19 +13,25 @@ function New-KorusWebuiSnapshot {
         if (-not (Test-Path $nodeModules)) {
             Write-Host "  webui-build: npm ci..." -ForegroundColor DarkGray
             Push-Location $buildDir
+            $prevEap = $ErrorActionPreference
             try {
+                $ErrorActionPreference = 'Continue'
                 & $npm ci 2>&1 | Out-Null
                 if ($LASTEXITCODE -ne 0) { throw "npm ci failed in webui-build" }
             } finally {
+                $ErrorActionPreference = $prevEap
                 Pop-Location
             }
         }
         Write-Host "  webui-build: tailwind.css..." -ForegroundColor DarkGray
         Push-Location $buildDir
+        $prevEap = $ErrorActionPreference
         try {
+            $ErrorActionPreference = 'Continue'
             & $npm run build:css 2>&1 | Out-Null
             if ($LASTEXITCODE -ne 0) { throw "npm run build:css failed" }
         } finally {
+            $ErrorActionPreference = $prevEap
             Pop-Location
         }
     }
