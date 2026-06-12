@@ -1,6 +1,6 @@
 # E2EE/MLS — RFC 9420 phase 1 (wire codec)
 
-**Статус:** Phase 1 `completed` (2026-06-09); Phase 2 hybrid `in progress` — server KMLS + client WASM hook per `docs/adr/ADR-e2ee-mls-library.md`
+**Статус:** Phase 1 `completed` (2026-06-09); Phase 2 hybrid `completed` (engineering, 2026-06-12) — prod `MLS_STATUS=active` blocked on security gate in `specs/004-deferred-phase2-closure/quickstart.md` § US7
 **Теги:** `[e2ee]` `[core-api]` `[криптография]` `[web-client]` `[безопасность]`
 
 ---

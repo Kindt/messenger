@@ -8,6 +8,16 @@
 
 ## [Unreleased]
 
+### 2026-06-12 — Spec 004 engineering closure (deferred phase 2 post-backlog)
+
+- **US2/US3 Hex write-path**: User, Organization, File write via application services and ports; saved-chat and public-link ports; legacy cleanup.
+- **US1 Prod TLS scaffold**: `deploy/ansible/inventory/prod/`, vault wiring, CORS, WSS, `tls_smoke` tag; ops stage deploy pending real host.
+- **US4 JFR profiling**: 8 worker `Dockerfile.*.profiling`, compose overlay, `scripts/profiling/profile-docker-jfr.ps1`.
+- **US7 E2EE hybrid MLS**: server KMLS + browser client encrypt in `app.js`; NATS consumer; batch migration; Playwright `e2ee-capabilities.spec.ts`; prod `MLS_STATUS=active` gated on security sign-off.
+- **US9 Fast acceptance**: `playwright-dev-loop.ps1` tier manifest, inner/outer gate, failure analysis; Playwright **26/26** on QEMU (2026-06-12).
+- **US5/US6/US8**: Playwright parity gates, governance docs, QEMU DX hardening.
+- **Docs**: `acceptance-report.md`, `analyze-report.md` (US9), `ops-signoff-log.md`; plans `05`/`06`/`08` synced.
+
 ### 2026-06-09 — Deferred backlog (post-backlog plan)
 
 - **Hotplug governance**: ADR accepted, constitution v1.1 Bounded Deployment Split Exception.

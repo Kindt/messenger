@@ -35,4 +35,4 @@
 
 - US7 gated on product sign-off after spike — documented in spec and plan.
 - US8 marked optional; quickstart documents QEMU prerequisite for US5 full-stack gate.
-- Checklist validated 2026-06-09; ready for `/speckit-plan`.
+- Checklist validated 2026-06-09; engineering closure 2026-06-12 (see [acceptance-report.md](../acceptance-report.md)).

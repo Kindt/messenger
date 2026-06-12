@@ -25,7 +25,34 @@ function Test-Url($url) {
 
 $uiCode = Test-Url "$WebBaseUrl/"
 $apiCode = Test-Url "$ApiBaseUrl/api/v1/health"
-$pwStatus = if ($PlaywrightReportDir -and (Test-Path $PlaywrightReportDir)) { "see $PlaywrightReportDir" } else { "not run" }
+$runDir = Join-Path (Split-Path -Parent $PSScriptRoot) "deploy\qemu\run"
+$pwLog = @(
+    (Join-Path $runDir "playwright-orchestrator.log"),
+    (Join-Path $runDir "playwright-dev-loop.log")
+) | Where-Object { Test-Path $_ } | Select-Object -First 1
+$pwStatus = "not run"
+$pwDetail = ""
+if ($pwLog) {
+    $tail = Get-Content $pwLog -Tail 30 -ErrorAction SilentlyContinue | Out-String
+    if ($tail -match '(\d+)\s+passed') {
+        $pwStatus = "PASS ($($Matches[1]) passed)"
+        if ($tail -match '(\d+)\s+failed') { $pwStatus += ", $($Matches[1]) failed" }
+    } elseif ($tail -match 'OK all inner tiers pass|OK tier') {
+        $pwStatus = "inner tiers green (see inner-tier-status.json)"
+    }
+    $pwDetail = "Log: $($pwLog | Split-Path -Leaf)"
+}
+if ($PlaywrightReportDir -and (Test-Path $PlaywrightReportDir)) {
+    $pwStatus = "see $PlaywrightReportDir"
+}
+$innerPath = Join-Path $runDir "inner-tier-status.json"
+$innerLine = ""
+if (Test-Path $innerPath) {
+    try {
+        $inner = Get-Content $innerPath -Raw | ConvertFrom-Json
+        if ($inner.allInnerPass) { $innerLine = "- Inner tiers: **all pass** ($($inner.at))`n" }
+    } catch { }
+}
 
 $body = @"
 # Runtime Gate Report - Automated snapshot
@@ -41,7 +68,8 @@ $body = @"
 
 ## Playwright
 
-- Report: $pwStatus
+${innerLine}- Status: $pwStatus
+- $pwDetail
 - Command: cd tests/e2e-web; PLAYWRIGHT_BASE_URL=$WebBaseUrl KORUS_API_URL=$ApiBaseUrl npx playwright test
 
 ## Operator sign-off

@@ -85,15 +85,4 @@ Cross-reference: `specs/004-deferred-phase2-closure/` (US1 tasks T020–T026, co
 - [x] T081 Vault + CORS in `korus-server.env.j2`; WSS + optional RTC in `korus-web.env.j2`
 - [x] T082 Role `tls`: certbot renew hook, UFW 80/443 operator notes
 - [x] T083 `korus_smoke` integrates `smoke-tls-redirect.ps1` (`--tags tls_smoke` optional)
-
----
-
-## Phase 9 — Prod TLS rollout (spec 004 US1)
-
-Cross-ref: [specs/004-deferred-phase2-closure/spec.md](../004-deferred-phase2-closure/spec.md)
-
-- [ ] T080 `inventory/prod/` hosts and group_vars (BYO-cert example)
-- [ ] T081 `CORS_ALLOWED_ORIGINS` in korus-server env template
-- [ ] T082 `wss://` in korus-web env when `korus_tls_enabled`
-- [ ] T083 `korus_smoke` optional `tls_smoke` tag → `smoke-tls-redirect.ps1`
-- [ ] T084 Ops/security sign-off documented in spec 004 quickstart
+- [x] T084 Ops/security sign-off documented in spec 004 quickstart (see [quickstart.md](../004-deferred-phase2-closure/quickstart.md) US1/US7)

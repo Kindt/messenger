@@ -1,6 +1,6 @@
 # Ops Sign-Off Log: Spec 004
 
-**Date**: 2026-06-09  
+**Date**: 2026-06-09 (engineering closure 2026-06-12)  
 **Environment**: local dev / QEMU (stage prod gates marked pending)
 
 ## Automated verification (engineering)
@@ -11,15 +11,15 @@
 | E2EE unit | `.\gradlew.bat :modules:core-api:test --tests "*Mls*"` | **PASS** (2026-06-09) | 17 tests |
 | TLS smoke (dev) | `.\scripts\smoke-tls-redirect.ps1 -SkipTls` | **PASS** | HTTP-only path |
 | Hex write unit | `.\gradlew.bat :modules:core-api:test --tests "*ApplicationServiceTest*"` | PASS | User/Org/File |
-| Playwright full-stack | `npx playwright test` @ `http://127.0.0.1:19088` | pending | Requires QEMU stack up |
+| Playwright full-stack | `npx playwright test` @ `http://127.0.0.1:19088` | **PASS** (2026-06-12, 26/26) | QEMU stack |
 
 ## US9 — Fast acceptance (inner / outer)
 
 | Check | Command | Result | Notes |
 |-------|---------|--------|-------|
-| Inner tier `api` | `.\scripts\playwright-dev-loop.ps1 -Tier api` | pending | &lt; 90s with stack up |
-| Inner `all-inner` | `.\scripts\playwright-dev-loop.ps1 -Tier all-inner` | pending | Writes `inner-tier-status.json` |
-| Outer gate | `.\scripts\qemu-plan-orchestrator.ps1 -SkipVmUp` | pending | Full 26 + gate report once |
+| Inner tier `api` | `.\scripts\playwright-dev-loop.ps1 -Tier api` | **PASS** (2026-06-12, 10 tests) | ~10s |
+| Inner `all-inner` | `.\scripts\playwright-dev-loop.ps1 -Tier all-inner` | **PASS** (2026-06-12) | `inner-tier-status.json` allInnerPass=true |
+| Outer gate | `.\scripts\qemu-plan-orchestrator.ps1 -SkipVmUp` | **PASS** (2026-06-12, 26/26 manual + gate report) | orchestrator wsUrl loop fixed in script |
 | Exited(255) probe | auto-remediate on KeepDisks | implemented | Server redeploy once / 10m cooldown |
 
 ## US1 — Stage/prod TLS (ops)
@@ -45,7 +45,7 @@
 | 5 | `POST /admin/e2ee/migrate-batch` staging | — | ⏳ Ops |
 | 6 | `GET /admin/e2ee/status` sane counts | — | ⏳ Ops |
 | 7 | Legacy `e2ee_scheme=legacy` unchanged | unit tests | ✅ automated |
-| 8 | Playwright `e2ee-capabilities.spec.ts` | pending stack | ⏳ QA |
+| 8 | Playwright `e2ee-capabilities.spec.ts` | **PASS** on QEMU (2026-06-12) | ⏳ QA formal sign |
 
 **Prod enable**: `MLS_STATUS=active` only after rows 1–8 signed below.
 

@@ -11,7 +11,7 @@
 | 3 | `03-export-compliance.md` | Экспорт и комплаенс — политика полноты, GDPR | Средний | `completed` |
 | 4 | `04-security-timing.md` | Безопасность — timing, унификация ответов, security headers | Средний | `completed` |
 | 5 | `05-worker-localization.md` | Локализация воркеров — i18n, метрики, health | Низкий | `completed` |
-| 6 | `06-e2ee-mls.md` | E2EE/MLS — scaffold + group state (RFC 9420 deferred) | По запросу | `completed` |
+| 6 | `06-e2ee-mls.md` | E2EE/MLS — wire + hybrid client MLS (OpenMLS deferred) | По запросу | `completed` (prod gate pending) |
 | 7 | `07-read-receipts.md` | Per-message read receipts | По запросу | `completed` |
 | 8 | `08-hexagonal-refactoring.md` | Ports & Adapters Phase 2a (Chat) | Опционально | `completed` |
 | 9 | `09-code-health-backlog.md` | Серия малых PR по рефакторингу hotspot-зон | Высокий | `completed` |

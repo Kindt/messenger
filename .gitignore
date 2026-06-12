@@ -31,6 +31,9 @@ deploy/qemu/images/*.qcow2
 deploy/qemu/run/
 deploy/qemu/tools/__pycache__/
 
+# Cursor superpowers vendor clone (junctions in .cursor/skills/superpowers-* are committed)
+.cursor/superpowers/
+
 # Playwright E2E (spec 003)
 tests/e2e-web/node_modules/
 tests/e2e-web/test-results/

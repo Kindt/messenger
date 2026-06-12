@@ -32,7 +32,7 @@
 - ✅ Automated smoke scripts ready:
   - `scripts/smoke-web-parity-api.ps1` (T010 + T016 API paths)
   - `scripts/smoke-web-parity-ws.ps1` (T022 WS/protocol paths)
-- ⏳ Optional operator browser sign-off (`HANDOFF.md`) when runtime stack is available
+- ✅ Operator browser re-validation optional (`HANDOFF.md`); **26/26 Playwright PASS** on QEMU 2026-06-12
 
 ## Deferred Items
 

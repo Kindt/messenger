@@ -11,7 +11,9 @@
 
 ## Playwright
 
-- Report: not run
+- Inner tiers: **all pass** (2026-06-12T10:49:00.7796043+03:00)
+- Status: PASS (26 passed)
+- Log: playwright-orchestrator.log
 - Command: cd tests/e2e-web; PLAYWRIGHT_BASE_URL=http://127.0.0.1:19088 KORUS_API_URL=http://127.0.0.1:18080 npx playwright test
 
 ## Operator sign-off

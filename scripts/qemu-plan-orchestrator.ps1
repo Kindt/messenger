@@ -95,7 +95,7 @@ function Emit-PlanChatTick {
         snapshot = 'deploy/qemu/run/status-minute.snapshot.json'
     }
     $json = ($payload | ConvertTo-Json -Compress -Depth 5)
-    Write-Output "AGENT_LOOP_TICK_qemu_plan $json"
+    Write-Host "AGENT_LOOP_TICK_qemu_plan $json"
 }
 
 function Test-KorusStackReady {

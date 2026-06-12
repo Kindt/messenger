@@ -113,5 +113,5 @@ npx playwright test specs/e2ee-capabilities.spec.ts
 ```powershell
 .\scripts\qemu-up.ps1
 .\scripts\qemu-redeploy.ps1 -WebOnly
-# Verify http://127.0.0.1:9088 shows login shell
+# Verify http://127.0.0.1:19088 shows login shell
 ```

@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-09
 
-**Status**: Ready for Implementation
+**Status**: Engineering Complete — pending ops/security sign-off (see [ops-signoff-log.md](ops-signoff-log.md))
 
 **Input**: Close deferred post-backlog items E0–E10: production TLS/Vault, hexagonal write-path, JFR profiling for all workers, Playwright full-stack gates, governance sign-off, full E2EE (client-side MLS encrypt), optional QEMU dev stability.
 
