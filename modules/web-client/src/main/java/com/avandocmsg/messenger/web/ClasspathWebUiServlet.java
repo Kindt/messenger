@@ -94,7 +94,8 @@ public final class ClasspathWebUiServlet extends HttpServlet {
             || "sw.js".equals(lower)
             || "app.js".equals(lower)
             || "themes.css".equals(lower)
-            || "styles.css".equals(lower)) {
+            || "styles.css".equals(lower)
+            || "tailwind.css".equals(lower)) {
             return "no-store, max-age=0";
         }
         return "public, max-age=86400";

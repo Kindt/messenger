@@ -3,15 +3,17 @@ param(
     [ValidateSet('api', 'ui-auth', 'ui-messaging', 'ui-files', 'ui-conference', 'ui-e2ee', 'full', 'all-inner')]
     [string]$Tier = 'api',
     [switch]$SkipPreflight,
+    [switch]$SyncWebUi,
     [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 if ($Help) {
     Write-Host @"
-Usage: .\scripts\playwright-dev-loop.ps1 [-Tier api|ui-auth|ui-messaging|ui-files|ui-conference|ui-e2ee|full|all-inner]
+Usage: .\scripts\playwright-dev-loop.ps1 [-Tier api|...] [-SyncWebUi]
 
 Fast Playwright against http://127.0.0.1:19088 / :18080 (QEMU must be up).
+-SyncWebUi runs qemu-web-sync.ps1 first (~10s, requires hotswap enabled).
 Updates deploy/qemu/run/inner-tier-status.json and plan-failure-analysis.json on failure.
 
 Examples:
@@ -66,6 +68,16 @@ function Invoke-TierPlaywright {
     } finally {
         Pop-Location
     }
+}
+
+if ($SyncWebUi) {
+    $syncScript = Join-Path $Root "scripts\qemu-web-sync.ps1"
+    if (-not (Test-Path $syncScript)) {
+        Write-Error "missing $syncScript"
+    }
+    Write-Host "SyncWebUi: qemu-web-sync.ps1" -ForegroundColor Cyan
+    & $syncScript
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
 if (-not $SkipPreflight) {

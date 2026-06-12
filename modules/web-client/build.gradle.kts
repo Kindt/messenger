@@ -15,3 +15,22 @@ application {
     mainClass = "com.avandocmsg.messenger.web.WebClientApplication"
     applicationDefaultJvmArgs = listOf("-Dapp.home=\$APP_HOME")
 }
+
+val webuiTailwindOut = layout.projectDirectory.file("src/main/resources/webui/tailwind.css")
+
+tasks.register<Exec>("buildTailwindCss") {
+    group = "webui"
+    description = "Build tailwind.css from webui-build (requires Node/npm)"
+    workingDir = layout.projectDirectory.dir("webui-build").asFile
+    val npm = if (System.getProperty("os.name").lowercase().contains("windows")) "npm.cmd" else "npm"
+    commandLine(npm, "run", "build:css")
+    inputs.file(layout.projectDirectory.file("webui-build/src/input.css"))
+    inputs.file(layout.projectDirectory.file("webui-build/package.json"))
+    inputs.file(layout.projectDirectory.file("webui-build/package-lock.json"))
+    inputs.dir(layout.projectDirectory.dir("src/main/resources/webui"))
+    outputs.file(webuiTailwindOut)
+}
+
+tasks.named("processResources") {
+    dependsOn("buildTailwindCss")
+}

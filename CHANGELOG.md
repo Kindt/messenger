@@ -8,6 +8,18 @@
 
 ## [Unreleased]
 
+### 2026-06-12 — QEMU webui hot-swap (fast dev loop)
+
+- **`korus-web/docker-compose.hotswap-qemu.yml`**: bind-mount `modules/web-client/.../webui` on web guest.
+- **`scripts/qemu-web-hotswap.ps1 -Enable`**, **`scripts/qemu-web-sync.ps1`**: `webui.tgz` sync (~10s) vs full `repo.tgz` redeploy.
+- **`playwright-dev-loop.ps1 -SyncWebUi`**: sync UI before inner-tier Playwright.
+
+### 2026-06-12 — Web client: Tailwind CSS v4 build pipeline
+
+- **`modules/web-client/webui-build/`**: npm + Tailwind v4 CLI → `webui/tailwind.css` (prefixed utilities `tw:*`).
+- Gradle task **`buildTailwindCss`** runs before `processResources`; CI installs Node deps.
+- Auth screen (`renderAuth` in `app.js`) — first Tailwind utility usage.
+
 ### 2026-06-12 — Spec 004 engineering closure (deferred phase 2 post-backlog)
 
 - **US2/US3 Hex write-path**: User, Organization, File write via application services and ports; saved-chat and public-link ports; legacy cleanup.

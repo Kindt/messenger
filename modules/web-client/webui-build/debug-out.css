@@ -1,0 +1,15 @@
+/*! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com */
+@media layer(utilities) {
+  .visible {
+    visibility: visible;
+  }
+  .static {
+    position: static;
+  }
+  .block {
+    display: block;
+  }
+  .inline {
+    display: inline;
+  }
+}

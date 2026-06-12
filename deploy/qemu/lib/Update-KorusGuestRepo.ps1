@@ -15,20 +15,29 @@ function Invoke-PlinkShell {
         $prevEap = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
         try {
-            $merged = & $Plink -batch -hostkey $HostKey -pw korus -P $Port -m $tmp "korus@127.0.0.1" 2>&1
+            $maxAttempts = 3
+            for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+                $merged = & $Plink -batch -hostkey $HostKey -pw korus -P $Port -m $tmp "korus@127.0.0.1" 2>&1
+                $text = if ($merged -is [array]) { ($merged | ForEach-Object { "$_" }) -join "`n" } else { "$merged" }
+                $exit = $LASTEXITCODE
+                if ($exit -eq 0) {
+                    return $text
+                }
+                $benign = $text -match '(?i)(host key|fingerprint|store key in cache|connection reset|connection timed out|connection abort|software caused connection abort)'
+                if ($benign -and $text -match 'repo-updated') {
+                    return $text
+                }
+                $retryable = $text -match '(?i)(connection reset|connection timed out|connection abort|software caused connection abort)'
+                if ($retryable -and $attempt -lt $maxAttempts) {
+                    Start-Sleep -Seconds (10 * $attempt)
+                    continue
+                }
+                throw "plink failed (exit $exit): $($text.Trim())"
+            }
+            throw "plink failed after $maxAttempts attempts"
         } finally {
             $ErrorActionPreference = $prevEap
         }
-        $text = if ($merged -is [array]) { ($merged | ForEach-Object { "$_" }) -join "`n" } else { "$merged" }
-        $exit = $LASTEXITCODE
-        if ($exit -ne 0) {
-            $benign = $text -match '(?i)(host key|fingerprint|store key in cache|connection reset|connection timed out)'
-            if ($benign -and $text -match 'repo-updated') {
-                return $text
-            }
-            throw "plink failed (exit $exit): $($text.Trim())"
-        }
-        return $text
     } finally {
         Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
     }

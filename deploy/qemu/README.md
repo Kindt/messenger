@@ -78,6 +78,30 @@ Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_
 .\scripts\qemu-redeploy.ps1
 .\scripts\qemu-redeploy.ps1 -WebOnly
 
+### Быстрый цикл UI (hot-swap, ~10 с вместо ~15–25 мин redeploy)
+
+После **одного** полного `-WebOnly` (образ `korus-messenger-web-client:local` на госте):
+
+```powershell
+# Включить bind-mount webui с хоста (один раз)
+.\scripts\qemu-web-hotswap.ps1 -Enable
+
+# Итерация: правки в modules/web-client/.../webui/ -> sync -> F5
+.\scripts\qemu-web-sync.ps1
+
+# Playwright с автосинком UI перед тестом
+.\scripts\playwright-dev-loop.ps1 -Tier ui-auth -SyncWebUi
+```
+
+`webui.tgz` (~сотни KiB) вместо `repo.tgz` (~180 MiB); контейнер не пересобирается.
+
+| Сценарий | Команда | Время |
+|----------|---------|-------|
+| API / backend | `qemu-redeploy.ps1 -ServerOnly` | ~20–25 мин |
+| Первый web / Java web-client | `qemu-redeploy.ps1 -WebOnly` | ~15–25 мин |
+| UI JS/CSS/Tailwind | `qemu-web-sync.ps1` | ~5–15 с |
+| Включить hotswap | `qemu-web-hotswap.ps1 -Enable` | ~1–3 мин |
+
 # 3) Дождаться стека (опционально)
 .\scripts\qemu-stack-wait.ps1
 

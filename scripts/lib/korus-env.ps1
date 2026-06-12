@@ -33,6 +33,7 @@ function Set-KorusPathEnvironment {
     $env:KORUS_KORUS_WEB_COMPOSE_ATTACH = Join-Path $kw "docker-compose.attach.yml"
     $env:KORUS_KORUS_WEB_COMPOSE_TURN = Join-Path $kw "docker-compose.turn.yml"
     $env:KORUS_KORUS_WEB_COMPOSE_HOTSWAP = Join-Path $kw "docker-compose.hotswap.yml"
+    $env:KORUS_KORUS_WEB_COMPOSE_HOTSWAP_QEMU = Join-Path $kw "docker-compose.hotswap-qemu.yml"
 }
 
 function Update-KorusSessionPathFromMachine {

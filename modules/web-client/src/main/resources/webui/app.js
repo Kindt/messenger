@@ -5444,19 +5444,34 @@
   function renderAuth() {
     var root = document.getElementById("root");
     root.innerHTML = "";
-    var outer = el("div", "auth-layout");
-    var brand = el("div", "auth-brand");
-    brand.appendChild(el("div", "auth-brand-logo", "K"));
-    brand.appendChild(el("h1", null, "Korus Messenger"));
-    brand.appendChild(el("p", "auth-brand-tag", brandTagline()));
+    var outer = el(
+      "div",
+      "auth-layout tw:flex tw:min-h-screen tw:flex-col tw:md:flex-row tw:items-stretch tw:justify-center tw:gap-6 tw:md:gap-12 tw:p-4 tw:md:p-8"
+    );
+    var brand = el(
+      "div",
+      "auth-brand tw:flex tw:flex-col tw:justify-center tw:flex-1 tw:max-w-lg tw:gap-3"
+    );
+    brand.appendChild(el("div", "auth-brand-logo tw:flex tw:h-14 tw:w-14 tw:items-center tw:justify-center tw:rounded-2xl tw:text-2xl tw:font-bold", "K"));
+    brand.appendChild(el("h1", "tw:text-3xl tw:font-semibold tw:tracking-tight", "Korus Messenger"));
+    brand.appendChild(el("p", "auth-brand-tag tw:text-base tw:opacity-80", brandTagline()));
     outer.appendChild(brand);
-    var card = el("div", "auth-card");
+    var card = el(
+      "div",
+      "auth-card tw:w-full tw:max-w-md tw:rounded-2xl tw:border tw:border-[color-mix(in_srgb,var(--border)_80%,transparent)] tw:bg-[var(--panel)] tw:p-6 tw:shadow-xl tw:self-center"
+    );
     card.appendChild(
       el("h2", null, state.authTab === "register" ? L("auth.register") : L("auth.login"))
     );
     card.appendChild(el("p", "auth-hint", L("auth.hint")));
     if (state.error) {
-      card.appendChild(el("div", "error-banner", state.error));
+      card.appendChild(
+        el(
+          "div",
+          "error-banner tw:mb-4 tw:rounded-lg tw:border tw:border-red-500/40 tw:bg-red-500/10 tw:px-3 tw:py-2 tw:text-sm",
+          state.error
+        )
+      );
     }
     var tabs = el("div", "tabs");
     var tLogin = el("button", state.authTab === "login" ? "active" : "", L("auth.login"));
@@ -5489,7 +5504,7 @@
     }
     var submit = el(
       "button",
-      "btn btn-primary",
+      "btn btn-primary tw:mt-2 tw:w-full tw:rounded-lg tw:font-semibold tw:transition-opacity tw:hover:opacity-90 tw:disabled:opacity-60",
       state.busy
         ? "…"
         : state.authTab === "login"

@@ -1,0 +1,13 @@
+{
+  "name": "korus-webui-tailwind",
+  "private": true,
+  "description": "Tailwind CSS build for modules/web-client webui static assets",
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/input.css -o ../src/main/resources/webui/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./src/input.css -o ../src/main/resources/webui/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.11",
+    "tailwindcss": "^4.1.11"
+  }
+}

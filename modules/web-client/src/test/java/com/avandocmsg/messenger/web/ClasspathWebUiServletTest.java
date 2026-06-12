@@ -62,5 +62,6 @@ class ClasspathWebUiServletTest {
         assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("app.js"));
         assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("themes.css"));
         assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("styles.css"));
+        assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("tailwind.css"));
     }
 }

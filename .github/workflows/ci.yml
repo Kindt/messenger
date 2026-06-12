@@ -29,6 +29,17 @@ jobs:
           distribution: temurin
           cache: gradle
 
+      - name: Set up Node.js (web-client Tailwind)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: modules/web-client/webui-build/package-lock.json
+
+      - name: Install webui Tailwind deps
+        run: npm ci
+        working-directory: modules/web-client/webui-build
+
       - name: "buildIntegrity (all modules: compile, test, assemble)"
         run: chmod +x gradlew && ./gradlew buildIntegrity --no-daemon
 
