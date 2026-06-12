@@ -20,6 +20,16 @@ Spec-kit workflow completed: specify → plan → tasks → analyze → implemen
 | US6 Governance | ADR sign-off docs, plans sync, SMOKE_INDEX | Pass |
 | US7 E2EE | MlsWireHandler, NATS consumer, app.js client MLS hooks, interop tests | Pass (security sign-off before prod) |
 | US8 QEMU DX | plink handling, vars order, compose parallel limit | Pass |
+| US9 Fast acceptance | Tiered inner loop, outer gate, failure analysis | Pass (engineering) |
+
+## US9 addendum (SC-006–SC-009)
+
+| Criterion | Target | Status |
+|-----------|--------|--------|
+| SC-006 Inner tier retest | &lt; 2 min with stack up | Implemented (`playwright-dev-loop.ps1`) |
+| SC-007 No full suite on preflight fail | preflight exits 1 | Implemented |
+| SC-008 Outer golden path | ≤ 1 run per fix batch | Orchestrator blocks blind retry |
+| SC-009 Playwright 26/26 outer | before gate report approved | Pending live QEMU run |
 
 ## Build
 

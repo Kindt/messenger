@@ -86,7 +86,12 @@ Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_
 # Optional: assert wsUrl contains Windows LAN IP (see deploy/qemu/lib/Get-KorusLanHostIp.ps1)
 .\scripts\smoke-korus-web.ps1 -WebBaseUrl http://127.0.0.1:19088 -ExpectWsHost 192.168.x.x
 
-# 5) Playwright (API через прокси UI)
+# 5) Inner loop (US9) then outer Playwright gate
+.\scripts\playwright-dev-loop.ps1 -Tier all-inner
+# Outer gate (full suite once):
+.\scripts\qemu-plan-orchestrator.ps1 -SkipVmUp
+
+# Or manual full suite:
 cd tests\e2e-web
 npm ci
 $env:PLAYWRIGHT_BASE_URL = "http://127.0.0.1:19088"
@@ -94,8 +99,13 @@ $env:KORUS_API_URL = "http://127.0.0.1:18080"
 npx playwright test
 ```
 
+**First boot** (before `qemu-up` or once per fresh disks): preload Docker images to avoid long pulls:
+
+```powershell
+.\scripts\preload-qemu-docker-images.ps1
+```
+
 Поминутные отчёты в чат + auto-fix/restart: `.\scripts\qemu-chat-watch.ps1` (loop → `AGENT_LOOP_TICK_qemu_chat`). Полный план (stack → smoke → Playwright → gate report): `.\scripts\qemu-plan-orchestrator.ps1` (`AGENT_LOOP_TICK_qemu_plan`). При активном docker pull/gradle/build auto-remediate **ждёт**, не redeploy/restart. Stop: `.\scripts\stop-qemu-plan-orchestrator.ps1`.
-Предзагрузка Docker-образов: `.\scripts\preload-qemu-docker-images.ps1`.
 
 Логи: `deploy\qemu\run\server-serial.log`, `web-serial.log`; в гостях: **`/var/log/korus-bootstrap.log`**
 

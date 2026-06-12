@@ -11,12 +11,18 @@ This handoff is the shortest path for optional browser re-validation after engin
 ## Run Order
 
 1. Follow `quickstart.md` sections for runtime setup.
-2. Execute optional browser re-validation (when stack is up):
+2. **US9 inner loop** (stack already up via QEMU):
+   - `.\scripts\playwright-dev-loop.ps1 -Tier api|ui-messaging|ui-conference|...`
+   - `.\scripts\playwright-dev-loop.ps1 -Tier all-inner` when all tiers should be green
+   - Read `deploy/qemu/run/plan-failure-analysis.json` on failure
+3. **Outer gate once** per fix batch:
+   - `.\scripts\qemu-plan-orchestrator.ps1 -SkipVmUp`
+4. Execute optional browser re-validation (when stack is up):
    - messaging DOM (`T010` scenarios in quickstart)
    - file upload UI + export artifact download (`T016`)
    - RTC UI controls (`T022`)
-3. Fill evidence in `runtime-gate-report.md`.
-4. Mirror outcomes:
+5. Fill evidence in `runtime-gate-report.md`.
+6. Mirror outcomes:
    - `tasks.md` (gate statuses)
    - `parity-report.md` (final operational note)
 

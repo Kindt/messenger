@@ -5,15 +5,17 @@ param(
     [int]$MaxWaitMinutes = 90,
     [int]$MaxAcceptanceMinutes = 120,
     [switch]$SkipVmUp,
+    [switch]$SkipInnerTierCheck,
     [switch]$Help
 )
 
 $ErrorActionPreference = "Continue"
 if ($Help) {
     Write-Host @"
-Usage: .\scripts\qemu-plan-orchestrator.ps1 [-IntervalSeconds 60] [-MaxWaitMinutes 90] [-MaxAcceptanceMinutes 120] [-SkipVmUp]
+Usage: .\scripts\qemu-plan-orchestrator.ps1 [-IntervalSeconds 60] [-MaxWaitMinutes 90] [-MaxAcceptanceMinutes 120] [-SkipVmUp] [-SkipInnerTierCheck]
 
 Runs full acceptance plan with per-minute chat output and auto-remediate.
+Outer Playwright runs once after inner tiers pass (unless -SkipInnerTierCheck).
 Stop: Ctrl+C or .\scripts\stop-qemu-plan-orchestrator.ps1
 "@
     exit 0
@@ -23,6 +25,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 $RunDir = Join-Path $Root "deploy\qemu\run"
 . (Join-Path $Root "deploy\qemu\lib\Start-KorusQemuGuestRedeploy.ps1")
 . (Join-Path $Root "deploy\qemu\lib\Invoke-KorusPlanFailureAnalysis.ps1")
+. (Join-Path $Root "deploy\qemu\lib\Get-KorusInnerTierStatus.ps1")
 $StatePath = Join-Path $RunDir "plan-orchestrator.json"
 $LogPath = Join-Path $RunDir "plan-orchestrator.log"
 $PidPath = Join-Path $RunDir "plan-orchestrator.pid"
@@ -245,26 +248,32 @@ function Resolve-PlanFailureNextPhase {
             $State.pendingRemediation = 'redeploy_server'
         }
         'fix_playwright_env' {
-            Invoke-KorusPlanFailureRemediate -Action fix_playwright_env -RunDir $RunDir -Root $Root | Out-Null
-            $State.phase = 'running_playwright'
-            $State.playwrightRunning = $false
-            $State.pendingRemediation = ''
+            $State.blocked = $true
+            $State.phase = 'blocked'
+            $State.pendingRemediation = 'fix_playwright_env'
+            Log "BLOCKED outer gate: fix PLAYWRIGHT_BASE_URL / KORUS_* env (use :19088/:18080)"
         }
         'fix_tests_in_repo' {
-            if ($repeat -lt 2) {
-                $State.phase = 'running_playwright'
-                $State.playwrightRunning = $false
-                $State.pendingRemediation = 'await_code_fix'
-            } else {
-                $State.blocked = $true
-                $State.phase = 'blocked'
-                $State.pendingRemediation = 'fix_tests_in_repo'
-            }
+            $State.blocked = $true
+            $State.phase = 'blocked'
+            $State.pendingRemediation = 'fix_tests_in_repo'
+            Log "BLOCKED outer gate: fix tests (run playwright-dev-loop.ps1 -Tier ...)"
         }
         'preflight_retry' {
-            $State.phase = 'running_playwright'
+            $State.phase = 'waiting_stack'
             $State.playwrightRunning = $false
-            $State.pendingRemediation = ''
+            $State.pendingRemediation = 'preflight_or_inner_loop'
+            Log "outer gate preflight fail -> waiting_stack (run inner loop when ready)"
+        }
+        'analyze_web_auth_proxy' {
+            $State.blocked = $true
+            $State.phase = 'blocked'
+            $State.pendingRemediation = 'analyze_web_auth_proxy'
+        }
+        'analyze_playwright_log' {
+            $State.blocked = $true
+            $State.phase = 'blocked'
+            $State.pendingRemediation = 'analyze_playwright_log'
         }
         default {
             $State.phase = 'blocked'
@@ -382,12 +391,19 @@ while ($true) {
                 $state.smokeOk = $ok
                 $state.smokeRunning = $false
                 if ($ok) {
-                    $state.phase = 'running_playwright'
-                    $state.playwrightRunning = $false
-                    $state.lastError = ''
-                    Log "smoke OK"
-                    Write-Output "--- PLAN: smoke OK ---"
-                    Emit-PlanChatTick -Phase 'running_playwright' -SummaryRu 'Smoke passed. Running Playwright.'
+                    if ($SkipInnerTierCheck -or (Test-KorusAllInnerTiersPass -RunDir $RunDir)) {
+                        $state.phase = 'running_playwright'
+                        $state.playwrightRunning = $false
+                        $state.lastError = ''
+                        Log "smoke OK -> outer playwright (inner tiers green or skipped)"
+                        Write-Output "--- PLAN: smoke OK -> full Playwright outer gate ---"
+                        Emit-PlanChatTick -Phase 'running_playwright' -SummaryRu 'Smoke passed. Running full Playwright outer gate.'
+                    } else {
+                        $state.phase = 'waiting_inner_tiers'
+                        Log "smoke OK; waiting inner tiers"
+                        Write-Output "--- PLAN: smoke OK; run playwright-dev-loop.ps1 -Tier all-inner ---"
+                        Emit-PlanChatTick -Phase 'waiting_inner_tiers' -SummaryRu 'Smoke OK. Run inner tiers (playwright-dev-loop) before outer gate.'
+                    }
                 } else {
                     $failKind = Get-PlanSmokeFailureKind
                     $analysis = Invoke-KorusPlanFailureAnalysis -Kind smoke -RunDir $RunDir -Root $Root -LastError $failKind
@@ -405,6 +421,19 @@ while ($true) {
                     }
                 }
                 Set-PlanState $state
+            }
+        }
+        'waiting_inner_tiers' {
+            if (Test-KorusAllInnerTiersPass -RunDir $RunDir) {
+                Log "inner tiers green -> outer playwright"
+                $state.phase = 'running_playwright'
+                $state.playwrightRunning = $false
+                $state.lastError = ''
+                Set-PlanState $state
+                Write-Output "--- PLAN: inner tiers green -> full Playwright ---"
+                Emit-PlanChatTick -Phase 'running_playwright' -SummaryRu 'Inner tiers green. Running full Playwright outer gate.'
+            } else {
+                Write-Output "--- PLAN: waiting inner tiers (run playwright-dev-loop.ps1 -Tier all-inner) ---"
             }
         }
         'remediating_web' {
@@ -426,8 +455,12 @@ while ($true) {
         'remediating_auth' {
             $pre = Test-KorusPlanPlaywrightPreflight -Root $Root -RunDir $RunDir
             if ($pre.Ok) {
-                Log "auth remediate OK -> playwright"
-                $state.phase = 'running_playwright'
+                Log "auth remediate OK -> inner tiers or playwright"
+                if ($SkipInnerTierCheck -or (Test-KorusAllInnerTiersPass -RunDir $RunDir)) {
+                    $state.phase = 'running_playwright'
+                } else {
+                    $state.phase = 'waiting_inner_tiers'
+                }
                 $state.playwrightRunning = $false
                 $state.pendingRemediation = ''
                 $state.failureRepeatCount = 0

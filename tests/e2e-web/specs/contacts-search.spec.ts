@@ -21,6 +21,8 @@ test.describe("contacts and search", () => {
     const contactsBtn = page.getByRole("button", { name: /Контакты|Contacts/i });
     if (await contactsBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await contactsBtn.click();
+      await expect(page.getByRole("button", { name: /Чаты|Chats/i })).toBeVisible();
+      return;
     }
     await expect(page.locator("[data-testid=message-composer]")).toBeVisible();
   });

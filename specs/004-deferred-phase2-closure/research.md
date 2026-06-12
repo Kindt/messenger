@@ -44,3 +44,13 @@
 **Decision**: Extend existing `docker-compose.profiling.yml` pattern from E2 (JDK tag swap only).
 
 **Rationale**: Proven for core-api, retention, indexer; zero prod image change.
+
+## R6 — Fast acceptance tiers (US9/US5)
+
+**Decision**: Split Playwright gate into tiers (`api`, `ui-auth`, `ui-messaging`, `ui-files`, `ui-conference`, `ui-e2ee`, `full`) per [contracts/fast-acceptance-contract.md](contracts/fast-acceptance-contract.md).
+
+**Rationale**: 14/26 tests already passed in QEMU sessions; developers fix one domain at a time via `playwright-dev-loop.ps1` without redeploy. Outer orchestrator runs `full` only when `inner-tier-status.json` shows all inner tiers pass.
+
+**Alternatives considered**:
+- Full suite on every fix (rejected — 3–5 min × N retries plus infra wait)
+- CI-only Playwright (rejected — violates US5 operator gate on QEMU)

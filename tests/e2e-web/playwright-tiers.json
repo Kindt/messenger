@@ -1,0 +1,55 @@
+{
+  "innerTierNames": [
+    "api",
+    "ui-auth",
+    "ui-messaging",
+    "ui-files",
+    "ui-conference",
+    "ui-e2ee"
+  ],
+  "tiers": {
+    "api": {
+      "description": "API-heavy specs without DOM login",
+      "args": [
+        "specs/profile-settings.spec.ts",
+        "specs/e2ee-capabilities.spec.ts",
+        "specs/contacts-search.spec.ts",
+        "specs/conference-rtc.spec.ts"
+      ],
+      "grep": "global search API|blocks list API|device register API|capabilities advertise|legacy e2ee|mls active exposes|plaintext-preview|authenticated user can upload|send with e2ee_scheme|media capabilities include"
+    },
+    "ui-auth": {
+      "description": "Auth session UI",
+      "args": ["specs/auth-session.spec.ts", "specs/contacts-search.spec.ts"],
+      "grep": "login via UI|logout returns|contacts list loads"
+    },
+    "ui-messaging": {
+      "description": "Messaging critical, group, actions",
+      "args": [
+        "specs/messaging-critical.spec.ts",
+        "specs/messaging-group.spec.ts",
+        "specs/messaging-actions.spec.ts"
+      ]
+    },
+    "ui-files": {
+      "description": "Files upload and export DOM",
+      "args": ["specs/files-export.spec.ts"]
+    },
+    "ui-conference": {
+      "description": "Conference RTC UI",
+      "args": ["specs/conference-rtc.spec.ts"]
+    },
+    "ui-e2ee": {
+      "description": "Browser MLS roundtrip",
+      "args": ["specs/e2ee-browser-roundtrip.spec.ts"]
+    },
+    "full": {
+      "description": "All specs (outer gate only)",
+      "args": []
+    },
+    "all-inner": {
+      "description": "Run all inner tiers sequentially",
+      "sequential": ["api", "ui-auth", "ui-messaging", "ui-files", "ui-conference", "ui-e2ee"]
+    }
+  }
+}

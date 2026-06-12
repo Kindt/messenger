@@ -130,6 +130,26 @@
 
 ---
 
+## Phase 13: US9 Fast acceptance (T201–T215)
+
+- [x] T201 [US9] US9 spec + R6 + contracts/fast-acceptance-contract.md
+- [x] T202 [US9] scripts/playwright-dev-loop.ps1 — preflight, -Tier, env defaults
+- [x] T203 [US9] tests/e2e-web/playwright-tiers.json tier manifest
+- [x] T204 [US9] ASCII plan-failure-i18n.json; remove Cyrillic from Invoke-KorusPlanFailureAnalysis.ps1
+- [x] T205 [US9] qemu-plan-orchestrator outer gate: inner-tier check, blocked on playwright fail
+- [x] T206 [US9] playwright.config.ts env comment for QEMU ports
+- [x] T207 [US9] tests/e2e-web/README.md tier commands
+- [x] T208 [US9] KeepDisks Exited(255) probe in auto-remediate
+- [x] T209 [US9] preload-qemu-docker-images in quickstart / deploy/qemu/README
+- [x] T210 [US9] Fix remaining Playwright failures (conference selectors, ui fixtures)
+- [x] T211 [US9] inner-tier-status.json writer in dev-loop
+- [x] T212 [US9] HANDOFF inner → outer path
+- [x] T213 [US9] ops-signoff-log US9 row
+- [x] T214 [US9] .cursor/rules/qemu-chat-watch tier-first workflow
+- [x] T215 [US9] acceptance-report.md US9 addendum
+
+---
+
 ## Dependencies
 
 ```text
@@ -138,6 +158,7 @@ US2 (T040-T065) → US3 (T070-T074)
 T130 → T140-T169
 T160 → T170
 US8 (T190-T192) recommended before US5 full-stack gate
+US9 (T201-T215) inner tiers before outer orchestrator gate
 ```
 
 ## Parallel example (Week 1)

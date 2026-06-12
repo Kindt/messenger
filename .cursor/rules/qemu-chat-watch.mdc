@@ -1,6 +1,6 @@
 ---
 description: QEMU minute chat reports and auto-remediate
-globs: deploy/qemu/**,scripts/qemu-*.ps1
+globs: deploy/qemu/**,scripts/qemu-*.ps1,scripts/playwright-dev-loop.ps1
 ---
 
 # QEMU chat-watch
@@ -12,4 +12,17 @@ When monitoring Korus QEMU for the user:
 3. Auto-remediate runs inside `qemu-status-minute.ps1` (docker pull, bootstrap errors, background `qemu-redeploy -ServerOnly`). Do not duplicate unless remediate is empty and severity=high.
 4. **Never** `qemu-down` without user request. **Never** kill non-Korus `qemu-system-x86_64` (co-hosted VMs).
 
-Logs: `status-minute.log`, `status-remediate.log`, `*-serial.log`.
+## US9 fast acceptance (Playwright / API parity fixes)
+
+Before `qemu-plan-orchestrator.ps1`, use inner tiers against live stack:
+
+```powershell
+.\scripts\qemu-up.ps1 -KeepDisks
+.\scripts\qemu-stack-wait.ps1
+.\scripts\playwright-dev-loop.ps1 -Tier api          # or ui-messaging, ui-conference, ...
+.\scripts\playwright-dev-loop.ps1 -Tier all-inner    # before outer gate
+```
+
+On failure read `deploy/qemu/run/plan-failure-analysis.json`. Do **not** re-run full orchestrator on every fix — outer gate once when `inner-tier-status.json` shows `allInnerPass=true`.
+
+Logs: `status-minute.log`, `status-remediate.log`, `playwright-dev-loop.log`, `*-serial.log`.

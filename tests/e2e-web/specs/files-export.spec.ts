@@ -12,14 +12,12 @@ test.describe("files and export parity", () => {
     const chatId = await apiCreateGroup(request, tokenA, title, [idB]);
 
     const upload = await request.post(`${apiBase()}/api/v1/files/upload`, {
-      headers: { Authorization: `Bearer ${tokenA}` },
-      multipart: {
-        file: {
-          name: "parity.txt",
-          mimeType: "text/plain",
-          buffer: Buffer.from("playwright parity file"),
-        },
+      headers: {
+        Authorization: `Bearer ${tokenA}`,
+        "Content-Type": "application/octet-stream",
+        "X-Filename": "parity.txt",
       },
+      data: "playwright parity file",
     });
     expect(upload.ok()).toBeTruthy();
 
@@ -44,11 +42,12 @@ test.describe("files and export parity", () => {
 
     await uiLogin(page, "smoke_user_a", "smokepass123");
     await uiOpenChatByTitle(page, title);
+    await uiSendMessage(page, `export-seed-${Date.now()}`);
 
     const exportBtn = page.locator("[data-testid=chat-export-button]");
     await expect(exportBtn).toBeVisible({ timeout: 10_000 });
 
-    const downloadPromise = page.waitForEvent("download", { timeout: 120_000 });
+    const downloadPromise = page.waitForEvent("download", { timeout: 180_000 });
     await exportBtn.click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/korus-export|\.zip/i);

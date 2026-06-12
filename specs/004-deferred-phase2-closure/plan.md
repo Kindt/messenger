@@ -70,7 +70,8 @@ deploy/qemu/lib/
 | 8–9 | US7 | E2EE full + e2ee playwright |
 | 10 | US6 | governance + docs |
 | 11 | US8 | QEMU DX |
-| 12 | — | acceptance-report |
+| 12 | US9 | Fast acceptance inner/outer loop |
+| 13 | — | acceptance-report |
 
 ## Complexity Tracking
 

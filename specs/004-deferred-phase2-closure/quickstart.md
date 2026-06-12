@@ -56,6 +56,27 @@ npx playwright test
 
 Operator sign-off: [HANDOFF.md](../../002-web-client-server-parity/HANDOFF.md) → update [runtime-gate-report.md](../../002-web-client-server-parity/runtime-gate-report.md).
 
+## US9 — Fast acceptance (inner loop + outer gate)
+
+```powershell
+# Stack once (KeepDisks between code iterations)
+.\scripts\qemu-up.ps1 -KeepDisks
+.\scripts\qemu-stack-wait.ps1
+
+# First boot (optional): preload Docker images into server guest
+.\scripts\preload-qemu-docker-images.ps1
+
+# Inner loop — host browser against :19088/:18080
+.\scripts\playwright-dev-loop.ps1 -Tier api
+.\scripts\playwright-dev-loop.ps1 -Tier ui-messaging
+.\scripts\playwright-dev-loop.ps1 -Tier all-inner
+
+# Outer gate once (full 26 tests + gate report)
+.\scripts\qemu-plan-orchestrator.ps1 -SkipVmUp -MaxAcceptanceMinutes 60
+```
+
+See [contracts/fast-acceptance-contract.md](contracts/fast-acceptance-contract.md) and [tests/e2e-web/README.md](../../tests/e2e-web/README.md).
+
 ## US6 — Governance
 
 ```powershell

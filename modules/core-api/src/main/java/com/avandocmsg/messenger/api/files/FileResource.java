@@ -166,20 +166,32 @@ public class FileResource {
         var mimeType = filePart.getMediaType() != null
             ? filePart.getMediaType().toString()
             : "application/octet-stream";
-        var raw = filePart.getEntity();
-        if (!(raw instanceof InputStream is)) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, messages.get("error.file.multipart_must_be_stream")))
-                .build();
-        }
-        try (is) {
-            var result = fileService.uploadStream(is, filename, mimeType, userId);
-            if (result == null) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ApiError(400, uploadTooLargeMessage(fileService.maxUploadBytes())))
-                    .build();
+        try {
+            var raw = filePart.getEntity();
+            if (raw instanceof byte[] bytes) {
+                var result = fileService.upload(
+                    new java.io.ByteArrayInputStream(bytes), filename, mimeType, bytes.length, userId);
+                if (result == null) {
+                    return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(new ApiError(400, uploadTooLargeMessage(fileService.maxUploadBytes())))
+                        .build();
+                }
+                return Response.status(Response.Status.CREATED).entity(result).build();
             }
-            return Response.status(Response.Status.CREATED).entity(result).build();
+            try (InputStream is = filePart.getValueAs(InputStream.class)) {
+                if (is == null) {
+                    return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(new ApiError(400, messages.get("error.file.multipart_must_be_stream")))
+                        .build();
+                }
+                var result = fileService.uploadStream(is, filename, mimeType, userId);
+                if (result == null) {
+                    return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(new ApiError(400, uploadTooLargeMessage(fileService.maxUploadBytes())))
+                        .build();
+                }
+                return Response.status(Response.Status.CREATED).entity(result).build();
+            }
         } catch (IOException e) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(new ApiError(400, messages.format("error.file.upload_failed", e.getMessage())))

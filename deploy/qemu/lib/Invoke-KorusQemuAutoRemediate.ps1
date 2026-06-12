@@ -40,6 +40,7 @@ function Invoke-KorusQemuAutoRemediate {
             lastRestartAt             = $null
             lastServerRedeployAt      = $null
             lastWebRedeployAt         = $null
+            lastExited255RedeployAt   = $null
             bootstrapErrorFingerprint = ""
             bootstrapErrorSince       = $null
             lastOrphanSweepAt         = $null
@@ -70,6 +71,7 @@ function Invoke-KorusQemuAutoRemediate {
                 lastRestartAt             = $o.lastRestartAt
                 lastServerRedeployAt      = $o.lastServerRedeployAt
                 lastWebRedeployAt         = $o.lastWebRedeployAt
+                lastExited255RedeployAt   = $o.lastExited255RedeployAt
                 bootstrapErrorFingerprint = [string]$o.bootstrapErrorFingerprint
                 bootstrapErrorSince       = $o.bootstrapErrorSince
                 lastOrphanSweepAt         = $o.lastOrphanSweepAt
@@ -138,6 +140,25 @@ function Invoke-KorusQemuAutoRemediate {
             ($_ -replace '\x1b\[[0-9;?]*[ -/]*[@-~]', '') -replace '\s+', ' '
         }) -join "|"
         return $normalized.Trim()
+    }
+
+    function Test-KorusDockerExited255InText {
+        param([string]$Text)
+        if (-not $Text) { return $false }
+        return ($Text -match 'Exited \(255\)|exit code 255| exited.*255 ')
+    }
+
+    function Get-KorusDockerExited255ProbeText {
+        param([string]$BootstrapText, [string]$RunDirPath)
+        if (Test-KorusDockerExited255InText -Text $BootstrapText) { return $BootstrapText }
+        $serial = Join-Path $RunDirPath "server-serial.log"
+        if (Test-Path $serial) {
+            try {
+                $tail = Get-Content $serial -Tail 250 -ErrorAction SilentlyContinue | Out-String
+                if (Test-KorusDockerExited255InText -Text $tail) { return $tail }
+            } catch { }
+        }
+        return ""
     }
 
     function Start-GuestPullRemediation {
@@ -222,6 +243,11 @@ fi
         if (Test-RestartInProgress) {
             Write-RemLog "SKIP restart already in progress"
             return @{ Started = $false; Summary = "restart in progress" }
+        }
+        $goldenLock = Join-Path $RunDir "golden-path.no-auto-restart"
+        if (Test-Path $goldenLock) {
+            Write-RemLog "SKIP restart golden-path lock active ($Trigger)"
+            return @{ Started = $false; Summary = "golden-path lock: skip restart" }
         }
 
         . (Join-Path $Root "deploy\qemu\lib\Invoke-KorusQemuPreRestartAnalysis.ps1")
@@ -400,6 +426,20 @@ fi
         } else {
             $actions.Add("pull stuck (no fingerprint yet)") | Out-Null
         }
+    }
+
+    $exited255Text = Get-KorusDockerExited255ProbeText -BootstrapText $ServerBootstrapText -RunDirPath $RunDir
+    if ($exited255Text -and $korusQemuUp -and -not $stackReady -and -not $loadingState.Loading -and -not $redeployActive) {
+        if (Test-CooldownOk -LastAt $state.lastExited255RedeployAt -Minutes 10) {
+            Write-RemLog "ACTION server redeploy Exited(255) probe (KeepDisks stack broken)"
+            $rd = Start-KorusQemuGuestRedeploy -Role server -RunDir $RunDir -Root $Root -Reason "docker Exited(255) after KeepDisks"
+            if ($rd.Summary) { $actions.Add($rd.Summary) | Out-Null }
+            $state.lastExited255RedeployAt = (Get-Date).ToString("o")
+            $actions.Add("Exited(255) docker -> server redeploy once") | Out-Null
+            Set-RemState $state
+            return @{ Actions = @($actions); Summary = ($actions -join "; ") }
+        }
+        $actions.Add("Exited(255) detected (server redeploy cooldown)") | Out-Null
     }
 
     $bootstrapErr = ($Activity -eq "bootstrap errors") -or ($BootstrapStates -contains "error")

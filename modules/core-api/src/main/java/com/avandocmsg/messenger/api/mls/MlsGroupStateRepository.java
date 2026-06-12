@@ -49,11 +49,11 @@ public class MlsGroupStateRepository {
     }
 
     public Optional<MlsGroupState> findByGroupId(UUID groupId) {
-        return findOne("group_id = ?", groupId);
+        return findOne("group_id", groupId);
     }
 
     public Optional<MlsGroupState> findByChatId(UUID chatId) {
-        return findOne("chat_id = ?", chatId);
+        return findOne("chat_id", chatId);
     }
 
     public long countAll() {
@@ -88,13 +88,12 @@ public class MlsGroupStateRepository {
         }
     }
 
-    private Optional<MlsGroupState> findOne(String whereColumn, UUID id) {
+    private Optional<MlsGroupState> findOne(String column, UUID id) {
         if (dataSource == null) {
             return Optional.empty();
         }
-        var sql = """
-            SELECT group_id, chat_id, epoch, tree_data, created_at, updated_at
-            FROM mls_group_state WHERE """ + whereColumn;
+        var sql = "SELECT group_id, chat_id, epoch, tree_data, created_at, updated_at FROM mls_group_state WHERE "
+            + column + " = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
             stmt.setObject(1, id);

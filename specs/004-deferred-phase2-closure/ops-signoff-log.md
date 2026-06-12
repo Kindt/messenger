@@ -13,6 +13,15 @@
 | Hex write unit | `.\gradlew.bat :modules:core-api:test --tests "*ApplicationServiceTest*"` | PASS | User/Org/File |
 | Playwright full-stack | `npx playwright test` @ `http://127.0.0.1:19088` | pending | Requires QEMU stack up |
 
+## US9 — Fast acceptance (inner / outer)
+
+| Check | Command | Result | Notes |
+|-------|---------|--------|-------|
+| Inner tier `api` | `.\scripts\playwright-dev-loop.ps1 -Tier api` | pending | &lt; 90s with stack up |
+| Inner `all-inner` | `.\scripts\playwright-dev-loop.ps1 -Tier all-inner` | pending | Writes `inner-tier-status.json` |
+| Outer gate | `.\scripts\qemu-plan-orchestrator.ps1 -SkipVmUp` | pending | Full 26 + gate report once |
+| Exited(255) probe | auto-remediate on KeepDisks | implemented | Server redeploy once / 10m cooldown |
+
 ## US1 — Stage/prod TLS (ops)
 
 | # | Gate | Owner | Status |

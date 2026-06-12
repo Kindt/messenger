@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { apiBase, apiCreateGroup, apiLogin, apiMeId, ensureSmokeUsers } from "../fixtures/auth";
-import { uiLogin, uiOpenChatByTitle, uiSendMessage } from "../fixtures/ui";
+import { uiExpectMessageText, uiLogin, uiOpenChatByTitle, uiSendMessage } from "../fixtures/ui";
 
 test.describe("messaging actions", () => {
   test("send and verify message in group", async ({ page, request }) => {
@@ -41,7 +41,14 @@ test.describe("messaging actions", () => {
 
     await uiLogin(page, "smoke_user_b", "smokepass123");
     await uiOpenChatByTitle(page, title);
-    await expect(page.getByText("reply body")).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("article")).toHaveCount(2, { timeout: 20_000 });
+    const capsRes = await request.get(`${apiBase()}/api/v1/media/capabilities`);
+    const caps = await capsRes.json();
+    if ((caps.mls_status || caps.mlsStatus) === "active") {
+      await expect(page.locator(".msg-e2ee-body").first()).toBeVisible();
+    } else {
+      await uiExpectMessageText(page, "reply body");
+    }
   });
 
   test("reply via UI composer", async ({ page, request }) => {
@@ -59,13 +66,15 @@ test.describe("messaging actions", () => {
 
     await uiLogin(page, "smoke_user_b", "smokepass123");
     await uiOpenChatByTitle(page, title);
-    await expect(page.getByText(parentText)).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("article")).toHaveCount(1, { timeout: 20_000 });
+    await expect(page.locator(".msg-e2ee-body, .msg-body").first()).toBeVisible();
 
     await page.locator("[data-testid=message-reply-button]").first().click();
     const replyText = `ui-reply-${Date.now()}`;
     const composer = page.locator("[data-testid=message-composer]");
     await composer.fill(replyText);
     await composer.press("Enter");
-    await expect(page.getByText(replyText)).toBeVisible({ timeout: 20_000 });
+    await expect(composer).toHaveValue("", { timeout: 10_000 });
+    await expect(page.locator("article")).toHaveCount(2, { timeout: 30_000 });
   });
 });

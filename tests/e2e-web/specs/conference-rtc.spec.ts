@@ -62,14 +62,12 @@ test.describe("conference and media", () => {
 
     await uiLogin(page, "smoke_user_a", "smokepass123");
     await uiOpenChatByTitle(page, title);
-    const callBtn = page.getByRole("button", { name: /Видео|Video|conference/i });
+    const callBtn = page.getByTestId("call-panel-toggle");
     await callBtn.click();
     const meshBtn = page.locator("[data-testid=mesh-webrtc-button]");
     await expect(meshBtn).toBeVisible({ timeout: 10_000 });
     await meshBtn.click();
-    await expect(page.locator(".call-panel-title, .messenger-shell.call-open")).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("call-panel-title")).toBeVisible({ timeout: 10_000 });
   });
 
   test("in-chat conference panel toggle visible", async ({ page, request }) => {
@@ -82,11 +80,9 @@ test.describe("conference and media", () => {
 
     await uiLogin(page, "smoke_user_a", "smokepass123");
     await uiOpenChatByTitle(page, title);
-    const callBtn = page.getByRole("button", { name: /Видео|Video|conference/i });
+    const callBtn = page.getByTestId("call-panel-toggle");
     await expect(callBtn).toBeVisible({ timeout: 10_000 });
     await callBtn.click();
-    await expect(page.locator(".call-panel-title, .messenger-shell.call-open")).toBeVisible({
-      timeout: 10_000,
-    });
+    await expect(page.getByTestId("call-panel-title")).toBeVisible({ timeout: 10_000 });
   });
 });

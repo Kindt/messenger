@@ -143,6 +143,23 @@ As a developer on Windows, I want reliable QEMU up/redeploy for full-stack QA, s
 
 ---
 
+### User Story 9 — Fast full-stack acceptance loop (Priority: P1)
+
+As a developer fixing Playwright or web/API parity, I want a fast inner loop against an already-up QEMU stack, so that I do not wait for redeploy and the full 26-test suite on every iteration.
+
+**Why this priority**: US5 full-stack gate took hours when mixed with infra wait and blind Playwright retries; inner loop unblocks daily dev.
+
+**Independent Test**: With stack ready, `.\scripts\playwright-dev-loop.ps1 -Tier api` exits 0 in under 90s; `-Tier ui-messaging` exits 0 in under 3m.
+
+**Acceptance Scenarios**:
+
+1. **Given** API/UI health green, **When** inner loop runs preflight, **Then** it skips Playwright if env/ports wrong (no 5m wasted suite).
+2. **Given** Playwright failure, **When** analysis runs, **Then** `plan-failure-analysis.json` lists category + recommendedAction; outer orchestrator does **not** re-run full suite with same fingerprint.
+3. **Given** API-only spec failure, **When** developer runs `-Tier api`, **Then** only API-heavy specs run (no DOM login waits).
+4. **Given** inner tiers green (`inner-tier-status.json`), **When** outer gate runs once, **Then** smoke + full Playwright + gate report complete.
+
+---
+
 ### Edge Cases
 
 - TLS cert renewal fails → rollback documented via `korus_tls_enabled: false` inventory flag; HTTP smokes still pass on dev.
@@ -165,6 +182,8 @@ As a developer on Windows, I want reliable QEMU up/redeploy for full-stack QA, s
 - **FR-008** (US7): MLS chats MUST encrypt on client; server MUST NOT expose plaintext preview when MLS active.
 - **FR-009** (US7): Legacy E2EE scheme MUST remain functional for older clients.
 - **FR-010** (US6): Hotplug ADR MUST list real approver names, not placeholders.
+- **FR-011** (US9): Inner loop MUST NOT trigger `qemu-down` or full server redeploy unless analysis action is `redeploy_server`.
+- **FR-012** (US9): All `.ps1` orchestration scripts MUST remain ASCII-only (i18n in `deploy/qemu/lib/plan-failure-i18n.json`).
 
 ### Key Entities
 
@@ -172,6 +191,7 @@ As a developer on Windows, I want reliable QEMU up/redeploy for full-stack QA, s
 - **HexWritePort**: repository port method contract per aggregate (User, Organization, File, PublicLink).
 - **ProfilingTarget**: worker name, JDK image tag, compose service alias.
 - **PlaywrightScenario**: spec file, parity-matrix row, pass/waiver status.
+- **AcceptanceTier**: named Playwright subset (api, ui-messaging, …) with pass timestamp in `inner-tier-status.json`.
 - **MlsGroupState**: epoch, member key packages, wire message types.
 - **GovernanceSignoff**: role, approver name, decision date.
 
@@ -184,6 +204,10 @@ As a developer on Windows, I want reliable QEMU up/redeploy for full-stack QA, s
 - **SC-003**: QA runs one Playwright command and gets green on stable full stack.
 - **SC-004**: MLS-enabled chat participants decrypt only their own messages on device; server audit shows no plaintext retention for MLS sends.
 - **SC-005**: All post-backlog directions in `docs/plans/*.md` show `completed` or explicit deferred status with date.
+- **SC-006** (US9): Inner tier retest after code change completes in under 2 minutes when stack is already up.
+- **SC-007** (US9): Zero full-suite Playwright runs while preflight fails.
+- **SC-008** (US9): Outer golden path runs at most once per fix batch (not per orchestrator retry tick).
+- **SC-009** (US9): Playwright 26/26 on outer gate before `runtime-gate-report` operator approval.
 
 ## Assumptions
 
@@ -200,3 +224,4 @@ As a developer on Windows, I want reliable QEMU up/redeploy for full-stack QA, s
 | E2EE library | Hybrid: server MLS library per spike ADR; browser WASM MLS for client encrypt |
 | TLS on prod | Let's Encrypt on stage; prod supports BYO-cert with certbot optional |
 | US8 vs US5 | US8 optional; US5 full-stack gate documents QEMU prerequisite in quickstart |
+| US9 inner vs outer | Inner loop on host Playwright tiers; outer gate = smoke + full suite + gate report once |

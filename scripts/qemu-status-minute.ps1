@@ -82,12 +82,12 @@ function Get-BootstrapSnippet {
     } -ArgumentList $Plink, $HostKey, $Port, $cmd
     $done = Wait-Job $job -Timeout $SshTimeoutSec
     if (-not $done) {
-        Stop-Job $job -Force | Out-Null
-        Remove-Job $job -Force | Out-Null
+        Stop-Job $job | Out-Null
+        Remove-Job $job | Out-Null
         return @{ Lines = @("(SSH timeout)"); Text = ""; State = "ssh-busy" }
     }
     $out = @(Receive-Job $job)
-    Remove-Job $job -Force | Out-Null
+    Remove-Job $job | Out-Null
     $text = ($out | ForEach-Object { "$_" }) -join "`n"
     $state = "running"
     if ($text -match "server stack up done|web stack up done|QEMU server ansible deploy done|QEMU web ansible deploy done") { $state = "complete" }

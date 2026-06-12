@@ -1,0 +1,17 @@
+{
+  "summaries": {
+    "web_wrong_port": "Playwright uses wrong port; set PLAYWRIGHT_BASE_URL/KORUS_WEB_URL to :19088.",
+    "api_csadmin_401": "csadmin login 401; run keycloak-ensure-dev-users on server guest.",
+    "wait_stack": "API/register not ready; wait stack ready, do not run Playwright.",
+    "test_strict_mode": "Strict mode violation in tests; fix fixtures/ui.ts or specs.",
+    "preflight_retry": "Preflight failed; fix env or stack before Playwright.",
+    "ui_login_timeout": "UI login timeout; check web proxy, Keycloak, wsUrl.",
+    "partial_pass": "Playwright partial pass; analyze test-results, no blind retry.",
+    "analyze_log": "Playwright failed; read playwright log and test-results.",
+    "preflight_unknown": "Playwright exit non-zero; check preflight and log.",
+    "smoke_ws_url": "smoke wsUrl mismatch; redeploy web.",
+    "smoke_api_down": "smoke API down; wait stack or redeploy server.",
+    "smoke_other": "smoke failed; read smoke-last.log.",
+    "gate_report_fail": "runtime-gate-report failed."
+  }
+}

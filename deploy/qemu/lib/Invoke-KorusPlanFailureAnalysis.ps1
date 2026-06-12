@@ -1,5 +1,28 @@
 # Analyze smoke / Playwright / gate-report failures; recommend targeted remediation (no blind retry).
 
+function Get-PlanFailureI18nPath {
+    param([Parameter(Mandatory)][string]$Root)
+    Join-Path $Root "deploy\qemu\lib\plan-failure-i18n.json"
+}
+
+function Get-PlanFailureSummary {
+    param(
+        [Parameter(Mandatory)][string]$Key,
+        [Parameter(Mandatory)][string]$Root,
+        [string]$Detail = ""
+    )
+    $path = Get-PlanFailureI18nPath -Root $Root
+    $text = $Key
+    if (Test-Path $path) {
+        try {
+            $i18n = Get-Content $path -Raw | ConvertFrom-Json
+            if ($i18n.summaries.$Key) { $text = [string]$i18n.summaries.$Key }
+        } catch { }
+    }
+    if ($Detail) { return "$text $Detail" }
+    return $text
+}
+
 function Get-KorusPlanFailureAnalysisPath {
     param([Parameter(Mandatory)][string]$RunDir)
     Join-Path $RunDir "plan-failure-analysis.json"
@@ -28,7 +51,7 @@ function Test-KorusPlanPlaywrightPreflight {
     }
     try {
         $html = (Invoke-WebRequest -Uri $webUrl -UseBasicParsing -TimeoutSec 8).Content
-        if ($html -notmatch 'id="u"|webui/|Korus Messenger|web-client') {
+        if ($html -notmatch 'id="u"|data-testid=auth-submit|webui/|Korus Messenger|web-client') {
             $issues += "web UI missing login shell at $webUrl"
         }
     } catch {
@@ -81,12 +104,16 @@ function Invoke-KorusPlanFailureAnalysis {
     $failed = 0
     $passed = 0
     $recommended = "none"
+    $summaryKey = ""
     $codeFix = $false
     $summaryRu = ""
     $preflight = $null
 
-    if ($Kind -eq "playwright") {
-        $pwLog = Join-Path $RunDir "playwright-orchestrator.log"
+        if ($Kind -eq "playwright") {
+        $pwLog = Join-Path $RunDir "playwright-dev-loop.log"
+        if (-not (Test-Path $pwLog)) {
+            $pwLog = Join-Path $RunDir "playwright-orchestrator.log"
+        }
         $text = ""
         if (Test-Path $pwLog) { $text = Get-Content $pwLog -Raw -ErrorAction SilentlyContinue }
 
@@ -129,44 +156,53 @@ function Invoke-KorusPlanFailureAnalysis {
             $samples += "smoke_user API login failed"
         }
 
+        $stackDownPreflight = $false
         if (-not $preflight.Ok) {
             $categories["preflight_fail"] = 1
             foreach ($i in $preflight.Issues) { if ($samples.Count -lt 5) { $samples += $i } }
+            $issueText = $preflight.Issues -join "; "
+            if ($issueText -match 'API health down|web UI down|web UI missing|register failed|login failed') {
+                $stackDownPreflight = $true
+            }
         }
 
         if ($categories.ContainsKey("web_wrong_port") -or ($preflight -and $preflight.PwBase -notmatch ':19088')) {
             $recommended = "fix_playwright_env"
-            $summaryRu = "Playwright ходит не на :19088. Проверить PLAYWRIGHT_BASE_URL/KORUS_WEB_URL в orchestrator и playwright.config."
+            $summaryKey = "web_wrong_port"
         }
         elseif ($categories.ContainsKey("api_csadmin_401")) {
             $recommended = "ensure_keycloak_dev_users"
-            $summaryRu = "csadmin login 401. Запустить keycloak-ensure-dev-users на server guest."
+            $summaryKey = "api_csadmin_401"
         }
-        if ($categories.ContainsKey("test_strict_mode")) {
+        elseif ($categories.ContainsKey("api_register_503") -or $stackDownPreflight) {
+            $recommended = "wait_stack"
+            $summaryKey = "wait_stack"
+        }
+        elseif ($preflight.Ok -and $categories.ContainsKey("test_strict_mode")) {
             $recommended = "fix_tests_in_repo"
             $codeFix = $true
-            $summaryRu = "Flaky/fail tests: strict mode violation (duplicate text in chat list + message). Fix fixtures/ui.ts or specs."
+            $summaryKey = "test_strict_mode"
         }
         elseif ($categories.ContainsKey("preflight_fail") -and -not $categories.ContainsKey("api_csadmin_401")) {
             $recommended = "preflight_retry"
-            $summaryRu = "Preflight failed: $($preflight.Issues -join '; '). Fix preflight or env before Playwright."
+            $summaryKey = "preflight_retry"
         }
         elseif ($categories.ContainsKey("ui_login_timeout")) {
             $recommended = "analyze_web_auth_proxy"
-            $summaryRu = "UI login timeout. Проверить web->API proxy, Keycloak, wsUrl; смотреть test-results error-context."
+            $summaryKey = "ui_login_timeout"
         }
         elseif ($failed -gt 0 -and $passed -gt 0) {
             $recommended = "fix_tests_in_repo"
             $codeFix = $true
-            $summaryRu = "Playwright: $passed pass / $failed fail. API частично OK, UI/tests -- разбор логов и test-results, не blind retry."
+            $summaryKey = "partial_pass"
         }
         elseif ($failed -gt 0) {
             $recommended = "analyze_playwright_log"
-            $summaryRu = "Playwright: $failed fail / $passed pass. Разбор playwright-orchestrator.log и test-results."
+            $summaryKey = "analyze_log"
         }
         else {
             $recommended = "preflight_retry"
-            $summaryRu = "Playwright exit non-zero без parsed summary; проверить preflight и лог."
+            $summaryKey = "preflight_unknown"
         }
     }
     elseif ($Kind -eq "smoke") {
@@ -179,21 +215,35 @@ function Invoke-KorusPlanFailureAnalysis {
         if (Test-KorusWebClientWsHostMismatch -RunDir $RunDir) {
             $categories["ws_url_mismatch"] = 1
             $recommended = "redeploy_web"
-            $summaryRu = "smoke: wsUrl не совпадает с host-lan. redeploy web."
+            $summaryKey = "smoke_ws_url"
         }
         elseif ($text -match '18080|core|api' -and $text -match 'fail|error|down') {
             $categories["api_down"] = 1
             $recommended = "wait_stack_or_redeploy_server"
-            $summaryRu = "smoke: API down. Ждать stack или redeploy server."
+            $summaryKey = "smoke_api_down"
         }
         else {
             $recommended = "analyze_smoke_output"
-            $summaryRu = "smoke failed ($LastError). Смотреть вывод smoke-korus-web.ps1."
+            $summaryKey = "smoke_other"
         }
     }
     else {
         $recommended = "analyze_gate_report"
-        $summaryRu = "runtime-gate-report failed. Проверить write-runtime-gate-report.ps1 output."
+        $summaryKey = "gate_report_fail"
+    }
+
+    if ($summaryKey) {
+        $detail = ""
+        if ($summaryKey -eq "preflight_retry" -and $preflight -and $preflight.Issues) {
+            $detail = ($preflight.Issues -join "; ")
+        }
+        elseif ($summaryKey -eq "partial_pass" -or $summaryKey -eq "analyze_log") {
+            $detail = "($passed pass / $failed fail)"
+        }
+        elseif ($summaryKey -eq "smoke_other") {
+            $detail = "($LastError)"
+        }
+        $summaryRu = Get-PlanFailureSummary -Key $summaryKey -Root $Root -Detail $detail
     }
 
     $fpParts = @($Kind)
@@ -210,6 +260,7 @@ function Invoke-KorusPlanFailureAnalysis {
         passedCount        = $passed
         sampleErrors       = $samples
         recommendedAction  = $recommended
+        summaryKey         = $summaryKey
         codeFixRequired    = $codeFix
         summaryRu          = $summaryRu
         preflight          = $preflight
