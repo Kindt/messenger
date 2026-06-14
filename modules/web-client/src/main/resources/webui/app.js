@@ -245,6 +245,7 @@
     e2eeKeyCount: null,
     serverKeyPackages: null,
     settingsOpen: false,
+    settingsTab: null,
     soundNotify: false,
     lastPublicLink: null,
     e2eePlaintextCache: {},
@@ -318,6 +319,21 @@
     kk: "settings.localeKk",
     zh: "settings.localeZh",
     ko: "settings.localeKo",
+  };
+  var PRESENCE_LABEL_KEYS = {
+    online: "ui.settings.presenceOnline",
+    away: "ui.settings.presenceAway",
+    dnd: "ui.settings.presenceDnd",
+    offline: "ui.settings.presenceOffline",
+  };
+  var SETTINGS_TAB_IDS = ["general", "profile", "notifications", "links", "security"];
+  var SETTINGS_TAB_KEY = "korus_settings_tab";
+  var SETTINGS_TAB_LABEL_KEYS = {
+    general: "ui.settings.tabGeneral",
+    profile: "ui.settings.tabProfile",
+    notifications: "ui.settings.tabNotifications",
+    links: "ui.settings.tabLinks",
+    security: "ui.settings.tabSecurity",
   };
   var THREAD_PAGE = 50;
   var THREAD_SOFT_RELOAD = {
@@ -6181,6 +6197,554 @@
     setTimeout(attachLocalVideo, 0);
   }
 
+  function normalizeSettingsTab(tab) {
+    if (tab && SETTINGS_TAB_IDS.indexOf(tab) >= 0) return tab;
+    return "general";
+  }
+
+  function getSettingsTab() {
+    if (state.settingsTab) return normalizeSettingsTab(state.settingsTab);
+    try {
+      var stored = localStorage.getItem(SETTINGS_TAB_KEY);
+      if (stored) return normalizeSettingsTab(stored);
+    } catch (e) {}
+    return "general";
+  }
+
+  function setSettingsTab(tabId) {
+    var next = normalizeSettingsTab(tabId);
+    if (getSettingsTab() === next && state.settingsTab === next) return;
+    state.settingsTab = next;
+    try {
+      localStorage.setItem(SETTINGS_TAB_KEY, next);
+    } catch (e2) {}
+    render();
+  }
+
+  function closeSettingsModal() {
+    state.settingsOpen = false;
+    render();
+  }
+
+  function appendSettingsGeneralPanel(panel) {
+    var rowTheme = el("div", "settings-row");
+    rowTheme.appendChild(el("span", null, L("ui.settings.appearance")));
+    var bTheme = el(
+      "button",
+      "btn btn-ghost btn-sm",
+      state.appearance === "light" ? L("ui.common.dark") : L("ui.common.light")
+    );
+    bTheme.type = "button";
+    bTheme.onclick = function () {
+      toggleAppearance();
+    };
+    rowTheme.appendChild(bTheme);
+    panel.appendChild(rowTheme);
+
+    var rowLocale = el("div", "settings-row settings-row-locale");
+    rowLocale.appendChild(el("span", null, L("settings.locale")));
+    var localePicker = el("div", "settings-locale-picker");
+    localePicker.setAttribute("role", "group");
+    localePicker.setAttribute("aria-label", L("settings.locale"));
+    var localeCodes = i18n.supportedLocales ? i18n.supportedLocales() : ["ru", "en"];
+    var currentLocale = i18n.getLocale();
+    localeCodes.forEach(function (code) {
+      var labelKey = LOCALE_LABEL_KEYS[code] || "settings.localeEn";
+      var bLoc = el(
+        "button",
+        "btn btn-ghost btn-sm" + (currentLocale === code ? " active" : ""),
+        L(labelKey)
+      );
+      bLoc.type = "button";
+      bLoc.setAttribute("data-testid", "locale-" + code);
+      bLoc.setAttribute("aria-pressed", currentLocale === code ? "true" : "false");
+      bLoc.onclick = (function (localeCode) {
+        return function () {
+          i18n
+            .setLocale(localeCode)
+            .then(function () {
+              return persistUiLocale(localeCode, { silent: false });
+            })
+            .then(function () {
+              render();
+            });
+        };
+      })(code);
+      localePicker.appendChild(bLoc);
+    });
+    rowLocale.appendChild(localePicker);
+    panel.appendChild(rowLocale);
+    panel.appendChild(el("p", "settings-hint", L("ui.settings.appearanceKorus")));
+
+    var rowCache = el("div", "settings-row");
+    rowCache.appendChild(el("span", null, L("ui.settings.cache")));
+    var bCache = el("button", "btn btn-ghost btn-sm", L("ui.settings.resetCache"));
+    bCache.type = "button";
+    bCache.disabled = state.busy;
+    bCache.onclick = function () {
+      resetAppUiCache();
+    };
+    rowCache.appendChild(bCache);
+    panel.appendChild(rowCache);
+    panel.appendChild(el("p", "settings-hint", L("ui.settings.cacheHint")));
+
+    if (state.serverVersion) {
+      var rowVer = el("div", "settings-row");
+      rowVer.appendChild(el("span", null, L("ui.settings.apiVersion")));
+      rowVer.appendChild(el("span", "settings-value", state.serverVersion));
+      panel.appendChild(rowVer);
+    }
+
+    var kbdHint = document.createElement("p");
+    kbdHint.className = "settings-hint settings-kbd-hint";
+    kbdHint.innerHTML = L("ui.settings.kbdHint");
+    panel.appendChild(kbdHint);
+
+    if (state.pwaInstallPrompt || deferredInstallPrompt) {
+      var rowPwa = el("div", "settings-row");
+      rowPwa.appendChild(el("span", null, L("ui.settings.pwaInstall")));
+      var bPwa = el("button", "btn btn-primary btn-sm", L("ui.settings.pwaInstallBtn"));
+      bPwa.type = "button";
+      bPwa.onclick = function () {
+        promptInstallPwa();
+      };
+      rowPwa.appendChild(bPwa);
+      panel.appendChild(rowPwa);
+    }
+
+    if ("serviceWorker" in navigator) {
+      panel.appendChild(el("p", "settings-hint", L("ui.settings.offlineHint")));
+    }
+  }
+
+  function appendSettingsProfilePanel(panel) {
+    var rowPres = el("div", "settings-row");
+    var presLabel = document.createElement("label");
+    presLabel.setAttribute("for", "settings-presence");
+    presLabel.textContent = L("ui.settings.status");
+    rowPres.appendChild(presLabel);
+    var presSel = document.createElement("select");
+    presSel.id = "settings-presence";
+    presSel.name = "presence";
+    presSel.className = "settings-select";
+    ["online", "away", "dnd", "offline"].forEach(function (st) {
+      var opt = document.createElement("option");
+      opt.value = st;
+      opt.textContent = L(PRESENCE_LABEL_KEYS[st] || st);
+      if (st === state.myPresence) opt.selected = true;
+      presSel.appendChild(opt);
+    });
+    presSel.disabled = state.busy;
+    presSel.onchange = function () {
+      updatePresence(presSel.value);
+    };
+    rowPres.appendChild(presSel);
+    panel.appendChild(rowPres);
+
+    var rowProf = el("div", "settings-row");
+    var nameLabel = document.createElement("label");
+    nameLabel.setAttribute("for", "settings-display-name");
+    nameLabel.textContent = L("ui.settings.name");
+    rowProf.appendChild(nameLabel);
+    var nameInp = document.createElement("input");
+    nameInp.type = "text";
+    nameInp.id = "settings-display-name";
+    nameInp.name = "displayName";
+    nameInp.setAttribute("autocomplete", "name");
+    nameInp.className = "settings-text-input";
+    nameInp.value = state.myDisplayName || "";
+    nameInp.disabled = state.busy;
+    nameInp.oninput = function () {
+      state.myDisplayName = nameInp.value;
+    };
+    rowProf.appendChild(nameInp);
+    var bSaveProf = el("button", "btn btn-ghost btn-sm", L("ui.common.save"));
+    bSaveProf.type = "button";
+    bSaveProf.disabled = state.busy;
+    bSaveProf.onclick = function () {
+      saveMyProfile();
+    };
+    rowProf.appendChild(bSaveProf);
+    panel.appendChild(rowProf);
+
+    if (state.blockedUsers && state.blockedUsers.length) {
+      var rowBl = el("div", "settings-row");
+      rowBl.appendChild(
+        el("span", null, L("ui.settings.blockedUsers", { count: state.blockedUsers.length }))
+      );
+      panel.appendChild(rowBl);
+      state.blockedUsers.forEach(function (bu) {
+        var rowBu = el("div", "settings-row settings-row-sub");
+        var buLabel = bu.display_name || bu.username || bu.user_id;
+        rowBu.appendChild(el("span", "settings-value", buLabel));
+        var bUn = el("button", "btn btn-ghost btn-sm", L("ui.settings.unblockShort"));
+        bUn.type = "button";
+        bUn.disabled = state.busy;
+        bUn.onclick = function () {
+          unblockUser(bu.user_id);
+        };
+        rowBu.appendChild(bUn);
+        panel.appendChild(rowBu);
+      });
+    }
+  }
+
+  function appendSettingsNotificationsPanel(panel) {
+    var rowNotif = el("div", "settings-row");
+    rowNotif.appendChild(el("span", null, L("ui.settings.notifications")));
+    var bNotif = el(
+      "button",
+      "btn btn-ghost btn-sm",
+      notificationsAllowed() ? L("ui.common.off") : L("ui.common.on")
+    );
+    bNotif.type = "button";
+    bNotif.onclick = function () {
+      if (notificationsAllowed()) {
+        state.notifyPref = false;
+        localStorage.setItem(NOTIF_KEY, "0");
+        unregisterWebPush().then(render);
+      } else {
+        enableNotifications();
+      }
+    };
+    rowNotif.appendChild(bNotif);
+    panel.appendChild(rowNotif);
+
+    var rowSound = el("div", "settings-row");
+    rowSound.appendChild(el("span", null, L("ui.settings.sound")));
+    var bSound = el(
+      "button",
+      "btn btn-ghost btn-sm",
+      state.soundNotify ? L("ui.common.off") : L("ui.common.on")
+    );
+    bSound.type = "button";
+    bSound.onclick = function () {
+      state.soundNotify = !state.soundNotify;
+      localStorage.setItem(SOUND_NOTIF_KEY, state.soundNotify ? "1" : "0");
+      if (!state.soundNotify) {
+        stopIncomingCallRing();
+      } else {
+        syncIncomingCallRing();
+      }
+      render();
+    };
+    rowSound.appendChild(bSound);
+    panel.appendChild(rowSound);
+
+    if (notificationsAllowed()) {
+      var rowTestN = el("div", "settings-row");
+      rowTestN.appendChild(el("span", null, L("ui.settings.testNotification")));
+      var bTestN = el("button", "btn btn-ghost btn-sm", L("ui.settings.showTest"));
+      bTestN.type = "button";
+      bTestN.onclick = function () {
+        testLocalNotification();
+      };
+      rowTestN.appendChild(bTestN);
+      panel.appendChild(rowTestN);
+    }
+
+    if (vapidPublicKey() && notificationsAllowed()) {
+      var rowPush = el("div", "settings-row");
+      rowPush.appendChild(el("span", null, L("ui.settings.webPush")));
+      var bPushSync = el("button", "btn btn-ghost btn-sm", L("ui.settings.pushSyncUpdate"));
+      bPushSync.type = "button";
+      bPushSync.disabled = state.busy;
+      bPushSync.onclick = function () {
+        resyncWebPush();
+      };
+      rowPush.appendChild(bPushSync);
+      panel.appendChild(rowPush);
+    }
+
+    if (state.myDevices && state.myDevices.length) {
+      var rowDev = el("div", "settings-row");
+      rowDev.appendChild(
+        el("span", null, L("ui.settings.devicesCount", { count: state.myDevices.length }))
+      );
+      panel.appendChild(rowDev);
+      state.myDevices.forEach(function (d) {
+        var rowD = el("div", "settings-row settings-row-sub");
+        var active = d.push_active === true;
+        var label =
+          (d.device_name || "?") +
+          (active ? L("ui.settings.devicePushActive") : L("ui.settings.devicePushOff")) +
+          (d.push_provider ? " (" + d.push_provider + ")" : "");
+        rowD.appendChild(el("span", "settings-value", label));
+        var bUnDev = el("button", "btn btn-ghost btn-sm", L("ui.settings.disconnectShort"));
+        bUnDev.type = "button";
+        bUnDev.title = L("ui.settings.resetPushTitle");
+        bUnDev.disabled = state.busy;
+        bUnDev.onclick = function () {
+          unregisterDevice(d.device_name);
+        };
+        rowD.appendChild(bUnDev);
+        panel.appendChild(rowD);
+      });
+    } else if (state.myDevices) {
+      panel.appendChild(el("p", "settings-hint", L("ui.settings.noDevices")));
+    }
+
+    if (state.webPushError && vapidPublicKey()) {
+      panel.appendChild(el("p", "settings-hint settings-hint-error", state.webPushError));
+    }
+  }
+
+  function appendSettingsLinksPanel(panel) {
+    if (state.lastPublicLink) {
+      var rowRevoke = el("div", "settings-row");
+      rowRevoke.appendChild(el("span", null, L("ui.settings.lastPublicLink")));
+      var bRevoke = el("button", "btn btn-ghost btn-sm", L("ui.common.revoke"));
+      bRevoke.type = "button";
+      bRevoke.disabled = state.busy;
+      bRevoke.onclick = function () {
+        revokeLastPublicLink();
+      };
+      rowRevoke.appendChild(bRevoke);
+      panel.appendChild(rowRevoke);
+    }
+
+    panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.myPublicLinks")));
+    if (state.myPublicLinksBusy) {
+      panel.appendChild(el("p", "settings-hint", L("ui.common.loading")));
+    } else if (state.myPublicLinks && state.myPublicLinks.length) {
+      state.myPublicLinks.forEach(function (row) {
+        var linkRow = el("div", "file-link-row");
+        var head = el("div", "file-link-row-head");
+        var fname = row.filename || row.file_id.slice(0, 8);
+        head.textContent = L("ui.settings.myLinkRow", {
+          name: fname,
+          kind: row.link_kind || "?",
+          expires: formatInstantLabel(row.expires_at),
+        });
+        linkRow.appendChild(head);
+        var acts = el("div", "file-link-row-actions");
+        var bGo = el("button", "btn btn-ghost btn-sm", L("ui.settings.goToMessage"));
+        bGo.type = "button";
+        bGo.disabled = state.busy;
+        bGo.onclick = function () {
+          openChatMessageForFile(row.file_id);
+        };
+        acts.appendChild(bGo);
+        var bDl = el("button", "btn btn-ghost btn-sm", L("ui.common.download"));
+        bDl.type = "button";
+        bDl.disabled = state.busy;
+        bDl.onclick = function () {
+          downloadChatFile(row.file_id).catch(function (e) {
+            state.error = e.message || L("files.downloadFailed");
+            render();
+          });
+        };
+        acts.appendChild(bDl);
+        var bRevLink = el("button", "btn btn-ghost btn-sm", L("ui.common.revoke"));
+        bRevLink.type = "button";
+        bRevLink.disabled = state.busy;
+        bRevLink.onclick = function () {
+          revokeFilePublicLink(row.file_id, row.id);
+        };
+        acts.appendChild(bRevLink);
+        linkRow.appendChild(acts);
+        panel.appendChild(linkRow);
+      });
+    } else if (state.myPublicLinks) {
+      panel.appendChild(el("p", "settings-hint", L("ui.settings.noPublicLinks")));
+    }
+
+    var rowLinksRefresh = el("div", "settings-row");
+    var bLinksRefresh = el("button", "btn btn-ghost btn-sm", L("ui.settings.refreshLinks"));
+    bLinksRefresh.type = "button";
+    bLinksRefresh.disabled = state.busy || state.myPublicLinksBusy;
+    bLinksRefresh.onclick = function () {
+      loadMyPublicLinks().then(render);
+    };
+    rowLinksRefresh.appendChild(bLinksRefresh);
+    panel.appendChild(rowLinksRefresh);
+  }
+
+  function appendSettingsSecurityPanel(panel) {
+    panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.e2eeSection")));
+
+    if (state.e2eeKeyCount !== null) {
+      var rowE2 = el("div", "settings-row");
+      rowE2.appendChild(el("span", null, L("ui.settings.e2eeKeyPackages")));
+      rowE2.appendChild(el("span", "settings-value", String(state.e2eeKeyCount)));
+      panel.appendChild(rowE2);
+    }
+
+    if (state.serverKeyPackages && state.serverKeyPackages.length) {
+      state.serverKeyPackages.forEach(function (kp) {
+        var rowKpItem = el("div", "settings-row settings-row-sub");
+        var pkHint = kp.public_key ? String(kp.public_key).slice(0, 14) + "…" : kp.id;
+        rowKpItem.appendChild(el("span", "settings-value", pkHint));
+        var bDelKp = el("button", "btn btn-ghost btn-sm", L("ui.actions.delete"));
+        bDelKp.type = "button";
+        bDelKp.disabled = state.busy;
+        bDelKp.onclick = function () {
+          deleteServerKeyPackage(kp.id);
+        };
+        rowKpItem.appendChild(bDelKp);
+        panel.appendChild(rowKpItem);
+      });
+    }
+
+    var rowKp = el("div", "settings-row");
+    rowKp.appendChild(el("span", null, L("ui.settings.newKeyPackage")));
+    var bKp = el("button", "btn btn-ghost btn-sm", L("ui.settings.create"));
+    bKp.type = "button";
+    bKp.disabled = state.busy;
+    bKp.onclick = function () {
+      createAndUploadKeyPackage();
+    };
+    rowKp.appendChild(bKp);
+    panel.appendChild(rowKp);
+
+    var rowKeyIo = el("div", "settings-row");
+    rowKeyIo.appendChild(el("span", null, L("ui.settings.localKey")));
+    var bExport = el("button", "btn btn-ghost btn-sm", L("ui.settings.exportKey"));
+    bExport.type = "button";
+    bExport.disabled = !state.localKeyPackageMeta;
+    bExport.onclick = function () {
+      exportLocalKeyPackage();
+    };
+    rowKeyIo.appendChild(bExport);
+    var bImport = el("button", "btn btn-ghost btn-sm", L("ui.settings.importKey"));
+    bImport.type = "button";
+    bImport.onclick = function () {
+      importLocalKeyPackage();
+    };
+    rowKeyIo.appendChild(bImport);
+    panel.appendChild(rowKeyIo);
+
+    if (state.localKeyPackageMeta) {
+      var rowLoc = el("div", "settings-row");
+      rowLoc.appendChild(
+        el(
+          "span",
+          null,
+          L("ui.settings.localKeySaved", {
+            prefix:
+              state.localKeyPackageMeta.public_key_prefix || L("ui.settings.localKeySavedYes"),
+          })
+        )
+      );
+      var bWipe = el("button", "btn btn-ghost btn-sm", L("ui.actions.delete"));
+      bWipe.type = "button";
+      bWipe.onclick = function () {
+        wipeLocalKeyPackage();
+      };
+      rowLoc.appendChild(bWipe);
+      panel.appendChild(rowLoc);
+    }
+
+    var privateHint = el("p", "settings-hint");
+    privateHint.setAttribute("translate", "no");
+    var pushHint = L("ui.settings.privateKeyHint");
+    if (vapidPublicKey()) {
+      pushHint += state.webPushRegistered
+        ? L("ui.settings.webPushHintRegistered")
+        : L("ui.settings.webPushHintDefault");
+    } else {
+      pushHint += L("ui.settings.webPushNoVapid");
+    }
+    privateHint.textContent = pushHint;
+    panel.appendChild(privateHint);
+  }
+
+  function renderSettingsModal(shell) {
+    if (!state.settingsOpen) return;
+
+    var activeTab = getSettingsTab();
+    state.settingsTab = activeTab;
+
+    var sOv = el("div", "settings-overlay");
+    var sCard = el("div", "settings-card");
+    sCard.setAttribute("role", "dialog");
+    sCard.setAttribute("aria-modal", "true");
+    sCard.setAttribute("aria-labelledby", "settings-dialog-title");
+
+    var sTitle = el("h2", "settings-title", L("ui.settings.title"));
+    sTitle.id = "settings-dialog-title";
+    sCard.appendChild(sTitle);
+
+    var tablist = el("div", "settings-tablist");
+    tablist.setAttribute("role", "tablist");
+    tablist.setAttribute("aria-label", L("ui.settings.tabListLabel"));
+    SETTINGS_TAB_IDS.forEach(function (tabId) {
+      var tabBtn = el(
+        "button",
+        "settings-tab" + (tabId === activeTab ? " active" : ""),
+        L(SETTINGS_TAB_LABEL_KEYS[tabId] || tabId)
+      );
+      tabBtn.type = "button";
+      tabBtn.id = "settings-tab-" + tabId;
+      tabBtn.setAttribute("role", "tab");
+      tabBtn.setAttribute("data-testid", "settings-tab-" + tabId);
+      tabBtn.setAttribute("aria-selected", tabId === activeTab ? "true" : "false");
+      tabBtn.setAttribute("aria-controls", "settings-panel-" + tabId);
+      tabBtn.tabIndex = tabId === activeTab ? 0 : -1;
+      tabBtn.onclick = (function (id) {
+        return function () {
+          setSettingsTab(id);
+        };
+      })(tabId);
+      tabBtn.onkeydown = (function (id) {
+        return function (e) {
+          var idx = SETTINGS_TAB_IDS.indexOf(id);
+          if (idx < 0) return;
+          var next = null;
+          if (e.key === "ArrowRight") {
+            next = SETTINGS_TAB_IDS[(idx + 1) % SETTINGS_TAB_IDS.length];
+          } else if (e.key === "ArrowLeft") {
+            next = SETTINGS_TAB_IDS[(idx - 1 + SETTINGS_TAB_IDS.length) % SETTINGS_TAB_IDS.length];
+          } else if (e.key === "Home") {
+            next = SETTINGS_TAB_IDS[0];
+          } else if (e.key === "End") {
+            next = SETTINGS_TAB_IDS[SETTINGS_TAB_IDS.length - 1];
+          }
+          if (!next) return;
+          e.preventDefault();
+          setSettingsTab(next);
+        };
+      })(tabId);
+      tablist.appendChild(tabBtn);
+    });
+    sCard.appendChild(tablist);
+
+    var sBody = el("div", "settings-body");
+    SETTINGS_TAB_IDS.forEach(function (tabId) {
+      var tabPanel = el("div", "settings-tabpanel");
+      tabPanel.id = "settings-panel-" + tabId;
+      tabPanel.setAttribute("role", "tabpanel");
+      tabPanel.setAttribute("aria-labelledby", "settings-tab-" + tabId);
+      if (tabId !== activeTab) {
+        tabPanel.hidden = true;
+      } else if (tabId === "general") {
+        appendSettingsGeneralPanel(tabPanel);
+      } else if (tabId === "profile") {
+        appendSettingsProfilePanel(tabPanel);
+      } else if (tabId === "notifications") {
+        appendSettingsNotificationsPanel(tabPanel);
+      } else if (tabId === "links") {
+        appendSettingsLinksPanel(tabPanel);
+      } else if (tabId === "security") {
+        appendSettingsSecurityPanel(tabPanel);
+      }
+      sBody.appendChild(tabPanel);
+    });
+    sCard.appendChild(sBody);
+
+    var sClose = el("button", "btn btn-primary", L("ui.common.close"));
+    sClose.type = "button";
+    sClose.setAttribute("data-testid", "settings-close");
+    sClose.onclick = closeSettingsModal;
+    sCard.appendChild(sClose);
+
+    sOv.appendChild(sCard);
+    sOv.onclick = function (e) {
+      if (e.target === sOv) closeSettingsModal();
+    };
+    shell.appendChild(sOv);
+  }
+
   function renderMain() {
     var root = document.getElementById("root");
     root.innerHTML = "";
@@ -7195,403 +7759,7 @@
     shell.appendChild(main);
     renderCallPanel(shell);
     if (state.settingsOpen) {
-      var sOv = el("div", "settings-overlay");
-      var sCard = el("div", "settings-card");
-      sCard.appendChild(el("h2", "settings-title", L("ui.settings.title")));
-      var sBody = el("div", "settings-body");
-      var rowTheme = el("div", "settings-row");
-      rowTheme.appendChild(el("span", null, L("ui.settings.appearance")));
-      var bTheme = el(
-        "button",
-        "btn btn-ghost btn-sm",
-        state.appearance === "light" ? L("ui.common.dark") : L("ui.common.light")
-      );
-      bTheme.type = "button";
-      bTheme.onclick = function () {
-        toggleAppearance();
-      };
-      rowTheme.appendChild(bTheme);
-      sBody.appendChild(rowTheme);
-      var rowLocale = el("div", "settings-row");
-      rowLocale.appendChild(el("span", null, L("settings.locale")));
-      var localeCodes = i18n.supportedLocales ? i18n.supportedLocales() : ["ru", "en"];
-      localeCodes.sort().forEach(function (code) {
-        var labelKey = LOCALE_LABEL_KEYS[code] || "settings.localeEn";
-        var bLoc = el(
-          "button",
-          "btn btn-ghost btn-sm" + (i18n.getLocale() === code ? " active" : ""),
-          L(labelKey)
-        );
-        bLoc.type = "button";
-        bLoc.setAttribute("data-testid", "locale-" + code);
-        bLoc.onclick = (function (localeCode) {
-          return function () {
-            i18n
-              .setLocale(localeCode)
-              .then(function () {
-                return persistUiLocale(localeCode, { silent: false });
-              })
-              .then(function () {
-                render();
-              });
-          };
-        })(code);
-        rowLocale.appendChild(bLoc);
-      });
-      sBody.appendChild(rowLocale);
-      sBody.appendChild(
-        el(
-          "p",
-          "settings-hint",
-          L("ui.settings.appearanceKorus")
-        )
-      );
-      var rowCache = el("div", "settings-row");
-      rowCache.appendChild(el("span", null, L("ui.settings.cache")));
-      var bCache = el("button", "btn btn-ghost btn-sm", L("ui.settings.resetCache"));
-      bCache.type = "button";
-      bCache.disabled = state.busy;
-      bCache.onclick = function () {
-        resetAppUiCache();
-      };
-      rowCache.appendChild(bCache);
-      sBody.appendChild(rowCache);
-      sBody.appendChild(
-        el(
-          "p",
-          "settings-hint",
-          L("ui.settings.cacheHint")
-        )
-      );
-      if (state.serverVersion) {
-        var rowVer = el("div", "settings-row");
-        rowVer.appendChild(el("span", null, L("ui.settings.apiVersion")));
-        rowVer.appendChild(el("span", "settings-value", state.serverVersion));
-        sBody.appendChild(rowVer);
-      }
-      var kbdHint = document.createElement("p");
-      kbdHint.className = "settings-hint settings-kbd-hint";
-      kbdHint.innerHTML = L("ui.settings.kbdHint");
-      sBody.appendChild(kbdHint);
-      var rowPres = el("div", "settings-row");
-      rowPres.appendChild(el("span", null, L("ui.settings.status")));
-      var presSel = document.createElement("select");
-      presSel.className = "settings-select";
-      ["online", "away", "dnd", "offline"].forEach(function (st) {
-        var opt = document.createElement("option");
-        opt.value = st;
-        opt.textContent = st;
-        if (st === state.myPresence) opt.selected = true;
-        presSel.appendChild(opt);
-      });
-      presSel.disabled = state.busy;
-      presSel.onchange = function () {
-        updatePresence(presSel.value);
-      };
-      rowPres.appendChild(presSel);
-      sBody.appendChild(rowPres);
-      var rowProf = el("div", "settings-row");
-      rowProf.appendChild(el("span", null, L("ui.settings.name")));
-      var nameInp = document.createElement("input");
-      nameInp.type = "text";
-      nameInp.className = "settings-text-input";
-      nameInp.value = state.myDisplayName || "";
-      nameInp.disabled = state.busy;
-      nameInp.oninput = function () {
-        state.myDisplayName = nameInp.value;
-      };
-      rowProf.appendChild(nameInp);
-      var bSaveProf = el("button", "btn btn-ghost btn-sm", L("ui.common.save"));
-      bSaveProf.type = "button";
-      bSaveProf.disabled = state.busy;
-      bSaveProf.onclick = function () {
-        saveMyProfile();
-      };
-      rowProf.appendChild(bSaveProf);
-      sBody.appendChild(rowProf);
-      var rowNotif = el("div", "settings-row");
-      rowNotif.appendChild(el("span", null, L("ui.settings.notifications")));
-      var bNotif = el(
-        "button",
-        "btn btn-ghost btn-sm",
-        notificationsAllowed() ? L("ui.common.off") : L("ui.common.on")
-      );
-      bNotif.type = "button";
-      bNotif.onclick = function () {
-        if (notificationsAllowed()) {
-          state.notifyPref = false;
-          localStorage.setItem(NOTIF_KEY, "0");
-          unregisterWebPush().then(render);
-        } else {
-          enableNotifications();
-        }
-      };
-      rowNotif.appendChild(bNotif);
-      sBody.appendChild(rowNotif);
-      var rowSound = el("div", "settings-row");
-      rowSound.appendChild(el("span", null, L("ui.settings.sound")));
-      var bSound = el(
-        "button",
-        "btn btn-ghost btn-sm",
-        state.soundNotify ? L("ui.common.off") : L("ui.common.on")
-      );
-      bSound.type = "button";
-      bSound.onclick = function () {
-        state.soundNotify = !state.soundNotify;
-        localStorage.setItem(SOUND_NOTIF_KEY, state.soundNotify ? "1" : "0");
-        if (!state.soundNotify) {
-          stopIncomingCallRing();
-        } else {
-          syncIncomingCallRing();
-        }
-        render();
-      };
-      rowSound.appendChild(bSound);
-      sBody.appendChild(rowSound);
-      if (state.lastPublicLink) {
-        var rowRevoke = el("div", "settings-row");
-        rowRevoke.appendChild(el("span", null, L("ui.settings.lastPublicLink")));
-        var bRevoke = el("button", "btn btn-ghost btn-sm", L("ui.common.revoke"));
-        bRevoke.type = "button";
-        bRevoke.disabled = state.busy;
-        bRevoke.onclick = function () {
-          revokeLastPublicLink();
-        };
-        rowRevoke.appendChild(bRevoke);
-        sBody.appendChild(rowRevoke);
-      }
-      sBody.appendChild(el("h3", "settings-subtitle", L("ui.settings.myPublicLinks")));
-      if (state.myPublicLinksBusy) {
-        sBody.appendChild(el("p", "settings-hint", L("ui.common.loading")));
-      } else if (state.myPublicLinks && state.myPublicLinks.length) {
-        state.myPublicLinks.forEach(function (row) {
-          var linkRow = el("div", "file-link-row");
-          var head = el("div", "file-link-row-head");
-          var fname = row.filename || row.file_id.slice(0, 8);
-          head.textContent = L("ui.settings.myLinkRow", {
-            name: fname,
-            kind: row.link_kind || "?",
-            expires: formatInstantLabel(row.expires_at),
-          });
-          linkRow.appendChild(head);
-          var acts = el("div", "file-link-row-actions");
-          var bGo = el("button", "btn btn-ghost btn-sm", L("ui.settings.goToMessage"));
-          bGo.type = "button";
-          bGo.disabled = state.busy;
-          bGo.onclick = function () {
-            openChatMessageForFile(row.file_id);
-          };
-          acts.appendChild(bGo);
-          var bDl = el("button", "btn btn-ghost btn-sm", L("ui.common.download"));
-          bDl.type = "button";
-          bDl.disabled = state.busy;
-          bDl.onclick = function () {
-            downloadChatFile(row.file_id).catch(function (e) {
-              state.error = e.message || L("files.downloadFailed");
-              render();
-            });
-          };
-          acts.appendChild(bDl);
-          var bRevLink = el("button", "btn btn-ghost btn-sm", L("ui.common.revoke"));
-          bRevLink.type = "button";
-          bRevLink.disabled = state.busy;
-          bRevLink.onclick = function () {
-            revokeFilePublicLink(row.file_id, row.id);
-          };
-          acts.appendChild(bRevLink);
-          linkRow.appendChild(acts);
-          sBody.appendChild(linkRow);
-        });
-      } else if (state.myPublicLinks) {
-        sBody.appendChild(el("p", "settings-hint", L("ui.settings.noPublicLinks")));
-      }
-      var rowLinksRefresh = el("div", "settings-row");
-      var bLinksRefresh = el("button", "btn btn-ghost btn-sm", L("ui.settings.refreshLinks"));
-      bLinksRefresh.type = "button";
-      bLinksRefresh.disabled = state.busy || state.myPublicLinksBusy;
-      bLinksRefresh.onclick = function () {
-        loadMyPublicLinks().then(render);
-      };
-      rowLinksRefresh.appendChild(bLinksRefresh);
-      sBody.appendChild(rowLinksRefresh);
-      if (notificationsAllowed()) {
-        var rowTestN = el("div", "settings-row");
-        rowTestN.appendChild(el("span", null, L("ui.settings.testNotification")));
-        var bTestN = el("button", "btn btn-ghost btn-sm", L("ui.settings.showTest"));
-        bTestN.type = "button";
-        bTestN.onclick = function () {
-          testLocalNotification();
-        };
-        rowTestN.appendChild(bTestN);
-        sBody.appendChild(rowTestN);
-      }
-      if (vapidPublicKey() && notificationsAllowed()) {
-        var rowPush = el("div", "settings-row");
-        rowPush.appendChild(el("span", null, L("ui.settings.webPush")));
-        var bPushSync = el("button", "btn btn-ghost btn-sm", L("ui.settings.pushSyncUpdate"));
-        bPushSync.type = "button";
-        bPushSync.disabled = state.busy;
-        bPushSync.onclick = function () {
-          resyncWebPush();
-        };
-        rowPush.appendChild(bPushSync);
-        sBody.appendChild(rowPush);
-      }
-      if (state.e2eeKeyCount !== null) {
-        var rowE2 = el("div", "settings-row");
-        rowE2.appendChild(el("span", null, L("ui.settings.e2eeKeyPackages")));
-        rowE2.appendChild(el("span", "settings-value", String(state.e2eeKeyCount)));
-        sBody.appendChild(rowE2);
-      }
-      if (state.serverKeyPackages && state.serverKeyPackages.length) {
-        state.serverKeyPackages.forEach(function (kp) {
-          var rowKpItem = el("div", "settings-row settings-row-sub");
-          var pkHint = kp.public_key ? String(kp.public_key).slice(0, 14) + "…" : kp.id;
-          rowKpItem.appendChild(el("span", "settings-value", pkHint));
-          var bDelKp = el("button", "btn btn-ghost btn-sm", L("ui.actions.delete"));
-          bDelKp.type = "button";
-          bDelKp.disabled = state.busy;
-          bDelKp.onclick = function () {
-            deleteServerKeyPackage(kp.id);
-          };
-          rowKpItem.appendChild(bDelKp);
-          sBody.appendChild(rowKpItem);
-        });
-      }
-      var rowKp = el("div", "settings-row");
-      rowKp.appendChild(el("span", null, L("ui.settings.newKeyPackage")));
-      var bKp = el("button", "btn btn-ghost btn-sm", L("ui.settings.create"));
-      bKp.type = "button";
-      bKp.disabled = state.busy;
-      bKp.onclick = function () {
-        createAndUploadKeyPackage();
-      };
-      rowKp.appendChild(bKp);
-      sBody.appendChild(rowKp);
-      var rowKeyIo = el("div", "settings-row");
-      rowKeyIo.appendChild(el("span", null, L("ui.settings.localKey")));
-      var bExport = el("button", "btn btn-ghost btn-sm", L("ui.settings.exportKey"));
-      bExport.type = "button";
-      bExport.disabled = !state.localKeyPackageMeta;
-      bExport.onclick = function () {
-        exportLocalKeyPackage();
-      };
-      rowKeyIo.appendChild(bExport);
-      var bImport = el("button", "btn btn-ghost btn-sm", L("ui.settings.importKey"));
-      bImport.type = "button";
-      bImport.onclick = function () {
-        importLocalKeyPackage();
-      };
-      rowKeyIo.appendChild(bImport);
-      sBody.appendChild(rowKeyIo);
-      if (state.localKeyPackageMeta) {
-        var rowLoc = el("div", "settings-row");
-        rowLoc.appendChild(
-          el(
-            "span",
-            null,
-            L("ui.settings.localKeySaved", {
-              prefix:
-                state.localKeyPackageMeta.public_key_prefix || L("ui.settings.localKeySavedYes"),
-            })
-          )
-        );
-        var bWipe = el("button", "btn btn-ghost btn-sm", L("ui.actions.delete"));
-        bWipe.type = "button";
-        bWipe.onclick = function () {
-          wipeLocalKeyPackage();
-        };
-        rowLoc.appendChild(bWipe);
-        sBody.appendChild(rowLoc);
-      }
-      if (state.pwaInstallPrompt || deferredInstallPrompt) {
-        var rowPwa = el("div", "settings-row");
-        rowPwa.appendChild(el("span", null, L("ui.settings.pwaInstall")));
-        var bPwa = el("button", "btn btn-primary btn-sm", L("ui.settings.pwaInstallBtn"));
-        bPwa.type = "button";
-        bPwa.onclick = function () {
-          promptInstallPwa();
-        };
-        rowPwa.appendChild(bPwa);
-        sBody.appendChild(rowPwa);
-      }
-      if (state.blockedUsers && state.blockedUsers.length) {
-        var rowBl = el("div", "settings-row");
-        rowBl.appendChild(
-          el("span", null, L("ui.settings.blockedUsers", { count: state.blockedUsers.length }))
-        );
-        sBody.appendChild(rowBl);
-        state.blockedUsers.forEach(function (bu) {
-          var rowBu = el("div", "settings-row settings-row-sub");
-          var buLabel = bu.display_name || bu.username || bu.user_id;
-          rowBu.appendChild(el("span", "settings-value", buLabel));
-          var bUn = el("button", "btn btn-ghost btn-sm", L("ui.settings.unblockShort"));
-          bUn.type = "button";
-          bUn.disabled = state.busy;
-          bUn.onclick = function () {
-            unblockUser(bu.user_id);
-          };
-          rowBu.appendChild(bUn);
-          sBody.appendChild(rowBu);
-        });
-      }
-      if (state.myDevices && state.myDevices.length) {
-        var rowDev = el("div", "settings-row");
-        rowDev.appendChild(el("span", null, L("ui.settings.devicesCount", { count: state.myDevices.length })));
-        sBody.appendChild(rowDev);
-        state.myDevices.forEach(function (d) {
-          var rowD = el("div", "settings-row settings-row-sub");
-          var active = d.push_active === true;
-          var label =
-            (d.device_name || "?") +
-            (active ? L("ui.settings.devicePushActive") : L("ui.settings.devicePushOff")) +
-            (d.push_provider ? " (" + d.push_provider + ")" : "");
-          rowD.appendChild(el("span", "settings-value", label));
-          var bUnDev = el("button", "btn btn-ghost btn-sm", L("ui.settings.disconnectShort"));
-          bUnDev.type = "button";
-          bUnDev.title = L("ui.settings.resetPushTitle");
-          bUnDev.disabled = state.busy;
-          bUnDev.onclick = function () {
-            unregisterDevice(d.device_name);
-          };
-          rowD.appendChild(bUnDev);
-          sBody.appendChild(rowD);
-        });
-      }
-      var pushHint = L("ui.settings.privateKeyHint");
-      if (vapidPublicKey()) {
-        pushHint += state.webPushRegistered
-          ? L("ui.settings.webPushHintRegistered")
-          : L("ui.settings.webPushHintDefault");
-      } else {
-        pushHint += L("ui.settings.webPushNoVapid");
-      }
-      sBody.appendChild(el("p", "settings-hint", pushHint));
-      if (state.webPushError && vapidPublicKey()) {
-        sBody.appendChild(el("p", "settings-hint settings-hint-error", state.webPushError));
-      }
-      if ("serviceWorker" in navigator) {
-        sBody.appendChild(
-          el("p", "settings-hint", L("ui.settings.offlineHint"))
-        );
-      }
-      sCard.appendChild(sBody);
-      var sClose = el("button", "btn btn-primary", L("ui.common.close"));
-      sClose.type = "button";
-      sClose.setAttribute("data-testid", "settings-close");
-      sClose.onclick = function () {
-        state.settingsOpen = false;
-        render();
-      };
-      sCard.appendChild(sClose);
-      sOv.appendChild(sCard);
-      sOv.onclick = function (e) {
-        if (e.target === sOv) {
-          state.settingsOpen = false;
-          render();
-        }
-      };
-      shell.appendChild(sOv);
+      renderSettingsModal(shell);
     }
     if (state.forwardPick) {
       var fOv = el("div", "forward-overlay");
