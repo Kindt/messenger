@@ -395,17 +395,72 @@ button {
   color: #c9a0ff;
 }
 
-.e2ee-status {
-  font-size: 0.72rem;
-  color: var(--muted);
-  padding: 0 6px;
-  white-space: nowrap;
+.e2ee-status.count-zero {
+  opacity: 0.65;
+}
+
+.status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  position: relative;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.status-icon .status-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.ws-status.connected .status-dot {
+  background: var(--success, #6ecf8f);
+}
+
+.ws-status.pending .status-dot {
+  background: #e6c84a;
+  animation: status-dot-pulse 1.2s ease-in-out infinite;
+}
+
+.ws-status.error .status-dot {
+  background: var(--danger, #e55);
+}
+
+.status-badge {
+  position: absolute;
+  top: -1px;
+  right: -3px;
+  min-width: 0.85rem;
+  height: 0.85rem;
+  padding: 0 2px;
+  border-radius: 999px;
+  font-size: 0.55rem;
+  line-height: 0.85rem;
+  text-align: center;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+@keyframes status-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 
 .app-header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
@@ -425,20 +480,21 @@ button {
 }
 
 .sidebar-header {
-  padding: 12px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .sidebar-search {
   width: 100%;
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
+  font-size: 0.85rem;
 }
 
 .sidebar-search::placeholder {
@@ -624,21 +680,39 @@ button {
   flex-shrink: 0;
 }
 
+.sidebar-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .sidebar-tabs {
   display: flex;
-  gap: 4px;
-  margin: 4px 8px 8px;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
 }
 
 .sidebar-tab {
   flex: 1;
-  padding: 6px 8px;
+  padding: 4px 6px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--panel);
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   cursor: pointer;
+  line-height: 1;
+}
+
+.sidebar-tab-icon {
+  min-width: 1.75rem;
+  max-width: 2.25rem;
+  padding: 4px;
+  font-size: 0.95rem;
+  text-align: center;
 }
 
 .sidebar-tab.active {
@@ -1298,14 +1372,17 @@ button {
 
 .sidebar-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 0 0 8px;
+  flex-shrink: 0;
+  gap: 3px;
 }
 
-.sidebar-actions .btn-icon {
-  flex: 1 1 auto;
-  min-width: 2.25rem;
+.sidebar-actions .btn-icon,
+.sidebar-actions .sidebar-action-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  min-width: 1.75rem;
+  flex: none;
+  font-size: 0.85rem;
 }
 
 .msg-actions .btn-icon,
@@ -1544,19 +1621,6 @@ button {
 .incoming-call-actions {
   display: flex;
   gap: 8px;
-}
-
-.ws-status {
-  font-size: 0.72rem;
-  color: var(--muted);
-}
-
-.ws-status.connected {
-  color: var(--success, #6ecf8f);
-}
-
-.ws-status.disconnected {
-  color: var(--muted);
 }
 
 .empty-thread {

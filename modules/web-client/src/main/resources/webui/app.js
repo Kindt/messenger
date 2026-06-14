@@ -5441,6 +5441,55 @@
     );
   }
 
+  function wsStatusLabel() {
+    if (state.wsState === "open") return L("ws.online");
+    if (state.wsState === "connecting") return L("ws.connecting");
+    if (state.wsState === "reconnecting") return L("ws.reconnecting");
+    if (state.wsState === "error") return L("ws.error");
+    return L("ws.offline");
+  }
+
+  function shellStatusIcon(icon, tip, cls) {
+    var span = el("span", "status-icon " + (cls || ""));
+    span.setAttribute("role", "status");
+    span.title = tip;
+    span.setAttribute("aria-label", tip);
+    if (icon === "dot") {
+      span.appendChild(el("span", "status-dot"));
+    } else {
+      span.textContent = icon;
+    }
+    return span;
+  }
+
+  function shellWsStatusIcon() {
+    var connected = state.wsState === "open";
+    var pending = state.wsState === "connecting" || state.wsState === "reconnecting";
+    var cls = "ws-status";
+    if (connected) cls += " connected";
+    else if (pending) cls += " pending";
+    else if (state.wsState === "error") cls += " error";
+    else cls += " disconnected";
+    var tip = L("ws.prefix") + " " + wsStatusLabel() + " — " + wsBaseUrl();
+    var span = shellStatusIcon("dot", tip, cls);
+    span.setAttribute("data-testid", "ws-status");
+    return span;
+  }
+
+  function shellE2eeStatusIcon(count) {
+    var tip = L("ui.shell.e2eeTitle") + " — " + L("ui.shell.e2eeCount", { count: count });
+    var cls = "e2ee-status";
+    if (!count) cls += " count-zero";
+    var span = shellStatusIcon("🔐", tip, cls);
+    span.setAttribute("data-testid", "e2ee-status");
+    if (count > 0) {
+      var badge = el("span", "status-badge");
+      badge.textContent = count > 99 ? "99+" : String(count);
+      span.appendChild(badge);
+    }
+    return span;
+  }
+
   function chatActivityMs(c) {
     var prev = state.chatPreview[c.id];
     if (prev && prev.at) return prev.at;
@@ -6846,10 +6895,7 @@
     });
     hdrR.appendChild(callBtn);
     if (state.e2eeKeyCount !== null) {
-      var e2eeSpan = el("span", "e2ee-status");
-      e2eeSpan.title = L("ui.shell.e2eeTitle");
-      e2eeSpan.textContent = L("ui.shell.e2eeCount", { count: state.e2eeKeyCount });
-      hdrR.appendChild(e2eeSpan);
+      hdrR.appendChild(shellE2eeStatusIcon(state.e2eeKeyCount));
     }
     var themeBtn = el(
       "button",
@@ -6885,22 +6931,7 @@
       },
     });
     hdrR.appendChild(setBtn);
-    var wsConnected = state.wsState === "open";
-    var ws = el("span", "ws-status " + (wsConnected ? "connected" : "disconnected"));
-    ws.title = wsBaseUrl();
-    ws.textContent =
-      L("ws.prefix") +
-      " " +
-      (state.wsState === "open"
-        ? L("ws.online")
-        : state.wsState === "connecting"
-          ? L("ws.connecting")
-          : state.wsState === "reconnecting"
-            ? L("ws.reconnecting")
-          : state.wsState === "error"
-            ? L("ws.error")
-            : L("ws.offline"));
-    hdrR.appendChild(ws);
+    hdrR.appendChild(shellWsStatusIcon());
     var lo = iconBtn("🚪", L("common.logout"), {
       testId: "logout",
       onClick: function () {
@@ -6996,12 +7027,13 @@
       render();
     };
     sh.appendChild(search);
+    var sideToolbar = el("div", "sidebar-toolbar");
     var sideActs = el("div", "sidebar-actions");
     sideActs.appendChild(
       iconBtn("✚", L("ui.sidebar.newGroup"), {
         primary: true,
-        block: true,
         disabled: state.busy,
+        cls: "sidebar-action-btn",
         onClick: function () {
           newGroup();
         },
@@ -7009,8 +7041,8 @@
     );
     sideActs.appendChild(
       iconBtn("🔒", L("ui.sidebar.vaultTitle"), {
-        block: true,
         disabled: state.busy,
+        cls: "sidebar-action-btn",
         onClick: function () {
           openSavedVault();
         },
@@ -7018,22 +7050,23 @@
     );
     sideActs.appendChild(
       iconBtn("✓", L("ui.sidebar.readAllTitle"), {
-        block: true,
         disabled: state.busy,
+        cls: "sidebar-action-btn",
         onClick: function () {
           markAllChatsRead();
         },
       })
     );
-    sh.appendChild(sideActs);
-    side.appendChild(sh);
+    sideToolbar.appendChild(sideActs);
     var tabs = el("div", "sidebar-tabs");
     var tabChats = el(
       "button",
-      "sidebar-tab" + (state.sidebarMode === "chats" ? " active" : ""),
-      L("ui.sidebar.chats")
+      "sidebar-tab sidebar-tab-icon" + (state.sidebarMode === "chats" ? " active" : ""),
+      "💬"
     );
     tabChats.type = "button";
+    tabChats.title = L("ui.sidebar.chats");
+    tabChats.setAttribute("aria-label", L("ui.sidebar.chats"));
     tabChats.setAttribute("data-testid", "sidebar-tab-chats");
     tabChats.onclick = function () {
       state.sidebarMode = "chats";
@@ -7041,10 +7074,12 @@
     };
     var tabContacts = el(
       "button",
-      "sidebar-tab" + (state.sidebarMode === "contacts" ? " active" : ""),
-      L("ui.sidebar.contacts")
+      "sidebar-tab sidebar-tab-icon" + (state.sidebarMode === "contacts" ? " active" : ""),
+      "👥"
     );
     tabContacts.type = "button";
+    tabContacts.title = L("ui.sidebar.contacts");
+    tabContacts.setAttribute("aria-label", L("ui.sidebar.contacts"));
     tabContacts.setAttribute("data-testid", "sidebar-tab-contacts");
     tabContacts.onclick = function () {
       if (state.sidebarMode === "contacts") return;
@@ -7053,7 +7088,9 @@
     };
     tabs.appendChild(tabChats);
     tabs.appendChild(tabContacts);
-    side.appendChild(tabs);
+    sideToolbar.appendChild(tabs);
+    sh.appendChild(sideToolbar);
+    side.appendChild(sh);
     var qTrim = state.sidebarSearch.trim();
     if (qTrim.length >= 2) {
       var usBlock = el("div", "user-search-block");
