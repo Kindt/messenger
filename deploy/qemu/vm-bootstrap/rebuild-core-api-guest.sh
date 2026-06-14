@@ -37,6 +37,9 @@ sudo docker compose -f "$COMPOSE" build core-api
 echo ">>> docker compose up -d core-api"
 sudo docker compose -f "$COMPOSE" up -d core-api
 
+echo ">>> docker compose up -d (ensure workers/infra not left Exited after partial restart)"
+sudo docker compose -f "$COMPOSE" up -d
+
 deadline=$((SECONDS + 300))
 while [ "$SECONDS" -lt "$deadline" ]; do
   if curl -fsS --max-time 5 "http://127.0.0.1:8080/api/v1/health" >/dev/null 2>&1; then

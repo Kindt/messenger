@@ -84,8 +84,10 @@
       a.setAttribute("data-testid", "export-download-link");
       document.body.appendChild(a);
       a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      setTimeout(function () {
+        a.remove();
+        URL.revokeObjectURL(url);
+      }, 1000);
     }
 
     async function previewExportAttachments(chatId, jobId) {
