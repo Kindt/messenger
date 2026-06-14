@@ -11,10 +11,11 @@ escape_sed() {
 _gw_host=$(escape_sed "$KORUS_WS_GATEWAY_HOST")
 _gw_port=$(escape_sed "$KORUS_WS_GATEWAY_PORT")
 
+_template="${NGINX_CONF_TEMPLATE:-/etc/nginx/nginx.conf.template}"
 sed \
   -e "s/\${KORUS_WS_GATEWAY_HOST}/${_gw_host}/g" \
   -e "s/\${KORUS_WS_GATEWAY_PORT}/${_gw_port}/g" \
-  < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+  < "$_template" > /etc/nginx/nginx.conf
 
 if ! nginx -t 2>&1; then
   echo "lb: nginx -t failed; generated config:" >&2

@@ -392,6 +392,10 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 - **Repo HTTP** (`repo.tgz` на `:18890`) — обрыв во время redeploy рвёт bootstrap; не redeploy пока cloud-init не завершился.
 - Serial/bootstrap логи: guest **`/var/log/korus-bootstrap.log`**, host **`deploy/qemu/run/*-serial.log`**.
 - **Redeploy-цикл агента:** `qemu-dev-mode.ps1 -Mode status` → sync-api / sync-ui (default **без** build); `-Rebuild` только явно; monitor → fix → `qemu-redeploy-monitored.ps1` → **commit**; golden-path lock; guest bootstrap phase в wait-loop (правило `qemu-redeploy-monitor.mdc`, дизайн `docs/plans/2026-06-12-qemu-dev-modes-stabilization-design.md`).
+- **Hotswap WS:** `docker-compose.hotswap-qemu.yml` = `web-dev` + nginx **lb** (`/ws` → ws-gateway); Tomcat-only hotswap давал WS **404** на `:19088/ws`.
+- **sync-ui locales:** `New-KorusWebuiSnapshot` → `npm run build:assets` (tailwind + копия из `webui-build/locales/messages/`).
+- **Git push GitHub:** `.\scripts\git-push.ps1` или `git -c http.proxy= -c https.proxy= push`.
+- **QEMU backup:** `qemu-backup.ps1` / `qemu-restore.ps1` (ВМ остановлены).
 - **VM падают ~10 мин в server redeploy** (WHPX/host load): цикл retry через monitored script; при повторе — `KORUS_QEMU_FORCE_TCG=1` или проверка RAM (~13 ГБ).
 
 ### Playwright / US9

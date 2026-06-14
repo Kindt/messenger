@@ -23,13 +23,13 @@ function New-KorusWebuiSnapshot {
                 Pop-Location
             }
         }
-        Write-Host "  webui-build: tailwind.css..." -ForegroundColor DarkGray
+        Write-Host "  webui-build: locales + tailwind.css..." -ForegroundColor DarkGray
         Push-Location $buildDir
         $prevEap = $ErrorActionPreference
         try {
             $ErrorActionPreference = 'Continue'
-            & $npm run build:css 2>&1 | Out-Null
-            if ($LASTEXITCODE -ne 0) { throw "npm run build:css failed" }
+            & $npm run build:assets 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "npm run build:assets failed" }
         } finally {
             $ErrorActionPreference = $prevEap
             Pop-Location

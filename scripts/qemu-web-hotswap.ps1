@@ -67,7 +67,14 @@ if ($SyncOnly) {
 }
 
 Write-Host "=== QEMU web hotswap enable $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" -ForegroundColor Cyan
-Write-Host "Syncing webui (with tailwind build)..." -ForegroundColor Yellow
+Write-Host "Syncing guest repo (korus-web compose)..." -ForegroundColor Yellow
+. (Join-Path $QemuRoot "lib\Start-KorusRepoHttp.ps1")
+. (Join-Path $QemuRoot "lib\New-KorusRepoSnapshot.ps1")
+. (Join-Path $QemuRoot "lib\Update-KorusGuestRepo.ps1")
+Start-KorusRepoHttp | Out-Null
+New-KorusRepoSnapshot -Force | Out-Null
+Update-KorusGuestRepo -Role web -SshPort 12222 -HostKey $hk -Plink $Plink | Out-Null
+Write-Host "Syncing webui (locales + tailwind)..." -ForegroundColor Yellow
 Sync-KorusGuestWebui -SshPort 12222 -HostKey $hk -Plink $Plink | Out-Null
 Write-Host "Switching guest to docker-compose.hotswap-qemu.yml (no build)..." -ForegroundColor Yellow
 try {

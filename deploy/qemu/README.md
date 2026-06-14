@@ -83,14 +83,14 @@ Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_
 
 ### Быстрый цикл UI (hot-swap, ~10 с вместо ~15–25 мин redeploy)
 
-После **одного** полного `-WebOnly` (образ `korus-messenger-web-client:local` на госте):
+После **одного** полного `-WebOnly` (образ `korus-messenger-web-client:local` на госте). Hotswap поднимает **web-dev + nginx lb** (прокси `/ws`).
 
 ```powershell
-# Включить bind-mount webui с хоста (один раз)
+# Включить bind-mount webui + lb (один раз; подтягивает repo на web guest)
 .\scripts\qemu-web-hotswap.ps1 -Enable
 
-# Итерация: правки в modules/web-client/.../webui/ -> sync -> F5
-.\scripts\qemu-web-sync.ps1
+# Итерация: правки webui или webui-build/locales/messages -> sync-ui -> F5
+.\scripts\qemu-dev-mode.ps1 -Mode sync-ui
 
 # Playwright с автосинком UI перед тестом
 .\scripts\playwright-dev-loop.ps1 -Tier ui-auth -SyncWebUi
@@ -109,6 +109,12 @@ Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_
 | UI JS/CSS/Tailwind | `qemu-dev-mode.ps1 -Mode sync-ui` | ~5–15 с |
 | Включить hotswap | `qemu-web-hotswap.ps1 -Enable` или `-Status` | ~1–3 мин |
 | Остановка | `qemu-dev-mode.ps1 -Mode stop` | сек |
+
+Hotswap: **web-dev + nginx lb** — прокси **`/ws` → ws-gateway** (typing/live в браузере). `sync-ui` собирает **tailwind + locales** (`build:assets`) перед `webui.tgz`.
+
+**Backup дисков:** `qemu-down` → `qemu-backup.ps1 -Label green-stack` → `qemu-up -KeepDisks`. Restore: `qemu-restore.ps1 -From deploy\qemu\backups\<dir>`.
+
+**Git push (GitHub):** `.\scripts\git-push.ps1` (обход corp proxy).
 
 # 3) Дождаться стека (опционально)
 .\scripts\qemu-stack-wait.ps1

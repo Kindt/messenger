@@ -1,12 +1,12 @@
-# QEMU web guest: bind-mount repo webui (no dev-overlay copy). Host port via lb :9088.
+# QEMU web guest: bind-mount repo webui + nginx lb (/ws -> ws-gateway).
 # Enable: scripts/qemu-web-hotswap.ps1 -Enable (guest, after image exists)
 # Fast sync: scripts/qemu-web-sync.ps1 (~10s, refresh browser)
 
 services:
   web-dev:
     image: korus-messenger-web-client:local
-    ports:
-      - "0.0.0.0:${KORUS_WEB_LB_PORT:-9088}:9080"
+    expose:
+      - "9080"
     environment:
       WEB_CLIENT_PORT: "9080"
       WEB_CLIENT_API_UPSTREAM: ${WEB_CLIENT_API_UPSTREAM:-http://host.docker.internal:8080}
@@ -16,6 +16,22 @@ services:
       WEB_CLIENT_WEBUI_OVERLAY: /overlay/webui
     volumes:
       - ../modules/web-client/src/main/resources/webui:/overlay/webui:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  lb:
+    build:
+      context: ./nginx-lb
+      dockerfile: Dockerfile
+    ports:
+      - "0.0.0.0:${KORUS_WEB_LB_PORT:-9088}:80"
+    environment:
+      KORUS_WS_GATEWAY_HOST: ${KORUS_WS_GATEWAY_HOST:-host.docker.internal}
+      KORUS_WS_GATEWAY_PORT: ${KORUS_WS_GATEWAY_PORT:-8081}
+      NGINX_CONF_TEMPLATE: /etc/nginx/nginx.conf.hotswap.template
+    depends_on:
+      - web-dev
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped

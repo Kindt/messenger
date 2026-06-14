@@ -20,6 +20,12 @@
 - **QEMU API fast path**: `qemu-dev-mode -Mode sync-api-core` (repo + `docker compose build core-api`, ~3 min); UI hotswap + `sync-ui`.
 - **Acceptance**: `playwright-dev-loop.ps1 -Tier all-inner` green on QEMU (26 specs across inner tiers).
 
+### 2026-06-14 — QEMU hotswap WS, sync-ui locales, backup
+
+- **`docker-compose.hotswap-qemu.yml`**: nginx lb + `web-dev` overlay; `/ws` proxied to ws-gateway (fixes WS 404 in hotswap).
+- **`New-KorusWebuiSnapshot`**: `npm run build:assets` (tailwind + locales) before `webui.tgz`.
+- **`scripts/qemu-backup.ps1`**, **`scripts/qemu-restore.ps1`**: qcow2 backup/restore; **`scripts/git-push.ps1`**: GitHub push without corp proxy.
+
 ### 2026-06-12 — QEMU dev modes: sync default, facade, bootstrap phase
 
 - **`qemu-redeploy.ps1`**: default `KORUS_BUILD=0` (sync); `-Rebuild` for full docker build; `-Force` skips ready preflight; guest bootstrap phase in wait-loop.
