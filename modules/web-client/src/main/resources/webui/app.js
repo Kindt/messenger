@@ -4097,15 +4097,16 @@
       return;
     }
     var label = kind === "video" ? L("ui.message.video") : L("ui.message.file");
-    var btn = el("button", "btn btn-ghost btn-sm msg-attachment-dl", label);
-    btn.type = "button";
-    btn.setAttribute("data-testid", "message-file-download");
-    btn.onclick = function () {
-      downloadChatFile(fileId).catch(function (err) {
-        state.error = err.message || L("files.downloadFailedShort");
-        render();
-      });
-    };
+    var btn = iconBtn("⬇", label, {
+      cls: "msg-attachment-dl",
+      testId: "message-file-download",
+      onClick: function () {
+        downloadChatFile(fileId).catch(function (err) {
+          state.error = err.message || L("files.downloadFailedShort");
+          render();
+        });
+      },
+    });
     bodyEl.appendChild(btn);
   }
 
@@ -5417,6 +5418,29 @@
     return n;
   }
 
+  function iconBtn(icon, tip, opts) {
+    var ib = window.KorusIconButtons && window.KorusIconButtons.iconButton;
+    if (!ib) {
+      var btn = el("button", "btn btn-ghost btn-icon btn-sm", icon);
+      btn.type = "button";
+      if (tip) {
+        btn.title = tip;
+        btn.setAttribute("aria-label", tip);
+      }
+      if (opts && opts.testId) btn.setAttribute("data-testid", opts.testId);
+      if (opts && opts.disabled) btn.disabled = true;
+      if (opts && opts.onClick) btn.onclick = opts.onClick;
+      if (opts && opts.submit) btn.type = "submit";
+      return btn;
+    }
+    return ib(
+      Object.assign(
+        { icon: icon, tip: tip, sm: opts && opts.sm !== false },
+        opts || {}
+      )
+    );
+  }
+
   function chatActivityMs(c) {
     var prev = state.chatPreview[c.id];
     if (prev && prev.at) return prev.at;
@@ -5872,35 +5896,29 @@
     var titleSpan = el("span", "call-panel-title", L("ui.call.title"));
     titleSpan.setAttribute("data-testid", "call-panel-title");
     ph.appendChild(titleSpan);
-    var cl = el("button", "btn btn-ghost btn-sm", L("ui.call.collapse"));
-    cl.type = "button";
-    cl.onclick = function () {
-      toggleCallPanel();
-    };
+    var cl = iconBtn("✕", L("ui.call.collapse"), {
+      onClick: function () {
+        toggleCallPanel();
+      },
+    });
     ph.appendChild(cl);
     panel.appendChild(ph);
     var modeBar = el("div", "call-mode-bar");
-    var bMesh = el(
-      "button",
-      "btn btn-sm " + (state.callMode === "mesh" ? "btn-primary" : "btn-ghost"),
-      "Mesh WebRTC"
-    );
-    bMesh.type = "button";
-    bMesh.setAttribute("data-testid", "mesh-webrtc-button");
-    bMesh.disabled = state.conferenceBusy;
-    bMesh.onclick = function () {
-      switchCallMode("mesh");
-    };
-    var bJitsi = el(
-      "button",
-      "btn btn-sm " + (state.callMode === "jitsi" ? "btn-primary" : "btn-ghost"),
-      "Jitsi"
-    );
-    bJitsi.type = "button";
-    bJitsi.disabled = state.conferenceBusy || state.busy;
-    bJitsi.onclick = function () {
-      switchCallMode("jitsi");
-    };
+    var bMesh = iconBtn("📡", "Mesh WebRTC", {
+      primary: state.callMode === "mesh",
+      testId: "mesh-webrtc-button",
+      disabled: state.conferenceBusy,
+      onClick: function () {
+        switchCallMode("mesh");
+      },
+    });
+    var bJitsi = iconBtn("🎥", "Jitsi", {
+      primary: state.callMode === "jitsi",
+      disabled: state.conferenceBusy || state.busy,
+      onClick: function () {
+        switchCallMode("jitsi");
+      },
+    });
     modeBar.appendChild(bMesh);
     modeBar.appendChild(bJitsi);
     panel.appendChild(modeBar);
@@ -5910,53 +5928,47 @@
       var confTitle = el("div", "call-conferences-title");
       confTitle.textContent = L("conference.sectionTitle");
       confHead.appendChild(confTitle);
-      var bRefConf = el("button", "btn btn-ghost btn-sm", "↻");
-      bRefConf.type = "button";
-      bRefConf.title = L("conference.refreshList");
-      bRefConf.disabled = state.conferenceBusy || state.busy;
-      bRefConf.onclick = function () {
-        loadActiveConferences()
-          .then(function () {
-            return loadChatConferences();
-          })
-          .then(render)
-          .catch(function () {
-            render();
-          });
-      };
-      confHead.appendChild(bRefConf);
+      confHead.appendChild(
+        iconBtn("↻", L("conference.refreshList"), {
+          disabled: state.conferenceBusy || state.busy,
+          onClick: function () {
+            loadActiveConferences()
+              .then(function () {
+                return loadChatConferences();
+              })
+              .then(render)
+              .catch(function () {
+                render();
+              });
+          },
+        })
+      );
       confSec.appendChild(confHead);
       confSec.appendChild(el("p", "call-hint", L("conference.inviteHint")));
       var confActions = el("div", "call-conferences-actions");
-      var bNewConf = el(
-        "button",
-        "btn btn-primary btn-sm",
-        state.conferenceBusy ? L("conference.creating") : L("conference.create")
-      );
-      bNewConf.type = "button";
-      bNewConf.disabled = state.conferenceBusy || state.busy;
-      bNewConf.onclick = function () {
-        createConference();
-      };
-      var bJoinLink = el("button", "btn btn-ghost btn-sm", L("conference.joinByLink"));
-      bJoinLink.type = "button";
-      bJoinLink.disabled = state.conferenceBusy || state.busy;
-      bJoinLink.onclick = function () {
-        joinConferenceByLink();
-      };
+      var bNewConf = iconBtn("＋", state.conferenceBusy ? L("conference.creating") : L("conference.create"), {
+        primary: true,
+        disabled: state.conferenceBusy || state.busy,
+        onClick: function () {
+          createConference();
+        },
+      });
+      var bJoinLink = iconBtn("🔗", L("conference.joinByLink"), {
+        disabled: state.conferenceBusy || state.busy,
+        onClick: function () {
+          joinConferenceByLink();
+        },
+      });
       confActions.appendChild(bNewConf);
       if (state.selectedId && state.selectedId !== state.savedChatId) {
-        var bChatConf = el(
-          "button",
-          "btn btn-ghost btn-sm",
-          L("conference.startInChat")
+        confActions.appendChild(
+          iconBtn("🎬", L("conference.startInChat"), {
+            disabled: state.conferenceBusy || state.busy,
+            onClick: function () {
+              createConferenceInChat();
+            },
+          })
         );
-        bChatConf.type = "button";
-        bChatConf.disabled = state.conferenceBusy || state.busy;
-        bChatConf.onclick = function () {
-          createConferenceInChat();
-        };
-        confActions.appendChild(bChatConf);
       }
       confActions.appendChild(bJoinLink);
       confSec.appendChild(confActions);
@@ -5974,13 +5986,14 @@
               ? " · " + L("conference.live")
               : "");
           row.appendChild(el("span", "call-conf-label", baseTitle));
-          var bJoin = el("button", "btn btn-ghost btn-sm", L("conference.join"));
-          bJoin.type = "button";
-          bJoin.disabled = state.conferenceBusy;
-          bJoin.onclick = function () {
-            joinJitsiConference(c);
-          };
-          row.appendChild(bJoin);
+          row.appendChild(
+            iconBtn("▶", L("conference.join"), {
+              disabled: state.conferenceBusy,
+              onClick: function () {
+                joinJitsiConference(c);
+              },
+            })
+          );
           confSec.appendChild(row);
         });
       } else {
@@ -6013,17 +6026,17 @@
         var partSec = el("div", "call-participants");
         var partHead = el("div", "call-participants-head");
         partHead.appendChild(el("span", "call-participants-title", L("conference.participantsTitle")));
-        var bPartRef = el("button", "btn btn-ghost btn-sm", "↻");
-        bPartRef.type = "button";
-        bPartRef.title = L("conference.refreshParticipants");
-        bPartRef.onclick = function () {
-          loadConferenceParticipants(state.activeConference.conference_id)
-            .then(render)
-            .catch(function () {
-              render();
-            });
-        };
-        partHead.appendChild(bPartRef);
+        partHead.appendChild(
+          iconBtn("↻", L("conference.refreshParticipants"), {
+            onClick: function () {
+              loadConferenceParticipants(state.activeConference.conference_id)
+                .then(render)
+                .catch(function () {
+                  render();
+                });
+            },
+          })
+        );
         partSec.appendChild(partHead);
         var partList = el("ul", "call-participants-list");
         var participants = state.conferenceParticipantsList;
@@ -6050,60 +6063,65 @@
       jWrap.appendChild(iframe);
       panel.appendChild(jWrap);
       var jBar = el("div", "call-toolbar");
-      var bCopy = el("button", "btn btn-ghost", L("conference.copyLink"));
-      bCopy.type = "button";
-      bCopy.title = L("conference.copyLinkHint");
-      bCopy.onclick = function () {
-        copyConferenceLink();
-      };
-      var bReload = el("button", "btn btn-ghost", L("conference.reloadJitsi"));
-      bReload.type = "button";
-      bReload.title = L("conference.reloadJitsiHint");
-      bReload.onclick = function () {
-        reloadJitsiIframe();
-      };
+      jBar.appendChild(
+        iconBtn("📋", L("conference.copyLinkHint"), {
+          onClick: function () {
+            copyConferenceLink();
+          },
+        })
+      );
+      jBar.appendChild(
+        iconBtn("↻", L("conference.reloadJitsiHint"), {
+          onClick: function () {
+            reloadJitsiIframe();
+          },
+        })
+      );
       if (conferenceIsTracked(state.activeConference)) {
-        var bInvite = el("button", "btn btn-ghost", L("conference.inviteMembers"));
-        bInvite.type = "button";
-        bInvite.disabled = state.busy;
-        bInvite.onclick = function () {
-          inviteMembersToMeetingChat(state.activeConference);
-        };
-        jBar.appendChild(bInvite);
-        var bRepost = el("button", "btn btn-ghost", L("conference.repostInvite"));
-        bRepost.type = "button";
-        bRepost.disabled = state.busy;
-        bRepost.onclick = function () {
-          postMeetingInviteMessage(state.activeConference.chat_id, state.activeConference)
-            .then(function () {
-              state.statusMessage = L("conference.invitePosted");
-              render();
-            })
-            .catch(function (e) {
-              state.error = localErr(e.message) || L("conference.invitePostFailed");
-              render();
-            });
-        };
-        jBar.appendChild(bRepost);
+        jBar.appendChild(
+          iconBtn("➕", L("conference.inviteMembers"), {
+            disabled: state.busy,
+            onClick: function () {
+              inviteMembersToMeetingChat(state.activeConference);
+            },
+          })
+        );
+        jBar.appendChild(
+          iconBtn("📢", L("conference.repostInvite"), {
+            disabled: state.busy,
+            onClick: function () {
+              postMeetingInviteMessage(state.activeConference.chat_id, state.activeConference)
+                .then(function () {
+                  state.statusMessage = L("conference.invitePosted");
+                  render();
+                })
+                .catch(function (e) {
+                  state.error = localErr(e.message) || L("conference.invitePostFailed");
+                  render();
+                });
+            },
+          })
+        );
       }
-      var bLeave = el("button", "btn btn-ghost", L("conference.leave"));
-      bLeave.type = "button";
-      bLeave.onclick = function () {
-        leaveActiveConference();
-      };
-      var bEnd = el("button", "btn btn-ghost", L("conference.endAll"));
-      bEnd.type = "button";
-      bEnd.disabled = state.busy || !conferenceIsTracked(state.activeConference);
-      bEnd.title = conferenceIsTracked(state.activeConference)
-        ? ""
-        : L("conference.endGuestHint");
-      bEnd.onclick = function () {
-        endActiveConference();
-      };
-      jBar.appendChild(bCopy);
-      jBar.appendChild(bReload);
-      jBar.appendChild(bLeave);
-      jBar.appendChild(bEnd);
+      jBar.appendChild(
+        iconBtn("🚪", L("conference.leave"), {
+          onClick: function () {
+            leaveActiveConference();
+          },
+        })
+      );
+      jBar.appendChild(
+        iconBtn("⏹", L("conference.endAll"), {
+          disabled: state.busy || !conferenceIsTracked(state.activeConference),
+          onClick: function () {
+            endActiveConference();
+          },
+        })
+      );
+      if (!conferenceIsTracked(state.activeConference)) {
+        jBar.lastChild.title = L("conference.endGuestHint");
+        jBar.lastChild.setAttribute("aria-label", L("conference.endGuestHint"));
+      }
       panel.appendChild(jBar);
       shell.appendChild(panel);
       return;
@@ -6174,21 +6192,26 @@
     }
     panel.appendChild(remotes);
     var bar = el("div", "call-toolbar");
-    var bMic = el("button", "btn " + (state.callMicOn ? "btn-primary" : "btn-ghost"), state.callMicOn ? L("ui.call.micOn") : L("ui.call.micOff"));
-    bMic.type = "button";
-    bMic.onclick = function () {
-      toggleCallMic();
-    };
-    var bCam = el("button", "btn " + (state.callCamOn ? "btn-primary" : "btn-ghost"), state.callCamOn ? L("ui.call.camOn") : L("ui.call.camOff"));
-    bCam.type = "button";
-    bCam.onclick = function () {
-      toggleCallCam();
-    };
-    var bScr = el("button", "btn btn-ghost", state.callScreenStream ? L("ui.call.stopScreen") : L("ui.call.screen"));
-    bScr.type = "button";
-    bScr.onclick = function () {
-      toggleScreenShare();
-    };
+    var bMic = iconBtn(state.callMicOn ? "🎤" : "🔇", state.callMicOn ? L("ui.call.micOn") : L("ui.call.micOff"), {
+      primary: state.callMicOn,
+      size: "md",
+      onClick: function () {
+        toggleCallMic();
+      },
+    });
+    var bCam = iconBtn(state.callCamOn ? "📷" : "📷", state.callCamOn ? L("ui.call.camOn") : L("ui.call.camOff"), {
+      primary: state.callCamOn,
+      size: "md",
+      onClick: function () {
+        toggleCallCam();
+      },
+    });
+    var bScr = iconBtn("🖥", state.callScreenStream ? L("ui.call.stopScreen") : L("ui.call.screen"), {
+      size: "md",
+      onClick: function () {
+        toggleScreenShare();
+      },
+    });
     bar.appendChild(bMic);
     bar.appendChild(bCam);
     bar.appendChild(bScr);
@@ -6229,16 +6252,13 @@
   function appendSettingsGeneralPanel(panel) {
     var rowTheme = el("div", "settings-row");
     rowTheme.appendChild(el("span", null, L("ui.settings.appearance")));
-    var bTheme = el(
-      "button",
-      "btn btn-ghost btn-sm",
-      state.appearance === "light" ? L("ui.common.dark") : L("ui.common.light")
+    rowTheme.appendChild(
+      iconBtn(state.appearance === "light" ? "🌙" : "☀️", state.appearance === "light" ? L("ui.common.darkTheme") : L("ui.common.lightTheme"), {
+        onClick: function () {
+          toggleAppearance();
+        },
+      })
     );
-    bTheme.type = "button";
-    bTheme.onclick = function () {
-      toggleAppearance();
-    };
-    rowTheme.appendChild(bTheme);
     panel.appendChild(rowTheme);
 
     var rowLocale = el("div", "settings-row settings-row-locale");
@@ -6278,13 +6298,14 @@
 
     var rowCache = el("div", "settings-row");
     rowCache.appendChild(el("span", null, L("ui.settings.cache")));
-    var bCache = el("button", "btn btn-ghost btn-sm", L("ui.settings.resetCache"));
-    bCache.type = "button";
-    bCache.disabled = state.busy;
-    bCache.onclick = function () {
-      resetAppUiCache();
-    };
-    rowCache.appendChild(bCache);
+    rowCache.appendChild(
+      iconBtn("🗑", L("ui.settings.resetCache"), {
+        disabled: state.busy,
+        onClick: function () {
+          resetAppUiCache();
+        },
+      })
+    );
     panel.appendChild(rowCache);
     panel.appendChild(el("p", "settings-hint", L("ui.settings.cacheHint")));
 
@@ -6303,12 +6324,14 @@
     if (state.pwaInstallPrompt || deferredInstallPrompt) {
       var rowPwa = el("div", "settings-row");
       rowPwa.appendChild(el("span", null, L("ui.settings.pwaInstall")));
-      var bPwa = el("button", "btn btn-primary btn-sm", L("ui.settings.pwaInstallBtn"));
-      bPwa.type = "button";
-      bPwa.onclick = function () {
-        promptInstallPwa();
-      };
-      rowPwa.appendChild(bPwa);
+      rowPwa.appendChild(
+        iconBtn("📲", L("ui.settings.pwaInstallBtn"), {
+          primary: true,
+          onClick: function () {
+            promptInstallPwa();
+          },
+        })
+      );
       panel.appendChild(rowPwa);
     }
 
@@ -6358,13 +6381,14 @@
       state.myDisplayName = nameInp.value;
     };
     rowProf.appendChild(nameInp);
-    var bSaveProf = el("button", "btn btn-ghost btn-sm", L("ui.common.save"));
-    bSaveProf.type = "button";
-    bSaveProf.disabled = state.busy;
-    bSaveProf.onclick = function () {
-      saveMyProfile();
-    };
-    rowProf.appendChild(bSaveProf);
+    rowProf.appendChild(
+      iconBtn("💾", L("ui.common.save"), {
+        disabled: state.busy,
+        onClick: function () {
+          saveMyProfile();
+        },
+      })
+    );
     panel.appendChild(rowProf);
 
     if (state.blockedUsers && state.blockedUsers.length) {
@@ -6377,13 +6401,14 @@
         var rowBu = el("div", "settings-row settings-row-sub");
         var buLabel = bu.display_name || bu.username || bu.user_id;
         rowBu.appendChild(el("span", "settings-value", buLabel));
-        var bUn = el("button", "btn btn-ghost btn-sm", L("ui.settings.unblockShort"));
-        bUn.type = "button";
-        bUn.disabled = state.busy;
-        bUn.onclick = function () {
-          unblockUser(bu.user_id);
-        };
-        rowBu.appendChild(bUn);
+        rowBu.appendChild(
+          iconBtn("✓", L("ui.settings.unblockShort"), {
+            disabled: state.busy,
+            onClick: function () {
+              unblockUser(bu.user_id);
+            },
+          })
+        );
         panel.appendChild(rowBu);
       });
     }
@@ -6392,67 +6417,63 @@
   function appendSettingsNotificationsPanel(panel) {
     var rowNotif = el("div", "settings-row");
     rowNotif.appendChild(el("span", null, L("ui.settings.notifications")));
-    var bNotif = el(
-      "button",
-      "btn btn-ghost btn-sm",
-      notificationsAllowed() ? L("ui.common.off") : L("ui.common.on")
+    rowNotif.appendChild(
+      iconBtn(notificationsAllowed() ? "🔕" : "🔔", notificationsAllowed() ? L("ui.common.off") : L("ui.common.on"), {
+        onClick: function () {
+          if (notificationsAllowed()) {
+            state.notifyPref = false;
+            localStorage.setItem(NOTIF_KEY, "0");
+            unregisterWebPush().then(render);
+          } else {
+            enableNotifications();
+          }
+        },
+      })
     );
-    bNotif.type = "button";
-    bNotif.onclick = function () {
-      if (notificationsAllowed()) {
-        state.notifyPref = false;
-        localStorage.setItem(NOTIF_KEY, "0");
-        unregisterWebPush().then(render);
-      } else {
-        enableNotifications();
-      }
-    };
-    rowNotif.appendChild(bNotif);
     panel.appendChild(rowNotif);
 
     var rowSound = el("div", "settings-row");
     rowSound.appendChild(el("span", null, L("ui.settings.sound")));
-    var bSound = el(
-      "button",
-      "btn btn-ghost btn-sm",
-      state.soundNotify ? L("ui.common.off") : L("ui.common.on")
+    rowSound.appendChild(
+      iconBtn(state.soundNotify ? "🔇" : "🔊", state.soundNotify ? L("ui.common.off") : L("ui.common.on"), {
+        onClick: function () {
+          state.soundNotify = !state.soundNotify;
+          localStorage.setItem(SOUND_NOTIF_KEY, state.soundNotify ? "1" : "0");
+          if (!state.soundNotify) {
+            stopIncomingCallRing();
+          } else {
+            syncIncomingCallRing();
+          }
+          render();
+        },
+      })
     );
-    bSound.type = "button";
-    bSound.onclick = function () {
-      state.soundNotify = !state.soundNotify;
-      localStorage.setItem(SOUND_NOTIF_KEY, state.soundNotify ? "1" : "0");
-      if (!state.soundNotify) {
-        stopIncomingCallRing();
-      } else {
-        syncIncomingCallRing();
-      }
-      render();
-    };
-    rowSound.appendChild(bSound);
     panel.appendChild(rowSound);
 
     if (notificationsAllowed()) {
       var rowTestN = el("div", "settings-row");
       rowTestN.appendChild(el("span", null, L("ui.settings.testNotification")));
-      var bTestN = el("button", "btn btn-ghost btn-sm", L("ui.settings.showTest"));
-      bTestN.type = "button";
-      bTestN.onclick = function () {
-        testLocalNotification();
-      };
-      rowTestN.appendChild(bTestN);
+      rowTestN.appendChild(
+        iconBtn("🔔", L("ui.settings.showTest"), {
+          onClick: function () {
+            testLocalNotification();
+          },
+        })
+      );
       panel.appendChild(rowTestN);
     }
 
     if (vapidPublicKey() && notificationsAllowed()) {
       var rowPush = el("div", "settings-row");
       rowPush.appendChild(el("span", null, L("ui.settings.webPush")));
-      var bPushSync = el("button", "btn btn-ghost btn-sm", L("ui.settings.pushSyncUpdate"));
-      bPushSync.type = "button";
-      bPushSync.disabled = state.busy;
-      bPushSync.onclick = function () {
-        resyncWebPush();
-      };
-      rowPush.appendChild(bPushSync);
+      rowPush.appendChild(
+        iconBtn("↻", L("ui.settings.pushSyncUpdate"), {
+          disabled: state.busy,
+          onClick: function () {
+            resyncWebPush();
+          },
+        })
+      );
       panel.appendChild(rowPush);
     }
 
@@ -6470,14 +6491,14 @@
           (active ? L("ui.settings.devicePushActive") : L("ui.settings.devicePushOff")) +
           (d.push_provider ? " (" + d.push_provider + ")" : "");
         rowD.appendChild(el("span", "settings-value", label));
-        var bUnDev = el("button", "btn btn-ghost btn-sm", L("ui.settings.disconnectShort"));
-        bUnDev.type = "button";
-        bUnDev.title = L("ui.settings.resetPushTitle");
-        bUnDev.disabled = state.busy;
-        bUnDev.onclick = function () {
-          unregisterDevice(d.device_name);
-        };
-        rowD.appendChild(bUnDev);
+        rowD.appendChild(
+          iconBtn("✕", L("ui.settings.resetPushTitle"), {
+            disabled: state.busy,
+            onClick: function () {
+              unregisterDevice(d.device_name);
+            },
+          })
+        );
         panel.appendChild(rowD);
       });
     } else if (state.myDevices) {
@@ -6493,13 +6514,14 @@
     if (state.lastPublicLink) {
       var rowRevoke = el("div", "settings-row");
       rowRevoke.appendChild(el("span", null, L("ui.settings.lastPublicLink")));
-      var bRevoke = el("button", "btn btn-ghost btn-sm", L("ui.common.revoke"));
-      bRevoke.type = "button";
-      bRevoke.disabled = state.busy;
-      bRevoke.onclick = function () {
-        revokeLastPublicLink();
-      };
-      rowRevoke.appendChild(bRevoke);
+      rowRevoke.appendChild(
+        iconBtn("🚫", L("ui.common.revoke"), {
+          disabled: state.busy,
+          onClick: function () {
+            revokeLastPublicLink();
+          },
+        })
+      );
       panel.appendChild(rowRevoke);
     }
 
@@ -6518,30 +6540,33 @@
         });
         linkRow.appendChild(head);
         var acts = el("div", "file-link-row-actions");
-        var bGo = el("button", "btn btn-ghost btn-sm", L("ui.settings.goToMessage"));
-        bGo.type = "button";
-        bGo.disabled = state.busy;
-        bGo.onclick = function () {
-          openChatMessageForFile(row.file_id);
-        };
-        acts.appendChild(bGo);
-        var bDl = el("button", "btn btn-ghost btn-sm", L("ui.common.download"));
-        bDl.type = "button";
-        bDl.disabled = state.busy;
-        bDl.onclick = function () {
-          downloadChatFile(row.file_id).catch(function (e) {
-            state.error = e.message || L("files.downloadFailed");
-            render();
-          });
-        };
-        acts.appendChild(bDl);
-        var bRevLink = el("button", "btn btn-ghost btn-sm", L("ui.common.revoke"));
-        bRevLink.type = "button";
-        bRevLink.disabled = state.busy;
-        bRevLink.onclick = function () {
-          revokeFilePublicLink(row.file_id, row.id);
-        };
-        acts.appendChild(bRevLink);
+        acts.appendChild(
+          iconBtn("↗", L("ui.settings.goToMessage"), {
+            disabled: state.busy,
+            onClick: function () {
+              openChatMessageForFile(row.file_id);
+            },
+          })
+        );
+        acts.appendChild(
+          iconBtn("⬇", L("ui.common.download"), {
+            disabled: state.busy,
+            onClick: function () {
+              downloadChatFile(row.file_id).catch(function (e) {
+                state.error = e.message || L("files.downloadFailed");
+                render();
+              });
+            },
+          })
+        );
+        acts.appendChild(
+          iconBtn("🚫", L("ui.common.revoke"), {
+            disabled: state.busy,
+            onClick: function () {
+              revokeFilePublicLink(row.file_id, row.id);
+            },
+          })
+        );
         linkRow.appendChild(acts);
         panel.appendChild(linkRow);
       });
@@ -6550,13 +6575,14 @@
     }
 
     var rowLinksRefresh = el("div", "settings-row");
-    var bLinksRefresh = el("button", "btn btn-ghost btn-sm", L("ui.settings.refreshLinks"));
-    bLinksRefresh.type = "button";
-    bLinksRefresh.disabled = state.busy || state.myPublicLinksBusy;
-    bLinksRefresh.onclick = function () {
-      loadMyPublicLinks().then(render);
-    };
-    rowLinksRefresh.appendChild(bLinksRefresh);
+    rowLinksRefresh.appendChild(
+      iconBtn("↻", L("ui.settings.refreshLinks"), {
+        disabled: state.busy || state.myPublicLinksBusy,
+        onClick: function () {
+          loadMyPublicLinks().then(render);
+        },
+      })
+    );
     panel.appendChild(rowLinksRefresh);
   }
 
@@ -6575,43 +6601,47 @@
         var rowKpItem = el("div", "settings-row settings-row-sub");
         var pkHint = kp.public_key ? String(kp.public_key).slice(0, 14) + "…" : kp.id;
         rowKpItem.appendChild(el("span", "settings-value", pkHint));
-        var bDelKp = el("button", "btn btn-ghost btn-sm", L("ui.actions.delete"));
-        bDelKp.type = "button";
-        bDelKp.disabled = state.busy;
-        bDelKp.onclick = function () {
-          deleteServerKeyPackage(kp.id);
-        };
-        rowKpItem.appendChild(bDelKp);
+        rowKpItem.appendChild(
+          iconBtn("🗑", L("ui.actions.delete"), {
+            disabled: state.busy,
+            onClick: function () {
+              deleteServerKeyPackage(kp.id);
+            },
+          })
+        );
         panel.appendChild(rowKpItem);
       });
     }
 
     var rowKp = el("div", "settings-row");
     rowKp.appendChild(el("span", null, L("ui.settings.newKeyPackage")));
-    var bKp = el("button", "btn btn-ghost btn-sm", L("ui.settings.create"));
-    bKp.type = "button";
-    bKp.disabled = state.busy;
-    bKp.onclick = function () {
-      createAndUploadKeyPackage();
-    };
-    rowKp.appendChild(bKp);
+    rowKp.appendChild(
+      iconBtn("＋", L("ui.settings.create"), {
+        disabled: state.busy,
+        onClick: function () {
+          createAndUploadKeyPackage();
+        },
+      })
+    );
     panel.appendChild(rowKp);
 
     var rowKeyIo = el("div", "settings-row");
     rowKeyIo.appendChild(el("span", null, L("ui.settings.localKey")));
-    var bExport = el("button", "btn btn-ghost btn-sm", L("ui.settings.exportKey"));
-    bExport.type = "button";
-    bExport.disabled = !state.localKeyPackageMeta;
-    bExport.onclick = function () {
-      exportLocalKeyPackage();
-    };
-    rowKeyIo.appendChild(bExport);
-    var bImport = el("button", "btn btn-ghost btn-sm", L("ui.settings.importKey"));
-    bImport.type = "button";
-    bImport.onclick = function () {
-      importLocalKeyPackage();
-    };
-    rowKeyIo.appendChild(bImport);
+    rowKeyIo.appendChild(
+      iconBtn("📤", L("ui.settings.exportKey"), {
+        disabled: !state.localKeyPackageMeta,
+        onClick: function () {
+          exportLocalKeyPackage();
+        },
+      })
+    );
+    rowKeyIo.appendChild(
+      iconBtn("📥", L("ui.settings.importKey"), {
+        onClick: function () {
+          importLocalKeyPackage();
+        },
+      })
+    );
     panel.appendChild(rowKeyIo);
 
     if (state.localKeyPackageMeta) {
@@ -6626,12 +6656,13 @@
           })
         )
       );
-      var bWipe = el("button", "btn btn-ghost btn-sm", L("ui.actions.delete"));
-      bWipe.type = "button";
-      bWipe.onclick = function () {
-        wipeLocalKeyPackage();
-      };
-      rowLoc.appendChild(bWipe);
+      rowLoc.appendChild(
+        iconBtn("🗑", L("ui.actions.delete"), {
+          onClick: function () {
+            wipeLocalKeyPackage();
+          },
+        })
+      );
       panel.appendChild(rowLoc);
     }
 
@@ -6732,10 +6763,11 @@
     });
     sCard.appendChild(sBody);
 
-    var sClose = el("button", "btn btn-primary", L("ui.common.close"));
-    sClose.type = "button";
-    sClose.setAttribute("data-testid", "settings-close");
-    sClose.onclick = closeSettingsModal;
+    var sClose = iconBtn("✕", L("ui.common.close"), {
+      primary: true,
+      testId: "settings-close",
+      onClick: closeSettingsModal,
+    });
     sCard.appendChild(sClose);
 
     sOv.appendChild(sCard);
@@ -6757,11 +6789,12 @@
     if (state.swUpdateReady) {
       var swBanner = el("div", "sw-update-banner");
       swBanner.appendChild(document.createTextNode(L("ui.shell.swUpdate")));
-      var swBtn = el("button", "btn btn-sm btn-primary", L("ui.common.update"));
-      swBtn.type = "button";
-      swBtn.onclick = function () {
-        applyServiceWorkerUpdate();
-      };
+      var swBtn = iconBtn("↻", L("ui.common.update"), {
+        primary: true,
+        onClick: function () {
+          applyServiceWorkerUpdate();
+        },
+      });
       swBanner.appendChild(swBtn);
       shell.appendChild(swBanner);
     }
@@ -6777,12 +6810,12 @@
         status: state.exportProgressLabel || L("common.exportStarting"),
       });
       exBanner.appendChild(document.createTextNode(exLabel));
-      var exCancel = el("button", "btn btn-sm btn-ghost", L("ui.common.cancel"));
-      exCancel.type = "button";
-      exCancel.disabled = state.busy;
-      exCancel.onclick = function () {
-        cancelChatExport();
-      };
+      var exCancel = iconBtn("⏹", L("ui.common.cancel"), {
+        disabled: state.busy,
+        onClick: function () {
+          cancelChatExport();
+        },
+      });
       exBanner.appendChild(exCancel);
       shell.appendChild(exBanner);
     }
@@ -6804,16 +6837,13 @@
     hl.appendChild(gSearchWrap);
     header.appendChild(hl);
     var hdrR = el("div", "app-header-right");
-    var callBtn = el(
-      "button",
-      "btn btn-ghost",
-      state.callPanelOpen ? L("ui.shell.hideVideo") : L("ui.shell.showVideo")
-    );
-    callBtn.type = "button";
-    callBtn.setAttribute("data-testid", "call-panel-toggle");
-    callBtn.onclick = function () {
-      toggleCallPanel();
-    };
+    var callTip = state.callPanelOpen ? L("ui.shell.hideVideo") : L("ui.shell.showVideo");
+    var callBtn = iconBtn(state.callPanelOpen ? "📵" : "📹", callTip, {
+      testId: "call-panel-toggle",
+      onClick: function () {
+        toggleCallPanel();
+      },
+    });
     hdrR.appendChild(callBtn);
     if (state.e2eeKeyCount !== null) {
       var e2eeSpan = el("span", "e2ee-status");
@@ -6848,13 +6878,12 @@
       }
     };
     hdrR.appendChild(notifBtn);
-    var setBtn = el("button", "btn btn-ghost", "⚙");
-    setBtn.type = "button";
-    setBtn.setAttribute("data-testid", "settings-toggle");
-    setBtn.title = L("ui.shell.settings");
-    setBtn.onclick = function () {
-      toggleSettings();
-    };
+    var setBtn = iconBtn("⚙", L("ui.shell.settings"), {
+      testId: "settings-toggle",
+      onClick: function () {
+        toggleSettings();
+      },
+    });
     hdrR.appendChild(setBtn);
     var wsConnected = state.wsState === "open";
     var ws = el("span", "ws-status " + (wsConnected ? "connected" : "disconnected"));
@@ -6872,12 +6901,12 @@
             ? L("ws.error")
             : L("ws.offline"));
     hdrR.appendChild(ws);
-    var lo = el("button", "btn btn-ghost", L("common.logout"));
-    lo.type = "button";
-    lo.setAttribute("data-testid", "logout");
-    lo.onclick = function () {
-      logout();
-    };
+    var lo = iconBtn("🚪", L("common.logout"), {
+      testId: "logout",
+      onClick: function () {
+        logout();
+      },
+    });
     hdrR.appendChild(lo);
     header.appendChild(hdrR);
     shell.appendChild(header);
@@ -6915,18 +6944,19 @@
         )
       );
       var incActs = el("div", "incoming-call-actions");
-      var bAcc = el("button", "btn btn-primary btn-sm", L("ui.shell.accept"));
-      bAcc.type = "button";
-      bAcc.disabled = state.busy;
-      bAcc.onclick = function () {
-        acceptIncomingRtcCall();
-      };
-      var bDec = el("button", "btn btn-ghost btn-sm", L("ui.shell.decline"));
-      bDec.type = "button";
-      bDec.disabled = state.busy;
-      bDec.onclick = function () {
-        declineIncomingRtcCall();
-      };
+      var bAcc = iconBtn("📞", L("ui.shell.accept"), {
+        primary: true,
+        disabled: state.busy,
+        onClick: function () {
+          acceptIncomingRtcCall();
+        },
+      });
+      var bDec = iconBtn("✕", L("ui.shell.decline"), {
+        disabled: state.busy,
+        onClick: function () {
+          declineIncomingRtcCall();
+        },
+      });
       incActs.appendChild(bAcc);
       incActs.appendChild(bDec);
       incWrap.appendChild(incActs);
@@ -6966,30 +6996,37 @@
       render();
     };
     sh.appendChild(search);
-    var ng = el("button", "btn btn-primary btn-block", L("ui.sidebar.newGroup"));
-    ng.type = "button";
-    ng.disabled = state.busy;
-    ng.onclick = function () {
-      newGroup();
-    };
-    sh.appendChild(ng);
+    var sideActs = el("div", "sidebar-actions");
+    sideActs.appendChild(
+      iconBtn("✚", L("ui.sidebar.newGroup"), {
+        primary: true,
+        block: true,
+        disabled: state.busy,
+        onClick: function () {
+          newGroup();
+        },
+      })
+    );
+    sideActs.appendChild(
+      iconBtn("🔒", L("ui.sidebar.vaultTitle"), {
+        block: true,
+        disabled: state.busy,
+        onClick: function () {
+          openSavedVault();
+        },
+      })
+    );
+    sideActs.appendChild(
+      iconBtn("✓", L("ui.sidebar.readAllTitle"), {
+        block: true,
+        disabled: state.busy,
+        onClick: function () {
+          markAllChatsRead();
+        },
+      })
+    );
+    sh.appendChild(sideActs);
     side.appendChild(sh);
-    var vaultBtn = el("button", "btn btn-ghost btn-block vault-btn", L("ui.sidebar.vault"));
-    vaultBtn.type = "button";
-    vaultBtn.disabled = state.busy;
-    vaultBtn.title = L("ui.sidebar.vaultTitle");
-    vaultBtn.onclick = function () {
-      openSavedVault();
-    };
-    side.appendChild(vaultBtn);
-    var readAllBtn = el("button", "btn btn-ghost btn-block", L("ui.sidebar.readAll"));
-    readAllBtn.type = "button";
-    readAllBtn.disabled = state.busy;
-    readAllBtn.title = L("ui.sidebar.readAllTitle");
-    readAllBtn.onclick = function () {
-      markAllChatsRead();
-    };
-    side.appendChild(readAllBtn);
     var tabs = el("div", "sidebar-tabs");
     var tabChats = el(
       "button",
@@ -6997,6 +7034,7 @@
       L("ui.sidebar.chats")
     );
     tabChats.type = "button";
+    tabChats.setAttribute("data-testid", "sidebar-tab-chats");
     tabChats.onclick = function () {
       state.sidebarMode = "chats";
       render();
@@ -7007,6 +7045,7 @@
       L("ui.sidebar.contacts")
     );
     tabContacts.type = "button";
+    tabContacts.setAttribute("data-testid", "sidebar-tab-contacts");
     tabContacts.onclick = function () {
       if (state.sidebarMode === "contacts") return;
       state.sidebarMode = "contacts";
@@ -7117,12 +7156,13 @@
         state.contactImportText = impTa.value;
       };
       impBlock.appendChild(impTa);
-      var bImp = el("button", "btn btn-ghost btn-sm btn-block", L("ui.sidebar.importBtn"));
-      bImp.type = "button";
-      bImp.disabled = state.busy;
-      bImp.onclick = function () {
-        importContactsByPhoneHashes();
-      };
+      var bImp = iconBtn("📥", L("ui.sidebar.importBtn"), {
+        block: true,
+        disabled: state.busy,
+        onClick: function () {
+          importContactsByPhoneHashes();
+        },
+      });
       impBlock.appendChild(bImp);
       side.appendChild(impBlock);
     } else {
@@ -7236,72 +7276,69 @@
       th.appendChild(thMain);
       var thActs = el("div", "thread-header-actions");
       if (sel && sel.type !== "saved") {
-        var bMute = el(
-          "button",
-          "btn btn-ghost btn-sm",
-          sel.muted ? L("ui.thread.unmute") : L("ui.thread.mute")
-        );
-        bMute.type = "button";
-        bMute.disabled = state.busy;
-        bMute.onclick = function () {
-          toggleChatMute();
-        };
+        var bMute = iconBtn(sel.muted ? "🔊" : "🔇", sel.muted ? L("ui.thread.unmute") : L("ui.thread.mute"), {
+          disabled: state.busy,
+          onClick: function () {
+            toggleChatMute();
+          },
+        });
         thActs.appendChild(bMute);
-        var bFilter = el(
-          "button",
-          "btn btn-ghost btn-sm",
-          sel.personal_filter_active ? L("ui.thread.filterOn") : L("ui.thread.filter")
+        var bFilter = iconBtn(
+          sel.personal_filter_active ? "🔎" : "🔍",
+          L("ui.thread.filterTitle"),
+          {
+            disabled: state.busy,
+            onClick: function () {
+              togglePersonalFilter();
+            },
+          }
         );
-        bFilter.type = "button";
-        bFilter.title = L("ui.thread.filterTitle");
-        bFilter.disabled = state.busy;
-        bFilter.onclick = function () {
-          togglePersonalFilter();
-        };
         thActs.appendChild(bFilter);
         if (sel.type === "group") {
-          var bMembers = el("button", "btn btn-ghost btn-sm", L("ui.common.members"));
-          bMembers.type = "button";
-          bMembers.disabled = state.busy;
-          bMembers.onclick = function () {
-            openMembersModal();
-          };
-          thActs.appendChild(bMembers);
+          thActs.appendChild(
+            iconBtn("👥", L("ui.common.members"), {
+              disabled: state.busy,
+              onClick: function () {
+                openMembersModal();
+              },
+            })
+          );
         }
         var exportThisChat =
           state.exportBusy && state.exportJobChatId === state.selectedId;
-        var bExp = el(
-          "button",
-          "btn btn-ghost btn-sm",
-          exportThisChat ? L("ui.thread.exportCancel") : state.exportBusy ? L("common.exportBusy") : L("ui.thread.export")
-        );
-        bExp.setAttribute("data-testid", "chat-export-button");
-        bExp.type = "button";
-        bExp.disabled = state.busy || (state.exportBusy && !exportThisChat);
-        bExp.onclick = function () {
-          if (exportThisChat) {
-            cancelChatExport();
-          } else {
-            startChatExport();
-          }
-        };
+        var exportTip = exportThisChat
+          ? L("ui.thread.exportCancel")
+          : state.exportBusy
+            ? L("common.exportBusy")
+            : L("ui.thread.export");
+        var bExp = iconBtn(exportThisChat ? "⏹" : "📤", exportTip, {
+          testId: "chat-export-button",
+          disabled: state.busy || (state.exportBusy && !exportThisChat),
+          onClick: function () {
+            if (exportThisChat) {
+              cancelChatExport();
+            } else {
+              startChatExport();
+            }
+          },
+        });
         thActs.appendChild(bExp);
-        var bRef = el("button", "btn btn-ghost btn-sm", "↻");
-        bRef.type = "button";
-        bRef.title = L("ui.thread.refresh");
-        bRef.disabled = state.busy;
-        bRef.onclick = function () {
-          refreshCurrentThread();
-        };
-        thActs.appendChild(bRef);
-        var bChatLink = el("button", "btn btn-ghost btn-sm", "🔗");
-        bChatLink.type = "button";
-        bChatLink.title = L("ui.thread.copyChatLink");
-        bChatLink.disabled = state.busy;
-        bChatLink.onclick = function () {
-          copyChatDeepLink();
-        };
-        thActs.appendChild(bChatLink);
+        thActs.appendChild(
+          iconBtn("↻", L("ui.thread.refresh"), {
+            disabled: state.busy,
+            onClick: function () {
+              refreshCurrentThread();
+            },
+          })
+        );
+        thActs.appendChild(
+          iconBtn("🔗", L("ui.thread.copyChatLink"), {
+            disabled: state.busy,
+            onClick: function () {
+              copyChatDeepLink();
+            },
+          })
+        );
       }
       th.appendChild(thActs);
       thread.appendChild(th);
@@ -7332,13 +7369,15 @@
             .then(render)
             .catch(function () {});
         }
-        var bJoinLive = el("button", "btn btn-primary btn-sm", L("ui.common.join"));
-        bJoinLive.type = "button";
-        bJoinLive.disabled = state.conferenceBusy || state.busy;
-        bJoinLive.onclick = function () {
-          joinConferenceFromBanner(threadLiveConf);
-        };
-        confBanner.appendChild(bJoinLive);
+        confBanner.appendChild(
+          iconBtn("▶", L("ui.common.join"), {
+            primary: true,
+            disabled: state.conferenceBusy || state.busy,
+            onClick: function () {
+              joinConferenceFromBanner(threadLiveConf);
+            },
+          })
+        );
         thread.appendChild(confBanner);
       }
       var tSearchRow = el("div", "thread-search-row");
@@ -7391,16 +7430,13 @@
       }
       var msgs = el("div", "messages");
       if (state.threadHasMore) {
-        var loadOlder = el(
-          "button",
-          "btn btn-ghost btn-sm messages-load-more",
-          state.threadLoadingMore ? L("ui.common.loading") : L("ui.thread.loadOlder")
-        );
-        loadOlder.type = "button";
-        loadOlder.disabled = state.threadLoadingMore;
-        loadOlder.onclick = function () {
-          loadOlderMessages();
-        };
+        var loadOlder = iconBtn("↑", state.threadLoadingMore ? "…" : L("ui.thread.loadOlder"), {
+          cls: "messages-load-more",
+          disabled: state.threadLoadingMore,
+          onClick: function () {
+            loadOlderMessages();
+          },
+        });
         msgs.appendChild(loadOlder);
       }
       msgs.onscroll = function () {
@@ -7511,112 +7547,121 @@
         }
         if (!m.deleted) {
           var actions = el("div", "msg-actions");
-          var bReply = el("button", "btn btn-ghost btn-sm", L("ui.actions.reply"));
-          bReply.type = "button";
-          bReply.setAttribute("data-testid", "message-reply-button");
-          bReply.onclick = function () {
-            setReplyTo(m);
-          };
-          actions.appendChild(bReply);
+          actions.appendChild(
+            iconBtn("↩", L("ui.actions.reply"), {
+              testId: "message-reply-button",
+              onClick: function () {
+                setReplyTo(m);
+              },
+            })
+          );
           if (m.type === "text" || isE2eeType(m.type) || (m.content && m.content.trim())) {
-            var bCopy = el("button", "btn btn-ghost btn-sm", L("ui.actions.copy"));
-            bCopy.type = "button";
-            bCopy.onclick = function () {
-              copyMessageText(m);
-            };
-            actions.appendChild(bCopy);
+            actions.appendChild(
+              iconBtn("📋", L("ui.actions.copy"), {
+                onClick: function () {
+                  copyMessageText(m);
+                },
+              })
+            );
           }
-          var bMsgLink = el("button", "btn btn-ghost btn-sm", "🔗");
-          bMsgLink.type = "button";
-          bMsgLink.title = L("ui.message.messageLinkTitle");
-          bMsgLink.onclick = function () {
-            copyMessageDeepLink(m);
-          };
-          actions.appendChild(bMsgLink);
+          actions.appendChild(
+            iconBtn("🔗", L("ui.message.messageLinkTitle"), {
+              onClick: function () {
+                copyMessageDeepLink(m);
+              },
+            })
+          );
           var attachId = messageAttachmentFileId(m);
           if (attachId) {
-            var bAttachDl = el("button", "btn btn-ghost btn-sm", L("ui.common.download"));
-            bAttachDl.type = "button";
-            bAttachDl.onclick = function () {
-              downloadChatFile(attachId).catch(function (err) {
-                state.error = err.message || L("files.downloadFailedShort");
-                render();
-              });
-            };
-            actions.appendChild(bAttachDl);
+            actions.appendChild(
+              iconBtn("⬇", L("ui.common.download"), {
+                onClick: function () {
+                  downloadChatFile(attachId).catch(function (err) {
+                    state.error = err.message || L("files.downloadFailedShort");
+                    render();
+                  });
+                },
+              })
+            );
           }
-          var bPin = el(
-            "button",
-            "btn btn-ghost btn-sm",
-            isMessagePinned(m.id) ? L("ui.message.unpin") : L("ui.message.pin")
+          actions.appendChild(
+            iconBtn(
+              isMessagePinned(m.id) ? "📍" : "📌",
+              isMessagePinned(m.id) ? L("ui.message.unpin") : L("ui.message.pin"),
+              {
+                onClick: function () {
+                  togglePinMessage(m).catch(function (err) {
+                    state.error = err.message || L("messages.pinFailed");
+                    render();
+                  });
+                },
+              }
+            )
           );
-          bPin.type = "button";
-          bPin.onclick = function () {
-            togglePinMessage(m).catch(function (err) {
-              state.error = err.message || L("messages.pinFailed");
-              render();
-            });
-          };
-          actions.appendChild(bPin);
-          var bFwd = el("button", "btn btn-ghost btn-sm", L("ui.actions.forward"));
-          bFwd.type = "button";
-          bFwd.onclick = function () {
-            openForwardPicker(m);
-          };
-          actions.appendChild(bFwd);
+          actions.appendChild(
+            iconBtn("↪", L("ui.actions.forward"), {
+              onClick: function () {
+                openForwardPicker(m);
+              },
+            })
+          );
           if (myId && m.sender_id === myId && messageAttachmentFileId(m)) {
             var fileId = messageAttachmentFileId(m);
-            var bPub = el("button", "btn btn-ghost btn-sm", L("ui.actions.pubLink"));
-            bPub.type = "button";
-            bPub.title = L("ui.message.pubLinkTitle");
-            bPub.onclick = function () {
-              createPublicLinkForFile(fileId);
-            };
-            actions.appendChild(bPub);
-            var bLinks = el("button", "btn btn-ghost btn-sm", L("ui.actions.links"));
-            bLinks.type = "button";
-            bLinks.title = L("ui.message.linksTitle");
-            bLinks.onclick = function () {
-              openFilePublicLinksModal(fileId);
-            };
-            actions.appendChild(bLinks);
-            var bDelFile = el("button", "btn btn-ghost btn-sm", L("ui.actions.deleteFile"));
-            bDelFile.type = "button";
-            bDelFile.onclick = function () {
-              deleteOwnFile(fileId);
-            };
-            actions.appendChild(bDelFile);
+            actions.appendChild(
+              iconBtn("🌐", L("ui.message.pubLinkTitle"), {
+                onClick: function () {
+                  createPublicLinkForFile(fileId);
+                },
+              })
+            );
+            actions.appendChild(
+              iconBtn("🔗", L("ui.message.linksTitle"), {
+                onClick: function () {
+                  openFilePublicLinksModal(fileId);
+                },
+              })
+            );
+            actions.appendChild(
+              iconBtn("🗑", L("ui.actions.deleteFile"), {
+                onClick: function () {
+                  deleteOwnFile(fileId);
+                },
+              })
+            );
           }
           if (state.savedChatId && state.selectedId !== state.savedChatId) {
-            var bVault = el("button", "btn btn-ghost btn-sm", L("ui.actions.toVault"));
-            bVault.type = "button";
-            bVault.onclick = function () {
-              saveMessageToVault(m).catch(function (err) {
-                state.error = err.message || L("saved.saveFailed");
-                render();
-              });
-            };
-            actions.appendChild(bVault);
+            actions.appendChild(
+              iconBtn("🔒", L("ui.actions.toVault"), {
+                onClick: function () {
+                  saveMessageToVault(m).catch(function (err) {
+                    state.error = err.message || L("saved.saveFailed");
+                    render();
+                  });
+                },
+              })
+            );
           }
           if (myId && m.sender_id === myId && m.type === "text") {
-            var bEdit = el("button", "btn btn-ghost btn-sm", L("ui.actions.edit"));
-            bEdit.type = "button";
-            bEdit.onclick = function () {
-              editMessagePrompt(m).catch(function (err) {
-                state.error = err.message || L("messages.editFailed");
-                render();
-              });
-            };
-            actions.appendChild(bEdit);
-            var bDel = el("button", "btn btn-ghost btn-sm", L("ui.actions.delete"));
-            bDel.type = "button";
-            bDel.onclick = function () {
-              deleteMessageConfirm(m).catch(function (err) {
-                state.error = err.message || L("messages.deleteFailed");
-                render();
-              });
-            };
-            actions.appendChild(bDel);
+            actions.appendChild(
+              iconBtn("✎", L("ui.actions.edit"), {
+                onClick: function () {
+                  editMessagePrompt(m).catch(function (err) {
+                    state.error = err.message || L("messages.editFailed");
+                    render();
+                  });
+                },
+              })
+            );
+            actions.appendChild(
+              iconBtn("🗑", L("ui.actions.delete"), {
+                onClick: function () {
+                  deleteMessageConfirm(m).catch(function (err) {
+                    state.error = err.message || L("messages.deleteFailed");
+                    render();
+                  });
+                },
+              })
+            );
           }
           QUICK_REACTIONS.forEach(function (em) {
             var br = el("button", "btn btn-ghost btn-sm msg-react-btn", em);
@@ -7687,18 +7732,17 @@
         state.mediaCaps && state.mediaCaps.max_upload_bytes
           ? " до " + Math.round(state.mediaCaps.max_upload_bytes / (1024 * 1024)) + " МБ"
           : "";
-      var bFile = el("button", "btn btn-ghost btn-icon", L("ui.thread.fileBtn"));
-      bFile.type = "button";
-      bFile.setAttribute("data-testid", "file-attach");
-      bFile.title = maxHint
+      var bFile = iconBtn("📎", maxHint
         ? L("ui.thread.attachFileMax", {
             mb: Math.round(state.mediaCaps.max_upload_bytes / (1024 * 1024)),
           })
-        : L("ui.thread.attachFile");
-      bFile.disabled = state.busy;
-      bFile.onclick = function () {
-        filePick.click();
-      };
+        : L("ui.thread.attachFile"), {
+        testId: "file-attach",
+        disabled: state.busy,
+        onClick: function () {
+          filePick.click();
+        },
+      });
       filePick.onchange = function () {
         if (filePick.files && filePick.files[0]) {
           sendFileMessage(filePick.files[0]);
@@ -7748,9 +7792,12 @@
         }
       };
       comp.appendChild(ta);
-      var sb = el("button", "btn btn-primary", L("ui.thread.send"));
-      sb.type = "submit";
-      sb.disabled = state.busy;
+      var sb = iconBtn("➤", L("ui.thread.send"), {
+        primary: true,
+        cls: "composer-send-btn",
+        submit: true,
+        disabled: state.busy,
+      });
       comp.appendChild(sb);
       bindComposerDrop(comp);
       thread.appendChild(comp);
@@ -7785,11 +7832,11 @@
           fList.appendChild(fb);
         });
       fCard.appendChild(fList);
-      var fCancel = el("button", "btn btn-ghost", L("ui.common.cancel"));
-      fCancel.type = "button";
-      fCancel.onclick = function () {
-        closeForwardPicker();
-      };
+      var fCancel = iconBtn("✕", L("ui.common.cancel"), {
+        onClick: function () {
+          closeForwardPicker();
+        },
+      });
       fCard.appendChild(fCancel);
       fOv.appendChild(fCard);
       fOv.onclick = function (e) {
@@ -7817,20 +7864,22 @@
         var manageMembers = canManageMembers(myRole);
         if (selChat && selChat.type === "group" && manageMembers) {
           var mTools = el("div", "member-tools");
-          var bRen = el("button", "btn btn-ghost btn-sm", L("ui.members.rename"));
-          bRen.type = "button";
-          bRen.disabled = state.busy;
-          bRen.onclick = function () {
-            renameGroupChat();
-          };
-          mTools.appendChild(bRen);
-          var bAdd = el("button", "btn btn-ghost btn-sm", L("ui.members.addMember"));
-          bAdd.type = "button";
-          bAdd.disabled = state.busy;
-          bAdd.onclick = function () {
-            addMemberToChat();
-          };
-          mTools.appendChild(bAdd);
+          mTools.appendChild(
+            iconBtn("✎", L("ui.members.rename"), {
+              disabled: state.busy,
+              onClick: function () {
+                renameGroupChat();
+              },
+            })
+          );
+          mTools.appendChild(
+            iconBtn("＋", L("ui.members.addMember"), {
+              disabled: state.busy,
+              onClick: function () {
+                addMemberToChat();
+              },
+            })
+          );
           mBody.appendChild(mTools);
         }
         state.chatMembers.forEach(function (m) {
@@ -7858,44 +7907,48 @@
             mRow.appendChild(roleSel);
           }
           if (m.user_id === meId && selChat && selChat.type === "group") {
-            var bLeave = el("button", "btn btn-ghost btn-sm", L("ui.members.leave"));
-            bLeave.type = "button";
-            bLeave.disabled = state.busy;
-            bLeave.onclick = function () {
-              removeMemberFromChat(m.user_id);
-            };
-            mRow.appendChild(bLeave);
+            mRow.appendChild(
+              iconBtn("🚪", L("ui.members.leave"), {
+                disabled: state.busy,
+                onClick: function () {
+                  removeMemberFromChat(m.user_id);
+                },
+              })
+            );
           } else if (
             manageMembers &&
             m.user_id !== meId &&
             m.role !== "owner" &&
             !m.banned
           ) {
-            var bRm = el("button", "btn btn-ghost btn-sm", L("ui.members.remove"));
-            bRm.type = "button";
-            bRm.disabled = state.busy;
-            bRm.onclick = function () {
-              removeMemberFromChat(m.user_id);
-            };
-            mRow.appendChild(bRm);
+            mRow.appendChild(
+              iconBtn("✕", L("ui.members.remove"), {
+                disabled: state.busy,
+                onClick: function () {
+                  removeMemberFromChat(m.user_id);
+                },
+              })
+            );
           }
           if (manageBans && m.user_id !== meId && m.role !== "owner") {
             if (m.banned) {
-              var bUn = el("button", "btn btn-ghost btn-sm", L("ui.members.unban"));
-              bUn.type = "button";
-              bUn.disabled = state.busy;
-              bUn.onclick = function () {
-                unbanUserInChat(m.user_id);
-              };
-              mRow.appendChild(bUn);
+              mRow.appendChild(
+                iconBtn("✓", L("ui.members.unban"), {
+                  disabled: state.busy,
+                  onClick: function () {
+                    unbanUserInChat(m.user_id);
+                  },
+                })
+              );
             } else if (m.role !== "admin" || myRole === "owner") {
-              var bBan = el("button", "btn btn-ghost btn-sm", L("ui.members.ban"));
-              bBan.type = "button";
-              bBan.disabled = state.busy;
-              bBan.onclick = function () {
-                banUserInChat(m.user_id);
-              };
-              mRow.appendChild(bBan);
+              mRow.appendChild(
+                iconBtn("⛔", L("ui.members.ban"), {
+                  disabled: state.busy,
+                  onClick: function () {
+                    banUserInChat(m.user_id);
+                  },
+                })
+              );
             }
           }
           mBody.appendChild(mRow);
@@ -7904,11 +7957,12 @@
         mBody.appendChild(el("p", "settings-hint", L("ui.members.noMembers")));
       }
       mCard.appendChild(mBody);
-      var mClose = el("button", "btn btn-primary", L("ui.common.close"));
-      mClose.type = "button";
-      mClose.onclick = function () {
-        closeMembersModal();
-      };
+      var mClose = iconBtn("✕", L("ui.common.close"), {
+        primary: true,
+        onClick: function () {
+          closeMembersModal();
+        },
+      });
       mCard.appendChild(mClose);
       mOv.appendChild(mCard);
       mOv.onclick = function (e) {
@@ -7934,13 +7988,14 @@
           });
           flRow.appendChild(head);
           var flActs = el("div", "file-link-row-actions");
-          var bRev = el("button", "btn btn-ghost btn-sm", L("ui.common.revoke"));
-          bRev.type = "button";
-          bRev.disabled = state.busy;
-          bRev.onclick = function () {
-            revokeFilePublicLink(state.fileLinksFileId, row.id);
-          };
-          flActs.appendChild(bRev);
+          flActs.appendChild(
+            iconBtn("🚫", L("ui.common.revoke"), {
+              disabled: state.busy,
+              onClick: function () {
+                revokeFilePublicLink(state.fileLinksFileId, row.id);
+              },
+            })
+          );
           flRow.appendChild(flActs);
           flBody.appendChild(flRow);
         });
@@ -7949,19 +8004,22 @@
       }
       flCard.appendChild(flBody);
       var flFoot = el("div", "modal-footer");
-      var flCreate = el("button", "btn btn-ghost btn-sm", L("ui.fileLinks.create"));
-      flCreate.type = "button";
-      flCreate.disabled = state.busy || !state.fileLinksFileId;
-      flCreate.onclick = function () {
-        createPublicLinkForFile(state.fileLinksFileId);
-      };
-      flFoot.appendChild(flCreate);
-      var flClose = el("button", "btn btn-primary", L("ui.common.close"));
-      flClose.type = "button";
-      flClose.onclick = function () {
-        closeFilePublicLinksModal();
-      };
-      flFoot.appendChild(flClose);
+      flFoot.appendChild(
+        iconBtn("＋", L("ui.fileLinks.create"), {
+          disabled: state.busy || !state.fileLinksFileId,
+          onClick: function () {
+            createPublicLinkForFile(state.fileLinksFileId);
+          },
+        })
+      );
+      flFoot.appendChild(
+        iconBtn("✕", L("ui.common.close"), {
+          primary: true,
+          onClick: function () {
+            closeFilePublicLinksModal();
+          },
+        })
+      );
       flCard.appendChild(flFoot);
       flOv.appendChild(flCard);
       flOv.onclick = function (e) {
@@ -7995,11 +8053,12 @@
         vBody.appendChild(el("p", "settings-hint", L("ui.versions.none")));
       }
       vCard.appendChild(vBody);
-      var vClose = el("button", "btn btn-primary", L("ui.common.close"));
-      vClose.type = "button";
-      vClose.onclick = function () {
-        closeMessageVersionsModal();
-      };
+      var vClose = iconBtn("✕", L("ui.common.close"), {
+        primary: true,
+        onClick: function () {
+          closeMessageVersionsModal();
+        },
+      });
       vCard.appendChild(vClose);
       vOv.appendChild(vCard);
       vOv.onclick = function (e) {

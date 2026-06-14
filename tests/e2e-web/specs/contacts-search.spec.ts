@@ -18,10 +18,10 @@ test.describe("contacts and search", () => {
   test("contacts list loads after login", async ({ page, request }) => {
     await ensureSmokeUsers(request);
     await uiLogin(page, "smoke_user_a", "smokepass123");
-    const contactsBtn = page.getByRole("button", { name: /Контакты|Contacts/i });
+    const contactsBtn = page.locator("[data-testid=sidebar-tab-contacts]");
     if (await contactsBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await contactsBtn.click();
-      await expect(page.getByRole("button", { name: /Чаты|Chats/i })).toBeVisible();
+      await expect(page.locator("[data-testid=sidebar-tab-chats]")).toBeVisible();
       return;
     }
     await expect(page.locator("[data-testid=message-composer]")).toBeVisible();
