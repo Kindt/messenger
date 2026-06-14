@@ -60,8 +60,12 @@ jobs:
           cd deploy/ansible
           ansible-playbook -i inventory/local/hosts.yml playbooks/ci-local.yml -e run_smoke=true
 
+      - name: Diagnostics on failure
+        if: failure()
+        run: bash scripts/ci-stack-diagnostics.sh full-server
+
       - name: Stack down
-        if: ${{ github.event_name == 'schedule' || github.event.inputs.skip_down != 'true' }}
+        if: always() && (github.event_name == 'schedule' || github.event.inputs.skip_down != 'true')
         run: |
           chmod +x scripts/*.sh
           ./scripts/full-stack-down.sh
@@ -88,6 +92,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: modules/web-client/webui-build/package-lock.json
+
+      - name: Install webui Tailwind deps
+        run: npm ci
+        working-directory: modules/web-client/webui-build
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -120,6 +130,10 @@ jobs:
           KORUS_WEB_URL: http://127.0.0.1:9088
           KORUS_API_URL: http://127.0.0.1:8080
         run: npx playwright test
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: bash scripts/ci-stack-diagnostics.sh full-server
 
       - name: Upload Playwright report on failure
         if: failure()

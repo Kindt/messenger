@@ -8,6 +8,15 @@
 
 ## [Unreleased]
 
+### 2026-06-14 — CI: nightly smokes, export file bodies, diagnostics
+
+- **`.github/workflows/ci.yml`**: `buildIntegrity` on push to any branch (not only main/develop).
+- **`.github/workflows/deploy-messaging-smoke.yml`**: fixed `:modules:web-client:assemble`; Ansible bootstrap log under `/tmp`; failure diagnostics; stack down on `always()`.
+- **`.github/workflows/export-compliance-smoke.yml`**: `keycloak-ensure-dev-users` before admin smokes; failure diagnostics; stack down on `always()`.
+- **`docker/docker-compose.export-smoke.yml`**: `EXPORT_REPLAY_INCLUDE_FILE_BODIES=true` for `--include-file` compliance flow.
+- **`deploy/ansible`**: configurable `korus_bootstrap_log` with writable-path fallback for CI localhost.
+- **`scripts/ci-stack-diagnostics.sh`**: compose ps + tail logs for GHA failure steps.
+
 ### 2026-06-14 — Spec 005: web UI startup fix and i18n
 
 - **`docker/Dockerfile.web-client`**: multi-stage Node 20 Tailwind build; Gradle skips `buildTailwindCss` in image (fixes guest bootstrap `npm` failure / UI :19088 down).

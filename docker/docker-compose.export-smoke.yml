@@ -7,3 +7,6 @@ services:
       EXPORT_ADMIN_SUGGEST_ENABLED: "true"
       EXPORT_ADMIN_EXPORT_ENABLED: "true"
       EXPORT_SUGGESTED_SUBSCRIBER_ENABLED: "true"
+  export-replay-worker:
+    environment:
+      EXPORT_REPLAY_INCLUDE_FILE_BODIES: "true"

@@ -8,6 +8,7 @@ import com.avandocmsg.messenger.api.files.dto.FileUploadResponse;
 import com.avandocmsg.messenger.api.messages.MessageService;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
+import com.avandocmsg.messenger.api.mls.MlsMessageTypes;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -42,7 +44,8 @@ class AdminExportComplianceSeedTest {
                 actor.toString(), 1, false, false, null, Instant.now()));
         when(retentionRepo.upsert(eq(chatId), eq(0), isNull(), eq(false), eq(true), eq(false), eq(actor)))
             .thenReturn(true);
-        when(messageService.sendMessage(eq(chatId), eq(actor), any(SendMessageRequest.class), isNull()))
+        when(messageService.sendMessage(eq(chatId), eq(actor), argThat(req ->
+                req != null && MlsMessageTypes.SCHEME_LEGACY.equals(req.e2eeScheme())), isNull()))
             .thenReturn(new MessageResponse("m1", chatId.toString(), actor.toString(), "text", "x", null,
                 false, Instant.now(), null, null, null))
             .thenReturn(new MessageResponse("m2", chatId.toString(), actor.toString(), "text", "x", null,
@@ -75,7 +78,8 @@ class AdminExportComplianceSeedTest {
                 actor.toString(), 1, false, false, null, Instant.now()));
         when(retentionRepo.upsert(eq(chatId), eq(0), isNull(), eq(false), eq(true), eq(false), eq(actor)))
             .thenReturn(true);
-        when(messageService.sendMessage(eq(chatId), eq(actor), any(SendMessageRequest.class), isNull()))
+        when(messageService.sendMessage(eq(chatId), eq(actor), argThat(req ->
+                req != null && MlsMessageTypes.SCHEME_LEGACY.equals(req.e2eeScheme())), isNull()))
             .thenReturn(new MessageResponse("m1", chatId.toString(), actor.toString(), "text", "x", null,
                 false, Instant.now(), null, null, null))
             .thenReturn(new MessageResponse("mf", chatId.toString(), actor.toString(), "file", fileId, null,

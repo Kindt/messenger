@@ -14,6 +14,8 @@ import com.avandocmsg.messenger.api.messages.MessageService;
 
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 
+import com.avandocmsg.messenger.api.mls.MlsMessageTypes;
+
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
@@ -38,7 +40,8 @@ import java.util.UUID;
 
 public final class AdminExportComplianceSeed {
 
-
+    /** Plaintext retention/export smokes must not use server MLS (export-replay skips e2ee-* types). */
+    private static final String COMPLIANCE_PLAINTEXT_SCHEME = MlsMessageTypes.SCHEME_LEGACY;
 
     private final ChatService chatService;
 
@@ -160,7 +163,7 @@ public final class AdminExportComplianceSeed {
 
                 actorId,
 
-                new SendMessageRequest("text", content, null, null, null, null, null),
+                new SendMessageRequest("text", content, null, null, null, null, COMPLIANCE_PLAINTEXT_SCHEME),
 
                 null
 
@@ -222,7 +225,7 @@ public final class AdminExportComplianceSeed {
 
                 actorId,
 
-                new SendMessageRequest("file", fileId, null, null, null, null, null),
+                new SendMessageRequest("file", fileId, null, null, null, null, COMPLIANCE_PLAINTEXT_SCHEME),
 
                 null
 

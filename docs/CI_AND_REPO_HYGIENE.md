@@ -6,7 +6,7 @@
 
 | Элемент | Описание |
 |--------|-----------|
-| **Триггеры** | Push в ветки **`main`**, **`master`**, **`develop`**; все **pull request**; ручной запуск (**`workflow_dispatch`**) |
+| **Триггеры** | Push во **все ветки**; все **pull request**; ручной запуск (**`workflow_dispatch`**) |
 | **ОС** | **`ubuntu-latest`** |
 | **JDK** | **25** (Temurin), кэш Gradle через **`setup-java@v5`** (`**cache: gradle**`) |
 | **Проверка wrapper** | **`gradle/actions/wrapper-validation@v5`** — контроль целостности **`gradle-wrapper.jar`** (файл **должен** быть в репозитории; не игнорировать **`*.jar`** для `gradle/wrapper/`, см. **`!gradle/wrapper/gradle-wrapper.jar`** в **`.gitignore`**) |
@@ -44,11 +44,29 @@
 | **Deploy** | Ansible **`deploy/ansible/playbooks/ci-local.yml`** (`run_smoke=true`) |
 | **Acceptance** | **`scripts/smoke-deploy-acceptance.sh`** (wait-ready, auth, **`smoke-messaging-e2e`**, web-parity-api) |
 | **Playwright** | Отдельный job **`playwright`**: full-stack + korus-web attach → **`tests/e2e-web`** |
+| **При падении** | **`scripts/ci-stack-diagnostics.sh full-server`**; Playwright report artifact |
 | **Timeout** | 90 min на job |
 
 PR gate по-прежнему только **`buildIntegrity`** в **`ci.yml`**.
 
 Spec-kit: **`specs/003-docker-ansible-autotest/`**. Playwright: **`tests/e2e-web/`**.
+
+## Export compliance smoke (nightly)
+
+Файл **`.github/workflows/export-compliance-smoke.yml`**:
+
+| Элемент | Описание |
+|--------|-----------|
+| **Триггеры** | **`workflow_dispatch`**, cron **04:00 UTC** |
+| **Стек** | **`full-stack-up.sh --export-smoke --export-auto-queue --build`** + overlay **`docker-compose.export-smoke.yml`** (в т.ч. **`EXPORT_REPLAY_INCLUDE_FILE_BODIES=true`**) |
+| **Keycloak** | **`keycloak-ensure-dev-users.sh`** перед admin smokes (**csadmin** password grant) |
+| **Acceptance** | OpenAPI → observability → **`smoke-export-compliance-flow.sh --include-file`** → pack |
+| **При падении** | **`scripts/ci-stack-diagnostics.sh export-smoke`** |
+| **Timeout** | 90 min; **`poll_seconds`** input (default 300) |
+
+## CI diagnostics
+
+**`scripts/ci-stack-diagnostics.sh`** — `docker compose ps` + tail логов (режимы **`full-server`**, **`export-smoke`**). Вызывается из nightly workflows при **`failure()`**.
 
 ## `.gitattributes`
 

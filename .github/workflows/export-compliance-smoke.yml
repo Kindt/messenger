@@ -54,6 +54,9 @@ jobs:
         env:
           TIMEOUT_SEC: 420
 
+      - name: Ensure Keycloak dev users (csadmin password grant)
+        run: bash scripts/keycloak-ensure-dev-users.sh
+
       - name: OpenAPI export-compliance-prep
         run: ./scripts/smoke-openapi-export-compliance.sh
 
@@ -70,6 +73,10 @@ jobs:
         env:
           POLL_SECONDS: ${{ github.event.inputs.poll_seconds || '300' }}
 
+      - name: Diagnostics on failure
+        if: failure()
+        run: bash scripts/ci-stack-diagnostics.sh export-smoke
+
       - name: Stack down
-        if: ${{ github.event_name == 'schedule' || github.event.inputs.skip_down != 'true' }}
+        if: always() && (github.event_name == 'schedule' || github.event.inputs.skip_down != 'true')
         run: ./scripts/full-stack-down.sh --export-smoke --export-auto-queue
