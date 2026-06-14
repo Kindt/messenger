@@ -377,6 +377,7 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 | **Документация** | Не создавать markdown «просто так»; docs по запросу или в рамках spec-kit |
 | **Тесты** | Полезные тесты только при реальном coverage; не trivial asserts |
 | **Plan files** | Не редактировать `.cursor/plans/*.plan.md` без явного указания |
+| **GitHub** | **Не ставить GitHub CLI (`gh`)**; push — `.\scripts\git-push.ps1`; PR — вручную через compare на github.com |
 
 ---
 
