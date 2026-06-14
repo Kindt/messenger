@@ -11,15 +11,15 @@
 | E2EE unit | `.\gradlew.bat :modules:core-api:test --tests "*Mls*"` | **PASS** (2026-06-09) | 17 tests |
 | TLS smoke (dev) | `.\scripts\smoke-tls-redirect.ps1 -SkipTls` | **PASS** | HTTP-only path |
 | Hex write unit | `.\gradlew.bat :modules:core-api:test --tests "*ApplicationServiceTest*"` | PASS | User/Org/File |
-| Playwright full-stack | `npx playwright test` @ `http://127.0.0.1:19088` | **PASS** (2026-06-12, 26/26) | QEMU stack |
+| Playwright full-stack | `npx playwright test` @ `http://127.0.0.1:19088` | **PASS** (2026-06-14, 27/27) | QEMU hotswap+lb; spec 005 i18n |
 
 ## US9 — Fast acceptance (inner / outer)
 
 | Check | Command | Result | Notes |
 |-------|---------|--------|-------|
 | Inner tier `api` | `.\scripts\playwright-dev-loop.ps1 -Tier api` | **PASS** (2026-06-12, 10 tests) | ~10s |
-| Inner `all-inner` | `.\scripts\playwright-dev-loop.ps1 -Tier all-inner` | **PASS** (2026-06-12) | `inner-tier-status.json` allInnerPass=true |
-| Outer gate | `.\scripts\qemu-plan-orchestrator.ps1 -SkipVmUp` | **PASS** (2026-06-12, 26/26 manual + gate report) | orchestrator wsUrl loop fixed in script |
+| Inner `all-inner` | `.\scripts\playwright-dev-loop.ps1 -Tier all-inner` | **PASS** (2026-06-14) | 27/27; hotswap nginx lb |
+| Outer gate | `.\scripts\qemu-plan-orchestrator.ps1 -SkipVmUp` | **PASS** (2026-06-14, 27/27 + runtime-gate-report) | green backup `2026-06-14_122224_green-2026-06-14` |
 | Exited(255) probe | auto-remediate on KeepDisks | implemented | Server redeploy once / 10m cooldown |
 
 ## US1 — Stage/prod TLS (ops)
