@@ -48,6 +48,13 @@ public final class UserApplicationService {
         return getProfileForViewer(userId, userId);
     }
 
+    public Optional<UserProfile> updateUiLocale(UserId userId, String uiLocale) {
+        if (!userRepositoryPort.updateUiLocale(userId, uiLocale)) {
+            return Optional.empty();
+        }
+        return getProfileForViewer(userId, userId);
+    }
+
     public void touchHeartbeat(UserId userId) {
         userRepositoryPort.touchHeartbeat(userId);
     }
@@ -73,6 +80,7 @@ public final class UserApplicationService {
             profile.presenceStatus(),
             profile.lastSeenAt(),
             null,
-            false);
+            false,
+            null);
     }
 }

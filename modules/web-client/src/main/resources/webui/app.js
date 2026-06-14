@@ -6,7 +6,7 @@
       return key;
     },
     translateError: function (msg) {
-      return msg || "Ошибка";
+      return msg || L("errors.generic");
     },
     init: function () {},
     getLocale: function () {
@@ -311,6 +311,14 @@
   var HEARTBEAT_WS_MIN_MS = 30000;
   var lastHeartbeatMs = 0;
   var QUICK_REACTIONS = ["👍", "❤️", "😂"];
+  var LOCALE_LABEL_KEYS = {
+    ru: "settings.localeRu",
+    en: "settings.localeEn",
+    be: "settings.localeBe",
+    kk: "settings.localeKk",
+    zh: "settings.localeZh",
+    ko: "settings.localeKo",
+  };
   var THREAD_PAGE = 50;
   var THREAD_SOFT_RELOAD = {
     keepScroll: true,
@@ -327,46 +335,13 @@
       }
     },
     formatChatListTime: function (ms) {
-      if (!ms) return "";
-      var d = new Date(ms);
-      if (isNaN(d.getTime())) return "";
-      var now = Date.now();
-      var diff = now - ms;
-      if (diff < 60000) return "сейчас";
-      if (diff < 3600000) {
-        var mins = Math.floor(diff / 60000);
-        return mins + " мин";
-      }
-      var today = new Date();
-      today.setHours(0, 0, 0, 0);
-      var day = new Date(d);
-      day.setHours(0, 0, 0, 0);
-      var yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      if (day.getTime() === today.getTime()) {
-        return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      }
-      if (day.getTime() === yesterday.getTime()) return "вчера";
-      if (now - ms < 7 * 86400000) {
-        var wd = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
-        return wd[d.getDay()];
-      }
-      return d.toLocaleDateString([], { day: "numeric", month: "short" });
+      return ms ? String(ms) : "";
     },
-    formatTtlLabel: function (seconds) {
-      if (!seconds || seconds < 1) return "";
-      if (seconds >= 86400) return "⏱ " + Math.round(seconds / 86400) + " д";
-      if (seconds >= 3600) return "⏱ " + Math.round(seconds / 3600) + " ч";
-      if (seconds >= 60) return "⏱ " + Math.round(seconds / 60) + " мин";
-      return "⏱ " + seconds + " с";
+    formatTtlLabel: function () {
+      return "";
     },
-    formatTimeLeft: function (secondsLeft) {
-      if (secondsLeft == null || secondsLeft <= 0) return "истекло";
-      var s = Math.floor(secondsLeft);
-      if (s >= 86400) return Math.ceil(s / 86400) + " д";
-      if (s >= 3600) return Math.ceil(s / 3600) + " ч";
-      if (s >= 60) return Math.ceil(s / 60) + " мин";
-      return s + " с";
+    formatTimeLeft: function () {
+      return L("time.expired");
     },
   };
   var uiShellUtils = window.KorusUiShellUtils || {
@@ -586,15 +561,15 @@
         if (base === "file") return "🔒 Файл";
         return "🔒 Зашифровано";
       }
-      if (t === "image") return "Изображение";
-      if (t === "video") return "Видео";
-      if (t === "file") return "Файл";
+      if (t === "image") return L("ui.message.image");
+      if (t === "video") return L("ui.message.video");
+      if (t === "file") return L("ui.message.file");
       var text = String(content || "")
         .replace(/[*_`#[\]]/g, "")
         .replace(/\s+/g, " ")
         .trim();
       if (text.length > 72) text = text.slice(0, 72) + "…";
-      return text || "Сообщение";
+      return text || L("ui.message.default");
     },
     formatPreviewForMessage: function (
       message,
@@ -602,7 +577,7 @@
       messageAttachmentFileIdFn,
       formatPreviewTextFn
     ) {
-      if (!message) return "Сообщение";
+      if (!message) return L("ui.message.default");
       if (messageAttachmentKindFn(message) && messageAttachmentFileIdFn(message)) {
         return formatPreviewTextFn(message.type, "");
       }
@@ -890,7 +865,7 @@
 
   async function enableNotifications() {
     if (typeof Notification === "undefined") {
-      state.error = "Браузер не поддерживает уведомления";
+      state.error = L("notifications.unsupported");
       render();
       return;
     }
@@ -898,7 +873,7 @@
     state.notifyPref = perm === "granted";
     localStorage.setItem(NOTIF_KEY, state.notifyPref ? "1" : "0");
     if (!state.notifyPref && perm === "denied") {
-      state.error = "Уведомления отклонены в настройках браузера";
+      state.error = L("notifications.denied");
     }
     if (state.notifyPref) {
       await registerWebPush();
@@ -933,7 +908,7 @@
       }
       await loadMyDevices();
     } catch (e) {
-      state.error = e.message || "Не удалось обновить push-подписку";
+      state.error = e.message || L("notifications.pushResyncFailed");
     } finally {
       state.busy = false;
       render();
@@ -966,7 +941,7 @@
       state.webPushError = null;
     } catch (e) {
       state.webPushRegistered = false;
-      state.webPushError = e.message || "Не удалось зарегистрировать Web Push";
+      state.webPushError = e.message || L("notifications.pushRegisterFailed");
     }
   }
 
@@ -983,7 +958,7 @@
   }
 
   function updateDocumentTitle() {
-    var base = "Korus Messenger";
+    var base = L("ui.brand.title");
     var u = totalUnreadCount();
     document.title = u > 0 ? "(" + u + ") " + base : base;
     updateAppBadge(u);
@@ -1061,9 +1036,9 @@
     try {
       await apiFetch("/e2ee/key-packages/" + kpId, { method: "DELETE" });
       await loadE2eeStatus();
-      state.statusMessage = "Key package удалён";
+      state.statusMessage = L("e2ee.keyPackageDeleted");
     } catch (e) {
-      state.error = e.message || "Не удалось удалить key package";
+      state.error = e.message || L("e2ee.deleteKeyPackageFailed");
     } finally {
       state.busy = false;
       render();
@@ -1083,9 +1058,9 @@
       );
       state.lastPublicLink = null;
       saveLastPublicLink(null);
-      state.statusMessage = "Публичная ссылка отозвана";
+      state.statusMessage = L("files.publicLinkRevoked");
     } catch (e) {
-      state.error = e.message || "Не удалось отозвать ссылку";
+      state.error = e.message || L("files.revokeFailed");
     } finally {
       state.busy = false;
       render();
@@ -1112,15 +1087,48 @@
     }
   }
 
-  async function loadMyProfile() {
-    if (!state.tokens) return;
+  async function loadMyProfile(opts) {
+    opts = opts || {};
+    if (!state.tokens) return null;
     try {
       var p = await apiJson("/users/me", { method: "GET" });
       if (p) {
         if (p.presence_status) state.myPresence = p.presence_status;
         state.myDisplayName = p.display_name || p.username || "";
+        if (opts.applyLocale) {
+          await applyProfileLocale(p);
+        }
       }
+      return p || null;
     } catch (e) {}
+    return null;
+  }
+
+  async function applyProfileLocale(p) {
+    var code = p && p.ui_locale;
+    var supported = i18n.supportedLocales ? i18n.supportedLocales() : [];
+    if (code && supported.indexOf(code) >= 0) {
+      if (i18n.getLocale() !== code) {
+        await i18n.setLocale(code);
+      }
+    }
+  }
+
+  async function persistUiLocale(code, opts) {
+    opts = opts || {};
+    if (!state.tokens || !code) return;
+    var supported = i18n.supportedLocales ? i18n.supportedLocales() : [];
+    if (supported.indexOf(code) < 0) return;
+    try {
+      await apiJson("/users/me/locale", {
+        method: "PATCH",
+        jsonBody: { ui_locale: code },
+      });
+    } catch (e) {
+      if (!opts.silent) {
+        state.error = e.message || L("profile.localeSaveFailed");
+      }
+    }
   }
 
   async function loadContacts() {
@@ -1147,7 +1155,7 @@
         await loadContacts();
       }
     } catch (e) {
-      state.error = e.message || "Не удалось добавить в контакты";
+      state.error = e.message || L("contacts.addFailed");
     } finally {
       state.busy = false;
       render();
@@ -1165,12 +1173,12 @@
         return s.length > 0;
       });
     if (!hashes.length) {
-      state.error = "Введите хотя бы один хэш телефона (SHA-256, hex)";
+      state.error = L("contacts.hashRequired");
       render();
       return;
     }
     if (hashes.length > 1000) {
-      state.error = "Не более 1000 хэшей за раз";
+      state.error = L("contacts.hashLimit");
       render();
       return;
     }
@@ -1186,10 +1194,10 @@
       state.contactImportText = "";
       await loadContacts();
       state.sidebarMode = "contacts";
-      state.statusMessage = "Импорт: добавлено контактов — " + found;
+      state.statusMessage = L("contacts.importOk", { count: found });
       state.error = null;
     } catch (e) {
-      state.error = e.message || "Импорт не удался";
+      state.error = e.message || L("contacts.importFailed");
     } finally {
       state.busy = false;
       render();
@@ -1205,7 +1213,7 @@
       await apiJson("/contacts/" + contactId, { method: "DELETE" });
       await loadContacts();
     } catch (e) {
-      state.error = e.message || "Не удалось удалить контакт";
+      state.error = e.message || L("contacts.deleteFailed");
     } finally {
       state.busy = false;
       render();
@@ -1294,7 +1302,7 @@
       });
       if (p && p.display_name) state.myDisplayName = p.display_name;
     } catch (e) {
-      state.error = e.message || "Не удалось сохранить профиль";
+      state.error = e.message || L("profile.saveFailed");
     } finally {
       state.busy = false;
       render();
@@ -1324,7 +1332,7 @@
       });
       chat.muted = next;
     } catch (e) {
-      state.error = e.message || "Не удалось изменить режим уведомлений чата";
+      state.error = e.message || L("profile.notifyModeFailed");
     } finally {
       state.busy = false;
       render();
@@ -1345,7 +1353,7 @@
       });
       chat.personal_filter_active = next;
     } catch (e) {
-      state.error = e.message || "Не удалось изменить фильтр";
+      state.error = e.message || L("profile.filterFailed");
     } finally {
       state.busy = false;
       render();
@@ -1372,7 +1380,7 @@
   async function renameGroupChat() {
     var chat = currentChat();
     if (!chat || chat.type !== "group" || !state.tokens) return;
-    var title = window.prompt("Название группы", chat.title || "");
+    var title = window.prompt(L("chat.groupTitlePrompt"), chat.title || "");
     if (title === null) return;
     state.busy = true;
     state.error = null;
@@ -1384,9 +1392,9 @@
       });
       if (updated && updated.title) chat.title = updated.title;
       await refreshChats();
-      state.statusMessage = "Название группы обновлено";
+      state.statusMessage = L("chat.groupTitleUpdated");
     } catch (e) {
-      state.error = e.message || "Не удалось переименовать";
+      state.error = e.message || L("chat.renameFailed");
     } finally {
       state.busy = false;
       render();
@@ -1395,7 +1403,7 @@
 
   async function addMemberToChat() {
     if (!state.selectedId || !state.tokens) return;
-    var uid = window.prompt("UUID пользователя для добавления в группу");
+    var uid = window.prompt(L("chat.addMemberPrompt"));
     if (!uid || !uid.trim()) return;
     state.busy = true;
     state.error = null;
@@ -1407,9 +1415,9 @@
       });
       await loadChatMembersModal();
       await refreshChats();
-      state.statusMessage = "Участник добавлен";
+      state.statusMessage = L("chat.memberAdded");
     } catch (e) {
-      state.error = e.message || "Не удалось добавить участника";
+      state.error = e.message || L("chat.addMemberFailed");
     } finally {
       state.busy = false;
       render();
@@ -1441,14 +1449,14 @@
         state.selectedId = null;
         state.messages = [];
         await refreshChats();
-        state.statusMessage = "Вы вышли из группы";
+        state.statusMessage = L("chat.leftGroup");
       } else {
         await loadChatMembersModal();
         await refreshChats();
-        state.statusMessage = "Участник исключён";
+        state.statusMessage = L("chat.memberRemoved");
       }
     } catch (e) {
-      state.error = e.message || "Не удалось удалить участника";
+      state.error = e.message || L("chat.removeMemberFailed");
     } finally {
       state.busy = false;
       render();
@@ -1466,9 +1474,9 @@
         jsonBody: { role: role },
       });
       await loadChatMembersModal();
-      state.statusMessage = "Роль обновлена";
+      state.statusMessage = L("chat.roleUpdated");
     } catch (e) {
-      state.error = e.message || "Не удалось сменить роль";
+      state.error = e.message || L("chat.roleUpdateFailed");
     } finally {
       state.busy = false;
       render();
@@ -1499,7 +1507,7 @@
         }
       }
     } catch (e) {
-      state.error = e.message || "Не удалось загрузить участников";
+      state.error = e.message || L("chat.loadMembersFailed");
       state.membersModalOpen = false;
     } finally {
       state.chatMembersBusy = false;
@@ -1521,7 +1529,7 @@
 
   async function banUserInChat(userId) {
     if (!state.selectedId || !userId || !state.tokens) return;
-    var reason = window.prompt("Причина бана (необязательно)") || "";
+    var reason = window.prompt(L("chat.banReasonPrompt")) || "";
     state.busy = true;
     state.error = null;
     render();
@@ -1532,7 +1540,7 @@
       });
       await loadChatMembersModal();
     } catch (e) {
-      state.error = e.message || "Не удалось забанить";
+      state.error = e.message || L("chat.banFailed");
     } finally {
       state.busy = false;
       render();
@@ -1548,7 +1556,7 @@
       await apiJson("/chats/" + state.selectedId + "/bans/" + userId, { method: "DELETE" });
       await loadChatMembersModal();
     } catch (e) {
-      state.error = e.message || "Не удалось разбанить";
+      state.error = e.message || L("chat.unbanFailed");
     } finally {
       state.busy = false;
       render();
@@ -1614,7 +1622,7 @@
   }
 
   function conferencePreviewLabel(conf) {
-    var base = conf.title || "Видеоконференция";
+    var base = conf.title || L("conference.defaultVideoTitle");
     return "🎥 " + base + conferenceParticipantsLabel(conf.participant_count);
   }
 
@@ -1957,7 +1965,7 @@
   async function saveMessageToVault(m) {
     if (!m || !state.selectedId) return;
     if (state.selectedId === state.savedChatId) {
-      state.error = "Сообщение уже в хранилище";
+      state.error = L("saved.alreadyInVault");
       render();
       return;
     }
@@ -1966,7 +1974,7 @@
     render();
     try {
       if (!state.savedChatId) await loadSavedChatId();
-      if (!state.savedChatId) throw new Error("Чат «Хранилище» не найден");
+      if (!state.savedChatId) throw new Error(L("chat.savedNotFound"));
       var sent = await apiJson(
         "/chats/" + state.selectedId + "/messages/" + m.id + "/forward",
         { method: "POST", jsonBody: { target_chat_id: state.savedChatId } }
@@ -1975,9 +1983,9 @@
       if (state.selectedId === state.savedChatId && sent) {
         await afterLocalSend(state.savedChatId, sent);
       }
-      state.statusMessage = "Сохранено в хранилище";
+      state.statusMessage = L("saved.savedToVault");
     } catch (e) {
-      state.error = e.message || "Не удалось сохранить в хранилище";
+      state.error = e.message || L("saved.saveFailed");
     } finally {
       state.busy = false;
       render();
@@ -2010,7 +2018,7 @@
         state.myPresence = status;
       }
     } catch (e) {
-      state.error = e.message || "Не удалось обновить статус";
+      state.error = e.message || L("profile.presenceUpdateFailed");
     } finally {
       state.busy = false;
       render();
@@ -2030,7 +2038,7 @@
       await loadBlockedUsers();
       await refreshChats();
     } catch (e) {
-      state.error = e.message || "Не удалось заблокировать";
+      state.error = e.message || L("profile.blockFailed");
     } finally {
       state.busy = false;
       render();
@@ -2045,9 +2053,9 @@
     try {
       await apiFetch("/blocks/" + encodeURIComponent(userId), { method: "DELETE" });
       await loadBlockedUsers();
-      state.statusMessage = "Пользователь разблокирован";
+      state.statusMessage = L("profile.userUnblocked");
     } catch (e) {
-      state.error = e.message || "Не удалось разблокировать";
+      state.error = e.message || L("profile.unblockFailed");
     } finally {
       state.busy = false;
       render();
@@ -2071,9 +2079,9 @@
         state.webPushRegistered = false;
       }
       await loadMyDevices();
-      state.statusMessage = "Устройство «" + deviceName + "» отключено";
+      state.statusMessage = L("profile.deviceDisconnected", { name: deviceName });
     } catch (e) {
-      state.error = e.message || "Не удалось отключить устройство";
+      state.error = e.message || L("profile.disconnectFailed");
     } finally {
       state.busy = false;
       render();
@@ -2088,10 +2096,10 @@
     render();
     try {
       await apiFetch("/files/" + fileId, { method: "DELETE" });
-      state.statusMessage = "Файл удалён";
+      state.statusMessage = L("files.deleted");
       render();
     } catch (e) {
-      state.error = e.message || "Не удалось удалить файл";
+      state.error = e.message || L("files.deleteFailed");
     } finally {
       state.busy = false;
       render();
@@ -2103,23 +2111,23 @@
     var chatId = m.chat_id || state.selectedId;
     function doCopy(text) {
       if (!text || !String(text).trim()) {
-        state.error = "Нечего копировать";
+        state.error = L("files.nothingToCopy");
         render();
         return;
       }
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(String(text)).then(
           function () {
-            state.statusMessage = "Текст скопирован";
+            state.statusMessage = L("files.textCopied");
             render();
           },
           function () {
-            state.error = "Не удалось скопировать";
+            state.error = L("files.copyFailed");
             render();
           }
         );
       } else {
-        state.error = "Буфер обмена недоступен";
+        state.error = L("conference.clipboardUnavailable");
         render();
       }
     }
@@ -2167,9 +2175,9 @@
       await loadThread(state.selectedId, { keepScroll: true });
       await markChatRead(state.selectedId);
       await loadUnreadCounts();
-      state.statusMessage = "Чат обновлён";
+      state.statusMessage = L("chat.updated");
     } catch (e) {
-      state.error = e.message || "Не удалось обновить чат";
+      state.error = e.message || L("chat.updateFailed");
     } finally {
       state.busy = false;
       render();
@@ -2189,9 +2197,9 @@
         })
       );
       await loadUnreadCounts();
-      state.statusMessage = "Все чаты отмечены прочитанными";
+      state.statusMessage = L("chat.markAllRead");
     } catch (e) {
-      state.error = e.message || "Не удалось отметить прочитанным";
+      state.error = e.message || L("chat.markAllReadFailed");
     } finally {
       state.busy = false;
       render();
@@ -2212,7 +2220,7 @@
       );
       state.messageVersions = Array.isArray(rows) ? rows : [];
     } catch (e) {
-      state.error = e.message || "Не удалось загрузить историю";
+      state.error = e.message || L("chat.historyLoadFailed");
       state.messageVersionsOpen = false;
     } finally {
       state.messageVersionsBusy = false;
@@ -2332,18 +2340,18 @@
 
   function testLocalNotification() {
     if (!notificationsAllowed()) {
-      state.error = "Сначала включите уведомления";
+      state.error = L("notifications.enableFirst");
       render();
       return;
     }
     try {
       new Notification("Korus Messenger", {
-        body: "Тест: локальное уведомление",
+        body: L("notifications.testLocalBody"),
         icon: "/icon.svg",
         tag: "korus-test-local",
       });
     } catch (e) {
-      state.error = e.message || "Не удалось показать уведомление";
+      state.error = e.message || L("notifications.showFailed");
       render();
     }
   }
@@ -2415,7 +2423,7 @@
       if (state.savedChatId) {
         openChatById(state.savedChatId);
       } else {
-        state.error = "Чат «Хранилище» не найден";
+        state.error = L("chat.savedNotFound");
         render();
       }
     });
@@ -2466,7 +2474,7 @@
       }
       window.location.reload();
     } catch (e) {
-      state.error = (e && e.message) || "Не удалось сбросить кэш";
+      state.error = (e && e.message) || L("e2ee.cacheResetFailed");
       state.busy = false;
       render();
     }
@@ -2646,7 +2654,7 @@
       await idbDelete(IDB_KEY_LOCAL_KP);
       state.localKeyPackageMeta = null;
     } catch (e) {
-      state.error = "Не удалось удалить ключ";
+      state.error = L("e2ee.deleteKeyFailed");
     }
     render();
   }
@@ -2655,7 +2663,7 @@
     try {
       var row = await idbGet(IDB_KEY_LOCAL_KP);
       if (!row || !row.private_key) {
-        state.error = "Нет локального ключа для экспорта";
+        state.error = L("e2ee.noLocalKey");
         render();
         return;
       }
@@ -2672,7 +2680,7 @@
       a.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
-      state.error = "Не удалось экспортировать ключ";
+      state.error = L("e2ee.exportKeyFailed");
       render();
     }
   }
@@ -2692,13 +2700,13 @@
           try {
             var data = JSON.parse(String(reader.result || ""));
             if (!data || !data.private_key) {
-              throw new Error("В файле нет private_key");
+              throw new Error(L("e2ee.noPrivateKeyInFile"));
             }
             await idbSet(IDB_KEY_LOCAL_KP, data);
             await loadLocalKeyPackageMeta();
             state.error = null;
           } catch (e) {
-            state.error = e.message || "Неверный файл ключа";
+            state.error = e.message || L("e2ee.invalidKeyFile");
           }
           render();
         })();
@@ -2754,7 +2762,7 @@
     try {
       var keys = await apiJson("/e2ee/generate", { method: "POST", jsonBody: {} });
       if (!keys || !keys.public_key || !keys.signature_key) {
-        throw new Error("Сервер не вернул ключи");
+        throw new Error(L("e2ee.serverNoKeys"));
       }
       await apiJson("/e2ee/key-packages", {
         method: "POST",
@@ -2778,7 +2786,7 @@
       }
       await loadE2eeStatus();
     } catch (err) {
-      state.error = err.message || "Не удалось создать key package";
+      state.error = err.message || L("e2ee.keyPackageCreateFailed");
     } finally {
       state.busy = false;
       render();
@@ -2892,7 +2900,7 @@
     state.selectedId = null;
     state.chats = [];
     state.messages = [];
-    state.error = "Сессия истекла — войдите снова.";
+    state.error = L("errors.sessionExpired");
     render();
   }
 
@@ -3159,9 +3167,9 @@
       await flushPendingIceCandidates(from);
       sendRtcSignal({ kind: "answer", targetUserId: from, sdp: ans.sdp }, inc.chatId);
       attachLocalVideo();
-      state.statusMessage = "Звонок принят";
+      state.statusMessage = L("rtc.callAccepted");
     } catch (e) {
-      state.error = e.message || "Не удалось принять звонок";
+      state.error = e.message || L("rtc.acceptFailed");
     } finally {
       state.busy = false;
       render();
@@ -3212,7 +3220,7 @@
       var rows = await apiJson("/files/" + fileId + "/public-links", { method: "GET" });
       state.fileLinksRows = Array.isArray(rows) ? rows : [];
     } catch (e) {
-      state.error = e.message || "Не удалось загрузить ссылки";
+      state.error = e.message || L("files.loadLinksFailed");
       state.fileLinksOpen = false;
     } finally {
       state.fileLinksBusy = false;
@@ -3236,7 +3244,7 @@
         state.lastPublicLink = null;
         saveLastPublicLink(null);
       }
-      state.statusMessage = "Ссылка отозвана";
+      state.statusMessage = L("files.linkRevoked");
       if (state.fileLinksOpen && state.fileLinksFileId === fileId) {
         var rows = await apiJson("/files/" + fileId + "/public-links", { method: "GET" });
         state.fileLinksRows = Array.isArray(rows) ? rows : [];
@@ -3245,7 +3253,7 @@
         await loadMyPublicLinks();
       }
     } catch (e) {
-      state.error = e.message || "Не удалось отозвать ссылку";
+      state.error = e.message || L("files.revokeFailed");
     } finally {
       state.busy = false;
       render();
@@ -3278,7 +3286,7 @@
       window.location.pathname +
       "?chat=" +
       encodeURIComponent(state.selectedId);
-    copyTextToClipboardOrShow(url, "Ссылка на чат скопирована");
+    copyTextToClipboardOrShow(url, L("chat.chatLinkCopied"));
   }
 
   function copyMessageDeepLink(m) {
@@ -3290,22 +3298,22 @@
       encodeURIComponent(state.selectedId) +
       "&msg=" +
       encodeURIComponent(m.id);
-    copyTextToClipboardOrShow(url, "Ссылка на сообщение скопирована");
+    copyTextToClipboardOrShow(url, L("chat.messageLinkCopied"));
   }
 
   async function createPublicLinkForFile(fileId) {
     if (!fileId || !state.tokens) return;
-    var kindRaw = window.prompt("Тип ссылки: A (публичная), B (Bearer), C (пароль)", "A");
+    var kindRaw = window.prompt(L("files.linkTypePrompt"), "A");
     if (!kindRaw) return;
     var kind = kindRaw.trim().charAt(0).toUpperCase();
     if (kind !== "A" && kind !== "B" && kind !== "C") {
-      state.error = "Тип должен быть A, B или C";
+      state.error = L("files.linkTypeInvalid");
       render();
       return;
     }
     var password = null;
     if (kind === "C") {
-      password = window.prompt("Пароль для ссылки C");
+      password = window.prompt(L("files.linkPasswordPrompt"));
       if (!password) return;
     }
     state.busy = true;
@@ -3321,7 +3329,7 @@
         },
       });
       var token = r && r.access_token;
-      if (!token) throw new Error("Сервер не вернул access_token");
+      if (!token) throw new Error(L("chat.noAccessToken"));
       var pubUrl =
         kind === "B"
           ? window.location.origin +
@@ -3330,9 +3338,9 @@
           : window.location.origin + "/api/v1/files/pub/" + encodeURIComponent(token);
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(pubUrl);
-        state.statusMessage = "Публичная ссылка (" + kind + ") скопирована";
+        state.statusMessage = L("files.linkCopied", { kind: kind });
       } else {
-        state.statusMessage = "Ссылка (" + kind + "): " + pubUrl;
+        state.statusMessage = L("files.linkUrl", { kind: kind, url: pubUrl });
       }
       if (r.public_url_hint) {
         state.statusMessage += " · " + r.public_url_hint;
@@ -3340,7 +3348,7 @@
       if (r.link_id) {
         state.lastPublicLink = { file_id: fileId, link_id: r.link_id };
         saveLastPublicLink(state.lastPublicLink);
-        state.statusMessage += " (можно отозвать в настройках)";
+        state.statusMessage += L("files.linkRevokeHint");
       }
       if (state.fileLinksOpen && state.fileLinksFileId === fileId) {
         var links = await apiJson("/files/" + fileId + "/public-links", { method: "GET" });
@@ -3350,7 +3358,7 @@
         await loadMyPublicLinks();
       }
     } catch (e) {
-      state.error = e.message || "Не удалось создать ссылку";
+      state.error = e.message || L("files.createLinkFailed");
     } finally {
       state.busy = false;
       render();
@@ -3370,9 +3378,9 @@
         });
         await loadChatMembersModal();
         await refreshChats();
-        state.statusMessage = "Участник добавлен в группу";
+        state.statusMessage = L("chat.memberAdded");
       } catch (e) {
-        state.error = e.message || "Не удалось добавить участника";
+        state.error = e.message || L("chat.addMemberFailed");
       } finally {
         state.busy = false;
         render();
@@ -3431,7 +3439,7 @@
           return r.user_id;
         });
     } catch (e) {
-      state.error = (e && e.message) || "Не удалось загрузить участников для звонка";
+      state.error = (e && e.message) || L("chat.loadCallMembersFailed");
     }
   }
 
@@ -3492,7 +3500,7 @@
       } catch (e1) {}
       teardownPeer(peerId);
       if (state.callPanelOpen) {
-        state.error = "Связь с участником звонка прервана (сеть / ICE / TURN).";
+        state.error = L("rtc.iceFailed");
         render();
       }
     };
@@ -3751,7 +3759,9 @@
       await rtcRenegotiateMesh();
     } catch (e) {
       state.callScreenStream = null;
-      state.error = "Экран: " + (e.message || "отмена");
+      state.error = L("rtc.screenShareFailed", {
+        detail: e.message || L("rtc.screenShareCancelled"),
+      });
     }
     render();
     attachLocalVideo();
@@ -3827,7 +3837,7 @@
     playNotifySound();
     var title = chatTitleById(data.chat_id);
     var body =
-      "Начата видеоконференция" + (data.title ? ": " + data.title : "");
+      L("chat.confStarted") + (data.title ? ": " + data.title : "");
     try {
       var note = new Notification(title, {
         body: body,
@@ -3877,8 +3887,9 @@
       setActiveConferenceForChat(data.chat_id, conferenceRowFromEvent(data));
       patchConferenceParticipantCount(data);
       if (data.change === "created") {
-        state.statusMessage =
-          "Видеоконференция" + (data.title ? ": " + data.title : " создана");
+        state.statusMessage = data.title
+          ? L("chat.confCreatedNamed", { title: data.title })
+          : L("chat.confCreatedDefault");
         maybeNotifyConference(data);
       }
     } else if (data.change === "ended") {
@@ -3890,7 +3901,7 @@
         state.activeConference = null;
         clearJitsiIframe();
       }
-      state.statusMessage = "Конференция завершена";
+      state.statusMessage = L("conference.ended");
     }
     if (data.chat_id === state.selectedId) {
       loadChatConferences().catch(function () {});
@@ -4064,17 +4075,18 @@
     if (kind === "image") {
       var img = document.createElement("img");
       img.className = "msg-attachment-image";
-      img.alt = "Изображение";
+      img.alt = L("ui.message.image");
       bodyEl.appendChild(img);
       attachAuthenticatedImage(fileId, img);
       return;
     }
-    var label = kind === "video" ? "Скачать видео" : "Скачать файл";
+    var label = kind === "video" ? L("ui.message.video") : L("ui.message.file");
     var btn = el("button", "btn btn-ghost btn-sm msg-attachment-dl", label);
     btn.type = "button";
+    btn.setAttribute("data-testid", "message-file-download");
     btn.onclick = function () {
       downloadChatFile(fileId).catch(function (err) {
-        state.error = err.message || "Скачать не удалось";
+        state.error = err.message || L("files.downloadFailedShort");
         render();
       });
     };
@@ -4085,7 +4097,7 @@
     var c = state.chats.find(function (x) {
       return x.id === chatId;
     });
-    return (c && c.title) || (chatId ? chatId.slice(0, 8) + "…" : "Чат");
+    return (c && c.title) || (chatId ? chatId.slice(0, 8) + "…" : L("ui.message.chatFallback"));
   }
 
   function formatPreviewText(type, content) {
@@ -4185,8 +4197,8 @@
       }
       if (uid !== myId) others += 1;
     });
-    if (others === 1) return "печатает…";
-    if (others > 1) return "печатают…";
+    if (others === 1) return L("ui.message.typingOne");
+    if (others > 1) return L("ui.message.typingMany");
     return "";
   }
 
@@ -4506,7 +4518,7 @@
     var myId = jwtSub(state.tokens.access_token);
     if (wasPinned) {
       var res = await apiFetch(path, { method: "DELETE" });
-      if (!res.ok) throw new Error("Не удалось открепить");
+      if (!res.ok) throw new Error(L("messages.unpinFailed"));
       applyPinChangeEvent({
         change: "unpin",
         chat_id: chatId,
@@ -4514,7 +4526,7 @@
       });
     } else {
       var resPost = await apiFetch(path, { method: "POST" });
-      if (!resPost.ok) throw new Error("Не удалось закрепить");
+      if (!resPost.ok) throw new Error(L("messages.pinApiFailed"));
       applyPinChangeEvent({
         change: "pin",
         chat_id: chatId,
@@ -4528,7 +4540,7 @@
 
   async function editMessagePrompt(m) {
     if (!state.selectedId || !m || m.deleted || m.type !== "text") return;
-    var text = window.prompt("Редактировать сообщение", m.content || "");
+    var text = window.prompt(L("messages.editPrompt"), m.content || "");
     if (text === null) return;
     text = text.trim();
     if (!text || text === (m.content || "").trim()) return;
@@ -4554,7 +4566,7 @@
     var res = await apiFetch("/chats/" + state.selectedId + "/messages/" + m.id, {
       method: "DELETE",
     });
-    if (!res.ok) throw new Error("Не удалось удалить");
+    if (!res.ok) throw new Error(L("messages.deleteFailed"));
     if (!patchMessageInThread(m.id, { deleted: true, content: "" })) {
       await loadThread(state.selectedId, THREAD_SOFT_RELOAD);
     } else {
@@ -4603,7 +4615,7 @@
         }
       }
     } catch (err) {
-      state.error = err.message || "Не удалось загрузить историю";
+      state.error = err.message || L("chat.historyLoadFailed");
     } finally {
       state.threadLoadingMore = false;
       render();
@@ -4711,7 +4723,7 @@
       setChatPreview(
         chatId,
         last.type || "text",
-        "Сообщение удалено",
+        L("ui.message.deleted"),
         last.sender_id,
         new Date(last.created_at).getTime(),
         last.id
@@ -4768,7 +4780,7 @@
 
   function replySnippetForId(msgId) {
     var p = findMessageInThread(msgId);
-    if (!p) return "Сообщение";
+    if (!p) return L("ui.message.default");
     return formatPreviewForMessage(p);
   }
 
@@ -4822,7 +4834,7 @@
       highlightMessageElement(msgId);
       return;
     }
-    throw new Error("Сообщение не найдено в истории чата");
+    throw new Error(L("messages.notFoundInHistory"));
   }
 
   function setReplyTo(m) {
@@ -4984,7 +4996,7 @@
     try {
       await scrollToMessageId(hit.id);
     } catch (e) {
-      state.error = e.message || "Сообщение не найдено";
+      state.error = e.message || L("messages.notFound");
       render();
     }
   }
@@ -4995,7 +5007,7 @@
       return c.id !== state.selectedId;
     });
     if (!others.length) {
-      state.error = "Нет других чатов для пересылки";
+      state.error = L("messages.forwardNoChats");
       render();
       return;
     }
@@ -5032,14 +5044,14 @@
         return;
       }
       var title = chatTitleById(targetChatId);
-      if (window.confirm("Переслано в «" + title + "». Открыть этот чат?")) {
+      if (window.confirm(L("messages.forwardOpenConfirm", { title: title }))) {
         await openChatById(targetChatId, { forceReload: !sent });
         if (sent) await afterLocalSend(targetChatId, sent);
       } else {
         render();
       }
     } catch (err) {
-      state.error = err.message || "Не удалось переслать";
+      state.error = err.message || L("messages.forwardFailed");
     } finally {
       state.busy = false;
       render();
@@ -5094,7 +5106,7 @@
   async function uploadChatFile(file) {
     var max = state.mediaCaps && state.mediaCaps.max_upload_bytes;
     if (max && file.size > max) {
-      throw new Error("Файл слишком большой (лимит " + Math.round(max / (1024 * 1024)) + " МБ)");
+      throw new Error(L("files.tooLarge", { mb: Math.round(max / (1024 * 1024)) }));
     }
     var fd = new FormData();
     fd.append("file", file, file.name || "file");
@@ -5113,7 +5125,7 @@
         parsed && typeof parsed === "object" && parsed.message
           ? String(parsed.message)
           : res.statusText;
-      throw new Error(msg || "Не удалось загрузить файл");
+      throw new Error(msg || L("files.uploadFailed"));
     }
     return parsed;
   }
@@ -5144,12 +5156,12 @@
       state.blobUrls.push(u);
       imgEl.src = u;
       imgEl.style.cursor = "pointer";
-      imgEl.title = "Открыть в новой вкладке";
+      imgEl.title = L("files.openInNewTab");
       imgEl.onclick = function () {
         if (imgEl.src) window.open(imgEl.src, "_blank", "noopener,noreferrer");
       };
       imgEl.onerror = function () {
-        imgEl.alt = "Не удалось загрузить изображение";
+        imgEl.alt = L("files.imageLoadFailed");
         imgEl.classList.add("msg-attachment-image-error");
       };
     } catch (e) {}
@@ -5164,12 +5176,12 @@
     try {
       var ref = await apiJson("/files/" + fileId + "/message-ref", { method: "GET" });
       if (!ref || !ref.chat_id || !ref.message_id) {
-        throw new Error("Сообщение с этим файлом не найдено");
+        throw new Error(L("files.messageForFileNotFound"));
       }
       await openChatById(ref.chat_id);
       await scrollToMessageId(ref.message_id);
     } catch (e) {
-      state.error = e.message || "Не удалось перейти к сообщению";
+      state.error = e.message || L("messages.jumpFailed");
       state.settingsOpen = true;
     } finally {
       state.busy = false;
@@ -5183,7 +5195,7 @@
       headers: { Accept: "*/*" },
     });
     if (!res.ok) {
-      throw new Error("Не удалось скачать файл");
+      throw new Error(L("files.downloadFailed"));
     }
     var cd = res.headers.get("Content-Disposition") || "";
     var filename = "file";
@@ -5211,7 +5223,7 @@
       var p = el(
         "p",
         "msg-e2ee-body",
-        isMlsCapabilitiesActive() ? "Расшифровка на клиенте (MLS)…" : "Расшифровка…"
+        isMlsCapabilitiesActive() ? L("e2ee.decryptingMls") : L("e2ee.decrypting")
       );
       bodyEl.appendChild(p);
       loadE2eePlaintext(chatId, m.id).then(function (text) {
@@ -5220,10 +5232,10 @@
           p.className = "msg-e2ee-body msg-e2ee-decrypted";
         } else if (isMlsCapabilitiesActive()) {
           p.textContent =
-            "Зашифровано (MLS). Серверное превью отключено — требуется клиентская расшифровка.";
+            L("e2ee.encryptedMlsPreview");
         } else {
           p.textContent =
-            "Зашифровано (E2EE). Превью недоступно (старая запись или нет сессии).";
+            L("e2ee.encryptedE2eePreview");
         }
       });
       return;
@@ -5429,14 +5441,19 @@
     return t.charAt(0).toUpperCase();
   }
 
+  function markBrandNoTranslate(node) {
+    if (node) node.setAttribute("translate", "no");
+  }
+
   function brandTagline() {
-    return "Корпоративный мессенджер КОРУС Консалтинг.";
+    return L("ui.brand.tagline");
   }
 
   function appendAppTitle(parent) {
     var row = el("div", "app-title-row");
     row.appendChild(el("div", "app-title-logo", "K"));
-    var h1 = el("h1", null, "Korus Messenger");
+    var h1 = el("h1", null, L("ui.brand.title"));
+    markBrandNoTranslate(h1);
     row.appendChild(h1);
     parent.appendChild(row);
   }
@@ -5452,8 +5469,12 @@
       "div",
       "auth-brand tw:flex tw:flex-col tw:justify-center tw:flex-1 tw:max-w-lg tw:gap-3"
     );
-    brand.appendChild(el("div", "auth-brand-logo tw:flex tw:h-14 tw:w-14 tw:items-center tw:justify-center tw:rounded-2xl tw:text-2xl tw:font-bold", "K"));
-    brand.appendChild(el("h1", "tw:text-3xl tw:font-semibold tw:tracking-tight", "Korus Messenger"));
+    var brandLogo = el("div", "auth-brand-logo tw:flex tw:h-14 tw:w-14 tw:items-center tw:justify-center tw:rounded-2xl tw:text-2xl tw:font-bold", "K");
+    markBrandNoTranslate(brandLogo);
+    brand.appendChild(brandLogo);
+    var brandTitle = el("h1", "tw:text-3xl tw:font-semibold tw:tracking-tight", L("ui.brand.title"));
+    markBrandNoTranslate(brandTitle);
+    brand.appendChild(brandTitle);
     brand.appendChild(el("p", "auth-brand-tag tw:text-base tw:opacity-80", brandTagline()));
     outer.appendChild(brand);
     var card = el(
@@ -5496,11 +5517,11 @@
       e.preventDefault();
       submitAuth();
     };
-    form.appendChild(field("u", "Логин", "text", "username", true, 3, 32));
+    form.appendChild(field("u", L("ui.auth.username"), "text", "username", true, 3, 32));
     var pwdMinLen = state.authTab === "register" ? 8 : null;
-    form.appendChild(field("p", "Пароль", "password", "password", true, pwdMinLen, null));
+    form.appendChild(field("p", L("ui.auth.password"), "password", "password", true, pwdMinLen, null));
     if (state.authTab === "register") {
-      form.appendChild(field("d", "Отображаемое имя", "text", null, false, null, null));
+      form.appendChild(field("d", L("ui.auth.displayName"), "text", null, false, null, null));
     }
     var submit = el(
       "button",
@@ -5680,15 +5701,15 @@
     state.myPublicLinks = null;
     state.myPublicLinksBusy = false;
     closeWs();
-    document.title = "Korus Messenger";
+    document.title = L("ui.brand.title");
     render();
   }
 
   async function newGroup() {
-    var title = window.prompt("Название группы");
+    var title = window.prompt(L("chat.groupTitlePrompt"));
     if (!title || !title.trim() || !state.tokens) return;
     var membersRaw =
-      window.prompt("UUID участников через запятую (необязательно)") || "";
+      window.prompt(L("chat.createMembersPrompt")) || "";
     var memberIds = membersRaw
       .split(/[,;\s]+/)
       .map(function (s) {
@@ -5708,7 +5729,7 @@
       await refreshChats();
       await openChatById(chat.id, { forceReload: true });
     } catch (err) {
-      state.error = err.message || "Не удалось создать чат";
+      state.error = err.message || L("chat.createFailed");
     } finally {
       state.busy = false;
       render();
@@ -5730,7 +5751,7 @@
       await refreshChats();
       await openChatById(chat.id, { forceReload: true });
     } catch (err) {
-      state.error = err.message || "Не удалось открыть личный чат";
+      state.error = err.message || L("chat.openDmFailed");
     } finally {
       state.busy = false;
       render();
@@ -5777,7 +5798,7 @@
       clearReplyTo();
       await afterLocalSend(state.selectedId, sent);
     } catch (err) {
-      state.error = err.message || "Не удалось отправить файл";
+      state.error = err.message || L("messages.sendFileFailed");
     } finally {
       state.busy = false;
       render();
@@ -5821,7 +5842,7 @@
       clearReplyTo();
       await afterLocalSend(state.selectedId, sent);
     } catch (err) {
-      state.error = err.message || "Не отправилось";
+      state.error = err.message || L("messages.sendFailed");
     } finally {
       state.busy = false;
       render();
@@ -5832,10 +5853,10 @@
     if (!state.callPanelOpen) return;
     var panel = el("aside", "call-panel");
     var ph = el("div", "call-panel-head");
-    var titleSpan = el("span", "call-panel-title", "Видео / конференция");
+    var titleSpan = el("span", "call-panel-title", L("ui.call.title"));
     titleSpan.setAttribute("data-testid", "call-panel-title");
     ph.appendChild(titleSpan);
-    var cl = el("button", "btn btn-ghost btn-sm", "Свернуть");
+    var cl = el("button", "btn btn-ghost btn-sm", L("ui.call.collapse"));
     cl.type = "button";
     cl.onclick = function () {
       toggleCallPanel();
@@ -6101,7 +6122,7 @@
     }
     panel.appendChild(stage);
     var thumbs = el("div", "call-thumbs");
-    thumbs.appendChild(el("span", "call-thumbs-label", "Миниатюры (обновление каждые 2 с)"));
+    thumbs.appendChild(el("span", "call-thumbs-label", L("ui.call.thumbs")));
     var c1 = document.createElement("canvas");
     c1.className = "call-thumb-canvas";
     var c2 = document.createElement("canvas");
@@ -6110,7 +6131,7 @@
     thumbs.appendChild(c2);
     panel.appendChild(thumbs);
     var remotes = el("div", "call-remotes");
-    remotes.appendChild(el("div", "call-remotes-title", "Удалённые потоки (участники чата)"));
+    remotes.appendChild(el("div", "call-remotes-title", L("ui.call.remotes")));
     state.rtcPeerIds.forEach(function (pid) {
       var slot = el("div", "rtc-remote-slot");
       slot.id = "rtc-remote-" + pid;
@@ -6132,22 +6153,22 @@
     });
     if (!state.rtcPeerIds.length) {
       remotes.appendChild(
-        el("div", "call-participant-slot", "В чате только вы, или нет доступа к списку участников.")
+        el("div", "call-participant-slot", L("ui.call.aloneInChat"))
       );
     }
     panel.appendChild(remotes);
     var bar = el("div", "call-toolbar");
-    var bMic = el("button", "btn " + (state.callMicOn ? "btn-primary" : "btn-ghost"), state.callMicOn ? "Мик: вкл" : "Мик: выкл");
+    var bMic = el("button", "btn " + (state.callMicOn ? "btn-primary" : "btn-ghost"), state.callMicOn ? L("ui.call.micOn") : L("ui.call.micOff"));
     bMic.type = "button";
     bMic.onclick = function () {
       toggleCallMic();
     };
-    var bCam = el("button", "btn " + (state.callCamOn ? "btn-primary" : "btn-ghost"), state.callCamOn ? "Кам: вкл" : "Кам: выкл");
+    var bCam = el("button", "btn " + (state.callCamOn ? "btn-primary" : "btn-ghost"), state.callCamOn ? L("ui.call.camOn") : L("ui.call.camOff"));
     bCam.type = "button";
     bCam.onclick = function () {
       toggleCallCam();
     };
-    var bScr = el("button", "btn btn-ghost", state.callScreenStream ? "Стоп экрана" : "Экран");
+    var bScr = el("button", "btn btn-ghost", state.callScreenStream ? L("ui.call.stopScreen") : L("ui.call.screen"));
     bScr.type = "button";
     bScr.onclick = function () {
       toggleScreenShare();
@@ -6171,8 +6192,8 @@
     }
     if (state.swUpdateReady) {
       var swBanner = el("div", "sw-update-banner");
-      swBanner.appendChild(document.createTextNode("Доступна новая версия приложения"));
-      var swBtn = el("button", "btn btn-sm btn-primary", "Обновить");
+      swBanner.appendChild(document.createTextNode(L("ui.shell.swUpdate")));
+      var swBtn = el("button", "btn btn-sm btn-primary", L("ui.common.update"));
       swBtn.type = "button";
       swBtn.onclick = function () {
         applyServiceWorkerUpdate();
@@ -6186,15 +6207,13 @@
       state.exportJobChatId
     ) {
       var exBanner = el("div", "export-progress-banner");
-      var exLabel =
-        "Экспорт «" +
-        chatTitleById(state.exportJobChatId) +
-        "»" +
-        (state.exportJobChatId === state.selectedId ? "" : " (фоном)") +
-        ": " +
-        (state.exportProgressLabel || "запуск…");
+      var exLabel = L("ui.shell.exportBanner", {
+        chat: chatTitleById(state.exportJobChatId),
+        bg: state.exportJobChatId === state.selectedId ? "" : L("common.exportBackground"),
+        status: state.exportProgressLabel || L("common.exportStarting"),
+      });
       exBanner.appendChild(document.createTextNode(exLabel));
-      var exCancel = el("button", "btn btn-sm btn-ghost", "Отмена");
+      var exCancel = el("button", "btn btn-sm btn-ghost", L("ui.common.cancel"));
       exCancel.type = "button";
       exCancel.disabled = state.busy;
       exCancel.onclick = function () {
@@ -6210,7 +6229,7 @@
     var gSearch = document.createElement("input");
     gSearch.type = "search";
     gSearch.className = "global-search-input";
-    gSearch.placeholder = "Поиск по всем чатам (от 2 симв., без E2EE)…";
+    gSearch.placeholder = L("ui.shell.globalSearchPlaceholder");
     gSearch.value = state.globalSearch;
     gSearch.oninput = function () {
       state.globalSearch = gSearch.value;
@@ -6221,7 +6240,11 @@
     hl.appendChild(gSearchWrap);
     header.appendChild(hl);
     var hdrR = el("div", "app-header-right");
-    var callBtn = el("button", "btn btn-ghost", state.callPanelOpen ? "Скрыть видео" : "Видео / конференция");
+    var callBtn = el(
+      "button",
+      "btn btn-ghost",
+      state.callPanelOpen ? L("ui.shell.hideVideo") : L("ui.shell.showVideo")
+    );
     callBtn.type = "button";
     callBtn.setAttribute("data-testid", "call-panel-toggle");
     callBtn.onclick = function () {
@@ -6230,9 +6253,8 @@
     hdrR.appendChild(callBtn);
     if (state.e2eeKeyCount !== null) {
       var e2eeSpan = el("span", "e2ee-status");
-      e2eeSpan.title =
-        "Key packages на сервере (MLS). Текст e2ee-* расшифровывается на сервере для превью в чате.";
-      e2eeSpan.textContent = "E2EE: " + state.e2eeKeyCount;
+      e2eeSpan.title = L("ui.shell.e2eeTitle");
+      e2eeSpan.textContent = L("ui.shell.e2eeCount", { count: state.e2eeKeyCount });
       hdrR.appendChild(e2eeSpan);
     }
     var themeBtn = el(
@@ -6241,7 +6263,8 @@
       state.appearance === "light" ? "🌙" : "☀️"
     );
     themeBtn.type = "button";
-    themeBtn.title = state.appearance === "light" ? "Тёмная тема" : "Светлая тема";
+    themeBtn.title =
+      state.appearance === "light" ? L("ui.common.darkTheme") : L("ui.common.lightTheme");
     themeBtn.onclick = function () {
       toggleAppearance();
     };
@@ -6249,8 +6272,8 @@
     var notifBtn = el("button", "btn btn-ghost btn-icon", notificationsAllowed() ? "🔔" : "🔕");
     notifBtn.type = "button";
     notifBtn.title = notificationsAllowed()
-      ? "Отключить уведомления"
-      : "Включить уведомления браузера";
+      ? L("ui.shell.notifDisable")
+      : L("ui.shell.notifEnable");
     notifBtn.onclick = function () {
       if (notificationsAllowed()) {
         state.notifyPref = false;
@@ -6263,7 +6286,8 @@
     hdrR.appendChild(notifBtn);
     var setBtn = el("button", "btn btn-ghost", "⚙");
     setBtn.type = "button";
-    setBtn.title = "Настройки";
+    setBtn.setAttribute("data-testid", "settings-toggle");
+    setBtn.title = L("ui.shell.settings");
     setBtn.onclick = function () {
       toggleSettings();
     };
@@ -6296,7 +6320,7 @@
     if (state.globalSearch.trim().length >= 2) {
       var gPanel = el("div", "global-search-panel");
       if (state.globalSearchBusy) {
-        gPanel.appendChild(el("div", "global-search-hint", "Поиск…"));
+        gPanel.appendChild(el("div", "global-search-hint", L("ui.common.searching")));
       } else if (state.globalSearchHits && state.globalSearchHits.length) {
         state.globalSearchHits.forEach(function (hit) {
           var gb = el("button", "global-search-hit");
@@ -6309,7 +6333,7 @@
           gPanel.appendChild(gb);
         });
       } else if (state.globalSearchHits) {
-        gPanel.appendChild(el("div", "global-search-hint", "Ничего не найдено."));
+        gPanel.appendChild(el("div", "global-search-hint", L("ui.common.nothingFound")));
       }
       shell.appendChild(gPanel);
     }
@@ -6320,20 +6344,20 @@
         el(
           "span",
           "incoming-call-text",
-          "Входящий звонок · " +
-            chatTitleById(inc.chatId) +
-            " · " +
-            inc.fromUserId.slice(0, 8)
+          L("ui.shell.incomingCall", {
+            chat: chatTitleById(inc.chatId),
+            user: inc.fromUserId.slice(0, 8),
+          })
         )
       );
       var incActs = el("div", "incoming-call-actions");
-      var bAcc = el("button", "btn btn-primary btn-sm", "Принять");
+      var bAcc = el("button", "btn btn-primary btn-sm", L("ui.shell.accept"));
       bAcc.type = "button";
       bAcc.disabled = state.busy;
       bAcc.onclick = function () {
         acceptIncomingRtcCall();
       };
-      var bDec = el("button", "btn btn-ghost btn-sm", "Отклонить");
+      var bDec = el("button", "btn btn-ghost btn-sm", L("ui.shell.decline"));
       bDec.type = "button";
       bDec.disabled = state.busy;
       bDec.onclick = function () {
@@ -6350,7 +6374,7 @@
       okBanner.textContent = state.statusMessage;
       var okDismiss = el("button", "banner-dismiss", "×");
       okDismiss.type = "button";
-      okDismiss.title = "Закрыть";
+      okDismiss.title = L("ui.common.close");
       okDismiss.onclick = function () {
         state.statusMessage = null;
         render();
@@ -6370,7 +6394,7 @@
     var search = el("input");
     search.type = "search";
     search.className = "sidebar-search";
-    search.placeholder = "Чаты или пользователи (от 2 симв.)…";
+    search.placeholder = L("ui.sidebar.searchPlaceholder");
     search.value = state.sidebarSearch;
     search.oninput = function () {
       state.sidebarSearch = search.value;
@@ -6378,7 +6402,7 @@
       render();
     };
     sh.appendChild(search);
-    var ng = el("button", "btn btn-primary btn-block", "Новая группа");
+    var ng = el("button", "btn btn-primary btn-block", L("ui.sidebar.newGroup"));
     ng.type = "button";
     ng.disabled = state.busy;
     ng.onclick = function () {
@@ -6386,18 +6410,18 @@
     };
     sh.appendChild(ng);
     side.appendChild(sh);
-    var vaultBtn = el("button", "btn btn-ghost btn-block vault-btn", "📁 Хранилище");
+    var vaultBtn = el("button", "btn btn-ghost btn-block vault-btn", L("ui.sidebar.vault"));
     vaultBtn.type = "button";
     vaultBtn.disabled = state.busy;
-    vaultBtn.title = "Личный чат saved (заметки и файлы)";
+    vaultBtn.title = L("ui.sidebar.vaultTitle");
     vaultBtn.onclick = function () {
       openSavedVault();
     };
     side.appendChild(vaultBtn);
-    var readAllBtn = el("button", "btn btn-ghost btn-block", "✓ Прочитать всё");
+    var readAllBtn = el("button", "btn btn-ghost btn-block", L("ui.sidebar.readAll"));
     readAllBtn.type = "button";
     readAllBtn.disabled = state.busy;
-    readAllBtn.title = "Отметить все чаты прочитанными";
+    readAllBtn.title = L("ui.sidebar.readAllTitle");
     readAllBtn.onclick = function () {
       markAllChatsRead();
     };
@@ -6406,7 +6430,7 @@
     var tabChats = el(
       "button",
       "sidebar-tab" + (state.sidebarMode === "chats" ? " active" : ""),
-      "Чаты"
+      L("ui.sidebar.chats")
     );
     tabChats.type = "button";
     tabChats.onclick = function () {
@@ -6416,7 +6440,7 @@
     var tabContacts = el(
       "button",
       "sidebar-tab" + (state.sidebarMode === "contacts" ? " active" : ""),
-      "Контакты"
+      L("ui.sidebar.contacts")
     );
     tabContacts.type = "button";
     tabContacts.onclick = function () {
@@ -6430,9 +6454,9 @@
     var qTrim = state.sidebarSearch.trim();
     if (qTrim.length >= 2) {
       var usBlock = el("div", "user-search-block");
-      usBlock.appendChild(el("div", "user-search-label", "Пользователи"));
+      usBlock.appendChild(el("div", "user-search-label", L("ui.sidebar.users")));
       if (state.userSearchBusy) {
-        usBlock.appendChild(el("div", "user-search-hint", "Поиск…"));
+        usBlock.appendChild(el("div", "user-search-hint", L("ui.common.searching")));
       } else if (state.userSearchHits && state.userSearchHits.length) {
         state.userSearchHits.forEach(function (u) {
           var row = el("div", "user-search-item-row");
@@ -6447,7 +6471,7 @@
           row.appendChild(ub);
           var bBlock = el("button", "btn btn-ghost btn-sm user-search-block-btn", "⛔");
           bBlock.type = "button";
-          bBlock.title = "Заблокировать";
+          bBlock.title = L("ui.sidebar.blockUser");
           bBlock.disabled = state.busy;
           bBlock.onclick = function (e) {
             e.stopPropagation();
@@ -6456,7 +6480,7 @@
           row.appendChild(bBlock);
           var bContact = el("button", "btn btn-ghost btn-sm user-search-block-btn", "＋");
           bContact.type = "button";
-          bContact.title = "В контакты";
+          bContact.title = L("ui.sidebar.addContact");
           bContact.disabled = state.busy;
           bContact.onclick = function (e) {
             e.stopPropagation();
@@ -6467,7 +6491,7 @@
           if (selForAdd && selForAdd.type === "group" && state.selectedId) {
             var bGrp = el("button", "btn btn-ghost btn-sm user-search-block-btn", "👥");
             bGrp.type = "button";
-            bGrp.title = "В группу";
+            bGrp.title = L("ui.sidebar.addToGroup");
             bGrp.disabled = state.busy;
             bGrp.onclick = function (e) {
               e.stopPropagation();
@@ -6478,14 +6502,14 @@
           usBlock.appendChild(row);
         });
       } else if (state.userSearchHits && !state.userSearchHits.length) {
-        usBlock.appendChild(el("div", "user-search-hint", "Никого не найдено."));
+        usBlock.appendChild(el("div", "user-search-hint", L("ui.sidebar.noUsers")));
       }
       side.appendChild(usBlock);
     }
     if (state.sidebarMode === "contacts") {
       var cList = el("div", "chat-list contacts-list");
       if (state.contactsBusy) {
-        cList.appendChild(el("div", "chat-list-empty", "Загрузка контактов…"));
+        cList.appendChild(el("div", "chat-list-empty", L("ui.sidebar.loadingContacts")));
       } else if (state.contacts && state.contacts.length) {
         state.contacts.forEach(function (ct) {
           var row = el("div", "contact-item-row");
@@ -6500,7 +6524,7 @@
           row.appendChild(cb);
           var bRm = el("button", "btn btn-ghost btn-sm user-search-block-btn", "✕");
           bRm.type = "button";
-          bRm.title = "Удалить из контактов";
+          bRm.title = L("ui.sidebar.removeContact");
           bRm.disabled = state.busy;
           bRm.onclick = function (e) {
             e.stopPropagation();
@@ -6511,25 +6535,25 @@
         });
       } else {
         cList.appendChild(
-          el("div", "chat-list-empty", "Нет контактов. Найдите пользователя в поиске и нажмите ＋.")
+          el("div", "chat-list-empty", L("ui.sidebar.noContacts"))
         );
       }
       side.appendChild(cList);
       var impBlock = el("div", "contact-import-block");
       var impLabel = el("div", "user-search-label");
-      impLabel.textContent = "Импорт по хэшу телефона (SHA-256 hex)";
+      impLabel.textContent = L("ui.sidebar.importLabel");
       impBlock.appendChild(impLabel);
       var impTa = document.createElement("textarea");
       impTa.className = "contact-import-textarea";
       impTa.rows = 3;
-      impTa.placeholder = "Один хэш на строку, до 1000";
+      impTa.placeholder = L("ui.sidebar.importPlaceholder");
       impTa.value = state.contactImportText || "";
       impTa.disabled = state.busy;
       impTa.oninput = function () {
         state.contactImportText = impTa.value;
       };
       impBlock.appendChild(impTa);
-      var bImp = el("button", "btn btn-ghost btn-sm btn-block", "Импортировать");
+      var bImp = el("button", "btn btn-ghost btn-sm btn-block", L("ui.sidebar.importBtn"));
       bImp.type = "button";
       bImp.disabled = state.busy;
       bImp.onclick = function () {
@@ -6546,7 +6570,7 @@
     });
     var fc = filteredChats();
     if (fc.length === 0) {
-      list.appendChild(el("div", "chat-list-empty", state.chats.length ? "Нет чатов по запросу." : "Нет чатов."));
+      list.appendChild(el("div", "chat-list-empty", state.chats.length ? L("ui.sidebar.noChatsFilter") : L("ui.sidebar.noChats")));
     }
     fc.forEach(function (c) {
       var b = el("button", "chat-item" + (c.id === state.selectedId ? " active" : ""));
@@ -6593,10 +6617,10 @@
         var draftPrev = composerDraftPreview(c.id);
         if (draftPrev && c.id !== state.selectedId) {
           txt.appendChild(
-            el("div", "chat-preview chat-preview-draft", "Черновик: " + draftPrev)
+            el("div", "chat-preview chat-preview-draft", L("ui.sidebar.draft", { text: draftPrev }))
           );
         } else {
-          txt.appendChild(el("div", "chat-meta", c.type + " · " + c.member_count + " уч."));
+          txt.appendChild(el("div", "chat-meta", L("ui.sidebar.membersMeta", { type: c.type, count: c.member_count })));
         }
       }
       row.appendChild(txt);
@@ -6616,7 +6640,7 @@
     main.appendChild(side);
     var thread = el("section", "thread");
     if (!state.selectedId) {
-      thread.appendChild(el("div", "empty-thread", "Выберите чат слева или создайте группу."));
+      thread.appendChild(el("div", "empty-thread", L("ui.thread.empty")));
     } else {
       var sel = state.chats.find(function (x) {
         return x.id === state.selectedId;
@@ -6630,7 +6654,7 @@
           el(
             "div",
             "thread-subtitle",
-            "TTL сообщений в чате: " + formatTtlLabel(chatTtlSeconds)
+            L("ui.thread.messageTtl", { ttl: formatTtlLabel(chatTtlSeconds) })
           )
         );
       }
@@ -6639,7 +6663,7 @@
         state.exportJobChatId === state.selectedId &&
         state.exportJobId
       ) {
-        thMain.appendChild(el("div", "thread-subtitle thread-export-hint", "Экспорт…"));
+        thMain.appendChild(el("div", "thread-subtitle thread-export-hint", L("common.exportHint")));
       }
       var typingHdr = getTypingLabel(state.selectedId);
       if (typingHdr) {
@@ -6651,7 +6675,7 @@
         var bMute = el(
           "button",
           "btn btn-ghost btn-sm",
-          sel.muted ? "Вкл. звук" : "Без звука"
+          sel.muted ? L("ui.thread.unmute") : L("ui.thread.mute")
         );
         bMute.type = "button";
         bMute.disabled = state.busy;
@@ -6662,17 +6686,17 @@
         var bFilter = el(
           "button",
           "btn btn-ghost btn-sm",
-          sel.personal_filter_active ? "Фильтр вкл." : "Фильтр"
+          sel.personal_filter_active ? L("ui.thread.filterOn") : L("ui.thread.filter")
         );
         bFilter.type = "button";
-        bFilter.title = "Персональный фильтр сообщений";
+        bFilter.title = L("ui.thread.filterTitle");
         bFilter.disabled = state.busy;
         bFilter.onclick = function () {
           togglePersonalFilter();
         };
         thActs.appendChild(bFilter);
         if (sel.type === "group") {
-          var bMembers = el("button", "btn btn-ghost btn-sm", "Участники");
+          var bMembers = el("button", "btn btn-ghost btn-sm", L("ui.common.members"));
           bMembers.type = "button";
           bMembers.disabled = state.busy;
           bMembers.onclick = function () {
@@ -6685,7 +6709,7 @@
         var bExp = el(
           "button",
           "btn btn-ghost btn-sm",
-          exportThisChat ? "Отмена экспорта" : state.exportBusy ? "Экспорт…" : "Экспорт"
+          exportThisChat ? L("ui.thread.exportCancel") : state.exportBusy ? L("common.exportBusy") : L("ui.thread.export")
         );
         bExp.setAttribute("data-testid", "chat-export-button");
         bExp.type = "button";
@@ -6700,7 +6724,7 @@
         thActs.appendChild(bExp);
         var bRef = el("button", "btn btn-ghost btn-sm", "↻");
         bRef.type = "button";
-        bRef.title = "Обновить чат";
+        bRef.title = L("ui.thread.refresh");
         bRef.disabled = state.busy;
         bRef.onclick = function () {
           refreshCurrentThread();
@@ -6708,7 +6732,7 @@
         thActs.appendChild(bRef);
         var bChatLink = el("button", "btn btn-ghost btn-sm", "🔗");
         bChatLink.type = "button";
-        bChatLink.title = "Скопировать ссылку на этот чат";
+        bChatLink.title = L("ui.thread.copyChatLink");
         bChatLink.disabled = state.busy;
         bChatLink.onclick = function () {
           copyChatDeepLink();
@@ -6724,7 +6748,7 @@
           "span",
           "conference-live-banner-text",
           "🎥 " +
-            (threadLiveConf.title || "Идёт видеоконференция") +
+            (threadLiveConf.title || L("ui.thread.confLiveDefault")) +
             conferenceParticipantsLabel(threadLiveConf.participant_count)
         );
         confBanner.appendChild(confBannerText);
@@ -6744,7 +6768,7 @@
             .then(render)
             .catch(function () {});
         }
-        var bJoinLive = el("button", "btn btn-primary btn-sm", "Войти");
+        var bJoinLive = el("button", "btn btn-primary btn-sm", L("ui.common.join"));
         bJoinLive.type = "button";
         bJoinLive.disabled = state.conferenceBusy || state.busy;
         bJoinLive.onclick = function () {
@@ -6757,7 +6781,7 @@
       var tSearch = el("input");
       tSearch.type = "search";
       tSearch.className = "thread-search-input";
-      tSearch.placeholder = "Поиск в этом чате (от 2 симв., без E2EE)…";
+      tSearch.placeholder = L("ui.thread.searchPlaceholder");
       tSearch.value = state.threadSearch;
       tSearch.oninput = function () {
         state.threadSearch = tSearch.value;
@@ -6767,11 +6791,11 @@
       tSearchRow.appendChild(tSearch);
       thread.appendChild(tSearchRow);
       if (state.threadSearchBusy) {
-        thread.appendChild(el("div", "thread-search-hint", "Поиск…"));
+        thread.appendChild(el("div", "thread-search-hint", L("ui.common.searching")));
       } else if (state.threadSearchHits && state.threadSearch.trim().length >= 2) {
         var hitsBox = el("div", "thread-search-hits");
         if (!state.threadSearchHits.length) {
-          hitsBox.appendChild(el("div", "thread-search-hint", "Ничего не найдено в этом чате."));
+          hitsBox.appendChild(el("div", "thread-search-hint", L("ui.thread.nothingInChat")));
         } else {
           state.threadSearchHits.forEach(function (hit) {
             var hb = el("button", "thread-search-hit");
@@ -6793,7 +6817,7 @@
           pinBtn.textContent = "📌 " + replySnippetForId(p.message_id);
           pinBtn.onclick = function () {
             scrollToMessageId(p.message_id).catch(function (e) {
-              state.error = (e && e.message) || "Сообщение не найдено";
+              state.error = (e && e.message) || L("messages.notFound");
               render();
             });
           };
@@ -6806,7 +6830,7 @@
         var loadOlder = el(
           "button",
           "btn btn-ghost btn-sm messages-load-more",
-          state.threadLoadingMore ? "Загрузка…" : "Ранние сообщения"
+          state.threadLoadingMore ? L("ui.common.loading") : L("ui.thread.loadOlder")
         );
         loadOlder.type = "button";
         loadOlder.disabled = state.threadLoadingMore;
@@ -6831,7 +6855,7 @@
         );
         art.id = "msg-" + m.id;
         var meta = el("div", "msg-meta");
-        meta.appendChild(document.createTextNode(myId && m.sender_id === myId ? "Вы" : m.sender_id.slice(0, 8)));
+        meta.appendChild(document.createTextNode(myId && m.sender_id === myId ? L("ui.thread.you") : m.sender_id.slice(0, 8)));
         var ts = el("span");
         ts.className = "msg-ts";
         ts.textContent = new Date(m.created_at).toLocaleString();
@@ -6839,8 +6863,8 @@
         if (m.edited_at) {
           var ed = el("button", "msg-edited");
           ed.type = "button";
-          ed.textContent = " · ред.";
-          ed.title = "История правок";
+          ed.textContent = L("ui.message.editedShort");
+          ed.title = L("ui.message.editHistoryTitle");
           ed.onclick = function () {
             openMessageVersions(m);
           };
@@ -6867,12 +6891,12 @@
           var ttlLbl = el("span");
           ttlLbl.className = "msg-ttl msg-ttl-indicator" + (isExpired ? " msg-ttl-expired" : "");
           if (isExpired) {
-            ttlLbl.textContent = " · ⏱ истекло";
-            ttlLbl.title = "Срок видимости сообщения истек";
+            ttlLbl.textContent = L("ui.message.ttlExpiredLabel");
+            ttlLbl.title = L("ui.message.ttlExpiredTitle");
           } else {
             var leftSeconds = Math.max(1, Math.ceil((expiresAt - Date.now()) / 1000));
             ttlLbl.textContent = " · ⏱ " + formatTimeLeft(leftSeconds);
-            ttlLbl.title = "Исчезнет через " + formatTimeLeft(leftSeconds);
+            ttlLbl.title = L("ui.message.ttlExpiresIn", { time: formatTimeLeft(leftSeconds) });
           }
           meta.appendChild(ttlLbl);
         }
@@ -6895,7 +6919,7 @@
         var body = el("div", "msg-body md");
         if (m.deleted || isExpired) {
           body.className = "msg-body msg-deleted-body";
-          body.textContent = isExpired ? "Сообщение недоступно (TTL истек)" : "Сообщение удалено";
+          body.textContent = isExpired ? L("ui.message.unavailableTtl") : L("ui.message.deleted");
         } else {
           renderMessageContent(body, m);
         }
@@ -6913,7 +6937,7 @@
             chip.type = "button";
             chip.onclick = function () {
               toggleReaction(m.id, em).catch(function (err) {
-                state.error = err.message || "Реакция не обновилась";
+                state.error = err.message || L("messages.reactionFailed");
                 render();
               });
             };
@@ -6923,7 +6947,7 @@
         }
         if (!m.deleted) {
           var actions = el("div", "msg-actions");
-          var bReply = el("button", "btn btn-ghost btn-sm", "Ответить");
+          var bReply = el("button", "btn btn-ghost btn-sm", L("ui.actions.reply"));
           bReply.type = "button";
           bReply.setAttribute("data-testid", "message-reply-button");
           bReply.onclick = function () {
@@ -6931,7 +6955,7 @@
           };
           actions.appendChild(bReply);
           if (m.type === "text" || isE2eeType(m.type) || (m.content && m.content.trim())) {
-            var bCopy = el("button", "btn btn-ghost btn-sm", "Копировать");
+            var bCopy = el("button", "btn btn-ghost btn-sm", L("ui.actions.copy"));
             bCopy.type = "button";
             bCopy.onclick = function () {
               copyMessageText(m);
@@ -6940,18 +6964,18 @@
           }
           var bMsgLink = el("button", "btn btn-ghost btn-sm", "🔗");
           bMsgLink.type = "button";
-          bMsgLink.title = "Ссылка на сообщение";
+          bMsgLink.title = L("ui.message.messageLinkTitle");
           bMsgLink.onclick = function () {
             copyMessageDeepLink(m);
           };
           actions.appendChild(bMsgLink);
           var attachId = messageAttachmentFileId(m);
           if (attachId) {
-            var bAttachDl = el("button", "btn btn-ghost btn-sm", "Скачать");
+            var bAttachDl = el("button", "btn btn-ghost btn-sm", L("ui.common.download"));
             bAttachDl.type = "button";
             bAttachDl.onclick = function () {
               downloadChatFile(attachId).catch(function (err) {
-                state.error = err.message || "Скачать не удалось";
+                state.error = err.message || L("files.downloadFailedShort");
                 render();
               });
             };
@@ -6960,17 +6984,17 @@
           var bPin = el(
             "button",
             "btn btn-ghost btn-sm",
-            isMessagePinned(m.id) ? "Открепить" : "Закрепить"
+            isMessagePinned(m.id) ? L("ui.message.unpin") : L("ui.message.pin")
           );
           bPin.type = "button";
           bPin.onclick = function () {
             togglePinMessage(m).catch(function (err) {
-              state.error = err.message || "Закрепление не изменилось";
+              state.error = err.message || L("messages.pinFailed");
               render();
             });
           };
           actions.appendChild(bPin);
-          var bFwd = el("button", "btn btn-ghost btn-sm", "Переслать");
+          var bFwd = el("button", "btn btn-ghost btn-sm", L("ui.actions.forward"));
           bFwd.type = "button";
           bFwd.onclick = function () {
             openForwardPicker(m);
@@ -6978,21 +7002,21 @@
           actions.appendChild(bFwd);
           if (myId && m.sender_id === myId && messageAttachmentFileId(m)) {
             var fileId = messageAttachmentFileId(m);
-            var bPub = el("button", "btn btn-ghost btn-sm", "Публ. ссылка");
+            var bPub = el("button", "btn btn-ghost btn-sm", L("ui.actions.pubLink"));
             bPub.type = "button";
-            bPub.title = "Создать публичную ссылку на файл (A/B/C)";
+            bPub.title = L("ui.message.pubLinkTitle");
             bPub.onclick = function () {
               createPublicLinkForFile(fileId);
             };
             actions.appendChild(bPub);
-            var bLinks = el("button", "btn btn-ghost btn-sm", "Ссылки");
+            var bLinks = el("button", "btn btn-ghost btn-sm", L("ui.actions.links"));
             bLinks.type = "button";
-            bLinks.title = "Список и отзыв публичных ссылок";
+            bLinks.title = L("ui.message.linksTitle");
             bLinks.onclick = function () {
               openFilePublicLinksModal(fileId);
             };
             actions.appendChild(bLinks);
-            var bDelFile = el("button", "btn btn-ghost btn-sm", "Удалить файл");
+            var bDelFile = el("button", "btn btn-ghost btn-sm", L("ui.actions.deleteFile"));
             bDelFile.type = "button";
             bDelFile.onclick = function () {
               deleteOwnFile(fileId);
@@ -7000,31 +7024,31 @@
             actions.appendChild(bDelFile);
           }
           if (state.savedChatId && state.selectedId !== state.savedChatId) {
-            var bVault = el("button", "btn btn-ghost btn-sm", "В хранилище");
+            var bVault = el("button", "btn btn-ghost btn-sm", L("ui.actions.toVault"));
             bVault.type = "button";
             bVault.onclick = function () {
               saveMessageToVault(m).catch(function (err) {
-                state.error = err.message || "Не удалось сохранить";
+                state.error = err.message || L("saved.saveFailed");
                 render();
               });
             };
             actions.appendChild(bVault);
           }
           if (myId && m.sender_id === myId && m.type === "text") {
-            var bEdit = el("button", "btn btn-ghost btn-sm", "Изменить");
+            var bEdit = el("button", "btn btn-ghost btn-sm", L("ui.actions.edit"));
             bEdit.type = "button";
             bEdit.onclick = function () {
               editMessagePrompt(m).catch(function (err) {
-                state.error = err.message || "Не удалось изменить";
+                state.error = err.message || L("messages.editFailed");
                 render();
               });
             };
             actions.appendChild(bEdit);
-            var bDel = el("button", "btn btn-ghost btn-sm", "Удалить");
+            var bDel = el("button", "btn btn-ghost btn-sm", L("ui.actions.delete"));
             bDel.type = "button";
             bDel.onclick = function () {
               deleteMessageConfirm(m).catch(function (err) {
-                state.error = err.message || "Не удалось удалить";
+                state.error = err.message || L("messages.deleteFailed");
                 render();
               });
             };
@@ -7033,10 +7057,10 @@
           QUICK_REACTIONS.forEach(function (em) {
             var br = el("button", "btn btn-ghost btn-sm msg-react-btn", em);
             br.type = "button";
-            br.title = "Реакция " + em;
+            br.title = L("ui.message.reactionTitle", { emoji: em });
             br.onclick = function () {
               toggleReaction(m.id, em).catch(function (err) {
-                state.error = err.message || "Реакция не добавилась";
+                state.error = err.message || L("messages.reactionAddFailed");
                 render();
               });
             };
@@ -7055,11 +7079,11 @@
       if (state.replyTo) {
         var rbar = el("div", "composer-reply-bar");
         rbar.appendChild(
-          el("span", "composer-reply-text", "Ответ: " + state.replyTo.snippet)
+          el("span", "composer-reply-text", L("ui.thread.replyPrefix", { text: state.replyTo.snippet }))
         );
         var rCancel = el("button", "btn btn-ghost btn-sm", "✕");
         rCancel.type = "button";
-        rCancel.title = "Отменить ответ";
+        rCancel.title = L("ui.thread.cancelReply");
         rCancel.onclick = function () {
           clearReplyTo();
           render();
@@ -7070,19 +7094,19 @@
       var fmt = el("div", "composer-format");
       var bBold = el("button", "btn btn-ghost btn-icon", "B");
       bBold.type = "button";
-      bBold.title = "Жирный";
+      bBold.title = L("ui.thread.bold");
       bBold.onclick = function () {
         wrapComposerSelection("**", "**");
       };
       var bIt = el("button", "btn btn-ghost btn-icon", "I");
       bIt.type = "button";
-      bIt.title = "Курсив";
+      bIt.title = L("ui.thread.italic");
       bIt.onclick = function () {
         wrapComposerSelection("*", "*");
       };
       var bCode = el("button", "btn btn-ghost btn-icon", "</>");
       bCode.type = "button";
-      bCode.title = "Код";
+      bCode.title = L("ui.thread.code");
       bCode.onclick = function () {
         wrapComposerSelection("`", "`");
       };
@@ -7099,10 +7123,14 @@
         state.mediaCaps && state.mediaCaps.max_upload_bytes
           ? " до " + Math.round(state.mediaCaps.max_upload_bytes / (1024 * 1024)) + " МБ"
           : "";
-      var bFile = el("button", "btn btn-ghost btn-icon", "Файл");
+      var bFile = el("button", "btn btn-ghost btn-icon", L("ui.thread.fileBtn"));
       bFile.type = "button";
       bFile.setAttribute("data-testid", "file-attach");
-      bFile.title = "Прикрепить файл" + maxHint;
+      bFile.title = maxHint
+        ? L("ui.thread.attachFileMax", {
+            mb: Math.round(state.mediaCaps.max_upload_bytes / (1024 * 1024)),
+          })
+        : L("ui.thread.attachFile");
       bFile.disabled = state.busy;
       bFile.onclick = function () {
         filePick.click();
@@ -7115,18 +7143,18 @@
       };
       fmt.appendChild(bFile);
       fmt.appendChild(filePick);
-      fmt.appendChild(el("span", "composer-md-hint", "Markdown: **жирный**, *курсив*, `код`, [ссылка](https://…)"));
+      fmt.appendChild(el("span", "composer-md-hint", L("ui.thread.markdownHint")));
       comp.appendChild(fmt);
       var ttlRow = el("div", "composer-ttl-row");
-      ttlRow.appendChild(el("label", "composer-ttl-label", "Автоудаление:"));
+      ttlRow.appendChild(el("label", "composer-ttl-label", L("ui.thread.autoDelete")));
       var ttlSel = document.createElement("select");
       ttlSel.id = "composerTtl";
       ttlSel.className = "composer-ttl-select";
       [
-        { v: "", l: "нет" },
-        { v: "60", l: "1 мин" },
-        { v: "3600", l: "1 час" },
-        { v: "86400", l: "24 часа" },
+        { v: "", l: L("ui.thread.ttlNone") },
+        { v: "60", l: L("ui.thread.ttl1min") },
+        { v: "3600", l: L("ui.thread.ttl1hour") },
+        { v: "86400", l: L("ui.thread.ttl24h") },
       ].forEach(function (opt) {
         var o = document.createElement("option");
         o.value = opt.v;
@@ -7143,7 +7171,7 @@
       ta.id = "msgdraft";
       ta.setAttribute("data-testid", "message-composer");
       ta.rows = 3;
-      ta.placeholder = "Сообщение… (Shift+Enter — строка, перетащите файл)";
+      ta.placeholder = L("ui.thread.composerPlaceholder");
       ta.value = loadComposerDraftForChat(state.selectedId);
       ta.oninput = function () {
         scheduleSaveComposerDraft();
@@ -7156,7 +7184,7 @@
         }
       };
       comp.appendChild(ta);
-      var sb = el("button", "btn btn-primary", "Отправить");
+      var sb = el("button", "btn btn-primary", L("ui.thread.send"));
       sb.type = "submit";
       sb.disabled = state.busy;
       comp.appendChild(sb);
@@ -7169,14 +7197,14 @@
     if (state.settingsOpen) {
       var sOv = el("div", "settings-overlay");
       var sCard = el("div", "settings-card");
-      sCard.appendChild(el("h2", "settings-title", "Настройки"));
+      sCard.appendChild(el("h2", "settings-title", L("ui.settings.title")));
       var sBody = el("div", "settings-body");
       var rowTheme = el("div", "settings-row");
-      rowTheme.appendChild(el("span", null, "Оформление"));
+      rowTheme.appendChild(el("span", null, L("ui.settings.appearance")));
       var bTheme = el(
         "button",
         "btn btn-ghost btn-sm",
-        state.appearance === "light" ? "Тёмная" : "Светлая"
+        state.appearance === "light" ? L("ui.common.dark") : L("ui.common.light")
       );
       bTheme.type = "button";
       bTheme.onclick = function () {
@@ -7186,17 +7214,28 @@
       sBody.appendChild(rowTheme);
       var rowLocale = el("div", "settings-row");
       rowLocale.appendChild(el("span", null, L("settings.locale")));
-      ["ru", "en"].forEach(function (code) {
+      var localeCodes = i18n.supportedLocales ? i18n.supportedLocales() : ["ru", "en"];
+      localeCodes.sort().forEach(function (code) {
+        var labelKey = LOCALE_LABEL_KEYS[code] || "settings.localeEn";
         var bLoc = el(
           "button",
           "btn btn-ghost btn-sm" + (i18n.getLocale() === code ? " active" : ""),
-          code === "ru" ? L("settings.localeRu") : L("settings.localeEn")
+          L(labelKey)
         );
         bLoc.type = "button";
-        bLoc.onclick = function () {
-          i18n.setLocale(code);
-          render();
-        };
+        bLoc.setAttribute("data-testid", "locale-" + code);
+        bLoc.onclick = (function (localeCode) {
+          return function () {
+            i18n
+              .setLocale(localeCode)
+              .then(function () {
+                return persistUiLocale(localeCode, { silent: false });
+              })
+              .then(function () {
+                render();
+              });
+          };
+        })(code);
         rowLocale.appendChild(bLoc);
       });
       sBody.appendChild(rowLocale);
@@ -7204,12 +7243,12 @@
         el(
           "p",
           "settings-hint",
-          "Оформление КОРУС Консалтинг (#7949F4, korusconsulting.ru)."
+          L("ui.settings.appearanceKorus")
         )
       );
       var rowCache = el("div", "settings-row");
-      rowCache.appendChild(el("span", null, "Кэш приложения"));
-      var bCache = el("button", "btn btn-ghost btn-sm", "Сбросить кэш UI");
+      rowCache.appendChild(el("span", null, L("ui.settings.cache")));
+      var bCache = el("button", "btn btn-ghost btn-sm", L("ui.settings.resetCache"));
       bCache.type = "button";
       bCache.disabled = state.busy;
       bCache.onclick = function () {
@@ -7221,24 +7260,21 @@
         el(
           "p",
           "settings-hint",
-          "Если после обновления сервера видите старый интерфейс (Opera, PWA)."
+          L("ui.settings.cacheHint")
         )
       );
       if (state.serverVersion) {
         var rowVer = el("div", "settings-row");
-        rowVer.appendChild(el("span", null, "Версия API"));
+        rowVer.appendChild(el("span", null, L("ui.settings.apiVersion")));
         rowVer.appendChild(el("span", "settings-value", state.serverVersion));
         sBody.appendChild(rowVer);
       }
       var kbdHint = document.createElement("p");
       kbdHint.className = "settings-hint settings-kbd-hint";
-      kbdHint.innerHTML =
-        "<kbd>Ctrl+K</kbd> или <kbd>/</kbd> — поиск · " +
-        "<kbd>Alt+↑</kbd><kbd>Alt+↓</kbd> — чаты · " +
-        "<kbd>M</kbd> — сообщение · <kbd>Esc</kbd> — закрыть · <kbd>Ctrl+,</kbd> — настройки";
+      kbdHint.innerHTML = L("ui.settings.kbdHint");
       sBody.appendChild(kbdHint);
       var rowPres = el("div", "settings-row");
-      rowPres.appendChild(el("span", null, "Статус"));
+      rowPres.appendChild(el("span", null, L("ui.settings.status")));
       var presSel = document.createElement("select");
       presSel.className = "settings-select";
       ["online", "away", "dnd", "offline"].forEach(function (st) {
@@ -7255,7 +7291,7 @@
       rowPres.appendChild(presSel);
       sBody.appendChild(rowPres);
       var rowProf = el("div", "settings-row");
-      rowProf.appendChild(el("span", null, "Имя"));
+      rowProf.appendChild(el("span", null, L("ui.settings.name")));
       var nameInp = document.createElement("input");
       nameInp.type = "text";
       nameInp.className = "settings-text-input";
@@ -7265,7 +7301,7 @@
         state.myDisplayName = nameInp.value;
       };
       rowProf.appendChild(nameInp);
-      var bSaveProf = el("button", "btn btn-ghost btn-sm", "Сохранить");
+      var bSaveProf = el("button", "btn btn-ghost btn-sm", L("ui.common.save"));
       bSaveProf.type = "button";
       bSaveProf.disabled = state.busy;
       bSaveProf.onclick = function () {
@@ -7274,11 +7310,11 @@
       rowProf.appendChild(bSaveProf);
       sBody.appendChild(rowProf);
       var rowNotif = el("div", "settings-row");
-      rowNotif.appendChild(el("span", null, "Уведомления"));
+      rowNotif.appendChild(el("span", null, L("ui.settings.notifications")));
       var bNotif = el(
         "button",
         "btn btn-ghost btn-sm",
-        notificationsAllowed() ? "Выкл." : "Вкл."
+        notificationsAllowed() ? L("ui.common.off") : L("ui.common.on")
       );
       bNotif.type = "button";
       bNotif.onclick = function () {
@@ -7293,11 +7329,11 @@
       rowNotif.appendChild(bNotif);
       sBody.appendChild(rowNotif);
       var rowSound = el("div", "settings-row");
-      rowSound.appendChild(el("span", null, "Звук уведомлений"));
+      rowSound.appendChild(el("span", null, L("ui.settings.sound")));
       var bSound = el(
         "button",
         "btn btn-ghost btn-sm",
-        state.soundNotify ? "Выкл." : "Вкл."
+        state.soundNotify ? L("ui.common.off") : L("ui.common.on")
       );
       bSound.type = "button";
       bSound.onclick = function () {
@@ -7314,8 +7350,8 @@
       sBody.appendChild(rowSound);
       if (state.lastPublicLink) {
         var rowRevoke = el("div", "settings-row");
-        rowRevoke.appendChild(el("span", null, "Последняя публичная ссылка"));
-        var bRevoke = el("button", "btn btn-ghost btn-sm", "Отозвать");
+        rowRevoke.appendChild(el("span", null, L("ui.settings.lastPublicLink")));
+        var bRevoke = el("button", "btn btn-ghost btn-sm", L("ui.common.revoke"));
         bRevoke.type = "button";
         bRevoke.disabled = state.busy;
         bRevoke.onclick = function () {
@@ -7324,40 +7360,39 @@
         rowRevoke.appendChild(bRevoke);
         sBody.appendChild(rowRevoke);
       }
-      sBody.appendChild(el("h3", "settings-subtitle", "Мои публичные ссылки"));
+      sBody.appendChild(el("h3", "settings-subtitle", L("ui.settings.myPublicLinks")));
       if (state.myPublicLinksBusy) {
-        sBody.appendChild(el("p", "settings-hint", "Загрузка…"));
+        sBody.appendChild(el("p", "settings-hint", L("ui.common.loading")));
       } else if (state.myPublicLinks && state.myPublicLinks.length) {
         state.myPublicLinks.forEach(function (row) {
           var linkRow = el("div", "file-link-row");
           var head = el("div", "file-link-row-head");
           var fname = row.filename || row.file_id.slice(0, 8);
-          head.textContent =
-            fname +
-            " · тип " +
-            (row.link_kind || "?") +
-            " · до " +
-            formatInstantLabel(row.expires_at);
+          head.textContent = L("ui.settings.myLinkRow", {
+            name: fname,
+            kind: row.link_kind || "?",
+            expires: formatInstantLabel(row.expires_at),
+          });
           linkRow.appendChild(head);
           var acts = el("div", "file-link-row-actions");
-          var bGo = el("button", "btn btn-ghost btn-sm", "К сообщению");
+          var bGo = el("button", "btn btn-ghost btn-sm", L("ui.settings.goToMessage"));
           bGo.type = "button";
           bGo.disabled = state.busy;
           bGo.onclick = function () {
             openChatMessageForFile(row.file_id);
           };
           acts.appendChild(bGo);
-          var bDl = el("button", "btn btn-ghost btn-sm", "Скачать");
+          var bDl = el("button", "btn btn-ghost btn-sm", L("ui.common.download"));
           bDl.type = "button";
           bDl.disabled = state.busy;
           bDl.onclick = function () {
             downloadChatFile(row.file_id).catch(function (e) {
-              state.error = e.message || "Не удалось скачать файл";
+              state.error = e.message || L("files.downloadFailed");
               render();
             });
           };
           acts.appendChild(bDl);
-          var bRevLink = el("button", "btn btn-ghost btn-sm", "Отозвать");
+          var bRevLink = el("button", "btn btn-ghost btn-sm", L("ui.common.revoke"));
           bRevLink.type = "button";
           bRevLink.disabled = state.busy;
           bRevLink.onclick = function () {
@@ -7368,10 +7403,10 @@
           sBody.appendChild(linkRow);
         });
       } else if (state.myPublicLinks) {
-        sBody.appendChild(el("p", "settings-hint", "Активных ссылок нет."));
+        sBody.appendChild(el("p", "settings-hint", L("ui.settings.noPublicLinks")));
       }
       var rowLinksRefresh = el("div", "settings-row");
-      var bLinksRefresh = el("button", "btn btn-ghost btn-sm", "Обновить список");
+      var bLinksRefresh = el("button", "btn btn-ghost btn-sm", L("ui.settings.refreshLinks"));
       bLinksRefresh.type = "button";
       bLinksRefresh.disabled = state.busy || state.myPublicLinksBusy;
       bLinksRefresh.onclick = function () {
@@ -7381,8 +7416,8 @@
       sBody.appendChild(rowLinksRefresh);
       if (notificationsAllowed()) {
         var rowTestN = el("div", "settings-row");
-        rowTestN.appendChild(el("span", null, "Тест уведомления"));
-        var bTestN = el("button", "btn btn-ghost btn-sm", "Показать");
+        rowTestN.appendChild(el("span", null, L("ui.settings.testNotification")));
+        var bTestN = el("button", "btn btn-ghost btn-sm", L("ui.settings.showTest"));
         bTestN.type = "button";
         bTestN.onclick = function () {
           testLocalNotification();
@@ -7392,8 +7427,8 @@
       }
       if (vapidPublicKey() && notificationsAllowed()) {
         var rowPush = el("div", "settings-row");
-        rowPush.appendChild(el("span", null, "Web Push"));
-        var bPushSync = el("button", "btn btn-ghost btn-sm", "Обновить подписку");
+        rowPush.appendChild(el("span", null, L("ui.settings.webPush")));
+        var bPushSync = el("button", "btn btn-ghost btn-sm", L("ui.settings.pushSyncUpdate"));
         bPushSync.type = "button";
         bPushSync.disabled = state.busy;
         bPushSync.onclick = function () {
@@ -7404,7 +7439,7 @@
       }
       if (state.e2eeKeyCount !== null) {
         var rowE2 = el("div", "settings-row");
-        rowE2.appendChild(el("span", null, "E2EE key packages"));
+        rowE2.appendChild(el("span", null, L("ui.settings.e2eeKeyPackages")));
         rowE2.appendChild(el("span", "settings-value", String(state.e2eeKeyCount)));
         sBody.appendChild(rowE2);
       }
@@ -7413,7 +7448,7 @@
           var rowKpItem = el("div", "settings-row settings-row-sub");
           var pkHint = kp.public_key ? String(kp.public_key).slice(0, 14) + "…" : kp.id;
           rowKpItem.appendChild(el("span", "settings-value", pkHint));
-          var bDelKp = el("button", "btn btn-ghost btn-sm", "Удалить");
+          var bDelKp = el("button", "btn btn-ghost btn-sm", L("ui.actions.delete"));
           bDelKp.type = "button";
           bDelKp.disabled = state.busy;
           bDelKp.onclick = function () {
@@ -7424,8 +7459,8 @@
         });
       }
       var rowKp = el("div", "settings-row");
-      rowKp.appendChild(el("span", null, "Новый key package"));
-      var bKp = el("button", "btn btn-ghost btn-sm", "Создать");
+      rowKp.appendChild(el("span", null, L("ui.settings.newKeyPackage")));
+      var bKp = el("button", "btn btn-ghost btn-sm", L("ui.settings.create"));
       bKp.type = "button";
       bKp.disabled = state.busy;
       bKp.onclick = function () {
@@ -7434,15 +7469,15 @@
       rowKp.appendChild(bKp);
       sBody.appendChild(rowKp);
       var rowKeyIo = el("div", "settings-row");
-      rowKeyIo.appendChild(el("span", null, "Локальный ключ"));
-      var bExport = el("button", "btn btn-ghost btn-sm", "Экспорт");
+      rowKeyIo.appendChild(el("span", null, L("ui.settings.localKey")));
+      var bExport = el("button", "btn btn-ghost btn-sm", L("ui.settings.exportKey"));
       bExport.type = "button";
       bExport.disabled = !state.localKeyPackageMeta;
       bExport.onclick = function () {
         exportLocalKeyPackage();
       };
       rowKeyIo.appendChild(bExport);
-      var bImport = el("button", "btn btn-ghost btn-sm", "Импорт");
+      var bImport = el("button", "btn btn-ghost btn-sm", L("ui.settings.importKey"));
       bImport.type = "button";
       bImport.onclick = function () {
         importLocalKeyPackage();
@@ -7455,10 +7490,13 @@
           el(
             "span",
             null,
-            "Сохранён: " + (state.localKeyPackageMeta.public_key_prefix || "да")
+            L("ui.settings.localKeySaved", {
+              prefix:
+                state.localKeyPackageMeta.public_key_prefix || L("ui.settings.localKeySavedYes"),
+            })
           )
         );
-        var bWipe = el("button", "btn btn-ghost btn-sm", "Удалить");
+        var bWipe = el("button", "btn btn-ghost btn-sm", L("ui.actions.delete"));
         bWipe.type = "button";
         bWipe.onclick = function () {
           wipeLocalKeyPackage();
@@ -7468,8 +7506,8 @@
       }
       if (state.pwaInstallPrompt || deferredInstallPrompt) {
         var rowPwa = el("div", "settings-row");
-        rowPwa.appendChild(el("span", null, "Установить приложение"));
-        var bPwa = el("button", "btn btn-primary btn-sm", "Установить");
+        rowPwa.appendChild(el("span", null, L("ui.settings.pwaInstall")));
+        var bPwa = el("button", "btn btn-primary btn-sm", L("ui.settings.pwaInstallBtn"));
         bPwa.type = "button";
         bPwa.onclick = function () {
           promptInstallPwa();
@@ -7480,14 +7518,14 @@
       if (state.blockedUsers && state.blockedUsers.length) {
         var rowBl = el("div", "settings-row");
         rowBl.appendChild(
-          el("span", null, "Заблокированы (" + state.blockedUsers.length + ")")
+          el("span", null, L("ui.settings.blockedUsers", { count: state.blockedUsers.length }))
         );
         sBody.appendChild(rowBl);
         state.blockedUsers.forEach(function (bu) {
           var rowBu = el("div", "settings-row settings-row-sub");
           var buLabel = bu.display_name || bu.username || bu.user_id;
           rowBu.appendChild(el("span", "settings-value", buLabel));
-          var bUn = el("button", "btn btn-ghost btn-sm", "Разблок.");
+          var bUn = el("button", "btn btn-ghost btn-sm", L("ui.settings.unblockShort"));
           bUn.type = "button";
           bUn.disabled = state.busy;
           bUn.onclick = function () {
@@ -7499,19 +7537,19 @@
       }
       if (state.myDevices && state.myDevices.length) {
         var rowDev = el("div", "settings-row");
-        rowDev.appendChild(el("span", null, "Устройства (" + state.myDevices.length + ")"));
+        rowDev.appendChild(el("span", null, L("ui.settings.devicesCount", { count: state.myDevices.length })));
         sBody.appendChild(rowDev);
         state.myDevices.forEach(function (d) {
           var rowD = el("div", "settings-row settings-row-sub");
           var active = d.push_active === true;
           var label =
             (d.device_name || "?") +
-            (active ? " · push активен" : " · push выкл") +
+            (active ? L("ui.settings.devicePushActive") : L("ui.settings.devicePushOff")) +
             (d.push_provider ? " (" + d.push_provider + ")" : "");
           rowD.appendChild(el("span", "settings-value", label));
-          var bUnDev = el("button", "btn btn-ghost btn-sm", "Откл.");
+          var bUnDev = el("button", "btn btn-ghost btn-sm", L("ui.settings.disconnectShort"));
           bUnDev.type = "button";
-          bUnDev.title = "Сбросить push-токен устройства";
+          bUnDev.title = L("ui.settings.resetPushTitle");
           bUnDev.disabled = state.busy;
           bUnDev.onclick = function () {
             unregisterDevice(d.device_name);
@@ -7520,16 +7558,13 @@
           sBody.appendChild(rowD);
         });
       }
-      var pushHint =
-        "Приватный ключ — только в IndexedDB; на сервер уходит только public key package.";
+      var pushHint = L("ui.settings.privateKeyHint");
       if (vapidPublicKey()) {
-        pushHint +=
-          " Web Push: подписка при включении уведомлений" +
-          (state.webPushRegistered ? " (зарегистрирована)." : ".") +
-          " Доставка — push-worker (PUSH_VAPID_* = public key web-client).";
+        pushHint += state.webPushRegistered
+          ? L("ui.settings.webPushHintRegistered")
+          : L("ui.settings.webPushHintDefault");
       } else {
-        pushHint +=
-          " Web Push: WEB_CLIENT_VAPID_PUBLIC_KEY и PUSH_VAPID_* на push-worker.";
+        pushHint += L("ui.settings.webPushNoVapid");
       }
       sBody.appendChild(el("p", "settings-hint", pushHint));
       if (state.webPushError && vapidPublicKey()) {
@@ -7537,12 +7572,13 @@
       }
       if ("serviceWorker" in navigator) {
         sBody.appendChild(
-          el("p", "settings-hint", "Офлайн: статика кэшируется Service Worker; API требует сеть.")
+          el("p", "settings-hint", L("ui.settings.offlineHint"))
         );
       }
       sCard.appendChild(sBody);
-      var sClose = el("button", "btn btn-primary", "Закрыть");
+      var sClose = el("button", "btn btn-primary", L("ui.common.close"));
       sClose.type = "button";
+      sClose.setAttribute("data-testid", "settings-close");
       sClose.onclick = function () {
         state.settingsOpen = false;
         render();
@@ -7560,7 +7596,7 @@
     if (state.forwardPick) {
       var fOv = el("div", "forward-overlay");
       var fCard = el("div", "forward-card");
-      fCard.appendChild(el("h2", "forward-title", "Переслать сообщение"));
+      fCard.appendChild(el("h2", "forward-title", L("ui.forward.title")));
       fCard.appendChild(el("p", "forward-snippet", state.forwardPick.snippet));
       var fList = el("div", "forward-chat-list");
       state.chats
@@ -7571,14 +7607,17 @@
           var fb = el("button", "forward-chat-item");
           fb.type = "button";
           fb.disabled = state.busy;
-          fb.textContent = (c.title || c.type) + " · " + c.member_count + " уч.";
+          fb.textContent =
+            (c.title || c.type) +
+            " · " +
+            L("ui.sidebar.membersMeta", { type: c.type, count: c.member_count });
           fb.onclick = function () {
             forwardMessageTo(c.id);
           };
           fList.appendChild(fb);
         });
       fCard.appendChild(fList);
-      var fCancel = el("button", "btn btn-ghost", "Отмена");
+      var fCancel = el("button", "btn btn-ghost", L("ui.common.cancel"));
       fCancel.type = "button";
       fCancel.onclick = function () {
         closeForwardPicker();
@@ -7597,12 +7636,12 @@
       var mTitle = el("h2", "settings-title");
       mTitle.textContent =
         selChat && selChat.type === "group"
-          ? "Группа: " + (selChat.title || selChat.id.slice(0, 8))
-          : "Участники чата";
+          ? L("ui.members.groupTitle", { name: selChat.title || selChat.id.slice(0, 8) })
+          : L("ui.members.chatTitle");
       mCard.appendChild(mTitle);
       var mBody = el("div", "settings-body members-body");
       if (state.chatMembersBusy) {
-        mBody.appendChild(el("p", "settings-hint", "Загрузка…"));
+        mBody.appendChild(el("p", "settings-hint", L("ui.common.loading")));
       } else if (state.chatMembers && state.chatMembers.length) {
         var meId = state.tokens ? jwtSub(state.tokens.access_token) : null;
         var myRole = myChatRole(state.chatMembers);
@@ -7610,14 +7649,14 @@
         var manageMembers = canManageMembers(myRole);
         if (selChat && selChat.type === "group" && manageMembers) {
           var mTools = el("div", "member-tools");
-          var bRen = el("button", "btn btn-ghost btn-sm", "Переименовать");
+          var bRen = el("button", "btn btn-ghost btn-sm", L("ui.members.rename"));
           bRen.type = "button";
           bRen.disabled = state.busy;
           bRen.onclick = function () {
             renameGroupChat();
           };
           mTools.appendChild(bRen);
-          var bAdd = el("button", "btn btn-ghost btn-sm", "+ Участник");
+          var bAdd = el("button", "btn btn-ghost btn-sm", L("ui.members.addMember"));
           bAdd.type = "button";
           bAdd.disabled = state.busy;
           bAdd.onclick = function () {
@@ -7632,7 +7671,7 @@
             (m.display_name || m.username || m.user_id) +
             " · " +
             m.role +
-            (m.banned ? " · забанен" : "");
+            (m.banned ? L("ui.members.banned") : "");
           mRow.appendChild(el("span", "member-row-label", label));
           if (myRole === "owner" && m.user_id !== meId && m.role !== "owner" && !m.banned) {
             var roleSel = document.createElement("select");
@@ -7651,7 +7690,7 @@
             mRow.appendChild(roleSel);
           }
           if (m.user_id === meId && selChat && selChat.type === "group") {
-            var bLeave = el("button", "btn btn-ghost btn-sm", "Выйти");
+            var bLeave = el("button", "btn btn-ghost btn-sm", L("ui.members.leave"));
             bLeave.type = "button";
             bLeave.disabled = state.busy;
             bLeave.onclick = function () {
@@ -7664,7 +7703,7 @@
             m.role !== "owner" &&
             !m.banned
           ) {
-            var bRm = el("button", "btn btn-ghost btn-sm", "Исключить");
+            var bRm = el("button", "btn btn-ghost btn-sm", L("ui.members.remove"));
             bRm.type = "button";
             bRm.disabled = state.busy;
             bRm.onclick = function () {
@@ -7674,7 +7713,7 @@
           }
           if (manageBans && m.user_id !== meId && m.role !== "owner") {
             if (m.banned) {
-              var bUn = el("button", "btn btn-ghost btn-sm", "Разбан");
+              var bUn = el("button", "btn btn-ghost btn-sm", L("ui.members.unban"));
               bUn.type = "button";
               bUn.disabled = state.busy;
               bUn.onclick = function () {
@@ -7682,7 +7721,7 @@
               };
               mRow.appendChild(bUn);
             } else if (m.role !== "admin" || myRole === "owner") {
-              var bBan = el("button", "btn btn-ghost btn-sm", "Бан");
+              var bBan = el("button", "btn btn-ghost btn-sm", L("ui.members.ban"));
               bBan.type = "button";
               bBan.disabled = state.busy;
               bBan.onclick = function () {
@@ -7694,10 +7733,10 @@
           mBody.appendChild(mRow);
         });
       } else {
-        mBody.appendChild(el("p", "settings-hint", "Нет участников."));
+        mBody.appendChild(el("p", "settings-hint", L("ui.members.noMembers")));
       }
       mCard.appendChild(mBody);
-      var mClose = el("button", "btn btn-primary", "Закрыть");
+      var mClose = el("button", "btn btn-primary", L("ui.common.close"));
       mClose.type = "button";
       mClose.onclick = function () {
         closeMembersModal();
@@ -7712,24 +7751,22 @@
     if (state.fileLinksOpen) {
       var flOv = el("div", "settings-overlay");
       var flCard = el("div", "settings-card members-card");
-      flCard.appendChild(el("h2", "settings-title", "Публичные ссылки на файл"));
+      flCard.appendChild(el("h2", "settings-title", L("ui.fileLinks.title")));
       var flBody = el("div", "settings-body members-body");
       if (state.fileLinksBusy) {
-        flBody.appendChild(el("p", "settings-hint", "Загрузка…"));
+        flBody.appendChild(el("p", "settings-hint", L("ui.common.loading")));
       } else if (state.fileLinksRows && state.fileLinksRows.length) {
         state.fileLinksRows.forEach(function (row) {
           var flRow = el("div", "file-link-row");
           var head = el("div", "file-link-row-head");
-          head.textContent =
-            "Тип " +
-            (row.link_kind || "?") +
-            " · до " +
-            formatInstantLabel(row.expires_at) +
-            " · создана " +
-            formatInstantLabel(row.created_at);
+          head.textContent = L("ui.fileLinks.row", {
+            kind: row.link_kind || "?",
+            expires: formatInstantLabel(row.expires_at),
+            created: formatInstantLabel(row.created_at),
+          });
           flRow.appendChild(head);
           var flActs = el("div", "file-link-row-actions");
-          var bRev = el("button", "btn btn-ghost btn-sm", "Отозвать");
+          var bRev = el("button", "btn btn-ghost btn-sm", L("ui.common.revoke"));
           bRev.type = "button";
           bRev.disabled = state.busy;
           bRev.onclick = function () {
@@ -7740,18 +7777,18 @@
           flBody.appendChild(flRow);
         });
       } else {
-        flBody.appendChild(el("p", "settings-hint", "Активных ссылок нет."));
+        flBody.appendChild(el("p", "settings-hint", L("ui.fileLinks.none")));
       }
       flCard.appendChild(flBody);
       var flFoot = el("div", "modal-footer");
-      var flCreate = el("button", "btn btn-ghost btn-sm", "Создать ссылку");
+      var flCreate = el("button", "btn btn-ghost btn-sm", L("ui.fileLinks.create"));
       flCreate.type = "button";
       flCreate.disabled = state.busy || !state.fileLinksFileId;
       flCreate.onclick = function () {
         createPublicLinkForFile(state.fileLinksFileId);
       };
       flFoot.appendChild(flCreate);
-      var flClose = el("button", "btn btn-primary", "Закрыть");
+      var flClose = el("button", "btn btn-primary", L("ui.common.close"));
       flClose.type = "button";
       flClose.onclick = function () {
         closeFilePublicLinksModal();
@@ -7767,10 +7804,10 @@
     if (state.messageVersionsOpen) {
       var vOv = el("div", "settings-overlay");
       var vCard = el("div", "settings-card members-card");
-      vCard.appendChild(el("h2", "settings-title", "История правок"));
+      vCard.appendChild(el("h2", "settings-title", L("ui.versions.title")));
       var vBody = el("div", "settings-body members-body");
       if (state.messageVersionsBusy) {
-        vBody.appendChild(el("p", "settings-hint", "Загрузка…"));
+        vBody.appendChild(el("p", "settings-hint", L("ui.common.loading")));
       } else if (state.messageVersions && state.messageVersions.length) {
         state.messageVersions.forEach(function (ver, idx) {
           var vRow = el("div", "version-row");
@@ -7787,10 +7824,10 @@
           vBody.appendChild(vRow);
         });
       } else {
-        vBody.appendChild(el("p", "settings-hint", "Нет сохранённых версий."));
+        vBody.appendChild(el("p", "settings-hint", L("ui.versions.none")));
       }
       vCard.appendChild(vBody);
-      var vClose = el("button", "btn btn-primary", "Закрыть");
+      var vClose = el("button", "btn btn-primary", L("ui.common.close"));
       vClose.type = "button";
       vClose.onclick = function () {
         closeMessageVersionsModal();
@@ -7929,6 +7966,7 @@
     try {
       state.lastPublicLink = loadLastPublicLink();
       var pendingMsgId = openChatFromUrlParam();
+      await loadMyProfile({ applyLocale: true });
       await loadMediaCaps();
       await loadServerVersion();
       await loadE2eeStatus();
@@ -7944,7 +7982,7 @@
           try {
             await scrollToMessageId(pendingMsgId);
           } catch (e) {
-            state.error = e.message || "Сообщение из ссылки не найдено";
+            state.error = e.message || L("messages.deepLinkNotFound");
           }
         }
       }
@@ -7958,7 +7996,15 @@
   }
 
   function boot() {
-    i18n.init();
+    i18n.init().then(function () {
+      bootAfterI18n();
+    }).catch(function (err) {
+      console.error("i18n init failed", err);
+      bootAfterI18n();
+    });
+  }
+
+  function bootAfterI18n() {
     applyStyleSet(loadStyleSet());
     syncNotifyPref();
     startTtlRenderTicker();
@@ -7985,7 +8031,7 @@
         })
         .catch(function () {
           clearTokens();
-          state.error = "Сессия истекла — войдите снова.";
+          state.error = L("errors.sessionExpired");
           render();
         });
     } else {

@@ -154,7 +154,7 @@ set -euo pipefail
 export KORUS_BUILD=$buildFlag KORUS_REPO_ROOT=/mnt/korus
 sed -i 's/\r$//' /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
 chmod +x /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
-rm -f /var/run/korus-redeploy.done
+sudo rm -f /var/run/korus-redeploy.done
 nohup sudo bash -c '
   export KORUS_BUILD=$buildFlag KORUS_REPO_ROOT=/mnt/korus
   sh /mnt/korus/deploy/qemu/vm-bootstrap/korus-guest-deps.sh
@@ -188,7 +188,7 @@ set -euo pipefail
 export KORUS_BUILD=$buildFlag KORUS_REPO_ROOT=/mnt/korus
 sed -i 's/\r$//' /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
 chmod +x /mnt/korus/deploy/qemu/vm-bootstrap/*.sh || true
-rm -f /var/run/korus-redeploy.done
+sudo rm -f /var/run/korus-redeploy.done
 nohup sudo bash -c '
   export KORUS_BUILD=$buildFlag KORUS_REPO_ROOT=/mnt/korus
   sh /mnt/korus/deploy/qemu/vm-bootstrap/korus-guest-deps.sh

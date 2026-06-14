@@ -1,6 +1,6 @@
 # Unified QEMU dev entrypoint (docs/plans/2026-06-12-qemu-dev-modes-stabilization-design.md).
 param(
-    [ValidateSet("warm", "sync-api", "sync-web", "sync-ui", "rebuild-api", "rebuild-web", "enable-hotswap", "status", "stop", "monitored")]
+    [ValidateSet("warm", "sync-api", "sync-api-core", "sync-web", "sync-ui", "rebuild-api", "rebuild-web", "enable-hotswap", "status", "stop", "monitored")]
     [string]$Mode = "status",
     [switch]$Force,
     [switch]$Rebuild,
@@ -21,7 +21,8 @@ if ($Help) {
 QEMU dev modes facade:
 
   .\scripts\qemu-dev-mode.ps1 -Mode warm           # qemu-up -KeepDisks + stack-wait
-  .\scripts\qemu-dev-mode.ps1 -Mode sync-api       # redeploy ServerOnly (no build)
+  .\scripts\qemu-dev-mode.ps1 -Mode sync-api       # redeploy ServerOnly (Ansible, no image build)
+  .\scripts\qemu-dev-mode.ps1 -Mode sync-api-core  # repo sync + rebuild core-api only (~5-15 min)
   .\scripts\qemu-dev-mode.ps1 -Mode sync-web       # redeploy WebOnly (no build)
   .\scripts\qemu-dev-mode.ps1 -Mode sync-ui        # qemu-web-sync
   .\scripts\qemu-dev-mode.ps1 -Mode rebuild-api    # redeploy ServerOnly -Rebuild
@@ -64,27 +65,31 @@ switch ($Mode) {
         exit $LASTEXITCODE
     }
     "sync-api" {
-        $redeployArgs = @("-ServerOnly")
-        if ($Force) { $redeployArgs += "-Force" }
-        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @redeployArgs
+        $p = @{ ServerOnly = $true }
+        if ($Force) { $p.Force = $true }
+        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @p
+        exit $LASTEXITCODE
+    }
+    "sync-api-core" {
+        & (Join-Path $Root "scripts\qemu-sync-api-core.ps1")
         exit $LASTEXITCODE
     }
     "sync-web" {
-        $redeployArgs = @("-WebOnly")
-        if ($Force) { $redeployArgs += "-Force" }
-        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @redeployArgs
+        $p = @{ WebOnly = $true }
+        if ($Force) { $p.Force = $true }
+        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @p
         exit $LASTEXITCODE
     }
     "rebuild-api" {
-        $redeployArgs = @("-ServerOnly", "-Rebuild")
-        if ($Force) { $redeployArgs += "-Force" }
-        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @redeployArgs
+        $p = @{ ServerOnly = $true; Rebuild = $true }
+        if ($Force) { $p.Force = $true }
+        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @p
         exit $LASTEXITCODE
     }
     "rebuild-web" {
-        $redeployArgs = @("-WebOnly", "-Rebuild")
-        if ($Force) { $redeployArgs += "-Force" }
-        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @redeployArgs
+        $p = @{ WebOnly = $true; Rebuild = $true }
+        if ($Force) { $p.Force = $true }
+        & (Join-Path $Root "scripts\qemu-redeploy.ps1") @p
         exit $LASTEXITCODE
     }
     "sync-ui" {

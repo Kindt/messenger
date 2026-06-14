@@ -42,14 +42,14 @@ class ContactServiceTest {
 
     @Test
     void add_succeedsForValidUser() {
-        userRepo.users.put(contactId, new UserProfile(contactId.toString(), "john", "John", null, false, now, "offline", null, null, false));
+        userRepo.users.put(contactId, new UserProfile(contactId.toString(), "john", "John", null, false, now, "offline", null, null, false, null));
 
         assertTrue(contactService.add(userId, contactId));
     }
 
     @Test
     void add_rejectedWhenEitherPartyBlocked() {
-        userRepo.users.put(contactId, new UserProfile(contactId.toString(), "john", "John", null, false, now, "offline", null, null, false));
+        userRepo.users.put(contactId, new UserProfile(contactId.toString(), "john", "John", null, false, now, "offline", null, null, false, null));
         blockRepo.blockedPairs.add(userId + ":" + contactId);
 
         assertFalse(contactService.add(userId, contactId));
@@ -66,7 +66,7 @@ class ContactServiceTest {
     void importByPhoneHashes_findsAndAdds() {
         var hashes = List.of("hash1", "hash2");
         contactRepo.foundByHash.put(userId, List.of(contactId));
-        userRepo.users.put(contactId, new UserProfile(contactId.toString(), "john", "John", null, false, now, "offline", null, null, false));
+        userRepo.users.put(contactId, new UserProfile(contactId.toString(), "john", "John", null, false, now, "offline", null, null, false, null));
 
         var result = contactService.importByPhoneHashes(userId, hashes);
 

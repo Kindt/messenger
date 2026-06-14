@@ -15,6 +15,7 @@ This project uses **two complementary skill sets**. Read this skill when unsure 
 | Constitution / principle updates | **speckit-constitution** |
 | Spec quality / consistency check | **speckit-analyze**, **speckit-checklist**, **speckit-clarify** |
 | Rough idea before a formal spec | **superpowers-brainstorming** (then feed into speckit-specify) |
+| Web UI, i18n, Tailwind, `:19088` | **korus-webui** (then speckit **005** or superpowers debugging) |
 | Implementation plan from approved design (non-spec-kit) | **superpowers-writing-plans** |
 | Execute a written plan with checkpoints | **superpowers-executing-plans** or **superpowers-subagent-driven-development** |
 | Parallel isolated work | **superpowers-using-git-worktrees**, **superpowers-dispatching-parallel-agents** |
@@ -71,5 +72,6 @@ When a superpowers skill suggests `docker compose`, `npm install` for full stack
 | Spec-kit | `.cursor/skills/speckit-*/SKILL.md` (committed) |
 | Superpowers | `.cursor/skills/superpowers-*/` (junctions -> `.cursor/superpowers/skills/`) |
 | This bridge | `.cursor/skills/korus-agent-workflow/SKILL.md` |
+| Web UI | `.cursor/skills/korus-webui/SKILL.md` |
 
 Install/update superpowers: see `AGENTS.md` section "Superpowers (Cursor skills)".

@@ -20,7 +20,7 @@ public class UserRepository {
 
     private static final String SELECT_USER = """
         SELECT id, username, display_name, phone, hidden, created_at,
-               presence_status, last_seen_at, org_id, privacy_disable_read_receipts
+               presence_status, last_seen_at, org_id, privacy_disable_read_receipts, ui_locale
         FROM users
         """;
 
@@ -202,7 +202,8 @@ public class UserRepository {
             rs.getString("presence_status"),
             lastSeen,
             org != null ? org.toString() : null,
-            rs.getBoolean("privacy_disable_read_receipts")
+            rs.getBoolean("privacy_disable_read_receipts"),
+            rs.getString("ui_locale")
         );
     }
 }

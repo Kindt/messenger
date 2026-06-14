@@ -25,8 +25,6 @@ class WebUiParityAssetsTest {
     void indexHtml_loadsUtilityModulesBeforeAppJs() throws Exception {
         var html = readResource("webui/index.html");
         var scripts = List.of(
-            "locales/ru.js",
-            "locales/en.js",
             "ui-i18n.js",
             "ui-shell-utils.js",
             "ui-transport-utils.js",
@@ -47,6 +45,7 @@ class WebUiParityAssetsTest {
             assertTrue(idx > last, script + " must appear after prior scripts");
             last = idx;
         }
+        assertTrue(!html.contains("locales/ru.js"), "legacy locale .js scripts must not be in index.html");
     }
 
     @Test
@@ -84,18 +83,22 @@ class WebUiParityAssetsTest {
 
     @Test
     void localeBundles_shareSameKeyPaths() throws Exception {
-        var en = readResource("webui/locales/en.js");
-        var ru = readResource("webui/locales/ru.js");
+        var en = readResource("webui/locales/en.json");
+        var ru = readResource("webui/locales/ru.json");
+        var manifest = readResource("webui/locales/manifest.json");
         for (var token : List.of(
             "startInChat",
             "readReceipts",
-            "common:",
             "deleteMessage",
             "defaultMeetingTitle"
         )) {
-            assertTrue(en.contains(token), "en.js missing " + token);
-            assertTrue(ru.contains(token), "ru.js missing " + token);
+            assertTrue(en.contains(token), "en.json missing " + token);
+            assertTrue(ru.contains(token), "ru.json missing " + token);
         }
+        assertTrue(en.contains("\"locale\": \"Language\""), "en.json settings.locale");
+        assertTrue(ru.contains("\"locale\": \"Язык\""), "ru.json settings.locale");
+        assertTrue(manifest.contains("\"default\": \"ru\""), "manifest default locale");
+        assertTrue(manifest.contains("\"codes\""), "manifest locale codes");
     }
 
     @Test

@@ -5,6 +5,9 @@
 .idea
 .vscode
 .cursor
+deploy/qemu/backups
+deploy/qemu/images
+deploy/qemu/run
 *.iml
 
 # Не нужны для Gradle-сборки Java-модулей внутри образа

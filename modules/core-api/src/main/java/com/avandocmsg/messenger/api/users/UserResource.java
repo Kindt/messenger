@@ -3,6 +3,7 @@ package com.avandocmsg.messenger.api.users;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
 import com.avandocmsg.messenger.api.users.dto.SavedChatResponse;
+import com.avandocmsg.messenger.api.users.dto.UpdateLocaleRequest;
 import com.avandocmsg.messenger.api.users.dto.UpdatePresenceRequest;
 import com.avandocmsg.messenger.api.users.dto.UpdatePrivacyRequest;
 import com.avandocmsg.messenger.api.users.dto.UpdateProfileRequest;
@@ -33,6 +34,7 @@ import java.util.Set;
 public class UserResource {
 
     private static final Set<String> PRESENCE_ALLOWED = Set.of("online", "away", "dnd", "offline");
+    private static final Set<String> UI_LOCALES_ALLOWED = Set.of("ru", "en", "be", "kk", "zh", "ko");
 
     private final UserApplicationService userApplicationService;
     private final UserMessageSource messages;
@@ -146,6 +148,27 @@ public class UserResource {
             .map(p -> Response.ok(p).build())
             .orElse(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(new ApiError(500, messages.get("error.user.privacy_update_failed")))
+                .build());
+    }
+
+    @PATCH
+    @Path("/me/locale")
+    @Operation(summary = "UI locale", description = "Web client language preference (ru, en, be, kk, zh, ko)")
+    public Response updateLocale(UpdateLocaleRequest request,
+                                   @Context SecurityContext securityContext) {
+        if (request == null || request.uiLocale() == null
+            || !UI_LOCALES_ALLOWED.contains(request.uiLocale())) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.user.locale_invalid")))
+                .build();
+        }
+        var userId = CurrentUserId.uuid(securityContext);
+        return userApplicationService
+            .updateUiLocale(UserId.of(userId), request.uiLocale())
+            .map(UserDomainMapper::toResponse)
+            .map(p -> Response.ok(p).build())
+            .orElse(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ApiError(500, messages.get("error.user.locale_update_failed")))
                 .build());
     }
 

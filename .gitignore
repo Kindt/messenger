@@ -28,6 +28,7 @@ deploy/qemu/tools/
 deploy/qemu/images/*.img
 deploy/qemu/images/*.img.partial
 deploy/qemu/images/*.qcow2
+deploy/qemu/backups/
 deploy/qemu/run/
 deploy/qemu/tools/__pycache__/
 

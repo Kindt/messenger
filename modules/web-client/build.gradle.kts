@@ -24,13 +24,28 @@ tasks.register<Exec>("buildTailwindCss") {
     workingDir = layout.projectDirectory.dir("webui-build").asFile
     val npm = if (System.getProperty("os.name").lowercase().contains("windows")) "npm.cmd" else "npm"
     commandLine(npm, "run", "build:css")
+    dependsOn("buildLocales")
     inputs.file(layout.projectDirectory.file("webui-build/src/input.css"))
     inputs.file(layout.projectDirectory.file("webui-build/package.json"))
     inputs.file(layout.projectDirectory.file("webui-build/package-lock.json"))
-    inputs.dir(layout.projectDirectory.dir("src/main/resources/webui"))
+    inputs.files(
+        layout.projectDirectory.file("src/main/resources/webui/app.js"),
+        layout.projectDirectory.file("src/main/resources/webui/index.html"),
+    )
     outputs.file(webuiTailwindOut)
 }
 
+tasks.register<Exec>("buildLocales") {
+    group = "webui"
+    description = "Copy locale JSON from webui-build/locales/messages to webui/locales"
+    workingDir = layout.projectDirectory.dir("webui-build").asFile
+    val npm = if (System.getProperty("os.name").lowercase().contains("windows")) "npm.cmd" else "npm"
+    commandLine(npm, "run", "build:locales")
+    inputs.dir(layout.projectDirectory.dir("webui-build/locales/messages"))
+    inputs.file(layout.projectDirectory.file("webui-build/scripts/build-locales.mjs"))
+    outputs.dir(layout.projectDirectory.dir("src/main/resources/webui/locales"))
+}
+
 tasks.named("processResources") {
-    dependsOn("buildTailwindCss")
+    dependsOn("buildTailwindCss", "buildLocales")
 }

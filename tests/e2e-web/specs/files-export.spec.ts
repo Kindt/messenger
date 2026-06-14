@@ -71,7 +71,7 @@ test.describe("files and export parity", () => {
       mimeType: "text/plain",
       buffer: Buffer.from(fileBody),
     });
-    await expect(page.getByRole("button", { name: /Скачать файл|Download file/i })).toBeVisible({
+    await expect(page.locator("[data-testid=message-file-download]")).toBeVisible({
       timeout: 30_000,
     });
   });

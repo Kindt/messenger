@@ -31,6 +31,7 @@ function New-KorusRepoSnapshot {
     $excludes = @(
         ".git",
         "deploy/qemu/images",
+        "deploy/qemu/backups",
         "deploy/qemu/run",
         "node_modules",
         ".gradle",

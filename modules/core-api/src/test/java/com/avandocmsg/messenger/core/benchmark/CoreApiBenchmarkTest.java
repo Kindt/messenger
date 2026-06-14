@@ -72,7 +72,8 @@ class CoreApiBenchmarkTest {
                     "online",
                     null,
                     null,
-                    false));
+                    false,
+                    null));
             }
 
             @Override
@@ -87,6 +88,11 @@ class CoreApiBenchmarkTest {
 
             @Override
             public boolean updatePrivacy(UserId id, boolean disableReadReceipts) {
+                return false;
+            }
+
+            @Override
+            public boolean updateUiLocale(UserId id, String uiLocale) {
                 return false;
             }
 

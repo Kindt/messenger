@@ -15,5 +15,7 @@ public interface UserRepositoryPort {
 
     boolean updatePrivacy(UserId id, boolean disableReadReceipts);
 
+    boolean updateUiLocale(UserId id, String uiLocale);
+
     boolean touchHeartbeat(UserId id);
 }

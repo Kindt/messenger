@@ -130,16 +130,17 @@ function Ensure-KorusStackUp {
 
 function Invoke-KorusRedeployStep {
     param([string]$Step)
-    $redeployArgs = @()
+    $redeployParams = @{}
     switch ($Step) {
-        "server" { $redeployArgs += "-ServerOnly" }
-        "web"    { $redeployArgs += "-WebOnly" }
+        "server" { $redeployParams.ServerOnly = $true }
+        "web"    { $redeployParams.WebOnly = $true }
     }
-    if ($Rebuild) { $redeployArgs += "-Rebuild" }
-    if ($Force) { $redeployArgs += "-Force" }
+    if ($Rebuild) { $redeployParams.Rebuild = $true }
+    if ($Force) { $redeployParams.Force = $true }
     $mode = if ($Rebuild) { "rebuild" } else { "sync" }
-    Write-MonLog "starting qemu-redeploy.ps1 $($redeployArgs -join ' ') mode=$mode" "Cyan"
-    & (Join-Path $Root "scripts\qemu-redeploy.ps1") @redeployArgs
+    $flagList = @($redeployParams.Keys | ForEach-Object { "-$_" }) -join ' '
+    Write-MonLog "starting qemu-redeploy.ps1 $flagList mode=$mode" "Cyan"
+    & (Join-Path $Root "scripts\qemu-redeploy.ps1") @redeployParams
 }
 
 function Test-TargetReady {

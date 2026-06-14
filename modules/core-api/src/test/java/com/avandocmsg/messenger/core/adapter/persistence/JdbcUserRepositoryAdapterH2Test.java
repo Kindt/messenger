@@ -41,7 +41,8 @@ class JdbcUserRepositoryAdapterH2Test {
                   presence_status VARCHAR(16) NOT NULL DEFAULT 'offline',
                   last_seen_at TIMESTAMP,
                   org_id UUID,
-                  privacy_disable_read_receipts BOOLEAN NOT NULL DEFAULT false
+                  privacy_disable_read_receipts BOOLEAN NOT NULL DEFAULT false,
+                  ui_locale VARCHAR(8)
                 )
                 """);
         }
@@ -100,6 +101,12 @@ class JdbcUserRepositoryAdapterH2Test {
     void updatePrivacy_togglesReadReceipts() {
         assertTrue(adapter.updatePrivacy(UserId.of(userId), false));
         assertFalse(adapter.findById(UserId.of(userId)).orElseThrow().privacyDisableReadReceipts());
+    }
+
+    @Test
+    void updateUiLocale_persistsCode() {
+        assertTrue(adapter.updateUiLocale(UserId.of(userId), "en"));
+        assertEquals("en", adapter.findById(UserId.of(userId)).orElseThrow().uiLocale());
     }
 
     @Test

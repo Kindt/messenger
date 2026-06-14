@@ -335,7 +335,8 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 # Headless (preferred facade)
 .\scripts\qemu-dev-mode.ps1 -Mode warm
 .\scripts\qemu-dev-mode.ps1 -Mode status
-.\scripts\qemu-dev-mode.ps1 -Mode sync-api    # default sync, not full build
+.\scripts\qemu-dev-mode.ps1 -Mode sync-api-core # Java/API ~3 min
+.\scripts\qemu-dev-mode.ps1 -Mode sync-api    # Ansible server (no image build)
 .\scripts\qemu-dev-mode.ps1 -Mode sync-ui     # after enable-hotswap
 
 # Inner loop

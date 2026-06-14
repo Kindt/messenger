@@ -4,6 +4,8 @@
   "description": "Tailwind CSS build for modules/web-client webui static assets",
   "scripts": {
     "build:css": "tailwindcss -i ./src/input.css -o ../src/main/resources/webui/tailwind.css --minify",
+    "build:locales": "node scripts/build-locales.mjs",
+    "build:assets": "npm run build:css && npm run build:locales",
     "watch:css": "tailwindcss -i ./src/input.css -o ../src/main/resources/webui/tailwind.css --watch"
   },
   "devDependencies": {

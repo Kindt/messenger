@@ -21,7 +21,7 @@
     "ui-auth": {
       "description": "Auth session UI",
       "args": ["specs/auth-session.spec.ts", "specs/contacts-search.spec.ts"],
-      "grep": "login via UI|logout returns|contacts list loads"
+      "grep": "login via UI|logout returns|locale switch|contacts list loads"
     },
     "ui-messaging": {
       "description": "Messaging critical, group, actions",

@@ -1,7 +1,7 @@
 /* Korus web-client: cache static assets; do NOT show login shell when server is down. */
 "use strict";
 
-var CACHE_NAME = "korus-web-static-v5";
+var CACHE_NAME = "korus-web-static-v6";
 
 var PRECACHE = [
   "/tailwind.css",
@@ -9,6 +9,8 @@ var PRECACHE = [
   "/themes.css",
   "/manifest.json",
   "/icon.svg",
+  "/locales/manifest.json",
+  "/locales/ru.json",
 ];
 
 var OFFLINE_HTML =

@@ -3,7 +3,19 @@
 
   var LOCALE_KEY = "korus_web_locale";
   var DEFAULT_LOCALE = "ru";
+  var HTML_LANG = {
+    ru: "ru",
+    en: "en",
+    be: "be",
+    kk: "kk",
+    zh: "zh-Hans",
+    ko: "ko",
+  };
+
   var current = DEFAULT_LOCALE;
+  var localeCodes = [DEFAULT_LOCALE];
+  var loaded = {};
+  var loading = {};
 
   var ERROR_EXACT = {
     "Request failed": "errors.requestFailed",
@@ -19,14 +31,44 @@
     "Session expired — please sign in again.": "errors.sessionExpired",
   };
 
-  function bundles() {
-    return global.KorusLocales || {};
+  function fetchJson(url) {
+    return fetch(url, { credentials: "same-origin" }).then(function (res) {
+      if (!res.ok) throw new Error("Locale fetch failed: " + url);
+      return res.json();
+    });
+  }
+
+  function loadManifest() {
+    return fetchJson("/locales/manifest.json").then(function (manifest) {
+      if (manifest && manifest.codes && manifest.codes.length) {
+        localeCodes = manifest.codes.slice();
+      }
+      if (manifest && manifest.default) {
+        DEFAULT_LOCALE = manifest.default;
+      }
+      return manifest;
+    });
+  }
+
+  function loadLocale(code) {
+    if (loaded[code]) return Promise.resolve(loaded[code]);
+    if (loading[code]) return loading[code];
+    loading[code] = fetchJson("/locales/" + encodeURIComponent(code) + ".json")
+      .then(function (bundle) {
+        loaded[code] = bundle;
+        delete loading[code];
+        return bundle;
+      })
+      .catch(function (err) {
+        delete loading[code];
+        throw err;
+      });
+    return loading[code];
   }
 
   function resolveBundle(code) {
-    var all = bundles();
-    if (all[code]) return all[code];
-    if (all[DEFAULT_LOCALE]) return all[DEFAULT_LOCALE];
+    if (loaded[code]) return loaded[code];
+    if (loaded[DEFAULT_LOCALE]) return loaded[DEFAULT_LOCALE];
     return {};
   }
 
@@ -48,15 +90,36 @@
     });
   }
 
+  function pickRegionalFromNavigator() {
+    var nav = global.navigator;
+    if (!nav) return null;
+    var list =
+      nav.languages && nav.languages.length ? nav.languages.slice() : [nav.language];
+    for (var i = 0; i < list.length; i++) {
+      var tag = String(list[i] || "").toLowerCase();
+      if (!tag) continue;
+      if (tag.indexOf("be") === 0 && localeCodes.indexOf("be") >= 0) return "be";
+      if (tag.indexOf("kk") === 0 && localeCodes.indexOf("kk") >= 0) return "kk";
+      if (tag.indexOf("ko") === 0 && localeCodes.indexOf("ko") >= 0) return "ko";
+      if (tag.indexOf("zh") === 0 && localeCodes.indexOf("zh") >= 0) return "zh";
+    }
+    return null;
+  }
+
   function detectLocale() {
     try {
       var stored = localStorage.getItem(LOCALE_KEY);
-      if (stored && resolveBundle(stored)) return stored;
+      if (stored && localeCodes.indexOf(stored) >= 0) return stored;
     } catch (e) {}
-    var nav = (global.navigator && global.navigator.language) || DEFAULT_LOCALE;
-    nav = String(nav).toLowerCase();
-    if (nav.indexOf("en") === 0 && resolveBundle("en")) return "en";
+    var regional = pickRegionalFromNavigator();
+    if (regional) return regional;
     return DEFAULT_LOCALE;
+  }
+
+  function applyHtmlLang(code) {
+    if (global.document && global.document.documentElement) {
+      global.document.documentElement.setAttribute("lang", HTML_LANG[code] || DEFAULT_LOCALE);
+    }
   }
 
   function t(key, params) {
@@ -135,24 +198,36 @@
   }
 
   function setLocale(code) {
-    var next = code && resolveBundle(code) ? code : DEFAULT_LOCALE;
-    current = next;
-    try {
-      localStorage.setItem(LOCALE_KEY, next);
-    } catch (e) {}
-    if (global.document && global.document.documentElement) {
-      global.document.documentElement.setAttribute("lang", next === "en" ? "en" : "ru");
-    }
+    var next = code && localeCodes.indexOf(code) >= 0 ? code : DEFAULT_LOCALE;
+    return loadLocale(DEFAULT_LOCALE)
+      .then(function () {
+        if (next !== DEFAULT_LOCALE) return loadLocale(next);
+      })
+      .then(function () {
+        current = next;
+        try {
+          localStorage.setItem(LOCALE_KEY, next);
+        } catch (e) {}
+        applyHtmlLang(next);
+      });
   }
 
   function init() {
-    setLocale(detectLocale());
+    return loadManifest()
+      .catch(function () {
+        return null;
+      })
+      .then(function () {
+        current = detectLocale();
+        applyHtmlLang(current);
+        return loadLocale(DEFAULT_LOCALE).then(function () {
+          if (current !== DEFAULT_LOCALE) return loadLocale(current);
+        });
+      });
   }
 
   function supportedLocales() {
-    return Object.keys(bundles()).filter(function (code) {
-      return !!resolveBundle(code);
-    });
+    return localeCodes.slice();
   }
 
   global.KorusI18n = {

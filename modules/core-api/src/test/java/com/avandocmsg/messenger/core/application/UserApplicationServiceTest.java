@@ -39,6 +39,7 @@ class UserApplicationServiceTest {
         assertNull(result.phone());
         assertNull(result.orgId());
         assertFalse(result.privacyDisableReadReceipts());
+        assertNull(result.uiLocale());
         assertEquals("alice", result.username());
     }
 
@@ -91,6 +92,15 @@ class UserApplicationServiceTest {
     }
 
     @Test
+    void updateUiLocale_returnsUpdatedProfile() {
+        userPort.profile = sampleProfile(targetId, false);
+        userPort.updateUiLocaleOk = true;
+
+        var result = service.updateUiLocale(UserId.of(targetId), "en").orElseThrow();
+        assertEquals("en", result.uiLocale());
+    }
+
+    @Test
     void touchHeartbeat_delegatesToPort() {
         service.touchHeartbeat(UserId.of(targetId));
         assertTrue(userPort.heartbeatTouched);
@@ -107,7 +117,8 @@ class UserApplicationServiceTest {
             "online",
             Instant.parse("2026-01-02T00:00:00Z"),
             "org-1",
-            true);
+            true,
+            "ru");
     }
 
     static final class StubSavedChatPort implements SavedChatPort {
@@ -122,6 +133,7 @@ class UserApplicationServiceTest {
         boolean updateProfileOk;
         boolean updatePresenceOk;
         boolean updatePrivacyOk;
+        boolean updateUiLocaleOk;
         boolean heartbeatTouched;
 
         @Override
@@ -144,7 +156,8 @@ class UserApplicationServiceTest {
                 profile.presenceStatus(),
                 profile.lastSeenAt(),
                 profile.orgId(),
-                profile.privacyDisableReadReceipts());
+                profile.privacyDisableReadReceipts(),
+                profile.uiLocale());
             return true;
         }
 
@@ -163,7 +176,8 @@ class UserApplicationServiceTest {
                 presenceStatus,
                 profile.lastSeenAt(),
                 profile.orgId(),
-                profile.privacyDisableReadReceipts());
+                profile.privacyDisableReadReceipts(),
+                profile.uiLocale());
             return true;
         }
 
@@ -182,7 +196,28 @@ class UserApplicationServiceTest {
                 profile.presenceStatus(),
                 profile.lastSeenAt(),
                 profile.orgId(),
-                disableReadReceipts);
+                disableReadReceipts,
+                profile.uiLocale());
+            return true;
+        }
+
+        @Override
+        public boolean updateUiLocale(UserId id, String uiLocale) {
+            if (!updateUiLocaleOk || profile == null) {
+                return false;
+            }
+            profile = new UserProfile(
+                profile.id(),
+                profile.username(),
+                profile.displayName(),
+                profile.phone(),
+                profile.hidden(),
+                profile.createdAt(),
+                profile.presenceStatus(),
+                profile.lastSeenAt(),
+                profile.orgId(),
+                profile.privacyDisableReadReceipts(),
+                uiLocale);
             return true;
         }
 

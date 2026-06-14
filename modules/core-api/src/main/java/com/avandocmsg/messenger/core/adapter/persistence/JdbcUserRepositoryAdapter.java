@@ -14,7 +14,7 @@ import java.util.UUID;
 public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
     private static final String SELECT_USER = """
         SELECT id, username, display_name, phone, hidden, created_at,
-               presence_status, last_seen_at, org_id, privacy_disable_read_receipts
+               presence_status, last_seen_at, org_id, privacy_disable_read_receipts, ui_locale
         FROM users
         WHERE id = ?
         """;
@@ -101,6 +101,24 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
     }
 
     @Override
+    public boolean updateUiLocale(UserId id, String uiLocale) {
+        if (dataSource == null) {
+            return false;
+        }
+        var sql = """
+            UPDATE users SET ui_locale = ?, updated_at = now() WHERE id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, uiLocale);
+            stmt.setObject(2, id.value());
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
     public boolean touchHeartbeat(UserId id) {
         if (dataSource == null) {
             return false;
@@ -129,6 +147,7 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
             rs.getString("presence_status"),
             lastSeen,
             org != null ? org.toString() : null,
-            rs.getBoolean("privacy_disable_read_receipts"));
+            rs.getBoolean("privacy_disable_read_receipts"),
+            rs.getString("ui_locale"));
     }
 }

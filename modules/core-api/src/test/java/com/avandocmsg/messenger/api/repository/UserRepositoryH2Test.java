@@ -35,7 +35,8 @@ class UserRepositoryH2Test {
                   presence_status VARCHAR(16) NOT NULL DEFAULT 'offline',
                   last_seen_at TIMESTAMP,
                   org_id UUID,
-                  privacy_disable_read_receipts BOOLEAN NOT NULL DEFAULT false
+                  privacy_disable_read_receipts BOOLEAN NOT NULL DEFAULT false,
+                  ui_locale VARCHAR(8)
                 )
                 """);
         }

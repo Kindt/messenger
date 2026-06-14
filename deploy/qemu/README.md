@@ -76,7 +76,8 @@ Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_
 
 # 2) Обновить код в гостях без сброса дисков (sync = без docker build)
 .\scripts\qemu-dev-mode.ps1 -Mode status
-.\scripts\qemu-dev-mode.ps1 -Mode sync-api      # backend ~3–8 мин
+.\scripts\qemu-dev-mode.ps1 -Mode sync-api-core # Java/API only ~3 min
+.\scripts\qemu-dev-mode.ps1 -Mode sync-api      # Ansible server (no image build)
 .\scripts\qemu-dev-mode.ps1 -Mode sync-web      # web Tomcat ~3–8 мин
 .\scripts\qemu-redeploy.ps1 -ServerOnly -Rebuild   # только Dockerfile/Gradle (20–90 мин)
 
@@ -102,6 +103,7 @@ Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_
 | Статус / фаза guest | `qemu-dev-mode.ps1 -Mode status` | сек |
 | Warm boot | `qemu-dev-mode.ps1 -Mode warm` | 2–8 мин |
 | API / backend (sync) | `qemu-dev-mode.ps1 -Mode sync-api` | ~3–8 мин |
+| API core-api only (Java/Flyway) | `qemu-dev-mode.ps1 -Mode sync-api-core` | ~3–5 мин |
 | API full rebuild | `qemu-dev-mode.ps1 -Mode rebuild-api` | 20–90 мин |
 | Web sync | `qemu-dev-mode.ps1 -Mode sync-web` | ~3–8 мин |
 | UI JS/CSS/Tailwind | `qemu-dev-mode.ps1 -Mode sync-ui` | ~5–15 с |

@@ -23,4 +23,29 @@ test.describe("auth session", () => {
     await logoutBtn.click();
     await expect(page.locator("#u")).toBeVisible({ timeout: 15_000 });
   });
+
+  test("locale switch in settings keeps auth form usable", async ({ page, request }) => {
+    await ensureSmokeUsers(request);
+    await uiLogin(page, "csadmin", "csadmin");
+    await page.locator("[data-testid=settings-toggle]").click();
+    await expect(page.locator(".settings-overlay")).toBeVisible();
+    const clickLocale = async (code: string) => {
+      await page.locator(`[data-testid=locale-${code}]`).evaluate((el) => {
+        (el as HTMLButtonElement).click();
+      });
+    };
+    await clickLocale("ru");
+    await expect(page.locator("html")).toHaveAttribute("lang", "ru", { timeout: 10_000 });
+    await clickLocale("en");
+    await expect(page.locator("html")).toHaveAttribute("lang", "en", { timeout: 10_000 });
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".settings-overlay")).toHaveCount(0, { timeout: 5_000 });
+    await page.locator("[data-testid=logout]").click();
+    await expect(page.locator("#u")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("[data-testid=auth-submit]")).toBeVisible();
+    await page.locator("#u").fill("csadmin");
+    await page.locator("#p").fill("csadmin");
+    await page.locator("[data-testid=auth-submit]").click();
+    await expect(page.locator("[data-testid=logout]")).toBeVisible({ timeout: 30_000 });
+  });
 });

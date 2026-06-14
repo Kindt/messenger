@@ -1,7 +1,20 @@
+# Tailwind CSS requires Node/npm; gradle:jdk25-noble has no npm (buildTailwindCss fails without this stage).
+FROM node:20-bookworm-slim AS tailwind
+WORKDIR /app
+COPY modules/web-client/webui-build/package.json modules/web-client/webui-build/package-lock.json modules/web-client/webui-build/
+WORKDIR /app/modules/web-client/webui-build
+RUN npm ci
+WORKDIR /app
+COPY modules/web-client/webui-build/src modules/web-client/webui-build/src
+COPY modules/web-client/src/main/resources/webui modules/web-client/src/main/resources/webui
+WORKDIR /app/modules/web-client/webui-build
+RUN npm run build:css
+
 FROM gradle:jdk25-noble AS builder
 WORKDIR /app
 COPY . .
-RUN gradle --console=plain :modules:web-client:distTar --no-daemon -x test
+COPY --from=tailwind /app/modules/web-client/src/main/resources/webui/tailwind.css modules/web-client/src/main/resources/webui/tailwind.css
+RUN gradle --console=plain :modules:web-client:distTar --no-daemon -x test -x buildTailwindCss
 
 FROM eclipse-temurin:25-jre
 WORKDIR /app

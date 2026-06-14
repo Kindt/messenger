@@ -8,6 +8,18 @@
 
 ## [Unreleased]
 
+### 2026-06-14 — Spec 005: web UI startup fix and i18n
+
+- **`docker/Dockerfile.web-client`**: multi-stage Node 20 Tailwind build; Gradle skips `buildTailwindCss` in image (fixes guest bootstrap `npm` failure / UI :19088 down).
+- **Spec `005-webui-i18n-ux`**: spec, plan, tasks, i18n contract; design `docs/plans/2026-06-14-webui-i18n-ux-design.md`.
+- **`.cursor/skills/korus-webui`**: project skill for webui/Tailwind/i18n/QEMU acceptance; superpowers junctions refreshed.
+- **i18n batches A–E**: modals, settings, thread/composer, time/TTL in `ui-format-utils.js`; default locale `ru`.
+- **Phase 5 T050–T052**: i18n JSON architecture — source `webui-build/locales/messages/*.json`, lazy `fetch` in `ui-i18n.js`, removed six duplicate `locales/*.js`; design `docs/plans/2026-06-14-webui-i18n-json-architecture.md`.
+- **Phase 4 complete**: kk/zh/ko full translations; `navigator.languages` regional detect; `translate="no"` on brand; Playwright locale-switch test in `ui-auth`.
+- **Server UI locale**: `users.ui_locale`, `PATCH /api/v1/users/me/locale`; client sync on settings change; profile applies server preference only when set.
+- **QEMU API fast path**: `qemu-dev-mode -Mode sync-api-core` (repo + `docker compose build core-api`, ~3 min); UI hotswap + `sync-ui`.
+- **Acceptance**: `playwright-dev-loop.ps1 -Tier all-inner` green on QEMU (26 specs across inner tiers).
+
 ### 2026-06-12 — QEMU dev modes: sync default, facade, bootstrap phase
 
 - **`qemu-redeploy.ps1`**: default `KORUS_BUILD=0` (sync); `-Rebuild` for full docker build; `-Force` skips ready preflight; guest bootstrap phase in wait-loop.

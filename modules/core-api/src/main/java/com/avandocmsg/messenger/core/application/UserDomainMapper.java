@@ -17,6 +17,7 @@ public final class UserDomainMapper {
             profile.presenceStatus(),
             profile.lastSeenAt(),
             profile.orgId(),
-            profile.privacyDisableReadReceipts());
+            profile.privacyDisableReadReceipts(),
+            profile.uiLocale());
     }
 }

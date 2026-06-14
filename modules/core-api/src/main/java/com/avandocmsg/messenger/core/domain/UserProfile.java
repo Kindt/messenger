@@ -13,5 +13,6 @@ public record UserProfile(
     String presenceStatus,
     Instant lastSeenAt,
     String orgId,
-    boolean privacyDisableReadReceipts
+    boolean privacyDisableReadReceipts,
+    String uiLocale
 ) {}
