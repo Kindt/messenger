@@ -493,12 +493,10 @@
         var configured = String(cfg.wsUrl).replace(/\/$/, "");
         try {
           var cfgUrl = new URL(configured);
-          var page = loc && loc.hostname ? loc.hostname : "";
-          if (
-            page &&
-            cfgUrl.hostname !== page &&
-            (page === "127.0.0.1" || page === "localhost")
-          ) {
+          var pageHost = loc && loc.host ? loc.host : "";
+          var pageHostname = loc && loc.hostname ? loc.hostname : "";
+          var pageIsLoopback = pageHostname === "127.0.0.1" || pageHostname === "localhost";
+          if (pageIsLoopback && pageHost && cfgUrl.host !== pageHost) {
             return sameOrigin;
           }
         } catch (e) {
@@ -2776,7 +2774,9 @@
       if (state.selectedId) {
         loadThread(state.selectedId, THREAD_SOFT_RELOAD).catch(function () {});
       }
-      openWs();
+      if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+        openWs();
+      }
       if (notificationsAllowed() && vapidPublicKey() && !state.webPushRegistered) {
         registerWebPush()
           .then(function () {
@@ -2915,7 +2915,7 @@
           expires_in: t.expires_in,
         });
         if (state.ws && state.ws.readyState === WebSocket.OPEN) {
-          openWs();
+          openWs({ force: true });
         }
         return true;
       } catch (e) {
@@ -5314,7 +5314,16 @@
     state.wsState = "off";
   }
 
-  function openWs() {
+  function openWs(opts) {
+    opts = opts || {};
+    if (
+      !opts.force &&
+      state.ws &&
+      (state.ws.readyState === WebSocket.OPEN ||
+        state.ws.readyState === WebSocket.CONNECTING)
+    ) {
+      return;
+    }
     clearWsReconnect();
     if (state.ws) {
       state.wsReplacing = true;
@@ -5328,6 +5337,7 @@
     state.wsManualClose = false;
     var url = uiTransportUtils.buildWsUrl(wsBaseUrl(), state.tokens.access_token);
     state.wsState = "connecting";
+    render();
     var ws = new WebSocket(url);
     state.ws = ws;
     ws.onopen = function () {

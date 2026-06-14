@@ -242,10 +242,12 @@ if ($remediateSummary) {
 }
 
 . (Join-Path $Root "deploy\qemu\lib\Get-KorusQemuMinuteReport.ps1")
+. (Join-Path $Root "deploy\qemu\lib\Get-KorusQemuStackProfile.ps1")
+$stackProfile = Get-KorusQemuStackProfile
 $report = Get-KorusQemuMinuteReport -Tick $tick -QemuLines $qemuLineTexts -Health $h `
     -Ssh21 $ssh21 -Ssh22 $ssh22 -Activity $activity -BootstrapStates $bootstrapStates `
     -ServerBootstrapText $serverBootstrapText -RemediateSummary $remediateSummary `
-    -LoadingState $loadingState
+    -LoadingState $loadingState -StackProfile $stackProfile
 $report = Convert-KorusQemuReportToRussian -Report $report
 
 $snapshotPath = Join-Path $RunDir "status-minute.snapshot.json"

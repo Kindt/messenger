@@ -105,3 +105,5 @@ if ($disp -ne "none") {
 }
 Write-Host "  Monitor: .\scripts\qemu-watch.ps1 -NewWindow"
 Write-Host "  Stop: .\scripts\qemu-down.ps1"
+& (Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) "scripts\qemu-status-minute.ps1") -Once -NoRemediate -ErrorAction SilentlyContinue | Out-Null
+& (Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) "scripts\start-qemu-status-loop.ps1") -Force -ErrorAction SilentlyContinue | Out-Null

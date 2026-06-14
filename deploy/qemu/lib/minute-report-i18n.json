@@ -1,5 +1,6 @@
 {
   "stack_ready": "Стек готов: API, UI и database_ok.",
+  "stack_ready_profile": "Стек готов (профиль {0}): API, UI, database_ok.",
   "vms_down": "Korus QEMU не запущены.",
   "core_down_web_up": "API (18080) недоступен, UI (19088) отвечает — проблема server VM.",
   "core_down_loading": "API недоступен, на server идёт загрузка/сборка — ждём.",

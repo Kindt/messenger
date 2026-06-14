@@ -5,17 +5,16 @@ import com.avandocmsg.messenger.ws.auth.WsTokenValidator;
 import io.nats.client.Connection;
 import io.nats.client.Nats;
 import io.nats.client.Options;
-import jakarta.websocket.server.ServerContainer;
-import jakarta.websocket.server.ServerEndpointConfig;
-import org.apache.catalina.Context;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.tomcat.websocket.server.WsContextListener;
+import org.apache.tomcat.websocket.server.WsSci;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class WsGatewayApplication {
     private static final Logger log = LoggerFactory.getLogger(WsGatewayApplication.class);
@@ -56,19 +55,15 @@ public class WsGatewayApplication {
         var connector = tomcat.getConnector();
         connector.setProperty("bindOnInit", "false");
 
-        var ctx = tomcat.addContext("", null);
+        // addContext(null) does not enable WebSocket; WsSci registers @ServerEndpoint classes.
+        var ctx = tomcat.addContext("", System.getProperty("java.io.tmpdir"));
         ctx.setParentClassLoader(WsGatewayApplication.class.getClassLoader());
         ctx.addApplicationListener(WsContextListener.class.getName());
+        ctx.addServletContainerInitializer(new WsSci(), Set.of(MessagingWebSocket.class));
 
         tomcat.start();
 
-        var wsContainer = (ServerContainer) ctx.getServletContext()
-            .getAttribute(ServerContainer.class.getName());
-        wsContainer.addEndpoint(ServerEndpointConfig.Builder
-            .create(MessagingWebSocket.class, "/ws")
-            .build());
-
-        log.info("ws-gateway started on port {}", port);
+        log.info("ws-gateway started on port {} (/ws via WsSci)", port);
         tomcat.getServer().await();
     }
 }

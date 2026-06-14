@@ -14,12 +14,10 @@
       var configured = String(cfg.wsUrl).replace(/\/$/, "");
       try {
         var cfgUrl = new URL(configured);
-        var page = loc && loc.hostname ? loc.hostname : "";
-        if (
-          page &&
-          cfgUrl.hostname !== page &&
-          (page === "127.0.0.1" || page === "localhost")
-        ) {
+        var pageHost = loc && loc.host ? loc.host : "";
+        var pageHostname = loc && loc.hostname ? loc.hostname : "";
+        var pageIsLoopback = pageHostname === "127.0.0.1" || pageHostname === "localhost";
+        if (pageIsLoopback && pageHost && cfgUrl.host !== pageHost) {
           return sameOrigin;
         }
       } catch (e) {

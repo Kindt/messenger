@@ -10,7 +10,8 @@ function Get-KorusQemuMinuteReport {
         [string[]]$BootstrapStates = @(),
         [string]$ServerBootstrapText = "",
         [string]$RemediateSummary = "",
-        [hashtable]$LoadingState = @{ Loading = $false; Kind = 'none'; Detail = '' }
+        [hashtable]$LoadingState = @{ Loading = $false; Kind = 'none'; Detail = '' },
+        [string]$StackProfile = "dev"
     )
 
     $isLoading = [bool]$LoadingState.Loading
@@ -31,15 +32,16 @@ function Get-KorusQemuMinuteReport {
 
     if ($stackReady) {
         return @{
-            tick       = $Tick
-            at         = (Get-Date).ToString('o')
-            stackReady = $true
-            health     = $Health
-            activity   = $Activity
-            summaryRu  = 'OK: stack ready (API, UI, database_ok).'
-            issues     = @()
-            remediate  = $RemediateSummary
-            agentHint  = 'Stack ready. Stop chat-watch if monitoring only.'
+            tick         = $Tick
+            at           = (Get-Date).ToString('o')
+            stackProfile = $StackProfile
+            stackReady   = $true
+            health       = $Health
+            activity     = $Activity
+            summaryRu    = "OK: stack ready (profile=$StackProfile, API, UI, database_ok)."
+            issues       = @()
+            remediate    = $RemediateSummary
+            agentHint    = 'Stack ready. Stop chat-watch if monitoring only.'
         }
     }
 
@@ -98,7 +100,7 @@ function Get-KorusQemuMinuteReport {
     ) -join ', '
     $sshBits = ':12221=' + $(if ($Ssh21) { 'up' } else { 'down' }) + ', :12222=' + $(if ($Ssh22) { 'up' } else { 'down' })
 
-    $summary = 'tick=' + $Tick + ' | ' + $healthBits + ' | SSH ' + $sshBits + ' | ' + $Activity
+    $summary = 'profile=' + $StackProfile + ' | tick=' + $Tick + ' | ' + $healthBits + ' | SSH ' + $sshBits + ' | ' + $Activity
     if ($RemediateSummary) { $summary += ' | remediate: ' + $RemediateSummary }
     $issuesArray = @($issueList.ToArray())
     if ($issuesArray.Count -gt 0) {
@@ -110,9 +112,10 @@ function Get-KorusQemuMinuteReport {
     $agentHint = 'QEMU minute report. Post summaryRu and issues in Russian for the user. High severity without remediate: analyze logs, fix repo, qemu-redeploy -ServerOnly. No qemu-down. Do not kill non-Korus qemu.'
 
     return @{
-        tick       = $Tick
-        at         = (Get-Date).ToString('o')
-        stackReady = $false
+        tick         = $Tick
+        at           = (Get-Date).ToString('o')
+        stackProfile = $StackProfile
+        stackReady   = $false
         health     = $Health
         ssh        = @{ server = $Ssh21; web = $Ssh22 }
         activity   = $Activity
@@ -135,9 +138,10 @@ function Convert-KorusQemuReportToRussian {
     }
 
     $out = @{
-        tick       = $Report.tick
-        at         = $Report.at
-        stackReady = $Report.stackReady
+        tick         = $Report.tick
+        at           = $Report.at
+        stackProfile = $Report.stackProfile
+        stackReady   = $Report.stackReady
         health     = $Report.health
         ssh        = $Report.ssh
         activity   = $Report.activity
@@ -147,7 +151,11 @@ function Convert-KorusQemuReportToRussian {
         agentHint  = $Report.agentHint
     }
     if ($Report.stackReady) {
-        $out.summaryRu = if ($ru.stack_ready) { $ru.stack_ready } else { 'Stack ready.' }
+        if ($Report.stackProfile -and $ru.stack_ready_profile) {
+            $out.summaryRu = $ru.stack_ready_profile -f $Report.stackProfile
+        } else {
+            $out.summaryRu = if ($ru.stack_ready) { $ru.stack_ready } else { 'Stack ready.' }
+        }
         return $out
     }
 
