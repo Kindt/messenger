@@ -2,7 +2,10 @@ package com.avandocmsg.messenger.api.auth;
 
 import com.avandocmsg.messenger.api.auth.dto.RegisterRequest;
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.core.port.UuidGenerator;
+import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.SavedChatPort;
+import com.avandocmsg.messenger.core.port.UserRepositoryPort;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -14,7 +17,8 @@ class AuthServiceTest {
 
     private final StubUserRepository userRepo = new StubUserRepository();
     private final StubAppConfig appConfig = new StubAppConfig();
-    private final StubChatRepository chatRepo = new StubChatRepository();
+    private final StubUserRepositoryPort userPort = new StubUserRepositoryPort();
+    private final StubSavedChatPort savedChatPort = new StubSavedChatPort();
     private final UUID keycloakUserId = UUID.fromString("11111111-1111-4111-8111-111111111111");
 
     @Test
@@ -76,13 +80,13 @@ class AuthServiceTest {
         }
 
         TestingAuthService(UUID provisionedId, boolean usernameExists) {
-            super(new StubAppConfig(), new StubUserRepository(), new StubChatRepository(), UuidGenerator.standard());
+            super(new StubAppConfig(), new StubUserRepository(), new StubUserRepositoryPort(), new StubSavedChatPort());
             this.provisionedId = provisionedId;
             this.usernameExists = usernameExists;
         }
 
         TestingAuthService(UUID provisionedId, StubUserRepository userRepo) {
-            super(new StubAppConfig(), userRepo, new StubChatRepository(), UuidGenerator.standard());
+            super(new StubAppConfig(), userRepo, new StubUserRepositoryPort(), new StubSavedChatPort());
             this.provisionedId = provisionedId;
             this.usernameExists = false;
         }
@@ -123,14 +127,51 @@ class AuthServiceTest {
         }
     }
 
-    static class StubChatRepository extends com.avandocmsg.messenger.api.repository.ChatRepository {
-        StubChatRepository() {
-            super(null, Clock.systemUTC(), UuidGenerator.standard());
+    static class StubUserRepositoryPort implements UserRepositoryPort {
+        @Override
+        public Optional<com.avandocmsg.messenger.core.domain.UserProfile> findById(UserId id) {
+            return Optional.empty();
         }
 
         @Override
-        public java.util.UUID ensureSavedVaultChat(java.util.UUID userId) {
-            return java.util.UUID.randomUUID();
+        public boolean updateProfile(UserId id, String displayName, String phone) {
+            return false;
+        }
+
+        @Override
+        public boolean updatePresence(UserId id, String presenceStatus) {
+            return false;
+        }
+
+        @Override
+        public boolean updatePrivacy(UserId id, boolean disableReadReceipts) {
+            return false;
+        }
+
+        @Override
+        public boolean updateUiLocale(UserId id, String uiLocale) {
+            return false;
+        }
+
+        @Override
+        public boolean touchHeartbeat(UserId id) {
+            return false;
+        }
+
+        @Override
+        public void upsertFromKeycloak(UserId id, String username, String displayName) {
+        }
+    }
+
+    static class StubSavedChatPort implements SavedChatPort {
+        @Override
+        public Optional<ChatId> getSavedChatId(UserId userId) {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<ChatId> ensureSavedVaultChat(UserId userId) {
+            return Optional.of(ChatId.of(UUID.randomUUID()));
         }
     }
 

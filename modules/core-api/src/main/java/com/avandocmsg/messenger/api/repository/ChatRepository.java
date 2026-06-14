@@ -514,60 +514,6 @@ public class ChatRepository {
         return Optional.empty();
     }
 
-    /**
-     * ТЗ п. 30 «Хранилище»: id чата «Saved Messages» без создания.
-     */
-    public Optional<UUID> findSavedVaultChatId(UUID userId) {
-        var findSql = """
-            SELECT c.id FROM chats c
-            INNER JOIN chat_members cm ON cm.chat_id = c.id
-            WHERE c.type = 'saved' AND cm.user_id = ?
-            LIMIT 1
-            """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(findSql)) {
-            stmt.setObject(1, userId);
-            try (var rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.of(rs.getObject("id", UUID.class));
-                }
-            }
-        } catch (Exception e) {
-            log.error("findSavedVaultChatId failed", e);
-        }
-        return Optional.empty();
-    }
-
-    public UUID ensureSavedVaultChat(UUID userId) {
-        var existing = findSavedVaultChatId(userId);
-        if (existing.isPresent()) {
-            return existing.get();
-        }
-        try (var conn = dataSource.getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                var chatId = uuidGenerator.randomUuid();
-                try (var stmt = conn.prepareStatement(
-                    "INSERT INTO chats (id, title, type, owner_id, created_at, updated_at) VALUES (?, ?, 'saved', ?, now(), now())")) {
-                    stmt.setObject(1, chatId);
-                    stmt.setString(2, "Saved Messages");
-                    stmt.setObject(3, userId);
-                    stmt.executeUpdate();
-                }
-                addMemberInternal(conn, chatId, userId, "owner");
-                conn.commit();
-                log.info("Created saved vault chat {} for user {}", chatId, userId);
-                return chatId;
-            } catch (Exception e) {
-                conn.rollback();
-                throw e;
-            }
-        } catch (Exception e) {
-            log.error("ensureSavedVaultChat failed for {}", userId, e);
-            return null;
-        }
-    }
-
     private void addMemberInternal(java.sql.Connection conn, UUID chatId, UUID userId, String role) throws Exception {
         var sql = "INSERT INTO chat_members (chat_id, user_id, role, joined_at) VALUES (?, ?, ?, now())";
         try (var stmt = conn.prepareStatement(sql)) {

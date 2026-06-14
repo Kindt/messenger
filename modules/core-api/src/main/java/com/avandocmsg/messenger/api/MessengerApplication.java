@@ -292,7 +292,11 @@ public class MessengerApplication {
         var chatReadRepository = new ChatReadRepository(dataSource);
         var messageReadReceiptRepository = new MessageReadReceiptRepository(dataSource);
 
-        var authService = new AuthService(appConfig, userRepository, chatRepository, this.uuidGenerator);
+        var authService = new AuthService(
+            appConfig,
+            userRepository,
+            CoreModule.userRepositoryPort(dataSource),
+            CoreModule.savedChatPort(dataSource, this.uuidGenerator));
         var authRateLimiter = redisConfig != null
             ? AuthRateLimiter.redis(redisConfig.sync(), appConfig)
             : AuthRateLimiter.noop();
@@ -312,7 +316,7 @@ public class MessengerApplication {
         var mlsMigrationService = new MlsMigrationService(dataSource, mlsGroupManager, chatRepository);
         var chatApplicationService = CoreModule.chatApplicationService(dataSource, chatRepository);
         var messageApplicationService = CoreModule.messageApplicationService(dataSource, chatRepository);
-        var userApplicationService = CoreModule.userApplicationService(dataSource);
+        var userApplicationService = CoreModule.userApplicationService(dataSource, this.uuidGenerator);
         var objectStoragePort = CoreModule.objectStoragePort(appConfig, minioClient, fileProxy);
         var fileApplicationService = CoreModule.fileApplicationService(
             dataSource, messageRepository, objectStoragePort, this.uuidGenerator, appConfig);

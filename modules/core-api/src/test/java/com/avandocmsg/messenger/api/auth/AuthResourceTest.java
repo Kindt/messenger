@@ -3,7 +3,6 @@ package com.avandocmsg.messenger.api.auth;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.common.dto.ApiError;
-import com.avandocmsg.messenger.core.port.UuidGenerator;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 
@@ -55,7 +54,7 @@ class AuthResourceTest {
         String lastRevoked;
 
         StubAuthService() {
-            super(new AppConfig(), null, null, UuidGenerator.standard());
+            super(new AppConfig(), null, null, null);
         }
 
         @Override

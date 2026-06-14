@@ -29,12 +29,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
 final class AdminExportFacade {
+    private static final Logger log = LoggerFactory.getLogger(AdminExportFacade.class);
     private static final ObjectMapper ADMIN_AUDIT_JSON = new ObjectMapper();
 
     private final AppConfig appConfig;
@@ -310,8 +313,8 @@ final class AdminExportFacade {
                 "export_job",
                 jobId.toString(),
                 writeAdminAuditJson(details));
-        } catch (Exception ignored) {
-            // audit must not block operator reads
+        } catch (Exception e) {
+            log.warn("export admin inspect audit failed for job {}: {}", jobId, e.getMessage());
         }
     }
 
@@ -337,8 +340,8 @@ final class AdminExportFacade {
                 "export_jobs",
                 "global",
                 writeAdminAuditJson(details));
-        } catch (Exception ignored) {
-            // audit must not block operator reads
+        } catch (Exception e) {
+            log.warn("export global jobs list audit failed: {}", e.getMessage());
         }
     }
 

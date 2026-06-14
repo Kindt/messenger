@@ -5,9 +5,10 @@ import com.avandocmsg.messenger.api.auth.dto.LoginResponse;
 import com.avandocmsg.messenger.api.auth.dto.RegisterRequest;
 import com.avandocmsg.messenger.api.auth.dto.RegisterResponse;
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
-import com.avandocmsg.messenger.core.port.UuidGenerator;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.SavedChatPort;
+import com.avandocmsg.messenger.core.port.UserRepositoryPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jwt.SignedJWT;
 import org.slf4j.Logger;
@@ -28,16 +29,20 @@ public class AuthService {
 
     private final AppConfig appConfig;
     private final UserRepository userRepository;
-    private final ChatRepository chatRepository;
-    private final UuidGenerator uuidGenerator;
+    private final UserRepositoryPort userRepositoryPort;
+    private final SavedChatPort savedChatPort;
     private final HttpClient httpClient;
 
-    public AuthService(AppConfig appConfig, UserRepository userRepository, ChatRepository chatRepository,
-                       UuidGenerator uuidGenerator) {
+    public AuthService(
+        AppConfig appConfig,
+        UserRepository userRepository,
+        UserRepositoryPort userRepositoryPort,
+        SavedChatPort savedChatPort
+    ) {
         this.appConfig = appConfig;
         this.userRepository = userRepository;
-        this.chatRepository = chatRepository;
-        this.uuidGenerator = uuidGenerator;
+        this.userRepositoryPort = userRepositoryPort;
+        this.savedChatPort = savedChatPort;
         this.httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .build();
@@ -249,7 +254,7 @@ public class AuthService {
                 username = claims.getStringClaim("username");
             }
             var name = claims.getStringClaim("name");
-            userRepository.upsertFromKeycloak(sub, username, name);
+            userRepositoryPort.upsertFromKeycloak(UserId.of(sub), username, name);
             ensureSavedVault(sub);
         } catch (Exception e) {
             log.warn("Could not sync user from access token: {}", e.getMessage());
@@ -258,7 +263,7 @@ public class AuthService {
 
     private void ensureSavedVault(UUID userId) {
         try {
-            chatRepository.ensureSavedVaultChat(userId);
+            savedChatPort.ensureSavedVaultChat(UserId.of(userId));
         } catch (Exception e) {
             log.warn("Saved vault chat not ensured for {}: {}", userId, e.getMessage());
         }

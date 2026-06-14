@@ -5,6 +5,8 @@ import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.config.RedisProbe;
 import com.avandocmsg.messenger.api.export.ExportJobStaleCounts;
 import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.lang.management.ManagementFactory;
@@ -16,6 +18,8 @@ import java.time.temporal.ChronoUnit;
  * Сводная статистика для встроенной админ-панели «Статистика сервера».
  */
 public final class AdminServerStatsService implements AdminStatsPort {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminServerStatsService.class);
 
     private final DataSource dataSource;
     private final AppConfig appConfig;
@@ -138,8 +142,8 @@ public final class AdminServerStatsService implements AdminStatsPort {
             long processingStale = 0;
             try {
                 processingStale = ExportJobStaleCounts.countProcessingStale(dataSource, staleMinutes);
-            } catch (Exception ignored) {
-                // keep 0 when query fails
+            } catch (Exception e) {
+                log.warn("export processing stale count query failed (staleMinutes={}): {}", staleMinutes, e.getMessage());
             }
             return new AdminServerStatsResponse.ExportCompliance(
                 true,

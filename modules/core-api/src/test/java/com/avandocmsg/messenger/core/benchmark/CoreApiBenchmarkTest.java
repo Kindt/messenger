@@ -100,8 +100,22 @@ class CoreApiBenchmarkTest {
             public boolean touchHeartbeat(UserId id) {
                 return false;
             }
+
+            @Override
+            public void upsertFromKeycloak(UserId id, String username, String displayName) {
+            }
         };
-        SavedChatPort savedChatPort = userId -> Optional.empty();
+        SavedChatPort savedChatPort = new SavedChatPort() {
+            @Override
+            public Optional<ChatId> getSavedChatId(UserId userId) {
+                return Optional.empty();
+            }
+
+            @Override
+            public Optional<ChatId> ensureSavedVaultChat(UserId userId) {
+                return Optional.empty();
+            }
+        };
         var service = new UserApplicationService(port, savedChatPort);
 
         var start = System.nanoTime();

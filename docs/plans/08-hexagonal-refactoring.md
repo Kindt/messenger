@@ -98,7 +98,8 @@ The non-blocking benchmark step in `.github/workflows/ci.yml` (`./gradlew :modul
 - [x] Existing tests green (`buildIntegrity`).
 - [x] Benchmark task registered.
 - [x] Write-path migration completed (US2); US3 tail: saved-chat + public links on ports.
-- Отложено: auth registration / Keycloak upsert в legacy `UserRepository`; `ChatRepository.ensureSavedVaultChat` до выделения write-port.
+- [x] Auth Keycloak upsert + saved-vault provisioning via `UserRepositoryPort` / `SavedChatPort` (2026-06-14).
+- Отложено: `UserRepository.create` on register path; optional Gradle `core-domain` module.
 
 ---
 

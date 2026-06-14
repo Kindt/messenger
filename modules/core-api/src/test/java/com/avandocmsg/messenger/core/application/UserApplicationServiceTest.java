@@ -126,6 +126,11 @@ class UserApplicationServiceTest {
         public java.util.Optional<ChatId> getSavedChatId(UserId userId) {
             return java.util.Optional.empty();
         }
+
+        @Override
+        public java.util.Optional<ChatId> ensureSavedVaultChat(UserId userId) {
+            return java.util.Optional.empty();
+        }
     }
 
     static final class StubUserPort implements UserRepositoryPort {
@@ -225,6 +230,10 @@ class UserApplicationServiceTest {
         public boolean touchHeartbeat(UserId id) {
             heartbeatTouched = true;
             return true;
+        }
+
+        @Override
+        public void upsertFromKeycloak(UserId id, String username, String displayName) {
         }
     }
 }

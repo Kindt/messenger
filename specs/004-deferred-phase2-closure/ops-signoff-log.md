@@ -7,7 +7,7 @@
 
 | Check | Command | Result | Notes |
 |-------|---------|--------|-------|
-| Full build + tests | `.\gradlew.bat buildIntegrity --no-daemon --max-workers=1` | **PASS** (2026-06-09) | Windows: use `--max-workers=1` |
+| Full build + tests | `.\gradlew.bat buildIntegrity --no-daemon --max-workers=1` | **PASS** (2026-06-14) | hex tail + audit logging |
 | E2EE unit | `.\gradlew.bat :modules:core-api:test --tests "*Mls*"` | **PASS** (2026-06-09) | 17 tests |
 | TLS smoke (dev) | `.\scripts\smoke-tls-redirect.ps1 -SkipTls` | **PASS** | HTTP-only path |
 | Hex write unit | `.\gradlew.bat :modules:core-api:test --tests "*ApplicationServiceTest*"` | PASS | User/Org/File |
@@ -32,7 +32,20 @@
 | 4 | `smoke-tls-redirect.ps1` with real `-HttpUrl`/`-HttpsUrl` | Ops | ⏳ pending |
 | 5 | `ansible-playbook ... --tags tls_smoke` (prod inventory) | Ops | ⏳ pending |
 
-**Local dev**: `.\scripts\smoke-tls-redirect.ps1 -SkipTls` → exit 0 (HTTP-only path documented).
+**Local dev**: `.\scripts\smoke-tls-redirect.ps1 -SkipTls` → exit 0 (2026-06-14 re-verified).
+
+## Engineering backlog closure (2026-06-14)
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| Code review: `catch (Exception ignored)` in core-api | **closed** | warn-level logs in AdminExportFacade, HealthResource, AdminServerStatsService |
+| Hex tail: Keycloak upsert | **closed** | `UserRepositoryPort.upsertFromKeycloak` + AuthService |
+| Hex tail: saved-vault chat | **closed** | `SavedChatPort.ensureSavedVaultChat`; removed from ChatRepository |
+| Chunk writer duplication | **closed** (prior) | `ChunkedSnapshotWriter` in `modules/common` |
+| Redis per health probe | **closed** (prior) | `RedisProbe` shared client |
+| E2EE phase 3 OpenMLS / full WASM | **deferred** | product epic; see `docs/plans/06-e2ee-mls.md` § Phase 3 |
+| User register `UserRepository.create` → port | **deferred** | low risk; register path unchanged |
+| Gradle `core-domain` split | **deferred** | optional phase 3 hex |
 
 ## US7 — E2EE security review
 

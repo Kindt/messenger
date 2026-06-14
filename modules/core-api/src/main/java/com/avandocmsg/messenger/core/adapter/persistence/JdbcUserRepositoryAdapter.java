@@ -133,6 +133,33 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
         }
     }
 
+    @Override
+    public void upsertFromKeycloak(UserId id, String username, String displayName) {
+        if (dataSource == null) {
+            return;
+        }
+        var un = username != null && !username.isBlank() ? username : "user";
+        var dn = displayName != null && !displayName.isBlank() ? displayName : un;
+        var sql = """
+            INSERT INTO users (id, username, display_name, created_at, updated_at)
+            VALUES (?, ?, ?, now(), now())
+            ON CONFLICT (id) DO UPDATE SET
+              username = EXCLUDED.username,
+              display_name = EXCLUDED.display_name,
+              updated_at = now()
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, id.value());
+            stmt.setString(2, un);
+            stmt.setString(3, dn);
+            stmt.executeUpdate();
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(JdbcUserRepositoryAdapter.class)
+                .warn("upsertFromKeycloak failed for {}: {}", id, e.getMessage());
+        }
+    }
+
     private static UserProfile mapRow(java.sql.ResultSet rs) throws Exception {
         var lastSeenTs = rs.getTimestamp("last_seen_at");
         Instant lastSeen = lastSeenTs != null ? lastSeenTs.toInstant() : null;

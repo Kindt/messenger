@@ -18,4 +18,7 @@ public interface UserRepositoryPort {
     boolean updateUiLocale(UserId id, String uiLocale);
 
     boolean touchHeartbeat(UserId id);
+
+    /** After Keycloak login: upsert local user row from JWT claims. */
+    void upsertFromKeycloak(UserId id, String username, String displayName);
 }

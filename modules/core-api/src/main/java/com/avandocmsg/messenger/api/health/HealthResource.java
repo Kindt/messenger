@@ -16,6 +16,8 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 
@@ -23,6 +25,8 @@ import javax.sql.DataSource;
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Health", description = "Health check endpoints")
 public class HealthResource {
+
+    private static final Logger log = LoggerFactory.getLogger(HealthResource.class);
 
     private final AppConfig appConfig;
     private final DataSource dataSource;
@@ -63,7 +67,8 @@ public class HealthResource {
              var st = conn.prepareStatement("SELECT 1");
              var rs = st.executeQuery()) {
             dbOk = rs.next();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("readiness DB probe failed: {}", e.getMessage());
             dbOk = false;
         }
         boolean redisOk = redisProbe.ping();
