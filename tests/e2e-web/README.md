@@ -7,6 +7,24 @@ Browser tests for web-client critical paths and parity-matrix domains.
 - QEMU stack up: API `http://127.0.0.1:18080`, UI `http://127.0.0.1:19088`
 - Smoke users seeded in server guest (`keycloak-ensure-smoke-users.sh`)
 
+## Multi-user (group) browser tests
+
+Parallel clients use **`fixtures/group-users.ts`**: one isolated `BrowserContext` per smoke user (`smoke_user_a/b/c`).
+
+```typescript
+const sessions = await openGroupUserSessions(browser, ["smoke_user_a", "smoke_user_b"]);
+try {
+  await openGroupChatForAll(sessions, title);
+  await uiSendAndExpectDelivery(sessionPage(sessions, "smoke_user_a"), [sessionPage(sessions, "smoke_user_b")], text, title);
+} finally {
+  await closeGroupUserSessions(sessions);
+}
+```
+
+Specs: `messaging-group-users.spec.ts` (A→B delivery, 3-user fan-out, B→A reply). Delivery uses WS when online; otherwise REST thread reload (QEMU host).
+
+Optional: `PLAYWRIGHT_WS_URL=ws://127.0.0.1:19088/ws` overrides patched `web-client-env.js` WS URL.
+
 ## Inner loop (US9 — fast acceptance)
 
 Stack once, then iterate by tier (host browser against forwarded ports):
@@ -60,6 +78,7 @@ npx playwright test
 | `auth-session.spec.ts` | auth |
 | `messaging-critical.spec.ts` | chats, messages |
 | `messaging-group.spec.ts` | chats (3-user group) |
+| `messaging-group-users.spec.ts` | chats (multi-browser A/B/C delivery) |
 | `messaging-actions.spec.ts` | messages (send, reply) |
 | `files-export.spec.ts` | files, export |
 | `contacts-search.spec.ts` | contacts, search |

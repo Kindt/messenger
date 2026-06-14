@@ -24,10 +24,11 @@
       "grep": "login via UI|logout returns|locale switch|contacts list loads"
     },
     "ui-messaging": {
-      "description": "Messaging critical, group, actions",
+      "description": "Messaging critical, group, actions, multi-browser group users",
       "args": [
         "specs/messaging-critical.spec.ts",
         "specs/messaging-group.spec.ts",
+        "specs/messaging-group-users.spec.ts",
         "specs/messaging-actions.spec.ts"
       ]
     },
