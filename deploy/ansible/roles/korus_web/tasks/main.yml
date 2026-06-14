@@ -18,7 +18,7 @@
     if {{ korus_build_images | bool | lower }}; then args+=( --build ); fi
     if {{ korus_web_attach | bool | lower }}; then args+=( --attach ); fi
     stdbuf -oL -eL bash scripts/korus-web-up.sh "${args[@]}" 2>&1 \
-      | stdbuf -oL tee -a /var/log/korus-bootstrap.log
+      | stdbuf -oL tee -a {{ korus_bootstrap_log }}
   args:
     executable: /bin/bash
   register: korus_web_up

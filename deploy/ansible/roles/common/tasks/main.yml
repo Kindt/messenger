@@ -1,4 +1,22 @@
 ---
+- name: Ensure bootstrap log path is writable
+  ansible.builtin.shell: |
+    set -euo pipefail
+    log="{{ korus_bootstrap_log }}"
+    if ! touch "$log" 2>/dev/null; then
+      log="${TMPDIR:-/tmp}/korus-bootstrap.log"
+      touch "$log"
+    fi
+    echo "$log"
+  args:
+    executable: /bin/bash
+  register: korus_bootstrap_log_resolved
+  changed_when: false
+
+- name: Set bootstrap log fact
+  ansible.builtin.set_fact:
+    korus_bootstrap_log: "{{ korus_bootstrap_log_resolved.stdout | trim }}"
+
 - name: Verify Docker is available
   ansible.builtin.command: docker info
   register: korus_docker_info

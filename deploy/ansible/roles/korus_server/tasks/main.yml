@@ -17,7 +17,7 @@
 - name: Log QEMU build phase (skips above are expected on localhost)
   ansible.builtin.shell: |
     printf '\n>>> Starting full-stack-up.sh%s (Gradle+Docker build, 15-30 min on first boot)\n' \
-      "{{ ' --build' if korus_build_images | bool else '' }}" >> /var/log/korus-bootstrap.log
+      "{{ ' --build' if korus_build_images | bool else '' }}" >> {{ korus_bootstrap_log }}
   args:
     executable: /bin/bash
   changed_when: false
@@ -40,7 +40,7 @@
     args=( )
     if {{ korus_build_images | bool | lower }}; then args+=( --build ); fi
     stdbuf -oL -eL bash scripts/full-stack-up.sh --skip-ensure --no-wait-ready "${args[@]}" 2>&1 \
-      | stdbuf -oL tee -a /var/log/korus-bootstrap.log
+      | stdbuf -oL tee -a {{ korus_bootstrap_log }}
   args:
     executable: /bin/bash
   register: korus_server_up

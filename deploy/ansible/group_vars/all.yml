@@ -9,3 +9,5 @@ korus_web_port: 9088
 korus_keycloak_url: "http://127.0.0.1:8081"
 # TLS reverse proxy (roles/tls); false keeps HTTP-only dev/QEMU/CI path.
 korus_tls_enabled: false
+# Writable on CI localhost; QEMU guests use /var/log/korus-bootstrap.log
+korus_bootstrap_log: "/var/log/korus-bootstrap.log"

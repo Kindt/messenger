@@ -9,6 +9,7 @@
     korus_use_lan_publish: false
     korus_build_images: true
     korus_run_smoke: "{{ run_smoke | default(false) }}"
+    korus_bootstrap_log: "/tmp/korus-bootstrap.log"
   tasks:
     - name: Common prerequisites
       ansible.builtin.import_role:

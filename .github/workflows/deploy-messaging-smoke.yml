@@ -98,7 +98,7 @@ jobs:
         run: pip install websocket-client
 
       - name: Build images (Gradle assemble)
-        run: chmod +x gradlew && ./gradlew :modules:core-api:assemble :modules:workers:web-client:assemble --no-daemon -q
+        run: chmod +x gradlew && ./gradlew :modules:core-api:assemble :modules:web-client:assemble --no-daemon -q
 
       - name: Full stack + korus-web up
         run: |
