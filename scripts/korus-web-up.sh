@@ -68,7 +68,7 @@ if "$TURN"; then
   echo "Turn: coturn on host 3478/tcp+udp; WEB_CLIENT_RTC_ICE_SERVERS → 127.0.0.1 (see korus-web/docker-compose.turn.yml)" >&2
   args+=(-f docker-compose.turn.yml)
 fi
-args+=(up -d)
+args+=(up -d --remove-orphans)
 if "$BUILD"; then
   args+=(--build)
 fi

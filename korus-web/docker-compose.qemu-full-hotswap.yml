@@ -1,0 +1,68 @@
+# DEPRECATED: use docker-compose.yml + docker-compose.qemu-hotswap-overlay.yml (merge).
+# Kept for guests that have not synced repo yet. New enable path: qemu-hotswap-overlay overlay.
+services:
+  web-a:
+    image: korus-messenger-web-client:local
+    expose:
+      - "9080"
+    environment:
+      WEB_CLIENT_PORT: "9080"
+      WEB_CLIENT_API_UPSTREAM: ${WEB_CLIENT_API_UPSTREAM:-http://host.docker.internal:8080}
+      WEB_CLIENT_WS_PUBLIC_URL: ${WEB_CLIENT_WS_PUBLIC_URL:-ws://localhost:9088/ws}
+      WEB_CLIENT_RTC_ICE_SERVERS: ${WEB_CLIENT_RTC_ICE_SERVERS:-}
+      WEB_CLIENT_VAPID_PUBLIC_KEY: ${WEB_CLIENT_VAPID_PUBLIC_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  web-b:
+    image: korus-messenger-web-client:local
+    depends_on:
+      web-a:
+        condition: service_started
+    environment:
+      WEB_CLIENT_PORT: "9080"
+      WEB_CLIENT_API_UPSTREAM: ${WEB_CLIENT_API_UPSTREAM:-http://host.docker.internal:8080}
+      WEB_CLIENT_WS_PUBLIC_URL: ${WEB_CLIENT_WS_PUBLIC_URL:-ws://localhost:9088/ws}
+      WEB_CLIENT_RTC_ICE_SERVERS: ${WEB_CLIENT_RTC_ICE_SERVERS:-}
+      WEB_CLIENT_VAPID_PUBLIC_KEY: ${WEB_CLIENT_VAPID_PUBLIC_KEY:-}
+    expose:
+      - "9080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  web-dev:
+    image: korus-messenger-web-client:local
+    expose:
+      - "9080"
+    environment:
+      WEB_CLIENT_PORT: "9080"
+      WEB_CLIENT_API_UPSTREAM: ${WEB_CLIENT_API_UPSTREAM:-http://host.docker.internal:8080}
+      WEB_CLIENT_WS_PUBLIC_URL: ${WEB_CLIENT_WS_PUBLIC_URL:-ws://localhost:9088/ws}
+      WEB_CLIENT_RTC_ICE_SERVERS: ${WEB_CLIENT_RTC_ICE_SERVERS:-}
+      WEB_CLIENT_VAPID_PUBLIC_KEY: ${WEB_CLIENT_VAPID_PUBLIC_KEY:-}
+      WEB_CLIENT_WEBUI_OVERLAY: /overlay/webui
+    volumes:
+      - ../modules/web-client/src/main/resources/webui:/overlay/webui:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  lb:
+    build:
+      context: ./nginx-lb
+      dockerfile: Dockerfile
+    ports:
+      - "0.0.0.0:${KORUS_WEB_LB_PORT:-9088}:80"
+    environment:
+      KORUS_WS_GATEWAY_HOST: ${KORUS_WS_GATEWAY_HOST:-host.docker.internal}
+      KORUS_WS_GATEWAY_PORT: ${KORUS_WS_GATEWAY_PORT:-8081}
+      NGINX_CONF_TEMPLATE: /etc/nginx/nginx.conf.hotswap.template
+    depends_on:
+      - web-dev
+      - web-a
+      - web-b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

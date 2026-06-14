@@ -59,7 +59,7 @@ switch ($Mode) {
         exit $LASTEXITCODE
     }
     "warm" {
-        & (Join-Path $Root "scripts\qemu-up.ps1") -KeepDisks
+        & (Join-Path $Root "scripts\qemu-up.ps1") -KeepDisks -StackProfile dev
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         & (Join-Path $Root "scripts\qemu-stack-wait.ps1") -MaxMinutes 30
         exit $LASTEXITCODE

@@ -7,10 +7,27 @@
 
   function wsBaseUrl(win, loc) {
     var cfg = win && win.__WEB_CLIENT__;
-    if (cfg && cfg.wsUrl) return String(cfg.wsUrl).replace(/\/$/, "");
-    var p = loc && loc.protocol === "https:" ? "wss:" : "ws:";
-    var host = loc && loc.host ? loc.host : "127.0.0.1:8081";
-    return p + "//" + host + "/ws";
+    var pageHost = loc && loc.host ? loc.host : "127.0.0.1:8081";
+    var sameOrigin =
+      (loc && loc.protocol === "https:" ? "wss:" : "ws:") + "//" + pageHost + "/ws";
+    if (cfg && cfg.wsUrl) {
+      var configured = String(cfg.wsUrl).replace(/\/$/, "");
+      try {
+        var cfgUrl = new URL(configured);
+        var page = loc && loc.hostname ? loc.hostname : "";
+        if (
+          page &&
+          cfgUrl.hostname !== page &&
+          (page === "127.0.0.1" || page === "localhost")
+        ) {
+          return sameOrigin;
+        }
+      } catch (e) {
+        /* keep configured */
+      }
+      return configured;
+    }
+    return sameOrigin;
   }
 
   function buildWsUrl(baseUrl, accessToken) {

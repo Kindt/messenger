@@ -51,6 +51,36 @@ Bootstrap и redeploy внутри ВМ — **`deploy/qemu/vm-bootstrap/run-ansi
 
 Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_DISPLAY=none`
 
+## Полный стенд + hotswap (рекомендуется)
+
+На **Windows-хосте** Docker не запускается. Полный стек — **внутри двух VM**:
+
+| Слой | Гость | Что поднимается |
+|------|-------|-----------------|
+| Server | `korus-server` | `full-stack-up.sh` — все контейнеры `docker-compose.full-server.yml` |
+| Web | `korus-web` | **web-a + web-b + web-dev** (bind-mount) + **lb** → браузер на `web-dev` |
+
+```powershell
+# Полный стенд + hotswap (диски сохраняются)
+.\scripts\qemu-full-stack-up.ps1
+
+# Пересборка образов в VM (~20-90 мин)
+.\scripts\qemu-full-stack-up.ps1 -Rebuild
+
+# Без hotswap (lb только web-a/web-b)
+.\scripts\qemu-full-stack-up.ps1 -SkipHotswap
+
+.\scripts\qemu-full-stack-down.ps1
+```
+
+UI sync после подъёма: `.\scripts\qemu-dev-mode.ps1 -Mode sync-ui` (~10 с).
+
+**Не путать** с `scripts/full-stack-up.ps1` на хосте — только Linux/CI (на Windows dev-хосте запрещён).
+
+## Dev-цикл (только UI sync)
+
+Если стек уже через `qemu-full-stack-up.ps1`, hotswap уже включён. См. также «Golden path» ниже — `sync-ui`, Playwright.
+
 Установить только QEMU (без ВМ): `.\scripts\qemu-up.ps1 -InstallQemuOnly`
 
 Остановка:
@@ -66,6 +96,75 @@ Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_
 - API (через проброс с server VM): http://127.0.0.1:18080/api/v1/health  
 - UI (через web VM): http://127.0.0.1:19088/  
 - Acceptance smokes (на хосте с Docker или через SSH-туннели): см. `specs/003-docker-ansible-autotest/quickstart.md`
+
+## Справочник стендов
+
+Краткая карта **всех конфигурированных стендов** в репозитории. На Windows dev-хосте runtime — **только QEMU** (строки ниже с пометкой Windows); `full-stack-up.ps1` на хосте Windows **не использовать** (см. `.cursor/rules/qemu-host-isolation.mdc`).
+
+### Windows QEMU (две VM, профили дисков)
+
+**Профили** (`deploy/qemu/run/stack-profile.txt`): `dev` (ежедневная работа) и `full` (acceptance / outer gate). Диски раздельные: `server-dev` / `web-dev` vs `server-full` / `web-full`. Одновременно может работать только один профиль (общие порты 18080/19088). Переключение: `qemu-down`, затем нужная команда.
+
+| Стенд | Команда на хосте | Server VM | Web VM | Hotswap UI | Диски |
+|-------|------------------|-----------|--------|------------|-------|
+| **Dev warm** | `qemu-dev-mode.ps1 -Mode warm` | на диске dev | на диске dev | как было | `server-dev`, `web-dev` |
+| **Full + hotswap** | `qemu-full-stack-up.ps1` | `full-stack-up.sh` — `docker-compose.full-server.yml` | `docker-compose.yml` + overlay → a/b/dev/lb | да | `server-full`, `web-full` |
+| **Full без hotswap** | `qemu-full-stack-up.ps1 -SkipHotswap` | то же | a/b/lb | нет | full profile |
+| **Sync API / Web** | `qemu-dev-mode.ps1 -Mode sync-api` / `sync-web` | Ansible sync | Ansible sync | не меняет | активный профиль |
+| **UI sync** | `qemu-dev-mode.ps1 -Mode sync-ui` | — | `webui.tgz` → overlay | нужен hotswap | активный профиль |
+| **Cold dev wipe** | `qemu-up` без `-KeepDisks` (profile dev) | cloud-init с нуля | то же | — | **только dev qcow2** |
+| **Cold full wipe** | `qemu-full-stack-up.ps1 -FreshDisks` | cloud-init с нуля | то же | после up — hotswap | **только full qcow2** |
+| **Outer gate** | `qemu-plan-orchestrator.ps1 -SkipVmUp` | smoke + Playwright | — | — | full profile |
+
+Compose web hotswap на QEMU: merge `docker-compose.yml` + `docker-compose.qemu-hotswap-overlay.yml` (web-dev + lb→dev; web-a/b из base). `sync-ui` одинаков для dev и full.
+
+### Docker на хосте (Linux / CI / two-host)
+
+| Стенд | Compose / скрипт | Backend | Web UI | Отличие от full-server |
+|-------|------------------|---------|--------|------------------------|
+| **Full server** | `full-stack-up.ps1` / `.sh` → `docker-compose.full-server.yml` | PG×2, Redis, NATS, MinIO, Solr, Keycloak, core-api, ws-gateway | отдельно: `korus-web-up` | все воркеры: message-pipeline, archiver, deep-archiver, indexer, push, export-replay, retention |
+| **Dev-min infra** | `dev-infra-up.ps1` | только инфра | — | без Java-сервисов |
+| **Dev-min + web** | `dev-web-stack-up.ps1` (profile `web`) | + ws-gateway, message-pipeline, push, retention | опционально attach | **без** archiver, deep-archiver, indexer, export-replay |
+| **Korus-web standalone** | `korus-web-up.ps1` | API через `host.docker.internal:8080` | `web-a` + `web-b` + `lb` :9088 | — |
+| **Korus-web attach** | `korus-web-up.ps1 -Attach` | Docker-сеть dev-min, `core-api:8080` | то же | — |
+| **Host hotswap** | `dev-overlay-up.ps1` → `docker-compose.hotswap.yml` | внешний API | один `web-dev` :9088, bind `dev-overlay/webui` | без lb |
+| **Export smoke** | `full-stack-up -ExportSmoke` + overlays | full-server + export overlays | — | compliance smokes |
+| **Observability** | Ansible `observability-only.yml` | Prometheus + Grafana | — | addon |
+
+Two-host на Windows вручную: `server-host-up.ps1` + `web-host-up.ps1`. На Linux — Ansible `site.yml`.
+
+### Ansible inventories (куда деплоится код)
+
+| Inventory | Топология | TLS | Playbook / стек | Назначение |
+|-----------|-----------|-----|-----------------|------------|
+| `inventory/qemu/` | 2 VM | нет | `qemu-server-local` → `full-stack-up.sh`; `qemu-web-local` → `korus-web-up.sh` | Windows QEMU |
+| `inventory/local/` | 1 node | нет | `ci-local.yml` | CI, Linux all-in-one |
+| `inventory/two-host/` | server + web LAN | опционально | `site.yml` | два Linux-хоста |
+| `inventory/stage/` | two-host | да (LE/BYO) | `site.yml` + role `tls` | pre-prod |
+| `inventory/prod/` | two-host | да + vault | `site.yml` | production scaffold |
+
+Подробнее: [`deploy/ansible/README.md`](../ansible/README.md), [`deploy/two-host/README.md`](../two-host/README.md).
+
+### Web UI — варианты compose
+
+| Файл | Контейнеры | LB → upstream | Bind-mount webui |
+|------|------------|---------------|------------------|
+| `korus-web/docker-compose.yml` | web-a, web-b, lb | a + b (least_conn) | нет |
+| `docker-compose.qemu-hotswap-overlay.yml` | overlay к `.yml`: +web-dev, lb→dev | web-dev | да (`/overlay/webui`) |
+| `docker-compose.qemu-full-hotswap.yml` | deprecated duplicate | web-dev | да (legacy guests) |
+| `docker-compose.hotswap-qemu.yml` | web-dev, lb | web-dev | да (минимальный) |
+| `docker-compose.hotswap.yml` | web-dev | нет (порт 9088) | `dev-overlay/webui` |
+| `docker-compose.attach.yml` | overlay к `.yml` | — | API через сеть dev-min |
+| `docker-compose.turn.yml` | overlay | — | + coturn для RTC |
+
+### Что выбрать
+
+| Задача | Стенд |
+|--------|-------|
+| Ежедневная работа на Windows | `qemu-dev-mode.ps1 -Mode warm` (+ sync-ui) |
+| Full stack / Playwright outer gate | `qemu-full-stack-up.ps1` |
+| CI / Linux all-in-one | `ansible-playbook … ci-local.yml` или `full-stack-up.sh` |
+| Два сервера в LAN | `ansible-playbook … site.yml` + `two-host` / `stage` / `prod` |
 
 ## Golden path (web-client dev + Playwright)
 
@@ -83,7 +182,7 @@ Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_
 
 ### Быстрый цикл UI (hot-swap, ~10 с вместо ~15–25 мин redeploy)
 
-После **одного** полного `-WebOnly` (образ `korus-messenger-web-client:local` на госте). Hotswap поднимает **web-dev + nginx lb** (прокси `/ws`).
+После `qemu-full-stack-up.ps1` hotswap уже включён (`web-a`/`web-b` остаются up, lb → `web-dev`). Или вручную: `qemu-web-hotswap.ps1 -Enable`.
 
 ```powershell
 # Включить bind-mount webui + lb (один раз; подтягивает repo на web guest)
@@ -110,7 +209,7 @@ Headless (как раньше): `.\scripts\qemu-up.ps1` или `$env:KORUS_QEMU_
 | Включить hotswap | `qemu-web-hotswap.ps1 -Enable` или `-Status` | ~1–3 мин |
 | Остановка | `qemu-dev-mode.ps1 -Mode stop` | сек |
 
-Hotswap: **web-dev + nginx lb** — прокси **`/ws` → ws-gateway** (typing/live в браузере). `sync-ui` собирает **tailwind + locales** (`build:assets`) перед `webui.tgz`.
+Hotswap: **web-a + web-b + web-dev + lb** (compose `qemu-full-hotswap`); браузер на **web-dev**, `/ws` через lb. `sync-ui` собирает **tailwind + locales** (`build:assets`) перед `webui.tgz`.
 
 **Backup дисков:** `qemu-down` → `qemu-backup.ps1 -Label green-stack` → `qemu-up -KeepDisks`. Restore: `qemu-restore.ps1 -From deploy\qemu\backups\<dir>`.
 
@@ -174,5 +273,6 @@ npx playwright test
 4. **Нет cloud image** — `.\scripts\ensure-qemu-images.ps1` или повторный `.\scripts\qemu-up.ps1` (скачивание при отсутствии `.img`).
 5. **Ansible/pip в ВМ** — cloud-init ставит `python3-pip`; bootstrap ставит `ansible` через pip. Смотрите `/var/log/korus-bootstrap.log`.
 6. **Пересборка** — `.\scripts\qemu-down.ps1` затем `.\scripts\qemu-up.ps1` или `.\scripts\qemu-redeploy.ps1 -KeepDisks` не сбрасывает диски: `qemu-up.ps1 -KeepDisks`.
+7. **nginx lb logs** — в образе `nginx:alpine` файлы `/var/log/nginx/*.log` — симлинки на stdout/stderr; **`docker exec … tail …/error.log` зависает**. Смотрите `docker logs korus-web-lb-1` на web-госте или `.\scripts\qemu-logs.ps1` (секция `nginx lb`). После правок шаблона lb: `.\scripts\qemu-redeploy.ps1 -WebOnly -Force -Rebuild`.
 
 См. также: [`deploy/ansible/README.md`](../ansible/README.md), [`specs/003-docker-ansible-autotest/quickstart.md`](../../specs/003-docker-ansible-autotest/quickstart.md).

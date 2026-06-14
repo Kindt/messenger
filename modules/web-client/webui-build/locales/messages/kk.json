@@ -40,7 +40,9 @@
     "connecting": "…",
     "reconnecting": "қайта қос.",
     "error": "қате",
-    "offline": "жоқ"
+    "offline": "жоқ",
+    "statusTip": "Live chat updates: {state}. URL: {url}",
+    "clickReconnect": "Click to reconnect."
   },
   "conference": {
     "sectionTitle": "Конференциялар",
@@ -304,6 +306,7 @@
       "showVideo": "Бейне / конференция",
       "e2eeTitle": "Сервердегі key packages (MLS). e2ee-* мәтіні чатта алдын ала қарау үшін серверде шифры ашылады.",
       "e2eeCount": "E2EE: {count}",
+      "e2eeStatusTip": "End-to-end encryption: {count} key(s) on server. Configure in Settings → E2EE / MLS.",
       "notifDisable": "Хабарландыруларды өшіру",
       "notifEnable": "Браузер хабарландыруларын қосу",
       "settings": "Параметрлер",

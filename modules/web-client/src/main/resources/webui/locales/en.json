@@ -36,11 +36,13 @@
   },
   "ws": {
     "prefix": "WS",
-    "online": "online",
-    "connecting": "…",
-    "reconnecting": "reconnecting",
+    "online": "connected",
+    "connecting": "connecting…",
+    "reconnecting": "reconnecting…",
     "error": "error",
-    "offline": "off"
+    "offline": "offline",
+    "statusTip": "Live chat updates: {state}. URL: {url}",
+    "clickReconnect": "Click to reconnect."
   },
   "conference": {
     "sectionTitle": "Conferences",
@@ -304,6 +306,7 @@
       "showVideo": "Video / conference",
       "e2eeTitle": "Key packages on server (MLS). e2ee-* text is decrypted on server for chat preview.",
       "e2eeCount": "E2EE: {count}",
+      "e2eeStatusTip": "End-to-end encryption: {count} key(s) on server. Configure in Settings → E2EE / MLS.",
       "notifDisable": "Disable notifications",
       "notifEnable": "Enable browser notifications",
       "settings": "Settings",

@@ -10,15 +10,21 @@ function Start-KorusQemuVm {
     . (Join-Path $PSScriptRoot "Test-KorusWhpx.ps1")
     . (Join-Path $PSScriptRoot "Get-KorusQemuDisplayMode.ps1")
     . (Join-Path $PSScriptRoot "Write-KorusDebugLog.ps1")
+    . (Join-Path $PSScriptRoot "Get-KorusQemuStackProfile.ps1")
 
-    Write-KorusDebugLog -Location "Start-KorusVm.ps1:entry" -Message "vm start" -HypothesisId "H1" -Data @{ Role = $Role; displayEnv = $env:KORUS_QEMU_DISPLAY }
+    $stackProfile = Get-KorusQemuStackProfile
+    Write-KorusDebugLog -Location "Start-KorusVm.ps1:entry" -Message "vm start" -HypothesisId "H1" -Data @{
+        Role = $Role; displayEnv = $env:KORUS_QEMU_DISPLAY; stackProfile = $stackProfile
+    }
 
     $qemu = Resolve-KorusQemu
     if (-not $qemu) { throw "QEMU not found. Run deploy/qemu/install-qemu.ps1" }
 
     New-Item -ItemType Directory -Force -Path $KorusQemuRunDir | Out-Null
+    Initialize-KorusLegacyVmDisks
     $base = Get-KorusCloudImage
-    $disk = New-KorusVmOverlayDisk -Name $Role -BaseImage $base
+    $diskName = Get-KorusVmDiskName -Role $Role -StackProfile $stackProfile
+    $disk = New-KorusVmOverlayDisk -Name $diskName -BaseImage $base
     $seed = New-KorusCidataSeed -Role $Role
     $serialName = "$Role-serial.log"
     $serialLog = Join-Path $KorusQemuRunDir $serialName

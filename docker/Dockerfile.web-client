@@ -6,15 +6,18 @@ WORKDIR /app/modules/web-client/webui-build
 RUN npm ci
 WORKDIR /app
 COPY modules/web-client/webui-build/src modules/web-client/webui-build/src
+COPY modules/web-client/webui-build/locales modules/web-client/webui-build/locales
+COPY modules/web-client/webui-build/scripts modules/web-client/webui-build/scripts
 COPY modules/web-client/src/main/resources/webui modules/web-client/src/main/resources/webui
 WORKDIR /app/modules/web-client/webui-build
-RUN npm run build:css
+RUN npm run build:assets
 
 FROM gradle:jdk25-noble AS builder
 WORKDIR /app
 COPY . .
 COPY --from=tailwind /app/modules/web-client/src/main/resources/webui/tailwind.css modules/web-client/src/main/resources/webui/tailwind.css
-RUN gradle --console=plain :modules:web-client:distTar --no-daemon -x test -x buildTailwindCss
+COPY --from=tailwind /app/modules/web-client/src/main/resources/webui/locales modules/web-client/src/main/resources/webui/locales
+RUN gradle --console=plain :modules:web-client:distTar --no-daemon -x test -x buildTailwindCss -x buildLocales
 
 FROM eclipse-temurin:25-jre
 WORKDIR /app

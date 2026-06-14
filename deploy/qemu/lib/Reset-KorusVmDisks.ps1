@@ -1,10 +1,18 @@
+. (Join-Path $PSScriptRoot "Get-KorusQemuStackProfile.ps1")
+
 function Reset-KorusVmDisks {
+    param(
+        [ValidateSet("dev", "full")]
+        [string]$StackProfile = (Get-KorusQemuStackProfile)
+    )
     . (Join-Path $PSScriptRoot "..\config.ps1")
+    . (Join-Path $PSScriptRoot "Get-KorusQemuStackProfile.ps1")
     foreach ($role in @("server", "web")) {
-        $overlay = Join-Path $KorusQemuImagesDir "$role.qcow2"
+        $diskName = Get-KorusVmDiskName -Role $role -StackProfile $StackProfile
+        $overlay = Join-Path $KorusQemuImagesDir "$diskName.qcow2"
         if (Test-Path $overlay) {
             Remove-Item -Force $overlay
-            Write-Host "Removed overlay: $overlay" -ForegroundColor DarkGray
+            Write-Host "Removed overlay ($StackProfile): $overlay" -ForegroundColor DarkGray
         }
     }
 }

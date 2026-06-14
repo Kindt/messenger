@@ -40,7 +40,9 @@
     "connecting": "…",
     "reconnecting": "перападкл.",
     "error": "памылка",
-    "offline": "не"
+    "offline": "не",
+    "statusTip": "Абнаўленні чата ў рэальным часе: {state}. Адрас: {url}",
+    "clickReconnect": "Націсніце для перападключэння."
   },
   "conference": {
     "sectionTitle": "Канферэнцыі",
@@ -304,6 +306,7 @@
       "showVideo": "Відэа / канферэнцыя",
       "e2eeTitle": "Key packages на серверы (MLS). Тэкст e2ee-* расшыфроўваецца на серверы для перадпрагляду ў чаце.",
       "e2eeCount": "E2EE: {count}",
+      "e2eeStatusTip": "End-to-end encryption: {count} key(s) on server. Configure in Settings → E2EE / MLS.",
       "notifDisable": "Адключыць апавяшчэнні",
       "notifEnable": "Уключыць апавяшчэнні браўзера",
       "settings": "Налады",

@@ -11,7 +11,7 @@ Ensure QEMU OS base images exist locally (not stored in git).
   .\scripts\ensure-qemu-images.ps1
 
 Downloads ubuntu-24.04-minimal-cloudimg-amd64.img when absent.
-Overlay disks (server.qcow2, web.qcow2) are created on first qemu-up.
+Overlay disks (server-dev/full, web-dev/full .qcow2) are created on first qemu-up per stack profile.
 "@
     exit 0
 }

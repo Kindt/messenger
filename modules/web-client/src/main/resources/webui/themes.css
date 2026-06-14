@@ -23,11 +23,16 @@
   --accent-secondary: #4514c2;
   --theme-color-meta: #7949f4;
   --auth-gradient: radial-gradient(
-      ellipse 120% 80% at 15% 15%,
-      rgba(121, 73, 244, 0.38),
-      transparent
+      ellipse 90% 70% at 85% 8%,
+      rgba(121, 73, 244, 0.42),
+      transparent 55%
     ),
-    linear-gradient(160deg, #1a1028 0%, var(--bg) 58%);
+    radial-gradient(
+      ellipse 70% 60% at 8% 92%,
+      rgba(69, 20, 194, 0.28),
+      transparent 58%
+    ),
+    linear-gradient(165deg, #14101f 0%, var(--bg) 52%);
   font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
 }
 
@@ -52,11 +57,16 @@
   --accent-secondary: #cebcff;
   --theme-color-meta: #7949f4;
   --auth-gradient: radial-gradient(
-      ellipse 120% 80% at 20% 20%,
-      rgba(121, 73, 244, 0.14),
-      transparent
+      ellipse 90% 70% at 88% 10%,
+      rgba(121, 73, 244, 0.16),
+      transparent 55%
     ),
-    linear-gradient(160deg, #f0ebff 0%, var(--bg) 55%);
+    radial-gradient(
+      ellipse 70% 60% at 6% 88%,
+      rgba(69, 20, 194, 0.1),
+      transparent 58%
+    ),
+    linear-gradient(165deg, #ece6ff 0%, var(--bg) 50%);
   font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
 }
 
@@ -88,12 +98,13 @@
   color: #dc2626;
 }
 
-.auth-brand {
-  background: var(--auth-gradient);
-}
-
 .auth-brand-logo {
   background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+  box-shadow: 0 6px 18px rgba(121, 73, 244, 0.35);
+}
+
+.auth-shell {
+  background: var(--auth-gradient);
 }
 
 .chat-avatar {

@@ -486,10 +486,27 @@
     },
     wsBaseUrl: function (win, loc) {
       var cfg = win && win.__WEB_CLIENT__;
-      if (cfg && cfg.wsUrl) return String(cfg.wsUrl).replace(/\/$/, "");
-      var p = loc && loc.protocol === "https:" ? "wss:" : "ws:";
-      var host = loc && loc.host ? loc.host : "127.0.0.1:8081";
-      return p + "//" + host + "/ws";
+      var pageHost = loc && loc.host ? loc.host : "127.0.0.1:8081";
+      var sameOrigin =
+        (loc && loc.protocol === "https:" ? "wss:" : "ws:") + "//" + pageHost + "/ws";
+      if (cfg && cfg.wsUrl) {
+        var configured = String(cfg.wsUrl).replace(/\/$/, "");
+        try {
+          var cfgUrl = new URL(configured);
+          var page = loc && loc.hostname ? loc.hostname : "";
+          if (
+            page &&
+            cfgUrl.hostname !== page &&
+            (page === "127.0.0.1" || page === "localhost")
+          ) {
+            return sameOrigin;
+          }
+        } catch (e) {
+          /* keep configured */
+        }
+        return configured;
+      }
+      return sameOrigin;
     },
     buildWsUrl: function (baseUrl, accessToken) {
       return baseUrl + "?token=" + encodeURIComponent(accessToken);
@@ -5270,6 +5287,8 @@
   function scheduleWsReconnect() {
     clearWsReconnect();
     if (state.wsManualClose || !state.tokens || !state.tokens.access_token) return;
+    state.wsState = "offline";
+    render();
     var delay = uiTransportUtils.nextWsReconnectDelay(state.wsReconnectAttempt);
     state.wsReconnectAttempt += 1;
     state.wsReconnectTimer = setTimeout(function () {
@@ -5327,7 +5346,6 @@
       if (state.wsManualClose || !state.tokens) {
         state.wsState = "off";
       } else {
-        state.wsState = "reconnecting";
         scheduleWsReconnect();
       }
       render();
@@ -5464,20 +5482,31 @@
 
   function shellWsStatusIcon() {
     var connected = state.wsState === "open";
-    var pending = state.wsState === "connecting" || state.wsState === "reconnecting";
+    var pending = state.wsState === "connecting";
     var cls = "ws-status";
     if (connected) cls += " connected";
     else if (pending) cls += " pending";
     else if (state.wsState === "error") cls += " error";
     else cls += " disconnected";
-    var tip = L("ws.prefix") + " " + wsStatusLabel() + " — " + wsBaseUrl();
+    var tip = L("ws.statusTip", { state: wsStatusLabel(), url: wsBaseUrl() });
     var span = shellStatusIcon("dot", tip, cls);
     span.setAttribute("data-testid", "ws-status");
+    span.style.cursor = connected ? "default" : "pointer";
+    if (!connected) {
+      span.title = tip + " " + L("ws.clickReconnect");
+      span.setAttribute("aria-label", span.title);
+      span.onclick = function () {
+        if (state.wsState === "open") return;
+        clearWsReconnect();
+        state.wsReconnectAttempt = 0;
+        openWs();
+      };
+    }
     return span;
   }
 
   function shellE2eeStatusIcon(count) {
-    var tip = L("ui.shell.e2eeTitle") + " — " + L("ui.shell.e2eeCount", { count: count });
+    var tip = L("ui.shell.e2eeStatusTip", { count: count });
     var cls = "e2ee-status";
     if (!count) cls += " count-zero";
     var span = shellStatusIcon("🔐", tip, cls);
@@ -5550,49 +5579,35 @@
   function renderAuth() {
     var root = document.getElementById("root");
     root.innerHTML = "";
-    var outer = el(
-      "div",
-      "auth-layout tw:flex tw:min-h-screen tw:flex-col tw:md:flex-row tw:items-stretch tw:justify-center tw:gap-6 tw:md:gap-12 tw:p-4 tw:md:p-8"
-    );
-    var brand = el(
-      "div",
-      "auth-brand tw:flex tw:flex-col tw:justify-center tw:flex-1 tw:max-w-lg tw:gap-3"
-    );
-    var brandLogo = el("div", "auth-brand-logo tw:flex tw:h-14 tw:w-14 tw:items-center tw:justify-center tw:rounded-2xl tw:text-2xl tw:font-bold", "K");
+    var shell = el("div", "auth-shell");
+    shell.appendChild(el("div", "auth-shell-glow auth-shell-glow-a"));
+    shell.appendChild(el("div", "auth-shell-glow auth-shell-glow-b"));
+    var card = el("div", "auth-card");
+    var head = el("div", "auth-card-head");
+    var brandRow = el("div", "auth-card-brand");
+    var brandLogo = el("div", "auth-brand-logo", "K");
     markBrandNoTranslate(brandLogo);
-    brand.appendChild(brandLogo);
-    var brandTitle = el("h1", "tw:text-3xl tw:font-semibold tw:tracking-tight", L("ui.brand.title"));
+    brandRow.appendChild(brandLogo);
+    var brandText = el("div", "auth-card-brand-text");
+    var brandTitle = el("div", "auth-card-brand-title", L("ui.brand.title"));
     markBrandNoTranslate(brandTitle);
-    brand.appendChild(brandTitle);
-    brand.appendChild(el("p", "auth-brand-tag tw:text-base tw:opacity-80", brandTagline()));
-    outer.appendChild(brand);
-    var card = el(
-      "div",
-      "auth-card tw:w-full tw:max-w-md tw:rounded-2xl tw:border tw:border-[color-mix(in_srgb,var(--border)_80%,transparent)] tw:bg-[var(--panel)] tw:p-6 tw:shadow-xl tw:self-center"
-    );
-    card.appendChild(
-      el("h2", null, state.authTab === "register" ? L("auth.register") : L("auth.login"))
-    );
-    card.appendChild(el("p", "auth-hint", L("auth.hint")));
-    if (state.error) {
-      card.appendChild(
-        el(
-          "div",
-          "error-banner tw:mb-4 tw:rounded-lg tw:border tw:border-red-500/40 tw:bg-red-500/10 tw:px-3 tw:py-2 tw:text-sm",
-          state.error
-        )
-      );
-    }
-    var tabs = el("div", "tabs");
-    var tLogin = el("button", state.authTab === "login" ? "active" : "", L("auth.login"));
+    brandText.appendChild(brandTitle);
+    brandText.appendChild(el("p", "auth-card-brand-tag", brandTagline()));
+    brandRow.appendChild(brandText);
+    head.appendChild(brandRow);
+    card.appendChild(head);
+    var tabs = el("div", "auth-tabs");
+    var tLogin = el("button", "auth-tab" + (state.authTab === "login" ? " active" : ""), L("auth.login"));
     tLogin.type = "button";
+    tLogin.setAttribute("data-testid", "auth-tab-login");
     tLogin.onclick = function () {
       state.authTab = "login";
       state.error = null;
       render();
     };
-    var tReg = el("button", state.authTab === "register" ? "active" : "", L("auth.register"));
+    var tReg = el("button", "auth-tab" + (state.authTab === "register" ? " active" : ""), L("auth.register"));
     tReg.type = "button";
+    tReg.setAttribute("data-testid", "auth-tab-register");
     tReg.onclick = function () {
       state.authTab = "register";
       state.error = null;
@@ -5601,7 +5616,10 @@
     tabs.appendChild(tLogin);
     tabs.appendChild(tReg);
     card.appendChild(tabs);
-    var form = el("form");
+    if (state.error) {
+      card.appendChild(el("div", "error-banner auth-error", state.error));
+    }
+    var form = el("form", "auth-form");
     form.onsubmit = function (e) {
       e.preventDefault();
       submitAuth();
@@ -5614,7 +5632,7 @@
     }
     var submit = el(
       "button",
-      "btn btn-primary tw:mt-2 tw:w-full tw:rounded-lg tw:font-semibold tw:transition-opacity tw:hover:opacity-90 tw:disabled:opacity-60",
+      "btn btn-primary auth-submit",
       state.busy
         ? "…"
         : state.authTab === "login"
@@ -5624,16 +5642,15 @@
     submit.type = "submit";
     submit.disabled = state.busy;
     submit.setAttribute("data-testid", "auth-submit");
-    submit.style.width = "100%";
-    submit.style.marginTop = "8px";
     form.appendChild(submit);
     card.appendChild(form);
-    outer.appendChild(card);
-    root.appendChild(outer);
+    card.appendChild(el("p", "auth-foot", L("auth.hint")));
+    shell.appendChild(card);
+    root.appendChild(shell);
   }
 
   function field(id, label, type, auto, required, minL, maxL) {
-    var wrap = el("div", "field");
+    var wrap = el("div", "field auth-field");
     var lab = el("label", null, label);
     lab.htmlFor = id;
     var inp = el("input");

@@ -2,7 +2,7 @@
     param([int]$ProcessId)
     $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId=$ProcessId" -ErrorAction SilentlyContinue).CommandLine
     if (-not $cmd) { return $false }
-    return ($cmd -match 'korus-server|korus-web|korus-whpx-probe|deploy[/\\]qemu[/\\]images[/\\](server|web)\.qcow2')
+    return ($cmd -match 'korus-server|korus-web|korus-whpx-probe|deploy[/\\]qemu[/\\]images[/\\](server|web)(-(dev|full))?\.qcow2')
 }
 
 function Test-KorusQemuStackRunning {

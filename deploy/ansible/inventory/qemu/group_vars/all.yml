@@ -1,15 +1,14 @@
 ---
-# QEMU user netdev: each guest is 10.0.2.15; host port-forwards are reachable at 10.0.2.2
-# (192.168.76.x in README is target topology — not wired in Start-KorusVm.ps1 yet)
+# QEMU slirp netdev today: web guest 10.0.2.15, host gateway 10.0.2.2 (port-forwards 18080/18082/19088).
+# When 192.168.76.x user LAN is wired (deploy/qemu/config.ps1), switch server/web LAN IPs and ws_gateway_port to 8082.
 korus_server_lan_ip: "10.0.2.2"
 korus_web_lan_ip: "10.0.2.15"
 korus_api_port: 18080
 korus_ws_port: 18082
+korus_ws_gateway_port: 18082
+korus_web_api_upstream: "http://10.0.2.2:18080"
 korus_use_lan_publish: false
 korus_configure_ufw: false
 korus_browser_ws_port: 19088
-# Explicit upstream for web guest → host-forwarded server API (overrides group_vars/all.yml :8080).
-korus_web_api_upstream: "http://{{ korus_server_lan_ip }}:{{ korus_api_port }}"
-# docker.io on Ubuntu cloud guests: use legacy builder; gradle:jdk25-noble has /etc/passwd root entry
 korus_docker_buildkit: "0"
 korus_compose_bake: "0"

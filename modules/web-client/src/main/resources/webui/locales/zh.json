@@ -40,7 +40,9 @@
     "connecting": "…",
     "reconnecting": "重连中",
     "error": "错误",
-    "offline": "离线"
+    "offline": "离线",
+    "statusTip": "Live chat updates: {state}. URL: {url}",
+    "clickReconnect": "Click to reconnect."
   },
   "conference": {
     "sectionTitle": "会议",
@@ -304,6 +306,7 @@
       "showVideo": "视频 / 会议",
       "e2eeTitle": "服务器上的 key packages（MLS）。e2ee-* 文本在服务器端解密以在聊天中预览。",
       "e2eeCount": "E2EE：{count}",
+      "e2eeStatusTip": "End-to-end encryption: {count} key(s) on server. Configure in Settings → E2EE / MLS.",
       "notifDisable": "关闭通知",
       "notifEnable": "启用浏览器通知",
       "settings": "设置",

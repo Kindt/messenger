@@ -88,6 +88,53 @@ function Show-Bootstrap {
     }
 }
 
+function Show-NginxLbLogs {
+    param(
+        [int]$Port,
+        [string]$HostKey,
+        [int]$Tail,
+        [int]$SshTimeout
+    )
+    Write-Host "`n=== nginx lb (docker logs, web guest :$Port) ===" -ForegroundColor Cyan
+    if (-not (Test-Path $Plink)) {
+        Write-Host "  plink not found; skip lb logs" -ForegroundColor Yellow
+        return
+    }
+    if (-not $HostKey) {
+        Write-Host "  host key not in serial log yet" -ForegroundColor Yellow
+        return
+    }
+    # Official nginx image symlinks /var/log/nginx/*.log -> stdout/stderr; tail inside exec blocks forever.
+    $cmd = "sudo docker logs --tail $Tail korus-web-lb-1 2>&1 | tail -n $Tail"
+    $job = Start-Job {
+        param($Plink, $HostKey, $Port, $Cmd)
+        & $Plink -batch -hostkey $HostKey -pw korus -P $Port "korus@127.0.0.1" $Cmd 2>&1
+    } -ArgumentList $Plink, $HostKey, $Port, $cmd
+    $done = Wait-Job $job -Timeout $SshTimeout
+    if (-not $done) {
+        Stop-Job $job -Force
+        Remove-Job $job -Force
+        Write-Host "  SSH timeout fetching lb docker logs" -ForegroundColor Yellow
+        return
+    }
+    $out = Receive-Job $job
+    Remove-Job $job -Force
+    if (-not $out) {
+        Write-Host "  (no lb container logs or korus-web-lb-1 missing)" -ForegroundColor Yellow
+        return
+    }
+    $out | ForEach-Object { Write-Host $_ }
+    $text = $out -join "`n"
+    if ($text -match "worker_connections exceed open file resource limit") {
+        Write-Host "  >> lb: worker_connections/rlimit warning (rebuild lb: qemu-redeploy -WebOnly -Force -Rebuild)" -ForegroundColor Yellow
+    }
+    if ($text -match "connect\(\) failed \(111: Connection refused\)|no live upstreams") {
+        Write-Host "  >> lb: transient upstream errors during redeploy/restart (expected)" -ForegroundColor DarkGray
+    } elseif ($text -match "\[error\]") {
+        Write-Host "  >> lb: nginx errors in recent logs" -ForegroundColor Yellow
+    }
+}
+
 Write-Host "=== QEMU launch log analysis $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" -ForegroundColor Green
 Get-Process qemu-system-x86_64 -ErrorAction SilentlyContinue | ForEach-Object {
     $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine
@@ -106,6 +153,9 @@ foreach ($r in $roles) {
     $port = if ($r -eq "server") { 12221 } else { 12222 }
     $hk = Get-HostKeyFromSerial -SerialPath (Join-Path $RunDir "$r-serial.log") -Role $r -SshPort $port
     Show-Bootstrap -Name $r -Port $port -HostKey $hk -SshTimeout $SshTimeoutSec
+    if ($r -eq "web") {
+        Show-NginxLbLogs -Port $port -HostKey $hk -Tail $Tail -SshTimeout $SshTimeoutSec
+    }
 }
 
 Write-Host "`nHealth:" -ForegroundColor Cyan

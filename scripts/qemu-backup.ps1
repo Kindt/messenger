@@ -1,6 +1,8 @@
-# Backup Korus QEMU overlay disks (server.qcow2, web.qcow2). VMs must be stopped.
+# Backup Korus QEMU overlay disks (server-{profile}.qcow2, web-{profile}.qcow2). VMs must be stopped.
 param(
     [string]$Label = "",
+    [ValidateSet("", "dev", "full")]
+    [string]$StackProfile = "",
     [switch]$Compress,
     [switch]$Help
 )
@@ -17,7 +19,9 @@ Backup QEMU guest disks (overlay qcow2 with Docker/stacks state).
   .\scripts\qemu-backup.ps1 -Compress   # qemu-img compressed copy (slow, smaller)
 
 Requires: VMs stopped (.\scripts\qemu-down.ps1).
-Output: deploy\qemu\backups\<timestamp>\server.qcow2, web.qcow2, manifest.json
+Output: deploy\qemu\backups\<timestamp>\server-<profile>.qcow2, manifest.json
+
+  -StackProfile dev|full   default: active profile from deploy\qemu\run\stack-profile.txt
 
 Restore: .\scripts\qemu-restore.ps1 -From <backup-dir>
 
@@ -33,6 +37,10 @@ $RunDir = Join-Path $QemuRoot "run"
 
 . (Join-Path $QemuRoot "config.ps1")
 . (Join-Path $QemuRoot "lib\Test-KorusQemuProcess.ps1")
+. (Join-Path $QemuRoot "lib\Get-KorusQemuStackProfile.ps1")
+
+if (-not $StackProfile) { $StackProfile = Get-KorusQemuStackProfile }
+Write-Host "Backup stack profile: $StackProfile" -ForegroundColor DarkGray
 
 if (Test-KorusQemuStackRunning -RunDir $RunDir) {
     Write-Error "Korus QEMU VMs are running. Stop first: .\scripts\qemu-down.ps1"
@@ -50,25 +58,26 @@ if ($Compress -and -not $qemuImg) {
 
 $files = @()
 foreach ($role in @("server", "web")) {
-    $src = Join-Path $ImagesDir "$role.qcow2"
+    $diskName = Get-KorusVmDiskName -Role $role -StackProfile $StackProfile
+    $src = Join-Path $ImagesDir "$diskName.qcow2"
     if (-not (Test-Path $src)) {
-        Write-Error "Missing disk: $src (start VMs at least once with qemu-up -KeepDisks)"
+        Write-Error "Missing disk: $src (start VMs at least once with qemu-up -StackProfile $StackProfile -KeepDisks)"
     }
-    $out = Join-Path $dest "$role.qcow2"
+    $out = Join-Path $dest "$diskName.qcow2"
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     if ($Compress) {
-        Write-Host "Converting $role.qcow2 (compressed)..." -ForegroundColor Cyan
+        Write-Host "Converting $diskName.qcow2 (compressed)..." -ForegroundColor Cyan
         & $qemuImg.Source convert -p -c -O qcow2 $src $out
         if ($LASTEXITCODE -ne 0) { throw "qemu-img convert failed for $role" }
     } else {
-        Write-Host "Copying $role.qcow2 ($([math]::Round((Get-Item $src).Length/1GB,2)) GB)..." -ForegroundColor Cyan
+        Write-Host "Copying $diskName.qcow2 ($([math]::Round((Get-Item $src).Length/1GB,2)) GB)..." -ForegroundColor Cyan
         Copy-Item -Path $src -Destination $out -Force
     }
     $sw.Stop()
     $gb = [math]::Round((Get-Item $out).Length / 1GB, 2)
-    Write-Host "  [OK] $role.qcow2 ${gb} GB in $([math]::Round($sw.Elapsed.TotalSeconds,1))s" -ForegroundColor Green
+    Write-Host "  [OK] $diskName.qcow2 ${gb} GB in $([math]::Round($sw.Elapsed.TotalSeconds,1))s" -ForegroundColor Green
     $files += @{
-        name = "$role.qcow2"
+        name = "$diskName.qcow2"
         bytes = (Get-Item $out).Length
         compressed = [bool]$Compress
     }
@@ -80,11 +89,12 @@ try {
 } catch { }
 
 $manifest = @{
-    created_utc = (Get-Date).ToUniversalTime().ToString("o")
-    label       = $Label
-    git_head    = $gitHead
-    files       = $files
-    restore     = ".\scripts\qemu-restore.ps1 -From `"$dest`""
+    created_utc   = (Get-Date).ToUniversalTime().ToString("o")
+    label         = $Label
+    stackProfile  = $StackProfile
+    git_head      = $gitHead
+    files         = $files
+    restore       = ".\scripts\qemu-restore.ps1 -From `"$dest`" -StackProfile $StackProfile"
 }
 $manifestPath = Join-Path $dest "manifest.json"
 $manifest | ConvertTo-Json -Depth 4 | Set-Content -Path $manifestPath -Encoding utf8

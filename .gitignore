@@ -40,4 +40,5 @@ tests/e2e-web/node_modules/
 tests/e2e-web/test-results/
 tests/e2e-web/playwright-report/
 tests/e2e-web/blob-report/
+/test-results/
 

@@ -36,11 +36,13 @@
   },
   "ws": {
     "prefix": "WS",
-    "online": "онлайн",
-    "connecting": "…",
-    "reconnecting": "переподкл.",
+    "online": "подключён",
+    "connecting": "подключение…",
+    "reconnecting": "переподключение…",
     "error": "ошибка",
-    "offline": "нет"
+    "offline": "нет связи",
+    "statusTip": "Обновления чата в реальном времени: {state}. Адрес: {url}",
+    "clickReconnect": "Нажмите для переподключения."
   },
   "conference": {
     "sectionTitle": "Конференции",
@@ -304,6 +306,7 @@
       "showVideo": "Видео / конференция",
       "e2eeTitle": "Key packages на сервере (MLS). Текст e2ee-* расшифровывается на сервере для превью в чате.",
       "e2eeCount": "E2EE: {count}",
+      "e2eeStatusTip": "Сквозное шифрование: {count} ключ(ей) на сервере. Настройка — в ⚙ → E2EE / MLS.",
       "notifDisable": "Отключить уведомления",
       "notifEnable": "Включить уведомления браузера",
       "settings": "Настройки",

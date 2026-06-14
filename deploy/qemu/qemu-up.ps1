@@ -5,6 +5,8 @@ param(
     [switch]$Graphical,
     [ValidateSet("", "none", "gtk", "sdl", "default")]
     [string]$Display = "",
+    [ValidateSet("", "dev", "full")]
+    [string]$StackProfile = "",
     [switch]$Help
 )
 
@@ -18,7 +20,8 @@ Write-KorusDebugLog -Location "qemu-up.ps1:start" -Message "qemu-up begin" -Hypo
     KeepDisks = [bool]$KeepDisks; SkipQemuInstall = [bool]$SkipQemuInstall
 }
 if ($Help) {
-    Write-Host "Usage: .\deploy\qemu\qemu-up.ps1 [-InstallQemuOnly] [-SkipQemuInstall] [-KeepDisks] [-Graphical] [-Display none|gtk|sdl|default]"
+    Write-Host "Usage: .\deploy\qemu\qemu-up.ps1 [-InstallQemuOnly] [-SkipQemuInstall] [-KeepDisks] [-Graphical] [-Display none|gtk|sdl|default] [-StackProfile dev|full]"
+    Write-Host "  Disks: server-{dev|full}.qcow2, web-{dev|full}.qcow2 (legacy server.qcow2 -> server-dev on first boot)"
     exit 0
 }
 
@@ -34,13 +37,22 @@ if (-not (Resolve-KorusQemu)) {
     Write-Error "QEMU required. Run: .\deploy\qemu\install-qemu.ps1"
 }
 
+. (Join-Path $lib "Get-KorusQemuStackProfile.ps1")
+if ($StackProfile) {
+    Set-KorusQemuStackProfile -Profile $StackProfile
+} elseif (-not $env:KORUS_QEMU_STACK_PROFILE) {
+    Set-KorusQemuStackProfile -Profile (Get-KorusQemuStackProfile)
+}
+$activeProfile = Get-KorusQemuStackProfile
+Write-Host "QEMU stack profile: $activeProfile (disks: server-$activeProfile, web-$activeProfile)" -ForegroundColor DarkGray
+
 . (Join-Path $lib "Korus-DockerImageCache.ps1")
 Start-KorusDockerImageCacheBackground | Out-Null
 
 if (-not $KeepDisks) {
     . (Join-Path $lib "Reset-KorusVmDisks.ps1")
-    Write-KorusDebugLog -Location "qemu-up.ps1:disks" -Message "resetting VM disks" -HypothesisId "A"
-    Reset-KorusVmDisks
+    Write-KorusDebugLog -Location "qemu-up.ps1:disks" -Message "resetting VM disks" -HypothesisId "A" -Data @{ profile = $activeProfile }
+    Reset-KorusVmDisks -StackProfile $activeProfile
     Remove-Item (Join-Path $runDir "ssh-hostkeys.ps1") -Force -ErrorAction SilentlyContinue
     Write-KorusDebugLog -Location "qemu-up.ps1:disks" -Message "disks reset, ssh cache cleared" -HypothesisId "C"
 }

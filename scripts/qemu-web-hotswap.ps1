@@ -1,6 +1,7 @@
 # Enable QEMU web guest hot-swap (bind-mount repo webui). One-time after image exists.
 param(
     [switch]$Enable,
+    [switch]$Disable,
     [switch]$SyncOnly,
     [switch]$Status,
     [switch]$Help
@@ -11,6 +12,7 @@ if ($Help) {
     Write-Host @"
 Usage:
   .\scripts\qemu-web-hotswap.ps1 -Enable     # sync webui + switch guest to hotswap compose (~1-3 min)
+  .\scripts\qemu-web-hotswap.ps1 -Disable   # back to full compose web-a/web-b/lb
   .\scripts\qemu-web-hotswap.ps1 -SyncOnly   # same as qemu-web-sync.ps1
   .\scripts\qemu-web-hotswap.ps1 -Status     # hotswap active, tailwind.css, last webui.tgz
 
@@ -40,7 +42,13 @@ if ($Status) {
     $webuiTgz = Join-Path $RunDir "webui.tgz"
     $syncAt = if (Test-Path $webuiTgz) { (Get-Item $webuiTgz).LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss") } else { "never" }
     Write-Host "=== web hotswap status ===" -ForegroundColor Cyan
-    Write-Host "  hotswap compose: $(if ($active) { 'active' } else { 'off' })"
+    Write-Host "  hotswap (web-dev): $(if ($active) { 'active' } else { 'off' })"
+    if ((Test-KorusQemuStackRunning -RunDir $RunDir) -and $hk) {
+        try {
+            $cnt = Invoke-PlinkShell -Plink $Plink -HostKey $hk -Port 12222 -Script "sudo docker ps --format '{{.Names}}' | grep -cE 'korus-web-web-(a|b|dev)-1' || true"
+            Write-Host "  web replicas:    $cnt container(s) (a/b/dev)"
+        } catch {}
+    }
     Write-Host "  UI :19088:       $(Test-KorusHostUiReady)"
     Write-Host "  tailwind.css:    $(Test-KorusHostTailwindCss)"
     Write-Host "  last webui.tgz:  $syncAt"
@@ -50,8 +58,8 @@ if ($Status) {
     exit 0
 }
 
-if (-not $Enable -and -not $SyncOnly) {
-    Write-Error "Specify -Enable, -SyncOnly, or -Status"
+if (-not $Enable -and -not $Disable -and -not $SyncOnly) {
+    Write-Error "Specify -Enable, -Disable, -SyncOnly, or -Status"
 }
 
 if (-not (Test-KorusQemuStackRunning -RunDir $RunDir)) {
@@ -60,6 +68,13 @@ if (-not (Test-KorusQemuStackRunning -RunDir $RunDir)) {
 
 $hk = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "web-serial.log") -Role web -SshPort 12222
 if (-not $hk) { throw "web SSH host key not ready" }
+
+if ($Disable) {
+    Write-Host "=== QEMU web hotswap disable -> full compose ===" -ForegroundColor Cyan
+    Disable-KorusGuestWebHotswap -SshPort 12222 -HostKey $hk -Plink $Plink | Out-Null
+    Write-Host "[OK] Full web compose active (web-a, web-b, lb)" -ForegroundColor Green
+    exit 0
+}
 
 if ($SyncOnly) {
     & (Join-Path $Root "scripts\qemu-web-sync.ps1")

@@ -1,5 +1,6 @@
-# Prefer docker-compose.yml + docker-compose.qemu-hotswap-overlay.yml on QEMU full stack.
-# This file: minimal hotswap-only (web-dev + lb, no web-a/web-b).
+# Overlay on docker-compose.yml: add web-dev bind-mount; lb -> web-dev (/ws unchanged).
+# Used by qemu-full-stack-up and qemu-web-hotswap -Enable on QEMU web guest.
+# Dev UI sync (webui.tgz) is the same path for dev and full stack profiles.
 
 services:
   web-dev:
@@ -20,17 +21,12 @@ services:
     restart: unless-stopped
 
   lb:
-    build:
-      context: ./nginx-lb
-      dockerfile: Dockerfile
-    ports:
-      - "0.0.0.0:${KORUS_WEB_LB_PORT:-9088}:80"
     environment:
-      KORUS_WS_GATEWAY_HOST: ${KORUS_WS_GATEWAY_HOST:-host.docker.internal}
-      KORUS_WS_GATEWAY_PORT: ${KORUS_WS_GATEWAY_PORT:-8081}
       NGINX_CONF_TEMPLATE: /etc/nginx/nginx.conf.hotswap.template
     depends_on:
-      - web-dev
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: unless-stopped
+      web-a:
+        condition: service_started
+      web-b:
+        condition: service_started
+      web-dev:
+        condition: service_started
