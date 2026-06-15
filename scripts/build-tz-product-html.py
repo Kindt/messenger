@@ -6,7 +6,15 @@ import sys
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from build_tz_product_html_part2 import append_sections_11_18  # noqa: E402
+from product_status import (  # noqa: E402
+    PLAYWRIGHT_DATE,
+    PLAYWRIGHT_PASSED,
+    PRODUCT_DATE,
+    PRODUCT_VERSION,
+    render_product_snapshot_html,
+)
 from tz_product_pricing import render_fig_cost_monthly_svg  # noqa: E402
+from tz_product_sizing import render_fig_ram_svg  # noqa: E402
 
 OUT = Path(__file__).resolve().parents[1] / "product_presentation.html"
 LEGACY_OUT = Path(__file__).resolve().parents[1] / "tz_product.html"
@@ -271,23 +279,7 @@ FIG_PROFILES = """<figure class="fig"><svg viewBox="0 0 620 180" width="620" hei
 
 FIG_COST = render_fig_cost_monthly_svg()
 
-FIG_RAM = """<figure class="fig"><svg viewBox="0 0 560 240" width="560" height="240" xmlns="http://www.w3.org/2000/svg">
-  <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="bold">Оперативная память (ГБ) — без оптимизации и цель §12</text>
-  <line x1="58" y1="200" x2="500" y2="200" stroke="#9ca3af"/>
-  <line x1="58" y1="200" x2="58" y2="40" stroke="#9ca3af"/>
-  <text x="52" y="204" text-anchor="end" font-size="9">0</text>
-  <text x="52" y="44" text-anchor="end" font-size="9">2 TB</text>
-  <text x="100" y="218" text-anchor="middle" font-size="11">10k</text>
-  <text x="220" y="218" text-anchor="middle" font-size="11">100k</text>
-  <text x="340" y="218" text-anchor="middle" font-size="11">500k</text>
-  <text x="460" y="218" text-anchor="middle" font-size="11">1M</text>
-  <rect x="78" y="128" width="28" height="72" fill="#fca5a5"/><rect x="110" y="188" width="28" height="12" fill="#86efac"/>
-  <rect x="198" y="72" width="28" height="128" fill="#fca5a5"/><rect x="230" y="112" width="28" height="88" fill="#86efac"/>
-  <rect x="318" y="48" width="28" height="152" fill="#fca5a5"/><rect x="350" y="98" width="28" height="102" fill="#86efac"/>
-  <rect x="438" y="32" width="28" height="168" fill="#fca5a5"/><rect x="470" y="78" width="28" height="122" fill="#86efac"/>
-  <rect x="510" y="48" width="12" height="12" fill="#fca5a5"/><text x="528" y="57" font-size="10">без оптим.</text>
-  <rect x="510" y="68" width="12" height="12" fill="#86efac"/><text x="528" y="77" font-size="10">цель §12</text>
-</svg><figcaption class="fig-cap">Рис. 4. Снижение потребления RAM при оптимизированных профилях (§12)</figcaption></figure>"""
+FIG_RAM = render_fig_ram_svg()
 
 FIG_MSG = """<figure class="fig"><svg viewBox="0 0 600 100" width="600" height="100" xmlns="http://www.w3.org/2000/svg">
   <rect x="10" y="30" width="80" height="40" rx="6" fill="#dbeafe" stroke="#3b82f6"/><text x="50" y="55" text-anchor="middle" font-size="11">Отправитель</text>
@@ -336,7 +328,7 @@ def main():
 
 <h1>Продуктовая презентация<br/>Korus Messenger (AvandocMsg)</h1>
 <div class="meta">
-  <b>Версия:</b> 2.3 &nbsp;|&nbsp; <b>Дата:</b> 15 июня 2026 &nbsp;|&nbsp;
+  <b>Версия:</b> {PRODUCT_VERSION} &nbsp;|&nbsp; <b>Дата:</b> {PRODUCT_DATE} &nbsp;|&nbsp;
   <b>Аудитория:</b> руководители, юристы, продажи, бухгалтерия, операторы, служба безопасности<br/>
   <b>Формат:</b> презентация продукта для заказчика; приложение I — каталог <b>страниц</b> клиента и админки
 </div>
@@ -353,9 +345,11 @@ def main():
     <span class="tag tag-done">Реализовано</span> — доступно сейчас &nbsp;
     <span class="tag tag-partial">Частично</span> — есть, но с ограничениями &nbsp;
     <span class="tag tag-planned">Запланировано</span> — в планах развития &nbsp;
-    <span class="tag tag-out">Вне текущей поставки</span> — отдельный продукт
+    <span class="tag tag-out">Вне текущей поставки</span> — отдельный продукт / вне репозитория
   </div>
 </div>
+
+{render_product_snapshot_html()}
 
 <h2 id="toc">Содержание</h2>
 <ol class="toc">
@@ -363,20 +357,19 @@ def main():
   <li><a href="#s2">2. Для кого этот продукт</a></li>
   <li><a href="#s3">3. Словарь простыми словами</a></li>
   <li><a href="#s4">4. Возможности системы</a></li>
-  <li><a href="#s5">5. Кейсы использования (27 сценариев)</a></li>
+  <li><a href="#s5">5. Кейсы использования (24 + 3 planned)</a></li>
   <li><a href="#s6">6. Роли и права</a></li>
   <li><a href="#s7">7. Безопасность и соответствие</a></li>
   <li><a href="#s8">8. Сравнение с исходным техническим ТЗ</a></li>
   <li><a href="#s9">9. Возможности развития</a></li>
   <li><a href="#s10">10. Ресурсы серверов и нагрузка</a></li>
   <li><a href="#s11">11. Критерии приёмки</a></li>
-  <li><a href="#s12">12. Оптимизация инфраструктуры</a></li>
-  <li><a href="#s13">13. Интеграции</a></li>
-  <li><a href="#s14">14. Комплаенс и персональные данные</a></li>
-  <li><a href="#s15">15. Доступность и SLA</a></li>
-  <li><a href="#s16">16. Профили и ограничения для пользователя</a></li>
-  <li><a href="#s17">17. Приложения</a> (<a href="#app-i">I — страницы и URL</a>)</li>
-  <li><a href="#s18">18. Стоимость владения — примеры расчётов</a> (<a href="#s18-7">диаграмма за год</a>)</li>
+  <li><a href="#s12">12. Интеграции</a></li>
+  <li><a href="#s13">13. Комплаенс и персональные данные</a></li>
+  <li><a href="#s14">14. Доступность и SLA</a></li>
+  <li><a href="#s15">15. Профили и ограничения для пользователя</a></li>
+  <li><a href="#s16">16. Приложения</a> (<a href="#app-i">I — страницы и URL</a>)</li>
+  <li><a href="#s17">17. Стоимость владения — примеры расчётов</a> (<a href="#s17-7">диаграмма за год</a>)</li>
 </ol>
 """)
 
@@ -386,30 +379,34 @@ def main():
 <h2 id="s1">1. Резюме для руководства</h2>
 {FIG_ARCH}
 {ARCH_FLOW}
-<p><span class="req">Korus Messenger (AvandocMsg)</span> — корпоративный мессенджер для организаций: переписка, файлы, видеозвонки, управление сроками хранения данных и инструменты для юридического и внутреннего контроля. Работает в браузере, может устанавливаться как приложение (PWA). Предназначен для изолированных контуров — на серверах заказчика или в частном облаке.</p>
+<p><span class="req">Korus Messenger (AvandocMsg)</span> — корпоративный мессенджер для организаций: переписка, файлы, видеозвонки (WebRTC), управление сроками хранения и инструменты для юридического контроля. Работает в браузере, может устанавливаться как приложение (PWA). Развёртывание — на серверах заказчика или в частном облаке.</p>
 
-<h3>Что уже работает</h3>
+<h3>Что уже работает (проверено на стенде)</h3>
 <ul>
-  <li>Вход, регистрация, безопасный выход и автоматическое продление сессии</li>
-  <li>Личные и групповые чаты: отправка, редактирование, удаление, пересылка, реакции, закрепление, ответы, сообщения с автоудалением</li>
+  <li>Вход, регистрация, безопасный выход и автоматическое продление сессии (Keycloak)</li>
+  <li>Личные и групповые чаты: отправка, редактирование, удаление, пересылка, реакции, закрепление, ответы, TTL</li>
   <li>Мгновенная доставка в браузере; восстановление после обрыва связи</li>
-  <li>Контакты, поиск коллег и поиск по тексту переписки</li>
+  <li>Контакты, поиск коллег и поиск по переписке (Solr в Standard; SQL в Pilot)</li>
   <li>Файлы: загрузка, просмотр, скачивание, публичные ссылки с отзывом</li>
-  <li>Личное «Хранилище» для сохранённых сообщений</li>
-  <li>Экспорт переписки в архив (JSON/ZIP)</li>
-  <li>Видеозвонки и демонстрация экрана из чата</li>
-  <li>Админ-панель: организации, политики хранения, legal hold, журнал аудита</li>
-  <li>Интерфейс на 6 языках (русский, английский и др.)</li>
-  <li>Сквозное шифрование — технически готово; массовое включение в промышленной среде после согласования с безопасностью</li>
+  <li>Личное «Хранилище»; экспорт переписки JSON/ZIP</li>
+  <li>Админ-консоль (<code>/admin/</code>): организации, ретенция, legal hold, аудит, E2EE dashboard</li>
+  <li>Интерфейс на 6 языках</li>
+  <li>Автотесты UI: <b>{PLAYWRIGHT_PASSED}/{PLAYWRIGHT_PASSED}</b> Playwright на QEMU ({PLAYWRIGHT_DATE})</li>
 </ul>
 
-<h3>Что нужно до промышленного запуска</h3>
+<h3>Частично готово (код есть, нужен ops / sign-off)</h3>
 <ul>
-  <li>Защищённое соединение (HTTPS) для всех пользователей</li>
-  <li>Формальное одобрение усиленного шифрования (Product / Security / Ops)</li>
-  <li>Production-уведомления в браузере (Web Push)</li>
-  <li>Сервер для стабильных звонков за корпоративным firewall (TURN)</li>
-  <li>Согласованная с юристами политика полноты выгрузок для комплаенса</li>
+  <li><b>Видеозвонки</b> — mesh WebRTC из чата; за NAT может потребоваться TURN-сервер</li>
+  <li><b>E2EE (hybrid MLS)</b> — в браузере и на сервере; массовое prod после Product/Security sign-off</li>
+  <li><b>Web Push / PWA</b> — service worker и push-worker; VAPID vault→Ansible wiring ✓; delivery verify на stage — ops</li>
+  <li><b>HTTPS</b> — Ansible/TLS для stage/prod готов; выпуск сертификатов на контуре заказчика</li>
+</ul>
+
+<h3>До промышленного запуска</h3>
+<ul>
+  <li>Formal load test на stage (k6)</li>
+  <li>Согласованная с юристами политика полноты export (GDPR)</li>
+  <li>Bot API, SSO federation, Live-streaming, мобильные клиенты — <b>не в текущей поставке</b> (§9)</li>
 </ul>
 """)
 
@@ -431,7 +428,7 @@ def main():
   <tr><td>IT-администратор</td><td>Организации, политики, пользователи</td></tr>
   <tr><td>Безопасность / комплаенс</td><td>Аудит, экспорт, legal hold</td></tr>
   <tr><td>Оператор инфраструктуры</td><td>Развёртывание, резервные копии, масштабирование</td></tr>
-  <tr><td>Продажи / закупки</td><td>Оценка стоимости и профиля (см. §18)</td></tr>
+  <tr><td>Продажи / закупки</td><td>Оценка стоимости и профиля (см. §17)</td></tr>
 </table>
 <h3>Границы текущей поставки</h3>
 <table>
@@ -454,7 +451,7 @@ def main():
   <tr><td>Ретенция</td><td>Правила: как долго хранить переписку и когда удалять</td></tr>
   <tr><td>Legal hold</td><td>Заморозка удаления по требованию юристов</td></tr>
   <tr><td>Экспорт (export)</td><td>Выгрузка переписки в файл для расследования или архива</td></tr>
-  <tr><td>E2EE (сквозное шифрование)</td><td>Текст шифруется на устройстве; сервер не видит содержание</td></tr>
+  <tr><td>E2EE (сквозное шифрование)</td><td>Hybrid MLS: шифрование в браузере; сервер не хранит plaintext при активном MLS</td></tr>
   <tr><td>Организация (tenant)</td><td>Логическое подразделение — одна компания или ведомство</td></tr>
   <tr><td>TTL сообщения</td><td>Автоудаление сообщения через заданное время</td></tr>
   <tr><td>SLA</td><td>Договорённость о доступности сервиса и времени восстановления</td></tr>
@@ -472,23 +469,23 @@ def main():
   <tr><td>Вход и сессия</td><td>Регистрация, вход, выход, продление сессии</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Чаты и сообщения</td><td>1:1, группы, edit/delete/forward/pin/reactions/TTL</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Мгновенная доставка</td><td>Без обновления страницы, «печатает…»</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Контакты и поиск</td><td>Список, импорт, поиск людей и сообщений</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>Контакты и поиск</td><td>Список, импорт; Solr (Standard) или SQL (Pilot)</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Файлы</td><td>Загрузка, превью, публичные ссылки</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Экспорт чата</td><td>JSON/ZIP архив</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Звонки</td><td>Видео, комната по ссылке, screen share</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>E2EE</td><td>Шифрование в браузере</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>Push / PWA</td><td>Уведомления, установка как приложение</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>Админка</td><td>Org, ретенция, legal hold, аудит</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>Звонки</td><td>WebRTC mesh из чата, screen share; TURN — ops</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>E2EE</td><td>Hybrid MLS в браузере; prod после sign-off</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Push / PWA</td><td>SW, push-worker, UI; VAPID Ansible vault ✓</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Админка</td><td><code>/admin/</code> — org, ретенция, legal hold, audit</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Ретенция и архив</td><td>Многоуровневое хранение, автоочистка</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Локализация</td><td>ru, en, be, kk, zh, ko</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Bot API</td><td>Боты для Service Desk и автоматизации</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
   <tr><td>Live-streaming</td><td>All-hands, HLS-трансляции</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>Prod HTTPS</td><td>Защищённый доступ</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Prod HTTPS</td><td>Ansible/TLS scaffolding ✓; deploy на stage — ops</td><td><span class="tag tag-partial">Частично</span></td></tr>
 </table>
 """)
 
     # §5 cases
-    parts.append('<hr/><h2 id="s5">5. Кейсы использования</h2>\n<p>Формат: <b>ситуация → действия → результат</b>. Всего 27 сценариев.</p>\n<h3>5.1 Сотрудник</h3>\n')
+    parts.append('<hr/><h2 id="s5">5. Кейсы использования</h2>\n<p>Формат: <b>ситуация → действия → результат</b>. 27 сценариев: <b>24 реализовано</b> (или частично) + <b>3 запланировано</b> (КУ-25…27).</p>\n<h3>5.1 Сотрудник</h3>\n')
     cases_emp = [
         ("КУ-01: Переписка с коллегой", "done", "Нужно обсудить задачу с коллегой из другого отдела.", "Найти коллегу → открыть чат → написать.", "Сообщение доставлено мгновенно."),
         ("КУ-02: Проектная группа", "done", "Запуск проекта на 8 человек.", "Создать группу → пригласить участников.", "Общая лента и обмен файлами."),
@@ -571,13 +568,13 @@ def main():
   <li>Доступ к чатам только участникам</li>
   <li>Блокировки учитываются при поиске и доставке</li>
 </ul>
-<h3>Сквозное шифрование (E2EE)</h3>
+<h3>Сквозное шифрование (E2EE / hybrid MLS)</h3>
 <table>
   <tr><th>Режим</th><th>Что видит сервер</th></tr>
   <tr><td>Без E2EE</td><td>Текст сообщений (хранится на сервере организации)</td></tr>
-  <tr><td>С E2EE</td><td>Только «конверт» — расшифровка на устройстве пользователя</td></tr>
+  <tr><td>С E2EE (MLS active)</td><td>Шифротекст; plaintext-preview отключён; расшифровка на клиенте</td></tr>
 </table>
-<p><span class="tag tag-partial">Частично</span> — работает в тестовой среде; промышленное включение после согласования с безопасностью.</p>
+<p><span class="tag tag-partial">Частично</span> — engineering gate пройден (spec 004); промышленное <code>MLS_STATUS=active</code> после formal sign-off Product/Security/Ops.</p>
 
 <hr/>
 <h2 id="s8">8. Сравнение с исходным техническим ТЗ</h2>
@@ -586,22 +583,25 @@ def main():
   <tr><th>Критерий</th><th>Исходное ТЗ</th><th>Эта презентация</th></tr>
   <tr><td>Аудитория</td><td>Разработчики</td><td>Руководство, юристы, продажи</td></tr>
   <tr><td>Язык</td><td>Технический</td><td>Бизнес + статусы</td></tr>
-  <tr><td>Клиенты</td><td>Web + mobile + desktop</td><td>Web реализован; mobile — planned</td></tr>
-  <tr><td>Кейсы</td><td>Требования списком</td><td>27 сценариев (§5)</td></tr>
-  <tr><td>Sizing и стоимость</td><td>Формулы</td><td>Таблицы + примеры ₽ (§10, §18)</td></tr>
-  <tr><td>Комплаенс</td><td>Разрозненно</td><td>§14 + чеклист</td></tr>
-  <tr><td>SLA</td><td>Кратко</td><td>§15 по профилям</td></tr>
+  <tr><td>Клиенты</td><td>Web + mobile + desktop</td><td>Web ✓; mobile/desktop — вне репо / planned</td></tr>
+  <tr><td>Автотесты UI</td><td>—</td><td>{PLAYWRIGHT_PASSED}/{PLAYWRIGHT_PASSED} Playwright ({PLAYWRIGHT_DATE})</td></tr>
+  <tr><td>Кейсы</td><td>Требования списком</td><td>24 реализовано + 3 planned (§5)</td></tr>
+  <tr><td>Sizing и стоимость</td><td>Формулы</td><td>Таблицы + примеры ₽ (§10, §17)</td></tr>
+  <tr><td>Комплаенс</td><td>Разрозненно</td><td>§13 + чеклист</td></tr>
+  <tr><td>SLA</td><td>Кратко</td><td>§14 по профилям</td></tr>
   <tr><td>Статус фич</td><td>Все как требования</td><td>Реализовано / Частично / Planned</td></tr>
 </table>
 <table>
   <tr><th>Тема исходного ТЗ</th><th>Статус в продукте</th></tr>
   <tr><td>Вход, чаты, сообщения, TTL</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Hot/Archive/Deep, поиск, файлы</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>Hot/Archive/Deep, файлы, export</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>Поиск Solr / SQL (Pilot)</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>TLS prod deploy</td><td><span class="tag tag-partial">Частично</span> (код/Ansible ✓)</td></tr>
   <tr><td>Bot API</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
   <tr><td>Push-уведомления</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>Live-streaming</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
   <tr><td>Звонки</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>Оптимизация infra (§12, FR-OPT)</td><td><span class="tag tag-done">Реализовано</span> (01–07 ✓; 08–09 + load test — roadmap)</td></tr>
+  <tr><td>Профили Pilot / Standard</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Sizing 1M пользователей</td><td>§10 — ориентиры</td></tr>
 </table>
 """)
@@ -616,19 +616,14 @@ def main():
 <tr><td>E2EE prod enable</td><td>Конфиденциальность переписки</td></tr>
 <tr><td>Web Push, TURN</td><td>Уведомления и звонки за firewall</td></tr>
 <tr><td>GDPR export policy</td><td>Юридически полная выгрузка</td></tr>
+<tr><td>Formal load test (k6)</td><td>Подтверждение sizing §10 на stage</td></tr>
 </table>
 <h3>6–12 месяцев</h3>
 <table><tr><th>Направление</th><th>Ценность</th></tr>
 <tr><td>Bot API</td><td>Service Desk, автоматизация</td></tr>
 <tr><td>SSO Google/LDAP</td><td>Enterprise-вход</td></tr>
-<tr><td>FR-OPT-08 dedup, FR-OPT-09 sharding</td><td>Enterprise tier, §12 волна 4</td></tr>
-<tr><td>Formal load test (k6)</td><td>Подтверждение §10.4 на stage при go-live</td></tr>
-</table>
-<h3>Уже в коде (spec 006, волны 1–3)</h3>
-<table><tr><th>Направление</th><th>Ценность</th></tr>
-<tr><td>Pilot compose + Keycloak prod (FR-OPT-01/02)</td><td>Пилот на 12–16 ГБ RAM</td></tr>
-<tr><td>Read cache, scale WS/pipeline, replica (03–05)</td><td>Standard без лишних серверов</td></tr>
-<tr><td>zstd archive + batch Solr (06–07)</td><td>Меньше диска и CPU на поиске</td></tr>
+<tr><td>Dedup файлов (FR-OPT-08)</td><td>Экономия диска на вложениях</td></tr>
+<tr><td>Sharding PG (FR-OPT-09)</td><td>Enterprise tier, масштаб до 1M</td></tr>
 </table>
 <h3>12+ месяцев</h3>
 <ul><li>Live-streaming (all-hands)</li><li>Мобильные клиенты</li><li>SFU для звонков &gt;20 участников</li></ul>
@@ -639,7 +634,6 @@ def main():
 <hr/>
 <h2 id="s10">10. Ресурсы серверов и нагрузка</h2>
 {FIG_PROFILES}
-<p class="small" style="margin-top:8px;">Следующий рисунок — насколько оптимизация §12 снижает потребление RAM относительно базовой конфигурации §10.2.</p>
 {FIG_RAM}
 <div class="warn"><div class="req">Важно</div><div class="comment">Все цифры — <b>ориентиры для планирования</b>. Перед промышленным запуском рекомендуется нагрузочное тестирование на 10–20% целевой нагрузки. Активные видеозвонки и прямые эфиры могут удвоить требования к сети и процессору.</div></div>
 
@@ -661,32 +655,25 @@ DAU (активных в день) = Пользователи × доля акт
 
 <h3>10.2 Профили Pilot / Standard / Enterprise</h3>
 <table>
-  <tr><th>Профиль</th><th>Масштаб</th><th>RAM (цель)</th><th>Для кого</th></tr>
+  <tr><th>Профиль</th><th>Масштаб</th><th>RAM</th><th>Для кого</th></tr>
   <tr><td><b>Pilot</b></td><td>до 10 000</td><td>12–16 ГБ</td><td>Пилот, филиал, MVP</td></tr>
   <tr><td><b>Standard</b></td><td>10k–100k</td><td>120–160 ГБ</td><td>Типовая корпорация</td></tr>
-  <tr><td><b>Enterprise</b></td><td>100k–1M</td><td>900 ГБ–1,2 ТБ</td><td>Крупный / федеральный контур</td></tr>
+  <tr><td><b>Enterprise</b></td><td>100k–1M</td><td>450 ГБ–1,2 ТБ</td><td>Крупный / федеральный контур</td></tr>
 </table>
 
-<h3>10.3 Сравнительная таблица конфигураций (baseline)</h3>
+<h3>10.3 Рекомендуемые конфигурации</h3>
 <table>
-  <tr><th>Параметр</th><th>10k</th><th>100k</th><th>500k</th><th>1M</th></tr>
-  <tr><td>Архитектура</td><td>2 сервера</td><td>Малый кластер</td><td>Средний кластер</td><td>Распределённый</td></tr>
-  <tr><td>Суммарно RAM</td><td><b>~64 ГБ</b></td><td><b>~256 ГБ</b></td><td><b>~768 ГБ</b></td><td><b>~1,5–2 ТБ</b></td></tr>
-  <tr><td>Диск (1 год с файлами)</td><td><b>~8 ТБ</b></td><td><b>~50 ТБ</b></td><td><b>~180 ТБ</b></td><td><b>~350 ТБ+</b></td></tr>
+  <tr><th>Параметр</th><th>10k Pilot</th><th>100k Standard</th><th>500k Enterprise</th><th>1M Enterprise</th></tr>
+  <tr><td>Архитектура</td><td>Lean stack</td><td>Кластер</td><td>Расширенный кластер</td><td>Распределённый</td></tr>
+  <tr><td>Суммарно RAM</td><td><b>~14 ГБ</b></td><td><b>~140 ГБ</b></td><td><b>~450 ГБ</b></td><td><b>~900 ГБ–1,2 ТБ</b></td></tr>
+  <tr><td>Диск (1 год с файлами)</td><td><b>~5 ТБ</b></td><td><b>~30 ТБ</b></td><td><b>~110 ТБ</b></td><td><b>~200 ТБ</b></td></tr>
   <tr><td>Сеть (пик)</td><td>200 Мбит/с</td><td>1 Гбит/с</td><td>5 Гбит/с</td><td>10 Гбит/с+</td></tr>
   <tr><td>RPO / RTO</td><td>24ч / 4ч</td><td>8ч / 2ч</td><td>1ч / 30м</td><td>15м / 15м</td></tr>
+  <tr><td>Поиск</td><td>SQL</td><td>Solr</td><td>Solr cluster</td><td>Solr + sharding (roadmap)</td></tr>
 </table>
+<p class="small"><b>Устойчивость:</b> доставка сообщений (P0) не зависит от поиска, push и архива — при сбое второстепенных служб чаты продолжают работать.</p>
 
-<h3>10.4 Целевые конфигурации после оптимизации (§12)</h3>
-<table>
-  <tr><th>Масштаб</th><th>RAM baseline</th><th>RAM цель</th><th>Диск 1 год baseline</th><th>Диск цель</th></tr>
-  <tr><td>10k Pilot</td><td>~64 ГБ</td><td><b>~14 ГБ</b></td><td>~8 ТБ</td><td><b>~5 ТБ</b></td></tr>
-  <tr><td>100k Standard</td><td>~256 ГБ</td><td><b>~140 ГБ</b></td><td>~50 ТБ</td><td><b>~30 ТБ</b></td></tr>
-  <tr><td>500k</td><td>~768 ГБ</td><td><b>~450 ГБ</b></td><td>~180 ТБ</td><td><b>~110 ТБ</b></td></tr>
-  <tr><td>1M Enterprise</td><td>~1,5–2 ТБ</td><td><b>~900 ГБ–1,2 ТБ</b></td><td>~350 ТБ</td><td><b>~200 ТБ</b></td></tr>
-</table>
-
-<h3>10.5 Примеры сценариев</h3>
+<h3>10.4 Примеры сценариев</h3>
 <p><b>A — «Тихий офис» (10k):</b> небольшая компания, backup раз в сутки, профиль Pilot.</p>
 <p><b>B — «Распределённая компания» (100k):</b> утренний пик рассылок, replica БД, полнотекстовый поиск.</p>
 <p><b>C — «Федеральный масштаб» (1M):</b> dedicated ops 24/7, обязателен load test.</p>

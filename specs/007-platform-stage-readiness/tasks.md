@@ -39,9 +39,9 @@
 
 ## Phase 6 — W3/W4 T-P1 (ops — blocked without stage)
 
-- [ ] T601 Stage DNS + vault encrypt + `site.yml` (US1 rows 1–3) — prep kit ✅; operator on stage host
-- [ ] T602 Real TLS smoke on stage URL (US1 row 4) — runbook ✅
-- [ ] T603 E2EE staging rows 4–6 — checklist ✅
+- [ ] T601 Stage DNS + vault encrypt + `site.yml` (US1 rows 1–3) — **automation:** `preflight-stage-deploy.ps1`, `validate-stage-inventory.ps1` ✅; operator on stage host
+- [ ] T602 Real TLS smoke on stage URL (US1 row 4) — **wrapper:** `stage-tls-smoke.ps1` ✅
+- [ ] T603 E2EE staging rows 4–6 — **partial smoke:** `smoke-e2ee-staging.ps1` ✅
 - [x] T604 k6 baseline JSON on QEMU (`scripts/run-k6-qemu-baseline.ps1`, `deploy/qemu/run/k6-pilot-baseline.json` fallback 2026-06-15; full k6 when installed)
 - [ ] T605 Hotplug `apply-hotplug-signoff.ps1` (US6) — script + template ✅; human signers pending
 - [ ] T606 E2EE QA formal sign (US7 row 8)

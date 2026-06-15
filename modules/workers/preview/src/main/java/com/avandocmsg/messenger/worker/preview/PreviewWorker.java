@@ -101,6 +101,10 @@ public class PreviewWorker {
         log.info(workerMessages.format("worker.preview.link_preview", event.messageId(), targetUrl, title));
     }
 
+    public boolean natsConnected() {
+        return connection.getStatus() == Connection.Status.CONNECTED;
+    }
+
     public void shutdown() {
         try {
             connection.close();
@@ -129,14 +133,40 @@ public class PreviewWorker {
         var fetcher = new LinkPreviewFetcher(
             Duration.ofMillis(timeoutMs), Duration.ofMillis(timeoutMs), maxBytes, workerMessages);
 
+        PreviewHealthHttpServer healthServer = null;
         try {
             var worker = new PreviewWorker(natsUrl, previewDs, fetcher, cache, testUrl, workerMessages);
             worker.start();
-            Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));
+            var metricsPort = parseIntEnv("PREVIEW_METRICS_PORT", 9191);
+            if (metricsPort > 0) {
+                healthServer = PreviewHealthHttpServer.start(metricsPort,
+                    (PreviewReadinessCheck) worker::natsConnected,
+                    workerMessages);
+                log.info(workerMessages.format("worker.preview.health_url", healthServer.getPort()));
+            }
+            PreviewHealthHttpServer healthRef = healthServer;
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                if (healthRef != null) {
+                    healthRef.close();
+                }
+                worker.shutdown();
+            }));
             Thread.currentThread().join();
         } catch (Exception e) {
             log.error(workerMessages.get("worker.common.fatal_error"), e);
             System.exit(1);
+        }
+    }
+
+    private static int parseIntEnv(String key, int defaultVal) {
+        var raw = System.getenv(key);
+        if (raw == null || raw.isBlank()) {
+            return defaultVal;
+        }
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            return defaultVal;
         }
     }
 

@@ -454,7 +454,7 @@
 |-------------|-----------------|--------|
 | Профили Pilot / Standard / Enterprise | Платить за нужный масштаб, не за «full stack» с первого дня | **Реализовано** (compose + Ansible; pilot — явный override) |
 | Оптимизация RAM и пропускной способности | Больше пользователей на том же железе | **Реализовано** (FR-OPT-01…07, spec 006) |
-| Сжатие архива и dedup файлов | Длинная история без линейного роста дисков | **Частично** (zstd ✓; dedup FR-OPT-08 — запланировано) |
+| Сжатие архива и dedup файлов | Длинная история без линейного роста дисков | **Частично** (zstd ✓; dedup FR-OPT-08 **реализовано** в wave 4) |
 
 Детали: §12, приложение E, [`2026-06-15-infra-optimization-design.md`](plans/2026-06-15-infra-optimization-design.md).
 
@@ -593,7 +593,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 ## 12. Требования к оптимизации инфраструктуры
 
 > **Статус раздела:** **реализовано (волны 1–3, FR-OPT-01…07)** — spec 006 закрыт, инженерная приёмка на QEMU (spec 007).  
-> **В roadmap:** FR-OPT-08 (dedup файлов), FR-OPT-09 (sharding), formal load test для подтверждения §10.2.1 на stage.  
+> **В roadmap:** FR-OPT-09 (sharding full router), formal load test soak для подтверждения §10.2.1 на stage. FR-OPT-08 dedup — **реализовано** (wave 4).  
 > Техническая детализация — [`docs/plans/2026-06-15-infra-optimization-design.md`](plans/2026-06-15-infra-optimization-design.md).
 
 ### 12.1 Зачем это нужно (простым языком)
@@ -631,8 +631,8 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 | **FR-OPT-05** | Разделение чтения и записи БД (replica для ленты сообщений) | Снятие пика утренних рассылок | Standard+ | **Реализовано** |
 | **FR-OPT-06** | Сжатие архивных данных (cold storage) | −60% диска на старых сообщениях | Standard+ | **Реализовано** |
 | **FR-OPT-07** | Пакетная индексация для полнотекстового поиска | Меньше CPU при том же потоке сообщений | Standard+ | **Реализовано** |
-| **FR-OPT-08** | Дедупликация одинаковых файлов | −35% диска на вложениях | Standard+ | **Запланировано** |
-| **FR-OPT-09** | Разделение данных крупных организаций (sharding) | Путь к 1M пользователей | Enterprise | **Запланировано** |
+| **FR-OPT-08** | Дедупликация одинаковых файлов | −35% диска на вложениях | Standard+ | **Реализовано** (SHA-256, refcount) |
+| **FR-OPT-09** | Разделение данных крупных организаций (sharding) | Путь к 1M пользователей | Enterprise | **Частично** (scaffold; full router — ADR) |
 
 **Требование FR-OPT-010:** доставка сообщения (P0) **не зависит** от готовности поиска, push и архива (P1/P2) — деградация graceful, без потери сообщений.
 
@@ -1121,7 +1121,7 @@ flowchart LR
 | 05 Read replica | §5 | 256 GB | 140 GB | 03, 04 | Реализовано |
 | 06 zstd archive | §6 | disk 50 TB | disk 35 TB | retention | Реализовано |
 | 07 Batch Solr | §7 | 256 GB | 140 GB | Solr on | Реализовано |
-| 08 File dedup | §8 | disk 50 TB | disk 30 TB | MinIO | Запланировано |
+| 08 File dedup | §8 | disk 50 TB | disk 30 TB | MinIO | **Реализовано** |
 | 09 Sharding | §9 | 1M tier | 900 GB | 03–07 | Запланировано |
 
 *Целевые цифры RAM/диска — проектные; formal load test подтверждает §10.2.1 на stage при go-live.*

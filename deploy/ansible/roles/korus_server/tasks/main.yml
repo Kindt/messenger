@@ -10,6 +10,9 @@
     or korus_keycloak_admin_password is defined
     or korus_jwt_secret is defined
     or korus_coturn_secret is defined
+    or korus_vapid_public_key is defined
+    or korus_vapid_private_key is defined
+    or korus_vapid_subject is defined
     or korus_cors_allowed_origins is defined
     or korus_keycloak_issuer is defined
     or korus_keycloak_jwks_url is defined

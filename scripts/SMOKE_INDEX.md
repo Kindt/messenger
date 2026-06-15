@@ -46,6 +46,13 @@
 | Retention file cleanup metrics | `scripts/smoke-retention-file-cleanup.ps1` | manual | metrics on retention worker port |
 | Web parity API (spec 002 T010/T016 backend) | `scripts/smoke-web-parity-api.sh` | manual | `.ps1`; pin API may 500; UI/WS gates still manual |
 | **TLS redirect (spec 003 Phase B / 004 US1)** | `scripts/smoke-tls-redirect.ps1` | manual; Ansible `--tags tls_smoke` via `korus_smoke` role | stage/prod with `korus_tls_enabled`; `-SkipTls` for dev |
+| **Stage preflight (spec 007 T601)** | `scripts/preflight-stage-deploy.ps1` | manual (Windows host) | checklist + `validate-stage-inventory.ps1` |
+| **Stage TLS wrapper** | `scripts/stage-tls-smoke.ps1` | manual | reads `korus_tls_domain` from inventory |
+| **E2EE staging partial** | `scripts/smoke-e2ee-staging.ps1` | manual | `-AdminToken` for migrate-batch |
+| **k6 stage baseline** | `scripts/run-k6-stage-baseline.ps1` | manual | delegates to `run-k6-qemu-baseline.ps1` |
+| **TURN reachability** | `scripts/smoke-turn.ps1` | manual | TCP 3478 + optional `web-client-env.js` ICE |
+| **Preview worker health** | `scripts/smoke-preview-worker.ps1` | manual | full-server `:9195/health` |
+| **Playwright staging gate** | `scripts/playwright-staging-gate.ps1` | manual | `-BaseUrl https://...` |
 | **Playwright parity matrix** | `tests/e2e-web/` (9 specs) | `deploy-messaging-smoke.yml` (optional nightly job, `continue-on-error`) | spec 004 US5 T110–T115; operator template `specs/002-web-client-server-parity/runtime-gate-report.md` |
 
 ## Operator utilities

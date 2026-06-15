@@ -2,6 +2,13 @@
 
 Prod-like **two-host** topology with TLS on the web host. Replace placeholder hostnames before first deploy.
 
+## 0. Windows host preflight (before Ansible on control node)
+
+```powershell
+.\scripts\preflight-stage-deploy.ps1 -Inventory stage
+.\scripts\stage-ansible-dry-run.ps1 -Inventory stage
+```
+
 ## 1. Prerequisites
 
 | Item | Action |
@@ -57,6 +64,8 @@ ansible-playbook -i inventory/stage/hosts.yml playbooks/site.yml --ask-vault-pas
 Post-deploy TLS smoke (operator workstation):
 
 ```powershell
+.\scripts\stage-tls-smoke.ps1 -Inventory stage
+# or explicit URLs:
 .\scripts\smoke-tls-redirect.ps1 `
   -HttpUrl "http://messenger.stage.example.com" `
   -HttpsUrl "https://messenger.stage.example.com" `

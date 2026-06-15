@@ -14,10 +14,12 @@
 | **Частично** | Код есть; ops / sign-off / prod config | TLS, E2EE, Push, звонки, §7, §13 GDPR, traceability |
 | **Запланировано** | Нет публичной поставки | Bot API, SSO, Live HLS, mobile/desktop, FR-OPT-09 full |
 
-**Расхождение код ↔ презентация (обновить в v2.4):**
+**Расхождение код ↔ презентация (обновлено в v2.5):**
 
-- **FR-OPT-08 dedup** — реализован в коде (`V031`, spec wave 4); в MD/HTML ещё «Запланировано».
-- **§12 в HTML** — переименован в «Интеграции»; оптимизация infra — в §9/§10 и резюме §1.
+- **FR-OPT-08 dedup** — реализован в коде и презентации (`V031`, wave 4).
+- **§12 в HTML** — «Интеграции»; infra optimization — в §9/§10 и резюме §1.
+
+**Sprint A+B (2026-06-16):** stage preflight scripts ✅; VAPID/TURN Ansible wiring ✅; preview-worker compose ✅; ops deploy на stage — pending.
 
 ---
 

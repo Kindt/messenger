@@ -6,7 +6,7 @@
 #
 # Админка: http://localhost:8080/admin/  (realm-роль admin: csadmin / csadmin или admin / admin)
 # Keycloak (realm avandocmsg): http://localhost:8081/
-# WS gateway: http://localhost:8082/  | retention metrics/health: http://localhost:9192/  | export-replay metrics: http://localhost:9193/  | push-worker health: http://localhost:9194/health
+# WS gateway: http://localhost:8082/  | retention metrics/health: http://localhost:9192/  | export-replay metrics: http://localhost:9193/  | push-worker health: http://localhost:9194/health  | preview-worker health: http://localhost:9195/health
 #
 # Та же сеть korus_messenger_dev_min, что и у docker-compose.dev-min.yml (korus-web attach).
 
@@ -255,10 +255,9 @@ services:
       DB_USER: avandocmsg
       DB_PASSWORD: avandocmsg
       PUSH_METRICS_PORT: "9191"
-      # Web Push (optional; public key must match WEB_CLIENT_VAPID_PUBLIC_KEY on web-client):
-      # PUSH_VAPID_PUBLIC_KEY: ""
-      # PUSH_VAPID_PRIVATE_KEY: ""
-      # PUSH_VAPID_SUBJECT: "mailto:notify@localhost"
+      PUSH_VAPID_PUBLIC_KEY: ${PUSH_VAPID_PUBLIC_KEY:-}
+      PUSH_VAPID_PRIVATE_KEY: ${PUSH_VAPID_PRIVATE_KEY:-}
+      PUSH_VAPID_SUBJECT: ${PUSH_VAPID_SUBJECT:-mailto:notify@localhost}
     ports:
       - "9194:9191"
     depends_on:
@@ -273,6 +272,36 @@ services:
         [
           "CMD-SHELL",
           "curl -fsS http://127.0.0.1:$$PUSH_METRICS_PORT/health >/dev/null || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+  preview-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.preview-worker
+    environment:
+      NATS_URL: nats://nats:4222
+      PREVIEW_DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      PREVIEW_DB_USER: avandocmsg
+      PREVIEW_DB_PASSWORD: avandocmsg
+      PREVIEW_METRICS_PORT: "9191"
+    ports:
+      - "9195:9191"
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+      nats:
+        condition: service_started
+      message-pipeline:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:$$PREVIEW_METRICS_PORT/health >/dev/null || exit 1",
         ]
       interval: 30s
       timeout: 5s

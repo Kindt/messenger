@@ -1,0 +1,26 @@
+# Production/stage coturn overlay — credentials from korus-web/.env (Ansible vault).
+# ICE servers are templated in WEB_CLIENT_RTC_ICE_SERVERS (.env); this file starts coturn only.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.turn-prod.yml up -d
+# From repo root: ./scripts/korus-web-up.sh --turn-prod
+
+services:
+  coturn:
+    image: coturn/coturn:4.6.2
+    restart: unless-stopped
+    ports:
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+    command:
+      - "-n"
+      - "--log-file=stdout"
+      - "--listening-ip=0.0.0.0"
+      - "--listening-port=3478"
+      - "--min-port=10000"
+      - "--max-port=10100"
+      - "--fingerprint"
+      - "--lt-cred-mech"
+      - "--user=korus:${KORUS_COTURN_SECRET:?set KORUS_COTURN_SECRET in .env}"
+      - "--realm=korus-messenger-turn"
+      - "--no-cli"
+      - "--allowed-peer-ip=0.0.0.0-255.255.255.255"

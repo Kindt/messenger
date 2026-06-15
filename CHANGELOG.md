@@ -8,7 +8,11 @@
 
 ## [Unreleased]
 
-### 2026-06-16 — Presentation gaps implementation plan
+### 2026-06-16 — Sprint A+B: stage ops scripts + prod wiring (Push/TURN/preview, presentation v2.5)
+
+- **Sprint A (stage preflight):** `preflight-stage-deploy.ps1`, `validate-stage-inventory.ps1`, `stage-tls-smoke.ps1`, `smoke-e2ee-staging.ps1`, `run-k6-stage-baseline.ps1`, `stage-ansible-dry-run.ps1`, `playwright-staging-gate.ps1`.
+- **Sprint B (eng):** VAPID vault→Ansible (`korus_vapid_*` → push-worker + web); TURN prod overlay `docker-compose.turn-prod.yml` + `korus_web_turn_prod`; preview-worker Dockerfile+compose+health `:9195`; `smoke-turn.ps1`, `smoke-preview-worker.ps1`, `docs/review/web-push-prod-runbook.md`.
+- **Presentation v2.5:** `product_status.py`, `PRODUCT_PRESENTATION.md` — FR-OPT-08 → реализовано; Push/TURN Ansible wiring отмечено.
 
 - **`docs/plans/2026-06-16-presentation-gaps-implementation-plan.md`**: inventory незакрытых блоков презентации, спринты A–D (ops, prod, integrations, scale).
 

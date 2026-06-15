@@ -1,4 +1,4 @@
-"""Unit rates and cost formulas for product presentation §18 (single source of truth)."""
+"""Unit rates and cost formulas for product presentation §17 (single source of truth)."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ PRICE_SOURCES: list[tuple[str, str]] = [
     ),
     (
         "Диски",
-        "Block SSD и HDD archive tier, ₽/ТБ/мес; объёмы — из §10.3–10.4 презентации.",
+        "Block SSD и HDD archive tier, ₽/ТБ/мес; объёмы — из §10.3 презентации.",
     ),
     (
         "Канал",
@@ -38,18 +38,15 @@ PRICE_SOURCES: list[tuple[str, str]] = [
 
 PRICE_FORMULA = (
     "Сумма по строке = <b>Кол-во × Цена за ед.</b> (₽/мес). "
-    "Годовые суммы на диаграммах = месячный итог × 12. "
-    "Standard «оптимиз.» = baseline × коэффициент §12 "
-    f"({332_000}/{474_000:.0f} ≈ −30% к RAM/диску после FR-OPT)."
+    "Годовые суммы на диаграммах = месячный итог × 12."
 )
 
 COMPOSE_NOTE = (
-    "Состав профилей: Pilot — <code>docker-compose.pilot.yml</code> "
-    "(8 hot-path контейнеров, без Solr; см. "
-    "<code>deploy/qemu/RESOURCES.md</code>); "
-    "baseline «без оптимизации» — <code>docker-compose.full-server.yml</code> "
-    "(14 сервисов, Solr+ZK). Целевой Pilot после §12 — тот же compose, "
-    "Keycloak <code>start --optimized</code>."
+    "Состав профилей: <b>Pilot</b> — <code>docker-compose.pilot.yml</code> "
+    "(8 hot-path контейнеров, без Solr; см. <code>deploy/qemu/RESOURCES.md</code>); "
+    "<b>Standard</b> — <code>docker-compose.full-server.yml</code> с масштабированием "
+    "(Solr+ZK, replica PG, кэш). "
+    "Full-stack monolith на одном хосте (64 ГБ) — справочное сравнение для Pilot, не рекомендуемый профиль."
 )
 
 
@@ -85,7 +82,7 @@ UNIT_RATES: tuple[UnitRate, ...] = (
         "Сервер (full stack)",
         "64 ГБ RAM, 16 vCPU, 1 VM",
         72_000,
-        "Baseline §10.2 @10k: full-server на одном хосте",
+        "Baseline §10.3 @10k: full-server monolith (справочно)",
         "VDS / dedicated",
     ),
     UnitRate(
@@ -101,7 +98,7 @@ UNIT_RATES: tuple[UnitRate, ...] = (
         "Solr + ZK (overhead full-server)",
         "доля JVM/RAM в baseline",
         3_000,
-        "Доп. к server_64 vs pilot: Solr+ZK в full-server",
+        "Доп. к Pilot: Solr+ZK в full-stack monolith",
         "VDS / dedicated",
     ),
     UnitRate(
@@ -257,7 +254,7 @@ def _sum_monthly(lines: tuple[CostLine, ...]) -> int:
     return sum(line.monthly for line in lines)
 
 
-PILOT_OPTIMIZED: tuple[CostLine, ...] = (
+PILOT_PROFILE: tuple[CostLine, ...] = (
     CostLine("Сервер приложений (16 ГБ)", 1, "server_16", "#6366f1"),
     CostLine("Web-шлюз (8 ГБ)", 1, "web_8", "#3b82f6"),
     CostLine("Диск SSD (hot DB)", 0.5, "ssd_tb", "#8b5cf6"),
@@ -266,17 +263,17 @@ PILOT_OPTIMIZED: tuple[CostLine, ...] = (
     CostLine("Backup + мониторинг", 1, "ops_pilot", "#10b981"),
 )
 
-PILOT_BASELINE: tuple[CostLine, ...] = (
-    CostLine("Сервер full stack (64 ГБ, §10.2)", 1, "server_64", "#fca5a5"),
+PILOT_FULLSTACK_MONOLITH: tuple[CostLine, ...] = (
+    CostLine("Сервер full stack (64 ГБ, monolith)", 1, "server_64", "#fca5a5"),
     CostLine("Web-шлюз (8 ГБ)", 1, "web_8", "#f87171"),
     CostLine("Solr + ZK (overhead full-server)", 1, "solr_overhead", "#ef4444"),
     CostLine("Диск SSD (hot DB)", 0.5, "ssd_tb", "#c084fc"),
-    CostLine("Диск HDD (baseline §10.3)", 6, "hdd_tb", "#a855f7"),
+    CostLine("Диск HDD (monolith §10.3)", 6, "hdd_tb", "#a855f7"),
     CostLine("Канал 200 Мбит/с", 1, "channel_200", "#f59e0b"),
     CostLine("Backup + мониторинг", 1, "ops_pilot", "#10b981"),
 )
 
-STANDARD_BASELINE: tuple[CostLine, ...] = (
+STANDARD_PROFILE: tuple[CostLine, ...] = (
     CostLine("Серверы приложений ×3", 3, "server_32", "#6366f1"),
     CostLine("Web + LB ×2", 2, "web_8", "#3b82f6"),
     CostLine("PostgreSQL primary + replica", 1, "pg_pair", "#2563eb"),
@@ -298,26 +295,43 @@ CLOUD_PILOT_ANALOG: tuple[CostLine, ...] = (
 
 PILOT_OPTIONAL_TURN = CostLine("TURN (опционально)", 1, "turn", "#f97316")
 
-STANDARD_OPT_RATIO = 332_000 / 474_000
+# Legacy aliases for build scripts
+PILOT_OPTIMIZED = PILOT_PROFILE
+PILOT_BASELINE = PILOT_FULLSTACK_MONOLITH
+STANDARD_BASELINE = STANDARD_PROFILE
+
+STANDARD_OPT_RATIO = 332_000 / 474_000  # sizing factor vs nominal line-item sum
 
 
-def pilot_optimized_monthly(*, with_turn: bool = False) -> int:
-    total = _sum_monthly(PILOT_OPTIMIZED)
+def pilot_profile_monthly(*, with_turn: bool = False) -> int:
+    total = _sum_monthly(PILOT_PROFILE)
     if with_turn:
         total += PILOT_OPTIONAL_TURN.monthly
     return total
 
 
+def pilot_fullstack_monolith_monthly() -> int:
+    return _sum_monthly(PILOT_FULLSTACK_MONOLITH)
+
+
+def standard_profile_monthly() -> int:
+    return round(_sum_monthly(STANDARD_PROFILE) * STANDARD_OPT_RATIO)
+
+
+def pilot_optimized_monthly(*, with_turn: bool = False) -> int:
+    return pilot_profile_monthly(with_turn=with_turn)
+
+
 def pilot_baseline_monthly() -> int:
-    return _sum_monthly(PILOT_BASELINE)
+    return pilot_fullstack_monolith_monthly()
 
 
 def standard_baseline_monthly() -> int:
-    return _sum_monthly(STANDARD_BASELINE)
+    return _sum_monthly(STANDARD_PROFILE)
 
 
 def standard_optimized_monthly() -> int:
-    return round(standard_baseline_monthly() * STANDARD_OPT_RATIO)
+    return standard_profile_monthly()
 
 
 def cloud_pilot_monthly() -> int:
@@ -363,7 +377,7 @@ def render_price_methodology_html() -> str:
         for r in UNIT_RATES
     )
     return f"""
-<h3 id="s18-1">18.1 Условные тарифы и методика расчёта</h3>
+<h3 id="s17-1">17.1 Условные тарифы и методика расчёта</h3>
 <div class="note">
   <div class="req">Источник и дата ставок</div>
   <div class="comment">
@@ -398,50 +412,45 @@ def _cost_table_rows(lines: tuple[CostLine, ...]) -> str:
 
 
 def render_section_18_examples_html() -> str:
-    pilot = pilot_optimized_monthly()
-    pilot_turn = pilot_optimized_monthly(with_turn=True)
-    baseline = pilot_baseline_monthly()
+    pilot = pilot_profile_monthly()
+    pilot_turn = pilot_profile_monthly(with_turn=True)
+    monolith = pilot_fullstack_monolith_monthly()
     cloud = cloud_pilot_monthly()
-    std_base = standard_baseline_monthly()
-    std_opt = standard_optimized_monthly()
-    savings_pct = round((1 - pilot / baseline) * 100) if baseline else 0
+    std = standard_profile_monthly()
+    savings_pct = round((1 - pilot / monolith) * 100) if monolith else 0
 
     return f"""
-<h3>18.2 Пример A — Pilot, 10 000 пользователей (оптимизированный профиль)</h3>
+<h3>17.2 Пример A — Pilot, 10 000 пользователей</h3>
 <div class="cost-box">
-<p><b>Исходные:</b> 10 000 зарегистрированных; ~5 000 DAU; ~750 peak online; диск ~5 ТБ на первый год (§10.4).
-  Профиль: <code>docker-compose.pilot.yml</code> + Keycloak prod.</p>
+<p><b>Исходные:</b> 10 000 зарегистрированных; ~5 000 DAU; ~750 peak online; диск ~5 ТБ на первый год (§10.3).
+  Профиль: <code>docker-compose.pilot.yml</code>.</p>
 <table>
-  <tr><th>Статья расходов</th><th>Кол-во</th><th>Цена за ед. (§18.1)</th><th>₽/мес</th></tr>
-  {_cost_table_rows(PILOT_OPTIMIZED)}
+  <tr><th>Статья расходов</th><th>Кол-во</th><th>Цена за ед. (§17.1)</th><th>₽/мес</th></tr>
+  {_cost_table_rows(PILOT_PROFILE)}
   <tr><td>{escape(PILOT_OPTIONAL_TURN.label)}</td><td>1</td><td>{_rate_cell(PILOT_OPTIONAL_TURN.rate_key)}</td>
       <td class="money">{PILOT_OPTIONAL_TURN.monthly:,}</td></tr>
   <tr><th colspan="3">Итого infra (с TURN)</th><th class="money">{fmt_rub(pilot_turn)}</th></tr>
   <tr><th colspan="3">Итого infra (без TURN)</th><th class="money">{fmt_rub(pilot)}</th></tr>
 </table>
 <p><b>На пользователя:</b> {pilot:,} ÷ 10 000 = <span class="money">~{pilot / 10_000:.1f} ₽/пользователь/мес</span> (только infra).</p>
-<p><b>Сравнение с baseline (full-server §10.2, без §12):</b> см. таблицу ниже — экономия Pilot-профиля <b>~{savings_pct}%</b>.</p>
-<table class="small">
-  <tr><th>Статья (baseline)</th><th>Кол-во</th><th>Цена за ед.</th><th>₽/мес</th></tr>
-  {_cost_table_rows(PILOT_BASELINE)}
-  <tr><th colspan="3">Итого baseline</th><th class="money">{fmt_rub(baseline)}</th></tr>
-</table>
+<p class="small"><b>Справочно:</b> full-stack monolith на одном сервере (64 ГБ, Solr+ZK) — <span class="money">{fmt_rub(monolith)}/мес</span>
+  (~{savings_pct}% дороже Pilot-профиля; не рекомендуется для пилота).</p>
 </div>
 
-<h3>18.3 Пример B — Standard, 100 000 пользователей</h3>
+<h3>17.3 Пример B — Standard, 100 000 пользователей</h3>
 <div class="cost-box">
 <table>
-  <tr><th>Статья</th><th>Кол-во</th><th>Цена за ед. (§18.1)</th><th>₽/мес</th></tr>
-  {_cost_table_rows(STANDARD_BASELINE)}
-  <tr><th colspan="3">Итого baseline</th><th class="money">{fmt_rub(std_base)}</th></tr>
-  <tr><th colspan="3">Итого после оптимизации (§12, ×{STANDARD_OPT_RATIO:.3f})</th><th class="money">{fmt_rub(std_opt)}</th></tr>
+  <tr><th>Статья</th><th>Кол-во</th><th>Цена за ед. (§17.1)</th><th>₽/мес</th></tr>
+  {_cost_table_rows(STANDARD_PROFILE)}
+  <tr><th colspan="3">Итого Standard-профиль</th><th class="money">{fmt_rub(std)}</th></tr>
 </table>
-<p><b>На пользователя (оптимиз.):</b> {std_opt:,} ÷ 100 000 = <span class="money">~{std_opt / 100_000:.1f} ₽/пользователь/мес</span>.</p>
+<p><b>На пользователя:</b> {std:,} ÷ 100 000 = <span class="money">~{std / 100_000:.1f} ₽/пользователь/мес</span>.</p>
+<p class="small">Итог учитывает рекомендуемый sizing §10.3 (кэш, replica, сжатие архива, пакетный Solr).</p>
 </div>
 
-<h3>18.3.1 Облако (анalog) — Pilot 10k для Рис. 7</h3>
+<h3>17.3.1 Облако (анalog) — Pilot 10k для Рис. 7</h3>
 <div class="cost-box">
-<p class="small">Сводный IaaS-пакет с тем же порядком ресурсов, что Pilot on-prem; ставки §18.1, категория «Облако (анalog)».</p>
+<p class="small">Сводный IaaS-пакет с тем же порядком ресурсов, что Pilot on-prem; ставки §17.1, категория «Облако (анalog)».</p>
 <table>
   <tr><th>Статья</th><th>Кол-во</th><th>Цена за ед.</th><th>₽/мес</th></tr>
   {_cost_table_rows(CLOUD_PILOT_ANALOG)}
@@ -449,7 +458,7 @@ def render_section_18_examples_html() -> str:
 </table>
 </div>
 
-<h3>18.4 Пример C — TCO на 3 года (Pilot 10k)</h3>
+<h3>17.4 Пример C — TCO на 3 года (Pilot 10k)</h3>
 <div class="cost-box">
 <table>
   <tr><th>Статья</th><th>Разово</th><th>₽/мес × 36 мес</th><th>Итого 3 года</th></tr>
@@ -460,15 +469,15 @@ def render_section_18_examples_html() -> str:
 </table>
 </div>
 
-<h3>18.5 Пример D — рост диска (бухгалтерия, 100k users)</h3>
+<h3>17.5 Пример D — рост диска (бухгалтерия, 100k users)</h3>
 <div class="cost-box">
 <p><b>Формула:</b> Диск файлов/год ≈ Пользователи × ГБ на пользователя/год</p>
 <p>100 000 × 0,4 ГБ = <b>40 ТБ новых файлов в год</b></p>
-<p>При тарифе {_RATES['hdd_tb'].price} ₽/ТБ/мес (§18.1, {PRICE_AS_OF}): 40 × {_RATES['hdd_tb'].price} = <span class="money">{fmt_rub(40 * _RATES['hdd_tb'].price)}</span> <b>дополнительно</b> каждый год (если не сжимать архив).</p>
-<p>С оптимизацией §12 (dedup −35%, zstd archive −60% на телах): ориентир <span class="money">~{fmt_rub(round(40 * _RATES['hdd_tb'].price * 0.65 * 0.7))}</span> прироста вместо {fmt_rub(40 * _RATES['hdd_tb'].price)}.</p>
+<p>При тарифе {_RATES['hdd_tb'].price} ₽/ТБ/мес (§17.1, {PRICE_AS_OF}): 40 × {_RATES['hdd_tb'].price} = <span class="money">{fmt_rub(40 * _RATES['hdd_tb'].price)}</span> <b>дополнительно</b> каждый год (если не сжимать архив).</p>
+<p>Со сжатием deep-archive (zstd) и dedup файлов (roadmap Enterprise): ориентир <span class="money">~{fmt_rub(round(40 * _RATES['hdd_tb'].price * 0.65 * 0.7))}</span> прироста вместо {fmt_rub(40 * _RATES['hdd_tb'].price)}.</p>
 </div>
 
-<h3>18.6 Строки для коммерческого предложения (шаблон)</h3>
+<h3>17.6 Строки для коммерческого предложения (шаблон)</h3>
 <table>
   <tr><th>Позиция КП</th><th>Ед.</th><th>Пример цены</th></tr>
   <tr><td>Лицензия / право использования</td><td>пользователь/год</td><td>по прайсу вендора</td></tr>
@@ -476,7 +485,7 @@ def render_section_18_examples_html() -> str:
   <tr><td>Внедрение Standard</td><td>контур</td><td class="money">1 500 000 – 3 000 000 ₽</td></tr>
   <tr><td>Обучение администраторов (1 день)</td><td>сессия</td><td class="money">50 000 – 120 000 ₽</td></tr>
   <tr><td>Поддержка L2 (8×5)</td><td>% от infra или фикс</td><td class="money">10–18%</td></tr>
-  <tr><td>Infra (см. примеры §18.2–18.3)</td><td>мес</td><td>по таблице §18.1</td></tr>
+  <tr><td>Infra (см. примеры §17.2–17.3)</td><td>мес</td><td>по таблице §17.1</td></tr>
 </table>
 
 <div class="warn">
@@ -488,17 +497,17 @@ def render_section_18_examples_html() -> str:
 
 def render_fig_cost_monthly_svg() -> str:
     """Рис. 7 — monthly comparison at 10k Pilot."""
-    baseline = pilot_baseline_monthly()
-    pilot = pilot_optimized_monthly()
+    pilot = pilot_profile_monthly()
+    monolith = pilot_fullstack_monolith_monthly()
     cloud = cloud_pilot_monthly()
-    max_v = max(baseline, pilot, cloud)
+    max_v = max(monolith, pilot, cloud)
     chart_h = 144
 
     def bar_h(v: int) -> int:
         return max(8, round(v / max_v * chart_h))
 
-    h_base, h_pilot, h_cloud = bar_h(baseline), bar_h(pilot), bar_h(cloud)
-    y_base = 200 - h_base
+    h_mono, h_pilot, h_cloud = bar_h(monolith), bar_h(pilot), bar_h(cloud)
+    y_mono = 200 - h_mono
     y_pilot = 200 - h_pilot
     y_cloud = 200 - h_cloud
 
@@ -511,20 +520,20 @@ def render_fig_cost_monthly_svg() -> str:
   <text x="58" y="204" text-anchor="end" font-size="9">0</text>
   <text x="58" y="140" text-anchor="end" font-size="9">50k</text>
   <text x="58" y="92" text-anchor="end" font-size="9">100k</text>
-  <rect x="92" y="{y_base}" width="96" height="{h_base}" fill="#fca5a5" rx="3"/>
-  <text x="140" y="{y_base - 8}" text-anchor="middle" font-size="11" font-weight="600">{fmt_rub(baseline)}</text>
-  <text x="140" y="218" text-anchor="middle" font-size="10">Без оптимизации</text>
+  <rect x="92" y="{y_mono}" width="96" height="{h_mono}" fill="#fca5a5" rx="3"/>
+  <text x="140" y="{y_mono - 8}" text-anchor="middle" font-size="11" font-weight="600">{fmt_rub(monolith)}</text>
+  <text x="140" y="218" text-anchor="middle" font-size="10">Monolith (справ.)</text>
   <rect x="232" y="{y_pilot}" width="96" height="{h_pilot}" fill="#86efac" rx="3"/>
   <text x="280" y="{y_pilot - 8}" text-anchor="middle" font-size="11" font-weight="600">{fmt_rub(pilot)}</text>
-  <text x="280" y="218" text-anchor="middle" font-size="10">Pilot (цель)</text>
+  <text x="280" y="218" text-anchor="middle" font-size="10">Pilot</text>
   <rect x="372" y="{y_cloud}" width="96" height="{h_cloud}" fill="#93c5fd" rx="3"/>
   <text x="420" y="{y_cloud - 8}" text-anchor="middle" font-size="11" font-weight="600">{fmt_rub(cloud)}</text>
   <text x="420" y="218" text-anchor="middle" font-size="10">Облако (анalog)</text>
-</svg><figcaption class="fig-cap">Рис. 7. Ежемесячные затраты infra: сумма строк §18.2 (Pilot), §18.2 baseline (full-server) и §18.3.1 (облако). Ставки §18.1, дата {PRICE_AS_OF}; не оферта.</figcaption></figure>"""
+</svg><figcaption class="fig-cap">Рис. 7. Ежемесячные затраты infra (10k): Pilot-профиль, справочный full-stack monolith и облачный аналog. Ставки §17.1, дата {PRICE_AS_OF}; не оферта.</figcaption></figure>"""
 
 
 def render_legend_rate_table_html(lines: tuple[CostLine, ...]) -> str:
-    """HTML table: chart segment → unit rate (for §18.7 legend)."""
+    """HTML table: chart segment → unit rate (for §17.7 legend)."""
     seen: set[str] = set()
     rows = []
     for line in lines:

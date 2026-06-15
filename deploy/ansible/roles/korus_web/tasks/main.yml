@@ -18,6 +18,11 @@
     args=()
     if {{ korus_build_images | bool | lower }}; then args+=( --build ); fi
     if {{ korus_web_attach | bool | lower }}; then args+=( --attach ); fi
+    if {{ korus_web_turn_prod | default(false) | bool | lower }}; then
+      args+=( --turn-prod )
+    elif {{ korus_web_turn | default(false) | bool | lower }}; then
+      args+=( --turn )
+    fi
     if {{ korus_web_env_template.changed | bool | lower }}; then args+=( --force-recreate ); fi
     stdbuf -oL -eL bash scripts/korus-web-up.sh "${args[@]}" 2>&1 \
       | stdbuf -oL tee -a {{ korus_bootstrap_log }}
