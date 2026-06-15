@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT="${ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 EXPECTED_GROUP="${PIPELINE_QUEUE_GROUP:-pipeline-workers}"
 FOUND=0
-for name in message-pipeline message-pipeline-2; do
-  cid=$(docker ps --filter "name=${name}" --format '{{.Names}}' | head -1 || true)
+for name in message-pipeline-1 message-pipeline-2-1; do
+  cid=$(docker ps --format '{{.Names}}' | grep -E "^docker-${name}$" | head -1 || true)
   if [[ -z "$cid" ]]; then
     echo "[skip] container $name not running"
     continue

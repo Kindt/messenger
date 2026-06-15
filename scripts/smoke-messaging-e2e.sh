@@ -42,36 +42,41 @@ echo "user_a=$ID_A user_b=$ID_B user_c=$ID_C" >&2
 
 smoke_step "DM: A creates p2p with B, sends 2 messages"
 DM_CHAT=$(smoke_create_p2p "$BASE_URL" "$TOKEN_A" "$ID_B")
-smoke_send_message "$BASE_URL" "$TOKEN_A" "$DM_CHAT" "smoke-dm-1-$(date +%s)" >/dev/null
-smoke_send_message "$BASE_URL" "$TOKEN_A" "$DM_CHAT" "smoke-dm-2-$(date +%s)" >/dev/null
-smoke_poll_message "$BASE_URL" "$TOKEN_B" "$DM_CHAT" "smoke-dm-1" 15 || smoke_fail "B did not see dm-1"
-smoke_poll_message "$BASE_URL" "$TOKEN_B" "$DM_CHAT" "smoke-dm-2" 15 || smoke_fail "B did not see dm-2"
+DM_M1=$(smoke_send_message "$BASE_URL" "$TOKEN_A" "$DM_CHAT" "smoke-dm-1-$(date +%s)")
+DM_M2=$(smoke_send_message "$BASE_URL" "$TOKEN_A" "$DM_CHAT" "smoke-dm-2-$(date +%s)")
+smoke_poll_message_id "$BASE_URL" "$TOKEN_B" "$DM_CHAT" "$DM_M1" 15 || smoke_fail "B did not see dm-1"
+smoke_poll_message_id "$BASE_URL" "$TOKEN_B" "$DM_CHAT" "$DM_M2" 15 || smoke_fail "B did not see dm-2"
 echo "[OK] DM delivery" >&2
 
 smoke_step "Group: A creates [B,C], sends 3 messages"
 GROUP_TITLE="smoke-group-$(date +%Y%m%d-%H%M%S)"
 GROUP_CHAT=$(smoke_create_group "$BASE_URL" "$TOKEN_A" "$GROUP_TITLE" "$ID_B,$ID_C")
+GRP_BEFORE_B=$(smoke_message_count "$BASE_URL" "$TOKEN_B" "$GROUP_CHAT")
+GRP_BEFORE_C=$(smoke_message_count "$BASE_URL" "$TOKEN_C" "$GROUP_CHAT")
+GRP_TARGET_B=$((GRP_BEFORE_B + 3))
+GRP_TARGET_C=$((GRP_BEFORE_C + 3))
 G1="smoke-grp-1-$(date +%s)"
 G2="smoke-grp-2-$(date +%s)"
 G3="smoke-grp-3-$(date +%s)"
 MSG_G1=$(smoke_send_message "$BASE_URL" "$TOKEN_A" "$GROUP_CHAT" "$G1")
 smoke_send_message "$BASE_URL" "$TOKEN_A" "$GROUP_CHAT" "$G2" >/dev/null
-smoke_send_message "$BASE_URL" "$TOKEN_A" "$GROUP_CHAT" "$G3" >/dev/null
+MSG_G3=$(smoke_send_message "$BASE_URL" "$TOKEN_A" "$GROUP_CHAT" "$G3")
 for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-  CB=$(smoke_count_messages_with_prefix "$BASE_URL" "$TOKEN_B" "$GROUP_CHAT" "smoke-grp-")
-  CC=$(smoke_count_messages_with_prefix "$BASE_URL" "$TOKEN_C" "$GROUP_CHAT" "smoke-grp-")
-  if [[ "$CB" -ge 3 && "$CC" -ge 3 ]]; then break; fi
+  CB=$(smoke_message_count "$BASE_URL" "$TOKEN_B" "$GROUP_CHAT")
+  CC=$(smoke_message_count "$BASE_URL" "$TOKEN_C" "$GROUP_CHAT")
+  if [[ "$CB" -ge "$GRP_TARGET_B" && "$CC" -ge "$GRP_TARGET_C" ]]; then break; fi
   sleep 1
 done
-CB=$(smoke_count_messages_with_prefix "$BASE_URL" "$TOKEN_B" "$GROUP_CHAT" "smoke-grp-")
-CC=$(smoke_count_messages_with_prefix "$BASE_URL" "$TOKEN_C" "$GROUP_CHAT" "smoke-grp-")
-[[ "$CB" -ge 3 ]] || smoke_fail "B expected >=3 group messages, got $CB"
-[[ "$CC" -ge 3 ]] || smoke_fail "C expected >=3 group messages, got $CC"
+CB=$(smoke_message_count "$BASE_URL" "$TOKEN_B" "$GROUP_CHAT")
+CC=$(smoke_message_count "$BASE_URL" "$TOKEN_C" "$GROUP_CHAT")
+[[ "$CB" -ge "$GRP_TARGET_B" ]] || smoke_fail "B expected >=$GRP_TARGET_B group messages, got $CB"
+[[ "$CC" -ge "$GRP_TARGET_C" ]] || smoke_fail "C expected >=$GRP_TARGET_C group messages, got $CC"
+smoke_poll_message_id "$BASE_URL" "$TOKEN_B" "$GROUP_CHAT" "$MSG_G3" 5 || true
 echo "[OK] Group messages visible to B and C" >&2
 
 smoke_step "Group: B replies"
 REPLY=$(smoke_send_message "$BASE_URL" "$TOKEN_B" "$GROUP_CHAT" "smoke-reply-$(date +%s)" "$MSG_G1")
-smoke_poll_message "$BASE_URL" "$TOKEN_A" "$GROUP_CHAT" "smoke-reply-" 15 || smoke_fail "A did not see B reply"
+smoke_poll_message_id "$BASE_URL" "$TOKEN_A" "$GROUP_CHAT" "$REPLY" 15 || smoke_fail "A did not see B reply"
 echo "[OK] Group reply" >&2
 
 smoke_step "WS: B connected, A sends ws-marker message"
@@ -91,7 +96,9 @@ if [[ -n "$WS_PID" ]]; then
 fi
 if ! $WS_OK; then
   echo "[WARN] WS deliver not confirmed; REST fallback poll" >&2
-  smoke_poll_message "$BASE_URL" "$TOKEN_B" "$GROUP_CHAT" "$WS_MARKER" 20 || smoke_fail "B did not receive ws-marker via REST either"
+  smoke_poll_message "$BASE_URL" "$TOKEN_B" "$GROUP_CHAT" "$WS_MARKER" 5 \
+    || smoke_poll_min_message_count "$BASE_URL" "$TOKEN_B" "$GROUP_CHAT" "$((GRP_TARGET_B + 2))" 20 \
+    || smoke_fail "B did not receive ws-marker via REST either"
 fi
 echo "[OK] WS/REST delivery" >&2
 
@@ -110,10 +117,13 @@ $READ_OK || smoke_fail "read_by did not include B for message $REPLY"
 
 if [[ "$LOAD_ROUNDS" -gt 0 ]]; then
   smoke_step "Load: $LOAD_ROUNDS extra DM rounds"
+  DM_LOAD_BEFORE=$(smoke_message_count "$BASE_URL" "$TOKEN_B" "$DM_CHAT")
+  LAST_LOAD_ID=""
   for r in $(seq 1 "$LOAD_ROUNDS"); do
-    smoke_send_message "$BASE_URL" "$TOKEN_A" "$DM_CHAT" "smoke-load-$r-$(date +%s)" >/dev/null
+    LAST_LOAD_ID=$(smoke_send_message "$BASE_URL" "$TOKEN_A" "$DM_CHAT" "smoke-load-$r-$(date +%s)")
   done
-  smoke_poll_message "$BASE_URL" "$TOKEN_B" "$DM_CHAT" "smoke-load-$LOAD_ROUNDS" 30 \
+  smoke_poll_min_message_count "$BASE_URL" "$TOKEN_B" "$DM_CHAT" "$((DM_LOAD_BEFORE + LOAD_ROUNDS))" 30 \
+    || smoke_poll_message_id "$BASE_URL" "$TOKEN_B" "$DM_CHAT" "$LAST_LOAD_ID" 30 \
     || smoke_fail "load round delivery failed"
   echo "[OK] load rounds complete" >&2
 fi

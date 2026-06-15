@@ -98,6 +98,45 @@ smoke_send_message() {
     || smoke_fail "message id missing"
 }
 
+smoke_message_count() {
+  local base="$1" token="$2" chat_id="$3"
+  local resp
+  resp=$(smoke_curl_json GET "${base%/}/api/v1/chats/${chat_id}/messages?limit=50" "$token") || smoke_fail "list messages failed"
+  python3 -c 'import json,sys; data=json.loads(sys.argv[1]); items=data if isinstance(data,list) else (data.get("items") or data.get("messages") or []); print(len(items))' "$resp"
+}
+
+smoke_messages_contain_id() {
+  local base="$1" token="$2" chat_id="$3" message_id="$4"
+  local resp
+  resp=$(smoke_curl_json GET "${base%/}/api/v1/chats/${chat_id}/messages?limit=50" "$token") || smoke_fail "list messages failed"
+  python3 -c 'import json,sys; mid=sys.argv[2]; data=json.loads(sys.argv[1]); items=data if isinstance(data,list) else (data.get("items") or data.get("messages") or []); sys.exit(0 if any((m.get("id") or m.get("message_id"))==mid for m in items) else 1)' "$resp" "$message_id"
+}
+
+smoke_poll_message_id() {
+  local base="$1" token="$2" chat_id="$3" message_id="$4" timeout="${5:-15}"
+  local i
+  for ((i=0; i<timeout; i++)); do
+    if smoke_messages_contain_id "$base" "$token" "$chat_id" "$message_id"; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+smoke_poll_min_message_count() {
+  local base="$1" token="$2" chat_id="$3" min_count="$4" timeout="${5:-15}"
+  local i count
+  for ((i=0; i<timeout; i++)); do
+    count=$(smoke_message_count "$base" "$token" "$chat_id")
+    if [[ "$count" -ge "$min_count" ]]; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
 smoke_messages_contain() {
   local base="$1" token="$2" chat_id="$3" needle="$4"
   local resp
@@ -114,7 +153,9 @@ smoke_count_messages_with_prefix() {
 
 smoke_mark_read() {
   local base="$1" token="$2" chat_id="$3" msg_id="$4"
-  smoke_curl_json POST "${base%/}/api/v1/chats/${chat_id}/messages/${msg_id}/read" "$token" "{}" >/dev/null \
+  local body
+  body=$(python3 -c 'import json,sys; print(json.dumps({"message_ids":[sys.argv[1]]}))' "$msg_id")
+  smoke_curl_json POST "${base%/}/api/v1/chats/${chat_id}/read-batch" "$token" "$body" >/dev/null \
     || smoke_fail "mark read failed"
 }
 

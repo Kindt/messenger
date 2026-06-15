@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+### 2026-06-15 — spec 006 Wave 2 guest smokes: E2EE-safe messaging scripts
+
+- **`SmokeMessaging.sh`**: polling по `message_id` / count (E2EE `e2ee-text`); `smoke_mark_read` → `POST /read-batch`.
+- **`smoke-messaging-e2e.sh`**, **`load-message-pipeline.sh`**: delivery checks без plaintext needle.
+- **`scale-stack-up.sh`**: tag образов + `sudo` fallback для QEMU guest (без buildx).
+- **`verify-nats-queue-group.sh`**: точные имена `docker-message-pipeline-1` / `docker-message-pipeline-2-1`.
+- Guest gate (QEMU `korus-server`): `verify-nats-queue-group`, `load-message-pipeline`, `smoke-messaging-e2e --load-rounds 3` — green.
+
 ### 2026-06-15 — spec 006 Wave 2 T202–T206: cache integration, scale, read replica
 
 - **T202 (FR-OPT-03):** `ReadCacheCoordinator`, `ReadCacheMetrics` (`read_cache_hit_total` / `read_cache_miss_total`); cache-aside в `ChatService`, `UserApplicationService`; invalidation на write-path (`MessageService`, `ReadReceiptService`, profile/presence updates).

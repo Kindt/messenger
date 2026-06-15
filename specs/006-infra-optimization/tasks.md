@@ -54,6 +54,10 @@
 - [x] T205 [US5] Read replica compose + routing
 - [x] T206 [US5] `scripts/smoke-messaging-e2e.sh` under load
 
+### Verification gate (Wave 2)
+
+- [x] T207 [US4] Guest smokes on QEMU: `scale-stack-up`, `verify-nats-queue-group`, `load-message-pipeline`, `smoke-messaging-e2e --load-rounds 3`
+
 ---
 
 ## Phase 3–5
