@@ -71,7 +71,25 @@
 | Приоритет | Содержание |
 |-----------|------------|
 | Высокий | **Закрыто (2026-06-15):** Pilot compose, Keycloak prod, read cache, scale overlays, zstd deep-archive, batch Solr, NATS cache invalidation, replica/enterprise Ansible. См. **`specs/006-infra-optimization/`**, **`docs/plans/2026-06-15-infra-optimization-design.md`**. |
-| Средний | **Хвост:** load test matrix (k6/Locust), file dedup, PG sharding — см. **`docs/plans/2026-06-15-unfinished-development-plan.md`**. |
+| Высокий | **Презентация §12 закрыта (v2.3):** FR-OPT-01…07 = реализовано; 08–09 + formal load test — roadmap. См. **`docs/PRODUCT_PRESENTATION.md`**, **`product_presentation.html`**. |
+| Средний | **Хвост волна 4:** FR-OPT-08 file dedup, FR-OPT-09 PG sharding — см. design-doc §8–9. |
+| Средний | **Load test matrix:** k6 baseline на stage (T604) или documented QEMU run; обновление §10.2.1 **измеренными** числами. Скрипты: **`scripts/load/pilot-*.js`**. |
+
+---
+
+## 8. Следующие приоритеты (после spec 007 engineering closure)
+
+| # | Эпик | Блокер | Действие |
+|---|------|--------|----------|
+| 1 | **Stage/prod TLS + Vault** (spec 004 US1) | Реальный stage host | T601–T602, T607 — **`deploy/ansible/inventory/stage/`**, **`stage-tls-smoke-runbook.md`** |
+| 2 | **E2EE formal sign-off** (US7) | Security/Product | T603, T606 — **`e2ee-security-signoff-packet-2026-06-15.md`** |
+| 3 | **Hotplug governance** (US6) | Именованные подписи | T605 — **`apply-hotplug-signoff.ps1`** |
+| 4 | **k6 load baseline** (T604) | k6 на хосте или stage | **`scripts/load/pilot-health.js`** → JSON отчёт |
+| 5 | **FR-OPT-08 dedup** | Нет | design-doc §8, MinIO content-hash |
+| 6 | **Hex tail 2b** | Нет | Message write-path через application + port |
+| 7 | **Prod features §9** | Продукт | Web Push prod, TURN, Bot API, SSO |
+
+Детальный inventory: **`docs/plans/2026-06-15-unfinished-development-plan.md`** §2–4. Spec ops backlog: **`specs/007-platform-stage-readiness/tasks.md`** Phase 6.
 
 ---
 
@@ -87,4 +105,4 @@
 
 ---
 
-*Версия: 2026-05-08 — замена закрытого трекера **`docs/TZ_SERVER_100.md`**.*
+*Версия: 2026-06-15 — §12 presentation closure; приоритеты post–spec 007.*

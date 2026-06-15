@@ -69,7 +69,7 @@
 
 - k6/Locust @ 20% peak для Pilot / Standard / Enterprise
 - Baseline метрик: p95 REST, p95 WS deliver, cache hit rate, PG connections, indexer lag
-- Обновление `PRODUCT_PRESENTATION.md` §10.2 **измеренными** числами
+- Обновление `PRODUCT_PRESENTATION.md` §10.2 **измеренными** числами (§12 в презентации закрыт для FR-OPT 01–07; load test — при go-live)
 
 ---
 

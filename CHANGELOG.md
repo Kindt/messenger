@@ -8,6 +8,11 @@
 
 ## [Unreleased]
 
+### 2026-06-15 — Roadmap post–spec 007: §12 closure + next priorities
+
+- **`docs/ROADMAP_EPICS.md`**: §7 presentation §12 note; new §8 priority table (stage TLS, E2EE, k6, FR-OPT-08/09).
+- **`docs/plans/2026-06-15-unfinished-development-plan.md`**: load test note aligned with §12 presentation closure.
+
 ### 2026-06-15 — §12 product presentation closure (FR-OPT 01–07)
 
 - **`docs/PRODUCT_PRESENTATION.md`**, **`product_presentation.html` v2.3**: §12 → реализовано (волны 1–3); traceability и §9 infra обновлены; 08–09 + formal load test — roadmap.
