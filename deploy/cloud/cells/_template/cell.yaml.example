@@ -1,0 +1,39 @@
+# Example Cell manifest (spec 011 T01101)
+# Validate: python scripts/validate-cell-manifest.py deploy/cloud/cells/_template/cell.yaml.example
+
+cell_id: acme-prod-example
+status: planned
+
+commercial:
+  model: b_dedicated
+  billing_model: bundled_anchor
+  sku: standard
+  sla_tier: standard
+  anchor_ru: 10000
+
+compute:
+  provider: generic
+  deploy_profile: standard
+  server_private_ip: 10.0.42.10
+  web_private_ip: 10.0.42.20
+  web_public_ip: 203.0.113.10
+
+dns:
+  mode: customer_cname
+  fqdn: chat.acme.example.com
+  platform_backend: acme-prod-example.messenger.cloud.example.com
+
+tls:
+  use_letsencrypt: false
+  cert_ref: vault:cells/acme-prod-example/tls
+
+backup:
+  preset: bank
+
+observability:
+  scrape_enabled: true
+  labels:
+    customer_tier: bank
+
+images:
+  tag: "0.1.0-SNAPSHOT"

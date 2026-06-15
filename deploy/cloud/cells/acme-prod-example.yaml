@@ -1,0 +1,39 @@
+# Dedicated B Cell — customer CNAME (spec 011 Phase 2 T01121 example)
+# Do not provision without sales contract.
+
+cell_id: acme-prod-example
+status: planned
+
+commercial:
+  model: b_dedicated
+  billing_model: bundled_anchor
+  sku: enterprise
+  sla_tier: premium
+
+compute:
+  provider: generic
+  deploy_profile: standard
+  server_private_ip: 10.10.1.10
+  web_private_ip: 10.10.1.20
+  web_public_ip: 203.0.113.50
+
+dns:
+  mode: customer_cname
+  fqdn: chat.acme.example.com
+  platform_backend: edge.messenger.cloud.example.com
+
+tls:
+  use_letsencrypt: true
+  cert_ref: vault:cells/acme-prod-example/tls
+
+backup:
+  preset: bank
+
+observability:
+  scrape_enabled: true
+  labels:
+    env: production
+    client: acme
+
+images:
+  tag: "TBD"

@@ -14,6 +14,11 @@ korus_tls_proxy_api: true
 
 korus_cors_allowed_origins: "https://messenger.example.com"
 
+# TURN (coturn on web host): set public hostname/IP for ICE + --turn-prod overlay
+korus_turn_host: "messenger.example.com"
+korus_web_turn_prod: true
+# korus_coturn_external_ip: "{{ korus_turn_host }}"  # optional override in vault/host vars
+
 # Optional: set korus_keycloak_https: true when Keycloak is published at HTTPS on korus_tls_domain.
 # Default compose issuer (http://keycloak:8080/realms/...) remains for internal JWT validation.
 # korus_keycloak_issuer: "https://messenger.example.com/realms/avandocmsg"

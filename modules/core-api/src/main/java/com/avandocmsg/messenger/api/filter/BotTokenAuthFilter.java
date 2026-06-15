@@ -31,7 +31,7 @@ public class BotTokenAuthFilter implements ContainerRequestFilter {
     @Override
     public void filter(ContainerRequestContext request) {
         var path = JwtAuthFilter.normalizeJerseyPath(request.getUriInfo().getPath());
-        if (!path.equals("v1/bot/send")) {
+        if (!path.startsWith("v1/bot/")) {
             return;
         }
 

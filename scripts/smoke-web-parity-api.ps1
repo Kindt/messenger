@@ -1,6 +1,7 @@
 # Spec 002 API-level parity smoke (T010 + T016 backend paths).
 # WS/protocol checks: scripts/smoke-web-parity-ws.ps1 (T022).
-# Optional browser DOM/RTC gates: docs/parity/HANDOFF.mdparam(
+# Optional browser DOM/RTC gates: docs/parity/HANDOFF.md
+param(
     [string]$BaseUrl = "http://127.0.0.1:18080",
     [string]$User = "csadmin",
     [string]$Pass = "csadmin",

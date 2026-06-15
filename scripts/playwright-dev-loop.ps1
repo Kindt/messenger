@@ -1,6 +1,6 @@
 # US9 inner loop: preflight + tiered Playwright against live QEMU stack (host browser OK).
 param(
-    [ValidateSet('api', 'ui-auth', 'ui-messaging', 'ui-files', 'ui-conference', 'ui-e2ee', 'full', 'all-inner')]
+    [ValidateSet('api', 'ui-auth', 'ui-messaging', 'ui-files', 'ui-conference', 'ui-e2ee', 'ui-bot', 'full', 'all-inner')]
     [string]$Tier = 'api',
     [switch]$SkipPreflight,
     [switch]$SyncWebUi,

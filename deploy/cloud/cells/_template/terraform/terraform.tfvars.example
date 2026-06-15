@@ -1,0 +1,4 @@
+cell_id             = "acme-prod-example"
+server_private_ip   = "10.0.42.10"
+web_private_ip      = "10.0.42.20"
+web_public_ip       = "203.0.113.10"

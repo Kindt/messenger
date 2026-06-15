@@ -37,4 +37,35 @@ class AdminUiResourceTest {
         assertEquals("t1", body.sections().get(0).id());
         assertEquals("9.8.7-test", body.apiVersion());
     }
+
+    @Test
+    void exportComplianceGuide_includesCompletenessPolicy() {
+        var manifest = AdminUiManifest.of(List.of());
+        AdminStatsPort stats = () -> new AdminServerStatsResponse(
+            "0",
+            new AdminServerStatsResponse.JvmStats(1, 2, 3, 4, 5),
+            new AdminServerStatsResponse.DependencyHealth(true, true, true),
+            new AdminServerStatsResponse.TableCounts(0, 0, 0, false),
+            AdminServerStatsResponse.ExportCompliance.unavailable());
+        var appConfig = new AppConfig() {
+            @Override
+            public String version() {
+                return "9.8.7-test";
+            }
+
+            @Override
+            public java.util.Set<String> exportRequiredFields() {
+                return java.util.Set.of("messages", "chat", "gdpr_disclosures");
+            }
+
+            @Override
+            public boolean exportCompletenessStrict() {
+                return false;
+            }
+        };
+        var resource = new AdminUiResource(manifest, stats, appConfig);
+        var guide = resource.exportComplianceGuide();
+        assertEquals(3, guide.completenessPolicy().requiredFields().size());
+        assertEquals(false, guide.completenessPolicy().strict());
+    }
 }

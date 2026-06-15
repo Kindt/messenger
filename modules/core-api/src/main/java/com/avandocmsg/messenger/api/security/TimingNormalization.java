@@ -23,4 +23,17 @@ public final class TimingNormalization {
             }
         }
     }
+
+    /** Extra delay on not-found paths when normalization is enabled (serialization / payload gap). */
+    public static void padNotFoundExtra(long extraNanos) {
+        if (extraNanos <= 0) {
+            return;
+        }
+        var remainingMs = Math.max(1L, extraNanos / 1_000_000L);
+        try {
+            Thread.sleep(remainingMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
 }

@@ -39,6 +39,10 @@ Docs: [`deploy/qemu/README.md`](deploy/qemu/README.md), [`deploy/ansible/README.
 3. Run smokes/ansible/docker **in the server or web guest** (SSH or documented VM paths), not on the host.
 4. If QEMU is down, **start/fix QEMU first** — do not fall back to host Docker.
 
+## Stage / prod (until September 2026)
+
+**No real stage/prod host until September 2026.** Do not propose or run stage/prod deploy, TLS smokes, k6 baseline, or Playwright staging gate against a real FQDN. For live-stack acceptance use **QEMU VMs** only (`127.0.0.1:18080` / `:19088`, guest smokes). Spec 007 ops tasks T601–T607 are backlog until the host exists.
+
 ## Exceptions
 
 - CI / GitHub Actions (Linux runners) — not the Windows dev host.

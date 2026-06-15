@@ -1,0 +1,11 @@
+---
+# Provision a Korus Cloud Cell (spec 011 T01106) — wraps site.yml.
+# Usage:
+#   ansible-playbook -i inventory/cells/<cell_id>/hosts.yml playbooks/cell-provision.yml \
+#     -e cell_id=<cell_id>
+#
+# Manifest vars (IPs, DNS, backup preset) live in inventory group_vars; see inventory/cells/README.md.
+
+- ansible.builtin.import_playbook: site.yml
+  vars:
+    korus_cell_id: "{{ cell_id | default('unknown') }}"

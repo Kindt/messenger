@@ -1,0 +1,11 @@
+---
+# Derived from deploy/cloud/cells/internal-dev.yaml (Phase 1 T01111)
+korus_cell_id: internal-dev
+korus_server_lan_ip: 192.168.76.10
+korus_web_lan_ip: 192.168.76.20
+korus_browser_ws_host: 127.0.0.1
+korus_tls_enabled: false
+korus_web_turn: true
+
+cell_backup_cell_id: internal-dev
+cell_backup_preset: default

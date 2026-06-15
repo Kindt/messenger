@@ -1,0 +1,27 @@
+# Korus Cloud — Cell registry (git-only v1, spec 011)
+
+version: 1
+updated: "2026-06-16"
+
+# Lifecycle: planned -> provisioning -> active -> maintenance -> decommissioned
+cells:
+  - cell_id: internal-dev
+    status: planned
+    fqdn: internal-dev.messenger.cloud.example.com
+    commercial_model: c_internal
+    sku: standard
+    images_tag: "0.1.0-SNAPSHOT"
+    notes: "Phase 1 dogfood; provision via QEMU two-host or stage when available"
+
+  - cell_id: acme-prod-example
+    status: planned
+    fqdn: chat.acme.example.com
+    commercial_model: b_dedicated
+    sku: standard
+    images_tag: "TBD"
+    notes: "Example B Cell — do not provision without sales contract"
+
+# Quarterly restore drill: log in docs/runbooks/cell-restore.md (Phase 2)
+restore_drill:
+  enabled: false
+  last_drill_utc: null

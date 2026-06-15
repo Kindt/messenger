@@ -30,6 +30,8 @@ public class AppConfig {
 
     private void overrideFromEnv() {
         override("APP_PORT", "server.port");
+        override("SECURITY_TIMING_NORMALIZATION_MIN_MS", "security.timing.normalization.min.ms");
+        override("SECURITY_TIMING_NOT_FOUND_EXTRA_MS", "security.timing.not_found.extra.ms");
         override("APP_HOME", "app.home");
         override("DB_JDBC_URL", "db.jdbc.url");
         override("DB_USER", "db.user");
@@ -639,5 +641,36 @@ public class AppConfig {
         return mlsWireEnabled()
             ? List.of("legacy", "mls")
             : List.of("legacy", "mls-stub");
+    }
+
+    /** Minimum handler duration for timing normalization (GET chat etc.). 0 = disabled. Env: SECURITY_TIMING_NORMALIZATION_MIN_MS. */
+    public long timingNormalizationMinNanos() {
+        var raw = props.getProperty("security.timing.normalization.min.ms", "").trim();
+        if (raw.isEmpty()) {
+            raw = System.getenv().getOrDefault("SECURITY_TIMING_NORMALIZATION_MIN_MS", "0");
+        }
+        try {
+            var ms = Math.max(0, Integer.parseInt(raw));
+            return ms * 1_000_000L;
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+
+    /** Extra delay on 404 when normalization enabled (closes response-size / serialization gap). Env: SECURITY_TIMING_NOT_FOUND_EXTRA_MS. */
+    public long timingNotFoundExtraNanos() {
+        if (timingNormalizationMinNanos() <= 0) {
+            return 0L;
+        }
+        var raw = props.getProperty("security.timing.not_found.extra.ms", "").trim();
+        if (raw.isEmpty()) {
+            raw = System.getenv().getOrDefault("SECURITY_TIMING_NOT_FOUND_EXTRA_MS", "35");
+        }
+        try {
+            var ms = Math.max(0, Integer.parseInt(raw));
+            return ms * 1_000_000L;
+        } catch (NumberFormatException e) {
+            return 35L * 1_000_000L;
+        }
     }
 }

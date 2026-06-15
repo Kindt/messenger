@@ -1,0 +1,11 @@
+---
+all:
+  children:
+    korus_server:
+      hosts:
+        korus-server:
+          ansible_host: "{{ server_private_ip | default('10.0.0.10') }}"
+    korus_web:
+      hosts:
+        korus-web:
+          ansible_host: "{{ web_private_ip | default('10.0.0.20') }}"

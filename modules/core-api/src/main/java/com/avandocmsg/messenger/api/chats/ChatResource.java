@@ -14,6 +14,8 @@ import com.avandocmsg.messenger.api.chats.dto.UpdateChatRequest;
 import com.avandocmsg.messenger.api.chats.dto.UpdateRoleRequest;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
+import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.api.security.TimingNormalization;
 import com.avandocmsg.messenger.core.application.ChatApplicationService;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.UserId;
@@ -52,14 +54,17 @@ public class ChatResource {
     private final ChatService chatService;
     private final ReadReceiptService readReceiptService;
     private final ChatApplicationService chatApplicationService;
+    private final AppConfig appConfig;
     private final UserMessageSource messages;
 
     @Inject
     public ChatResource(ChatService chatService, ReadReceiptService readReceiptService,
-                        ChatApplicationService chatApplicationService, UserMessageSource messages) {
+                        ChatApplicationService chatApplicationService, AppConfig appConfig,
+                        UserMessageSource messages) {
         this.chatService = chatService;
         this.readReceiptService = readReceiptService;
         this.chatApplicationService = chatApplicationService;
+        this.appConfig = appConfig;
         this.messages = messages;
     }
 
@@ -125,13 +130,17 @@ public class ChatResource {
                             @Context SecurityContext securityContext) {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var userId = CurrentUserId.uuid(securityContext);
-        if (chatApplicationService.getChatForMember(ChatId.of(chatId), UserId.of(userId)).isEmpty()) {
-            return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.chat.not_found")))
-                .build();
+        var minNs = appConfig.timingNormalizationMinNanos();
+        if (minNs > 0) {
+            return TimingNormalization.runWithMinimumDuration(minNs, () -> resolveGetById(chatId, userId));
         }
+        return resolveGetById(chatId, userId);
+    }
+
+    private Response resolveGetById(UUID chatId, UUID userId) {
         var chat = chatService.getById(chatId, userId);
         if (chat == null) {
+            TimingNormalization.padNotFoundExtra(appConfig.timingNotFoundExtraNanos());
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.chat.not_found")))
                 .build();

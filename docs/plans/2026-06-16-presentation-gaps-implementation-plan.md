@@ -11,22 +11,22 @@
 | Метка | Смысл | Кол-во блоков (ключевые) |
 |-------|--------|--------------------------|
 | **Реализовано** | Доступно на QEMU / в коде | §4 core, 24 кейса КУ-01…КУ-23, Pilot/Standard |
-| **Частично** | Код есть; ops / sign-off / prod config | TLS, E2EE, Push, звонки, §7, §13 GDPR, traceability |
-| **Запланировано** | Нет публичной поставки | Bot API, SSO, Live HLS, mobile/desktop, FR-OPT-09 full |
+| **Частично** | Код есть; ops / sign-off / prod config | TLS, E2EE, Push, звонки, **Bot API MVP**, §7, §13 GDPR, traceability |
+| **Запланировано** | Нет публичной поставки | SSO, Live HLS, mobile/desktop, FR-OPT-09 full, Bot API long-poll |
 
-**Расхождение код ↔ презентация (обновлено в v2.5):**
+**Расхождение код ↔ презентация (обновлено v2.5.2):**
 
 - **FR-OPT-08 dedup** — реализован в коде и презентации (`V031`, wave 4).
+- **Bot API MVP** — spec 009 closed; презентация → **Частично** (long-poll, pin/ban — roadmap).
 - **§12 в HTML** — «Интеграции»; infra optimization — в §9/§10 и резюме §1.
 
-**Sprint A+B (2026-06-16):** stage preflight scripts ✅; VAPID/TURN Ansible wiring ✅; preview-worker compose ✅.  
-**Deploy-ready (2026-06-16):** US1/US7 engineering closed — [`stage-prod-deploy-runbook.md`](../review/stage-prod-deploy-runbook.md); ops execution pending real hosts only.
+**Stage/prod:** реальный стенд **не раньше сентября 2026** — P0 ops отложен; acceptance на **QEMU** (см. `AGENTS.md`).
 
 ---
 
 ## 2. Блоки «Частично» — план закрытия
 
-### P0 — Ops / stage (блокирует prod go-live)
+### P0 — Ops / stage (блокирует prod go-live; **стенд с сентября 2026**)
 
 | ID | Блок презентации | Задачи | Владелец | Артефакты / критерий |
 |----|------------------|--------|----------|----------------------|
@@ -41,12 +41,12 @@
 
 | ID | Блок | Задачи | Spec / план | Критерий «Реализовано» в презентации |
 |----|------|--------|-------------|--------------------------------------|
-| **P1-1** | Web Push prod (§4, A25, §12 Web Push) | VAPID в vault, push-worker prod compose, smoke | spec **008** или 007 tail | Playwright push tier + prod env doc |
-| **P1-2** | TURN / звонки за NAT (§4, КУ-08, A21–A22) | coturn Ansible overlay, `korus-web` turn env | deploy 003 | `smoke-turn-*.ps1` green на stage |
-| **P1-3** | Preview worker (traceability §16) | Добавить в prod/pilot compose profile | 003 / ops | health + smoke |
+| **P1-1** | Web Push prod (§4, A25, §12 Web Push) | VAPID в vault, push-worker prod compose, smoke | spec **008** или 007 tail | `smoke-push-worker-qemu.ps1` green ✅; prod VAPID — ops |
+| **P1-2** | TURN / звонки за NAT (§4, КУ-08, A21–A22) | coturn Ansible overlay, `korus-web` turn env | deploy 003 | `smoke-turn-qemu.ps1 -GuestOnly` green ✅; host `:3478` — restart web VM |
+| **P1-3** | Preview worker (traceability §16) | Добавить в prod/pilot compose profile | 003 / ops | `smoke-preview-worker-qemu.ps1` green ✅ |
 | **P1-4** | File proxy resize (traceability §15) | Hot-plug или sidecar в compose | ADR optional | resize endpoint smoke |
-| **P1-5** | Security timing (§24) | Завершить `audit-timing.ps1` + headers | plan 04 | CI gate / sign-off |
-| **P1-6** | GDPR export completeness (§13, КУ-21, A20) | `EXPORT_REQUIRED_FIELDS` strict + юр. пакет | plan 03 + legal | contract + admin UI indicator |
+| **P1-5** | Security timing (§24) | `audit-timing.ps1` TTFB + GET chat normalization | plan 04 | ✅ PASS ~0.2% delta on QEMU (2026-06-16) |
+| **P1-6** | GDPR export completeness (§13, КУ-21, A20) | `EXPORT_REQUIRED_FIELDS` strict + admin UI indicator | plan 03 + legal | ✅ guide `completeness_policy` + smoke; strict prod — ops |
 
 ### P1b — Синхронизация презентации с кодом
 
@@ -64,7 +64,7 @@
 
 | ID | Фича | MVP scope | Оценка | Зависимости |
 |----|------|-----------|--------|-------------|
-| **P2-1** | **Bot API** | REST: register bot, webhook URL, sendMessage, `@mention` filter; long-poll optional | 3–4 нед. | `bot_webhook_subscriptions`, `bot-delivery` worker, OpenAPI §17 |
+| **P2-1** | **Bot API** | REST MVP ✅ (spec 009); long-poll, deleteMessage/pin/ban — backlog | — | `smoke-bot-api.ps1` green на QEMU |
 | **P2-2** | **SSO OIDC** | Keycloak identity broker template + admin doc | 1–2 нед. | stage Keycloak, DNS |
 | **P2-3** | **LDAP/AD** | Keycloak user federation playbook | 1 нед. | P2-2 |
 | **P2-4** | **Batch replay** (traceability) | Довести export-replay до non-stub policy | 2 нед. | plan 03 |
@@ -127,8 +127,8 @@ flowchart LR
 | Spec | Scope |
 |------|-------|
 | **007** (закрыт eng.) | Phase 6 ops — T601–T607 |
-| **008** (предложить) | Bot API + SSO + Web Push prod |
-| **009** (предложить) | FR-OPT-09 sharding Phase A |
+| **008** (closed) | Repository cleanup |
+| **009** (closed) | Bot API MVP + indexer hot-plug |
 | **004** US1/US6/US7 | Ops sign-off matrix (не дублировать) |
 
 ---
@@ -144,9 +144,13 @@ flowchart LR
 
 ## 7. Следующий шаг (немедленно)
 
-1. **Коммит wave 4** (FR-OPT-08, k6, stage scripts) — выполнен отдельным коммитом.
-2. **Sprint A:** выделить stage host → `stage-readiness-checklist.ps1 -Strict` → deploy по README.
-3. **P1b:** обновить презентацию v2.4 (FR-OPT-08, dedup в §9).
-4. **`/speckit.specify`** для spec 008 (Bot + SSO + Push prod) если стартуем Sprint C раньше ops.
+1. **P1b + v2.5.2:** синхронизация Bot API MVP в презентации — ✅ 2026-06-15.
+2. **Spec 010/011:** engineering closure — ✅ 2026-06-16 (`tasks.md`, Phase B/2+ → Sep 2026+).
+3. **P1 (QEMU):** Push/TURN/preview smokes green; multi-org Cell smoke — ✅.
+4. **P1-5 timing:** ✅ TTFB audit PASS (~0.2%); normalization 220ms + not-found padding.
+5. **P1-6 GDPR export:** ✅ admin `completeness_policy` + smoke; `EXPORT_COMPLETENESS_STRICT` prod — ops.
+6. **Inner gate:** ✅ `playwright-dev-loop -Tier all-inner` (2026-06-16).
+7. **Outer gate (T110):** ✅ **33/33** Playwright on QEMU (2026-06-16).
+8. **P0 ops:** T601–T607 — backlog до Sep 2026.
 
 Связанные документы: [`2026-06-15-unfinished-development-plan.md`](2026-06-15-unfinished-development-plan.md), [`ROADMAP_EPICS.md`](../ROADMAP_EPICS.md) §8.

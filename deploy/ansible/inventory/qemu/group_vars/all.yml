@@ -12,5 +12,9 @@ korus_configure_ufw: false
 korus_browser_ws_port: 19088
 korus_docker_buildkit: "0"
 korus_compose_bake: "0"
+# Dev TURN: coturn on web guest; host browser uses forwarded :3478 (Start-KorusVm web hostfwd).
+korus_web_turn: true
+korus_turn_host: "127.0.0.1"
+korus_coturn_secret: "korus-turn-demo-secret"
 # Deploy profile: default standard (full-server). Pilot: uncomment korus_deploy_profile: pilot
 # See docs/DEV_STACK_PROFILES.md

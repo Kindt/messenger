@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Korus Messenger — банк / госсектор / регуляторика</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.45;
+           margin: 24px auto; color: #111; max-width: 1240px; padding: 0 20px; }
+    h1 { font-size: 26px; margin-top: 0; color: #1e3a5f; }
+    h2 { font-size: 20px; border-top: 2px solid #6366f1; padding-top: 18px; margin-top: 32px; color: #1e3a5f; }
+    h3 { font-size: 17px; margin-top: 20px; color: #374151; }
+    h4 { font-size: 15px; margin: 12px 0 6px; color: #4b5563; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+    th, td { border: 1px solid #d1d5db; padding: 8px 10px; vertical-align: top; }
+    th { background: #eef2ff; text-align: left; font-weight: 600; }
+    tr:nth-child(even) { background: #f9fafb; }
+    .matrix-wide { font-size: 12px; min-width: 960px; }
+    .matrix-scroll { overflow-x: auto; margin: 12px 0; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .comment { color: #374151; }
+    .req { font-weight: 600; color: #1e3a5f; }
+    .note { background: #eff6ff; border: 1px solid #93c5fd; padding: 14px; border-radius: 8px; margin: 14px 0; }
+    .warn { background: #fff7ed; border: 1px solid #fdba74; padding: 14px; border-radius: 8px; margin: 14px 0; }
+    .cost-box { background: #f0fdf4; border: 1px solid #86efac; padding: 14px; border-radius: 8px; margin: 14px 0; }
+    .legacy-box { background: #fafaf9; border: 1px solid #d6d3d1; padding: 14px; border-radius: 8px; margin: 14px 0; }
+    .small { font-size: 13px; color: #6b7280; }
+    .meta { color: #6b7280; font-size: 14px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; }
+    .meta-link { display: inline-block; margin-top: 6px; }
+    .meta-link a { color: #4338ca; font-weight: 600; }
+    .fig { margin: 24px 0; text-align: center; }
+    .fig svg { display: block; margin: 0 auto; max-width: 100%; height: auto; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
+    .fig-wide svg { min-width: min(100%, 880px); }
+    .fig-scroll { overflow-x: auto; margin: 20px 0; -webkit-overflow-scrolling: touch; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 4px; background: #fafafa; }
+    .fig-scroll svg { min-width: 900px; }
+    .fig-cap { font-size: 14px; color: #6b7280; margin-top: 10px; }
+    .fig-stack { display: flex; flex-direction: column; gap: 20px; }
+    .case { margin: 10px 0; padding: 12px 14px; background: #fafafa; border-left: 4px solid #6366f1; border-radius: 0 8px 8px 0; }
+    .case h4 { margin: 0 0 6px; color: #111; }
+    .case ul { margin: 6px 0; padding-left: 20px; }
+    .money { font-weight: 600; color: #047857; }
+    .toc a { text-decoration: none; color: #4338ca; }
+    .toc a:hover { text-decoration: underline; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .grid-2 .fig svg { width: 100%; }
+    .scenario { padding: 12px 14px; background: #fafafa; border-radius: 8px; border: 1px solid #e5e7eb; }
+    .scenario h4 { margin: 0 0 8px; font-size: 15px; color: #1e3a5f; }
+    .scenario-korus { background: #f0fdf4; border-color: #86efac; }
+    .scenario-rec { margin: 10px 0 0; font-size: 13px; }
+    .rec-korus { color: #047857; font-weight: 700; }
+    .hero-subtitle { font-size: 16px; margin: -8px 0 20px; color: #4b5563; }
+    .hero { background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%); color: #fff;
+            padding: 28px 32px; border-radius: 12px; margin-bottom: 24px; }
+    .hero-lead { font-size: 17px; line-height: 1.5; margin: 0 0 20px; max-width: 920px; }
+    .hero-note { margin: 16px 0 0; opacity: 0.85; }
+    .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .stat-card { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+                  border-radius: 10px; padding: 16px; text-align: center; }
+    .stat-korus { background: rgba(34,197,94,0.25); border-color: #86efac; }
+    .stat-value { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .stat-label { font-size: 13px; line-height: 1.35; opacity: 0.95; }
+    .audience-nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0 28px; }
+    .audience-card { display: block; padding: 14px; background: #fff; border: 1px solid #c7d2fe;
+                     border-radius: 8px; text-decoration: none; color: inherit; transition: box-shadow .15s; }
+    .audience-card:hover { box-shadow: 0 4px 12px rgba(99,102,241,.15); border-color: #6366f1; }
+    .audience-role { display: block; font-weight: 700; color: #4338ca; font-size: 14px; margin-bottom: 4px; }
+    .audience-hint { display: block; font-size: 12px; color: #6b7280; line-height: 1.35; }
+    .positioning { background: #f8fafc; border: 1px solid #cbd5e1; padding: 18px 20px; border-radius: 10px; margin: 20px 0; }
+    .positioning-tagline { margin: 14px 0 0; padding-top: 12px; border-top: 1px dashed #cbd5e1; }
+    .decision-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .decision-card { background: #fff; border: 1px solid #d1d5db; border-radius: 8px; padding: 14px; }
+    .decision-card-muted { background: #f9fafb; }
+    .decision-q { font-weight: 700; color: #1e3a5f; margin-bottom: 8px; font-size: 14px; }
+    .decision-a { font-size: 13px; color: #374151; }
+    .decision-a ul { margin: 8px 0 0; padding-left: 18px; }
+    .cta-box { background: #eef2ff; border: 2px solid #6366f1; padding: 18px 22px; border-radius: 10px; margin: 28px 0; }
+    .row-korus { background: #f0fdf4 !important; }
+    .row-korus td:first-child + td { font-weight: 700; color: #047857; }
+    .case-korus { background: #f0fdf4; border-left-color: #22c55e; }
+    .meta-tech { margin-top: 8px; }
+    .tier-a { background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    .tier-b { background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    .tier-c { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    details.express-details { margin: 12px 0; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; }
+    details.express-details summary { cursor: pointer; font-weight: 600; color: #1e3a5f; }
+    .brief-badge { display: inline-block; background: #6366f1; color: #fff; font-size: 12px; font-weight: 600;
+                   padding: 3px 10px; border-radius: 999px; margin-left: 8px; vertical-align: middle; }
+    .elevator { background: #fafafa; border-left: 4px solid #6366f1; padding: 14px 18px; margin: 0 0 20px; border-radius: 0 8px 8px 0; }
+    .elevator-text { margin: 8px 0 0; font-size: 15px; line-height: 1.55; }
+    .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0 28px; }
+    .pillar { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; }
+    .pillar-korus { border-top: 3px solid #22c55e; }
+    .pillar-title { font-weight: 700; color: #1e3a5f; margin-bottom: 8px; font-size: 15px; }
+    .battle-card { margin: 24px 0; }
+    .battle-table th.col-korus, .battle-table td.col-korus { background: #f0fdf4; }
+    .battle-table .col-korus { border-left: 2px solid #22c55e; }
+    .faq { margin: 24px 0; }
+    .faq-item { margin: 8px 0; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
+    .faq-item summary { cursor: pointer; font-weight: 600; color: #1e3a5f; }
+    .faq-item p { margin: 10px 0 0; }
+    .segments { margin: 24px 0; }
+    .segment-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .segment-card { background: #fff; border: 1px solid #d1d5db; border-radius: 10px; padding: 16px; }
+    .segment-label { font-weight: 700; color: #4338ca; margin-bottom: 10px; font-size: 14px; }
+    .email-snippet { margin: 20px 0; border: 1px dashed #c7d2fe; border-radius: 8px; padding: 10px 14px; }
+    .email-body { white-space: pre-wrap; font-family: inherit; font-size: 13px; line-height: 1.5;
+                  background: #f9fafb; padding: 14px; border-radius: 6px; margin: 10px 0 0; }
+    .part-divider { margin: 36px 0 24px; padding: 18px 22px;
+                     background: linear-gradient(90deg, #eef2ff 0%, #fff 100%);
+                     border-left: 5px solid #6366f1; border-radius: 0 10px 10px 0; }
+    .part-badge { font-size: 12px; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: .04em; }
+    .part-title { font-size: 22px; font-weight: 700; color: #1e3a5f; margin: 6px 0; }
+    .part-subtitle { margin: 0; font-size: 14px; }
+    .section-lead { font-size: 15px; margin: -8px 0 16px; max-width: 920px; }
+    .reading-guide { margin: 16px 0 24px; }
+    .glossary { margin: 16px 0 24px; }
+    .glossary table { font-size: 13px; }
+    .segment-doc-badge { display: inline-block; background: #4338ca; color: #fff; font-size: 11px; font-weight: 700;
+                          padding: 4px 10px; border-radius: 999px; margin-left: 10px; vertical-align: middle; }
+    .segment-links a { font-weight: 600; }
+    @media (max-width: 900px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .hero-stats { grid-template-columns: 1fr; }
+      .audience-nav { grid-template-columns: 1fr 1fr; }
+      .decision-cards { grid-template-columns: 1fr; }
+      .pillars, .segment-grid { grid-template-columns: 1fr; }
+    }
+    @media print {
+      body { margin: 10mm; max-width: none; font-size: 10.5pt; }
+      .toc, .audience-nav, .meta-tech, .technical-only { display: none !important; }
+      h1, h2, h3 { break-after: avoid; }
+      table { font-size: 9pt; }
+      .note, .warn, .fig, .hero, .positioning, .cta-box, details.express-details { break-inside: avoid; }
+      .fig-scroll { overflow: visible; border: none; background: transparent; }
+      .hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+</style>
+</head>
+<body class="brief-doc">
+
+
+
+<div class="meta">
+  <b>Актуальность ставок:</b> 2026-06-15 &nbsp;|&nbsp;
+  <b>Регион:</b> РФ (Москва / СПб, коммерческий сегмент) &nbsp;|&nbsp; <b>НДС:</b> Без НДС &nbsp;|&nbsp;
+  <b>Версия:</b> 2.8 (сегмент: БАНК · ГОС)<br/>
+  <span class="meta-link">Полное: <a href="competitor_comparison.html">competitor_comparison.html</a> ·
+  <a href="competitor_comparison_brief.html">one-pager</a></span>
+</div>
+
+<h1>Korus Messenger — банк / госсектор / регуляторика<span class="segment-doc-badge">БАНК · ГОС</span></h1>
+<p class="hero-subtitle comment">One-pager для ИБ, комплаенса и закупки · контур + export/legal hold</p>
+
+<div class="hero">
+  <p class="hero-lead">Корпоративный мессенджер в контуре заказчика: <b>прозрачная экономика</b>,
+  <b>комплаенс из коробки</b> и сравнение с рынком РФ по единой методике якорей.</p>
+  <div class="hero-stats">
+    <div class="stat-card stat-korus">
+      <div class="stat-value">3.3 ₽/рег. пользов./мес</div>
+      <div class="stat-label">OPEX инфра Korus при 100&nbsp;тыс. рег.<br/><span class="small">без лицензии per-user</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">30 млн ₽</div>
+      <div class="stat-label">лицензия eXpress / год @10&nbsp;тыс. рег.<br/><span class="small">~90% TCO — доминирует</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">11.0 ₽/рег. пользов./мес</div>
+      <div class="stat-label">OPEX инфра Korus @10&nbsp;тыс. рег.<br/><span class="small">полный «Стандарт», не пробник</span></div>
+    </div>
+  </div>
+  <p class="hero-note small">Цифры — ориентиры для переговоров и КП; детали — в конце документа. Сравнение честное: сильные стороны конкурентов не скрываем.</p>
+</div>
+
+<div class="elevator">
+  <div class="req">Краткий pitch (30 секунд)</div>
+  <p class="elevator-text comment">
+    <b>Korus Messenger</b> — корпоративный мессенджер в контуре заказчика, где
+    <b>комплаенс (экспорт, legal hold, audit)</b> заложен в продукт, а экономика масштабируется
+    через <b>инфраструктуру</b>, а не через лицензию на каждого пользователя.
+    Сравниваемся с eXpress, облаком и рынком РФ по <b>единой методике</b> — без «красивых» цифр в вакууме.
+  </p>
+</div>
+<p class="section-lead comment">Фокус: data governance, export/legal hold, честное сравнение с eXpress по ФСТЭК.</p>
+
+<div class="scenario scenario-korus">
+  <h4>Контур + комплаенс (типичный банк / госсектор)</h4>
+  <p class="comment">Export, legal hold, audit, ретенция — аргумент для ИБ и внутреннего аудита, не «проект на год».</p>
+  <p class="scenario-rec"><b>Рекомендация:</b> <span class="rec-korus">Korus</span> — основной оффер по data governance;
+  <b>eXpress</b> — если hard requirement ФСТЭК до подписания.</p>
+</div>
+
+<div class="positioning" id="positioning">
+  <div class="req">Позиционирование Korus Messenger</div>
+  <div class="grid-2">
+    <div>
+      <p class="comment"><b>Korus — сильный выбор, когда:</b></p>
+      <ul class="comment">
+        <li>Нужен <b>изолированный контур</b> и предсказуемый OPEX без «налога» per-user лицензии.</li>
+        <li>Критичны <b>экспорт, legal hold, dual-TTL, audit</b> — не плагины «на доработку».</li>
+        <li>Масштаб от <b>10&nbsp;000 рег. пользов.</b> (Стандарт) до федерального контура (Корпоративный).</li>
+        <li>Важна <b>мультитenant org-shard</b> и путь от пилота к промышленному контуру без смешения матриц.</li>
+      </ul>
+    </div>
+    <div>
+      <p class="comment"><b>Честно: рассмотрите альтернативу, если:</b></p>
+      <ul class="comment">
+        <li>Нужен <b>готовый суперапп</b> (почта, SmartApps, ВКС 500+) — eXpress / VK Superapp.</li>
+        <li>Допустимо только <b>облако</b> и быстрый старт — Пачка, VK WorkSpace.</li>
+        <li>Обязателен <b>сертификат ФСТЭК уже сегодня</b> — eXpress №4997 (у Korus — в процессе).</li>
+        <li>Фокус <b>UC/ВКС</b>, а чат вторичен — TrueConf, МТС Линк.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="positioning-tagline comment">Ключевое сообщение для рынка:
+  <b>«Комплаенс и TCO в контуре — без сюрприза лицензии на каждого пользователя»</b>
+  (infra ~3.3 ₽/рег. пользов./мес при 100&nbsp;тыс. рег. vs доминирующая лицензия eXpress).</p>
+</div>
+
+<div class="note">
+  <div class="req">Чеклист для встречи с ИБ / комплаенсом</div>
+  <ul class="comment">
+    <li><b>Export / legal hold</b> — в ядре Korus, не кастомная интеграция.</li>
+    <li><b>Dual-TTL, audit trail</b> — ретенция и след действий для расследований.</li>
+    <li><b>Контур заказчика</b> — данные не в SaaS третьей стороны.</li>
+    <li><b>ФСТЭК</b> — у eXpress №4997 сегодня; у Korus — roadmap, обсуждаем план.</li>
+    <li><b>E2EE / MLS</b> — engineering roadmap; не обещаем «уже в prod» без sign-off.</li>
+  </ul>
+</div>
+
+<div class="battle-card" id="battle">
+  <div class="req">Сравнительная карта @10&nbsp;000 рег. пользов.</div>
+  <p class="small comment">Battle card для ЛПР и закупки. Не заменяет детальный TCO — якорь для первого касания.</p>
+  <table class="battle-table">
+    <tr>
+      <th>Критерий для ЛПР</th>
+      <th class="col-korus">Korus Messenger</th>
+      <th>eXpress Corporate</th>
+      <th>Пачка (облако)</th>
+    </tr>
+    <tr>
+      <td>Где живут данные</td>
+      <td class="col-korus"><b>В контуре заказчика</b></td>
+      <td>В контуре заказчика</td>
+      <td>Облако вендора</td>
+    </tr>
+    <tr>
+      <td>TCO @10k (ориентир)</td>
+      <td class="col-korus"><b>1 314 600 ₽/год</b> infra*<br/><span class="small">+ лицензия Korus по КП</span></td>
+      <td><b>33 468 000 ₽/год</b><br/><span class="small">лицензия ~30 000 000 ₽ (90%)</span></td>
+      <td><b>47 880 000 ₽/год</b><br/><span class="small">подписка, без своего ЦОД</span></td>
+    </tr>
+    <tr>
+      <td>Export / legal hold</td>
+      <td class="col-korus"><b>Ядро продукта</b></td>
+      <td>DLP / политики</td>
+      <td>API, не gate</td>
+    </tr>
+    <tr>
+      <td>ФСТЭК / реестр</td>
+      <td class="col-korus">В процессе</td>
+      <td><b>№4997</b></td>
+      <td>Заявлен</td>
+    </tr>
+    <tr>
+      <td>Суперапп / ВКС 500+</td>
+      <td class="col-korus">Дорожная карта</td>
+      <td><b>Сильная сторона</b></td>
+      <td>Чат + боты</td>
+    </tr>
+    <tr>
+      <td>Когда выигрываем</td>
+      <td class="col-korus">Compliance + TCO в контуре</td>
+      <td>ФСТЭК + суперапп «сейчас»</td>
+      <td>Скорость, нет ЦОД</td>
+    </tr>
+  </table>
+  <p class="small comment">* Korus @10k — полный «Стандарт» (infra), не пробник. VK WorkSpace и tier B/C — см. полную версию.</p>
+</div>
+
+<div class="faq" id="faq">
+  <div class="req">Возражения и ответы (продажи и пресейл)</div>
+  <details class="faq-item">
+    <summary>«У eXpress уже есть ФСТЭК и суперапп — зачем Korus?»</summary>
+    <p class="comment">Согласны: eXpress — сильный игрок, если нужен <b>сертификат сегодня</b> и bundle почта/ВКС/SmartApps.
+    Korus — когда приоритет <b>комплаенс-ядро</b> (export, legal hold, dual-TTL) и <b>экономика без доминирования лицензии per-user</b> на 10k–100k+.
+    Часто — параллельный шорт-лист: eXpress по ФСТЭК, Korus по TCO и архитектуре данных.</p>
+  </details>
+  <details class="faq-item">
+    <summary>«Пачка/VK дешевле — ₽/пользов./мес на сайте»</summary>
+    <p class="comment">Верно для <b>облака</b> и быстрого старта. Уточните: допустимо ли хранение переписки вне контура?
+    При 100k рег. облако — сотни млн ₽/год OPEX подписки. Korus и eXpress — для <b>изолированного контура</b>; Пачка — если облако OK.</p>
+  </details>
+  <details class="faq-item">
+    <summary>«Rocket.Chat / Mattermost — open source, лицензия бесплатная»</summary>
+    <p class="comment">Лицензия OSS ≠ TCO: MongoDB/PostgreSQL, EE-фичи, compliance и поддержка — на заказчике.
+    Нет типового модуля export/legal hold. Уровень B — для зрелых IT-команд; Korus — когда нужен <b>продуктовый комплаенс</b> и единый вендор.</p>
+  </details>
+  <details class="faq-item">
+    <summary>«Compass публикует 490 ₽/мес on-prem — вы дороже?»</summary>
+    <p class="comment">Сравнивайте <b>полный TCO</b>: лицензия + infra + интеграции. Compass — сильный UX и прайс; слабее export/legal hold.
+    Korus — не ценовой демпинг, а <b>compliance + sizing @10k+</b>. Попросите у Compass КП с infra @вашем якоре.</p>
+  </details>
+  <details class="faq-item">
+    <summary>«Покажите ФСТЭК / E2EE / мобильные — их пока нет»</summary>
+    <p class="comment">Честно: ФСТЭК и промышленная приёмка E2EE — <b>в процессе</b> (roadmap). Мобильные — в дорожной карте.
+    Не скрываем. Если hard requirement «ФСТЭК до подписания» — eXpress; если приоритет data governance и TCO — Korus + план сертификации.</p>
+  </details>
+</div>
+<figure class="fig fig-wide"><svg viewBox="0 0 720 640" width="720" height="640" xmlns="http://www.w3.org/2000/svg"><text x="360" y="28" text-anchor="middle" font-size="16" font-weight="bold">В контуре @10 тыс. рег.: лепестковая диаграмма (оценка 0–5)</text><polygon points="360.0,262.0 392.9,281.0 392.9,319.0 360.0,338.0 327.1,319.0 327.1,281.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,224.0 425.8,262.0 425.8,338.0 360.0,376.0 294.2,338.0 294.2,262.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,186.0 458.7,243.0 458.7,357.0 360.0,414.0 261.3,357.0 261.3,243.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,148.0 491.6,224.0 491.6,376.0 360.0,452.0 228.4,376.0 228.4,224.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,110.0 524.5,205.0 524.5,395.0 360.0,490.0 195.5,395.0 195.5,205.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><line x1="360" y1="300" x2="360.0" y2="110.0" stroke="#d1d5db"/><text x="360.0" y="74.0" text-anchor="middle" font-size="11">Комплаенс</text><line x1="360" y1="300" x2="524.5" y2="205.0" stroke="#d1d5db"/><text x="555.7" y="187.0" text-anchor="start" font-size="11">E2EE / ИБ</text><line x1="360" y1="300" x2="524.5" y2="395.0" stroke="#d1d5db"/><text x="555.7" y="413.0" text-anchor="start" font-size="11">Экономика</text><line x1="360" y1="300" x2="360.0" y2="490.0" stroke="#d1d5db"/><text x="360.0" y="526.0" text-anchor="middle" font-size="11">Функции</text><line x1="360" y1="300" x2="195.5" y2="395.0" stroke="#d1d5db"/><text x="164.3" y="413.0" text-anchor="end" font-size="11">Масштабирование</text><line x1="360" y1="300" x2="195.5" y2="205.0" stroke="#d1d5db"/><text x="164.3" y="187.0" text-anchor="end" font-size="11">Реестр / ФСТЭК</text><polygon points="360.0,110.0 491.6,224.0 491.6,376.0 360.0,452.0 195.5,395.0 261.3,243.0" fill="#22c55e" fill-opacity="0.15" stroke="#22c55e" stroke-width="2.5"/><polygon points="360.0,148.0 524.5,205.0 425.8,338.0 360.0,490.0 261.3,357.0 195.5,205.0" fill="#6366f1" fill-opacity="0.15" stroke="#6366f1" stroke-width="2.5"/><polygon points="360.0,224.0 458.7,243.0 491.6,376.0 360.0,452.0 294.2,338.0 228.4,224.0" fill="#f59e0b" fill-opacity="0.15" stroke="#f59e0b" stroke-width="2.5"/><polygon points="360.0,224.0 425.8,262.0 458.7,357.0 360.0,452.0 261.3,357.0 261.3,243.0" fill="#ec4899" fill-opacity="0.15" stroke="#ec4899" stroke-width="2.5"/><polygon points="360.0,186.0 425.8,262.0 425.8,338.0 360.0,452.0 294.2,338.0 195.5,205.0" fill="#ef4444" fill-opacity="0.15" stroke="#ef4444" stroke-width="2.5"/><polygon points="360.0,224.0 458.7,243.0 425.8,338.0 360.0,452.0 261.3,357.0 294.2,262.0" fill="#0ea5e9" fill-opacity="0.15" stroke="#0ea5e9" stroke-width="2.5"/><rect x="32" y="556" width="12" height="12" fill="#22c55e"/><text x="50" y="568" font-size="11">Korus</text><rect x="252" y="556" width="12" height="12" fill="#6366f1"/><text x="270" y="568" font-size="11">eXpress</text><rect x="472" y="556" width="12" height="12" fill="#f59e0b"/><text x="490" y="568" font-size="11">Loop</text><rect x="32" y="584" width="12" height="12" fill="#ec4899"/><text x="50" y="596" font-size="11">Compass</text><rect x="252" y="584" width="12" height="12" fill="#ef4444"/><text x="270" y="596" font-size="11">МТС Линк</text><rect x="472" y="584" width="12" height="12" fill="#0ea5e9"/><text x="490" y="596" font-size="11">Rocket.Chat</text></svg><figcaption class="fig-cap">Шкала 0–5: комплаенс, E2EE, экономика (прозрачность TCO), функции, sizing, реестр/ФСТЭК. Субъективная модель для переговоров, не рейтинг вендора.</figcaption></figure>
+<p class="comment">Ключевое сравнение для КП в контуре заказчика @10k+ рег. пользов.</p><div class="case case-korus"><h4>Korus Messenger</h4><p><b>Плюсы:</b></p><ul><li>Предсказуемый OPEX: ~3,3 ₽/рег. пользов./мес при 100 тыс. рег. — без per-user лицензии</li><li>Комплаенс в ядре: экспорт, legal hold, dual-TTL, audit — не «на доработку»</li><li>В контуре заказчика: мультитenant, путь Пробник → Стандарт → Корпоративный</li><li>Пилот отделён от production-матрицы — честный TCO с 10 тыс. рег.</li></ul><p><b>Ограничения:</b></p><ul><li>Меньше готового супераппа (SmartApps, почта, ВКС 500)</li><li>Нативные мобильные — в дорожной карте</li><li>Промышленная приёмка E2EE — в процессе</li></ul></div><div class="case"><h4>eXpress Corporate</h4><p><b>Плюсы:</b></p><ul><li>ФСТЭК №4997, сертифицированный суперапп</li><li>Публичный прайс 3 000 ₽/рег. пользов./год</li><li>ВКС до 500, SmartApps, федерация, iOS/Android/Аврора</li><li>Детальные таблицы sizing до ~1 тыс. рег. пользов.</li></ul><p><b>Ограничения:</b></p><ul><li>Лицензия 83–99% TCO при 10–100 тыс. рег.</li><li>Sizing от 10 тыс. рег. — инд. проект</li><li>Тяжёлый стек: Kafka, etcd, transcoding, media</li></ul></div>
+
+<details class="email-snippet">
+  <summary><b>Текст для email заказчику</b> (скопировать)</summary>
+  <pre class="email-body">Добрый день!
+
+Для вашего контура (банк / регулируемая отрасль) кратко о Korus Messenger:
+
+• Развёртывание в инфраструктуре заказчика — переписка не в облаке третьей стороны.
+• Export, legal hold, audit и ретенция — в ядре продукта, не через доработки интегратора.
+• Готовы провести ИБ-воркshop: сценарии export, dual-TTL, roadmap ФСТЭК/E2EE.
+
+Приложили сравнение с eXpress по единой методике @10k+ рег. пользов.
+С уважением,
+[ФИО / команда Korus]</pre>
+</details>
+
+
+<div class="cta-box">
+  <div class="req">Следующий шаг с заказчиком</div>
+  <ol class="comment">
+    <li><b>Квалификация</b> — контур (в контуре / облако), масштаб рег. пользов., требования ИБ (блок «Быстрый выбор»).</li>
+    <li><b>Пилот</b> — функциональная оценка на пробнике (вне TCO-матрицы); промышленный контур — с якоря S-10k.</li>
+    <li><b>КП</b> — инфра по якорю + лицензия Korus; для конкурента — те же якоря (разделы «Экономика», «Матрицы»).</li>
+    <li><b>ИБ-воркшоп</b> — export, ретенция, roadmap E2EE/ФСТЭК.</li>
+  </ol>
+</div>
+
+<div class="warn">
+  <ul class="comment">
+    <li>Цифры infra и TCO — ориентиры для переговоров; финальное КП — по sizing заказчика.</li>
+    <li>eXpress @10/100 тыс. рег. — модельная оценка infra; лицензия — публичный прайс express.ms.</li>
+    <li>Полная матрица (11 продуктов, legacy, НТ): см. <code>competitor_comparison.html</code>.</li>
+  </ul>
+</div>
+<p class="small comment">Полная версия (11 продуктов, legacy, НТ):
+<a href="competitor_comparison.html">competitor_comparison.html</a> ·
+<a href="competitor_comparison_brief.html">общий one-pager</a></p>
+
+
+
+
+</body>
+</html>

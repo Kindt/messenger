@@ -1,0 +1,29 @@
+# Prometheus file_sd fragment — internal-dev Cell (spec 011 T01113)
+# Mount into Prometheus container: /etc/prometheus/cells/internal-dev.yml
+# Parent prometheus.yml should include:
+#   - job_name: korus-cell-internal-dev
+#     metrics_path: /api/v1/metrics/prometheus
+#     file_sd_configs:
+#       - files: ["/etc/prometheus/cells/internal-dev.yml"]
+
+- targets:
+    - "192.168.76.10:8080"
+  labels:
+    cell_id: internal-dev
+    env: internal
+    role: core-api
+    commercial_model: c_internal
+
+- targets:
+    - "192.168.76.10:9192"
+  labels:
+    cell_id: internal-dev
+    env: internal
+    role: retention-worker
+
+- targets:
+    - "192.168.76.10:9193"
+  labels:
+    cell_id: internal-dev
+    env: internal
+    role: export-replay-worker

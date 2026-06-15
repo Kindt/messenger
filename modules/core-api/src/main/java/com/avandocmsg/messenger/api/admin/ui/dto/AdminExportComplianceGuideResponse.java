@@ -9,8 +9,13 @@ public record AdminExportComplianceGuideResponse(
     @JsonProperty("gdpr_disclosures_reference") JsonNode gdprDisclosuresReference,
     @JsonProperty("env_checklist") List<EnvChecklistItem> envChecklist,
     @JsonProperty("smoke_commands") List<SmokeCommandHint> smokeCommands,
-    @JsonProperty("export_compliance") AdminServerStatsResponse.ExportCompliance exportCompliance
+    @JsonProperty("export_compliance") AdminServerStatsResponse.ExportCompliance exportCompliance,
+    @JsonProperty("completeness_policy") CompletenessPolicy completenessPolicy
 ) {
+    public record CompletenessPolicy(
+        @JsonProperty("required_fields") List<String> requiredFields,
+        @JsonProperty("strict") boolean strict
+    ) {}
     public record EnvChecklistItem(
         @JsonProperty("env") String env,
         @JsonProperty("purpose") String purpose,

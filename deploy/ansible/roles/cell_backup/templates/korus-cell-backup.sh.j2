@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Korus Cell backup stub — {{ cell_backup_cell_id }} (preset {{ cell_backup_preset }})
+set -euo pipefail
+CELL_ID="{{ cell_backup_cell_id }}"
+TS="$(date -u +%Y%m%dT%H%M%SZ)"
+OUT_DIR="/var/backups/korus/${CELL_ID}/${TS}"
+mkdir -p "${OUT_DIR}"
+
+echo "[${TS}] cell=${CELL_ID} preset={{ cell_backup_preset }} targets={{ cell_backup_targets | length }}"
+
+# Phase 1: local postgres dump when compose stack is up on server host
+if command -v docker >/dev/null 2>&1; then
+  PG_CID="$(docker ps -q -f name=postgres 2>/dev/null | head -1 || true)"
+  if [[ -n "${PG_CID}" ]]; then
+    docker exec "${PG_CID}" pg_dump -U korus -Fc korus > "${OUT_DIR}/postgres_hot.dump" || true
+  fi
+fi
+
+# Phase 2: S3 / air-gap upload per expanded manifest targets
+exit 0

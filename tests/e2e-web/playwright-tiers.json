@@ -5,7 +5,8 @@
     "ui-messaging",
     "ui-files",
     "ui-conference",
-    "ui-e2ee"
+    "ui-e2ee",
+    "ui-bot"
   ],
   "tiers": {
     "api": {
@@ -16,7 +17,7 @@
         "specs/contacts-search.spec.ts",
         "specs/conference-rtc.spec.ts"
       ],
-      "grep": "global search API|blocks list API|device register API|capabilities advertise|legacy e2ee|mls active exposes|plaintext-preview|authenticated user can upload|send with e2ee_scheme|media capabilities include"
+      "grep": "global search API|blocks list API|device register API|capabilities advertise|legacy e2ee|mls active exposes|plaintext-preview|authenticated user can upload|send with e2ee_scheme|media capabilities include|register subscribe sendMessage|long-poll updates|token rotate"
     },
     "ui-auth": {
       "description": "Auth session UI",
@@ -44,13 +45,17 @@
       "description": "Browser MLS roundtrip",
       "args": ["specs/e2ee-browser-roundtrip.spec.ts"]
     },
+    "ui-bot": {
+      "description": "Bot API REST MVP + v2",
+      "args": ["specs/bot-api.spec.ts"]
+    },
     "full": {
       "description": "All specs (outer gate only)",
       "args": []
     },
     "all-inner": {
       "description": "Run all inner tiers sequentially",
-      "sequential": ["api", "ui-auth", "ui-messaging", "ui-files", "ui-conference", "ui-e2ee"]
+      "sequential": ["api", "ui-auth", "ui-messaging", "ui-files", "ui-conference", "ui-e2ee", "ui-bot"]
     }
   }
 }

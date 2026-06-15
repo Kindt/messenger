@@ -23,6 +23,7 @@ Single source of truth for commonly used host ports across local run modes.
 | `korus-server` | ws-gateway | `18082` | Forward to guest `8081` |
 | `korus-server` | keycloak | `18081` | Forward to guest `8080` |
 | `korus-web` | web LB | `19088` | Forward to guest `9088` |
+| `korus-web` | coturn (dev TURN) | `3478` | TCP+UDP forward to guest; ICE `turn:127.0.0.1:3478` |
 | `korus-server` | SSH | `12221` | `ssh korus@127.0.0.1 -p 12221` |
 | `korus-web` | SSH | `12222` | `ssh korus@127.0.0.1 -p 12222` |
 

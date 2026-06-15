@@ -374,7 +374,7 @@ public class MessengerApplication {
 
         var botRepository = new BotRepository(dataSource);
         var botService = new BotService(botRepository, chatRepository, messageApplicationService,
-            auditRepository, this.uuidGenerator);
+            messageService, chatBanService, auditRepository, this.uuidGenerator);
 
         var jerseyServlet = new ServletContainer(
             new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,

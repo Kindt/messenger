@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
-Current plan: `specs/007-platform-stage-readiness/plan.md`
+Current plan: `specs/011-korus-cloud-platform/plan.md`
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
 <!-- SPECKIT END -->
@@ -269,12 +269,14 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 
 | Spec | Назначение |
 |------|------------|
-| [`specs/007-platform-stage-readiness/`](specs/007-platform-stage-readiness/) | Ops/stage gates T601–T607 (eng. ✅; ops ⏳) |
+| [`specs/011-korus-cloud-platform/`](specs/011-korus-cloud-platform/) | Korus Cloud Cells — Phase 0–1 closed; Phase 2+ ops Sep 2026+ |
+| [`specs/007-platform-stage-readiness/`](specs/007-platform-stage-readiness/) | Ops/stage gates T601–T607 (eng. ✅; ops ⏳ Sep 2026+) |
 
 **Закрыты (engineering):**
 
 | Spec | Назначение |
 |------|------------|
+| [`specs/010-presentation-gaps-closure/`](specs/010-presentation-gaps-closure/) | §4 presentation gaps — eng. closed; Phase B ops Sep 2026+ |
 | [`specs/008-repository-cleanup/`](specs/008-repository-cleanup/) | Тотальная гигиена репо (closed 2026-06-15) |
 | [`specs/009-platform-modules/`](specs/009-platform-modules/) | indexer + bot-delivery + Bot API MVP (closed 2026-06-15) |
 
@@ -387,6 +389,7 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 | **Тесты** | Полезные тесты только при реальном coverage; не trivial asserts |
 | **Plan files** | Не редактировать `.cursor/plans/*.plan.md` без явного указания |
 | **GitHub** | **Не ставить GitHub CLI (`gh`)**; push — `.\scripts\git-push.ps1`; PR — вручную через compare на github.com |
+| **Stage/prod стенд** | **До сентября 2026 стенда не будет.** Не предлагать stage/prod deploy, `T601–T607`, `stage-tls-smoke`, `run-k6-stage-baseline`, `playwright-staging-gate` на реальном FQDN. Acceptance и smokes — **только QEMU** (`127.0.0.1:18080` / `:19088`, guest SSH smokes). Ops-задачи spec 007 — backlog до появления хоста; не блокировать инженерию. |
 
 ---
 
@@ -423,7 +426,13 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 - **Playwright UI**: `data-testid=call-panel-toggle`, MLS-aware `uiSendMessage` (encrypted bubble OK).
 - **PowerShell 5.1**: кириллица и `[OK]` в double-quoted strings ломает парсинг — ASCII + single quotes или plain text.
 
-### Открытые ops-гештальты (не automation)
+### Stage / prod timeline
+
+- **Stage/prod хост недоступен до сентября 2026** (решение команды, 2026-06-15). Агентам: не планировать и не предлагать прогон на stage/prod; вместо этого — **QEMU VM** (см. User Preferences «Stage/prod стенд»).
+- Spec **007** Phase 6 (`T601–T607`): engineering closed; ops-acceptance отложен до появления стенда.
+- Замена stage-smokes на QEMU: `playwright-dev-loop`, `qemu-plan-orchestrator`, `scripts/smoke-*.ps1` / `.sh` на server guest, health `:18080` / UI `:19088`.
+
+### Открытые ops-гештальты (не automation, после сентября 2026)
 
 - Stage/prod **TLS + vault** (US1) — нужен real host.
 - **E2EE formal sign-off** (Product/Security/Ops) перед `MLS_STATUS=active` в prod.
@@ -432,4 +441,4 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 
 ---
 
-*Последнее существенное обновление AGENTS.md: 2026-06-12 (Superpowers skills, US9 fast acceptance, QEMU learnings).*
+*Последнее существенное обновление AGENTS.md: 2026-06-15 (stage недоступен до сентября 2026; QEMU-only acceptance).*

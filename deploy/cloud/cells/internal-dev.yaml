@@ -1,0 +1,36 @@
+# Internal development Cell (spec 011 Phase 1 T01111)
+# Parity: QEMU two-host or inventory/two-host pattern
+
+cell_id: internal-dev
+status: planned
+
+commercial:
+  model: c_internal
+  billing_model: flat_platform
+  sku: standard
+  sla_tier: standard
+
+compute:
+  provider: generic
+  deploy_profile: standard
+  server_private_ip: 192.168.76.10
+  web_private_ip: 192.168.76.20
+  web_public_ip: 127.0.0.1
+
+dns:
+  mode: platform_subdomain
+  fqdn: internal-dev.messenger.cloud.example.com
+
+tls:
+  use_letsencrypt: false
+
+backup:
+  preset: default
+
+observability:
+  scrape_enabled: true
+  labels:
+    env: internal
+
+images:
+  tag: "0.1.0-SNAPSHOT"

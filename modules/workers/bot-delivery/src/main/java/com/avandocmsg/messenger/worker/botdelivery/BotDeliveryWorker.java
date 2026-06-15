@@ -78,21 +78,27 @@ public class BotDeliveryWorker {
         try {
             var payload = new String(msg.getData(), StandardCharsets.UTF_8);
             var event = MAPPER.readValue(payload, MessageWorkerEvent.class);
-            var urls = resolveWebhookUrls(event);
-            if (urls.isEmpty()) {
+            var targets = resolveTargets(event);
+            if (targets.isEmpty()) {
                 log.warn(workerMessages.format("worker.bot_delivery.no_webhook_targets", event.chatId(), event.messageId()));
                 return;
             }
-            for (var url : urls) {
-                deliver(url, event);
+            var json = buildPayload(event);
+            for (var target : targets) {
+                if (target.botId() != null) {
+                    enqueueUpdate(target.botId(), json);
+                }
+                deliver(target.webhookUrl(), event, json);
             }
         } catch (Exception e) {
             log.error(workerMessages.get("worker.bot_delivery.handle_failed"), e);
         }
     }
 
-    private List<String> resolveWebhookUrls(MessageWorkerEvent event) throws SQLException {
-        var urls = new ArrayList<String>();
+    private record DeliveryTarget(UUID botId, String webhookUrl) {}
+
+    private List<DeliveryTarget> resolveTargets(MessageWorkerEvent event) throws SQLException {
+        var targets = new ArrayList<DeliveryTarget>();
         if (subscriptionsEnabled) {
             var chatId = UUID.fromString(event.chatId());
             try (var conn = dataSource.getConnection()) {
@@ -107,10 +113,10 @@ public class BotDeliveryWorker {
                         stmt.setObject(1, chatId);
                         try (var rs = stmt.executeQuery()) {
                             while (rs.next()) {
-                                var botId = rs.getObject("bot_id");
+                                var botId = (UUID) rs.getObject("bot_id");
                                 var webhook = rs.getString("webhook_url");
                                 if (botId == null) {
-                                    addUrl(urls, webhook);
+                                    addTarget(targets, null, webhook);
                                     continue;
                                 }
                                 var botName = rs.getString("bot_name");
@@ -120,7 +126,7 @@ public class BotDeliveryWorker {
                                     continue;
                                 }
                                 var effective = webhook != null && !webhook.isBlank() ? webhook : defaultUrl;
-                                addUrl(urls, effective);
+                                addTarget(targets, botId, effective);
                             }
                         }
                     }
@@ -130,23 +136,67 @@ public class BotDeliveryWorker {
                         stmt.setObject(1, chatId);
                         try (var rs = stmt.executeQuery()) {
                             while (rs.next()) {
-                                addUrl(urls, rs.getString(1));
+                                addTarget(targets, null, rs.getString(1));
                             }
                         }
                     }
                 }
             }
         }
-        if (urls.isEmpty() && fallbackWebhookUrl != null) {
-            urls.add(fallbackWebhookUrl);
+        if (targets.isEmpty() && fallbackWebhookUrl != null) {
+            targets.add(new DeliveryTarget(null, fallbackWebhookUrl));
         }
-        return urls;
+        return targets;
     }
 
-    private static void addUrl(List<String> urls, String raw) {
+    private static void addTarget(List<DeliveryTarget> targets, UUID botId, String raw) {
         if (raw != null && !raw.isBlank()) {
-            urls.add(raw.trim());
+            targets.add(new DeliveryTarget(botId, raw.trim()));
         }
+    }
+
+    private void enqueueUpdate(UUID botId, String payloadJson) {
+        if (botId == null) {
+            return;
+        }
+        try (var conn = dataSource.getConnection()) {
+            if (!tableExists(conn, "bot_updates")) {
+                return;
+            }
+            var sql = """
+                INSERT INTO bot_updates (bot_id, event_type, payload)
+                VALUES (?, 'message', ?::jsonb)
+                """;
+            try (var stmt = conn.prepareStatement(sql)) {
+                stmt.setObject(1, botId);
+                stmt.setString(2, payloadJson);
+                stmt.executeUpdate();
+            }
+        } catch (SQLException e) {
+            log.warn("bot_updates enqueue failed: {}", e.getMessage());
+        }
+    }
+
+    private void deliver(String webhookUrl, MessageWorkerEvent event, String json) throws Exception {
+        var dedupKey = event.messageId() + "|" + webhookUrl;
+        var first = delivered.putIfAbsent(dedupKey, Boolean.TRUE) == null;
+        if (!first) {
+            log.warn(workerMessages.format("worker.bot_delivery.duplicate_delivery", event.messageId(), webhookUrl));
+        }
+        var status = postWebhook(httpClient, webhookUrl, json);
+        log.info(workerMessages.format("worker.bot_delivery.webhook_status",
+            status, event.messageId(), webhookUrl));
+    }
+
+    /** Package-visible for unit tests (BOT-6 mock HTTP server). */
+    static int postWebhook(HttpClient httpClient, String webhookUrl, String json) throws Exception {
+        var req = HttpRequest.newBuilder(URI.create(webhookUrl))
+            .timeout(Duration.ofSeconds(20))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
+            .build();
+        var resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        return resp.statusCode();
     }
 
     private static boolean tableExists(java.sql.Connection conn, String table) throws SQLException {
@@ -156,24 +206,7 @@ public class BotDeliveryWorker {
         }
     }
 
-    private void deliver(String webhookUrl, MessageWorkerEvent event) throws Exception {
-        var dedupKey = event.messageId() + "|" + webhookUrl;
-        var first = delivered.putIfAbsent(dedupKey, Boolean.TRUE) == null;
-        if (!first) {
-            log.warn(workerMessages.format("worker.bot_delivery.duplicate_delivery", event.messageId(), webhookUrl));
-        }
-        var json = buildPayload(event);
-        var req = HttpRequest.newBuilder(URI.create(webhookUrl))
-            .timeout(Duration.ofSeconds(20))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
-            .build();
-        var resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        log.info(workerMessages.format("worker.bot_delivery.webhook_status",
-            resp.statusCode(), event.messageId(), webhookUrl));
-    }
-
-    private static String buildPayload(MessageWorkerEvent event) {
+    static String buildPayload(MessageWorkerEvent event) {
         ObjectNode root = MAPPER.createObjectNode();
         root.put("event_id", event.messageId());
         root.put("messageId", event.messageId());

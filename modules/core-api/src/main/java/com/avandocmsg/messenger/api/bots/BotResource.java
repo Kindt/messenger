@@ -1,9 +1,11 @@
 package com.avandocmsg.messenger.api.bots;
 
+import com.avandocmsg.messenger.api.bots.dto.BotBanRequest;
 import com.avandocmsg.messenger.api.bots.dto.BotSendMessageRequest;
 import com.avandocmsg.messenger.api.bots.dto.BotSubscribeRequest;
 import com.avandocmsg.messenger.api.bots.dto.BotWebhookRequest;
 import com.avandocmsg.messenger.api.bots.dto.CreateBotRequest;
+import com.avandocmsg.messenger.api.bots.dto.RotateBotTokenResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
@@ -21,6 +23,7 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -140,6 +143,84 @@ public class BotResource {
     }
 
     @POST
+    @Path("/bots/{botId}/token/rotate")
+    @Operation(summary = "Rotate bot access token", description = "Returns new kbt_ token once; invalidates previous token")
+    public Response rotateToken(@PathParam("botId") String botIdStr, @Context SecurityContext securityContext) {
+        var ownerId = requireUserId(securityContext);
+        var botId = UuidParams.required(botIdStr, "bot_id");
+        return botService.rotateToken(ownerId, botId)
+            .map(r -> Response.ok(r).build())
+            .orElseGet(() -> Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.bot.not_found"))).build());
+    }
+
+    @GET
+    @Path("/bot/updates")
+    @Operation(summary = "Long-poll bot updates", description = "Authorization: Bearer kbt_…")
+    public Response pollUpdates(@QueryParam("offset") Long offset,
+                                @QueryParam("timeout") Integer timeout,
+                                @Context SecurityContext securityContext) {
+        var botId = requireBotId(securityContext);
+        var off = offset != null && offset >= 0 ? offset : 0L;
+        var to = timeout != null ? timeout : 30;
+        return Response.ok(botService.pollUpdates(botId, off, to)).build();
+    }
+
+    @DELETE
+    @Path("/bot/messages/{messageId}")
+    @Operation(summary = "Delete bot message", description = "Bot may delete its own messages only")
+    public Response deleteBotMessage(@PathParam("messageId") String messageIdStr,
+                                     @QueryParam("chat_id") String chatIdStr,
+                                     @Context SecurityContext securityContext) {
+        var botId = requireBotId(securityContext);
+        if (chatIdStr == null || chatIdStr.isBlank()) {
+            return badRequest("error.bot.chat_id_required");
+        }
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var msgId = UuidParams.required(messageIdStr, "message_id");
+        if (!botService.deleteMessage(botId, chatId, msgId)) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(new ApiError(403, messages.get("error.bot.action_denied"))).build();
+        }
+        return Response.noContent().build();
+    }
+
+    @POST
+    @Path("/bot/chats/{chatId}/messages/{messageId}/pin")
+    @Operation(summary = "Pin message as bot", description = "Requires bot admin/owner role in chat")
+    public Response pinBotMessage(@PathParam("chatId") String chatIdStr,
+                                  @PathParam("messageId") String messageIdStr,
+                                  @Context SecurityContext securityContext) {
+        var botId = requireBotId(securityContext);
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var msgId = UuidParams.required(messageIdStr, "message_id");
+        if (!botService.pinMessage(botId, chatId, msgId)) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(new ApiError(403, messages.get("error.bot.action_denied"))).build();
+        }
+        return Response.noContent().build();
+    }
+
+    @POST
+    @Path("/bot/chats/{chatId}/bans")
+    @Operation(summary = "Ban user as bot", description = "Requires bot admin/owner role in chat")
+    public Response banAsBot(@PathParam("chatId") String chatIdStr,
+                             BotBanRequest request,
+                             @Context SecurityContext securityContext) {
+        var botId = requireBotId(securityContext);
+        if (request == null || request.userId() == null || request.userId().isBlank()) {
+            return badRequest("error.bot.user_id_required");
+        }
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var targetId = UuidParams.required(request.userId(), "user_id");
+        if (!botService.banUser(botId, chatId, targetId, request.reason())) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(new ApiError(403, messages.get("error.bot.action_denied"))).build();
+        }
+        return Response.status(Response.Status.CREATED).build();
+    }
+
+    @POST
     @Path("/bot/send")
     @Operation(summary = "Send message as bot", description = "Authorization: Bearer kbt_… bot access token")
     @ApiResponse(responseCode = "201", description = "Message sent")
@@ -175,6 +256,14 @@ public class BotResource {
 
     private UUID requireUserId(SecurityContext securityContext) {
         return CurrentUserId.uuid(securityContext);
+    }
+
+    private UUID requireBotId(SecurityContext securityContext) {
+        var principal = securityContext.getUserPrincipal();
+        if (!(principal instanceof BotPrincipal botPrincipal)) {
+            throw new jakarta.ws.rs.NotAuthorizedException("Bot token required");
+        }
+        return UUID.fromString(botPrincipal.botId());
     }
 
     private Response badRequest(String messageKey) {

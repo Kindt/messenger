@@ -6,6 +6,65 @@
 
 ---
 
+### 2026-06-15 — Spec 012: Competitor presentation spider-web (speckit)
+
+- **`specs/012-competitor-presentation-spider/`**: spec, plan, tasks (T01201–T01228), research, quickstart, design, acceptance contract.
+- **Goal:** закрыть «паутинку» HTML v2.8 → v2.9 (P0) / v3.0 (P1) — matrix 11×4, battle cards, S-50k chart, segment enrichments.
+- **Live-streaming renumbered:** `specs/012-live-streaming` → **`specs/013-live-streaming`**.
+
+### 2026-06-15 — Spec 011: Korus Cloud Platform (speckit)
+
+- **`specs/011-korus-cloud-platform/`**: spec, plan, tasks, research, quickstart, contracts; design approved in `design/cloud-platform-design.md`.
+- **Live-streaming renumbered:** `specs/011-live-streaming` → **`specs/012-live-streaming`** → **`specs/013-live-streaming`** (spec 011 = cloud; spec 012 = presentation spider).
+- **`docs/plans/2026-06-15-korus-cloud-platform-design.md`**: redirect stub → spec 011.
+
+### 2026-06-16 — Outer gate T110 (QEMU Playwright 33/33)
+
+- Full suite green: `tests/e2e-web` `npx playwright test` against `:19088`/`:18080`.
+- Guest smokes T109: turn, push-worker, bot-api — OK.
+- [`docs/parity/runtime-gate-report.md`](docs/parity/runtime-gate-report.md) updated.
+
+### 2026-06-16 — P1-6 GDPR export completeness (admin UI)
+
+- **`GET /admin/ui/export-compliance-guide`**: поле `completeness_policy` (`required_fields`, `strict`) из `AppConfig`.
+- **Admin UI**: таблица mandatory fields в панели export compliance.
+- **Compose**: `EXPORT_REQUIRED_FIELDS`, `EXPORT_REPLAY_INCLUDE_EXPORT_COMPLETENESS` на export-replay worker.
+- **Smoke**: `scripts/smoke-export-gdpr-fulfillment.ps1`.
+
+### 2026-06-16 — P1-5 timing normalization (QEMU)
+
+- **`SECURITY_TIMING_NORMALIZATION_MIN_MS=220`** + **`SECURITY_TIMING_NOT_FOUND_EXTRA_MS=35`** in full-server compose.
+- **`TimingNormalization.padNotFoundExtra`**, **`AppConfig.timingNotFoundExtraNanos()`** — closes exist vs 404 payload gap on `GET /chats/{id}`.
+- **`scripts/audit-timing.ps1`**: QEMU tuning note in `-Help`.
+
+### 2026-06-16 — Spec 011 Phase 0–1: Korus Cloud scaffold + internal Cell
+
+- **`deploy/cloud/`**: Cell manifests (`internal-dev`, `acme-prod-example`), registry, JSON Schema, Terraform `generic` + proxmox stub.
+- **`scripts/`**: `cell_manifest.py`, validate/expand, `test_cell_manifest.py`, `precommit-validate-cell-manifests.py`.
+- **`build.gradle.kts`**: `checkCellManifest` → `buildIntegrity`.
+- **Ansible**: `cell-provision.yml`, `cell-upgrade.yml`, `cell-destroy.yml`, role `cell_backup`, inventory `cells/internal-dev/`.
+- **Obs**: `deploy/observability/prometheus/cells/internal-dev.yml`.
+- **`docs/runbooks/cell-restore.md`**; smoke `scripts/smoke-cell-multi-org-qemu.ps1`.
+- **Spec status:** Phase 0–1 engineering closed; Phase 2+ blocked Sep 2026+.
+
+### 2026-06-16 — Spec 010: engineering closure
+
+- **Phase A/C/D L0–L1** complete per [`specs/010-presentation-gaps-closure/tasks.md`](specs/010-presentation-gaps-closure/tasks.md).
+- **Phase B** (T601–T607, E2EE sign-off, presentation §4 prod) blocked until Sep 2026 stage host.
+
+### 2026-06-16 — spec 010: §4 gaps closure (QEMU eng + Bot API L2 + live ADR)
+
+- **TURN prod:** `docker-compose.turn-prod.yml` external-ip; prod inventory; `smoke-turn-relay.ps1`; runbook firewall §F.
+- **Web UI:** ICE failed i18n; push notifications onboarding hint.
+- **Push:** `full-stack-up.sh` — `--profile push` with full profile.
+- **Bot API L2:** V033 `bot_updates`; long-poll, delete/pin/ban, token rotate, rate limit; BOT-6 mock HTTP test; Playwright `ui-bot` tier.
+- **Live L0–L1:** `ADR-live-streaming-media-stack.md`; `specs/013-live-streaming/`.
+
+### 2026-06-16 — P1 QEMU smokes + timing audit (core-api)
+
+- **Smokes:** `smoke-push-worker-qemu.ps1`, `smoke-preview-worker-qemu.ps1`, `smoke-turn-qemu.ps1`; `audit-timing.ps1` fixes (PS 5.1).
+- **Security:** `ChatResource.getById` single query path + optional `TimingNormalization` (`SECURITY_TIMING_NORMALIZATION_MIN_MS`).
+
 ### 2026-06-16 — product_presentation v2.5.2: Bot API MVP + продуктовый язык
 
 - **`product_presentation.html` v2.5.2**, **`docs/PRODUCT_PRESENTATION.md` v1.10**: Bot API → **Частично** (register, webhook, sendMessage); КУ-25 partial; убраны QEMU/Ansible/bot-delivery/tz_full из текста для заказчика; §8–§12, приложения D/H/G; §17 pricing сверен (61 350 / 109 550 / 332 000 ₽).

@@ -133,6 +133,68 @@ def _fmt_per_user_month(rub: float) -> str:
     return f"{rub:.1f} ₽/рег. пользов./мес"
 
 
+def _section_lead(text: str) -> str:
+    return f'<p class="section-lead comment">{text}</p>'
+
+
+def render_reading_guide_html() -> str:
+    return """
+<div class="reading-guide note">
+  <div class="req">Как читать документ</div>
+  <ul class="comment">
+    <li><b>Часть I (продажи)</b> — сценарии, позиция, battle card, FAQ, сегменты: достаточно для первой встречи и email.</li>
+    <li><b>Часть II (обоснование КП)</b> — TCO, функции, матрицы по якорям: для закупки, тендера и архитектора.</li>
+    <li><b>Часть III (справочник)</b> — eXpress, legacy, НТ, источники: для пресейла и аналитика.</li>
+    <li>Краткая версия (~6–8 стр.): <a href="competitor_comparison_brief.html">competitor_comparison_brief.html</a>.</li>
+    <li><b>Сегментные one-pager'ы:</b>
+      <a href="competitor_comparison_segment_bank.html">банк/госсектор</a>,
+      <a href="competitor_comparison_segment_industry.html">промышленность</a>,
+      <a href="competitor_comparison_segment_cloud.html">облако-first</a>.</li>
+  </ul>
+</div>"""
+
+
+def render_part_divider_html(part: str, title: str, subtitle: str) -> str:
+    return f"""
+<div class="part-divider" id="part-{part}">
+  <div class="part-badge">Часть {part}</div>
+  <div class="part-title">{title}</div>
+  <p class="part-subtitle comment">{subtitle}</p>
+</div>"""
+
+
+def render_glossary_html() -> str:
+    return """
+<details class="glossary small">
+  <summary><b>Глоссарий для встречи с заказчиком</b></summary>
+  <table>
+    <tr><th>Термин</th><th>Как объяснить</th></tr>
+    <tr><td>TCO</td><td>Полная стоимость владения за год: лицензия + инфра + сопровождение (где применимо).</td></tr>
+    <tr><td>Якорь (S-10k … E-1M)</td><td>Фиксированный масштаб для честного сравнения; не смешиваем 100 и 10&nbsp;000 пользователей.</td></tr>
+    <tr><td>Рег. пользов.</td><td>Зарегистрированный пользователь в системе (не путать с «онлайн сейчас»).</td></tr>
+    <tr><td>Legal hold / export</td><td>Юридическое удержание и выгрузка переписки для расследований и аудита.</td></tr>
+    <tr><td>Уровень A / B / C</td><td>A — полный TCO; B — альтернативы в контуре (оценка); C — рынок РФ (прайс/КП).</td></tr>
+  </table>
+</details>"""
+
+
+def render_full_disclaimers_html() -> str:
+    return """
+<div class="warn">
+  <div class="req">Ограничения методики (обязательно к слайду «источники»)</div>
+  <ul class="comment">
+    <li>Цифры инфраструктуры — ориентиры; перед prod рекомендуется формальное нагрузочное тестирование на стенде заказчика.</li>
+    <li>TCO уровня B — модельные оценки; уровень C — публичные прайсы могут отличаться от коммерческого предложения.</li>
+    <li>eXpress при 10/100 тыс. рег. — модельная оценка infra, не оферта вендора.</li>
+    <li>Mattermost/Rocket.Chat: «одновременные пользователи» ≠ зарегистрированные.</li>
+    <li>Compass/Loop: акции и цены реселлера — сверять с офертой на дату КП.</li>
+    <li>МТС Линк Чаты — преемник линейки Dialog; актуальный бренд уточнять у МТС.</li>
+    <li>TrueConf — UC-first; TCO не сводится к ₽/рег. пользов.</li>
+    <li>Устаревший XMPP — модель HA-кластера; реальные контуры часто на одном узле.</li>
+  </ul>
+</div>"""
+
+
 @dataclass(frozen=True)
 class KorusAnchor:
     code: str
@@ -1125,19 +1187,171 @@ def render_hero_html() -> str:
       <div class="stat-label">OPEX инфра Korus @10&nbsp;тыс. рег.<br/><span class="small">полный «Стандарт», не пробник</span></div>
     </div>
   </div>
-  <p class="hero-note small">Цифры — ориентиры для переговоров и КП; детали и дисклеймеры — §8. Сравнение честное: сильные стороны конкурентов не скрываем.</p>
+  <p class="hero-note small">Цифры — ориентиры для переговоров и КП; детали — в конце документа. Сравнение честное: сильные стороны конкурентов не скрываем.</p>
+</div>"""
+
+
+def render_elevator_pitch_html() -> str:
+    return """
+<div class="elevator">
+  <div class="req">Краткий pitch (30 секунд)</div>
+  <p class="elevator-text comment">
+    <b>Korus Messenger</b> — корпоративный мессенджер в контуре заказчика, где
+    <b>комплаенс (экспорт, legal hold, audit)</b> заложен в продукт, а экономика масштабируется
+    через <b>инфраструктуру</b>, а не через лицензию на каждого пользователя.
+    Сравниваемся с eXpress, облаком и рынком РФ по <b>единой методике</b> — без «красивых» цифр в вакууме.
+  </p>
+</div>"""
+
+
+def render_value_pillars_html() -> str:
+    return """
+<div class="pillars">
+  <div class="pillar pillar-korus">
+    <div class="pillar-title">Контур заказчика</div>
+    <p class="comment">Развёртывание в инфраструктуре заказчика. Данные не уходят в чужое облако. Путь от пилота к якорям 10k–1M.</p>
+  </div>
+  <div class="pillar pillar-korus">
+    <div class="pillar-title">Комплаенс «из коробки»</div>
+    <p class="comment">Export gate, legal hold, dual-TTL, audit — не проект интегратора на год. Аргумент для ИБ и внутреннего аудита.</p>
+  </div>
+  <div class="pillar pillar-korus">
+    <div class="pillar-title">Предсказуемый TCO</div>
+    <p class="comment">OPEX инфра по sizing-якорям. Без сюрприза «30 млн ₽/год только лицензия» при 10 тыс. рег. — типичный профиль eXpress.</p>
+  </div>
+</div>"""
+
+
+def render_battle_card_html() -> str:
+    s10 = KORUS_ANCHORS[0]
+    ex_lic = express_license_yearly(10_000)
+    ex_infra = express_infra_yearly(10_000) or 0
+    pachka_y = pachka_yearly(10_000)
+    korus_tco = s10.infra_yearly  # license KORUS = КП, show infra as baseline
+    ex_tco = ex_lic + ex_infra
+    return f"""
+<div class="battle-card" id="battle">
+  <div class="req">Сравнительная карта @10&nbsp;000 рег. пользов.</div>
+  <p class="small comment">Battle card для ЛПР и закупки. Не заменяет детальный TCO — якорь для первого касания.</p>
+  <table class="battle-table">
+    <tr>
+      <th>Критерий для ЛПР</th>
+      <th class="col-korus">Korus Messenger</th>
+      <th>eXpress Corporate</th>
+      <th>Пачка (облако)</th>
+    </tr>
+    <tr>
+      <td>Где живут данные</td>
+      <td class="col-korus"><b>В контуре заказчика</b></td>
+      <td>В контуре заказчика</td>
+      <td>Облако вендора</td>
+    </tr>
+    <tr>
+      <td>TCO @10k (ориентир)</td>
+      <td class="col-korus"><b>{fmt_rub(korus_tco)}/год</b> infra*<br/><span class="small">+ лицензия Korus по КП</span></td>
+      <td><b>{fmt_rub(ex_tco)}/год</b><br/><span class="small">лицензия ~{fmt_rub(ex_lic)} ({round(100*ex_lic/ex_tco)}%)</span></td>
+      <td><b>{fmt_rub(pachka_y)}/год</b><br/><span class="small">подписка, без своего ЦОД</span></td>
+    </tr>
+    <tr>
+      <td>Export / legal hold</td>
+      <td class="col-korus"><b>Ядро продукта</b></td>
+      <td>DLP / политики</td>
+      <td>API, не gate</td>
+    </tr>
+    <tr>
+      <td>ФСТЭК / реестр</td>
+      <td class="col-korus">В процессе</td>
+      <td><b>№4997</b></td>
+      <td>Заявлен</td>
+    </tr>
+    <tr>
+      <td>Суперапп / ВКС 500+</td>
+      <td class="col-korus">Дорожная карта</td>
+      <td><b>Сильная сторона</b></td>
+      <td>Чат + боты</td>
+    </tr>
+    <tr>
+      <td>Когда выигрываем</td>
+      <td class="col-korus">Compliance + TCO в контуре</td>
+      <td>ФСТЭК + суперапп «сейчас»</td>
+      <td>Скорость, нет ЦОД</td>
+    </tr>
+  </table>
+  <p class="small comment">* Korus @10k — полный «Стандарт» (infra), не пробник. VK WorkSpace и tier B/C — см. полную версию.</p>
+</div>"""
+
+
+def render_objections_faq_html() -> str:
+    return """
+<div class="faq" id="faq">
+  <div class="req">Возражения и ответы (продажи и пресейл)</div>
+  <details class="faq-item">
+    <summary>«У eXpress уже есть ФСТЭК и суперапп — зачем Korus?»</summary>
+    <p class="comment">Согласны: eXpress — сильный игрок, если нужен <b>сертификат сегодня</b> и bundle почта/ВКС/SmartApps.
+    Korus — когда приоритет <b>комплаенс-ядро</b> (export, legal hold, dual-TTL) и <b>экономика без доминирования лицензии per-user</b> на 10k–100k+.
+    Часто — параллельный шорт-лист: eXpress по ФСТЭК, Korus по TCO и архитектуре данных.</p>
+  </details>
+  <details class="faq-item">
+    <summary>«Пачка/VK дешевле — ₽/пользов./мес на сайте»</summary>
+    <p class="comment">Верно для <b>облака</b> и быстрого старта. Уточните: допустимо ли хранение переписки вне контура?
+    При 100k рег. облако — сотни млн ₽/год OPEX подписки. Korus и eXpress — для <b>изолированного контура</b>; Пачка — если облако OK.</p>
+  </details>
+  <details class="faq-item">
+    <summary>«Rocket.Chat / Mattermost — open source, лицензия бесплатная»</summary>
+    <p class="comment">Лицензия OSS ≠ TCO: MongoDB/PostgreSQL, EE-фичи, compliance и поддержка — на заказчике.
+    Нет типового модуля export/legal hold. Уровень B — для зрелых IT-команд; Korus — когда нужен <b>продуктовый комплаенс</b> и единый вендор.</p>
+  </details>
+  <details class="faq-item">
+    <summary>«Compass публикует 490 ₽/мес on-prem — вы дороже?»</summary>
+    <p class="comment">Сравнивайте <b>полный TCO</b>: лицензия + infra + интеграции. Compass — сильный UX и прайс; слабее export/legal hold.
+    Korus — не ценовой демпинг, а <b>compliance + sizing @10k+</b>. Попросите у Compass КП с infra @вашем якоре.</p>
+  </details>
+  <details class="faq-item">
+    <summary>«Покажите ФСТЭК / E2EE / мобильные — их пока нет»</summary>
+    <p class="comment">Честно: ФСТЭК и промышленная приёмка E2EE — <b>в процессе</b> (roadmap). Мобильные — в дорожной карте.
+    Не скрываем. Если hard requirement «ФСТЭК до подписания» — eXpress; если приоритет data governance и TCO — Korus + план сертификации.</p>
+  </details>
+</div>"""
+
+
+def render_segment_cards_html() -> str:
+    return """
+<div class="segments" id="segments">
+  <div class="req">Сегменты: как кастомизировать разговор</div>
+  <div class="segment-grid">
+    <div class="segment-card">
+      <div class="segment-label">Банк / госсектор / регуляторика</div>
+      <p class="comment"><b>Korus:</b> комплаенс-ядро, в контуре, dual-TTL.<br/>
+      <b>Конкурент:</b> eXpress (ФСТЭК №4997) — если сертификат обязателен.<br/>
+      <b>Материалы:</b> <a href="competitor_comparison_segment_bank.html">one-pager сегмента</a>, battle card, ИБ-воркшоп.</p>
+    </div>
+    <div class="segment-card">
+      <div class="segment-label">Промышленность 10–100 тыс. рег.</div>
+      <p class="comment"><b>Боль:</b> TCO при росте, филиалы, legacy XMPP.<br/>
+      <b>Korus:</b> якоря S-10k/S-50k/S-100k, infra ~3 ₽/польз./мес @100k.<br/>
+      <b>Конкурент:</b> eXpress (лицензия), Compass (прайс).<br/>
+      <b>Материалы:</b> <a href="competitor_comparison_segment_industry.html">one-pager сегмента</a>, TCO, legacy.</p>
+    </div>
+    <div class="segment-card">
+      <div class="segment-label">Облако-first / без ЦОД</div>
+      <p class="comment"><b>Боль:</b> скорость, не строить infra.<br/>
+      <b>Честно:</b> не тянуть Korus — <b>Пачка</b> или <b>VK WorkSpace</b>.<br/>
+      <b>Korus позже:</b> если политика сменится на контур.<br/>
+      <b>Материалы:</b> <a href="competitor_comparison_segment_cloud.html">one-pager сегмента</a>, прайсы.</p>
+    </div>
+  </div>
 </div>"""
 
 
 def render_audience_nav_html() -> str:
     return """
 <div class="audience-nav">
-  <a class="audience-card" href="#summary"><span class="audience-role">Закупка / CFO</span>
-    <span class="audience-hint">TCO, якоря 10k–1M, доля лицензии</span></a>
-  <a class="audience-card" href="#s5"><span class="audience-role">ИБ / комплаенс</span>
-    <span class="audience-hint">экспорт, legal hold, audit, E2EE</span></a>
-  <a class="audience-card" href="#decision"><span class="audience-role">Продажи / presales</span>
-    <span class="audience-hint">сценарии, дерево выбора, ± по продуктам</span></a>
+  <a class="audience-card" href="#battle"><span class="audience-role">Закупка / CFO</span>
+    <span class="audience-hint">сравнительная карта, TCO @10k</span></a>
+  <a class="audience-card" href="#faq"><span class="audience-role">ИБ / комплаенс</span>
+    <span class="audience-hint">export, legal hold, возражения</span></a>
+  <a class="audience-card" href="#segments"><span class="audience-role">Продажи / пресейл</span>
+    <span class="audience-hint">сегменты, сценарии, FAQ</span></a>
   <a class="audience-card" href="#s2nt"><span class="audience-role">CTO / архитектор</span>
     <span class="audience-hint">sizing, НТ, infra по якорям</span></a>
 </div>"""
@@ -1155,7 +1369,7 @@ def render_korus_positioning_html() -> str:
         <li>Нужен <b>изолированный контур</b> и предсказуемый OPEX без «налога» per-user лицензии.</li>
         <li>Критичны <b>экспорт, legal hold, dual-TTL, audit</b> — не плагины «на доработку».</li>
         <li>Масштаб от <b>10&nbsp;000 рег. пользов.</b> (Стандарт) до федерального контура (Корпоративный).</li>
-        <li>Важна <b>мультитenant org-shard</b> и путь от пилота к production без смешения матриц.</li>
+        <li>Важна <b>мультитenant org-shard</b> и путь от пилота к промышленному контуру без смешения матриц.</li>
       </ul>
     </div>
     <div>
@@ -1179,10 +1393,10 @@ def render_cta_footer_html() -> str:
 <div class="cta-box">
   <div class="req">Следующий шаг с заказчиком</div>
   <ol class="comment">
-    <li><b>Квалификация</b> — контур (в контуре / облако), масштаб рег. пользов., требования ИБ (§ «Дерево выбора»).</li>
-    <li><b>Пилот</b> — функциональная оценка на пробнике (вне TCO-матрицы); production — с якоря S-10k.</li>
-    <li><b>КП</b> — infra по якорю + лицензия Korus; для конкурента — те же якоря (§3, §6).</li>
-    <li><b>ИБ-воркшоп</b> — export gate, ретенция, roadmap E2EE/ФСТЭК.</li>
+    <li><b>Квалификация</b> — контур (в контуре / облако), масштаб рег. пользов., требования ИБ (блок «Быстрый выбор»).</li>
+    <li><b>Пилот</b> — функциональная оценка на пробнике (вне TCO-матрицы); промышленный контур — с якоря S-10k.</li>
+    <li><b>КП</b> — инфра по якорю + лицензия Korus; для конкурента — те же якоря (разделы «Экономика», «Матрицы»).</li>
+    <li><b>ИБ-воркшоп</b> — export, ретенция, roadmap E2EE/ФСТЭК.</li>
   </ol>
 </div>"""
 
@@ -1196,7 +1410,7 @@ def render_executive_summary_html() -> str:
     <div class="scenario scenario-korus">
       <h4>Контур заказчика + комплаенс</h4>
       <p class="comment">Экспорт, legal hold, audit, ретенция — «из коробки», а не через интеграторов.</p>
-      <p class="scenario-rec"><b>Рекомендация:</b> <span class="rec-korus">Korus Messenger</span> — основной пitch;
+      <p class="scenario-rec"><b>Рекомендация:</b> <span class="rec-korus">Korus Messenger</span> — основной оффер;
       <b>eXpress</b> — если нужен ФСТЭК/суперапп и бюджет на лицензию.</p>
     </div>
     <div class="scenario">
@@ -1206,13 +1420,13 @@ def render_executive_summary_html() -> str:
     </div>
     <div class="scenario">
       <h4>Миграция с Jabber / Sametime / Lync</h4>
-      <p class="comment">Legacy дешевле по железу, но без современного UX, Solr и compliance-ядра.</p>
+      <p class="comment">Устаревшие платформы дешевле по железу, но без современного UX, Solr и комплаенс-ядра.</p>
       <p class="scenario-rec"><b>Рекомендация:</b> <span class="rec-korus">Korus</span> или <b>eXpress</b>; облако — если политика допускает.</p>
     </div>
     <div class="scenario">
       <h4>Российский рынок, прайс на сайте</h4>
-      <p class="comment">Compass, МТС Линк, TrueConf — альтернативы для shortlist и ценового давления.</p>
-      <p class="scenario-rec"><b>Рекомендация:</b> сравнить с Korus по §5 (функции) и §3.1 (уровень C).</p>
+      <p class="comment">Compass, МТС Линк, TrueConf — альтернативы для шорт-листа и ценового давления.</p>
+      <p class="scenario-rec"><b>Рекомендация:</b> сравнить с Korus по разделам «Функции» и «Альтернативы B/C».</p>
     </div>
   </div>
 </div>"""
@@ -1243,7 +1457,7 @@ def render_decision_tree_html() -> str:
     </div>
     <div class="decision-card decision-card-muted">
       <div class="decision-q">Миграция с Jabber / XMPP?</div>
-      <div class="decision-a">§5.3 — справочно; целевой путь: <span class="rec-korus">Korus</span> или eXpress.</div>
+      <div class="decision-a">Раздел «Миграция legacy» — справочно; целевой путь: <span class="rec-korus">Korus</span> или eXpress.</div>
     </div>
   </div>
   <p class="small comment">* VK Superapp — почта, календарь, диск; не «только мессенджер».</p>
@@ -1321,7 +1535,7 @@ def render_feature_heatmap_svg() -> str:
         f'<text x="320" y="{legend_y + 11}" font-size="11">КП / уточнять</text>'
     )
     parts.append(
-        '</svg><figcaption class="fig-cap">18 критериев × 11 продуктов. Детали — таблица §5.1.</figcaption></figure></div>'
+        '</svg><figcaption class="fig-cap">18 критериев × 11 продуктов. Детали — таблица «Детальная матрица» ниже.</figcaption></figure></div>'
     )
     return "".join(parts)
 
@@ -1406,13 +1620,14 @@ def render_tier_b_tco_html() -> str:
             f'<td class="small">{escape(r.infra_note)}</td></tr>'
         )
     return f"""
+{_section_lead("Open-source и EE в контуре: оценочный TCO @10k по тем же ставкам infra, что и Korus.")}
 <div class="warn">
   <div class="req">Уровень B — оценочный TCO при {_fmt_reg_users(10_000)}</div>
-  <div class="comment">Не оферта вендоров. Infra — модель по ставкам Korus ({PRICE_AS_OF}).</div>
+  <div class="comment">Не оферта вендоров. Инфраструктура — модель по ставкам Korus ({PRICE_AS_OF}).</div>
 </div>
 <table>
   <tr><th>Решение</th><th>Лицензия ₽/год</th><th>Инфра ₽/год (оценка)</th><th>Итого (оценка)</th>
-      <th>Лицензия</th><th>Infra</th></tr>
+      <th>Комментарий: лицензия</th><th>Комментарий: инфра</th></tr>
   {"".join(rows)}
 </table>"""
 
@@ -1439,14 +1654,20 @@ def render_feature_matrix_html() -> str:
 
 
 def render_tier_b_pros_cons_html() -> str:
-    names = ("Loop", "Rocket.Chat", "Mattermost EE", "VK Superapp on-prem")
-    parts = ['<h4>Уровень B — альтернативы в контуре</h4>']
-    for name in names:
-        pros, cons = PROS_CONS_BY_PRODUCT[name]
+    names = (
+        ("Loop", "Loop"),
+        ("Rocket.Chat", "Rocket.Chat"),
+        ("Mattermost EE", "Mattermost EE"),
+        ("VK Superapp on-prem", "VK Superapp (в контуре)"),
+    )
+    parts = ['<h4>Уровень B — альтернативы в контуре</h4>',
+             _section_lead("Open-source и EE-линейки: сильны по UX и экосистеме; комплаенс и TCO — на стороне заказчика.")]
+    for key, label in names:
+        pros, cons = PROS_CONS_BY_PRODUCT[key]
         pl = "".join(f"<li>{escape(p)}</li>" for p in pros)
         cl = "".join(f"<li>{escape(c)}</li>" for c in cons)
         parts.append(
-            f'<div class="case"><h4>{escape(name)}</h4>'
+            f'<div class="case"><h4>{escape(label)}</h4>'
             f"<p><b>Плюсы:</b></p><ul>{pl}</ul><p><b>Минусы:</b></p><ul>{cl}</ul></div>"
         )
     return "".join(parts)
@@ -1454,7 +1675,8 @@ def render_tier_b_pros_cons_html() -> str:
 
 def render_tier_c_pros_cons_html() -> str:
     names = ("МТС Линк Чаты", "Compass", "TrueConf Server")
-    parts = ['<h4>Уровень C — российский рынок</h4>']
+    parts = ['<h4>Уровень C — российский рынок</h4>',
+             _section_lead("Прайсы и реестр — для шорт-листа и ценового давления; полный TCO уточнять в КП вендора.")]
     for name in names:
         pros, cons = PROS_CONS_BY_PRODUCT[name]
         pl = "".join(f"<li>{escape(p)}</li>" for p in pros)
@@ -1521,7 +1743,7 @@ def render_legacy_infra_table_html() -> str:
       <th>Korus ₽/год</th><th>Δ HA</th></tr>
   {"".join(rows)}
 </table>
-<p class="small comment">Устаревший стек дешевле по инфраструктуре, но без Solr, export gate, workers, Keycloak-tier ops.
+<p class="small comment">Устаревший стек дешевле по инфраструктуре, но без Solr, export, workers, Keycloak-tier ops.
   Лицензия OSS = 0; скрытые затраты — интеграция, поддержка, миграция, compliance своими силами.</p>"""
 
 
@@ -1616,8 +1838,9 @@ def _matrix_block(anchor: KorusAnchor) -> str:
         share = ""
         if total and c.license_yearly and total > 0:
             share = f" ({round(100 * c.license_yearly / total)}% лиц.)"
+        row_cls = ' class="row-korus"' if c.name.startswith("Korus") else ""
         rows.append(
-            f"<tr><td>{escape(c.name)}</td>"
+            f"<tr{row_cls}><td>{escape(c.name)}</td>"
             f'<td class="money">{lic_s}</td><td class="money">{infra_s}</td>'
             f'<td class="money"><b>{total_s}</b>{share}</td></tr>'
         )
@@ -1903,3 +2126,239 @@ def render_sources_html() -> str:
   <li><b>Korus:</b> внутренний sizing Стандарт/Корпоративный + ставки инфра {date}</li>
 </ul>
 """.format(date=PRICE_AS_OF)
+
+
+# --- Segment one-pagers (v2.8) ---
+
+SEGMENT_SPECS: dict[str, dict[str, str]] = {
+    "bank": {
+        "filename": "competitor_comparison_segment_bank.html",
+        "badge": "БАНК · ГОС",
+        "title": "Korus Messenger — банк / госсектор / регуляторика",
+        "subtitle": "One-pager для ИБ, комплаенса и закупки · контур + export/legal hold",
+    },
+    "industry": {
+        "filename": "competitor_comparison_segment_industry.html",
+        "badge": "ПРОМ · 10–100K",
+        "title": "Korus Messenger — промышленность и крупный контур",
+        "subtitle": "One-pager для CFO и CIO · TCO @10k–100k, миграция с legacy",
+    },
+    "cloud": {
+        "filename": "competitor_comparison_segment_cloud.html",
+        "badge": "ОБЛАКО",
+        "title": "Облако-first: когда Korus не первый выбор",
+        "subtitle": "Честный one-pager · Пачка / VK WorkSpace и путь к контуру позже",
+    },
+}
+
+
+def render_segment_links_html() -> str:
+    return """
+<p class="small segment-links">
+  Сегментные one-pager'ы:
+  <a href="competitor_comparison_segment_bank.html">банк / госсектор</a> ·
+  <a href="competitor_comparison_segment_industry.html">промышленность</a> ·
+  <a href="competitor_comparison_segment_cloud.html">облако-first</a>
+</p>"""
+
+
+def render_compliance_checklist_html() -> str:
+    return """
+<div class="note">
+  <div class="req">Чеклист для встречи с ИБ / комплаенсом</div>
+  <ul class="comment">
+    <li><b>Export / legal hold</b> — в ядре Korus, не кастомная интеграция.</li>
+    <li><b>Dual-TTL, audit trail</b> — ретенция и след действий для расследований.</li>
+    <li><b>Контур заказчика</b> — данные не в SaaS третьей стороны.</li>
+    <li><b>ФСТЭК</b> — у eXpress №4997 сегодня; у Korus — roadmap, обсуждаем план.</li>
+    <li><b>E2EE / MLS</b> — engineering roadmap; не обещаем «уже в prod» без sign-off.</li>
+  </ul>
+</div>"""
+
+
+def render_industry_tco_pitch_html() -> str:
+    s10 = KORUS_ANCHORS[0]
+    s100 = KORUS_ANCHORS[2]
+    return f"""
+<div class="note">
+  <div class="req">Экономика для промышленности @10k–100k</div>
+  <ul class="comment">
+    <li>OPEX инфра Korus @10k: <b>{_fmt_per_user_month(s10.infra_per_user_month)}</b> (якорь «Стандарт»).</li>
+    <li>OPEX инфра Korus @100k: <b>{_fmt_per_user_month(s100.infra_per_user_month)}</b> — масштаб снижает ₽/рег. пользов.</li>
+    <li>eXpress @10k: лицензия ~90% TCO — типичный pain point при росте штата.</li>
+    <li>Compass / МТС Линк — в шорт-лист для ценового давления; сверять полный TCO с infra.</li>
+    <li>Legacy XMPP — дешевле по железу, дороже по миграции и комплаенсу.</li>
+  </ul>
+</div>"""
+
+
+def render_cloud_honest_pitch_html() -> str:
+    p10 = pachka_yearly(10_000)
+    vk10 = vk_saas_yearly(10_000)
+    s10 = KORUS_ANCHORS[0]
+    return f"""
+<div class="warn">
+  <div class="req">Когда не тянуть Korus на первой встрече</div>
+  <p class="comment">Если заказчик <b>не строит свой ЦОД</b> и допускает SaaS — начните с <b>Пачки</b> (фокус чат) или
+  <b>VK WorkSpace</b> (workspace bundle). Korus — когда политика сменится на контур или появится требование export/legal hold.</p>
+  <ul class="comment">
+    <li>Пачка @10k: <b>{fmt_rub(p10)}/год</b> подписка · быстрый старт.</li>
+    <li>VK WorkSpace @10k: <b>{fmt_rub(vk10)}/год</b> · bundle сервисов.</li>
+    <li>Korus @10k (infra only): <b>{fmt_rub(s10.infra_yearly)}/год</b> + свой ЦОД и ops.</li>
+  </ul>
+</div>"""
+
+
+def render_cloud_when_korus_html() -> str:
+    return """
+<div class="note scenario-korus">
+  <div class="req">Когда вернуться к Korus</div>
+  <ul class="comment">
+    <li>Регуляторика или аудит требуют <b>данные в контуре</b>.</li>
+    <li>Нужен <b>export / legal hold</b> для расследований — не «API облака».</li>
+    <li>Масштаб 10k+ рег. и облачная подписка становится <b>сотнями млн ₽/год</b>.</li>
+  </ul>
+</div>"""
+
+
+def render_segment_scenario_bank_html() -> str:
+    return """
+<div class="scenario scenario-korus">
+  <h4>Контур + комплаенс (типичный банк / госсектор)</h4>
+  <p class="comment">Export, legal hold, audit, ретенция — аргумент для ИБ и внутреннего аудита, не «проект на год».</p>
+  <p class="scenario-rec"><b>Рекомендация:</b> <span class="rec-korus">Korus</span> — основной оффер по data governance;
+  <b>eXpress</b> — если hard requirement ФСТЭК до подписания.</p>
+</div>"""
+
+
+def render_segment_scenario_industry_html() -> str:
+    return """
+<div class="scenario scenario-korus">
+  <h4>Промышленность 10–100 тыс. рег. + филиалы</h4>
+  <p class="comment">Боль — TCO при росте, единый мессенджер вместо XMPP/Sametime, предсказуемый sizing.</p>
+  <p class="scenario-rec"><b>Рекомендация:</b> <span class="rec-korus">Korus</span> по якорям S-10k/S-50k/S-100k;
+  <b>eXpress</b> — если нужен суперапп; <b>Compass</b> — ценовое давление в шорт-листе.</p>
+</div>"""
+
+
+def render_segment_scenario_cloud_html() -> str:
+    return """
+<div class="scenario">
+  <h4>Облако-first / без ЦОД</h4>
+  <p class="comment">Скорость важнее контура. Прозрачный ₽/пользов./мес и SLA вендора.</p>
+  <p class="scenario-rec"><b>Рекомендация:</b> <b>Пачка</b> или <b>VK WorkSpace</b>. Korus — после смены политики на контур.</p>
+</div>"""
+
+
+def render_email_snippet_html(variant: str = "default") -> str:
+    s100 = KORUS_ANCHORS[2]
+    if variant == "bank":
+        body = f"""Добрый день!
+
+Для вашего контура (банк / регулируемая отрасль) кратко о Korus Messenger:
+
+• Развёртывание в инфраструктуре заказчика — переписка не в облаке третьей стороны.
+• Export, legal hold, audit и ретенция — в ядре продукта, не через доработки интегратора.
+• Готовы провести ИБ-воркshop: сценарии export, dual-TTL, roadmap ФСТЭК/E2EE.
+
+Приложили сравнение с eXpress по единой методике @10k+ рег. пользов.
+С уважением,
+[ФИО / команда Korus]"""
+    elif variant == "industry":
+        body = f"""Добрый день!
+
+Korus Messenger для промышленного контура @10k–100k рег. пользов.:
+
+• OPEX инфра ~{_fmt_per_user_month(s100.infra_per_user_month)} @100 тыс. рег. (без per-user лицензии как у eXpress).
+• Якоря sizing S-10k / S-50k / S-100k — честное сравнение в КП без смешения масштабов.
+• Опыт миграции с legacy XMPP/Sametime — отдельный блок в приложении.
+
+Готовы обсудить пилот и TCO под ваш якорь.
+С уважением,
+[ФИО / команда Korus]"""
+    else:
+        body = f"""Добрый день!
+
+Кратко о позиции Korus Messenger для вашего контура:
+
+• Мессенджер в инфраструктуре заказчика — данные не в облаке третьей стороны.
+• Compliance-функции (экспорт, legal hold, audit, ретенция) — в ядре продукта.
+• Экономика: OPEX инфра ~{_fmt_per_user_month(s100.infra_per_user_month)} при 100 тыс. рег. пользов. (без per-user лицензии как у eXpress).
+
+Приложили сравнение с eXpress, облачными и российскими альтернативами по единой методике.
+Готовы обсудить пилот и sizing под ваш якорь (от 10 тыс. рег.).
+
+С уважением,
+[ФИО / команда Korus]"""
+    return f"""
+<details class="email-snippet">
+  <summary><b>Текст для email заказчику</b> (скопировать)</summary>
+  <pre class="email-body">{body}</pre>
+</details>"""
+
+
+def render_segment_page_body(slug: str) -> str:
+    spec = SEGMENT_SPECS[slug]
+    common_tail = f"""
+{render_cta_footer_html()}
+{render_brief_disclaimers_html()}
+<p class="small comment">Полная версия (11 продуктов, legacy, НТ):
+<a href="competitor_comparison.html">competitor_comparison.html</a> ·
+<a href="competitor_comparison_brief.html">общий one-pager</a></p>
+"""
+    if slug == "bank":
+        return f"""
+<h1>{spec["title"]}<span class="segment-doc-badge">{spec["badge"]}</span></h1>
+<p class="hero-subtitle comment">{spec["subtitle"]}</p>
+{render_hero_html()}
+{render_elevator_pitch_html()}
+{_section_lead("Фокус: data governance, export/legal hold, честное сравнение с eXpress по ФСТЭК.")}
+{render_segment_scenario_bank_html()}
+{render_korus_positioning_html()}
+{render_compliance_checklist_html()}
+{render_battle_card_html()}
+{render_objections_faq_html()}
+{render_fig_onprem_radar_svg()}
+{render_pros_cons_brief_html()}
+{render_email_snippet_html(variant="bank")}
+{common_tail}
+"""
+    if slug == "industry":
+        return f"""
+<h1>{spec["title"]}<span class="segment-doc-badge">{spec["badge"]}</span></h1>
+<p class="hero-subtitle comment">{spec["subtitle"]}</p>
+{render_hero_html()}
+{render_elevator_pitch_html()}
+{_section_lead("Фокус: TCO @10k–100k, sizing по якорям, миграция с legacy IM.")}
+{render_segment_scenario_industry_html()}
+{render_industry_tco_pitch_html()}
+<div class="grid-2">
+  <div>{render_fig_tco_s10k_svg()}</div>
+  <div>{render_fig_tco_s100k_svg()}</div>
+</div>
+{render_fig_license_per_user_svg()}
+{render_fig_legacy_timeline_svg()}
+{render_legacy_migration_html()}
+{render_objections_faq_html()}
+{render_pros_cons_brief_html()}
+{render_email_snippet_html(variant="industry")}
+{common_tail}
+"""
+    if slug == "cloud":
+        return f"""
+<h1>{spec["title"]}<span class="segment-doc-badge">{spec["badge"]}</span></h1>
+<p class="hero-subtitle comment">{spec["subtitle"]}</p>
+{render_cloud_honest_pitch_html()}
+{render_segment_scenario_cloud_html()}
+{_section_lead("Сравнение облака и контура @10k — чтобы не oversell Korus там, где нужен SaaS.")}
+<div class="grid-2">
+  <div>{render_fig_tco_s10k_svg()}</div>
+  <div>{render_fig_license_share_svg()}</div>
+</div>
+{render_fig_license_per_user_svg()}
+{render_pricing_reference_html()}
+{render_cloud_when_korus_html()}
+{render_objections_faq_html()}
+{common_tail}
+"""
+    raise ValueError(f"Unknown segment slug: {slug}")

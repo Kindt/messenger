@@ -13,4 +13,11 @@ class TimingNormalizationTest {
         TimingNormalization.runWithMinimumDuration(minNs, () -> "ok");
         assertTrue(System.nanoTime() - start >= minNs * 0.8);
     }
+
+    @Test
+    void padNotFoundExtra_noOpWhenZero() {
+        var start = System.nanoTime();
+        TimingNormalization.padNotFoundExtra(0);
+        assertTrue(System.nanoTime() - start < 5_000_000L);
+    }
 }

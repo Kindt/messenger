@@ -1,0 +1,43 @@
+---
+# Decommission Cell (spec 011 Phase 2 T01118)
+# Usage:
+#   ansible-playbook -i inventory/cells/<cell_id>/hosts.yml playbooks/cell-destroy.yml \
+#     -e cell_id=<cell_id> -e cell_destroy_wipe_volumes=false
+#
+# Set cell_destroy_wipe_volumes=true only after backup restore drill sign-off.
+
+- name: Cell destroy
+  hosts: korus_server:korus_web
+  gather_facts: false
+  vars:
+    cell_destroy_wipe_volumes: false
+  tasks:
+    - name: Require explicit cell_id
+      ansible.builtin.assert:
+        that:
+          - cell_id is defined
+        fail_msg: "Pass -e cell_id=<slug>"
+
+    - name: Stop compose stacks
+      ansible.builtin.shell: |
+        set -e
+        cd "{{ korus_repo_root | default(playbook_dir + '/../../..') }}"
+        docker compose -f docker/docker-compose.full-server.yml down {{ '--volumes' if (cell_destroy_wipe_volumes | bool) else '' }} 2>/dev/null || true
+      args:
+        executable: /bin/bash
+      when: inventory_hostname in groups.get('korus_server', [])
+
+    - name: Stop web stack
+      ansible.builtin.shell: |
+        set -e
+        cd "{{ korus_repo_root | default(playbook_dir + '/../../..') }}/korus-web"
+        docker compose down {{ '--volumes' if (cell_destroy_wipe_volumes | bool) else '' }} 2>/dev/null || true
+      args:
+        executable: /bin/bash
+      when: inventory_hostname in groups.get('korus_web', [])
+
+    - name: Update registry status (manual)
+      ansible.builtin.debug:
+        msg: >-
+          Set deploy/cloud/registry.yaml status=decommissioned for {{ cell_id }}.
+          Wipe={{ cell_destroy_wipe_volumes }}

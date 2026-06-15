@@ -19,7 +19,7 @@ class ChatResourceTest {
 
     @Test
     void create_group_invalidMemberId_throwsInvalidUuidParameterException() {
-        var resource = new ChatResource(null, null, null, I18nTestFixtures.messagesEn());
+        var resource = new ChatResource(null, null, null, null, I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.create(new CreateChatRequest("group", "My Group", List.of("not-a-uuid")),
                 userSecurityContext()));
@@ -27,7 +27,7 @@ class ChatResourceTest {
 
     @Test
     void create_p2p_invalidMemberId_throwsInvalidUuidParameterException() {
-        var resource = new ChatResource(null, null, null, I18nTestFixtures.messagesEn());
+        var resource = new ChatResource(null, null, null, null, I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.create(new CreateChatRequest("p2p", null, List.of("not-a-uuid")),
                 userSecurityContext()));
@@ -35,7 +35,7 @@ class ChatResourceTest {
 
     @Test
     void markRead_invalidUpToMessageId_throwsInvalidUuidParameterException() {
-        var resource = new ChatResource(null, null, null, I18nTestFixtures.messagesEn());
+        var resource = new ChatResource(null, null, null, null, I18nTestFixtures.messagesEn());
         var chatId = UUID.randomUUID().toString();
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.markRead(chatId, new MarkReadRequest("not-a-uuid"), userSecurityContext()));

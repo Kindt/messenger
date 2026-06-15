@@ -312,6 +312,49 @@
     }
     container.appendChild(table);
 
+    const cp = guide.completeness_policy;
+    if (cp && Array.isArray(cp.required_fields)) {
+      const hPol = document.createElement("p");
+      hPol.className = "json-panel-note";
+      hPol.textContent =
+        "Политика полноты (EXPORT_REQUIRED_FIELDS" +
+        (cp.strict ? ", STRICT" : "") +
+        "):";
+      container.appendChild(hPol);
+      const polWrap = document.createElement("div");
+      polWrap.className = "json-table-wrap";
+      const polTable = document.createElement("table");
+      const pHead = document.createElement("thead");
+      const pHr = document.createElement("tr");
+      ["field", "required"].forEach((h) => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        pHr.appendChild(th);
+      });
+      pHead.appendChild(pHr);
+      polTable.appendChild(pHead);
+      const pBody = document.createElement("tbody");
+      cp.required_fields.forEach((field) => {
+        const tr = document.createElement("tr");
+        const tdField = document.createElement("td");
+        tdField.textContent = field;
+        const tdReq = document.createElement("td");
+        tdReq.textContent = "yes";
+        tr.appendChild(tdField);
+        tr.appendChild(tdReq);
+        pBody.appendChild(tr);
+      });
+      polTable.appendChild(pBody);
+      polWrap.appendChild(polTable);
+      container.appendChild(polWrap);
+      if (cp.strict) {
+        const strictNote = document.createElement("p");
+        strictNote.className = "json-panel-note";
+        strictNote.textContent = "EXPORT_COMPLETENESS_STRICT=true — неполный пакет → export_failed.";
+        container.appendChild(strictNote);
+      }
+    }
+
     const hGdpr = document.createElement("p");
     hGdpr.className = "json-panel-note";
     hGdpr.textContent = "Справочник gdprDisclosures (шаблон для export.json):";

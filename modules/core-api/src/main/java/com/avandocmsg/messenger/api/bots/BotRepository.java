@@ -262,6 +262,88 @@ public class BotRepository {
         return out;
     }
 
+    public record BotUpdateRow(long id, String eventType, String payloadJson) {}
+
+    public boolean updateTokenHash(UUID botId, UUID ownerId, String tokenHash) {
+        var sql = """
+            UPDATE bots SET access_token_hash = ?, token_rotated_at = now()
+            WHERE id = ? AND owner_id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, tokenHash);
+            stmt.setObject(2, botId);
+            stmt.setObject(3, ownerId);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            log.warn("updateTokenHash failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public void insertUpdate(UUID botId, String eventType, String payloadJson) {
+        var sql = """
+            INSERT INTO bot_updates (bot_id, event_type, payload)
+            VALUES (?, ?, ?::jsonb)
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, botId);
+            stmt.setString(2, eventType);
+            stmt.setString(3, payloadJson);
+            stmt.executeUpdate();
+        } catch (Exception e) {
+            log.warn("insertUpdate failed: {}", e.getMessage());
+        }
+    }
+
+    public List<BotUpdateRow> pollUpdates(UUID botId, long offset, int limit) {
+        var sql = """
+            SELECT id, event_type, payload::text
+            FROM bot_updates
+            WHERE bot_id = ? AND id > ?
+            ORDER BY id ASC
+            LIMIT ?
+            """;
+        var out = new ArrayList<BotUpdateRow>();
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, botId);
+            stmt.setLong(2, offset);
+            stmt.setInt(3, limit);
+            try (var rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    out.add(new BotUpdateRow(rs.getLong(1), rs.getString(2), rs.getString(3)));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("pollUpdates failed: {}", e.getMessage());
+        }
+        return out;
+    }
+
+    public Optional<UUID> findBotIdForSubscription(UUID chatId, String botName) {
+        var sql = """
+            SELECT b.id FROM bot_webhook_subscriptions s
+            JOIN bots b ON b.id = s.bot_id
+            WHERE s.chat_id = ? AND b.bot_name = ?
+            LIMIT 1
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, chatId);
+            stmt.setString(2, botName);
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of((UUID) rs.getObject(1));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("findBotIdForSubscription failed: {}", e.getMessage());
+        }
+        return Optional.empty();
+    }
+
     private Optional<BotRow> queryOne(String sql, UUID id) {
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {

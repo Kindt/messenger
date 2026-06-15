@@ -67,8 +67,11 @@ ansible-playbook -i inventory/stage/hosts.yml playbooks/site.yml --ask-vault-pas
 ```powershell
 .\scripts\run-k6-stage-baseline.ps1 -BaseUrl "https://<domain>"
 .\scripts\smoke-turn.ps1 -TurnHost "<domain>" -WebBaseUrl "https://<domain>"
+.\scripts\smoke-turn-relay.ps1 -TurnHost "<domain>" -WebBaseUrl "https://<domain>"
 .\scripts\playwright-staging-gate.ps1 -BaseUrl "https://<domain>"
 ```
+
+**TURN firewall (web host):** открыть **3478/tcp+udp** и **UDP 10000–10100** (coturn relay range). Задать `KORUS_COTURN_EXTERNAL_IP` / `korus_turn_host` в vault. Prod inventory: `korus_web_turn_prod: true`.
 
 ### G. Sign-off
 

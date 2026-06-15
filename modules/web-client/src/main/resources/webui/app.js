@@ -3366,7 +3366,7 @@
       } catch (e1) {}
       teardownPeer(peerId);
       if (state.callPanelOpen) {
-        state.error = L("rtc.iceFailed");
+        state.error = L("rtc.iceFailedHelp");
         render();
       }
     };
@@ -6334,6 +6334,11 @@
       })
     );
     panel.appendChild(rowNotif);
+
+    if (!notificationsAllowed() && typeof Notification !== "undefined" && Notification.permission !== "denied") {
+      var hint = el("p", "settings-hint text-muted text-sm mt-1", L("notifications.enableHint"));
+      panel.appendChild(hint);
+    }
 
     var rowSound = el("div", "settings-row");
     rowSound.appendChild(el("span", null, L("ui.settings.sound")));

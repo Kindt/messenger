@@ -3,7 +3,7 @@ alwaysApply: true
 ---
 
 <!-- SPECKIT START -->
-Current plan: `specs/007-platform-stage-readiness/plan.md`
+Current plan: `specs/011-korus-cloud-platform/plan.md`
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
 <!-- SPECKIT END -->

@@ -27,7 +27,10 @@ final class AdminExportEnvChecklist {
             item("EXPORT_REPLAY_METRICS_PORT", "export-replay worker /metrics + /health (0=off)", "0"),
             item("EXPORT_PROCESSING_STALE_MINUTES", "Stale processing threshold (DB gauge + admin stats)", "30"),
             item("EXPORT_REPLAY_CANCEL_CHECK_EVERY_ROWS", "Cooperative cancel DB poll interval during export", "500"),
-            item("EXPORT_REPLAY_DEBUG_DELAY_MS", "Dev/smoke: pause after processing (ms)", "0")
+            item("EXPORT_REPLAY_DEBUG_DELAY_MS", "Dev/smoke: pause after processing (ms)", "0"),
+            item("EXPORT_REPLAY_INCLUDE_EXPORT_COMPLETENESS", "Write exportCompleteness block into export.json", "true"),
+            item("EXPORT_REQUIRED_FIELDS", "Mandatory completeness fields (CSV)", "messages,chat,chat_members,..."),
+            item("EXPORT_COMPLETENESS_STRICT", "Fail export when mandatory field missing", "false")
         );
     }
 

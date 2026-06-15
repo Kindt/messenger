@@ -9,7 +9,11 @@
 | Файл | Назначение | Сборка |
 |------|------------|--------|
 | [`competitor_comparison_brief.html`](../competitor_comparison_brief.html) | One-pager для встречи / PDF (~6–8 стр.) | `python scripts/build-competitor-comparison-html.py --brief-only` |
-| [`competitor_comparison.html`](../competitor_comparison.html) | Полная версия (TCO, legacy, НТ, 11 продуктов) | `python scripts/build-competitor-comparison-html.py` (оба файла по умолчанию) |
+| [`competitor_comparison.html`](../competitor_comparison.html) | Полная версия (TCO, legacy, НТ, 11 продуктов) | `python scripts/build-competitor-comparison-html.py` (по умолчанию — все 5 HTML) |
+
+**Сегментные one-pager'ы (v2.8):** `competitor_comparison_segment_bank.html`, `_industry.html`, `_cloud.html` — `--segments-only` или `--segment bank`.
+
+**Структура HTML v2.7:** Часть I — продажи (сценарии, battle card, FAQ); Часть II — обоснование КП (TCO, функции, матрицы); Часть III — справочник (eXpress, legacy, источники). В начале — «Как читать» и глоссарий.
 
 ---
 

@@ -1,0 +1,82 @@
+# Cell manifest schema (spec 011)
+# Validator: scripts/validate-cell-manifest.py (hand-coded parity with this schema)
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://korus.local/schemas/cell-manifest.schema.json",
+  "title": "Korus Cloud Cell manifest",
+  "type": "object",
+  "required": ["cell_id", "status", "commercial", "compute", "dns", "backup", "images"],
+  "additionalProperties": true,
+  "properties": {
+    "cell_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["planned", "provisioning", "active", "maintenance", "decommissioned"]
+    },
+    "commercial": {
+      "type": "object",
+      "required": ["model", "billing_model", "sku"],
+      "properties": {
+        "model": { "enum": ["b_dedicated", "c_internal", "a_shared"] },
+        "billing_model": { "enum": ["infra_pass_through", "bundled_anchor", "flat_platform"] },
+        "sku": { "enum": ["pilot", "standard", "enterprise"] },
+        "sla_tier": { "type": "string" },
+        "anchor_ru": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "compute": {
+      "type": "object",
+      "required": ["provider", "deploy_profile"],
+      "properties": {
+        "provider": { "enum": ["generic", "proxmox", "openstack", "cloud-vm"] },
+        "deploy_profile": { "enum": ["pilot", "standard", "enterprise"] },
+        "server_private_ip": { "type": "string" },
+        "web_private_ip": { "type": "string" },
+        "web_public_ip": { "type": "string" }
+      }
+    },
+    "dns": {
+      "type": "object",
+      "required": ["mode", "fqdn"],
+      "properties": {
+        "mode": { "enum": ["platform_subdomain", "customer_cname"] },
+        "fqdn": { "type": "string" },
+        "platform_backend": { "type": "string" },
+        "customer_hostname": { "type": "string" }
+      }
+    },
+    "backup": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "preset": { "enum": ["default", "bank", "pilot", "enterprise"] },
+        "targets": { "type": "array" }
+      }
+    },
+    "tls": {
+      "type": "object",
+      "properties": {
+        "use_letsencrypt": { "type": "boolean" },
+        "cert_ref": { "type": "string" }
+      }
+    },
+    "observability": {
+      "type": "object",
+      "properties": {
+        "scrape_enabled": { "type": "boolean" },
+        "labels": { "type": "object" }
+      }
+    },
+    "images": {
+      "type": "object",
+      "required": ["tag"],
+      "properties": {
+        "tag": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

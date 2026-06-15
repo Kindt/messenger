@@ -19,6 +19,8 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import java.util.List;
+
 @Path("/v1/admin/ui")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Admin UI", description = "Встроенная админ-консоль: manifest разделов и данные панелей")
@@ -66,10 +68,14 @@ public class AdminUiResource {
     @ApiResponse(responseCode = "200",
         content = @Content(schema = @Schema(implementation = AdminExportComplianceGuideResponse.class)))
     public AdminExportComplianceGuideResponse exportComplianceGuide() {
+        var policy = new AdminExportComplianceGuideResponse.CompletenessPolicy(
+            List.copyOf(appConfig.exportRequiredFields()),
+            appConfig.exportCompletenessStrict());
         return new AdminExportComplianceGuideResponse(
             ExportGdprDisclosures.referenceTemplate(),
             AdminExportEnvChecklist.items(),
             AdminExportSmokeHints.commands(),
-            stats.snapshot().exportCompliance());
+            stats.snapshot().exportCompliance(),
+            policy);
     }
 }

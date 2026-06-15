@@ -42,7 +42,9 @@
 | US2 Epic01 (QEMU wrapper) | `scripts/smoke-us2-epic01-qemu.ps1` | manual | `smoke-us2-epic01.ps1` |
 | Hot-plug indexer lifecycle | `scripts/smoke-hotplug-indexer.ps1` | manual | requires NATS (`14222` tunnel on QEMU) |
 | Bot-delivery worker (guest) | `scripts/smoke-bot-delivery-worker.ps1` | manual | QEMU server guest via SSH; profile `push`/`full` |
-| **Bot API REST (spec 009)** | `scripts/smoke-bot-api.sh` | manual | `.ps1`; host `:18080`; register/subscribe/sendMessage |
+| **Push-worker (QEMU guest)** | `scripts/smoke-push-worker-qemu.ps1` | manual | server guest `:9194/health` via SSH `:12221` |
+| **Preview-worker (QEMU guest)** | `scripts/smoke-preview-worker-qemu.ps1` | manual | server guest `:9195/health` via SSH `:12221` |
+| **Bot API REST (spec 009/010)** | `scripts/smoke-bot-api.sh` | manual | `.ps1`; host `:18080`; register/subscribe/sendMessage; Playwright `bot-api.spec.ts` |
 | Read receipts (API + WS) | `scripts/smoke-read-receipts.ps1` | manual | UI ✓✓ check optional |
 | Retention hot-row purge status | `scripts/smoke-retention-purge.ps1` | manual | requires admin token + stack |
 | Retention file cleanup metrics | `scripts/smoke-retention-file-cleanup.ps1` | manual | metrics on retention worker port |
@@ -53,7 +55,11 @@
 | **E2EE staging partial** | `scripts/smoke-e2ee-staging.ps1` | manual | `-AdminToken` for migrate-batch |
 | **k6 stage baseline** | `scripts/run-k6-stage-baseline.ps1` | manual | delegates to `run-k6-qemu-baseline.ps1` |
 | **TURN reachability** | `scripts/smoke-turn.ps1` | manual | TCP 3478 + optional `web-client-env.js` ICE |
-| **Preview worker health** | `scripts/smoke-preview-worker.ps1` | manual | full-server `:9195/health` |
+| **TURN relay ICE config** | `scripts/smoke-turn-relay.ps1` | manual | Extends smoke-turn; credential in env.js |
+| **TURN (QEMU)** | `scripts/smoke-turn-qemu.ps1` | manual | guest coturn + host `:3478` after web VM hostfwd; `-GuestOnly` |
+| **Cell multi-org (spec 011)** | `scripts/smoke-cell-multi-org-qemu.ps1` | manual | host `:18080`; creates 2 orgs via admin API |
+| **GDPR export completeness (P1-6)** | `scripts/smoke-export-gdpr-fulfillment.ps1` | manual | admin export-compliance-guide + parity API |
+| **Preview worker health** | `scripts/smoke-preview-worker.ps1` | manual | full-server `:9195/health`; QEMU: `smoke-preview-worker-qemu.ps1` |
 | **Playwright staging gate** | `scripts/playwright-staging-gate.ps1` | manual | `-BaseUrl https://...` |
 | **Stage/prod deploy runbook** | `docs/review/stage-prod-deploy-runbook.md` | manual | US1/US7 deploy-only when hosts available |
 | **Playwright parity matrix** | `tests/e2e-web/` (9 specs) | `deploy-messaging-smoke.yml` (optional nightly job, `continue-on-error`) | spec 004 US5 T110–T115; operator template `docs/parity/runtime-gate-report.md` |

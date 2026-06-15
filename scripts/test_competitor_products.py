@@ -58,6 +58,15 @@ class TestCompetitorProducts(unittest.TestCase):
         self.assertEqual(len(reg.product_columns), 11)
         self.assertEqual(len(reg.comparison_criteria), 18)
 
+    def test_segment_specs(self) -> None:
+        from competitor_comparison_data import SEGMENT_SPECS, render_segment_page_body  # noqa: PLC0415
+
+        self.assertEqual(set(SEGMENT_SPECS.keys()), {"bank", "industry", "cloud"})
+        for slug in SEGMENT_SPECS:
+            body = render_segment_page_body(slug)
+            self.assertIn("Korus", body)
+            self.assertIn(SEGMENT_SPECS[slug]["badge"], body)
+
 
 if __name__ == "__main__":
     unittest.main()

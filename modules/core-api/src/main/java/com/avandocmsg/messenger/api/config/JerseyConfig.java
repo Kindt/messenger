@@ -46,7 +46,9 @@ import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.api.search.MessageSearchService;
 import com.avandocmsg.messenger.api.bots.BotRepository;
 import com.avandocmsg.messenger.api.bots.BotResource;
+import com.avandocmsg.messenger.api.bots.BotRateLimiter;
 import com.avandocmsg.messenger.api.bots.BotService;
+import com.avandocmsg.messenger.api.filter.BotRateLimitFilter;
 import com.avandocmsg.messenger.api.filter.BotTokenAuthFilter;
 import com.avandocmsg.messenger.api.filter.JwtAuthFilter;
 import com.avandocmsg.messenger.api.health.HealthResource;
@@ -198,6 +200,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(purgeStatusService).to(PurgeStatusService.class);
                 bind(botRepository).to(BotRepository.class);
                 bind(botService).to(BotService.class);
+                bind(BotRateLimiter.fromEnv()).to(BotRateLimiter.class);
             }
         });
 
@@ -228,6 +231,7 @@ public class JerseyConfig extends ResourceConfig {
         register(OpenApiConfig.create(appConfig.version()).getClass());
 
         register(BotTokenAuthFilter.class);
+        register(BotRateLimitFilter.class);
         register(JwtAuthFilter.class);
         register(JacksonFeature.class);
         register(MultiPartFeature.class);

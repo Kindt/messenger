@@ -76,14 +76,21 @@ subprojects {
     }
 }
 
-/** Python unittest for scripts/competitors/registry.json (competitor presentation). */
+/** Python PR gates: competitor registry + Cell manifests (spec 011). */
 tasks.register<Exec>("checkCompetitorRegistry") {
     group = "verification"
-    description = "Validate competitor comparison registry (Python unittest)"
+    description = "Validate competitor registry and Cell manifests (Python unittest)"
     workingDir = rootDir
     val pythonCmd = System.getenv("PYTHON")
         ?: if (System.getProperty("os.name").lowercase().contains("win")) "python" else "python3"
-    commandLine(pythonCmd, "scripts/test_competitor_products.py")
+    commandLine(pythonCmd, "scripts/run_python_verification.py")
+}
+
+/** Alias for spec 011 — runs same Python gate as checkCompetitorRegistry. */
+tasks.register("checkCellManifest") {
+    group = "verification"
+    description = "Validate Korus Cloud Cell manifests (via run_python_verification.py)"
+    dependsOn("checkCompetitorRegistry")
 }
 
 /** Runs `build` (compile, test, assemble) on every subproject — CI smoke / integrity gate. */

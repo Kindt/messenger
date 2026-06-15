@@ -41,7 +41,7 @@ function Start-KorusQemuVm {
             "hostfwd=tcp:0.0.0.0:12221-:22"
         ) -join ","
     } else {
-        "hostfwd=tcp:0.0.0.0:19088-:9088,hostfwd=tcp:0.0.0.0:12222-:22"
+        "hostfwd=tcp:0.0.0.0:19088-:9088,hostfwd=tcp:0.0.0.0:3478-:3478,hostfwd=udp:0.0.0.0:3478-:3478,hostfwd=tcp:0.0.0.0:12222-:22"
     }
 
     $whpx = Test-KorusWhpxAvailable

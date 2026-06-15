@@ -1,0 +1,20 @@
+---
+# Upgrade Cell images (spec 011 Phase 2 T01117)
+# Usage:
+#   ansible-playbook -i inventory/cells/<cell_id>/hosts.yml playbooks/cell-upgrade.yml \
+#     -e cell_id=<cell_id> -e images_tag=1.2.3
+
+- name: Cell upgrade preflight
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - ansible.builtin.assert:
+        that:
+          - cell_id is defined
+          - images_tag is defined
+        fail_msg: "Pass -e cell_id=... -e images_tag=..."
+
+- ansible.builtin.import_playbook: site.yml
+  vars:
+    korus_cell_id: "{{ cell_id }}"
+    korus_images_tag: "{{ images_tag }}"
