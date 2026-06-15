@@ -2,7 +2,7 @@
 
 **Назначение:** единый справочник для разработчиков и агентов — чем отличаются **QEMU dev/full**, **deploy-профили** (pilot/standard), **compose-стеки** (full-server, pilot, dev-min) и **режимы Keycloak**.
 
-Связанные документы: [`deploy/qemu/README.md`](../deploy/qemu/README.md), [`deploy/qemu/RESOURCES.md`](../deploy/qemu/RESOURCES.md), [`docs/TZ_PRODUCT_ALTERNATIVE.md`](TZ_PRODUCT_ALTERNATIVE.md) §10–12, [`docs/plans/2026-06-15-infra-optimization-design.md`](plans/2026-06-15-infra-optimization-design.md).
+Связанные документы: [`deploy/qemu/README.md`](../deploy/qemu/README.md), [`deploy/qemu/RESOURCES.md`](../deploy/qemu/RESOURCES.md), [`docs/PRODUCT_PRESENTATION.md`](PRODUCT_PRESENTATION.md) §10–12, [`docs/plans/2026-06-15-infra-optimization-design.md`](plans/2026-06-15-infra-optimization-design.md).
 
 ---
 

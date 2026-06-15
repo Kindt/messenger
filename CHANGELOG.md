@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+### 2026-06-15 — product_presentation.html: публикация для заказчика
+
+- **`product_presentation.html` v2.2**: презентация продукта (не техническое ТЗ); §1–18, приложения, иллюстрации.
+- **`tz_product.html`**: редирект на `product_presentation.html`.
+- **`docs/PRODUCT_PRESENTATION.md` v1.5**: исходник Markdown; ссылки в `DEV_STACK_PROFILES`, `RESOURCES`.
+- **`scripts/build-tz-product-html.py`**, **`tz_product_resources.py`**: сборка HTML и каталог API/клиента.
+
 ### 2026-06-15 — spec 006 Wave 3 + Wave 2 closure: zstd archive, batch Solr, cache/replica/scale
 
 - **T301–T303:** `SnapshotPartCodec` (KDA1+zstd), `ChunkedSnapshotWriter`/`DeepArchiveReader`; `deep_archive_bytes_saved_total`; env `DEEP_ARCHIVE_COMPRESSION`.
