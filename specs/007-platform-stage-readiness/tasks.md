@@ -39,7 +39,7 @@
 
 ## Phase 6 — W3/W4 T-P1 (ops — deploy-only when host available)
 
-Engineering deliverables **READY** 2026-06-16 — [`docs/review/stage-prod-deploy-runbook.md`](../../docs/review/stage-prod-deploy-runbook.md), [`ops-signoff-log.md`](../004-deferred-phase2-closure/ops-signoff-log.md).
+Engineering deliverables **READY** 2026-06-16 — [`docs/review/stage-prod-deploy-runbook.md`](../../docs/review/stage-prod-deploy-runbook.md), [`docs/review/ops-signoff-log.md`](../../docs/review/ops-signoff-log.md).
 
 - [ ] T601 Stage DNS + vault encrypt + `site.yml` (US1 rows 1–3) — **eng. ✅** preflight/validate; **ops ⏳** real FQDN
 - [ ] T602 Real TLS smoke on stage URL (US1 row 4) — **eng. ✅** `stage-tls-smoke.ps1`; **ops ⏳** after deploy

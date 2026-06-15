@@ -1,7 +1,7 @@
 # Stage / prod deploy runbook — deploy-only (US1 + US7)
 
 **Status (2026-06-16):** инженерная поставка **готова**. Код, Ansible, vault-шаблоны, smoke-скрипты и preflight — в репозитории.  
-**Остаётся при появлении хостов:** кастомизация inventory → vault → `site.yml` → smokes → подписи в [`ops-signoff-log.md`](../../specs/004-deferred-phase2-closure/ops-signoff-log.md).
+**Остаётся при появлении хостов:** кастомизация inventory → vault → `site.yml` → smokes → подписи в [`ops-signoff-log.md`](../../docs/review/ops-signoff-log.md).
 
 **Не требуется:** доработка приложения, новые роли Ansible, новые smoke-скрипты для US1/US7.
 
@@ -72,7 +72,7 @@ ansible-playbook -i inventory/stage/hosts.yml playbooks/site.yml --ask-vault-pas
 
 ### G. Sign-off
 
-Заполнить таблицы **Ops execution** и **Signatures** в [`ops-signoff-log.md`](../../specs/004-deferred-phase2-closure/ops-signoff-log.md).
+Заполнить таблицы **Ops execution** и **Signatures** в [`ops-signoff-log.md`](../../docs/review/ops-signoff-log.md).
 
 ---
 
@@ -98,7 +98,7 @@ ansible-playbook -i inventory/stage/hosts.yml playbooks/site.yml --ask-vault-pas
 | TLS smoke | `scripts/stage-tls-smoke.ps1`, `smoke-tls-redirect.ps1` |
 | E2EE smoke | `scripts/smoke-e2ee-staging.ps1` |
 | E2EE packet | `e2ee-security-signoff-packet-2026-06-15.md` |
-| Sign-off matrix | `specs/004-deferred-phase2-closure/ops-signoff-log.md` |
+| Sign-off matrix | `docs/review/ops-signoff-log.md` |
 
 ---
 

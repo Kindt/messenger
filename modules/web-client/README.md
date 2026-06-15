@@ -43,7 +43,7 @@ Playwright: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:19088`, `KORUS_API_URL=http://
 
 Для полного пакета доработки web-client до текущего серверного состояния используйте:
 
-- **`specs/002-web-client-server-parity/README.md`** (точка входа),
-- **`specs/002-web-client-server-parity/parity-matrix.md`** (baseline покрытия),
-- **`specs/002-web-client-server-parity/parity-report.md`** (итог + deferred runtime gates),
-- **`specs/002-web-client-server-parity/runtime-gate-report.md`** (operator-run шаблон фиксации `T010`/`T016`/`T022`).
+- **`docs/parity/README.md`** (точка входа),
+- **`docs/parity/parity-matrix.md`** (baseline покрытия),
+- **`docs/parity/parity-report.md`** (итог + deferred runtime gates),
+- **`docs/parity/runtime-gate-report.md`** (operator-run шаблон фиксации `T010`/`T016`/`T022`).

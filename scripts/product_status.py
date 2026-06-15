@@ -6,7 +6,7 @@ PRODUCT_VERSION = "2.5"
 PRODUCT_DATE = "16 июня 2026"
 PLAYWRIGHT_PASSED = 30
 PLAYWRIGHT_DATE = "2026-06-15"
-RUNTIME_GATE_SPEC = "specs/002-web-client-server-parity/runtime-gate-report.md"
+RUNTIME_GATE_SPEC = "docs/parity/runtime-gate-report.md"
 
 # (id, label, status, note) — status: done | partial | planned | out
 FEATURES: tuple[tuple[str, str, str, str], ...] = (
@@ -26,7 +26,7 @@ FEATURES: tuple[tuple[str, str, str, str], ...] = (
     ("fr_opt", "Профили Pilot / Standard", "done", "lean Pilot + масштабируемый Standard в поставке"),
     ("fr_opt_dedup", "Дедупликация файлов (FR-OPT-08)", "done", "SHA-256 content_hash, refcount, FILE_DEDUP_ENABLED"),
     ("fr_opt_shard", "Sharding PostgreSQL (FR-OPT-09)", "planned", "scaffold OrganizationShardRouter; full router — ADR"),
-    ("load_test", "Formal load test на stage", "partial", "k6 QEMU baseline ✓; run-k6-stage-baseline.ps1"),
+    ("load_test", "Formal load test на stage", "partial", "QEMU NT baseline ✓ (docs/benchmarks/qemu-nt-baseline-2026-06-15.json); stage soak — pending"),
     ("bot_api", "Bot API (REST / long-poll)", "planned", "есть MVP webhook worker, не публичный Bot API"),
     ("sso", "SSO Google / LDAP / SAML", "planned", ""),
     ("live", "Live-streaming (HLS)", "planned", "нет кода ingest/HLS"),

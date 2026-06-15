@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
-Current plan: `specs/004-deferred-phase2-closure/plan.md`
+Current plan: `specs/008-repository-cleanup/plan.md`
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
 <!-- SPECKIT END -->
@@ -199,7 +199,7 @@ Set-Location ../..
 
 Артефакты в `specs/<NNN-feature>/`: `spec.md`, `plan.md`, `tasks.md`, `research.md`, `contracts/`, `quickstart.md`.
 
-Текущий активный plan: **`specs/004-deferred-phase2-closure/plan.md`**.
+Текущий активный plan: **`specs/008-repository-cleanup/plan.md`**.
 
 ### Перед реализацией
 
@@ -265,12 +265,15 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 
 ### Spec-kit артефакты по фичам
 
+**Активные:**
+
 | Spec | Назначение |
 |------|------------|
-| [`specs/001-system-review-refactoring/`](specs/001-system-review-refactoring/) | profiling, hex tail, hot-plug indexer, code review |
-| [`specs/002-web-client-server-parity/`](specs/002-web-client-server-parity/) | parity matrix, Playwright, HANDOFF, runtime gate |
-| [`specs/003-docker-ansible-autotest/`](specs/003-docker-ansible-autotest/) | Docker+Ansible deploy, messaging smokes, CI |
-| [`specs/004-deferred-phase2-closure/`](specs/004-deferred-phase2-closure/) | TLS, hex write-path, E2EE MLS, QEMU DX, **US9 fast acceptance** |
+| [`specs/007-platform-stage-readiness/`](specs/007-platform-stage-readiness/) | Ops/stage gates T601–T607 |
+| [`specs/008-repository-cleanup/`](specs/008-repository-cleanup/) | Тотальная гигиена репо (текущий engineering plan) |
+| [`specs/009-platform-modules/`](specs/009-platform-modules/) | indexer + bot-delivery deploy |
+
+**Архив (001–006):** [`specs/archive/README.md`](specs/archive/README.md) — living docs в [`docs/parity/`](docs/parity/), [`docs/contracts/`](docs/contracts/), [`deploy/ansible/DEPLOY_QUICKSTART.md`](deploy/ansible/DEPLOY_QUICKSTART.md).
 
 ### Architecture & ADR
 
@@ -298,7 +301,7 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 | [`docs/review/code-review-2026-05-23.md`](docs/review/code-review-2026-05-23.md) | baseline tech debt |
 | [`docs/review/e2ee-security-gate-signoff-2026-06-10.md`](docs/review/e2ee-security-gate-signoff-2026-06-10.md) | E2EE engineering checklist |
 | [`docs/review/hotplug-governance-handoff-2026-05-24.md`](docs/review/hotplug-governance-handoff-2026-05-24.md) | hotplug sign-off process |
-| [`specs/004-deferred-phase2-closure/ops-signoff-log.md`](specs/004-deferred-phase2-closure/ops-signoff-log.md) | ops/security sign-off matrix |
+| [`docs/review/ops-signoff-log.md`](docs/review/ops-signoff-log.md) | ops/security sign-off matrix |
 
 ### Deploy & dev runtime
 
@@ -314,10 +317,10 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 
 | Contract | Назначение |
 |----------|------------|
-| [`specs/004-deferred-phase2-closure/contracts/fast-acceptance-contract.md`](specs/004-deferred-phase2-closure/contracts/fast-acceptance-contract.md) | US9 inner/outer acceptance |
-| [`specs/004-deferred-phase2-closure/contracts/playwright-gate-contract.md`](specs/004-deferred-phase2-closure/contracts/playwright-gate-contract.md) | Playwright gate criteria |
-| [`specs/004-deferred-phase2-closure/contracts/e2ee-mls-contract.md`](specs/004-deferred-phase2-closure/contracts/e2ee-mls-contract.md) | MLS API surface |
-| [`specs/004-deferred-phase2-closure/contracts/tls-deploy-contract.md`](specs/004-deferred-phase2-closure/contracts/tls-deploy-contract.md) | stage/prod TLS |
+| [`docs/contracts/fast-acceptance-contract.md`](docs/contracts/fast-acceptance-contract.md) | US9 inner/outer acceptance |
+| [`docs/contracts/playwright-gate-contract.md`](docs/contracts/playwright-gate-contract.md) | Playwright gate criteria |
+| [`docs/contracts/e2ee-mls-contract.md`](docs/contracts/e2ee-mls-contract.md) | MLS API surface |
+| [`docs/contracts/tls-deploy-contract.md`](docs/contracts/tls-deploy-contract.md) | stage/prod TLS |
 
 **Правило:** при изменении поведения, затронутого contract/spec — обновить contract **в том же PR/коммите**, что и код. Tasks.md — отметить задачу выполненной.
 

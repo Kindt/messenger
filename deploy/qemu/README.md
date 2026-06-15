@@ -97,7 +97,7 @@ UI sync после подъёма: `.\scripts\qemu-dev-mode.ps1 -Mode sync-ui` (
 
 - API (через проброс с server VM): http://127.0.0.1:18080/api/v1/health  
 - UI (через web VM): http://127.0.0.1:19088/  
-- Acceptance smokes (на хосте с Docker или через SSH-туннели): см. `specs/003-docker-ansible-autotest/quickstart.md`
+- Acceptance smokes (на хосте с Docker или через SSH-туннели): см. `deploy/ansible/DEPLOY_QUICKSTART.md`
 
 ## Справочник стендов
 
@@ -279,4 +279,4 @@ npx playwright test
 6. **Пересборка** — `.\scripts\qemu-down.ps1` затем `.\scripts\qemu-up.ps1` или `.\scripts\qemu-redeploy.ps1 -KeepDisks` не сбрасывает диски: `qemu-up.ps1 -KeepDisks`.
 7. **nginx lb logs** — в образе `nginx:alpine` файлы `/var/log/nginx/*.log` — симлинки на stdout/stderr; **`docker exec … tail …/error.log` зависает**. Смотрите `docker logs korus-web-lb-1` на web-госте или `.\scripts\qemu-logs.ps1` (секция `nginx lb`). После правок шаблона lb: `.\scripts\qemu-redeploy.ps1 -WebOnly -Force -Rebuild`.
 
-См. также: [`deploy/ansible/README.md`](../ansible/README.md), [`specs/003-docker-ansible-autotest/quickstart.md`](../../specs/003-docker-ansible-autotest/quickstart.md).
+См. также: [`deploy/ansible/README.md`](../ansible/README.md), [`deploy/ansible/DEPLOY_QUICKSTART.md`](../../deploy/ansible/DEPLOY_QUICKSTART.md).

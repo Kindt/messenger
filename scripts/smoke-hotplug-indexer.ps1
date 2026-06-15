@@ -79,7 +79,7 @@ Push-Location $root
 $proc = $null
 try {
     $env:NATS_URL = $NatsUrl
-    $env:SERVICE_HTTP_PORT = "$ServicePort"
+    $env:INDEXER_METRICS_PORT = "$ServicePort"
     $env:SERVICE_ID = $ServiceId
     $env:SERVICE_HEARTBEAT_INTERVAL_MS = "$HeartbeatIntervalMs"
     $env:SERVICE_DRAIN_TIMEOUT_MS = "$DrainTimeoutMs"
@@ -90,11 +90,6 @@ try {
 
     Wait-Until -TimeoutSec $StartTimeoutSec -Description "indexer /health = 200" -Condition {
         $r = Get-Http "http://127.0.0.1:$ServicePort/health"
-        return $r -and $r.StatusCode -eq 200
-    }
-
-    Wait-Until -TimeoutSec $StartTimeoutSec -Description "indexer /ready = 200" -Condition {
-        $r = Get-Http "http://127.0.0.1:$ServicePort/ready"
         return $r -and $r.StatusCode -eq 200
     }
 

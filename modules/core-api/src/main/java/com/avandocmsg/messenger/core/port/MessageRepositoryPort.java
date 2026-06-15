@@ -7,4 +7,7 @@ import java.util.Optional;
 
 public interface MessageRepositoryPort {
     Optional<Message> findById(MessageId id);
+
+    /** Persists a new message row; empty when insert fails. */
+    Optional<Message> insert(MessageInsert command);
 }

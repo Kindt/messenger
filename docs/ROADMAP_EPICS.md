@@ -70,7 +70,7 @@
 
 | Приоритет | Содержание |
 |-----------|------------|
-| Высокий | **Закрыто (2026-06-15):** Pilot compose, Keycloak prod, read cache, scale overlays, zstd deep-archive, batch Solr, NATS cache invalidation, replica/enterprise Ansible. См. **`specs/006-infra-optimization/`**, **`docs/plans/2026-06-15-infra-optimization-design.md`**. |
+| Высокий | **Закрыто (2026-06-15):** Pilot compose, Keycloak prod, read cache, scale overlays, zstd deep-archive, batch Solr, NATS cache invalidation, replica/enterprise Ansible. См. **`specs/archive/006-infra-optimization/`**, **`docs/plans/2026-06-15-infra-optimization-design.md`**. |
 | Высокий | **Презентация §12 закрыта (v2.3):** FR-OPT-01…07 = реализовано; 08–09 + formal load test — roadmap. См. **`docs/PRODUCT_PRESENTATION.md`**, **`product_presentation.html`**. |
 | Средний | **Хвост волна 4:** FR-OPT-08 file dedup ✅ (2026-06-15); FR-OPT-09 PG sharding — scaffold (`DB_SHARD_JDBC_URL`), full router deferred. |
 | Средний | **Load test matrix:** k6 baseline на stage (T604) или documented QEMU run; обновление §10.2.1 **измеренными** числами. Скрипты: **`scripts/load/pilot-*.js`**. |

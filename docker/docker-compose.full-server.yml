@@ -1,12 +1,10 @@
-# Полный сервер: инфраструктура + core-api + ws-gateway + message-pipeline + retention-worker + export-replay-worker + archiver/deep-archiver/indexer.
-# Запуск из корня репозитория:
-#   docker compose -f docker/docker-compose.full-server.yml up -d --build
-# Остановка:
-#   docker compose -f docker/docker-compose.full-server.yml down
+# Полный сервер: hot-path + optional profiles (full | pilot-*).
+# Full stack:  docker compose -f docker/docker-compose.full-server.yml --profile full up -d --build
+# Pilot stack: ./scripts/pilot-stack-up.sh (same file + pilot-overrides, без --profile full/solr)
 #
 # Админка: http://localhost:8080/admin/  (realm-роль admin: csadmin / csadmin или admin / admin)
 # Keycloak (realm avandocmsg): http://localhost:8081/
-# WS gateway: http://localhost:8082/  | retention metrics/health: http://localhost:9192/  | export-replay metrics: http://localhost:9193/  | push-worker health: http://localhost:9194/health  | preview-worker health: http://localhost:9195/health
+# WS gateway: http://localhost:8082/  | retention metrics/health: http://localhost:9192/  | export-replay metrics: http://localhost:9193/  | push-worker health: http://localhost:9194/health  | preview-worker health: http://localhost:9195/health  | deep-archiver metrics: http://localhost:9196/  | indexer metrics: http://localhost:9197/
 #
 # Та же сеть korus_messenger_dev_min, что и у docker-compose.dev-min.yml (korus-web attach).
 
@@ -30,6 +28,7 @@ services:
       retries: 5
 
   postgres-archive:
+    profiles: ["full", "archive"]
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: avandocmsg_archive
@@ -77,6 +76,7 @@ services:
       - minio-data:/data
 
   zoo:
+    profiles: ["full", "solr"]
     image: zookeeper:3.9
     ports:
       - "2181:2181"
@@ -85,6 +85,7 @@ services:
       ZOO_SERVERS: server.1=0.0.0.0:2888:3888;2181
 
   solr:
+    profiles: ["full", "solr"]
     image: solr:9.4
     ports:
       - "8983:8983"
@@ -185,6 +186,7 @@ services:
         condition: service_started
 
   archiver-worker:
+    profiles: ["full", "compliance"]
     build:
       context: ..
       dockerfile: docker/Dockerfile.archiver-worker
@@ -200,6 +202,7 @@ services:
         condition: service_healthy
 
   deep-archiver-worker:
+    profiles: ["full", "compliance"]
     build:
       context: ..
       dockerfile: docker/Dockerfile.deep-archiver-worker
@@ -211,13 +214,27 @@ services:
       MINIO_BUCKET: avandocmsg
       DEEP_ARCHIVE_COMPRESSION: ${DEEP_ARCHIVE_COMPRESSION:-none}
       DEEP_ARCHIVE_ZSTD_LEVEL: ${DEEP_ARCHIVE_ZSTD_LEVEL:-3}
+      DEEP_ARCHIVER_METRICS_PORT: "9191"
+    ports:
+      - "9196:9191"
     depends_on:
       nats:
         condition: service_started
       minio:
         condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:$$DEEP_ARCHIVER_METRICS_PORT/health >/dev/null || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
 
   indexer-worker:
+    profiles: ["full", "solr"]
     build:
       context: ..
       dockerfile: docker/Dockerfile.indexer-worker
@@ -227,6 +244,9 @@ services:
       SOLR_COLLECTION: messages_meta
       INDEXER_BATCH_SIZE: ${INDEXER_BATCH_SIZE:-1}
       INDEXER_BATCH_FLUSH_MS: ${INDEXER_BATCH_FLUSH_MS:-500}
+      INDEXER_METRICS_PORT: "9191"
+    ports:
+      - "9197:9191"
     entrypoint:
       - /bin/sh
       - -lc
@@ -244,8 +264,19 @@ services:
         condition: service_started
       zoo:
         condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:$$INDEXER_METRICS_PORT/health >/dev/null || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   push-worker:
+    profiles: ["full", "push"]
     build:
       context: ..
       dockerfile: docker/Dockerfile.push-worker
@@ -279,6 +310,7 @@ services:
       start_period: 45s
 
   preview-worker:
+    profiles: ["full", "push"]
     build:
       context: ..
       dockerfile: docker/Dockerfile.preview-worker
@@ -308,7 +340,28 @@ services:
       retries: 3
       start_period: 45s
 
+  bot-delivery-worker:
+    profiles: ["full", "push"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.bot-delivery-worker
+    environment:
+      NATS_URL: nats://nats:4222
+      DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      DB_USER: avandocmsg
+      DB_PASSWORD: avandocmsg
+      BOT_WEBHOOK_URL: ${BOT_WEBHOOK_URL:-}
+      BOT_SUBSCRIPTIONS_ENABLED: ${BOT_SUBSCRIPTIONS_ENABLED:-false}
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+      nats:
+        condition: service_started
+      message-pipeline:
+        condition: service_started
+
   export-replay-worker:
+    profiles: ["full", "compliance"]
     build:
       context: ..
       dockerfile: docker/Dockerfile.export-replay-worker
@@ -344,6 +397,7 @@ services:
       start_period: 45s
 
   retention-worker:
+    profiles: ["full", "retention"]
     build:
       context: ..
       dockerfile: docker/Dockerfile.retention-worker

@@ -17,7 +17,8 @@ $ProfilingTargets = @(
     @{ Service = "retention-worker"; OutputName = "retention-worker" },
     @{ Service = "export-replay-worker"; OutputName = "export-replay-worker" },
     @{ Service = "push-worker"; OutputName = "push-worker" },
-    @{ Service = "indexer-worker"; OutputName = "indexer-worker" }
+    @{ Service = "indexer-worker"; OutputName = "indexer-worker" },
+    @{ Service = "bot-delivery-worker"; OutputName = "bot-delivery-worker" }
 )
 
 function Resolve-ContainerName {

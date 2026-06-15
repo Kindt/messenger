@@ -3,7 +3,7 @@
 **Deploy-ready (2026-06-16):** engineering automated checks PASS on QEMU; rows 4–6 — **ops execution** после HTTPS deploy.  
 **Master checklist:** [`stage-prod-deploy-runbook.md`](stage-prod-deploy-runbook.md)
 
-**Purpose:** ops rows 4–6 in [`specs/004-deferred-phase2-closure/ops-signoff-log.md`](../004-deferred-phase2-closure/ops-signoff-log.md) before prod `MLS_STATUS=active`.
+**Purpose:** ops rows 4–6 in [`docs/review/ops-signoff-log.md`](../004-deferred-phase2-closure/ops-signoff-log.md) before prod `MLS_STATUS=active`.
 
 Engineering baseline: [`e2ee-security-gate-signoff-2026-06-10.md`](e2ee-security-gate-signoff-2026-06-10.md), ADR [`docs/adr/ADR-e2ee-mls-library.md`](../adr/ADR-e2ee-mls-library.md).
 

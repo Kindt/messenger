@@ -2,6 +2,10 @@ package com.avandocmsg.messenger.core.bootstrap;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.files.FileProxy;
+import com.avandocmsg.messenger.api.mls.MlsMigrationService;
+import com.avandocmsg.messenger.api.mls.MlsService;
+import com.avandocmsg.messenger.core.application.MessageSendCoordinator;
+import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.FilePublicLinkRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
@@ -24,6 +28,7 @@ import com.avandocmsg.messenger.core.application.UserApplicationService;
 import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 import com.avandocmsg.messenger.core.port.FileMetadataPort;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
+import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.ObjectStoragePort;
 import com.avandocmsg.messenger.core.port.OrganizationRepositoryPort;
 import com.avandocmsg.messenger.core.port.PublicLinkPort;
@@ -55,8 +60,33 @@ public final class CoreModule {
         return new JdbcMessageRepositoryAdapter(dataSource);
     }
 
-    public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository legacy) {
-        return new MessageApplicationService(messageRepositoryPort(dataSource), legacy);
+    public static MessageSendCoordinator messageSendCoordinator(
+            DataSource dataSource,
+            ChatRepository chatRepository,
+            MlsService mlsService,
+            MlsMigrationService mlsMigrationService,
+            NatsOutboundPort natsOutbound,
+            UuidGenerator uuidGenerator,
+            ReadCachePort readCachePort) {
+        return new MessageSendCoordinator(
+            messageRepositoryPort(dataSource),
+            chatRepository,
+            mlsService,
+            mlsMigrationService,
+            natsOutbound,
+            uuidGenerator,
+            readCachePort);
+    }
+
+    public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository) {
+        return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepository);
+    }
+
+    public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
+                                                                      BlockRepository blockRepository,
+                                                                      MessageSendCoordinator sendCoordinator) {
+        return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepository, blockRepository,
+            sendCoordinator);
     }
 
     public static UserRepositoryPort userRepositoryPort(DataSource dataSource) {

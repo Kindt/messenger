@@ -20,6 +20,7 @@ import io.minio.PutObjectArgs;
 import io.nats.client.Connection;
 import io.nats.client.Nats;
 import io.nats.client.Options;
+import io.prometheus.client.hotspot.DefaultExports;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -212,6 +213,18 @@ public class DeepArchiverWorker {
         return Integer.parseInt(chunkSizeEnv);
     }
 
+    private static int parseMetricsPort(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return 0;
+        }
+        try {
+            var port = Integer.parseInt(raw.trim());
+            return port > 0 && port <= 65535 ? port : 0;
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
     public static void main(String[] args) {
         var workerMessages = WorkerMessageSources.forWorker(
             DeepArchiverWorker.class, "com.avandocmsg.messenger.i18n.messages_worker_deep_archiver");
@@ -240,9 +253,22 @@ public class DeepArchiverWorker {
         }
 
         try {
+            DefaultExports.initialize();
+            DeepArchiverMetricsHttpServer metricsServer = null;
+            var metricsPort = parseMetricsPort(System.getenv("DEEP_ARCHIVER_METRICS_PORT"));
             var worker = new DeepArchiverWorker(natsUrl, client, bucket, minioOk, chunkSize, workerMessages);
+            if (metricsPort > 0) {
+                metricsServer = DeepArchiverMetricsHttpServer.start(metricsPort, () -> true, workerMessages);
+                log.info(workerMessages.format("worker.deep_archiver.metrics_url", metricsServer.getPort()));
+            }
             worker.start();
-            Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));
+            var finalMetricsServer = metricsServer;
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                worker.shutdown();
+                if (finalMetricsServer != null) {
+                    finalMetricsServer.close();
+                }
+            }));
             Thread.currentThread().join();
         } catch (Exception e) {
             log.error(workerMessages.get("worker.common.fatal_error"), e);

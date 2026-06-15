@@ -64,6 +64,12 @@ final class ExportReplayMetrics {
     static void registerBuildInfoOnce() {
         if (BUILD_INFO_LABELED.compareAndSet(false, true)) {
             BUILD_INFO.info("version", "1", "name", "export-replay-worker");
+            // Expose zero-valued job counters so /metrics is scrape-ready before first job.
+            JOBS_STARTED.inc(0);
+            JOBS_COMPLETED.labels("export_v1").inc(0);
+            JOBS_COMPLETED.labels("export_failed").inc(0);
+            JOBS_COMPLETED.labels("stub_written").inc(0);
+            JOBS_CANCELLED.inc(0);
         }
     }
 

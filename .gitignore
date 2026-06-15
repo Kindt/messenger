@@ -31,6 +31,9 @@ deploy/qemu/images/*.qcow2
 deploy/qemu/backups/
 deploy/qemu/run/
 deploy/qemu/tools/__pycache__/
+scripts/__pycache__/
+**/*.pyc
+**/*.pyo
 
 # Cursor superpowers vendor clone (junctions in .cursor/skills/superpowers-* are committed)
 .cursor/superpowers/

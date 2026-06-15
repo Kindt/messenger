@@ -1,6 +1,4 @@
-# DEPRECATED (wrapper): canonical CI path is `scripts/smoke-export-compliance-flow.sh`.
-# Keep this script for Windows/manual operator flows.
-# Admin: export-compliance-prep -> export-suggest -> export (if needed) -> poll status.
+# Admin export compliance flow (Windows). CI canonical: smoke-export-compliance-flow.sh.
 # Requires EXPORT_ADMIN_SUGGEST_ENABLED (+ EXPORT_ADMIN_EXPORT_ENABLED if no auto-queue).
 param(
     [string]$ChatId = "",

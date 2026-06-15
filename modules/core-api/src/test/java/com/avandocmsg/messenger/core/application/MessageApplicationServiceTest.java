@@ -68,6 +68,23 @@ class MessageApplicationServiceTest {
         assertFalse(service.isChatMember(ChatId.of(chatId), UserId.of(outsiderId)));
     }
 
+    @Test
+    void sendBlockedReason_deniesNonMember() {
+        assertEquals(
+            Optional.of("error.message.send_denied.not_member"),
+            service.sendBlockedReason(chatId, outsiderId));
+    }
+
+    @Test
+    void sendBlockedReason_deniesBannedMember() {
+        chatRepo.put(chatId, memberId, "member");
+        chatRepo.banned.add(chatId + ":" + memberId);
+        var serviceWithBan = new MessageApplicationService(messagePort, chatRepo);
+        assertEquals(
+            Optional.of("error.message.send_denied.banned"),
+            serviceWithBan.sendBlockedReason(chatId, memberId));
+    }
+
     private Message sampleMessage() {
         return new Message(
             MessageId.of(messageId),
@@ -98,6 +115,13 @@ class MessageApplicationServiceTest {
         public String getMemberRole(UUID chatId, UUID userId) {
             return roles.get(chatId + ":" + userId);
         }
+
+        final java.util.Set<String> banned = new java.util.HashSet<>();
+
+        @Override
+        public boolean isMemberBanned(UUID chatId, UUID userId) {
+            return banned.contains(chatId + ":" + userId);
+        }
     }
 
     static final class StubMessagePort implements MessageRepositoryPort {
@@ -106,6 +130,11 @@ class MessageApplicationServiceTest {
         @Override
         public Optional<Message> findById(MessageId id) {
             return Optional.ofNullable(message);
+        }
+
+        @Override
+        public Optional<Message> insert(com.avandocmsg.messenger.core.port.MessageInsert command) {
+            return Optional.empty();
         }
     }
 }

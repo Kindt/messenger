@@ -1,6 +1,6 @@
 # Методика сравнения Korus Messenger с конкурентами
 
-**Версия:** 1.2  
+**Версия:** 1.3  
 **Дата:** 2026-06-15  
 **Назначение:** единые правила для презентаций, КП и переговоров. Документ **самодостаточен** — не ссылается на внутренние артефакты репозитория.
 
@@ -163,7 +163,21 @@ HA XMPP @10k **дороже** Korus infra (нет оптимизации monolit
 
 **Миграция на Korus:** экспорт истории (MAM), смена клиентов, пересмотр federation; выигрыш — export gate, dual-TTL, поиск, единый вендор.
 
-Детали — [`competitor_comparison.html`](../competitor_comparison.html), раздел 5.3.
+---
+
+## 6.1. Engineering baseline НТ (QEMU)
+
+Замеры на виртуалке (2026-06-15) — **не production TCO**, но подтверждают работоспособность стека Korus:
+
+| Метрика | Замер | Проект S-10k |
+|---------|-------|--------------|
+| Health p95 | 11 ms | &lt; 500 ms (k6 порог) |
+| REST read rps | ~250 | — |
+| E2E burst msg/s | ~6 | ~15 (пик Pilot) |
+
+Источник: [`docs/benchmarks/qemu-nt-baseline-2026-06-15.json`](benchmarks/qemu-nt-baseline-2026-06-15.json), визуализация — [`competitor_comparison.html`](../competitor_comparison.html) §2.1.
+
+Детали legacy-платформ — [`competitor_comparison.html`](../competitor_comparison.html), раздел 5.3.
 
 ---
 

@@ -22,6 +22,9 @@ public class MessageRepository {
     /** Сообщение видимо по TTL: нет лимита или возраст меньше {@code visibility_ttl_seconds} секунд с {@code created_at}. */
     public static final String SQL_MSG_VISIBILITY_TTL_VISIBLE =
         "(m.visibility_ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - m.created_at)) < m.visibility_ttl_seconds)";
+    /** List reads: omit E2EE ciphertext (web client uses preview/decrypt paths). */
+    private static final String SQL_LIST_CONTENT_PROJECTION =
+        "CASE WHEN m.type LIKE 'e2ee-%' THEN NULL ELSE m.content END AS content";
     private final DataSource dataSource;
     private final DataSource readDataSource;
     private final Clock clock;
@@ -120,10 +123,13 @@ public class MessageRepository {
     }
 
     public List<MessageResponse> findByChatId(UUID chatId, int limit, UUID before, UUID filterUserId) {
-        var sql = new StringBuilder("""
-            SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at,
-                m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id
-            FROM messages m WHERE m.chat_id = ? AND """ + SQL_MSG_VISIBILITY_TTL_VISIBLE);
+        var sql = new StringBuilder(
+            "SELECT m.id, m.chat_id, m.sender_id, m.type, "
+                + SQL_LIST_CONTENT_PROJECTION
+                + ", m.reply_to_msg_id, m.deleted, m.created_at, "
+                + "m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id "
+                + "FROM messages m WHERE m.chat_id = ? AND "
+                + SQL_MSG_VISIBILITY_TTL_VISIBLE);
         if (before != null) {
             sql.append(" AND m.created_at < (SELECT m2.created_at FROM messages m2 WHERE m2.id = ?)");
         }
@@ -134,7 +140,7 @@ public class MessageRepository {
         }
         sql.append(" ORDER BY m.created_at DESC LIMIT ?");
 
-        var result = new ArrayList<MessageResponse>();
+        var result = new ArrayList<MessageResponse>(Math.max(limit, 16));
         try (var conn = read().getConnection();
              var stmt = conn.prepareStatement(sql.toString())) {
             int idx = 1;

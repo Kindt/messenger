@@ -88,6 +88,21 @@
     });
   }
 
+  function messageTypeForMime(mime) {
+    if (mime && mime.indexOf("image/") === 0) return "image";
+    if (mime && mime.indexOf("video/") === 0) return "video";
+    return "file";
+  }
+
+  function revokeBlobUrls(blobUrls) {
+    (blobUrls || []).forEach(function (u) {
+      try {
+        URL.revokeObjectURL(u);
+      } catch (e) {}
+    });
+    return [];
+  }
+
   global.KorusUiMessagesUtils = {
     formatPreviewText: formatPreviewText,
     formatPreviewForMessage: formatPreviewForMessage,
@@ -96,5 +111,7 @@
     mergeMessageIntoThread: mergeMessageIntoThread,
     patchMessageInThread: patchMessageInThread,
     applyReactionChangeEventRows: applyReactionChangeEventRows,
+    messageTypeForMime: messageTypeForMime,
+    revokeBlobUrls: revokeBlobUrls,
   };
 })(typeof window !== "undefined" ? window : globalThis);

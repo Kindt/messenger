@@ -1,10 +1,27 @@
 plugins {
     id("java")
     id("java-library")
+    id("com.diffplug.spotless") version "7.0.2"
 }
 
 group = "com.avandocmsg"
 version = "0.1.0-SNAPSHOT"
+
+spotless {
+    java {
+        target("modules/**/src/main/java/**/*.java", "modules/**/src/test/java/**/*.java", "services/**/src/**/*.java")
+        toggleOffOn()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+tasks.register("spotlessCheckIncremental") {
+    group = "verification"
+    description = "Spotless check on configured Java paths (incremental policy; run before merge)"
+    dependsOn("spotlessCheck")
+}
 
 allprojects {
     repositories {

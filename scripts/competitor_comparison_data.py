@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from html import escape
+from pathlib import Path
 
 from tz_product_pricing import (
     PRICE_AS_OF,
@@ -37,6 +39,57 @@ _RCH200 = _RATES["channel_200"].price
 _RCH1G = _RATES["channel_1g"].price
 _ROPS_P = _RATES["ops_pilot"].price
 _ROPS_S = _RATES["ops_std"].price
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_NT_PATHS = (
+    _REPO_ROOT / "deploy/qemu/run/load-presentation-summary.json",
+    _REPO_ROOT / "docs/benchmarks/qemu-nt-baseline-2026-06-15.json",
+)
+
+# Проектные цели якоря S-10k (§10 PRODUCT_PRESENTATION) — для сравнения с замером НТ
+_DESIGN_S10K_PEAK_MSG_S = 15
+_DESIGN_PILOT_PEAK_MSG_S = 15
+
+
+def _ru_profile(profile: str) -> str:
+    return {
+        "Standard": "Стандарт",
+        "Enterprise": "Корпоративный",
+        "Пробник": "Пробник",
+    }.get(profile, profile)
+
+
+def _fmt_reg_users(ru: int, *, compact: bool = False) -> str:
+    """Подпись числа зарегистрированных пользователей (не путать с ₽)."""
+    spaced = f"{ru:,}".replace(",", " ")
+    if compact:
+        if ru >= 1_000_000:
+            return f"{ru // 1_000_000} млн рег."
+        if ru >= 1_000:
+            return f"{ru // 1_000} тыс. рег."
+        return f"{ru} рег."
+    return f"{spaced} рег. пользов."
+
+
+def _fmt_chart_y_value(value: int, *, unit: str) -> str:
+    """Формат значения на оси Y / над столбцом."""
+    if unit in ("₽/год", "₽"):
+        return fmt_rub_short(value)
+    if unit == "ГБ":
+        return f"{value} ГБ"
+    if unit == "мс":
+        return f"{value} мс"
+    if unit == "запр/с":
+        return f"{value} запр/с"
+    if unit == "сообщ/с":
+        return f"{value} сообщ/с"
+    if unit == "%":
+        return f"{value}%"
+    return str(value)
+
+
+def _fmt_per_user_month(rub: float) -> str:
+    return f"{rub:.1f} ₽/рег. пользов./мес"
 
 
 @dataclass(frozen=True)
@@ -126,7 +179,7 @@ KORUS_ANCHORS: tuple[KorusAnchor, ...] = (
         400,
         "~450 GB",
         _ENTERPRISE_500K_MONTHLY,
-        "Оценка; load test на stage",
+        "Оценка; НТ на stage",
     ),
     KorusAnchor(
         "E-1M",
@@ -136,7 +189,7 @@ KORUS_ANCHORS: tuple[KorusAnchor, ...] = (
         600,
         "~0,9–1,2 TB",
         _ENTERPRISE_1M_MONTHLY,
-        "Оценка; load test на stage",
+        "Оценка; НТ на stage",
     ),
 )
 
@@ -309,7 +362,7 @@ def competitors_at_anchor(anchor: KorusAnchor) -> tuple[CompetitorRow, ...]:
             "eXpress Corporate",
             license_yearly=express_license_yearly(ru),
             infra_yearly=expr_infra,
-            license_note="3 000 ₽/user/год, on-prem",
+            license_note="3 000 ₽/user/год, в контуре заказчика",
             infra_note="Оценка" if expr_infra else "Индивидуальный проект",
         ),
     ]
@@ -335,12 +388,12 @@ def competitors_at_anchor(anchor: KorusAnchor) -> tuple[CompetitorRow, ...]:
 
 FEATURE_ROWS: tuple[tuple[str, str, str, str, str, str], ...] = (
     ("On-prem / изолированный контур", "✓", "✓", "—", "—", "✓"),
-    ("Export / legal hold / dual-TTL", "✓ ядро", "DLP/политики", "export API", "зависит", "плагины"),
+    ("Export / legal hold / dual-TTL", "✓ ядро", "DLP/политики", "API экспорта", "зависит", "плагины"),
     ("Полнотекстовый поиск", "Solr / SQL", "✓", "✓", "✓", "Elasticsearch"),
-    ("E2EE", "MLS (sign-off)", "✓ E2EE", "—", "—", "опционально"),
+    ("E2EE", "MLS (приёмка)", "✓ E2EE", "—", "—", "опционально"),
     ("ВКС", "WebRTC mesh", "до 500 уч.", "до 10 уч.", "✓", "интеграции"),
-    ("Мобильные клиенты", "roadmap", "iOS/Android/Аврора", "✓", "✓", "✓"),
-    ("SmartApps / суперапп", "roadmap", "✓", "боты/API", "workspace", "apps"),
+    ("Мобильные клиенты", "дорожная карта", "iOS/Android/Аврора", "✓", "✓", "✓"),
+    ("SmartApps / суперапп", "дорожная карта", "✓", "боты/API", "рабочее пространство", "приложения"),
     ("ФСТЭК / реестр РФ", "в процессе", "✓", "✓", "✓", "✓ (Loop)"),
     ("Публичный sizing", "✓ якоря", "частично", "—", "on-prem КП", "✓ до 2k"),
     ("Публичный прайс лицензии", "КП", "✓", "✓", "✓ SaaS", "КП EE"),
@@ -355,9 +408,9 @@ REFERENCE_SOLUTIONS: tuple[tuple[str, str, str, str], ...] = (
     ),
     (
         "Mattermost EE",
-        "15k concurrent ref-arch",
-        "100k concurrent ref-arch",
-        "concurrent ≠ RU",
+        "15k concurrent (ref-arch)",
+        "100k concurrent (ref-arch)",
+        "concurrent ≠ RU (не смешивать)",
     ),
     (
         "Rocket.Chat",
@@ -393,11 +446,11 @@ LEGACY_SOLUTIONS: tuple[LegacySolution, ...] = (
         "XMPP / Jabber (протокол)",
         "2000–2010-е",
         "XMPP (RFC 6120/6121)",
-        "Open source; клиенты и серверы разных вендоров",
+        "Открытый код; клиенты и серверы разных вендоров",
         "1 узел 2–4 GB RAM, до ~2k RU",
         "Кластер 3+ узлов; >10k — кастомная архитектура",
         "Нет единого sizing; зависит от сервера (ejabberd/Openfire/Prosody)",
-        "Legacy; новые внедрения редки",
+        "Устарело; новые внедрения редки",
         "Миграция истории (MAM), roster, federated domains",
     ),
     LegacySolution(
@@ -429,7 +482,7 @@ LEGACY_SOLUTIONS: tuple[LegacySolution, ...] = (
         "MIT / ISC",
         "512 MB–2 GB RAM, малые команды",
         ">5k RU — не ref-arch; federation only",
-        "Lua; лёгкий single-node",
+        "Lua; лёгкий один узел",
         "Активен для малых контуров и federation",
         "Часто не целевой масштаб для 10k+",
     ),
@@ -441,7 +494,7 @@ LEGACY_SOLUTIONS: tuple[LegacySolution, ...] = (
         "Отдельный сервер приложений + DB",
         "Кластер Domino/Sametime; типично 10k–100k RU",
         "Тяжёлый Java/Domino-стек; инд. sizing",
-        "Legacy; HCL поддерживает, но рынок смещён",
+        "Устарело; HCL поддерживает, но рынок смещён",
         "Compliance-архивы, интеграция с почтой/календарём",
     ),
     LegacySolution(
@@ -463,7 +516,7 @@ LEGACY_SOLUTIONS: tuple[LegacySolution, ...] = (
         "IMP + CUCM; от 16 GB RAM на кластер",
         "Крупный UC: CUCM cluster + IMP cluster",
         "Часть Unified Communications, не «только чат»",
-        "Cisco pushing Webex; on-prem — legacy",
+        "Cisco уходит на Webex; on-prem — устарело",
         "UC-миграция vs выделенный корп. мессенджер",
     ),
 )
@@ -487,20 +540,20 @@ def legacy_xmpp_infra_monthly(ru: int, *, ha: bool = True) -> int:
 
 LEGACY_INFRA_ANCHORS: tuple[tuple[int, str, int, int], ...] = (
     (2_000, "типичный хвост Openfire/Prosody", legacy_xmpp_infra_monthly(2_000), legacy_xmpp_infra_monthly(2_000, ha=False)),
-    (10_000, "S-10k (HA vs single-node)", legacy_xmpp_infra_monthly(10_000), legacy_xmpp_infra_monthly(10_000, ha=False)),
-    (100_000, "S-100k (HA vs урезанный)", legacy_xmpp_infra_monthly(100_000), legacy_xmpp_infra_monthly(100_000, ha=False)),
+    (10_000, "S-10k (HA и один узел)", legacy_xmpp_infra_monthly(10_000), legacy_xmpp_infra_monthly(10_000, ha=False)),
+    (100_000, "S-100k (HA и урезанный)", legacy_xmpp_infra_monthly(100_000), legacy_xmpp_infra_monthly(100_000, ha=False)),
 )
 
 LEGACY_FEATURE_ROWS: tuple[tuple[str, str, str, str, str], ...] = (
     ("On-prem в контуре", "✓", "✓ (OSS)", "✓", "✓ (Windows)"),
-    ("Современные моб. клиенты", "roadmap", "устар./сторонние", "legacy mobile", "Teams path"),
-    ("Полнотекстовый поиск", "Solr / SQL", "MAM / ограниченно", "встроенный (legacy)", "Exchange index"),
-    ("Export / legal hold / audit", "✓ ядро", "DIY / плагины", "частично", "eDiscovery (Teams)"),
-    ("E2EE", "MLS (sign-off)", "OMEMO (опц.)", "—", "—"),
-    ("ВКС / голос", "WebRTC", "внешние / Jingle (редко)", "✓ (legacy)", "✓ (SIP/Skype)"),
-    ("Федерация / multi-tenant org", "org-shard", "✓ XMPP federation", "domino domains", "AD forest"),
-    ("Вендор / LTS", "Korus", "community / integrator", "HCL Sametime", "Microsoft EoL → Teams"),
-    ("Публичный sizing @10k+", "✓ якоря", "нет единого", "инд. IBM/HCL", "Microsoft ref-arch"),
+    ("Современные моб. клиенты", "дорожная карта", "устар./сторонние", "устар. мобил.", "переход на Teams"),
+    ("Полнотекстовый поиск", "Solr / SQL", "MAM / ограниченно", "встроенный (устар.)", "индекс Exchange"),
+    ("Export / legal hold / audit", "✓ ядро", "самостоятельно / плагины", "частично", "eDiscovery (Teams)"),
+    ("E2EE", "MLS (приёмка)", "OMEMO (опц.)", "—", "—"),
+    ("ВКС / голос", "WebRTC", "внешние / Jingle (редко)", "✓ (устар.)", "✓ (SIP/Skype)"),
+    ("Федерация / multi-tenant org", "org-shard", "✓ XMPP federation", "domino domains", "лес AD"),
+    ("Вендор / LTS", "Korus", "community / интегратор", "HCL Sametime", "Microsoft EoL → Teams"),
+    ("Публичный sizing @10k+", "✓ якоря", "нет единого", "инд. IBM/HCL", "ref-arch Microsoft"),
     ("Лицензия ПО", "КП", "0 (OSS) + интеграция", "коммерческая", "EA / подписка"),
     ("TCO @10k (infra, HA)", fmt_rub_short(KORUS_ANCHORS[0].infra_yearly), fmt_rub_short(legacy_xmpp_infra_monthly(10_000) * 12), "по КП", "по КП"),
 )
@@ -527,15 +580,15 @@ LEGACY_MIGRATION_CASES: tuple[tuple[str, list[str]], ...] = (
 )
 
 LEGACY_PROS_CONS: dict[str, tuple[list[str], list[str]]] = {
-    "XMPP / Jabber (legacy)": (
+    "XMPP / Jabber (устар.)": (
         [
             "Лицензия сервера 0 (OSS): ejabberd, Openfire, Prosody",
-            "Низкий infra на малых масштабах (1–2 узла)",
+            "Низкая инфра на малых масштабах (1–2 узла)",
             "Federation между доменами; открытый протокол",
-            "Многие гос/банки уже имели контур — знаком ops",
+            "Многие гос/банки уже имели контур — знакомая эксплуатация",
         ],
         [
-            "Нет единого вендора, mobile UX устарел",
+            "Нет единого вендора, мобильный UX устарел",
             "Compliance (export, legal hold) — самодельные скрипты",
             "@10k+ HA — непрозрачный sizing; поиск слабый",
             "Нет типового пути к E2EE и современному ВКС",
@@ -543,11 +596,11 @@ LEGACY_PROS_CONS: dict[str, tuple[list[str], list[str]]] = {
     ),
     "IBM / HCL Sametime": (
         [
-            "Зрелый enterprise-стек; интеграция с Domino/Notes",
+            "Зрелый корпоративный стек; интеграция с Domino/Notes",
             "Знаком крупным заказчикам 2000–2010-х",
         ],
         [
-            "Legacy-лицензии и тяжёлый стек",
+            "Устаревшие лицензии и тяжёлый стек",
             "Рынок смещён на Teams / отечественные мессенджеры",
             "TCO поддержки и миграции часто выше нового внедрения",
         ],
@@ -561,11 +614,12 @@ PROS_CONS: dict[str, tuple[list[str], list[str]]] = {
             "Compliance by design: export gate, legal hold, dual-TTL, audit",
             "On-prem, мультитenant org, путь Standard → Enterprise",
             "Pilot (пробник) отделён от production-матрицы",
+            "QEMU НТ (2026-06-15): health p95 11 мс, REST ~250 запр/с, e2e ~6 сообщ/с",
         ],
         [
             "Меньше готового супераппа (SmartApps, почта, ВКС 500)",
-            "Mobile native — в roadmap",
-            "Formal E2EE prod sign-off pending",
+            "Нативные мобильные — в дорожной карте",
+            "Промышленная приёмка E2EE — в процессе",
         ],
     ),
     "eXpress Corporate": (
@@ -610,23 +664,33 @@ PROS_CONS: dict[str, tuple[list[str], list[str]]] = {
 
 def _bar_chart_svg(
     title: str,
-    series: list[tuple[str, int, str]],
+    series: list[tuple[str, int, str] | tuple[str, int, str, str]],
     *,
     width: int = 720,
     height: int = 320,
     caption: str,
+    y_unit: str = "₽/год",
 ) -> str:
     if not series:
         return ""
-    max_v = max(v for _, v, _ in series) or 1
-    margin_l, margin_b, margin_t = 72, 48, 40
+    parsed: list[tuple[str, int, str, str]] = []
+    for item in series:
+        if len(item) == 4:
+            parsed.append(item)  # type: ignore[misc]
+        else:
+            lbl, val, col = item  # type: ignore[misc]
+            parsed.append((lbl, val, col, y_unit))
+    max_v = max(v for _, v, _, _ in parsed) or 1
+    margin_l, margin_b, margin_t = 88, 52, 44
     chart_h = height - margin_b - margin_t
     bar_w = min(72, (width - margin_l - 40) // max(len(series), 1) - 10)
     gap = 10
     parts = [
         f'<figure class="fig"><svg viewBox="0 0 {width} {height}" width="{width}" height="{height}" '
         f'xmlns="http://www.w3.org/2000/svg">',
-        f'<text x="{width // 2}" y="24" text-anchor="middle" font-size="14" font-weight="bold">{escape(title)}</text>',
+        f'<text x="{width // 2}" y="22" text-anchor="middle" font-size="14" font-weight="bold">{escape(title)}</text>',
+        f'<text x="14" y="{margin_t + chart_h // 2}" text-anchor="middle" font-size="9" fill="#6b7280" '
+        f'transform="rotate(-90 14 {margin_t + chart_h // 2})">{escape(y_unit)}</text>',
         f'<line x1="{margin_l}" y1="{margin_t + chart_h}" x2="{width - 20}" y2="{margin_t + chart_h}" stroke="#9ca3af"/>',
     ]
     for i in range(5):
@@ -635,16 +699,16 @@ def _bar_chart_svg(
         parts.append(f'<line x1="{margin_l}" y1="{y}" x2="{width - 20}" y2="{y}" stroke="#e5e7eb"/>')
         parts.append(
             f'<text x="{margin_l - 6}" y="{y + 4}" text-anchor="end" font-size="9" fill="#4b5563">'
-            f"{escape(fmt_rub_short(val))}</text>"
+            f"{escape(_fmt_chart_y_value(val, unit=y_unit))}</text>"
         )
     x = margin_l + 8
-    for label, value, color in series:
+    for label, value, color, item_unit in parsed:
         h = max(4, round(value / max_v * chart_h))
         y = margin_t + chart_h - h
         parts.append(f'<rect x="{x}" y="{y}" width="{bar_w}" height="{h}" fill="{color}" rx="3"/>')
         parts.append(
             f'<text x="{x + bar_w // 2}" y="{y - 6}" text-anchor="middle" font-size="8" font-weight="600">'
-            f"{escape(fmt_rub_short(value))}</text>"
+            f"{escape(_fmt_chart_y_value(value, unit=item_unit))}</text>"
         )
         parts.append(
             f'<text x="{x + bar_w // 2}" y="{margin_t + chart_h + 14}" text-anchor="middle" font-size="8">'
@@ -657,20 +721,30 @@ def _bar_chart_svg(
 
 def _stacked_tco_svg(title: str, items: list[tuple[str, int, int]], caption: str) -> str:
     width, height = 720, 340
-    margin_l, margin_t, margin_b = 80, 44, 56
+    margin_l, margin_t, margin_b = 96, 48, 56
     chart_h = height - margin_t - margin_b
     max_v = max(i + l for _, i, l in items) or 1
     bar_w, gap = 88, 16
     parts = [
         f'<figure class="fig"><svg viewBox="0 0 {width} {height}" width="{width}" height="{height}" '
         f'xmlns="http://www.w3.org/2000/svg">',
-        f'<text x="{width // 2}" y="24" text-anchor="middle" font-size="14" font-weight="bold">{escape(title)}</text>',
+        f'<text x="{width // 2}" y="22" text-anchor="middle" font-size="14" font-weight="bold">{escape(title)}</text>',
+        f'<text x="14" y="{margin_t + chart_h // 2}" text-anchor="middle" font-size="9" fill="#6b7280" '
+        f'transform="rotate(-90 14 {margin_t + chart_h // 2})">₽/год</text>',
         f'<rect x="{margin_l - 60}" y="{margin_t - 8}" width="12" height="12" fill="#86efac"/>'
-        f'<text x="{margin_l - 44}" y="{margin_t + 2}" font-size="10">Infra</text>',
+        f'<text x="{margin_l - 44}" y="{margin_t + 2}" font-size="10">Инфра</text>',
         f'<rect x="{margin_l + 40}" y="{margin_t - 8}" width="12" height="12" fill="#6366f1"/>'
         f'<text x="{margin_l + 56}" y="{margin_t + 2}" font-size="10">Лицензия</text>',
         f'<line x1="{margin_l}" y1="{margin_t + chart_h}" x2="{width - 24}" y2="{margin_t + chart_h}" stroke="#9ca3af"/>',
     ]
+    for i in range(5):
+        y = margin_t + chart_h - chart_h * i // 4
+        val = max_v * i // 4
+        parts.append(f'<line x1="{margin_l}" y1="{y}" x2="{width - 24}" y2="{y}" stroke="#e5e7eb"/>')
+        parts.append(
+            f'<text x="{margin_l - 6}" y="{y + 4}" text-anchor="end" font-size="9" fill="#4b5563">'
+            f"{escape(fmt_rub_short(val))}</text>"
+        )
     x = margin_l + 4
     for label, infra, lic in items:
         total = infra + lic
@@ -714,32 +788,32 @@ def render_fig_profile_floors_svg() -> str:
     return """<figure class="fig"><svg viewBox="0 0 720 210" width="720" height="210" xmlns="http://www.w3.org/2000/svg">
   <text x="360" y="22" text-anchor="middle" font-size="14" font-weight="bold">Профили Korus: пороги и якоря</text>
   <rect x="20" y="44" width="210" height="52" rx="8" fill="#fef3c7" stroke="#f59e0b"/>
-  <text x="125" y="66" text-anchor="middle" font-size="12" font-weight="600">Pilot (пробник)</text>
+  <text x="125" y="66" text-anchor="middle" font-size="12" font-weight="600">Пробник (Pilot)</text>
   <text x="125" y="84" text-anchor="middle" font-size="10" fill="#6b7280">до 10k · вне TCO-матрицы</text>
   <rect x="250" y="44" width="210" height="52" rx="8" fill="#dcfce7" stroke="#22c55e"/>
-  <text x="355" y="66" text-anchor="middle" font-size="12" font-weight="600">Standard</text>
-  <text x="355" y="84" text-anchor="middle" font-size="10" fill="#6b7280">floor 10k · S-10k · S-50k · S-100k</text>
+  <text x="355" y="66" text-anchor="middle" font-size="12" font-weight="600">Стандарт</text>
+  <text x="355" y="84" text-anchor="middle" font-size="10" fill="#6b7280">порог 10k · S-10k · S-50k · S-100k</text>
   <rect x="480" y="44" width="210" height="52" rx="8" fill="#dbeafe" stroke="#3b82f6"/>
-  <text x="585" y="66" text-anchor="middle" font-size="12" font-weight="600">Enterprise</text>
-  <text x="585" y="84" text-anchor="middle" font-size="10" fill="#6b7280">floor 100k · E-500k · E-1M</text>
+  <text x="585" y="66" text-anchor="middle" font-size="12" font-weight="600">Корпоративный</text>
+  <text x="585" y="84" text-anchor="middle" font-size="10" fill="#6b7280">порог 100k · E-500k · E-1M</text>
   <line x1="250" y1="120" x2="460" y2="120" stroke="#22c55e" stroke-width="2"/>
-  <circle cx="280" cy="120" r="5" fill="#22c55e"/><text x="280" y="140" text-anchor="middle" font-size="9">10k</text>
-  <circle cx="355" cy="120" r="5" fill="#22c55e"/><text x="355" y="140" text-anchor="middle" font-size="9">50k</text>
-  <circle cx="430" cy="120" r="5" fill="#22c55e"/><text x="430" y="140" text-anchor="middle" font-size="9">100k</text>
+  <circle cx="280" cy="120" r="5" fill="#22c55e"/><text x="280" y="140" text-anchor="middle" font-size="8">10 тыс. рег.</text>
+  <circle cx="355" cy="120" r="5" fill="#22c55e"/><text x="355" y="140" text-anchor="middle" font-size="8">50 тыс. рег.</text>
+  <circle cx="430" cy="120" r="5" fill="#22c55e"/><text x="430" y="140" text-anchor="middle" font-size="8">100 тыс. рег.</text>
   <line x1="480" y1="120" x2="690" y2="120" stroke="#3b82f6" stroke-width="2"/>
-  <circle cx="540" cy="120" r="5" fill="#3b82f6"/><text x="540" y="140" text-anchor="middle" font-size="9">500k</text>
-  <circle cx="630" cy="120" r="5" fill="#3b82f6"/><text x="630" y="140" text-anchor="middle" font-size="9">1M</text>
-  <text x="360" y="168" text-anchor="middle" font-size="10" fill="#6b7280">eXpress @100–1000 RU — ниже floor Standard Korus (10k)</text>
-  <text x="360" y="184" text-anchor="middle" font-size="10" fill="#6b7280">Media eXpress: ~0,3 vCPU × участник; ~10% users в звонке одновременно</text>
-</svg><figcaption class="fig-cap">Рис. 1. Production-сравнение только на якорях ≥10k (Standard) и ≥100k (Enterprise).</figcaption></figure>"""
+  <circle cx="540" cy="120" r="5" fill="#3b82f6"/><text x="540" y="140" text-anchor="middle" font-size="8">500 тыс. рег.</text>
+  <circle cx="630" cy="120" r="5" fill="#3b82f6"/><text x="630" y="140" text-anchor="middle" font-size="8">1 млн рег.</text>
+  <text x="360" y="168" text-anchor="middle" font-size="10" fill="#6b7280">eXpress 100–1000 рег. пользов. — ниже порога Стандарт Korus (10 тыс.)</text>
+  <text x="360" y="184" text-anchor="middle" font-size="10" fill="#6b7280">Media eXpress: ~0,3 vCPU × участник; ~10% пользователей в звонке</text>
+</svg><figcaption class="fig-cap">Рис. 1. Промышленное сравнение только на якорях ≥10k (Стандарт) и ≥100k (Корпоративный).</figcaption></figure>"""
 
 
 def render_fig_infra_by_anchor_svg() -> str:
     series = [(a.code, a.infra_yearly, "#86efac" if a.profile == "Standard" else "#6366f1") for a in KORUS_ANCHORS]
     return _bar_chart_svg(
-        "Infra Korus: годовая стоимость по якорям",
+        "Korus: инфраструктура, ₽/год по якорям",
         series,
-        caption=f"Только OPEX infra. Ставки {PRICE_AS_OF}; не оферта.",
+        caption=f"Ось Y — ₽/год (OPEX). Ставки {PRICE_AS_OF}; не оферта.",
     )
 
 
@@ -750,9 +824,9 @@ def render_fig_express_infra_tiers_svg() -> str:
             continue
         series.append((f"{t.ru} RU", t.infra_yearly_est, "#f59e0b"))
     return _bar_chart_svg(
-        "eXpress: оценка infra ₽/год (публичные таблицы @100–1000)",
+        "eXpress: оценка инфра ₽/год (публичные таблицы @100–1000)",
         series,
-        caption="Упаковка vCPU/RAM/SSD в VM по тем же ставкам, что Korus. Ниже 10k — не production-якорь Korus.",
+        caption="Упаковка vCPU/RAM/SSD в VM по тем же ставкам, что Korus. Ниже 10k — не промышленный якорь Korus.",
     )
 
 
@@ -768,7 +842,7 @@ def render_fig_ram_compare_svg() -> str:
     max_ram = 200
     parts = [
         f'<figure class="fig"><svg viewBox="0 0 {width} {height}" width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">',
-        '<text x="320" y="22" text-anchor="middle" font-size="13" font-weight="bold">Суммарная RAM (GB) — Korus vs eXpress</text>',
+        '<text x="320" y="22" text-anchor="middle" font-size="13" font-weight="bold">Суммарная RAM (ГБ) — Korus и eXpress</text>',
         f'<line x1="50" y1="220" x2="600" y2="220" stroke="#9ca3af"/>',
     ]
     gx = 70
@@ -790,7 +864,7 @@ def render_fig_ram_compare_svg() -> str:
 
 def render_fig_tco_s10k_svg() -> str:
     return _stacked_tco_svg(
-        "TCO @ 10 000 RU (infra + лицензия)",
+        "TCO @ 10 000 RU (инфра + лицензия)",
         _tco_items_for_anchor(KORUS_ANCHORS[0]),
         caption="Korus лицензия — строка КП. eXpress: 30 млн ₽/год лицензий.",
     )
@@ -798,9 +872,9 @@ def render_fig_tco_s10k_svg() -> str:
 
 def render_fig_tco_s100k_svg() -> str:
     return _stacked_tco_svg(
-        "TCO @ 100 000 RU (infra + лицензия)",
+        "TCO @ 100 000 RU (инфра + лицензия)",
         _tco_items_for_anchor(KORUS_ANCHORS[2]),
-        caption="eXpress infra — оценка 25 млн ₽/год.",
+        caption="Инфра eXpress — оценка 25 млн ₽/год.",
     )
 
 
@@ -813,7 +887,7 @@ def render_fig_tco_enterprise_svg() -> str:
             short = f"{c.name[:5]} {anchor.code}"
             items.append((short, c.infra_yearly or 0, c.license_yearly or 0))
     return _stacked_tco_svg(
-        "TCO Enterprise: E-500k и E-1M (Korus vs eXpress)",
+        "TCO Enterprise: E-500k и E-1M (Korus и eXpress)",
         items,
         caption="Infra eXpress @500k/1M — оценка; лицензия по публичному прайсу.",
     )
@@ -839,10 +913,10 @@ def render_fig_license_share_svg() -> str:
         parts.append(f'<text x="40" y="{y + 14}" font-size="10">@{label} RU</text>')
         parts.append(f'<rect x="100" y="{y}" width="{w_lic}" height="22" fill="#6366f1"/>')
         parts.append(f'<rect x="{100 + w_lic}" y="{y}" width="{w_inf}" height="22" fill="#86efac"/>')
-        parts.append(f'<text x="510" y="{y + 15}" font-size="10">{pct}% lic</text>')
+        parts.append(f'<text x="510" y="{y + 15}" font-size="10">{pct}% лиц.</text>')
         y += 36
     parts.append(
-        '</svg><figcaption class="fig-cap">Фиолетовый — лицензия; зелёный — infra (оценка).</figcaption></figure>'
+        '</svg><figcaption class="fig-cap">Фиолетовый — лицензия; зелёный — инфраструктура (оценка).</figcaption></figure>'
     )
     return "".join(parts)
 
@@ -850,10 +924,10 @@ def render_fig_license_share_svg() -> str:
 def render_fig_license_per_user_svg() -> str:
     ru = 10_000
     series = [
-        ("eXpress lic", EXPRESS_LICENSE_RUB_PER_USER_YEAR // 12, "#6366f1"),
+        ("eXpress лиц.", EXPRESS_LICENSE_RUB_PER_USER_YEAR // 12, "#6366f1"),
         ("Пачка", PACHKA_CORP_RUB_PER_USER_MONTH_YEAR, "#f59e0b"),
         ("VK SaaS", VK_SAAS_RUB_PER_USER_MONTH_YEAR, "#93c5fd"),
-        ("Korus infra", round(KORUS_ANCHORS[0].infra_per_user_month), "#86efac"),
+        ("Korus инфра", round(KORUS_ANCHORS[0].infra_per_user_month), "#86efac"),
     ]
     width, height = 560, 260
     max_v = max(s[1] for s in series) or 1
@@ -871,7 +945,7 @@ def render_fig_license_per_user_svg() -> str:
         parts.append(f'<text x="{x + 36}" y="{y - 6}" text-anchor="middle" font-size="10" font-weight="600">{value} ₽</text>')
         parts.append(f'<text x="{x + 36}" y="{margin_t + chart_h + 18}" text-anchor="middle" font-size="9">{escape(label)}</text>')
         x += 96
-    parts.append("</svg><figcaption class=\"fig-cap\">eXpress/Пачка/VK — подписка; Korus — только infra OPEX.</figcaption></figure>")
+    parts.append("</svg><figcaption class=\"fig-cap\">eXpress/Пачка/VK — подписка; Korus — только OPEX инфраструктуры.</figcaption></figure>")
     return "".join(parts)
 
 
@@ -879,7 +953,7 @@ def render_korus_anchor_table_html() -> str:
     rows = []
     for a in KORUS_ANCHORS:
         rows.append(
-            f"<tr><td><b>{escape(a.code)}</b></td><td>{escape(a.profile)}</td>"
+            f"<tr><td><b>{escape(a.code)}</b></td><td>{escape(_ru_profile(a.profile))}</td>"
             f"<td>{a.ru:,}".replace(",", " ")
             + f"</td><td>{a.peak_online:,}".replace(",", " ")
             + f"</td><td>~{a.peak_msg_s}</td><td>{escape(a.ram_gb)}</td>"
@@ -889,8 +963,8 @@ def render_korus_anchor_table_html() -> str:
         )
     return f"""
 <table>
-  <tr><th>Якорь</th><th>Профиль</th><th>RU</th><th>Пик онлайн</th><th>Пик msg/s</th>
-      <th>RAM</th><th>Infra ₽/год</th><th>₽/user/мес</th><th>Примечание</th></tr>
+  <tr><th>Якорь</th><th>Профиль</th><th>RU</th><th>Пик онлайн</th><th>Пик сообщ/с</th>
+      <th>RAM</th><th>Инфра ₽/год</th><th>₽/user/мес</th><th>Примечание</th></tr>
   {"".join(rows)}
 </table>"""
 
@@ -925,7 +999,7 @@ def render_express_full_table_html() -> str:
     return f"""
 <h4>Сводка по масштабам eXpress</h4>
 <table>
-  <tr><th>RU</th><th>vCPU / RAM / SSD</th><th>Infra ₽/год</th><th>Лицензия ₽/год</th><th>TCO</th><th>Якорь Korus</th><th>Источник</th></tr>
+  <tr><th>RU</th><th>vCPU / RAM / SSD</th><th>Инфра ₽/год</th><th>Лицензия ₽/год</th><th>TCO</th><th>Якорь Korus</th><th>Источник</th></tr>
   {"".join(rows)}
 </table>
 <h4>Детализация ролей eXpress (@100–1000)</h4>
@@ -950,10 +1024,10 @@ def render_pricing_reference_html() -> str:
     return f"""
 <table>
   <tr><th>Решение</th><th>Модель</th><th>₽/user/мес (ориентир)</th><th>@10k ₽/год</th><th>@100k ₽/год</th></tr>
-  <tr><td>Korus infra</td><td>OPEX</td><td class="money">~{KORUS_ANCHORS[0].infra_per_user_month:.0f} / ~{KORUS_ANCHORS[2].infra_per_user_month:.1f}</td>
+  <tr><td>Korus инфра</td><td>OPEX</td><td class="money">~{KORUS_ANCHORS[0].infra_per_user_month:.0f} / ~{KORUS_ANCHORS[2].infra_per_user_month:.1f}</td>
       <td class="money">{fmt_rub(KORUS_ANCHORS[0].infra_yearly)}</td>
       <td class="money">{fmt_rub(KORUS_ANCHORS[2].infra_yearly)}</td></tr>
-  <tr><td>eXpress Corporate</td><td>лицензия + infra</td><td class="money">250 + infra</td>
+  <tr><td>eXpress Corporate</td><td>лицензия + инфра</td><td class="money">250 + инфра</td>
       <td class="money">{fmt_rub(express_license_yearly(10_000) + (express_infra_yearly(10_000) or 0))}</td>
       <td class="money">{fmt_rub(express_license_yearly(100_000) + (express_infra_yearly(100_000) or 0))}</td></tr>
   <tr><td>Пачка Корпорация</td><td>SaaS</td><td class="money">399</td>
@@ -966,7 +1040,7 @@ def render_pricing_reference_html() -> str:
       <td class="money">{fmt_rub(pachka_yearly(10_000, corp=False))}</td>
       <td class="money">{fmt_rub(pachka_yearly(100_000, corp=False))}</td></tr>
 </table>
-<p class="small">Ставки infra: {PRICE_AS_OF}, {escape(_RATES['server_16'].source)}.</p>
+<p class="small">Ставки инфраструктуры: {PRICE_AS_OF}, {escape(_RATES['server_16'].source)}.</p>
 """
 
 
@@ -1013,7 +1087,7 @@ def render_legacy_solutions_html() -> str:
       <th>Малый масштаб</th><th>Крупный масштаб</th><th>Статус</th></tr>
   {"".join(rows)}
 </table>
-<p class="small comment">В production-матрице TCO legacy не участвуют — справочное и миграционное сравнение.</p>"""
+<p class="small comment">В промышленной TCO-матрице устаревшие платформы не участвуют — справочное и миграционное сравнение.</p>"""
 
 
 def render_legacy_infra_table_html() -> str:
@@ -1024,7 +1098,7 @@ def render_legacy_infra_table_html() -> str:
         delta_ha = ""
         if korus_y and ha_y:
             pct = round(100 * (korus_y - ha_y) / korus_y)
-            delta_ha = f" ({pct:+d}% vs Korus)" if pct else ""
+            delta_ha = f" ({pct:+d}% к Korus)" if pct else ""
         rows.append(
             f"<tr><td>{ru:,}".replace(",", " ")
             + f"</td><td>{escape(label)}</td>"
@@ -1034,14 +1108,14 @@ def render_legacy_infra_table_html() -> str:
             f'<td class="small">{delta_ha}</td></tr>'
         )
     return f"""
-<h4>Infra-only: XMPP-кластер vs Korus (те же ставки {PRICE_AS_OF})</h4>
+<h4>Только инфра: XMPP-кластер и Korus (те же ставки {PRICE_AS_OF})</h4>
 <table>
-  <tr><th>RU</th><th>Сценарий</th><th>XMPP HA ₽/год</th><th>XMPP 1-node ₽/год</th>
+  <tr><th>RU</th><th>Сценарий</th><th>XMPP HA ₽/год</th><th>XMPP 1 узел ₽/год</th>
       <th>Korus ₽/год</th><th>Δ HA</th></tr>
   {"".join(rows)}
 </table>
-<p class="small comment">Legacy дешевле по infra, но без Solr, export gate, workers, Keycloak-tier ops.
-  Лицензия OSS = 0; скрытые costs — интеграция, поддержка, миграция, compliance DIY.</p>"""
+<p class="small comment">Устаревший стек дешевле по инфраструктуре, но без Solr, export gate, workers, Keycloak-tier ops.
+  Лицензия OSS = 0; скрытые затраты — интеграция, поддержка, миграция, compliance своими силами.</p>"""
 
 
 def render_legacy_feature_matrix_html() -> str:
@@ -1069,8 +1143,8 @@ def render_fig_legacy_timeline_svg() -> str:
   <circle cx="440" cy="60" r="6" fill="#f59e0b"/><text x="440" y="82" text-anchor="middle" font-size="8">eXpress</text>
   <circle cx="560" cy="60" r="6" fill="#22c55e"/><text x="560" y="82" text-anchor="middle" font-size="8">Korus</text>
   <circle cx="640" cy="60" r="6" fill="#6366f1"/><text x="640" y="82" text-anchor="middle" font-size="8">VK/Пачка SaaS</text>
-  <text x="360" y="110" text-anchor="middle" font-size="9" fill="#6b7280">Legacy — справочно и для миграции; не в production TCO-матрице</text>
-</svg><figcaption class="fig-cap">Рис. Legacy-платформы vs современные якоря Korus.</figcaption></figure>"""
+  <text x="360" y="110" text-anchor="middle" font-size="9" fill="#6b7280">Устаревшие — справочно и для миграции; не в промышленной TCO-матрице</text>
+</svg><figcaption class="fig-cap">Рис. Устаревшие платформы и современные якоря Korus.</figcaption></figure>"""
 
 
 def render_fig_legacy_infra_svg() -> str:
@@ -1082,9 +1156,9 @@ def render_fig_legacy_infra_svg() -> str:
         series.append((f"XMPP HA @{ru // 1000}k", ha_y, "#78716c"))
         series.append((f"Korus @{ru // 1000}k", korus, "#86efac"))
     return _bar_chart_svg(
-        "Infra ₽/год: legacy XMPP (HA) vs Korus @10k / @100k",
+        "Инфра ₽/год: устаревший XMPP (HA) и Korus @10k / @100k",
         series,
-        caption="Только OPEX infra. Legacy без compliance-стека; OSS license = 0.",
+        caption="Только OPEX инфраструктуры. Устаревший стек без compliance; лицензия OSS = 0.",
     )
 
 
@@ -1134,7 +1208,7 @@ def _matrix_block(anchor: KorusAnchor) -> str:
         infra_s = fmt_rub(c.infra_yearly) if c.infra_yearly is not None else c.infra_note
         share = ""
         if total and c.license_yearly and total > 0:
-            share = f" ({round(100 * c.license_yearly / total)}% lic)"
+            share = f" ({round(100 * c.license_yearly / total)}% лиц.)"
         rows.append(
             f"<tr><td>{escape(c.name)}</td>"
             f'<td class="money">{lic_s}</td><td class="money">{infra_s}</td>'
@@ -1142,8 +1216,8 @@ def _matrix_block(anchor: KorusAnchor) -> str:
         )
     return (
         f"<h3>Якорь {escape(anchor.code)} — {anchor.ru:,} RU".replace(",", " ")
-        + f" · {escape(anchor.profile)}</h3>"
-        + "<table><tr><th>Решение</th><th>Лицензия ₽/год</th><th>Infra ₽/год</th><th>Итого TCO</th></tr>"
+        + f" · {escape(_ru_profile(anchor.profile))}</h3>"
+        + "<table><tr><th>Решение</th><th>Лицензия ₽/год</th><th>Инфра ₽/год</th><th>Итого TCO</th></tr>"
         + "".join(rows)
         + "</table>"
     )
@@ -1153,15 +1227,201 @@ def render_comparison_matrix_html() -> str:
     return "".join(_matrix_block(a) for a in KORUS_ANCHORS)
 
 
+def load_nt_baseline() -> dict:
+    for path in _NT_PATHS:
+        if path.is_file():
+            return json.loads(path.read_text(encoding="utf-8"))
+    return {}
+
+
+def _nt_scenario(data: dict, name: str) -> dict | None:
+    for s in data.get("scenarios", []):
+        if s.get("name") == name:
+            return s
+    return None
+
+
+def render_fig_nt_latency_svg() -> str:
+    data = load_nt_baseline()
+    health = _nt_scenario(data, "parallel-health-sustained") or {}
+    k6 = data.get("k6_health_fallback") or {}
+    p50 = health.get("p50_ms")
+    p95 = health.get("p95_ms")
+    k6_p95 = k6.get("p95_ms")
+    if not p95 and not k6_p95:
+        return ""
+    width, height = 480, 260
+    bars = []
+    if p50 is not None:
+        bars.append(("p50 /health", int(p50), "#86efac"))
+    if p95 is not None:
+        bars.append(("p95 /health", int(p95), "#22c55e"))
+    if k6_p95 is not None:
+        bars.append(("p95 проба", int(k6_p95), "#fcd34d"))
+    bars.append(("порог k6", 500, "#fca5a5"))
+    max_v = max(v for _, v, _ in bars) or 1
+    margin_l, margin_t, margin_b = 56, 40, 48
+    chart_h = height - margin_t - margin_b
+    parts = [
+        f'<figure class="fig"><svg viewBox="0 0 {width} {height}" width="{width}" height="{height}" '
+        f'xmlns="http://www.w3.org/2000/svg">',
+        '<text x="240" y="22" text-anchor="middle" font-size="13" font-weight="bold">'
+        "Задержка API (ms) — QEMU НТ</text>",
+        f'<line x1="{margin_l}" y1="{margin_t + chart_h}" x2="{width - 20}" y2="{margin_t + chart_h}" stroke="#9ca3af"/>',
+    ]
+    bar_w = 56
+    gap = 18
+    x = margin_l + 12
+    for label, val, color in bars:
+        h = max(4, round(val / max_v * chart_h))
+        y = margin_t + chart_h - h
+        parts.append(f'<rect x="{x}" y="{y}" width="{bar_w}" height="{h}" fill="{color}" rx="3"/>')
+        parts.append(
+            f'<text x="{x + bar_w // 2}" y="{y - 4}" text-anchor="middle" font-size="9">{val}</text>'
+        )
+        parts.append(
+            f'<text x="{x + bar_w // 2}" y="{margin_t + chart_h + 14}" text-anchor="middle" font-size="8">'
+            f"{escape(label)}</text>"
+        )
+        x += bar_w + gap
+    parts.append(
+        '</svg><figcaption class="fig-cap">GET /health, 8 workers × 30 s. '
+        "Порог k6 pilot-health: p95 &lt; 500 ms.</figcaption></figure>"
+    )
+    return "".join(parts)
+
+
+def render_fig_nt_throughput_svg() -> str:
+    data = load_nt_baseline()
+    if not data:
+        return ""
+    health = _nt_scenario(data, "parallel-health-sustained") or {}
+    read = _nt_scenario(data, "core-api-read-mixed") or {}
+    burst = _nt_scenario(data, "message-pipeline-burst") or {}
+    series = []
+    if health.get("rps"):
+        series.append(("Health, запр/с", int(round(float(health["rps"]))), "#86efac"))
+    rps = read.get("approx_rps")
+    if rps:
+        series.append(("REST, запр/с", int(round(float(rps))), "#6366f1"))
+    msg = burst.get("burst_msg_per_sec")
+    if msg:
+        series.append(("E2E, сообщ/с", int(msg), "#f59e0b"))
+    series.append((f"Цель S-10k, сообщ/с", _DESIGN_S10K_PEAK_MSG_S, "#e5e7eb"))
+    return _bar_chart_svg(
+        "Пропускная способность — замер и проектная цель S-10k",
+        series,
+        width=640,
+        caption="сообщ/с — end-to-end (50 DM, guest). REST — auth + messages/ready. "
+        "QEMU dev VM (~6–10 ГБ), не prod 64 ГБ.",
+    )
+
+
+def render_nt_baseline_html() -> str:
+    data = load_nt_baseline()
+    if not data:
+        return '<p class="small comment">Артефакты НТ не найдены (docs/benchmarks/qemu-nt-baseline-2026-06-15.json).</p>'
+
+    rows = []
+    labels = {
+        "parallel-health-sustained": "Устойчивая /health",
+        "core-api-read-mixed": "REST: чтение (auth)",
+        "rest-chat-list-burst": "Пакетный список чатов",
+        "message-pipeline-burst": "Конвейер сообщений E2E",
+        "messaging-e2e-load-rounds": "E2E мессенджинг + нагрузка",
+    }
+    for s in data.get("scenarios", []):
+        name = labels.get(s.get("name", ""), s.get("name", ""))
+        metric = ""
+        if "p95_ms" in s:
+            metric = f"p50 {s.get('p50_ms', '—')} мс · p95 {s['p95_ms']} мс · {s.get('rps', '—')} запр/с"
+        elif "approx_rps" in s:
+            metric = f"~{s['approx_rps']} запр/с · {s.get('requests_ok', '—')} усп. / {s.get('duration_sec', '—')} с"
+        elif "burst_msg_per_sec" in s:
+            metric = f"пик {s['burst_msg_per_sec']} сообщ/с · {s.get('burst_messages', '—')} сообщ. / {s.get('elapsed_sec', '—')} с"
+        elif s.get("elapsed_ms") is not None and s.get("requests"):
+            metric = f"~{s.get('approx_rps', '—')} запр/с · {s['elapsed_ms']} мс · {s['requests']} запр."
+        elif s.get("result"):
+            res = "ПРОЙДЕН" if str(s.get("result", "")).lower() == "pass" else str(s.get("result", "")).upper()
+            metric = f"{res} · раундов={s.get('load_rounds', '—')}"
+        fail = s.get("requests_fail", 0)
+        ok_note = f", fail={fail}" if fail else ""
+        rows.append(
+            f"<tr><td>{escape(name)}</td><td>{escape(metric)}{ok_note}</td>"
+            f'<td class="small">{escape(s.get("script", ""))}</td></tr>'
+        )
+
+    k6 = data.get("k6_health_fallback") or {}
+    if k6:
+        rows.append(
+            f"<tr><td>Проба /health (один поток)</td><td>p95 {k6.get('p95_ms', '—')} мс · "
+            f"{k6.get('requests', '—')} запр. / {k6.get('duration_sec', '—')} с</td>"
+            f'<td class="small">{escape(k6.get("mode", ""))}</td></tr>'
+        )
+
+    notes_raw = data.get("presentation_notes", [])
+    notes_ru = []
+    for n in notes_raw:
+        notes_ru.append(
+            n.replace("Health p95 11 ms", "Health p95 11 мс")
+            .replace("Burst messaging ~6 msg/s", "Пиковая рассылка ~6 сообщ/с")
+            .replace("engineering smoke baseline", "инженерный smoke-baseline")
+            .replace("formal soak — на stage", "формальный soak — на stage")
+            .replace("не stage/prod soak", "не stage/prod soak-тест")
+            .replace("REST с auth тяжелее", "REST с авторизацией тяжелее")
+            .replace("не чистый API RPS", "не чистый API RPS")
+        )
+    notes = "".join(f"<li>{escape(n)}</li>" for n in notes_ru)
+    env = escape(data.get("environment", ""))
+    when = escape(data.get("generated_at_utc", ""))
+
+    health = _nt_scenario(data, "parallel-health-sustained") or {}
+    read = _nt_scenario(data, "core-api-read-mixed") or {}
+    burst = _nt_scenario(data, "message-pipeline-burst") or {}
+    design_rows = ""
+    measured_msg = burst.get("burst_msg_per_sec")
+    if measured_msg is not None:
+        pct = round(100 * float(measured_msg) / _DESIGN_S10K_PEAK_MSG_S)
+        design_rows = f"""
+<table>
+  <tr><th>Метрика</th><th>Замер (QEMU)</th><th>Проект S-10k</th><th>Комментарий</th></tr>
+  <tr><td>E2E, сообщ/с</td><td><b>{measured_msg}</b></td><td>{_DESIGN_S10K_PEAK_MSG_S}</td>
+      <td class="small">~{pct}% цели на dev VM; prod soak — stage</td></tr>
+  <tr><td>Задержка /health p95</td><td><b>{health.get('p95_ms', '—')} мс</b></td><td>&lt; 500 мс (k6)</td>
+      <td class="small">Запас по задержке</td></tr>
+  <tr><td>REST, запр/с</td><td><b>{read.get('approx_rps', '—')}</b></td><td>—</td>
+      <td class="small">Auth + messages + ready</td></tr>
+</table>"""
+
+    return f"""
+<div class="note">
+  <div class="req">Инженерный эталон НТ · {when}</div>
+  <div class="comment">{env}</div>
+</div>
+<div class="grid-2">
+  <div>{render_fig_nt_latency_svg()}</div>
+  <div>{render_fig_nt_throughput_svg()}</div>
+</div>
+<h4>Сценарии прогона</h4>
+<table>
+  <tr><th>Сценарий</th><th>Результат</th><th>Скрипт</th></tr>
+  {"".join(rows)}
+</table>
+<h4>Замер и проектные цели</h4>
+{design_rows}
+<ul class="small comment">{notes}</ul>
+<p class="small">Источник: <code>docs/benchmarks/qemu-nt-baseline-2026-06-15.json</code></p>"""
+
+
 def render_pilot_footnote_html() -> str:
     p = PILOT_TRIAL
     return f"""
 <div class="warn">
-  <div class="req">Пробник (Pilot) — вне production-матрицы</div>
+  <div class="req">Пробник (Pilot) — вне промышленной матрицы</div>
   <div class="comment">
-    Pilot @10k: infra <span class="money">{fmt_rub(p.infra_yearly)}/год</span> (~{p.infra_per_user_month:.1f} ₽/user/мес),
-    RAM {p.ram_gb}, без Solr. Для оценки функционала, не для TCO-battle с eXpress Corporate.
-    Production-сравнение начинается с <b>Standard S-10k</b> (infra <span class="money">{fmt_rub(KORUS_ANCHORS[0].infra_yearly)}/год</span>, полный функционал).
+    Pilot @10k: инфра <span class="money">{fmt_rub(p.infra_yearly)}/год</span> (~{p.infra_per_user_month:.1f} ₽/user/мес),
+    RAM {p.ram_gb}, без Solr. Для оценки функционала, не для TCO-сравнения с eXpress Corporate.
+    Промышленное сравнение начинается с <b>Стандарт S-10k</b> (инфра <span class="money">{fmt_rub(KORUS_ANCHORS[0].infra_yearly)}/год</span>, полный функционал).
   </div>
 </div>"""
 
@@ -1190,8 +1450,9 @@ def render_sources_html() -> str:
   <li><b>ejabberd:</b> docs.ejabberd.im (cluster, scalability)</li>
   <li><b>Openfire:</b> igniterealtime.org/docs/openfire (clustering, system requirements)</li>
   <li><b>Prosody:</b> prosody.im doc (lightweight XMPP)</li>
-  <li><b>IBM/HCL Sametime:</b> HCL product docs (legacy enterprise)</li>
-  <li><b>Microsoft:</b> Skype for Business → Teams migration guides</li>
-  <li><b>Korus:</b> внутренний sizing Standard/Enterprise + ставки infra {date}</li>
+  <li><b>IBM/HCL Sametime:</b> документация HCL (устаревший enterprise)</li>
+  <li><b>Microsoft:</b> руководства миграции Skype for Business → Teams</li>
+  <li><b>Korus НТ QEMU:</b> docs/benchmarks/qemu-nt-baseline-2026-06-15.json (2026-06-15)</li>
+  <li><b>Korus:</b> внутренний sizing Стандарт/Корпоративный + ставки инфра {date}</li>
 </ul>
 """.format(date=PRICE_AS_OF)

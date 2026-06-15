@@ -5,7 +5,7 @@
 
 ## Approach
 
-Single spec tracks engineering deliverables (W1–W3 T-P2 + T-P1 prep). Ops deploy/sign-off remains in `specs/004-deferred-phase2-closure/ops-signoff-log.md`.
+Single spec tracks engineering deliverables (W1–W3 T-P2 + T-P1 prep). Ops deploy/sign-off: [`docs/review/ops-signoff-log.md`](../../docs/review/ops-signoff-log.md).
 
 ## Waves executed
 

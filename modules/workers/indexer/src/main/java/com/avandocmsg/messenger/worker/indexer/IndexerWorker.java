@@ -14,6 +14,7 @@ import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
 import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
 import org.apache.solr.common.SolrInputDocument;
+import io.prometheus.client.hotspot.DefaultExports;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -297,6 +298,9 @@ public class IndexerWorker {
         }
 
         try {
+            DefaultExports.initialize();
+            IndexerMetricsHttpServer metricsServer = null;
+            var metricsPort = parseMetricsPort(System.getenv("INDEXER_METRICS_PORT"));
             var worker = new IndexerWorker(
                 natsUrl,
                 client,
@@ -310,8 +314,18 @@ public class IndexerWorker {
                 batchSize,
                 batchFlushMs
             );
+            if (metricsPort > 0) {
+                metricsServer = IndexerMetricsHttpServer.start(metricsPort, () -> true, workerMessages);
+                log.info(workerMessages.format("worker.indexer.metrics_url", metricsServer.getPort()));
+            }
             worker.start();
-            Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));
+            var finalMetricsServer = metricsServer;
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                worker.shutdown();
+                if (finalMetricsServer != null) {
+                    finalMetricsServer.close();
+                }
+            }));
             Thread.currentThread().join();
         } catch (Exception e) {
             log.error(workerMessages.get("worker.common.fatal_error"), e);
@@ -328,6 +342,18 @@ public class IndexerWorker {
             return Long.parseLong(raw.trim());
         } catch (NumberFormatException e) {
             return defaultValue;
+        }
+    }
+
+    private static int parseMetricsPort(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return 0;
+        }
+        try {
+            var port = Integer.parseInt(raw.trim());
+            return port > 0 && port <= 65535 ? port : 0;
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 

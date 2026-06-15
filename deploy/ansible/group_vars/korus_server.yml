@@ -2,7 +2,9 @@
 # Deploy profile: pilot (lite hot-path), standard (full-server), enterprise (future scale overlays).
 korus_deploy_profile: standard
 korus_compose_full_server: "{{ korus_repo_root }}/docker/docker-compose.full-server.yml"
-korus_compose_pilot: "{{ korus_repo_root }}/docker/docker-compose.pilot.yml"
+korus_compose_pilot: "{{ korus_repo_root }}/docker/docker-compose.full-server.yml"
+korus_compose_pilot_overrides: "{{ korus_repo_root }}/docker/docker-compose.pilot-overrides.yml"
+# Legacy standalone file (deprecated): docker/docker-compose.pilot.yml — use full-server + pilot-overrides via scripts/pilot-stack-up.sh
 korus_compose_keycloak_prod: "{{ korus_repo_root }}/docker/docker-compose.keycloak-prod.yml"
 korus_compose_scale: "{{ korus_repo_root }}/docker/docker-compose.scale.yml"
 korus_compose_replica: "{{ korus_repo_root }}/docker/docker-compose.replica.yml"

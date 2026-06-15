@@ -1,8 +1,18 @@
 package com.avandocmsg.messenger.worker.deeparchive;
 
 import io.prometheus.client.Counter;
+import io.prometheus.client.Info;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 final class DeepArchiverMetrics {
+
+    private static final AtomicBoolean BUILD_INFO_LABELED = new AtomicBoolean(false);
+
+    private static final Info BUILD_INFO = Info.build()
+        .name("deep_archiver_worker_build_info")
+        .help("Build information for the deep-archiver worker (labels: version, name).")
+        .register();
 
     private static final Counter CHUNK_WRITES = Counter.build()
         .name("deep_archiver_chunk_writes_total")
@@ -20,6 +30,12 @@ final class DeepArchiverMetrics {
         .register();
 
     private DeepArchiverMetrics() {
+    }
+
+    static void registerBuildInfoOnce() {
+        if (BUILD_INFO_LABELED.compareAndSet(false, true)) {
+            BUILD_INFO.info("version", "1", "name", "deep-archiver-worker");
+        }
     }
 
     static void chunkWrite() {

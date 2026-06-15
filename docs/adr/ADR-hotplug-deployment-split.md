@@ -2,9 +2,9 @@
 
 **Status:** `accepted` (2026-06-09)
 **Date:** 2026-05-23  
-**Related spec:** `specs/001-system-review-refactoring/spec.md`  
-**Related plan:** `specs/001-system-review-refactoring/plan.md`  
-**Related task:** `specs/001-system-review-refactoring/tasks.md` (`T048`)
+**Related spec:** `specs/archive/001-system-review-refactoring/spec.md`  
+**Related plan:** `specs/archive/001-system-review-refactoring/plan.md`  
+**Related task:** `specs/archive/001-system-review-refactoring/tasks.md` (`T048`)
 
 ---
 
@@ -130,7 +130,7 @@ If any gate fails, fallback is Option A for current release.
 | `./gradlew test` | ✅ green (re-verified 2026-05-24) |
 | Architecture/PO/Ops approval | signed 2026-06-09 |
 
-Engineering closure: all implementation gates passed; tasks T048/T056 marked complete in `specs/001-system-review-refactoring/tasks.md` with handoff to sign-off script.
+Engineering closure: all implementation gates passed; tasks T048/T056 marked complete in `specs/archive/001-system-review-refactoring/tasks.md` with handoff to sign-off script.
 
 - [x] Engineering verification (see Implementation Evidence table)
 - [x] Architecture owner approval

@@ -5,7 +5,7 @@ import com.avandocmsg.messenger.api.chats.ChatService;
 import com.avandocmsg.messenger.api.chats.dto.ChatResponse;
 import com.avandocmsg.messenger.api.files.FileService;
 import com.avandocmsg.messenger.api.files.dto.FileUploadResponse;
-import com.avandocmsg.messenger.api.messages.MessageService;
+import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.api.mls.MlsMessageTypes;
@@ -35,7 +35,7 @@ class AdminExportComplianceSeedTest {
         var actor = UUID.randomUUID();
         var chatId = UUID.randomUUID();
         var chatService = mock(ChatService.class);
-        var messageService = mock(MessageService.class);
+        var messageApplicationService = mock(MessageApplicationService.class);
         var chatRepository = mock(ChatRepository.class);
         var retentionRepo = mock(ChatRetentionPolicyRepository.class);
 
@@ -44,7 +44,7 @@ class AdminExportComplianceSeedTest {
                 actor.toString(), 1, false, false, null, Instant.now()));
         when(retentionRepo.upsert(eq(chatId), eq(0), isNull(), eq(false), eq(true), eq(false), eq(actor)))
             .thenReturn(true);
-        when(messageService.sendMessage(eq(chatId), eq(actor), argThat(req ->
+        when(messageApplicationService.sendMessage(eq(chatId), eq(actor), argThat(req ->
                 req != null && MlsMessageTypes.SCHEME_LEGACY.equals(req.e2eeScheme())), isNull()))
             .thenReturn(new MessageResponse("m1", chatId.toString(), actor.toString(), "text", "x", null,
                 false, Instant.now(), null, null, null))
@@ -54,7 +54,7 @@ class AdminExportComplianceSeedTest {
                 false, Instant.now(), null, null, null));
 
         var seed = new AdminExportComplianceSeed(
-            chatService, messageService, mock(FileService.class), chatRepository, retentionRepo);
+            chatService, messageApplicationService, mock(FileService.class), chatRepository, retentionRepo);
         var result = seed.prepare(actor, new AdminExportCompliancePrepRequest(null, true, 3, false, null));
 
         assertEquals(chatId.toString(), result.response().chatId());
@@ -68,7 +68,7 @@ class AdminExportComplianceSeedTest {
         var chatId = UUID.randomUUID();
         var fileId = UUID.randomUUID().toString();
         var chatService = mock(ChatService.class);
-        var messageService = mock(MessageService.class);
+        var messageApplicationService = mock(MessageApplicationService.class);
         var fileService = mock(FileService.class);
         var chatRepository = mock(ChatRepository.class);
         var retentionRepo = mock(ChatRetentionPolicyRepository.class);
@@ -78,7 +78,7 @@ class AdminExportComplianceSeedTest {
                 actor.toString(), 1, false, false, null, Instant.now()));
         when(retentionRepo.upsert(eq(chatId), eq(0), isNull(), eq(false), eq(true), eq(false), eq(actor)))
             .thenReturn(true);
-        when(messageService.sendMessage(eq(chatId), eq(actor), argThat(req ->
+        when(messageApplicationService.sendMessage(eq(chatId), eq(actor), argThat(req ->
                 req != null && MlsMessageTypes.SCHEME_LEGACY.equals(req.e2eeScheme())), isNull()))
             .thenReturn(new MessageResponse("m1", chatId.toString(), actor.toString(), "text", "x", null,
                 false, Instant.now(), null, null, null))
@@ -87,7 +87,7 @@ class AdminExportComplianceSeedTest {
         when(fileService.upload(any(), eq("smoke.txt"), eq("text/plain"), anyLong(), eq(actor)))
             .thenReturn(new FileUploadResponse(fileId, "smoke.txt", "text/plain", 12, "/api/v1/files/" + fileId + "/download"));
 
-        var seed = new AdminExportComplianceSeed(chatService, messageService, fileService, chatRepository, retentionRepo);
+        var seed = new AdminExportComplianceSeed(chatService, messageApplicationService, fileService, chatRepository, retentionRepo);
         var result = seed.prepare(actor, new AdminExportCompliancePrepRequest(null, true, 1, true, "smoke.txt"));
 
         assertEquals(fileId, result.response().fileId());
@@ -104,7 +104,7 @@ class AdminExportComplianceSeedTest {
 
         var seed = new AdminExportComplianceSeed(
             mock(ChatService.class),
-            mock(MessageService.class),
+            mock(MessageApplicationService.class),
             mock(FileService.class),
             chatRepository,
             mock(ChatRetentionPolicyRepository.class));
@@ -117,7 +117,7 @@ class AdminExportComplianceSeedTest {
     void prepare_rejectsMessageCountOutOfRange() {
         var seed = new AdminExportComplianceSeed(
             mock(ChatService.class),
-            mock(MessageService.class),
+            mock(MessageApplicationService.class),
             mock(FileService.class),
             mock(ChatRepository.class),
             mock(ChatRetentionPolicyRepository.class));

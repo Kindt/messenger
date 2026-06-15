@@ -3,7 +3,7 @@
 **Дата:** 2026-06-15  
 **Статус:** `completed` (engineering sprint 007 closed 2026-06-15; ops backlog §2–4, §9.6 Phase 6–7)  
 **Spec:** [`specs/007-platform-stage-readiness/`](../specs/007-platform-stage-readiness/)  
-**Источники:** `docs/ROADMAP_EPICS.md`, `docs/PRODUCT_PRESENTATION.md`, `specs/004-deferred-phase2-closure/ops-signoff-log.md`, `AGENTS.md`, `docs/ARCHITECTURE_CORE_PACKAGES.md`, `docs/plans/2026-06-15-infra-optimization-design.md`
+**Источники:** `docs/ROADMAP_EPICS.md`, `docs/PRODUCT_PRESENTATION.md`, `docs/review/ops-signoff-log.md`, `AGENTS.md`, `docs/ARCHITECTURE_CORE_PACKAGES.md`, `docs/plans/2026-06-15-infra-optimization-design.md`
 
 ---
 

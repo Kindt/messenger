@@ -10,7 +10,7 @@ import com.avandocmsg.messenger.api.chats.ChatService;
 
 import com.avandocmsg.messenger.api.files.FileService;
 
-import com.avandocmsg.messenger.api.messages.MessageService;
+import com.avandocmsg.messenger.core.application.MessageApplicationService;
 
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 
@@ -45,7 +45,7 @@ public final class AdminExportComplianceSeed {
 
     private final ChatService chatService;
 
-    private final MessageService messageService;
+    private final MessageApplicationService messageApplicationService;
 
     private final FileService fileService;
 
@@ -59,7 +59,7 @@ public final class AdminExportComplianceSeed {
 
         ChatService chatService,
 
-        MessageService messageService,
+        MessageApplicationService messageApplicationService,
 
         FileService fileService,
 
@@ -71,7 +71,7 @@ public final class AdminExportComplianceSeed {
 
         this.chatService = chatService;
 
-        this.messageService = messageService;
+        this.messageApplicationService = messageApplicationService;
 
         this.fileService = fileService;
 
@@ -157,7 +157,7 @@ public final class AdminExportComplianceSeed {
 
             var content = "export-compliance seed " + i + " " + Instant.now();
 
-            var sent = messageService.sendMessage(
+            var sent = messageApplicationService.sendMessage(
 
                 chatId,
 
@@ -219,7 +219,7 @@ public final class AdminExportComplianceSeed {
 
             fileId = uploaded.id();
 
-            var fileMsg = messageService.sendMessage(
+            var fileMsg = messageApplicationService.sendMessage(
 
                 chatId,
 

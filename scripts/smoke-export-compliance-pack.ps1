@@ -1,6 +1,4 @@
-# DEPRECATED (wrapper): canonical CI path is `scripts/smoke-export-compliance-pack.sh`.
-# Keep this script for Windows/manual operator flows.
-# Runs export compliance smokes in sequence. ChatId optional with -CreateGroup (seeds a new chat).
+# Export compliance pack (Windows). CI canonical: smoke-export-compliance-pack.sh.
 param(
     [string]$ChatId = "",
     [switch]$CreateGroup,

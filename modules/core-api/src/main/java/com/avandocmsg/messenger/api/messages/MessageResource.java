@@ -100,9 +100,9 @@ public class MessageResource {
                 .entity(new ApiError(403, messages.get("error.message.send_denied.not_member")))
                 .build();
         }
-        var msg = messageService.sendMessage(chatId, userId, request, replyToMsgId);
+        var msg = messageApplicationService.sendMessage(chatId, userId, request, replyToMsgId);
         if (msg == null) {
-            var denied = messageService.sendBlockedReason(chatId, userId);
+            var denied = messageApplicationService.sendBlockedReason(chatId, userId);
             if (denied.isPresent()) {
                 ApiDeniedMetrics.messageSendDenied();
                 return Response.status(Response.Status.FORBIDDEN)
@@ -441,10 +441,10 @@ public class MessageResource {
         var msgId = UuidParams.required(msgIdStr, "message_id");
         var targetChatId = UuidParams.required(request.targetChatId(), "target_chat_id");
         var userId = CurrentUserId.uuid(securityContext);
-        var msg = messageService.forwardMessage(sourceChatId, msgId, userId, targetChatId);
+        var msg = messageApplicationService.forwardMessage(sourceChatId, msgId, userId, targetChatId);
         if (msg == null) {
-            var denied = messageService.sendBlockedReason(sourceChatId, userId)
-                .or(() -> messageService.sendBlockedReason(targetChatId, userId));
+            var denied = messageApplicationService.sendBlockedReason(sourceChatId, userId)
+                .or(() -> messageApplicationService.sendBlockedReason(targetChatId, userId));
             if (denied.isPresent()) {
                 ApiDeniedMetrics.messageSendDenied();
                 return Response.status(Response.Status.FORBIDDEN)

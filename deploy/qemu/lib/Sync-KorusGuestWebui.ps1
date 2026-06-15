@@ -46,11 +46,9 @@ test -f .env || { echo "missing korus-web/.env - run qemu-redeploy -WebOnly once
 base=docker-compose.yml
 overlay=docker-compose.qemu-hotswap-overlay.yml
 if [ ! -f "$overlay" ]; then
-  overlay=docker-compose.qemu-full-hotswap.yml
-  compose_files="-f $overlay"
-else
-  compose_files="-f $base -f $overlay"
+  echo "missing docker-compose.qemu-hotswap-overlay.yml - sync repo on web guest"; exit 1
 fi
+compose_files="-f $base -f $overlay"
 if ! sudo docker image inspect korus-messenger-web-client:local >/dev/null 2>&1; then
   echo "missing web-client image - run qemu-redeploy -WebOnly -Rebuild first"; exit 1
 fi
@@ -90,7 +88,7 @@ if [ -f docker-compose.qemu-hotswap-overlay.yml ]; then
   sudo docker compose --env-file .env -f docker-compose.yml -f docker-compose.qemu-hotswap-overlay.yml stop web-dev 2>/dev/null || true
   sudo docker compose --env-file .env -f docker-compose.yml -f docker-compose.qemu-hotswap-overlay.yml rm -f web-dev 2>/dev/null || true
 fi
-for f in docker-compose.qemu-full-hotswap.yml docker-compose.hotswap-qemu.yml; do
+for f in docker-compose.hotswap-qemu.yml; do
   if [ -f "$f" ]; then
     sudo docker compose --env-file .env -f "$f" stop web-dev 2>/dev/null || true
     sudo docker compose --env-file .env -f "$f" rm -f web-dev 2>/dev/null || true

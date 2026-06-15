@@ -19,7 +19,7 @@ Send to Architecture Owner, Product Owner, and Ops/SRE when ready to approve bou
 - ADR: docs/adr/ADR-hotplug-deployment-split.md
 - Constitution exception: docs/proposals/constitution-v1.1-hotplug-bounded-exception.md
 - Smoke: scripts/smoke-hotplug-indexer.ps1
-- Ops log: specs/004-deferred-phase2-closure/ops-signoff-log.md (US6)
+- Ops log: docs/review/ops-signoff-log.md (US6)
 
 Условия ADR (кратко):
 1. Зависимости compile-time без циклов

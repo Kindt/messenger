@@ -6,13 +6,63 @@
 
 ---
 
-## [Unreleased]
+### 2026-06-15 — Spec 009 smokes + metrics hotfix
 
-### 2026-06-16 — US1/US7 deploy-ready (ops-signoff + runbook)
+- **Smokes:** `smoke-us2-epic01-qemu.ps1` — SSH host key из `ssh-hostkeys.ps1`; `smoke-hotplug-indexer.ps1` — `INDEXER_METRICS_PORT`, без `/ready`; новый `smoke-bot-delivery-worker.ps1` + `SMOKE_INDEX.md`.
+- **Metrics:** `ExportReplayMetrics` — zero-valued job counters при старте; `IndexerMetrics` / `DeepArchiverMetrics` — исправлен `BUILD_INFO.info` (hot-plug `:services:indexer:run` больше не падает с `Invalid metric label name`).
+- **QEMU:** `bot-delivery-worker` и пересборка `export-replay-worker` на guest; US2 + bot-delivery smokes green; нагрузочный baseline без k6 → `deploy/qemu/run/load-presentation-summary.json`.
+
+### 2026-06-15 — API alias cleanup + JFR overlay tail
+
+- **API:** удалён `@JsonAlias("ttl_seconds")` у `SendMessageRequest` — только `visibility_ttl_seconds`; webui message TTL без legacy fallback.
+- **Profiling:** `Dockerfile.bot-delivery-worker.profiling` + overlay compose; `profile-docker-jfr.ps1` / `profile-worker.ps1` синхронизированы.
+
+### 2026-06-15 — Export replay split + list projection
+
+- **export-replay:** `ExportReplayNatsConsumer` (subscriptions/publish) + `ExportReplayJobRunner` (JDBC pipeline); `ExportReplayWorker` — thin entrypoint.
+- **Perf:** `MessageRepository.findByChatId` — SQL projection omits `e2ee-*` ciphertext (client uses preview path).
+
+### 2026-06-15 — Hex write-path tail (forward + export seed)
+
+- **Hex:** `MessageSendCoordinator.forward` + `MessageApplicationService.forwardMessage`; `MessageResource` forward → application layer; `AdminExportComplianceSeed` → `MessageApplicationService` (не `MessageService`).
+- **Web UI:** убран inline-fallback `KorusUiMessagesUtils` в `app.js` (требует `ui-messages-utils.js`).
+- **Docs:** Pilot compose в `product_presentation.html` / `tz_product_pricing.py` → `full-server.yml` + `pilot-overrides.yml`.
+
+### 2026-06-15 — Repository cleanup follow-up (hex + pilot + webui)
+
+- **Hex 2b:** `MessageSendCoordinator` — persist via `MessageRepositoryPort.insert`, NATS pipeline, cache invalidation; `MessageApplicationService` owns REST write-path.
+- **Pilot:** `KORUS_COMPOSE_PILOT` → full-server + `pilot-overrides`; `DEV_STACK_PROFILES`, `RESOURCES.md`, `SMOKE_INDEX` синхронизированы.
+- **Web UI:** убран inline-fallback transport в `app.js` (требует `ui-transport-utils.js`).
+
+### 2026-06-15 — Repository cleanup phase 2–6 (spec 008)
+
+- **Scripts:** `full-stack-up.ps1` `--profile full`; smoke hints → `flow.ps1 -IncludeFile` / `flow.sh --include-file`; Windows export `.ps1` — operator canonical (CI `.sh`).
+- **Code health:** `WorkerHealthHttpServer` in `modules/common`; hex write facade via `MessageApplicationService`; pilot compose → `full-server` + `pilot-overrides`; `ExportReferencedFilesSql` split.
+- **Observability:** indexer/deep-archiver HTTP `/metrics` + `/health` (compose `9197`/`9196`); Spotless wired in root `build.gradle.kts`.
+- **Web UI:** `messageTypeForMime` / `revokeBlobUrls` → `ui-messages-utils.js`.
+- **Spec 009:** `services:indexer` → `IndexerWorker`; `bot-delivery-worker` in `docker-compose.full-server.yml`.
+
+### 2026-06-15 — Repository cleanup phase 0–1 (spec 008)
+
+- **Hygiene:** `.gitignore` для `scripts/__pycache__`/`*.pyc`; удалены 7 orphan Python patch-скриптов и `qemu-dev-clean-up.ps1`.
+- **Specs:** 001–006 → `specs/archive/`; living docs: `docs/review/ops-signoff-log.md`, `docs/contracts/`, `docs/parity/`, `deploy/ansible/DEPLOY_QUICKSTART.md`; новые **008** (cleanup), **009** (modules); active plan → `specs/008-repository-cleanup`.
+- **Scripts:** удалены все `scripts/*.cmd` (26); SMOKE_INDEX policy: `.sh` + `.ps1` only.
+- **Review archive:** May-2025 snapshots → `docs/review/archive/2025-05/`.
+
 
 - **`docs/review/stage-prod-deploy-runbook.md`**: однодневный чеклист ops при появлении stage/prod хостов (deploy-only, без доработки кода).
-- **`specs/004-deferred-phase2-closure/ops-signoff-log.md`**: модель deploy-ready — engineering READY / ops execution pending host / human signatures.
+- **`docs/review/ops-signoff-log.md`**: модель deploy-ready — engineering READY / ops execution pending host / human signatures.
 - Обновлены: `inventory/stage/README.md`, `e2ee-staging-checklist.md`, `stage-tls-smoke-runbook.md`, `specs/007/tasks.md`, `ROADMAP_EPICS.md` §8.
+
+### 2026-06-15 — Русификация презентации сравнения (v1.4)
+
+- **`competitor_comparison.html`**: пользовательские подписи, таблицы и графики — на русском (v1.4).
+
+### 2026-06-15 — НТ QEMU в презентации сравнения (v1.3)
+
+- **`docs/benchmarks/qemu-nt-baseline-2026-06-15.json`**: зафиксированные замеры НТ на виртуалке (health, REST, e2e msg/s).
+- **`competitor_comparison.html`**: §2.1 — графики latency/throughput, таблица сценариев vs цели S-10k.
+- **`docs/PRODUCT_PRESENTATION.md`**: §10.3.1 engineering baseline.
 
 ### 2026-06-15 — Презентация сравнения: legacy Jabber/XMPP (v1.2)
 

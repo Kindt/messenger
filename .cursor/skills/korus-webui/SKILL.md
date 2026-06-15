@@ -66,7 +66,7 @@ Verify: `http://127.0.0.1:19088/`, API `http://127.0.0.1:18080/api/v1/health`.
 2. Replace hardcoded string with `L(...)` in JS
 3. If new Tailwind classes: `cd modules/web-client/webui-build && npm run build:css` (or Gradle build)
 4. Inner tier: `playwright-dev-loop.ps1 -Tier <ui-*|all-inner>`
-5. Update `specs/005-webui-i18n-ux/tasks.md` checkbox
+5. Update `specs/008-repository-cleanup/tasks.md` checkbox when applicable
 6. Notable behavior: `[Unreleased]` in `CHANGELOG.md`
 
 ## Docker web-client image
@@ -75,7 +75,7 @@ Verify: `http://127.0.0.1:19088/`, API `http://127.0.0.1:18080/api/v1/health`.
 
 ## Related docs
 
-- `specs/005-webui-i18n-ux/` — active spec for i18n + UX
+- `specs/archive/005-webui-i18n-ux/` — archived; living: `docs/plans/2026-06-14-webui-i18n-json-architecture.md`
 - `docs/plans/2026-06-14-webui-i18n-ux-design.md` — validated design
 - `modules/web-client/webui-build/README.md` — Tailwind commands
 - `tests/e2e-web/playwright-tiers.json` — tier manifest

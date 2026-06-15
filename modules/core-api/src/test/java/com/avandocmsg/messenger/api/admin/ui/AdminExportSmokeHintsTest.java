@@ -16,7 +16,8 @@ class AdminExportSmokeHintsTest {
         assertTrue(cmds.stream().anyMatch(c -> c.commandSh().contains("smoke-export-compliance-flow")));
         assertTrue(cmds.stream().anyMatch(c -> c.commandSh().contains("smoke-admin-export-download")));
         assertTrue(cmds.stream().anyMatch(c -> c.commandSh().contains("smoke-admin-export-inspect")));
-        assertTrue(cmds.stream().anyMatch(c -> c.commandSh().contains("smoke-export-compliance-with-file-flow")));
+        assertTrue(cmds.stream().anyMatch(c -> c.commandSh().contains("smoke-export-compliance-flow.sh --include-file")
+            || c.commandPs().contains("smoke-export-compliance-flow.ps1 -IncludeFile")));
         assertTrue(cmds.stream().anyMatch(c -> c.commandSh().contains("smoke-openapi-export-compliance")));
         assertTrue(cmds.stream().anyMatch(c -> c.title().contains("Compliance flow + file")));
     }

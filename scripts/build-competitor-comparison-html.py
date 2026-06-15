@@ -29,6 +29,7 @@ from competitor_comparison_data import (  # noqa: E402
     render_legacy_pros_cons_html,
     render_legacy_solutions_html,
     render_korus_anchor_table_html,
+    render_nt_baseline_html,
     render_pilot_footnote_html,
     render_pricing_reference_html,
     render_pros_cons_html,
@@ -86,22 +87,23 @@ def main() -> None:
 
 <h1>Сравнение Korus Messenger с конкурентами</h1>
 <div class="meta">
-  <b>Версия:</b> 1.2 &nbsp;|&nbsp; <b>Дата ставок:</b> {PRICE_AS_OF} &nbsp;|&nbsp;
+  <b>Версия:</b> 1.4 &nbsp;|&nbsp; <b>Дата ставок:</b> {PRICE_AS_OF} &nbsp;|&nbsp;
   <b>Регион:</b> {PRICE_REGION} &nbsp;|&nbsp; <b>НДС:</b> {PRICE_VAT}<br/>
   <b>Методика:</b> docs/COMPETITOR_COMPARISON_METHODOLOGY.md
 </div>
 
 <div class="note">
-  <div class="req">Production-матрица</div>
+  <div class="req">Промышленная матрица сравнения</div>
   <div class="comment">
-    <b>Pilot</b> — пробник, вне TCO-battle. <b>Standard</b> от 10&nbsp;000 RU (S-10k, S-50k, S-100k).
-    <b>Enterprise</b> от 100&nbsp;000 RU (E-500k, E-1M). eXpress @100–1000 — справочно, ниже floor Korus.
+    <b>Пробник (Pilot)</b> — вне TCO-сравнения. <b>Стандарт</b> от 10&nbsp;000 RU (S-10k, S-50k, S-100k).
+    <b>Корпоративный</b> от 100&nbsp;000 RU (E-500k, E-1M). eXpress @100–1000 — справочно, ниже порога Korus.
   </div>
 </div>
 
 <div class="toc small">
-  <a href="#s1">1 Профили</a> · <a href="#s2">2 Korus infra</a> · <a href="#s3">3 TCO</a> ·
-  <a href="#s4">4 eXpress</a> · <a href="#s5">5 Функции</a> · <a href="#s5legacy">5.3 Legacy</a> ·
+  <a href="#s1">1 Профили</a> · <a href="#s2">2 Инфра Korus</a> · <a href="#s2nt">2.1 НТ QEMU</a> ·
+  <a href="#s3">3 TCO</a> ·
+  <a href="#s4">4 eXpress</a> · <a href="#s5">5 Функции</a> · <a href="#s5legacy">5.3 Устаревшие</a> ·
   <a href="#s6">6 Матрицы</a> ·
   <a href="#s7">7 Плюсы/минусы</a> · <a href="#s8">8 Источники</a>
 </div>
@@ -114,6 +116,11 @@ def main() -> None:
 <h2 id="s2">2. Korus: инфраструктура</h2>
 {render_fig_infra_by_anchor_svg()}
 {render_korus_anchor_table_html()}
+
+<h3 id="s2nt">2.1 Нагрузочное тестирование (QEMU, июнь 2026)</h3>
+<div class="cost-box">
+{render_nt_baseline_html()}
+</div>
 
 <h2 id="s3">3. TCO и стоимость на пользователя</h2>
 <div class="grid-2">
@@ -141,15 +148,15 @@ def main() -> None:
 <h3 id="s5legacy">5.3 Устаревшие платформы (Jabber / XMPP и аналоги)</h3>
 <div class="legacy-box">
   <div class="comment">
-    Legacy-серверы <b>не входят</b> в production TCO-матрицу (§6) — отдельный контур для заказчиков
-    с действующим Jabber, Sametime, Lync/Skype for Business. Сравнение: функции, infra-only, сценарии миграции.
+    Устаревшие серверы <b>не входят</b> в промышленную TCO-матрицу (§6) — отдельный контур для заказчиков
+    с действующим Jabber, Sametime, Lync/Skype for Business. Сравнение: функции, только инфра, сценарии миграции.
   </div>
 </div>
 {render_fig_legacy_timeline_svg()}
 {render_legacy_solutions_html()}
 {render_fig_legacy_infra_svg()}
 {render_legacy_infra_table_html()}
-<h4>5.3.1 Функции: Korus vs legacy</h4>
+<h4>5.3.1 Функции: Korus и устаревшие платформы</h4>
 {render_legacy_feature_matrix_html()}
 <h4>5.3.2 Миграция и плюсы/минусы</h4>
 {render_legacy_migration_html()}
@@ -167,11 +174,11 @@ def main() -> None:
 {render_sources_html()}
 <div class="warn">
   <ul class="comment">
-    <li>Цифры infra — ориентиры; load test до prod sign-off рекомендуется.</li>
-    <li>ВКС и mass-call могут удвоить CPU/сеть (особенно eXpress Media).</li>
+    <li>Цифры инфраструктуры — ориентиры; нагрузочное тестирование до промышленной приёмки рекомендуется.</li>
+    <li>ВКС и массовые звонки могут удвоить CPU/сеть (особенно eXpress Media).</li>
     <li>eXpress @10k/100k infra — модельная оценка, не оферта вендора.</li>
-    <li>Mattermost concurrent ≠ RU Korus/eXpress.</li>
-    <li>Legacy XMPP infra — модель HA-кластера; реальные контуры часто undersized (1 node).</li>
+    <li>Mattermost: concurrent ≠ RU Korus/eXpress.</li>
+    <li>Устаревший XMPP — модель HA-кластера; реальные контуры часто на одном узле.</li>
     <li>Sametime/Lync — не «только чат»; миграция часто параллельна с Teams/UC.</li>
   </ul>
 </div>

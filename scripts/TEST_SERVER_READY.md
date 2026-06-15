@@ -97,7 +97,7 @@
   Остановка профиля: **`.\scripts\dev-web-stack-down.ps1`** / **`./scripts/dev-web-stack-down.sh`** (опционально **`-Volumes`** / **`--volumes`** — **`down -v`**).  
   Для **`korus-web`** в **`.env`**: **`KORUS_WS_GATEWAY_PORT=8082`** (см. **`korus-web/.env.example`**). Если для **core-api** включён **JetStream** (**`NATS_JETSTREAM=true`**), задайте то же для **message-pipeline**.
 
-Проверка lb/UI: **`.\scripts\smoke-korus-web.ps1`**, **`scripts\smoke-korus-web.cmd`** или **`./scripts/smoke-korus-web.sh`** (по умолчанию **`http://localhost:9088`**; **`-WebBaseUrl`** / **`--url`** при другом порте; **`-Help`** / **`--help`**; **`-CheckApi`** / **`--check-api`** — **`GET …/api/v1/health`** через прокси web-client). Поднять профиль **`web`**: **`.\scripts\dev-web-stack-up.ps1`** или **`./scripts/dev-web-stack-up.sh`** (**`-Build`** / **`--build`**; **`-SkipEnsure`** / **`SKIP_KORUS_ENSURE=1`** — без проверки/установки окружения; см. **`README.md`**).
+Проверка lb/UI: **`.\scripts\smoke-korus-web.ps1`** или **`./scripts/smoke-korus-web.sh`** (QEMU: **`http://127.0.0.1:19088`**; **`-WebBaseUrl`** / **`--url`**; **`-CheckApi`** / **`--check-api`**).
 
 **WebRTC mesh в UI (без отдельного Jitsi):** сигналы идут через **ws-gateway** и **NATS** (**`rtc.signal`**). Для двух браузеров в одной LAN часто хватает публичного **STUN** (значение по умолчанию в **`app.js`**). Если оба клиента за **симметричным NAT** / разными сетями без прямого P2P — нужен **TURN**: задайте в окружении контейнеров **web-client** переменную **`WEB_CLIENT_RTC_ICE_SERVERS`** одной строкой **JSON-массива** ICE-серверов (как в **`WebClientEnvServlet`** / **`korus-web/.env.example`**); скрипт **`GET /web-client-env.js`** отдаёт поле **`iceServersJson`** для **`JSON.parse`** в браузере. В **`korus-web/docker-compose*.yml`** переменная уже пробрасывается из **`.env`**. Локальный пример с **coturn**: **`korus-web/docker-compose.turn.yml`**, подъём **`.\scripts\korus-web-up.ps1 -Turn`** / **`./scripts/korus-web-up.sh --turn`** (см. **`korus-web/README.md`**).
 
@@ -120,6 +120,6 @@
 
 Docker-стенд из **корня репозитория**: **`.\scripts\start.ps1 min`** (встроены проверка окружения, переменные **`KORUS_*`**, **2** попытки **`docker compose`**), **`.\scripts\clean.ps1 all`**, **`.\scripts\create-stand.ps1 min`**, **`.\scripts\install-environment.ps1`** — см. **`README.md`**.
 
-Тихая установка **JDK / Git / Docker**, если чего-то нет: **Windows** — **`.\scripts\install-env-silent.ps1`** (**`-Quiet`**, **`install-env-silent.cmd`**) или **`.\scripts\install-environment.ps1 -SilentInstall -Quiet`**; **Debian/Ubuntu** — **`./scripts/install-env-silent.sh --quiet`** или **`./scripts/install-environment.sh --silent-install --quiet`**.
+Тихая установка **JDK / Git / Docker**, если чего-то нет: **Windows** — **`.\scripts\install-env-silent.ps1`** (**`-Quiet`**) или **`.\scripts\install-environment.ps1 -SilentInstall -Quiet`**; **Debian/Ubuntu** — **`./scripts/install-env-silent.sh --quiet`**.
 
 Общие проверки админ-консоли для PowerShell-скриптов: **`scripts\lib\SmokeAdminUi.ps1`** (функции **`Test-SmokeAdminConsoleRedirect`**, **`Test-SmokeAdminStaticPage`**, **`Test-SmokeAdminUiApi`**) — подключается из **`smoke-ready.ps1`** и **`smoke-auth.ps1`**.

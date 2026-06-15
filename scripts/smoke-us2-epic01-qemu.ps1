@@ -10,8 +10,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Root = Split-Path -Parent $scriptDir
+$RunDir = Join-Path $Root "deploy\qemu\run"
 $plink = Join-Path $env:ProgramFiles "PuTTY\plink.exe"
-$serverSerial = Join-Path (Join-Path $scriptDir "..\deploy\qemu\run") "server-serial.log"
+$serverSerial = Join-Path $RunDir "server-serial.log"
+
+. (Join-Path $Root "deploy\qemu\lib\Update-KorusGuestRepo.ps1")
 
 function Fail([string]$msg) {
     Write-Host "[FAIL] $msg" -ForegroundColor Red
@@ -21,15 +25,11 @@ function Fail([string]$msg) {
 if (-not (Test-Path $plink)) {
     Fail "plink not found: $plink"
 }
-if (-not (Test-Path $serverSerial)) {
-    Fail "server serial log not found: $serverSerial"
-}
 
-$m = Select-String -Path $serverSerial -Pattern "256 SHA256:([A-Za-z0-9+/=]+)\s+root@.*\(ED25519\)" | Select-Object -Last 1
-if (-not $m) {
-    Fail "Could not extract server ED25519 host key fingerprint from serial log."
+$hostKey = Get-KorusEd25519HostKey -SerialPath $serverSerial -Role server -SshPort $ServerSshPort
+if (-not $hostKey) {
+    Fail "Could not resolve server SSH host key (serial log or ssh-hostkeys.ps1 cache)."
 }
-$hostKey = "ssh-ed25519 255 SHA256:$($m.Matches[0].Groups[1].Value)"
 
 $retMetrics = "http://127.0.0.1:$LocalRetentionPort/metrics"
 $expMetrics = "http://127.0.0.1:$LocalExportReplayPort/metrics"

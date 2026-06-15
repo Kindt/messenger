@@ -50,8 +50,8 @@ final class AdminExportSmokeHints {
                 "./scripts/smoke-admin-export-inspect.sh --chat-id UUID --job-id UUID --require-success"),
             hint(
                 "Compliance flow + file attachment",
-                ".\\scripts\\smoke-export-compliance-with-file-flow.ps1",
-                "./scripts/smoke-export-compliance-with-file-flow.sh"),
+                ".\\scripts\\smoke-export-compliance-flow.ps1 -IncludeFile",
+                "./scripts/smoke-export-compliance-flow.sh --include-file"),
             hint(
                 "Admin export download (latest job)",
                 ".\\scripts\\smoke-admin-export-download.ps1 -ChatId <uuid> -RequireSuccess",

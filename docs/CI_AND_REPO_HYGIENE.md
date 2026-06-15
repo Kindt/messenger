@@ -31,7 +31,7 @@
 ## Smoke scripts policy
 
 - Канонический индекс smoke-сценариев: **`scripts/SMOKE_INDEX.md`**.
-- Для CI по умолчанию использовать `.sh` скрипты; `.ps1` / `.cmd` считаются совместимыми обертками для Windows.
+- Для CI по умолчанию использовать `.sh` скрипты; `.ps1` — обёртки для Windows-операторов.
 - Удаление smoke-скриптов допустимо только после проверки ссылок в workflow и документации.
 
 ## Deploy messaging smoke (nightly)
@@ -49,7 +49,7 @@
 
 PR gate по-прежнему только **`buildIntegrity`** в **`ci.yml`**.
 
-Spec-kit: **`specs/003-docker-ansible-autotest/`**. Playwright: **`tests/e2e-web/`**.
+Spec-kit: **`deploy/ansible/DEPLOY_QUICKSTART.md`**, archive **`specs/archive/003-docker-ansible-autotest/`**. Playwright: **`tests/e2e-web/`**.
 
 ## Export compliance smoke (nightly)
 

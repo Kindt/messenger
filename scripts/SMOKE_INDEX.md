@@ -22,11 +22,11 @@
 
 | Сценарий | Canonical script | CI usage | Параллельные обертки |
 |---|---|---|---|
-| Export compliance flow | `scripts/smoke-export-compliance-flow.sh` | `export-compliance-smoke.yml` | `.ps1`, `.cmd`, `smoke-export-compliance-with-file-flow.*` |
-| Export compliance pack | `scripts/smoke-export-compliance-pack.sh` | `export-compliance-smoke.yml` | `.ps1`, `.cmd` |
-| Export observability | `scripts/smoke-export-observability.sh` | `export-compliance-smoke.yml` | `.ps1`, `.cmd` |
+| Export compliance flow | `scripts/smoke-export-compliance-flow.sh` | `export-compliance-smoke.yml` | `.ps1`; file attach: `flow.sh --include-file` / `flow.ps1 -IncludeFile` |
+| Export compliance pack | `scripts/smoke-export-compliance-pack.sh` | `export-compliance-smoke.yml` | `.ps1` |
+| Export observability | `scripts/smoke-export-observability.sh` | `export-compliance-smoke.yml` | `.ps1` |
 | OpenAPI export compliance | `scripts/smoke-openapi-export-compliance.sh` | `export-compliance-smoke.yml` | `.ps1` |
-| Korus web basic smoke | `scripts/smoke-korus-web.sh` | manual (runtime) | `.ps1`, `.cmd`; optional — spec 002 parity smokes cover API/WS |
+| Korus web basic smoke | `scripts/smoke-korus-web.sh` | manual (runtime) | `.ps1`; optional — parity smokes cover API/WS |
 | **Deploy acceptance (spec 003)** | `scripts/smoke-deploy-acceptance.sh` | `deploy-messaging-smoke.yml` | orchestrates ready, auth, messaging-e2e, parity-api |
 | **Platform W2 guest (optional)** | `scripts/guest-smoke-platform-w2.sh` | manual (QEMU server guest) | `verify-nats-queue-group`; `KORUS_RUN_EXPORT_PURGE_SMOKE=1` for export-replay |
 | **QEMU wsUrl probe (host)** | `scripts/test-korus-wsurl.ps1` | manual; outer gate preflight | expects `host-lan-ip.txt` + `:19088/web-client-env.js` |
@@ -41,6 +41,7 @@
 | Retention worker health smoke | `scripts/smoke-retention-worker.ps1` | manual | none |
 | US2 Epic01 (QEMU wrapper) | `scripts/smoke-us2-epic01-qemu.ps1` | manual | `smoke-us2-epic01.ps1` |
 | Hot-plug indexer lifecycle | `scripts/smoke-hotplug-indexer.ps1` | manual | requires NATS (`14222` tunnel on QEMU) |
+| Bot-delivery worker (guest) | `scripts/smoke-bot-delivery-worker.ps1` | manual | QEMU server guest via SSH; profile `push`/`full` |
 | Read receipts (API + WS) | `scripts/smoke-read-receipts.ps1` | manual | UI ✓✓ check optional |
 | Retention hot-row purge status | `scripts/smoke-retention-purge.ps1` | manual | requires admin token + stack |
 | Retention file cleanup metrics | `scripts/smoke-retention-file-cleanup.ps1` | manual | metrics on retention worker port |
@@ -54,7 +55,7 @@
 | **Preview worker health** | `scripts/smoke-preview-worker.ps1` | manual | full-server `:9195/health` |
 | **Playwright staging gate** | `scripts/playwright-staging-gate.ps1` | manual | `-BaseUrl https://...` |
 | **Stage/prod deploy runbook** | `docs/review/stage-prod-deploy-runbook.md` | manual | US1/US7 deploy-only when hosts available |
-| **Playwright parity matrix** | `tests/e2e-web/` (9 specs) | `deploy-messaging-smoke.yml` (optional nightly job, `continue-on-error`) | spec 004 US5 T110–T115; operator template `specs/002-web-client-server-parity/runtime-gate-report.md` |
+| **Playwright parity matrix** | `tests/e2e-web/` (9 specs) | `deploy-messaging-smoke.yml` (optional nightly job, `continue-on-error`) | spec 004 US5 T110–T115; operator template `docs/parity/runtime-gate-report.md` |
 
 ## Operator utilities
 
@@ -92,10 +93,9 @@
 - `scripts/smoke-admin-export-global-jobs.sh` / `.ps1`
 - `scripts/smoke-admin-export-compliance-prep.sh` / `.ps1`
 - `scripts/smoke-export-compliance-stack.sh` / `.ps1`
-- `scripts/smoke-export-compliance-with-file-flow.sh` / `.ps1` / `.cmd`
+- `scripts/smoke-export-compliance-flow.sh --include-file` / `scripts/smoke-export-compliance-flow.ps1 -IncludeFile`
 
 ## Deprecation policy
 
-- До отдельного cleanup PR ничего не удалять.
-- Если сценарий дублируется (`.sh`, `.ps1`, `.cmd`), canonical для CI/документации выбирается в пользу `.sh`.
-- `.ps1` и `.cmd` остаются для Windows-операторов до явной миграции.
+- Canonical для CI/документации: `.sh`; Windows-операторы: `.ps1`.
+- Удаление deprecated `.ps1` — только после миграции ссылок (см. spec 008 T202).

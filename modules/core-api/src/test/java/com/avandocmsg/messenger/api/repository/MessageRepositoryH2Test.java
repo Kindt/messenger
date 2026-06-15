@@ -109,6 +109,17 @@ class MessageRepositoryH2Test {
     }
 
     @Test
+    void findByChatId_omitsE2eeCiphertext_butFindByIdKeepsContent() {
+        var e2eeId = UUID.randomUUID();
+        assertNotNull(repo.insert(e2eeId, chatId, senderId, "e2ee-text", "secret-ciphertext", null, null, null));
+        var listed = repo.findByChatId(chatId, 10, null);
+        assertEquals(1, listed.size());
+        assertNull(listed.get(0).content());
+        var byId = repo.findById(e2eeId).orElseThrow();
+        assertEquals("secret-ciphertext", byId.content());
+    }
+
+    @Test
     void findById_emptyWhenTtlExpired() throws Exception {
         var msgId = UUID.randomUUID();
         try (var c = ds.getConnection();

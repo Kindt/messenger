@@ -462,7 +462,7 @@
 
 ## 10. Ресурсы серверов и пропускная способность
 
-> **Важно:** все цифры ниже — **ориентиры для планирования**. Формальный load test (k6, Locust, JMeter) в репозитории **не проводился**. Перед prod sizing sign-off рекомендуется validation phase на целевом железе.
+> **Важно:** цифры ниже — **ориентиры для планирования**. **Engineering baseline НТ** на QEMU (2026-06-15) зафиксирован в [`docs/benchmarks/qemu-nt-baseline-2026-06-15.json`](benchmarks/qemu-nt-baseline-2026-06-15.json) и [`competitor_comparison.html`](../competitor_comparison.html) §2.1. Formal soak 20% peak — на stage при go-live.
 
 ### 10.1 Методология расчёта
 
@@ -566,9 +566,22 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 **Сценарий C — «Федеральный масштаб» (1M пользователей, профиль ТЗ-max)**  
 100M сообщений/день, пик ~4000 msg/s. Распределённый кластер, sharded PostgreSQL, SolrCloud 9+ nodes, geo-реплика MinIO. Отдельная команда SRE 24/7. **Обязателен** load test перед sign-off.
 
+### 10.3.1 Замеры НТ на QEMU (engineering baseline, 2026-06-15)
+
+Стенд: QEMU guest full-server, API через `127.0.0.1:18080`. Артефакт: [`docs/benchmarks/qemu-nt-baseline-2026-06-15.json`](benchmarks/qemu-nt-baseline-2026-06-15.json).
+
+| Сценарий | Результат | Примечание |
+|----------|-----------|------------|
+| Health sustained (8 workers, 30 s) | **3443** ok, p50 **3 ms**, p95 **11 ms**, **~115 rps** | GET `/api/v1/health` |
+| REST read mixed (45 s, 6 потоков) | **11 268** ok, **~250 rps** | messages + ready, smoke_user_a |
+| Message pipeline burst (guest) | **50** msg за **8 s**, **~6 msg/s** e2e | NATS + pipeline + доставка |
+| Messaging E2E + load | **PASS**, 30 load rounds | DM, group, WS/REST, read receipts |
+
+**Сравнение с целью Pilot/S-10k:** проектный пик **~15 msg/s**; на dev VM замер e2e burst **~6 msg/s** (~40% цели) — ожидаемо для лабораторного железа (~6–10 GB guest). Formal soak 20% peak — на stage/prod iron.
+
 ### 10.4 Дисклеймер
 
-- Цифры не подтверждены формальным нагрузочным тестированием.
+- QEMU baseline (§10.3.1) — **не** заменяет formal soak на stage; только engineering smoke.
 - Активные видеозвонки и live-стримы могут **удвоить** сетевые и CPU требования.
 - Рекомендация: validation phase (k6/Locust) на 10–20% целевой нагрузки перед prod.
 
@@ -1088,7 +1101,7 @@ flowchart LR
 | [`deploy/qemu/README.md`](../deploy/qemu/README.md) | Dev-стенд QEMU |
 | [`deploy/ansible/README.md`](../deploy/ansible/README.md) | Ansible deploy |
 | [`deploy/qemu/RESOURCES.md`](../deploy/qemu/RESOURCES.md) | Минимальные ресурсы dev |
-| [`specs/002-web-client-server-parity/`](../../specs/002-web-client-server-parity/) | Parity web-client |
+| [`docs/parity/`](../../docs/parity/) | Parity web-client |
 | [`docs/EXPORT_OPERATOR.md`](EXPORT_OPERATOR.md) | Export для операторов |
 | [`docs/plans/03-export-compliance.md`](plans/03-export-compliance.md) | Compliance export (engineering) |
 | [`docs/plans/2026-06-15-infra-optimization-design.md`](plans/2026-06-15-infra-optimization-design.md) | Оптимизация RAM, throughput, disk |

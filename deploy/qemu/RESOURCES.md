@@ -34,7 +34,7 @@
 
 ## korus-server (pilot profile, FR-OPT-01)
 
-Compose: `docker/docker-compose.pilot.yml` + `docker/docker-compose.keycloak-prod.yml`. Без Solr/ZK; поиск — SQL fallback.
+Compose: `docker/docker-compose.full-server.yml` + `docker-compose.pilot-overrides.yml` + `docker-compose.keycloak-prod.yml`. Без Solr/ZK; поиск — SQL fallback.
 
 | Компонент | Контейнер | RAM min, МБ | Примечание |
 |-----------|-----------|-------------|------------|
@@ -109,4 +109,4 @@ Optional compose profiles: `push`, `retention`, `compliance` (archiver/deep/inde
 
 ## Сокращение (не в минимальном full-server)
 
-Для уменьшения server-ВМ используйте **pilot profile** (`docker/docker-compose.pilot.yml`, Ansible `korus_deploy_profile: pilot`) — см. раздел «korus-server (pilot profile)» выше и [`docs/DEV_STACK_PROFILES.md`](../../docs/DEV_STACK_PROFILES.md). В штатном `full-server` все 14 сервисов поднимаются.
+Для уменьшения server-ВМ используйте **pilot profile** (`pilot-stack-up.sh` → full-server + pilot-overrides, Ansible `korus_deploy_profile: pilot`) — см. раздел «korus-server (pilot profile)» выше и [`docs/DEV_STACK_PROFILES.md`](../../docs/DEV_STACK_PROFILES.md). В штатном `full-server` все 14 сервисов поднимаются с `--profile full`.

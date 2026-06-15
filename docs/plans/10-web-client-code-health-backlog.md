@@ -5,10 +5,10 @@
 
 ## Связанный Spec-Kit пакет (parity)
 
-- `specs/002-web-client-server-parity/README.md` — точка входа по статусу и составу артефактов.
-- `specs/002-web-client-server-parity/parity-matrix.md` — baseline покрытия endpoint -> flow.
-- `specs/002-web-client-server-parity/parity-report.md` — итоговый статус (engineering closure 2026-05-24).
-- `specs/002-web-client-server-parity/runtime-gate-report.md` — evidence по `T010/T016/T022`.
+- `docs/parity/README.md` — точка входа по статусу и составу артефактов.
+- `docs/parity/parity-matrix.md` — baseline покрытия endpoint -> flow.
+- `docs/parity/parity-report.md` — итоговый статус (engineering closure 2026-05-24).
+- `docs/parity/runtime-gate-report.md` — evidence по `T010/T016/T022`.
 
 ## 1) Цель и рамки
 

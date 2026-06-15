@@ -46,4 +46,4 @@ Server role sources `docker/.env.korus-server` before `full-stack-up.sh`; compos
 
 ## 5. Sign-off
 
-Record in `specs/004-deferred-phase2-closure/ops-signoff-log.md` when prod delivery verified.
+Record in `docs/review/ops-signoff-log.md` when prod delivery verified.

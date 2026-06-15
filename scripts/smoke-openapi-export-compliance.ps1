@@ -1,4 +1,4 @@
-# DEPRECATED (wrapper): canonical CI path is `scripts/smoke-openapi-export-compliance.sh`.
+# OpenAPI export-compliance-prep smoke (Windows). CI canonical: smoke-openapi-export-compliance.sh.
 # Keep this script for Windows/manual operator flows.
 # Verifies OpenAPI document lists export-compliance-prep (requires running core-api on :8080).
 param(

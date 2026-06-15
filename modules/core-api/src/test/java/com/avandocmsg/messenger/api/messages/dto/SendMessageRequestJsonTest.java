@@ -1,22 +1,22 @@
 package com.avandocmsg.messenger.api.messages.dto;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SendMessageRequestJsonTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
-    void deserializesVisibilityTtlFromLegacyAlias() throws Exception {
-        var req = MAPPER.readValue("""
+    void rejectsLegacyTtlAlias() {
+        assertThrows(UnrecognizedPropertyException.class, () -> MAPPER.readValue("""
             {"type":"text","content":"hi","ttl_seconds":120}
-            """, SendMessageRequest.class);
-        assertEquals(120, req.visibilityTtlSeconds());
-        assertNull(req.archiveTtlSeconds());
+            """, SendMessageRequest.class));
     }
 
     @Test

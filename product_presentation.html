@@ -88,7 +88,7 @@
     <b>До промышленного запуска (ops):</b> TLS deploy на stage/prod, formal sign-off E2EE, Web Push delivery verify на stage,
     TURN smoke за NAT, load test soak на stage, юридическая политика GDPR export.<br/>
     <b>Не в текущей поставке:</b> мобильные приложения, Live HLS, публичный Bot API, full PG sharding (FR-OPT-09).<br/>
-    <span class="small">Источник: <code>specs/002-web-client-server-parity/runtime-gate-report.md</code>,
+    <span class="small">Источник: <code>docs/parity/runtime-gate-report.md</code>,
     <code>deploy/qemu/RESOURCES.md</code>,
     <code>docs/review/e2ee-security-gate-signoff-2026-06-10.md</code>.</span>
   </div>
@@ -842,7 +842,7 @@ DAU (активных в день) = Пользователи × доля акт
   </div>
 </div>
 <p class="small">Сумма по строке = <b>Кол-во × Цена за ед.</b> (₽/мес). Годовые суммы на диаграммах = месячный итог × 12.</p>
-<p class="small">Состав профилей: <b>Pilot</b> — <code>docker-compose.pilot.yml</code> (8 hot-path контейнеров, без Solr; см. <code>deploy/qemu/RESOURCES.md</code>); <b>Standard</b> — <code>docker-compose.full-server.yml</code> с масштабированием (Solr+ZK, replica PG, кэш). Full-stack monolith на одном хосте (64 ГБ) — справочное сравнение для Pilot, не рекомендуемый профиль.</p>
+<p class="small">Состав профилей: <b>Pilot</b> — <code>full-server.yml</code> + <code>pilot-overrides.yml</code> (8 hot-path контейнеров, без Solr; см. <code>deploy/qemu/RESOURCES.md</code>); <b>Standard</b> — <code>docker-compose.full-server.yml</code> с масштабированием (Solr+ZK, replica PG, кэш). Full-stack monolith на одном хосте (64 ГБ) — справочное сравнение для Pilot, не рекомендуемый профиль.</p>
 <table>
   <tr><th>Категория источника</th><th>Как интерпретировать</th></tr>
   <tr><td>VDS / dedicated</td><td>Усреднённые публичные тарифы аренды VM (8–64 ГБ RAM, 4–8 vCPU), ориентир H1 2026; не прайс-лист конкретного провайдера.</td></tr><tr><td>Диски</td><td>Block SSD и HDD archive tier, ₽/ТБ/мес; объёмы — из §10.3 презентации.</td></tr><tr><td>Канал</td><td>Выделенный интернет / DIA 200 Мбит/с и 1 Гбит/с, без last-mile и без TURN.</td></tr><tr><td>Облако (аналог)</td><td>Сводный IaaS-пакет (VM + managed DB + object storage + egress), эквивалентный ресурсам Pilot; не оферта Yandex/VK/MWS.</td></tr><tr><td>Ops</td><td>Базовый backup + мониторинг (Pilot) или расширенный контур (Standard).</td></tr>
@@ -856,7 +856,7 @@ DAU (активных в день) = Пользователи × доля акт
 <h3>17.2 Пример A — Pilot, 10 000 пользователей</h3>
 <div class="cost-box">
 <p><b>Исходные:</b> 10 000 зарегистрированных; ~5 000 DAU; ~750 peak online; диск ~5 ТБ на первый год (§10.3).
-  Профиль: <code>docker-compose.pilot.yml</code>.</p>
+  Профиль: <code>full-server.yml</code> + <code>pilot-overrides.yml</code>.</p>
 <table>
   <tr><th>Статья расходов</th><th>Кол-во</th><th>Цена за ед. (§17.1)</th><th>₽/мес</th></tr>
   <tr><td>Сервер приложений (16 ГБ)</td><td>1</td><td>28 000 ₽ <span class="small">(16 ГБ RAM  8 vCPU  1 VM)</span></td><td class="money">28 000</td></tr><tr><td>Web-шлюз (8 ГБ)</td><td>1</td><td>15 000 ₽ <span class="small">(8 ГБ RAM  4 vCPU  1 VM)</span></td><td class="money">15 000</td></tr><tr><td>Диск SSD (hot DB)</td><td>0 5</td><td>3 500 ₽ <span class="small">(1 ТБ)</span></td><td class="money">1 750</td></tr><tr><td>Диск HDD (файлы+архив)</td><td>4 5</td><td>800 ₽ <span class="small">(1 ТБ)</span></td><td class="money">3 600</td></tr><tr><td>Канал 200 Мбит/с</td><td>1</td><td>8 000 ₽ <span class="small">(200 Мбит/с)</span></td><td class="money">8 000</td></tr><tr><td>Backup + мониторинг</td><td>1</td><td>5 000 ₽ <span class="small">(контур Pilot)</span></td><td class="money">5 000</td></tr>

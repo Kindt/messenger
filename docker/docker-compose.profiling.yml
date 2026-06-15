@@ -55,3 +55,9 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.indexer-worker.profiling
     image: korus/indexer-worker:profiling
+
+  bot-delivery-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.bot-delivery-worker.profiling
+    image: korus/bot-delivery-worker:profiling

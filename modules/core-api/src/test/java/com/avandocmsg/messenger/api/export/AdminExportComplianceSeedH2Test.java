@@ -3,15 +3,17 @@ package com.avandocmsg.messenger.api.export;
 import com.avandocmsg.messenger.api.admin.dto.AdminExportCompliancePrepRequest;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.files.FileService;
-import com.avandocmsg.messenger.api.messages.MessageService;
 import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcFileMetadataAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.storage.FileProxyObjectStorageAdapter;
 import com.avandocmsg.messenger.core.application.FileApplicationService;
+import com.avandocmsg.messenger.core.application.MessageApplicationService;
+import com.avandocmsg.messenger.core.application.MessageSendCoordinator;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.zaxxer.hikari.HikariConfig;
@@ -155,17 +157,24 @@ class AdminExportComplianceSeedH2Test {
             appConfig.mediaMaxUploadBytes(),
             false);
         var fileService = new FileService(fileApplicationService, messageRepository);
-        var messageService = new MessageService(
-            messageRepository,
+        var messagePort = new JdbcMessageRepositoryAdapter(messageRepository);
+        var natsOutbound = mock(NatsOutboundPort.class);
+        var messageSendCoordinator = new MessageSendCoordinator(
+            messagePort,
+            chatRepository,
+            mock(MlsService.class),
+            null,
+            natsOutbound,
+            uuidGen,
+            null);
+        var messageApplicationService = new MessageApplicationService(
+            messagePort,
             chatRepository,
             new BlockRepository(ds),
-            mock(MlsService.class),
-            mock(NatsOutboundPort.class),
-            uuidGen
-        );
+            messageSendCoordinator);
         seed = new AdminExportComplianceSeed(
             null,
-            messageService,
+            messageApplicationService,
             fileService,
             chatRepository,
             new ChatRetentionPolicyRepository(ds)

@@ -480,186 +480,14 @@
       return { chatId: chatId, msgId: msgId };
     },
   };
-  var uiTransportUtils = window.KorusUiTransportUtils || {
-    apiRoot: function () {
-      return "/api/v1";
-    },
-    wsBaseUrl: function (win, loc) {
-      var cfg = win && win.__WEB_CLIENT__;
-      var pageHost = loc && loc.host ? loc.host : "127.0.0.1:8081";
-      var sameOrigin =
-        (loc && loc.protocol === "https:" ? "wss:" : "ws:") + "//" + pageHost + "/ws";
-      if (cfg && cfg.wsUrl) {
-        var configured = String(cfg.wsUrl).replace(/\/$/, "");
-        try {
-          var cfgUrl = new URL(configured);
-          var pageHost = loc && loc.host ? loc.host : "";
-          var pageHostname = loc && loc.hostname ? loc.hostname : "";
-          var pageIsLoopback = pageHostname === "127.0.0.1" || pageHostname === "localhost";
-          if (pageIsLoopback && pageHost && cfgUrl.host !== pageHost) {
-            return sameOrigin;
-          }
-        } catch (e) {
-          /* keep configured */
-        }
-        return configured;
-      }
-      return sameOrigin;
-    },
-    buildWsUrl: function (baseUrl, accessToken) {
-      return baseUrl + "?token=" + encodeURIComponent(accessToken);
-    },
-    nextWsReconnectDelay: function (attempt) {
-      return Math.min(30000, 1000 * Math.pow(2, attempt));
-    },
-    createApiClient: function (options) {
-      var fetchImpl = options.fetchImpl || window.fetch.bind(window);
-      var getAccessToken = options.getAccessToken || function () { return null; };
-      var getRefreshToken = options.getRefreshToken || function () { return null; };
-      var isPublicAuthPath = options.isPublicAuthPath || function () { return false; };
-      var tryRefreshTokens = options.tryRefreshTokens || (async function () { return false; });
-      var onSessionExpired = options.onSessionExpired || function () {};
-      var root = options.apiRoot || "/api/v1";
-
-      async function apiFetch(path, opts) {
-        opts = opts || {};
-        var headers = Object.assign({}, opts.headers || {});
-        if (!(opts.body instanceof FormData) && !headers.Accept) {
-          headers.Accept = opts.accept || "application/json";
-        }
-        var body = opts.body;
-        if (opts.jsonBody !== undefined) {
-          headers["Content-Type"] = "application/json";
-          body = JSON.stringify(opts.jsonBody);
-        }
-        var accessToken = getAccessToken();
-        if (accessToken && !opts.noAuth) {
-          headers.Authorization = "Bearer " + accessToken;
-        }
-        var url = root + (path.startsWith("/") ? path : "/" + path);
-        var res = await fetchImpl(url, {
-          method: opts.method || "GET",
-          headers: headers,
-          body: body,
-        });
-        if (
-          res.status === 401 &&
-          !opts.noRefresh &&
-          getRefreshToken() &&
-          !isPublicAuthPath(path)
-        ) {
-          var refreshed = await tryRefreshTokens();
-          if (refreshed) {
-            return apiFetch(path, Object.assign({}, opts, { noRefresh: true }));
-          }
-          onSessionExpired();
-          throw new Error(L("errors.sessionExpired"));
-        }
-        return res;
-      }
-
-      async function apiJson(path, opts) {
-        var res = await apiFetch(path, opts || {});
-        var text = await res.text();
-        var parsed = null;
-        if (text) {
-          try {
-            parsed = JSON.parse(text);
-          } catch (e) {
-            parsed = text;
-          }
-        }
-        if (!res.ok) {
-          var msg =
-            parsed && typeof parsed === "object" && parsed.message
-              ? String(parsed.message)
-              : res.statusText;
-          throw new Error(localErr(msg));
-        }
-        return parsed;
-      }
-
-      return { apiFetch: apiFetch, apiJson: apiJson };
-    },
-  };
-  var uiMessagesUtils = window.KorusUiMessagesUtils || {
-    formatPreviewText: function (type, content, isE2eeTypeFn, e2eePlainTypeFn) {
-      var t = type || "text";
-      if (isE2eeTypeFn(t)) {
-        var base = e2eePlainTypeFn(t);
-        if (base === "image") return "🔒 Изображение";
-        if (base === "video") return "🔒 Видео";
-        if (base === "file") return "🔒 Файл";
-        return "🔒 Зашифровано";
-      }
-      if (t === "image") return L("ui.message.image");
-      if (t === "video") return L("ui.message.video");
-      if (t === "file") return L("ui.message.file");
-      var text = String(content || "")
-        .replace(/[*_`#[\]]/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-      if (text.length > 72) text = text.slice(0, 72) + "…";
-      return text || L("ui.message.default");
-    },
-    formatPreviewForMessage: function (
-      message,
-      messageAttachmentKindFn,
-      messageAttachmentFileIdFn,
-      formatPreviewTextFn
-    ) {
-      if (!message) return L("ui.message.default");
-      if (messageAttachmentKindFn(message) && messageAttachmentFileIdFn(message)) {
-        return formatPreviewTextFn(message.type, "");
-      }
-      return formatPreviewTextFn(message.type, message.content);
-    },
-    sortMessagesAsc: function (rows) {
-      return (rows || []).slice().sort(function (a, b) {
-        return new Date(a.created_at) - new Date(b.created_at);
-      });
-    },
-    findMessageInThread: function (messages, msgId) {
-      if (!msgId || !messages || !messages.length) return null;
-      for (var i = 0; i < messages.length; i++) {
-        if (messages[i].id === msgId) return messages[i];
-      }
-      return null;
-    },
-    mergeMessageIntoThread: function (messages, fullMessage) {
-      if (!fullMessage || !fullMessage.id) return messages || [];
-      var rows = messages || [];
-      if (this.findMessageInThread(rows, fullMessage.id)) {
-        return rows.map(function (m) {
-          return m.id === fullMessage.id ? fullMessage : m;
-        });
-      }
-      return this.sortMessagesAsc(rows.concat([fullMessage]));
-    },
-    patchMessageInThread: function (messages, messageId, patch) {
-      if (!messageId || !patch) return { messages: messages || [], touched: false };
-      var touched = false;
-      var nextMessages = (messages || []).map(function (m) {
-        if (m.id !== messageId) return m;
-        touched = true;
-        return Object.assign({}, m, patch);
-      });
-      return { messages: nextMessages, touched: touched };
-    },
-    applyReactionChangeEventRows: function (rows, change, userId, reaction) {
-      var nextRows = (rows || []).slice();
-      if (change === "add") {
-        var exists = nextRows.some(function (r) {
-          return r.user_id === userId && r.reaction === reaction;
-        });
-        if (!exists) nextRows.push({ user_id: userId, reaction: reaction });
-        return nextRows;
-      }
-      return nextRows.filter(function (r) {
-        return !(r.user_id === userId && r.reaction === reaction);
-      });
-    },
-  };
+  if (!window.KorusUiTransportUtils) {
+    throw new Error("KorusUiTransportUtils required — load ui-transport-utils.js before app.js");
+  }
+  var uiTransportUtils = window.KorusUiTransportUtils;
+  if (!window.KorusUiMessagesUtils) {
+    throw new Error("KorusUiMessagesUtils required — load ui-messages-utils.js before app.js");
+  }
+  var uiMessagesUtils = window.KorusUiMessagesUtils;
   var uiRtcUtils = window.KorusUiRtcUtils || {
     sendRtcSignal: function (ws, chatId, payload) {
       if (!ws || ws.readyState !== WebSocket.OPEN || !chatId || !payload) return false;
@@ -2944,15 +2772,20 @@
   }
 
   function revokeBlobUrls() {
-    state.blobUrls.forEach(function (u) {
-      try {
-        URL.revokeObjectURL(u);
-      } catch (e) {}
-    });
-    state.blobUrls = [];
+    state.blobUrls = (uiMessagesUtils.revokeBlobUrls || function (urls) {
+      (urls || []).forEach(function (u) {
+        try {
+          URL.revokeObjectURL(u);
+        } catch (e) {}
+      });
+      return [];
+    })(state.blobUrls);
   }
 
   function messageTypeForMime(mime) {
+    if (uiMessagesUtils.messageTypeForMime) {
+      return uiMessagesUtils.messageTypeForMime(mime);
+    }
     if (mime && mime.indexOf("image/") === 0) return "image";
     if (mime && mime.indexOf("video/") === 0) return "video";
     return "file";
@@ -4719,11 +4552,7 @@
           ? data.visibility_ttl_seconds
           : data.visibilityTtlSeconds != null
             ? data.visibilityTtlSeconds
-            : data.ttl_seconds != null
-              ? data.ttl_seconds
-              : data.ttlSeconds != null
-                ? data.ttlSeconds
-                : null,
+            : null,
       attachment_file_id: aid,
     };
   }
@@ -4958,11 +4787,9 @@
     var raw =
       m.visibility_ttl_seconds != null
         ? m.visibility_ttl_seconds
-        : m.ttl_seconds != null
-          ? m.ttl_seconds
-          : m.ttlSeconds != null
-            ? m.ttlSeconds
-            : null;
+        : m.visibilityTtlSeconds != null
+          ? m.visibilityTtlSeconds
+          : null;
     if (raw == null) return null;
     var parsed = parseInt(raw, 10);
     return parsed > 0 ? parsed : null;

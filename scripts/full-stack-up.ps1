@@ -43,7 +43,7 @@ if (-not (Test-Path $Compose)) {
     Write-Error "Compose file not found: $Compose"
 }
 
-$dockerArgs = @("compose", "-f", $Compose)
+$dockerArgs = @("compose", "-f", $Compose, "--profile", "full")
 if ($ExportSmoke) {
     $dockerArgs += Get-KorusExportSmokeComposeArgs -AutoQueue:$ExportAutoQueue
 }

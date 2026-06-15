@@ -19,9 +19,9 @@ ansible-playbook -i inventory/local/hosts.yml playbooks/ci-local.yml
 ansible-playbook -i inventory/local/hosts.yml playbooks/ci-local.yml -e run_smoke=true
 ```
 
-See [specs/003-docker-ansible-autotest/quickstart.md](../../specs/003-docker-ansible-autotest/quickstart.md).
+See [deploy/ansible/DEPLOY_QUICKSTART.md](../../deploy/ansible/DEPLOY_QUICKSTART.md).
 
-Windows dev: continue using `scripts/full-stack-up.ps1` and `scripts/server-host-up.ps1`.
+Windows dev: use QEMU only — `.\scripts\qemu-dev-mode.ps1` (see [`deploy/qemu/README.md`](../qemu/README.md)). Linux/CI: `scripts/full-stack-up.sh`, `server-host-up.ps1` for LAN publish.
 
 ## Optional playbooks
 
@@ -34,7 +34,7 @@ Windows dev: continue using `scripts/full-stack-up.ps1` and `scripts/server-host
 
 **Stage prep kit (deploy-ready 2026-06-16):** [`inventory/stage/README.md`](inventory/stage/README.md) — placeholders until real hosts.  
 **Deploy-only runbook (US1/US7):** [`docs/review/stage-prod-deploy-runbook.md`](../../docs/review/stage-prod-deploy-runbook.md).  
-**Sign-off matrix:** [`specs/004-deferred-phase2-closure/ops-signoff-log.md`](../../specs/004-deferred-phase2-closure/ops-signoff-log.md).
+**Sign-off matrix:** [`docs/review/ops-signoff-log.md`](../../docs/review/ops-signoff-log.md).
 
 ### Prod vault checklist
 

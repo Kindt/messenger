@@ -79,7 +79,7 @@ ACTIVE → ELIGIBLE_ARCHIVE → ARCHIVED_METADATA_ONLY → DEEP_PACKED → (оп
 1. **Visibility TTL (`visibility_ttl_seconds`):** после `created_at + visibility_ttl_seconds` сообщение скрывается из ленты/поиска для обычных пользователей, но сохраняется для аудита и жизненного цикла ретенции.
 2. **Archive TTL (`archive_ttl_seconds`):** определяет срок до выноса тела сообщения в deep-archive/retention-пайплайн (при включенных политиках и воркерах).
 
-Текущий API уже разведен на эти два поля; alias `ttl_seconds` оставлен только для обратной совместимости клиентских JSON.
+Текущий API разведен на `visibility_ttl_seconds` и `archive_ttl_seconds`; legacy alias `ttl_seconds` для send **удалён** (2026-06-15).
 
 ---
 

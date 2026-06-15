@@ -75,7 +75,7 @@ flowchart LR
 | `korus_deploy_profile` | Скрипт | Compose |
 |------------------------|--------|---------|
 | **`standard`** (default) | `scripts/full-stack-up.sh` | `docker/docker-compose.full-server.yml` |
-| **`pilot`** | `scripts/pilot-stack-up.sh` | `docker/docker-compose.pilot.yml` + `docker-compose.keycloak-prod.yml` |
+| **`pilot`** | `scripts/pilot-stack-up.sh` | `docker-compose.full-server.yml` + `pilot-overrides.yml` + `keycloak-prod.yml` |
 | **`enterprise`** | `scripts/enterprise-stack-up.sh` | `docker-compose.full-server.yml` + `docker-compose.scale.yml` (+ optional `docker-compose.replica.yml`) |
 
 Compose overlays Wave 2 (guest / CI lab):
@@ -143,7 +143,7 @@ korus_deploy_profile: pilot
 | Стенд | Файл / скрипт | Назначение | Отличие от full-server |
 |-------|---------------|------------|------------------------|
 | **Full server** | `docker-compose.full-server.yml`, `full-stack-up.sh` | CI, Linux all-in-one, two-host server | Baseline «всё включено» |
-| **Pilot** | `docker-compose.pilot.yml`, `pilot-stack-up.sh` | Пилот / филиал, guest smokes | Без Solr; Keycloak prod |
+| **Pilot** | `full-server.yml` + `pilot-overrides.yml`, `pilot-stack-up.sh` | Пилот / филиал, guest smokes | Без Solr; Keycloak prod; без `--profile full` |
 | **Dev-min infra** | `docker-compose.dev-min.yml`, `dev-infra-up` | Только инфра | Без Java-сервисов |
 | **Dev-min + web** | profile `web` в dev-min | Локальный `:run` core-api на хосте | Без archiver, indexer, export, deep-archiver |
 | **Korus-web** | `korus-web/docker-compose.yml` | UI отдельно | API через attach или `host.docker.internal` |

@@ -20,7 +20,7 @@ Acceptance после деплоя: `./scripts/smoke-deploy-acceptance.sh` (mult
 
 Windows: по-прежнему `scripts/server-host-up.ps1` и `scripts/web-host-up.ps1`.
 
-Подробнее: [`deploy/ansible/README.md`](../ansible/README.md), [`specs/003-docker-ansible-autotest/quickstart.md`](../../specs/003-docker-ansible-autotest/quickstart.md).
+Подробнее: [`deploy/ansible/README.md`](../ansible/README.md), [`deploy/ansible/DEPLOY_QUICKSTART.md`](../../deploy/ansible/DEPLOY_QUICKSTART.md).
 
 ## Схема
 

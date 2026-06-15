@@ -3,13 +3,18 @@ plugins {
 }
 
 application {
-    mainClass.set("com.avandocmsg.messenger.service.indexer.IndexerServiceApp")
+    mainClass.set("com.avandocmsg.messenger.worker.indexer.IndexerWorker")
+    applicationName = "korus-indexer-service"
 }
 
 dependencies {
-    implementation(project(":modules:common"))
-    implementation("io.nats:jnats:2.17.4")
-    implementation("ch.qos.logback:logback-classic:1.5.3")
-    implementation("org.slf4j:slf4j-api:2.0.12")
-    implementation("io.prometheus:simpleclient_common:0.16.0")
+    implementation(project(":modules:workers:indexer"))
+}
+
+tasks.withType<Tar> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType<Zip> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

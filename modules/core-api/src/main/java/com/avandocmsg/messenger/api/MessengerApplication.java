@@ -337,7 +337,6 @@ public class MessengerApplication {
             this.uuidGenerator, this.clock, mlsWirePublisher);
         var mlsMigrationService = new MlsMigrationService(dataSource, mlsGroupManager, chatRepository);
         var chatApplicationService = CoreModule.chatApplicationService(dataSource, chatRepository);
-        var messageApplicationService = CoreModule.messageApplicationService(dataSource, chatRepository);
         var userApplicationService = CoreModule.userApplicationService(dataSource, this.uuidGenerator, readCachePort, appConfig);
         var objectStoragePort = CoreModule.objectStoragePort(appConfig, minioClient, fileProxy);
         var fileApplicationService = CoreModule.fileApplicationService(
@@ -346,12 +345,18 @@ public class MessengerApplication {
         var publicLinkPort = CoreModule.publicLinkPort(filePublicLinkRepository);
         var legalHoldRepository = new LegalHoldRepository(dataSource);
         var purgeStatusService = new PurgeStatusService(dataSource, auditRepository);
+        var messageSendCoordinator = CoreModule.messageSendCoordinator(
+            dataSource, chatRepository, mlsService, mlsMigrationService, natsOutbound,
+            this.uuidGenerator, readCachePort);
         var messageService = new MessageService(messageRepository, chatRepository, blockRepository,
             mlsService, mlsMigrationService, natsOutbound, this.uuidGenerator, readCachePort,
+            messageSendCoordinator,
             () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent());
+        var messageApplicationService = CoreModule.messageApplicationService(
+            dataSource, chatRepository, blockRepository, messageSendCoordinator);
         var fileService = new FileService(fileApplicationService, messageRepository);
         var exportComplianceSeed = new AdminExportComplianceSeed(
-            chatService, messageService, fileService, chatRepository, chatRetentionPolicyRepository);
+            chatService, messageApplicationService, fileService, chatRepository, chatRetentionPolicyRepository);
         var chatBanService = new ChatBanService(chatBanRepository, chatRepository);
         var conferenceRepository = new com.avandocmsg.messenger.api.repository.ConferenceRepository(dataSource, appConfig,
             this.uuidGenerator);

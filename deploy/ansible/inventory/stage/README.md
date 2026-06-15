@@ -91,6 +91,6 @@ See [`docs/review/stage-tls-smoke-runbook.md`](../../../docs/review/stage-tls-sm
 
 ## 8. Sign-off
 
-Record gates in [`specs/004-deferred-phase2-closure/ops-signoff-log.md`](../../../specs/004-deferred-phase2-closure/ops-signoff-log.md) — разделы **US1 Ops execution** и **Signatures**.
+Record gates in [`docs/review/ops-signoff-log.md`](../../../docs/review/ops-signoff-log.md) — разделы **US1 Ops execution** и **Signatures**.
 
 **Deploy-only runbook:** [`docs/review/stage-prod-deploy-runbook.md`](../../../docs/review/stage-prod-deploy-runbook.md).

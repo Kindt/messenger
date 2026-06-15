@@ -1,6 +1,4 @@
-# DEPRECATED (wrapper): canonical CI/manual baseline path is `scripts/smoke-korus-web.sh`.
-# Keep this script for Windows/manual operator flows.
-# Smoke korus-web stack (Java web-client behind nginx-lb). Needs stack up; default lb port 9088.
+# Smoke korus-web stack (Java web-client behind nginx-lb). Windows operator path; CI: smoke-korus-web.sh.
 # Help: .\scripts\smoke-korus-web.ps1 -Help
 param(
     [string]$WebBaseUrl = "http://localhost:9088",

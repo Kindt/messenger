@@ -1,0 +1,7 @@
+# Pilot env overrides when using docker-compose.full-server.yml without solr/full profiles.
+# Merge: -f docker-compose.full-server.yml -f docker-compose.pilot-overrides.yml -f docker-compose.keycloak-prod.yml
+services:
+  core-api:
+    environment:
+      SEARCH_MODE: sql
+      MLS_WIRE_ENABLED: "false"

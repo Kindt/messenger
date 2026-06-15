@@ -1,6 +1,6 @@
 # Spec 002 API-level parity smoke (T010 + T016 backend paths).
 # WS/protocol checks: scripts/smoke-web-parity-ws.ps1 (T022).
-# Optional browser DOM/RTC gates: specs/002-web-client-server-parity/HANDOFF.mdparam(
+# Optional browser DOM/RTC gates: docs/parity/HANDOFF.mdparam(
     [string]$BaseUrl = "http://127.0.0.1:18080",
     [string]$User = "csadmin",
     [string]$Pass = "csadmin",
@@ -163,4 +163,4 @@ if (-not $SkipExport) {
 
 Write-Host ""
 Write-Host "[OK] web parity API smoke (spec 002 T010/T016 backend)" -ForegroundColor Green
-Write-Host "Optional operator gates: browser DOM/RTC per specs/002-web-client-server-parity/HANDOFF.md" -ForegroundColor DarkGray
+Write-Host "Optional operator gates: browser DOM/RTC per docs/parity/HANDOFF.md" -ForegroundColor DarkGray

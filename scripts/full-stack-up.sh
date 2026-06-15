@@ -55,7 +55,7 @@ if [ "${KORUS_QEMU_CONSOLE:-0}" = "1" ]; then
   export COMPOSE_ANSI="${COMPOSE_ANSI:-never}"
 fi
 echo "cd $ROOT"
-compose_args=(-f "$COMPOSE")
+compose_args=(-f "$COMPOSE" --profile full)
 if $EXPORT_SMOKE; then
   while IFS= read -r arg; do
     compose_args+=("$arg")

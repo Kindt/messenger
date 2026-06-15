@@ -41,6 +41,8 @@ Or use the host runner (k6 or PowerShell fallback):
 .\scripts\run-k6-qemu-baseline.ps1
 ```
 
+Committed summary for presentations: `docs/benchmarks/qemu-nt-baseline-2026-06-15.json` (regenerate locally into `deploy/qemu/run/` when re-running).
+
 Stage prep checklist (T601–T607 artifacts):
 
 ```powershell

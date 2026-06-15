@@ -29,7 +29,7 @@
 |----------|----------|
 | API behaviour | `MessageResource` plaintext-preview path |
 | Automated | `.\gradlew.bat :modules:core-api:test --tests "*Mls*"` — **PASS** |
-| Contract | [`specs/004-deferred-phase2-closure/contracts/e2ee-mls-contract.md`](../../specs/004-deferred-phase2-closure/contracts/e2ee-mls-contract.md) |
+| Contract | [`docs/contracts/e2ee-mls-contract.md`](../../docs/contracts/e2ee-mls-contract.md) |
 
 **Sign when:** Security confirms server never returns plaintext preview for MLS-active chats.
 
@@ -59,5 +59,5 @@
 
 1. Execute staging checklist (rows 4–6).  
 2. QA formal sign row 8 (Playwright on staging URL).  
-3. Update [`ops-signoff-log.md`](../../specs/004-deferred-phase2-closure/ops-signoff-log.md) US7.  
+3. Update [`ops-signoff-log.md`](../../docs/review/ops-signoff-log.md) US7.  
 4. Only then consider prod `MLS_STATUS=active`.

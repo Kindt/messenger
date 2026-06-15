@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pilot stack (FR-OPT-01/02): docker-compose.pilot.yml + keycloak-prod override.
+# Pilot stack (FR-OPT-01/02): full-server + pilot-overrides + keycloak-prod override.
 # Run from repo root inside QEMU server guest (not on Windows host).
 set -euo pipefail
 
@@ -40,10 +40,15 @@ if [[ "$SKIP_KORUS_ENSURE" != "1" ]]; then
   korus_ensure_env "$ROOT" || exit 1
 fi
 
-COMPOSE_PILOT="$KORUS_COMPOSE_PILOT"
+COMPOSE_PILOT="$KORUS_COMPOSE_FULL_SERVER"
+COMPOSE_PILOT_OVERRIDES="$KORUS_DOCKER_DIR/docker-compose.pilot-overrides.yml"
 COMPOSE_KC_PROD="$KORUS_COMPOSE_KEYCLOAK_PROD"
 if [[ ! -f "$COMPOSE_PILOT" ]]; then
   echo "Not found: $COMPOSE_PILOT" >&2
+  exit 1
+fi
+if [[ ! -f "$COMPOSE_PILOT_OVERRIDES" ]]; then
+  echo "Not found: $COMPOSE_PILOT_OVERRIDES" >&2
   exit 1
 fi
 if [[ ! -f "$COMPOSE_KC_PROD" ]]; then
@@ -63,7 +68,7 @@ if $DOWN_FULL_FIRST && [[ -f "$KORUS_COMPOSE_FULL_SERVER" ]]; then
   docker compose -f "$KORUS_COMPOSE_FULL_SERVER" down --remove-orphans 2>/dev/null || true
 fi
 
-compose_args=(-f "$COMPOSE_PILOT" -f "$COMPOSE_KC_PROD")
+compose_args=(-f "$COMPOSE_PILOT" -f "$COMPOSE_PILOT_OVERRIDES" -f "$COMPOSE_KC_PROD")
 for profile in "${PROFILES[@]}"; do
   compose_args+=(--profile "$profile")
 done

@@ -32,7 +32,7 @@ External MLS interop test suite deferred until OpenMLS or validated BC state mac
 Before enabling production MLS (`MLS_STATUS=active` in prod inventory):
 
 1. **T130 / ADR sign-off** — Product owner + security acknowledge hybrid model and plaintext-preview restriction.
-2. **Security review** — checklist in `specs/004-deferred-phase2-closure/quickstart.md` § US7.
+2. **Security review** — checklist in `docs/review/ops-signoff-log.md` (US7).
 3. **Ops** — `GET /admin/e2ee/status` green; batch migration (`POST /admin/e2ee/migrate-batch`) run in staging.
 
 Implementation tasks T140+ require T130 sign-off recorded in deployment/governance log.

@@ -46,7 +46,7 @@
 2. Старые потребители должны игнорировать неизвестные поля.
 3. При отсутствии heartbeat > `SERVICE_HEARTBEAT_TTL_MS` core-api работает в degraded mode и не падает.
 
-Источник контракта для hot-plug: `specs/001-system-review-refactoring/contracts/hotplug-contract.md`.
+Источник контракта для hot-plug: `specs/archive/001-system-review-refactoring/contracts/hotplug-contract.md`.
 
 ## ws-gateway
 

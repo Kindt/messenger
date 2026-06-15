@@ -7,7 +7,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$validWorkers = @("deep-archiver", "retention", "indexer", "export-replay", "archiver")
+$validWorkers = @(
+    "deep-archiver", "retention", "indexer", "export-replay", "archiver",
+    "message-pipeline", "push", "bot-delivery"
+)
 if ($WorkerName -notin $validWorkers) {
     Write-Error "WorkerName must be one of: $($validWorkers -join ', ')"
     exit 1

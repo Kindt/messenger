@@ -19,7 +19,7 @@
 ## Текущее состояние
 
 - **`V023`** применена: `messages.ttl_seconds` переименовано в `messages.visibility_ttl_seconds`; dual TTL (`visibility_ttl_seconds` + `archive_ttl_seconds`) включен.
-- API отправки поддерживает `visibility_ttl_seconds` и `archive_ttl_seconds`; обратная совместимость по JSON сохранена через alias `ttl_seconds`.
+- API отправки поддерживает `visibility_ttl_seconds` и `archive_ttl_seconds`; alias `ttl_seconds` удалён (только canonical поля).
 - Фильтр видимости TTL унифицирован: `MessageRepository.SQL_MSG_VISIBILITY_TTL_VISIBLE`, `findByChatId`, `findById`, поиск, `viewerMayAccessFilePublicLink`, `findLatestMessageId`, `ChatReadRepository.countUnreadFromOthers`.
 - `DeepArchiverWorker` и `RetentionHotBodyJanitor` поддерживают чанкование JSON с `manifest.json` + `part-*.json`.
 - Добавлены `DeepArchiveManifest`, `ChunkEntry`, `DeepArchiveReader`, `ContentAnalyzer`; export читает deep-archive через единый reader.
@@ -64,7 +64,7 @@
 - [x] Обновить `docs/db/FLYWAY_AND_SCHEMA.md` — добавить V023.
 - **Тесты:**
   - [x] Проверить, что `flyway migrate` проходит на существующей БД с данными (`FlywayV023MigrationH2Test`).
-  - [x] Проверить, что старые запросы с `ttl_seconds` продолжают работать (через alias, `SendMessageRequestJsonTest`).
+  - [x] Проверить, что запросы с устаревшим `ttl_seconds` отклоняются (alias удалён, `SendMessageRequestJsonTest`).
 
 **1.4. OpenAPI: новые поля** ✅
 - [x] `SendMessageRequest.java` — добавить `example = "3600"` для `visibilityTtlSeconds`.

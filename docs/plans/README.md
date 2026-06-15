@@ -38,12 +38,14 @@
 До отдельного cleanup PR массовые удаления запрещены. Используйте эту матрицу:
 
 - **Canonical (источник правды для реализации):**
-  - `specs/001-system-review-refactoring/*`
+  - `specs/007-platform-stage-readiness/`, `specs/008-repository-cleanup/`, `specs/009-platform-modules/`
   - `docs/plans/*.md` (детальные эпики)
+  - `docs/parity/`, `docs/contracts/`, `docs/review/ops-signoff-log.md`
   - `docs/ROADMAP_EPICS.md` (укрупненный roadmap)
   - `scripts/SMOKE_INDEX.md` (индекс smoke-сценариев)
+  - `specs/archive/README.md` (закрытые 001–006)
 - **Deprecated (переходные сценарии, не удалять до миграции ссылок):**
-  - дублирующие smoke-обертки (`.cmd`/`.ps1`), если canonical отмечен в `scripts/SMOKE_INDEX.md`
+  - дублирующие smoke-обёртки (`.ps1`), если canonical отмечен в `scripts/SMOKE_INDEX.md`
   - устаревшие примеры команд в quickstart/plan-доках (подлежат замене в docs-first PR)
 
 ### Правило обновления статусов
@@ -68,4 +70,4 @@
 
 ## Связанные Spec-Kit пакеты
 
-- Для web-client parity используйте пакет `specs/002-web-client-server-parity/` (точка входа: `README.md`).
+- Для web-client parity: [`docs/parity/README.md`](../parity/README.md) (archived spec 002).

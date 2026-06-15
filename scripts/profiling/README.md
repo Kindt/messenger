@@ -36,7 +36,7 @@ Explicit container name (when auto-detect is ambiguous):
 .\scripts\profiling\profile-docker-jfr.ps1 -ContainerName korus-core-api-1 -OutputName core-api -DurationSeconds 60
 ```
 
-Profiling overlay services: `core-api`, `message-pipeline`, `archiver-worker`, `deep-archiver-worker`, `retention-worker`, `export-replay-worker`, `push-worker`, `indexer-worker`.
+Profiling overlay services: `core-api`, `message-pipeline`, `archiver-worker`, `deep-archiver-worker`, `retention-worker`, `export-replay-worker`, `push-worker`, `indexer-worker`, `bot-delivery-worker`.
 
 Host-local Tomcat can still use JFR:
 
@@ -50,7 +50,7 @@ Host-local Tomcat can still use JFR:
 .\scripts\profiling\profile-qemu-workers.ps1 -ApiBaseUrl http://127.0.0.1:18080
 ```
 
-Requires SSH tunnel to server VM (ports 19192 retention, 19193 export-replay). deep-archiver/indexer have no host metrics port in compose — use functional smokes.
+Requires SSH tunnel to server VM (ports 19192 retention, 19193 export-replay). Prometheus without JFR overlay: deep-archiver `:9196/metrics`, indexer `:9197/metrics` (full-server compose).
 
 After code changes to workers, rebuild on QEMU guest:
 

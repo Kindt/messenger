@@ -41,7 +41,7 @@ cd <repo-root>
 .\scripts\smoke-tls-redirect.ps1 -SkipTls
 ```
 
-Records in [`ops-signoff-log.md`](../../specs/004-deferred-phase2-closure/ops-signoff-log.md) as **US1 ops row 4** — **not** engineering dev path (`-SkipTls`).
+Records in [`ops-signoff-log.md`](../../docs/review/ops-signoff-log.md) as **US1 ops row 4** — **not** engineering dev path (`-SkipTls`).
 
 ---
 
