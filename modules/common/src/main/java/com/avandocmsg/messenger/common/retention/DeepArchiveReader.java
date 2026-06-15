@@ -36,7 +36,8 @@ public class DeepArchiveReader {
                 for (var chunk : manifest.chunks()) {
                     try (var partStream = client.getObject(
                         GetObjectArgs.builder().bucket(bucket).object(dir + chunk.partName()).build())) {
-                        partStream.transferTo(out);
+                        var stored = partStream.readAllBytes();
+                        out.write(SnapshotPartCodec.decompress(stored));
                     }
                 }
                 return Optional.of(new ByteArrayInputStream(out.toByteArray()));
@@ -56,7 +57,9 @@ public class DeepArchiveReader {
             var flatKey = "messages/" + messageId + ".json";
             var stream = client.getObject(
                 GetObjectArgs.builder().bucket(bucket).object(flatKey).build());
-            return Optional.of(stream);
+            var stored = stream.readAllBytes();
+            stream.close();
+            return Optional.of(new ByteArrayInputStream(SnapshotPartCodec.decompress(stored)));
         } catch (ErrorResponseException e) {
             if ("NoSuchKey".equals(e.errorResponse().code())) {
                 return Optional.empty();

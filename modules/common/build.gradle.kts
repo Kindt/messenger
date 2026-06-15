@@ -7,6 +7,7 @@ dependencies {
     api("io.nats:jnats:2.17.4")
     api("io.prometheus:simpleclient:0.16.0")
     implementation("io.minio:minio:8.5.17")
+    implementation("com.github.luben:zstd-jni:1.5.6-6")
 
     testImplementation("io.prometheus:simpleclient_common:0.16.0")
 }

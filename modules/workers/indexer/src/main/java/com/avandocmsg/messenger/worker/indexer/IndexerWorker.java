@@ -42,6 +42,7 @@ public class IndexerWorker {
     private final String serviceId;
     private final long drainTimeoutMs;
     private final UserMessageSource workerMessages;
+    private final IndexerBatchBuffer batchBuffer;
 
     public IndexerWorker(
         String natsUrl,
@@ -53,6 +54,24 @@ public class IndexerWorker {
         long heartbeatIntervalMs,
         long drainTimeoutMs,
         UserMessageSource workerMessages
+    )
+        throws Exception {
+        this(natsUrl, solrClient, solrEnabled, cloudMode, solrCollection, serviceId, heartbeatIntervalMs,
+            drainTimeoutMs, workerMessages, 1, 500L);
+    }
+
+    public IndexerWorker(
+        String natsUrl,
+        SolrClient solrClient,
+        boolean solrEnabled,
+        boolean cloudMode,
+        String solrCollection,
+        String serviceId,
+        long heartbeatIntervalMs,
+        long drainTimeoutMs,
+        UserMessageSource workerMessages,
+        int batchSize,
+        long batchFlushMs
     )
         throws Exception {
         var options = Options.builder()
@@ -70,6 +89,9 @@ public class IndexerWorker {
         this.drainTimeoutMs = Math.max(1000L, drainTimeoutMs);
         this.workerMessages = workerMessages;
         this.hotPlugHeartbeat = new HotPlugHeartbeat(this.connection, this.serviceId, heartbeatIntervalMs);
+        this.batchBuffer = solrEnabled && batchSize > 1
+            ? new IndexerBatchBuffer(solrClient, cloudMode, solrCollection, batchSize, batchFlushMs)
+            : null;
         log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }
 
@@ -82,7 +104,8 @@ public class IndexerWorker {
         String serviceId,
         long heartbeatIntervalMs,
         long drainTimeoutMs,
-        UserMessageSource workerMessages
+        UserMessageSource workerMessages,
+        IndexerBatchBuffer batchBuffer
     ) {
         this.connection = connection;
         this.solrClient = solrClient;
@@ -93,6 +116,7 @@ public class IndexerWorker {
         this.drainTimeoutMs = Math.max(1000L, drainTimeoutMs);
         this.workerMessages = workerMessages;
         this.hotPlugHeartbeat = new HotPlugHeartbeat(this.connection, this.serviceId, heartbeatIntervalMs);
+        this.batchBuffer = batchBuffer;
     }
 
     public void start() {
@@ -116,7 +140,11 @@ public class IndexerWorker {
             }
             if ("delete".equalsIgnoreCase(event.indexOp())) {
                 try {
-                    deleteFromSolr(event.messageId());
+                    if (batchBuffer != null) {
+                        batchBuffer.offerDelete(event.messageId());
+                    } else {
+                        deleteFromSolr(event.messageId());
+                    }
                     IndexerSolrMetrics.deleteSuccess();
                 } catch (Exception ex) {
                     IndexerSolrMetrics.error();
@@ -126,7 +154,11 @@ public class IndexerWorker {
             }
             if ("update".equalsIgnoreCase(event.indexOp())) {
                 try {
-                    clearContentTxt(event.messageId());
+                    if (batchBuffer != null) {
+                        batchBuffer.offerAdd(clearContentTxtDoc(event.messageId()));
+                    } else {
+                        clearContentTxt(event.messageId());
+                    }
                     IndexerSolrMetrics.contentClearSuccess();
                 } catch (Exception ex) {
                     IndexerSolrMetrics.error();
@@ -150,13 +182,8 @@ public class IndexerWorker {
         log.debug(workerMessages.format("worker.indexer.deleted_solr", messageId));
     }
 
-    /** Atomic partial update: clears content_txt when retention removes the body. */
     private void clearContentTxt(String messageId) throws Exception {
-        var doc = new SolrInputDocument();
-        doc.addField("id", messageId);
-        var clearOp = new HashMap<String, String>();
-        clearOp.put("set", "");
-        doc.addField("content_txt", clearOp);
+        var doc = clearContentTxtDoc(messageId);
         if (cloudMode) {
             solrClient.add(solrCollection, doc);
         } else {
@@ -166,7 +193,31 @@ public class IndexerWorker {
         log.debug(workerMessages.format("worker.indexer.cleared_content", messageId));
     }
 
+    private SolrInputDocument clearContentTxtDoc(String messageId) {
+        var doc = new SolrInputDocument();
+        doc.addField("id", messageId);
+        var clearOp = new HashMap<String, String>();
+        clearOp.put("set", "");
+        doc.addField("content_txt", clearOp);
+        return doc;
+    }
+
     private void indexMetadata(MessageWorkerEvent event) throws Exception {
+        var doc = buildMetadataDoc(event);
+        if (batchBuffer != null) {
+            batchBuffer.offerAdd(doc);
+            return;
+        }
+        if (cloudMode) {
+            solrClient.add(solrCollection, doc);
+        } else {
+            solrClient.add(doc);
+        }
+        solrClient.commit(cloudMode ? solrCollection : null);
+        log.debug(workerMessages.format("worker.indexer.indexed_solr", event.messageId()));
+    }
+
+    private SolrInputDocument buildMetadataDoc(MessageWorkerEvent event) {
         var doc = new SolrInputDocument();
         doc.addField("id", event.messageId());
         doc.addField("chat_id_s", event.chatId());
@@ -188,13 +239,7 @@ public class IndexerWorker {
         if (event.searchText() != null && !event.searchText().isBlank()) {
             doc.addField("content_txt", event.searchText());
         }
-        if (cloudMode) {
-            solrClient.add(solrCollection, doc);
-        } else {
-            solrClient.add(doc);
-        }
-        solrClient.commit(cloudMode ? solrCollection : null);
-        log.debug(workerMessages.format("worker.indexer.indexed_solr", event.messageId()));
+        return doc;
     }
 
     public void shutdown() {
@@ -204,6 +249,9 @@ public class IndexerWorker {
             Duration.ofMillis(drainTimeoutMs),
             () -> hotPlugHeartbeat.publish("DRAINING"),
             () -> {
+                if (batchBuffer != null) {
+                    batchBuffer.close();
+                }
                 hotPlugHeartbeat.close();
                 closeSolrClient();
             }
@@ -221,6 +269,8 @@ public class IndexerWorker {
         var serviceId = System.getenv().getOrDefault("SERVICE_ID", "indexer-worker");
         var heartbeatIntervalMs = envLong("SERVICE_HEARTBEAT_INTERVAL_MS", 10000L);
         var drainTimeoutMs = envLong("SERVICE_DRAIN_TIMEOUT_MS", 30000L);
+        var batchSize = (int) envLong("INDEXER_BATCH_SIZE", 1L);
+        var batchFlushMs = envLong("INDEXER_BATCH_FLUSH_MS", 500L);
 
         SolrClient client = null;
         boolean cloud = false;
@@ -256,7 +306,9 @@ public class IndexerWorker {
                 serviceId,
                 heartbeatIntervalMs,
                 drainTimeoutMs,
-                workerMessages
+                workerMessages,
+                batchSize,
+                batchFlushMs
             );
             worker.start();
             Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));

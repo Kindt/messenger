@@ -74,6 +74,7 @@ public class ChatService {
                 }
             }
         }
+        invalidateChatMutationForMembers(ownerId, memberIds);
         return chatRepository.findById(chatId, ownerId).orElse(null);
     }
 
@@ -89,7 +90,11 @@ public class ChatService {
             return null;
         }
         var chatId = uuidGenerator.randomUuid();
-        return chatRepository.createP2P(chatId, user1Id, user2Id);
+        var created = chatRepository.createP2P(chatId, user1Id, user2Id);
+        if (created != null) {
+            ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, user1Id, user2Id);
+        }
+        return created;
     }
 
     public List<ChatResponse> list(UUID userId) {
@@ -145,7 +150,11 @@ public class ChatService {
         if (blockRepository.exists(targetUserId, actorId)) {
             return false;
         }
-        return chatRepository.addMember(chatId, targetUserId, "member");
+        var ok = chatRepository.addMember(chatId, targetUserId, "member");
+        if (ok) {
+            ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, actorId, targetUserId);
+        }
+        return ok;
     }
 
     public boolean removeMember(UUID chatId, UUID actorId, UUID targetUserId) {
@@ -155,10 +164,18 @@ public class ChatService {
             return false;
         }
         if (actorRole.equals("owner")) {
-            return chatRepository.removeMember(chatId, targetUserId);
+            var ok = chatRepository.removeMember(chatId, targetUserId);
+            if (ok) {
+                ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, actorId, targetUserId);
+            }
+            return ok;
         }
         if (actorRole.equals("admin") && !targetRole.equals("owner")) {
-            return chatRepository.removeMember(chatId, targetUserId);
+            var ok = chatRepository.removeMember(chatId, targetUserId);
+            if (ok) {
+                ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, actorId, targetUserId);
+            }
+            return ok;
         }
         return false;
     }
@@ -243,5 +260,18 @@ public class ChatService {
         } catch (Exception e) {
             log.debug("typing publish failed: {}", e.getMessage());
         }
+    }
+
+    private void invalidateChatMutationForMembers(UUID ownerId, List<String> memberIds) {
+        if (memberIds == null || memberIds.isEmpty()) {
+            ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, ownerId);
+            return;
+        }
+        var userIds = new java.util.ArrayList<UUID>();
+        userIds.add(ownerId);
+        for (var mid : memberIds) {
+            userIds.add(UUID.fromString(mid));
+        }
+        ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, userIds.toArray(new UUID[0]));
     }
 }

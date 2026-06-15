@@ -33,7 +33,8 @@ class IndexerWorkerSolrUpdateTest {
             "indexer-test",
             1000L,
             1000L,
-            workerMessages
+            workerMessages,
+            null
         );
 
         Method method = IndexerWorker.class.getDeclaredMethod("clearContentTxt", String.class);

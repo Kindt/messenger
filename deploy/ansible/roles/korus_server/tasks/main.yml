@@ -42,6 +42,10 @@
     if [[ "$profile" == "pilot" ]]; then
       script="scripts/pilot-stack-up.sh"
       args+=( --down-full-first )
+    elif [[ "$profile" == "enterprise" || "{{ korus_enable_scale | default(false) | lower }}" == "true" ]]; then
+      script="scripts/enterprise-stack-up.sh"
+      args+=( --no-wait-ready )
+      export KORUS_ENABLE_READ_REPLICA={{ 1 if (korus_enable_read_replica | default(false) | bool) else 0 }}
     else
       script="scripts/full-stack-up.sh"
       args+=( --no-wait-ready )

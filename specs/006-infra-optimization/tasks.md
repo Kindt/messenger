@@ -58,8 +58,25 @@
 
 - [x] T207 [US4] Guest smokes on QEMU: `scale-stack-up`, `verify-nats-queue-group`, `load-message-pipeline`, `smoke-messaging-e2e --load-rounds 3`
 
+## Phase 3: Wave 3 — zstd deep-archive + batch Solr + Wave 2 closure **COMPLETE**
+
+### zstd deep-archive (stage 6)
+
+- [x] T301 `SnapshotPartCodec` + `SnapshotCompression` (KDA1 + zstd/gzip)
+- [x] T302 `ChunkedSnapshotWriter` / `DeepArchiveReader` compress+decompress
+- [x] T303 `deep_archive_bytes_saved_total` metric; env `DEEP_ARCHIVE_COMPRESSION`
+
+### Batch Solr indexing (stage 7)
+
+- [x] T304 `IndexerBatchBuffer` + env `INDEXER_BATCH_SIZE` / `INDEXER_BATCH_FLUSH_MS`
+- [x] T305 Batch metrics `indexer_batch_flush_total`
+
+### Wave 2 debts
+
+- [x] T306 NATS `msg.cache.invalidate` (pipeline publish + core-api subscriber)
+- [x] T307 `ChatService` chat-list invalidation on create/join/leave
+- [x] T308 `MessageRepository.findById` read routing; `replica-stack-up.sh`
+- [x] T309 Ansible `enterprise` profile + `enterprise-stack-up.sh`
+- [x] T310 `nginx.conf.scale.template` (ip_hash WS sticky)
+
 ---
-
-## Phase 3–5
-
-See design doc and prior tasks.md revision for Waves 3–4 and docs sync (T301–T503).

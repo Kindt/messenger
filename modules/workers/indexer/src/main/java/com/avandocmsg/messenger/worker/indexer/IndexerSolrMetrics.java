@@ -18,6 +18,16 @@ final class IndexerSolrMetrics {
         .help("Solr indexer operation failures")
         .register();
 
+    private static final Counter BATCH_FLUSH = Counter.build()
+        .name("indexer_batch_flush_total")
+        .help("Solr batch flush operations")
+        .register();
+
+    private static final Counter BATCH_DOCS = Counter.build()
+        .name("indexer_batch_docs_total")
+        .help("Solr documents added via batch flush")
+        .register();
+
     private IndexerSolrMetrics() {
     }
 
@@ -31,5 +41,15 @@ final class IndexerSolrMetrics {
 
     static void error() {
         ERRORS_TOTAL.inc();
+    }
+
+    static void batchFlushed(int adds, int deletes) {
+        if (adds > 0) {
+            BATCH_DOCS.inc(adds);
+        }
+        if (deletes > 0) {
+            DELETE_TOTAL.inc(deletes);
+        }
+        BATCH_FLUSH.inc();
     }
 }

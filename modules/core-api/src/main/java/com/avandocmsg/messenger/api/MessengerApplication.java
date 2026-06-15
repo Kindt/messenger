@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.api;
 
 import com.avandocmsg.messenger.api.auth.AuthService;
 import com.avandocmsg.messenger.api.auth.TokenValidator;
+import com.avandocmsg.messenger.api.cache.ReadCacheInvalidationSubscriber;
 import com.avandocmsg.messenger.api.chats.ChatService;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanService;
 import com.avandocmsg.messenger.api.config.AppConfig;
@@ -130,6 +131,7 @@ public class MessengerApplication {
     private ExportReplayCompleteSubscriber exportCompleteSubscriber;
     private ExportSuggestedSubscriber exportSuggestedSubscriber;
     private MlsWireSubscriber mlsWireSubscriber;
+    private ReadCacheInvalidationSubscriber readCacheInvalidationSubscriber;
     private IndexerHotPlugMonitor indexerHotPlugMonitor;
     private final ExportSuggestedHandler exportSuggestedHandler;
 
@@ -224,6 +226,10 @@ public class MessengerApplication {
         connector.setProperty("bindOnInit", "false");
 
         deployServlets();
+
+        readCacheInvalidationSubscriber = new ReadCacheInvalidationSubscriber(natsConnection, readCachePort);
+        readCacheInvalidationSubscriber.start();
+
         tomcat.start();
         log.info("core-api started on port {} (API locale: {})", appConfig.port(), appConfig.locale().toLanguageTag());
 
@@ -407,6 +413,10 @@ public class MessengerApplication {
         if (mlsWireSubscriber != null) {
             mlsWireSubscriber.close();
             mlsWireSubscriber = null;
+        }
+        if (readCacheInvalidationSubscriber != null) {
+            readCacheInvalidationSubscriber.close();
+            readCacheInvalidationSubscriber = null;
         }
         if (indexerHotPlugMonitor != null) {
             indexerHotPlugMonitor.close();

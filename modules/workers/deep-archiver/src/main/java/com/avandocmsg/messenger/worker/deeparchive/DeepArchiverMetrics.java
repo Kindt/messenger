@@ -14,6 +14,11 @@ final class DeepArchiverMetrics {
         .help("Messages stored as chunked deep-archive (multi-part) in MinIO")
         .register();
 
+    private static final Counter BYTES_SAVED = Counter.build()
+        .name("deep_archive_bytes_saved_total")
+        .help("Bytes saved by deep-archive compression vs plain JSON")
+        .register();
+
     private DeepArchiverMetrics() {
     }
 
@@ -23,5 +28,11 @@ final class DeepArchiverMetrics {
 
     static void chunkedMessage() {
         CHUNKED_MESSAGES.inc();
+    }
+
+    static void bytesSaved(long delta) {
+        if (delta > 0) {
+            BYTES_SAVED.inc(delta);
+        }
     }
 }

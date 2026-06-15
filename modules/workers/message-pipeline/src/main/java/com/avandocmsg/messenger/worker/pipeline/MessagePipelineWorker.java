@@ -6,6 +6,7 @@ import com.avandocmsg.messenger.common.dto.PinChangeEvent;
 import com.avandocmsg.messenger.common.dto.ReadReceiptEvent;
 import com.avandocmsg.messenger.common.dto.ReactionChangeEvent;
 import com.avandocmsg.messenger.common.dto.MessageSendEvent;
+import com.avandocmsg.messenger.common.dto.ReadCacheInvalidateEvent;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.dto.RtcSignalEvent;
 import com.avandocmsg.messenger.common.dto.TypingEvent;
@@ -30,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 public class MessagePipelineWorker {
@@ -353,6 +355,7 @@ public class MessagePipelineWorker {
                 natsConnection.publish(deliverSubject, raw);
                 log.debug(workerMessages.format("worker.pipeline.fanned_out", deliverSubject));
             }
+            publishReadCacheInvalidation(memberIds, UUID.fromString(event.senderId()));
 
             log.info(workerMessages.format("worker.pipeline.processed", event.messageId(), memberIds.size()));
             try {
@@ -377,6 +380,20 @@ public class MessagePipelineWorker {
         natsConnection.publish(NatsSubjects.MSG_EVENT_INDEX, payload);
         natsConnection.publish(NatsSubjects.MSG_EVENT_PUSH, payload);
         natsConnection.publish(NatsSubjects.MSG_EVENT_BOT, payload);
+    }
+
+    private void publishReadCacheInvalidation(List<String> recipientIds, UUID senderId) {
+        try {
+            var userIds = new java.util.ArrayList<String>(recipientIds.size() + 1);
+            userIds.add(senderId.toString());
+            for (var memberId : recipientIds) {
+                userIds.add(memberId);
+            }
+            var event = new ReadCacheInvalidateEvent(userIds, true, true);
+            natsConnection.publish(NatsSubjects.MSG_CACHE_INVALIDATE, MAPPER.writeValueAsBytes(event));
+        } catch (Exception e) {
+            log.debug("read-cache invalidate publish failed: {}", e.getMessage());
+        }
     }
 
     public void shutdown() {

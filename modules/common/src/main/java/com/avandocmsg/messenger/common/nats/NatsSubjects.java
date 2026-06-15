@@ -70,6 +70,12 @@ public final class NatsSubjects {
     public static final String MSG_READ_RECEIPT = "msg.read_receipt";
 
     /**
+     * Read-cache invalidation hint for core-api (JSON {@link com.avandocmsg.messenger.common.dto.ReadCacheInvalidateEvent}).
+     * Published by message-pipeline after fan-out; core-api applies Redis DEL via {@code ReadCacheCoordinator}.
+     */
+    public static final String MSG_CACHE_INVALIDATE = "msg.cache.invalidate";
+
+    /**
      * MLS Welcome wire payload (binary KMLS envelope — {@link com.avandocmsg.messenger.api.mls.wire.MlsWireCodec}).
      * Публикует core-api {@code MlsWirePublisher} при создании MLS-группы.
      */

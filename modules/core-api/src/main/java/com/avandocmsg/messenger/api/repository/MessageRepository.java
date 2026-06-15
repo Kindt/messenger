@@ -101,7 +101,7 @@ public class MessageRepository {
                 attachment_file_id
             FROM messages m WHERE m.id = ? AND (m.visibility_ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - m.created_at)) < m.visibility_ttl_seconds)
             """;
-        try (var conn = dataSource.getConnection();
+        try (var conn = read().getConnection();
              var stmt = conn.prepareStatement(sql)) {
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {

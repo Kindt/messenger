@@ -209,6 +209,8 @@ services:
       MINIO_ACCESS_KEY: avandocmsg
       MINIO_SECRET_KEY: avandocmsg123
       MINIO_BUCKET: avandocmsg
+      DEEP_ARCHIVE_COMPRESSION: ${DEEP_ARCHIVE_COMPRESSION:-none}
+      DEEP_ARCHIVE_ZSTD_LEVEL: ${DEEP_ARCHIVE_ZSTD_LEVEL:-3}
     depends_on:
       nats:
         condition: service_started
@@ -223,6 +225,8 @@ services:
       NATS_URL: nats://nats:4222
       SOLR_URL: http://solr:8983
       SOLR_COLLECTION: messages_meta
+      INDEXER_BATCH_SIZE: ${INDEXER_BATCH_SIZE:-1}
+      INDEXER_BATCH_FLUSH_MS: ${INDEXER_BATCH_FLUSH_MS:-500}
     entrypoint:
       - /bin/sh
       - -lc

@@ -7,6 +7,8 @@ import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.common.retention.ArchiveSnapshotEnvelopeDigest;
 import com.avandocmsg.messenger.common.retention.ArchiveSnapshotFormat;
 import com.avandocmsg.messenger.common.retention.ChunkedSnapshotWriter;
+import com.avandocmsg.messenger.common.retention.SnapshotCompression;
+import com.avandocmsg.messenger.common.retention.SnapshotPartCodec;
 import com.avandocmsg.messenger.common.retention.ContentAnalyzer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -50,19 +52,31 @@ public class DeepArchiverWorker {
     private final String minioBucket;
     private final boolean minioEnabled;
     private final int chunkSizeBytes;
+    private final SnapshotCompression compression;
+    private final int zstdLevel;
     private final UserMessageSource workerMessages;
 
     public DeepArchiverWorker(String natsUrl, MinioClient minioClient, String minioBucket, boolean minioEnabled,
                                 UserMessageSource workerMessages) throws Exception {
-        this(natsUrl, minioClient, minioBucket, minioEnabled, ArchiveSnapshotFormat.DEFAULT_CHUNK_SIZE_BYTES, workerMessages);
+        this(natsUrl, minioClient, minioBucket, minioEnabled, ArchiveSnapshotFormat.DEFAULT_CHUNK_SIZE_BYTES,
+            SnapshotCompression.fromEnv(), SnapshotCompression.zstdLevelFromEnv(), workerMessages);
     }
 
     public DeepArchiverWorker(String natsUrl, MinioClient minioClient, String minioBucket, boolean minioEnabled,
                                int chunkSizeBytes, UserMessageSource workerMessages) throws Exception {
+        this(natsUrl, minioClient, minioBucket, minioEnabled, chunkSizeBytes,
+            SnapshotCompression.fromEnv(), SnapshotCompression.zstdLevelFromEnv(), workerMessages);
+    }
+
+    public DeepArchiverWorker(String natsUrl, MinioClient minioClient, String minioBucket, boolean minioEnabled,
+                               int chunkSizeBytes, SnapshotCompression compression, int zstdLevel,
+                               UserMessageSource workerMessages) throws Exception {
         this.minioClient = minioClient;
         this.minioBucket = minioBucket;
         this.minioEnabled = minioEnabled;
         this.chunkSizeBytes = chunkSizeBytes;
+        this.compression = compression != null ? compression : SnapshotCompression.NONE;
+        this.zstdLevel = zstdLevel;
         this.workerMessages = workerMessages;
         var options = Options.builder()
             .server(natsUrl)
@@ -111,12 +125,14 @@ public class DeepArchiverWorker {
                     writeChunked(event.messageId(), bytes);
                 } else {
                     var key = "messages/" + event.messageId() + ".json";
+                    var stored = ChunkedSnapshotWriter.compressFlatSnapshot(bytes, compression, zstdLevel);
+                    DeepArchiverMetrics.bytesSaved(SnapshotPartCodec.bytesSaved(bytes.length, stored.length));
                     minioClient.putObject(
                         PutObjectArgs.builder()
                             .bucket(minioBucket)
                             .object(key)
-                            .stream(new ByteArrayInputStream(bytes), bytes.length, -1)
-                            .contentType("application/json")
+                            .stream(new ByteArrayInputStream(stored), stored.length, -1)
+                            .contentType(compression == SnapshotCompression.NONE ? "application/json" : "application/octet-stream")
                             .build()
                     );
                     log.debug(workerMessages.format("worker.deep_archiver.stored_object", key));
@@ -136,7 +152,10 @@ public class DeepArchiverWorker {
             messageId,
             jsonBytes,
             chunkSizeBytes,
-            MAPPER
+            MAPPER,
+            compression,
+            zstdLevel,
+            DeepArchiverMetrics::bytesSaved
         );
         log.info(workerMessages.format("worker.deep_archiver.wrote_chunks", chunkCount, messageId, jsonBytes.length));
         DeepArchiverMetrics.chunkedMessage();
