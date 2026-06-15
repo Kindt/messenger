@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
-Current plan: `specs/009-platform-modules/plan.md`
+Current plan: `specs/007-platform-stage-readiness/plan.md`
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
 <!-- SPECKIT END -->
@@ -199,7 +199,7 @@ Set-Location ../..
 
 Артефакты в `specs/<NNN-feature>/`: `spec.md`, `plan.md`, `tasks.md`, `research.md`, `contracts/`, `quickstart.md`.
 
-Текущий активный plan: **`specs/009-platform-modules/plan.md`**.
+Текущий активный plan: **`specs/007-platform-stage-readiness/plan.md`** (ops tail T601–T607).
 
 ### Перед реализацией
 
@@ -270,13 +270,13 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 | Spec | Назначение |
 |------|------------|
 | [`specs/007-platform-stage-readiness/`](specs/007-platform-stage-readiness/) | Ops/stage gates T601–T607 (eng. ✅; ops ⏳) |
-| [`specs/009-platform-modules/`](specs/009-platform-modules/) | indexer + bot-delivery + Bot API MVP |
 
 **Закрыты (engineering):**
 
 | Spec | Назначение |
 |------|------------|
 | [`specs/008-repository-cleanup/`](specs/008-repository-cleanup/) | Тотальная гигиена репо (closed 2026-06-15) |
+| [`specs/009-platform-modules/`](specs/009-platform-modules/) | indexer + bot-delivery + Bot API MVP (closed 2026-06-15) |
 
 **Архив (001–006):** [`specs/archive/README.md`](specs/archive/README.md) — living docs в [`docs/parity/`](docs/parity/), [`docs/contracts/`](docs/contracts/), [`deploy/ansible/DEPLOY_QUICKSTART.md`](deploy/ansible/DEPLOY_QUICKSTART.md).
 

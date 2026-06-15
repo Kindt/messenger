@@ -42,6 +42,7 @@
 | US2 Epic01 (QEMU wrapper) | `scripts/smoke-us2-epic01-qemu.ps1` | manual | `smoke-us2-epic01.ps1` |
 | Hot-plug indexer lifecycle | `scripts/smoke-hotplug-indexer.ps1` | manual | requires NATS (`14222` tunnel on QEMU) |
 | Bot-delivery worker (guest) | `scripts/smoke-bot-delivery-worker.ps1` | manual | QEMU server guest via SSH; profile `push`/`full` |
+| **Bot API REST (spec 009)** | `scripts/smoke-bot-api.sh` | manual | `.ps1`; host `:18080`; register/subscribe/sendMessage |
 | Read receipts (API + WS) | `scripts/smoke-read-receipts.ps1` | manual | UI ✓✓ check optional |
 | Retention hot-row purge status | `scripts/smoke-retention-purge.ps1` | manual | requires admin token + stack |
 | Retention file cleanup metrics | `scripts/smoke-retention-file-cleanup.ps1` | manual | metrics on retention worker port |

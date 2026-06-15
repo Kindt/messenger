@@ -10,10 +10,16 @@
 
 - **`product_presentation.html` v2.5.1**, **`docs/PRODUCT_PRESENTATION.md` v1.8**: убраны ссылки на specs, docs/, deploy/, design-doc; snapshot и §17 — только продуктовый язык.
 
+### 2026-06-15 — Spec 009 platform modules closed
+
+- **Bot API MVP:** REST `/v1/bots`, `/v1/bot/send`; migration `V032__bots` (`organizations` FK fix); worker `MENTIONS_ONLY` filter.
+- **Smokes:** `smoke-bot-api.ps1`/`.sh`, `smoke-bot-delivery-worker.ps1`; ADR spec 009 section.
+- **Status:** spec **009** closed; active speckit plan → **007** (ops tail).
+
 ### 2026-06-15 — Spec 008 repository cleanup closed
 
 - **Status:** all phases 0–6 complete; `specs/008-repository-cleanup/` → **closed** (engineering sign-off).
-- **Speckit:** active plan → `specs/009-platform-modules/` (`.specify/feature.json`, AGENTS.md).
+- **Speckit:** active plan → `specs/007-platform-stage-readiness/` (`.specify/feature.json`, AGENTS.md).
 
 ### 2026-06-15 — Spec 009 smokes + metrics hotfix
 
@@ -62,6 +68,42 @@
 - **`docs/review/stage-prod-deploy-runbook.md`**: однодневный чеклист ops при появлении stage/prod хостов (deploy-only, без доработки кода).
 - **`docs/review/ops-signoff-log.md`**: модель deploy-ready — engineering READY / ops execution pending host / human signatures.
 - Обновлены: `inventory/stage/README.md`, `e2ee-staging-checklist.md`, `stage-tls-smoke-runbook.md`, `specs/007/tasks.md`, `ROADMAP_EPICS.md` §8.
+
+### 2026-06-15 — Презентация v2.5 (one-pager для продаж / PDF)
+
+- **`competitor_comparison_brief.html`**: hero, сценарии, TCO @10k, radar, Korus vs eXpress, CTA (~6–8 стр. печати).
+- **`build-competitor-comparison-html.py`**: `--full-only` / `--brief-only`; исправлен CSS hero; версия 2.5.
+
+### 2026-06-15 — Презентация v2.4 (маркетинг: hero, сценарии, CTA)
+
+- Hero с ключевыми цифрами TCO; навигация по ролям (CFO, ИБ, presales, CTO).
+- Блок позиционирования Korus («когда да / когда альтернатива»); сценарии с рекомендациями.
+- Дерево выбора — карточки вместо monospace; CTA «следующий шаг»; выделение Korus в таблицах.
+
+### 2026-06-15 — Презентация сравнения v2.3 (руссификация, крупные графики)
+
+- Русские подписи: уровни A/B/C вместо Tier, тепловая карта, лепестковая диаграмма, оглавление.
+- SVG: ширина ~1040px, шрифты 10–16px; heatmap и radar — на всю ширину (не в grid-2).
+- **`scripts/competitors/registry.json`**: русские критерии, оси radar, tier_labels.
+
+### 2026-06-15 — Презентация сравнения v2.2 (JSON-реестр, CI, radar)
+
+- **`scripts/competitors/registry.json`**: единый реестр продуктов, критериев, pros/cons, radar; правки без Python.
+- **`scripts/competitor_registry_loader.py`**, **`scripts/export_competitor_registry_json.py`**: загрузка и round-trip export.
+- **`build.gradle.kts`**: задача **`checkCompetitorRegistry`** → входит в **`buildIntegrity`** (CI).
+- Radar on-prem: + **МТС Линк**, **Rocket.Chat** (6 серий); print-CSS для PDF.
+
+### 2026-06-15 — Презентация сравнения v2.1 (radar, pricing Tier B/C)
+
+- **Radar on-prem** (Korus, eXpress, Loop, Compass) + расширенная таблица прайсов Tier B/C.
+- **`scripts/test_competitor_products.py`**: проверка полноты registry (18×11, pros/cons).
+- eXpress-таблицы в `<details>`; удалён дублирующий `PROS_CONS` из data-модуля.
+
+### 2026-06-15 — Презентация сравнения v2.0 (Tier A/B/C)
+
+- **`competitor_comparison.html` v2.0**: executive summary, decision tree, heatmap 18×11, Tier B оценочный TCO, Tier C (МТС Линк, Compass, TrueConf).
+- **`scripts/competitor_products.py`**: реестр продуктов, критерии, pros/cons для 11 решений.
+- **`docs/COMPETITOR_COMPARISON_METHODOLOGY.md` v1.4**: tier-модель §6.0.
 
 ### 2026-06-15 — Единицы измерения на диаграммах сравнения (v1.5)
 

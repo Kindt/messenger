@@ -34,7 +34,8 @@ public class JwtAuthFilter implements ContainerRequestFilter {
         "v1/media/capabilities",
         "v1/metrics",
         "v1/files/pub",
-        "v1/admin/console"
+        "v1/admin/console",
+        "v1/bot/send"
     );
 
     private final TokenValidator tokenValidator;

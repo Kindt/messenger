@@ -1,5 +1,7 @@
 # Plan: Platform Modules (009)
 
+**Status:** `closed` (2026-06-15)
+
 ## US1 — Indexer hot-plug
 
 1. Audit `services:indexer` vs `modules/workers/indexer` — выбрать canonical deployable
@@ -17,3 +19,7 @@
 
 - [`docs/adr/ADR-hotplug-deployment-split.md`](../../docs/adr/ADR-hotplug-deployment-split.md)
 - [`docs/plans/2026-06-16-presentation-gaps-implementation-plan.md`](../../docs/plans/2026-06-16-presentation-gaps-implementation-plan.md)
+
+## Closure
+
+US1–US2 delivered; ADR spec 009 section; smokes in `SMOKE_INDEX.md`. Ops/stage → spec **007**.

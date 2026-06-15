@@ -94,16 +94,44 @@ public class BotDeliveryWorker {
     private List<String> resolveWebhookUrls(MessageWorkerEvent event) throws SQLException {
         var urls = new ArrayList<String>();
         if (subscriptionsEnabled) {
-            var sql = "SELECT webhook_url FROM " + SUBSCRIPTIONS_TABLE + " WHERE chat_id = ?";
             var chatId = UUID.fromString(event.chatId());
-            try (var conn = dataSource.getConnection();
-                 var stmt = conn.prepareStatement(sql)) {
-                stmt.setObject(1, chatId);
-                try (var rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        var u = rs.getString(1);
-                        if (u != null && !u.isBlank()) {
-                            urls.add(u.trim());
+            try (var conn = dataSource.getConnection()) {
+                if (tableExists(conn, "bots")) {
+                    var sql = """
+                        SELECT s.webhook_url, b.bot_name, b.listen_mode, b.default_webhook_url, s.bot_id
+                        FROM bot_webhook_subscriptions s
+                        LEFT JOIN bots b ON b.id = s.bot_id
+                        WHERE s.chat_id = ?
+                        """;
+                    try (var stmt = conn.prepareStatement(sql)) {
+                        stmt.setObject(1, chatId);
+                        try (var rs = stmt.executeQuery()) {
+                            while (rs.next()) {
+                                var botId = rs.getObject("bot_id");
+                                var webhook = rs.getString("webhook_url");
+                                if (botId == null) {
+                                    addUrl(urls, webhook);
+                                    continue;
+                                }
+                                var botName = rs.getString("bot_name");
+                                var listenMode = rs.getString("listen_mode");
+                                var defaultUrl = rs.getString("default_webhook_url");
+                                if (!BotEventFilter.shouldDeliver(event, botName, listenMode)) {
+                                    continue;
+                                }
+                                var effective = webhook != null && !webhook.isBlank() ? webhook : defaultUrl;
+                                addUrl(urls, effective);
+                            }
+                        }
+                    }
+                } else {
+                    var sql = "SELECT webhook_url FROM " + SUBSCRIPTIONS_TABLE + " WHERE chat_id = ?";
+                    try (var stmt = conn.prepareStatement(sql)) {
+                        stmt.setObject(1, chatId);
+                        try (var rs = stmt.executeQuery()) {
+                            while (rs.next()) {
+                                addUrl(urls, rs.getString(1));
+                            }
                         }
                     }
                 }
@@ -113,6 +141,19 @@ public class BotDeliveryWorker {
             urls.add(fallbackWebhookUrl);
         }
         return urls;
+    }
+
+    private static void addUrl(List<String> urls, String raw) {
+        if (raw != null && !raw.isBlank()) {
+            urls.add(raw.trim());
+        }
+    }
+
+    private static boolean tableExists(java.sql.Connection conn, String table) throws SQLException {
+        var md = conn.getMetaData();
+        try (var rs = md.getTables(conn.getSchema(), null, table, new String[]{"TABLE"})) {
+            return rs.next();
+        }
     }
 
     private void deliver(String webhookUrl, MessageWorkerEvent event) throws Exception {

@@ -34,7 +34,7 @@ For **tracked features** in `specs/<NNN-feature>/`:
 3. **speckit-tasks** - `tasks.md`
 4. **speckit-implement** - execute tasks, update `tasks.md` checkboxes
 
-Current active plan: `specs/009-platform-modules/plan.md`.
+Current active plan: `specs/007-platform-stage-readiness/plan.md` (ops tail; specs 008/009 closed).
 
 Do **not** replace speckit with superpowers `writing-plans` for formal spec-kit features. Superpowers planning complements speckit for ad-hoc tasks, spikes, or debugging branches.
 

@@ -174,3 +174,18 @@ Use `-WhatIf` to preview replacements without writing files.
 
 For principle-V exception wording and versioning notes, see:
 `docs/proposals/constitution-v1.1-hotplug-bounded-exception.md`.
+
+---
+
+## Spec 009 — Platform modules (2026-06-15)
+
+Canonical deployables after repository cleanup (spec 008):
+
+| Module | Canonical runtime | Dev / lab | Compose (full-server) |
+|--------|-------------------|-----------|------------------------|
+| **Indexer** | `modules/workers/indexer` → `Dockerfile.indexer-worker` | `services:indexer` delegates `main` to `IndexerWorker` | `indexer-worker` (profile `solr`/`full`); metrics `:9197` |
+| **Bot delivery** | `modules/workers/bot-delivery` → `Dockerfile.bot-delivery-worker` | — | `bot-delivery-worker` (profile `push`/`full`); NATS `msg.event.bot` |
+
+**Smokes:** `scripts/smoke-hotplug-indexer.ps1`, `scripts/smoke-bot-delivery-worker.ps1`, `scripts/smoke-bot-api.ps1`.
+
+**Bot API MVP (REST):** `POST /api/v1/bots`, subscribe, `POST /api/v1/bot/send` (Bearer `kbt_…`); worker filters `MENTIONS_ONLY` vs `READ_ALL`. See [`specs/009-platform-modules/`](../specs/009-platform-modules/).

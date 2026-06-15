@@ -44,6 +44,10 @@ import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
 import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.api.search.MessageSearchService;
+import com.avandocmsg.messenger.api.bots.BotRepository;
+import com.avandocmsg.messenger.api.bots.BotResource;
+import com.avandocmsg.messenger.api.bots.BotService;
+import com.avandocmsg.messenger.api.filter.BotTokenAuthFilter;
 import com.avandocmsg.messenger.api.filter.JwtAuthFilter;
 import com.avandocmsg.messenger.api.health.HealthResource;
 import com.avandocmsg.messenger.api.messages.MessageResource;
@@ -128,7 +132,9 @@ public class JerseyConfig extends ResourceConfig {
                         RedisProbe redisProbe,
                         ReadCachePort readCachePort,
                         LegalHoldRepository legalHoldRepository,
-                        PurgeStatusService purgeStatusService) {
+                        PurgeStatusService purgeStatusService,
+                        BotRepository botRepository,
+                        BotService botService) {
         register(new AbstractBinder() {
             @Override
             protected void configure() {
@@ -190,6 +196,8 @@ public class JerseyConfig extends ResourceConfig {
                 bind(adminServerStatsService).to(AdminServerStatsService.class);
                 bind(legalHoldRepository).to(LegalHoldRepository.class);
                 bind(purgeStatusService).to(PurgeStatusService.class);
+                bind(botRepository).to(BotRepository.class);
+                bind(botService).to(BotService.class);
             }
         });
 
@@ -214,10 +222,12 @@ public class JerseyConfig extends ResourceConfig {
         register(ConferenceResource.class);
         register(ChatConferenceResource.class);
         register(MediaCapabilitiesResource.class);
+        register(BotResource.class);
         register(PrometheusMetricsResource.class);
 
         register(OpenApiConfig.create(appConfig.version()).getClass());
 
+        register(BotTokenAuthFilter.class);
         register(JwtAuthFilter.class);
         register(JacksonFeature.class);
         register(MultiPartFeature.class);

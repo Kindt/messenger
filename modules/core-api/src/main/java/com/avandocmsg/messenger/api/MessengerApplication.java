@@ -2,6 +2,8 @@ package com.avandocmsg.messenger.api;
 
 import com.avandocmsg.messenger.api.auth.AuthService;
 import com.avandocmsg.messenger.api.auth.TokenValidator;
+import com.avandocmsg.messenger.api.bots.BotRepository;
+import com.avandocmsg.messenger.api.bots.BotService;
 import com.avandocmsg.messenger.api.cache.ReadCacheInvalidationSubscriber;
 import com.avandocmsg.messenger.api.chats.ChatService;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanService;
@@ -370,6 +372,10 @@ public class MessengerApplication {
         var conferenceService = new com.avandocmsg.messenger.api.conference.ConferenceService(
             conferenceRepository, chatRepository, chatService, natsOutbound, userMessages);
 
+        var botRepository = new BotRepository(dataSource);
+        var botService = new BotService(botRepository, chatRepository, messageApplicationService,
+            auditRepository, this.uuidGenerator);
+
         var jerseyServlet = new ServletContainer(
             new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
                 userRepository, contactRepository, contactService,
@@ -386,7 +392,7 @@ public class MessengerApplication {
                 exportComplianceSeed,
                 organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,
                 publicLinkPort, messageSearchService, adminManifest, adminServerStatsService, redisProbe,
-                readCachePort, legalHoldRepository, purgeStatusService));
+                readCachePort, legalHoldRepository, purgeStatusService, botRepository, botService));
         Tomcat.addServlet(ctx, SERVLET_NAME, jerseyServlet);
         ctx.addServletMappingDecoded("/api/*", SERVLET_NAME);
 

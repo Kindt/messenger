@@ -38,8 +38,8 @@
 До отдельного cleanup PR массовые удаления запрещены. Используйте эту матрицу:
 
 - **Canonical (источник правды для реализации):**
-  - `specs/007-platform-stage-readiness/`, `specs/009-platform-modules/` (active)
-  - `specs/008-repository-cleanup/` (closed 2026-06-15)
+  - `specs/007-platform-stage-readiness/` (active — ops tail)
+  - `specs/008-repository-cleanup/`, `specs/009-platform-modules/` (closed 2026-06-15)
   - `docs/plans/*.md` (детальные эпики)
   - `docs/parity/`, `docs/contracts/`, `docs/review/ops-signoff-log.md`
   - `docs/ROADMAP_EPICS.md` (укрупненный roadmap)
