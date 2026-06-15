@@ -52,9 +52,9 @@
 - [x] T701a `test-korus-wsurl.ps1` + `smoke-korus-web.ps1` ExpectWsHost (2026-06-15, QEMU live)
 - [x] T701b Inner Playwright `all-inner` green (2026-06-15)
 - [x] T701c Full outer `qemu-plan-orchestrator.ps1 -SkipVmUp` green (2026-06-15, runtime-gate-report)
-- [ ] T702 Guest `guest-smoke-platform-w2.sh` on live server guest
+- [x] T702 Guest `guest-smoke-platform-w2.sh` on live server guest (2026-06-15)
 
 ---
 
-**Engineering closure:** Phases 1–5 complete → spec 007 engineering sign-off 2026-06-15.  
-**Ops backlog:** Phase 6–7 → resume when stage host + named approvers available.
+**Engineering closure:** Phases 1–5 + T701–T702 complete → spec 007 engineering sign-off 2026-06-15.  
+**Ops backlog:** Phase 6 + T604 (k6 baseline) → resume when stage host / k6 installed.
