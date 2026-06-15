@@ -34,7 +34,7 @@ dependencies {
 
     // Redis + NATS
     implementation("io.lettuce:lettuce-core:6.3.2.RELEASE")
-    implementation("io.nats:jnats:2.17.4")
+    implementation("io.nats:jnats:2.25.3")
 
     // JSON
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")

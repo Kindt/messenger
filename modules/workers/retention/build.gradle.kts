@@ -14,7 +14,7 @@ tasks.jar {
 
 dependencies {
     implementation(project(":modules:common"))
-    implementation("io.nats:jnats:2.17.4")
+    implementation("io.nats:jnats:2.25.3")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
     implementation("io.minio:minio:8.5.17")
     implementation("com.zaxxer:HikariCP:5.1.0")

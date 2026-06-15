@@ -16,7 +16,7 @@ dependencies {
 
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0")
-    implementation("io.nats:jnats:2.17.4")
+    implementation("io.nats:jnats:2.25.3")
     implementation("com.nimbusds:nimbus-jose-jwt:9.37.3")
     implementation("ch.qos.logback:logback-classic:1.5.3")
     implementation("org.slf4j:slf4j-api:2.0.12")
