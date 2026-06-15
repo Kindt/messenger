@@ -352,6 +352,7 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 
 # Inner loop
 .\scripts\playwright-dev-loop.ps1 -Tier all-inner
+# Outer gate (all specs): -Tier full  (same as npx playwright test)
 
 # Outer gate (once)
 .\scripts\qemu-plan-orchestrator.ps1 -SkipVmUp
@@ -414,7 +415,8 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 ### Playwright / US9
 
 - QEMU host ports: **19088** (UI), **18080** (API) — не 9088/8080.
-- **`playwright-dev-loop.ps1`**: `$ErrorActionPreference Stop` + stderr Node → ложный fail; оборачивать `npx` в `Continue`.
+- **`playwright-dev-loop.ps1`**: stderr Node (`NO_COLOR`) фильтруется; `-Tier full` = outer gate (33 specs). Не путать с `exit 2` старой версии.
+- **Cursor background terminal**: файл `terminals/*.txt` может «зависнуть» без `exit_code` при долгом `sync-api-core` — истина: `qemu-dev-mode.ps1 -Mode status` и `[OK] core-api synced` в выводе; `qemu-sync-api-core` теперь стримит plink.
 - **Grep tier manifest**: паттерн `|media capabilities` (без `include`) ломает regex — использовать `media capabilities include` + `conference-rtc.spec.ts` в api tier.
 - **`Register-PlanFailure` / orchestrator**: `Write-Output` в `Emit-PlanChatTick` ломает `$state` (массив вместо hashtable) → только `Write-Host`.
 - **26/26** достижимо на живом QEMU (2026-06-12); MLS active required для e2ee-browser-roundtrip.

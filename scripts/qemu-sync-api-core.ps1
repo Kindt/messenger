@@ -51,9 +51,13 @@ echo core-api-rebuild-done
 '@
 
 Write-Host "Rebuilding core-api container (Gradle in Docker, not full stack)..." -ForegroundColor Yellow
+Write-Host "  (plink output streams below; long silence is normal during docker build)" -ForegroundColor DarkGray
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
-Invoke-PlinkShell -Plink $Plink -HostKey $hk -Port 12221 -Script $guestScript | Out-Null
+$buildOut = Invoke-PlinkShell -Plink $Plink -HostKey $hk -Port 12221 -Script $guestScript
 $sw.Stop()
+if ($buildOut -and "$buildOut".Trim()) {
+    Write-Host $buildOut
+}
 
 Write-Host "[OK] core-api synced in $([math]::Round($sw.Elapsed.TotalSeconds, 1))s" -ForegroundColor Green
 $c = curl.exe -sS -m 10 -o NUL -w "%{http_code}" "http://127.0.0.1:18080/api/v1/health" 2>$null

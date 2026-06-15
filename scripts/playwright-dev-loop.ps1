@@ -19,6 +19,7 @@ Updates deploy/qemu/run/inner-tier-status.json and plan-failure-analysis.json on
 Examples:
   .\scripts\playwright-dev-loop.ps1 -Tier api
   .\scripts\playwright-dev-loop.ps1 -Tier all-inner
+  .\scripts\playwright-dev-loop.ps1 -Tier full   # outer gate (all specs)
 "@
     exit 0
 }
@@ -59,7 +60,12 @@ function Invoke-TierPlaywright {
         $prevEap = $ErrorActionPreference
         $ErrorActionPreference = 'Continue'
         try {
-            & npx @pwArgs 2>&1 | Tee-Object -FilePath $log | Out-Host
+            # Node/Playwright write warnings to stderr; PS 5.1 surfaces them as ErrorRecord (red noise).
+            & npx @pwArgs 2>&1 | ForEach-Object {
+                $line = if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.ToString() } else { "$_" }
+                if ($line -match '(?i)NO_COLOR.*FORCE_COLOR') { return }
+                if ($_ -is [System.Management.Automation.ErrorRecord]) { Write-Host $line } else { Write-Output $_ }
+            } | Tee-Object -FilePath $log | Out-Host
             $exit = $LASTEXITCODE
         } finally {
             $ErrorActionPreference = $prevEap
@@ -130,8 +136,18 @@ if ($Tier -eq 'all-inner') {
 }
 
 if ($Tier -eq 'full') {
-    Write-Host "Use qemu-plan-orchestrator for full outer gate; inner loop skips tier=full." -ForegroundColor Yellow
-    exit 2
+    Write-Host "Outer gate: full Playwright suite (all specs)." -ForegroundColor Cyan
+    $fullDef = @{ args = @(); grep = $null }
+    $ok = Invoke-TierPlaywright -TierName 'full' -TierDef $fullDef
+    if ($ok) {
+        Set-KorusInnerTierResult -RunDir $RunDir -Root $Root -TierName 'full' -Pass $true | Out-Null
+        Write-Host 'OK tier full (outer gate)' -ForegroundColor Green
+        exit 0
+    }
+    $analysis = Invoke-KorusPlanFailureAnalysis -Kind playwright -RunDir $RunDir -Root $Root -LastError 'tier=full'
+    Set-KorusInnerTierResult -RunDir $RunDir -Root $Root -TierName 'full' -Pass $false -LastError $analysis.summaryRu | Out-Null
+    Write-Host "FAIL tier full - $($analysis.summaryRu)" -ForegroundColor Red
+    exit 1
 }
 
 $tierDef = $manifest.tiers.$Tier
