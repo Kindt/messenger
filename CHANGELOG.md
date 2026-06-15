@@ -8,7 +8,46 @@
 
 ## [Unreleased]
 
-### 2026-06-14 — CI: nightly smokes, export file bodies, diagnostics
+### 2026-06-15 — spec 006 Wave 1: pilot compose + Keycloak prod (FR-OPT-01/02)
+
+- **`docker/docker-compose.pilot.yml`**: 8 core services + optional profiles (`push`, `retention`, `compliance`, `archive`); без Solr/ZK; `SEARCH_MODE=sql`, `MLS_WIRE_ENABLED=false` для infra-smokes.
+- **`docker/docker-compose.keycloak-prod.yml`** + **`docker/Dockerfile.keycloak-prod`**: Keycloak `start --optimized`; heap `-Xmx256m`, `mem_limit=512m` (RSS ~335 MiB на gate).
+- **`scripts/pilot-stack-up.sh`**, **`scripts/smoke-pilot-stack.sh`**: guest helper + acceptance (health, DM/WS, SQL search).
+- **Ansible**: `korus_deploy_profile: pilot|standard|enterprise`; role `korus_server` выбирает pilot vs full-stack.
+- **`deploy/qemu/RESOURCES.md`**: sizing Pilot + Keycloak dev vs prod; gate RAM ~2 GiB used на guest 9.7 GiB.
+- **`AppConfig`**: env `SEARCH_MODE=sql|solr` (explicit Solr toggle).
+- **`scripts/lib/SmokeMessaging.sh`**: fix Python 3 `print()` return в JSON helpers.
+
+### 2026-06-15 — tz_product.html v2.0: автономная публикация для заказчика
+
+- **`tz_product.html`**: полный единый документ v2.0 — §1–18, 7 SVG-иллюстраций, §18 примеры стоимости (Pilot/Standard/TCO/диск) для продаж и бухгалтерии; без внешних ссылок.
+- **`scripts/build-tz-product-html.py`**: генератор HTML из шаблонов (пересборка при обновлении MD).
+
+### 2026-06-15 — TZ v1.3: §13 интеграции, приложения G/H, глоссарий для юристов
+
+- **`docs/TZ_PRODUCT_ALTERNATIVE.md`**: §13 FR-INT-01…08 (REST/WS, SSO, Bot API, паттерны); приложение G (assumptions/risks); приложение H (one-pager vs tz_full); расширение B.2; §11 п.11.
+- **`tz_product.html`**: §13 в TOC и теле; приложения B/G/H; v1.3.
+
+### 2026-06-15 — TZ v1.2: §14 compliance, §15 SLA, §16 профили UX
+
+- **`docs/TZ_PRODUCT_ALTERNATIVE.md`**: FR-COMP-01…08, FR-SLA-01…04, FR-PROF-01…02; приложение F (чеклист go-live); §11 п.8–10.
+- **`tz_product.html`**: §14–16 в TOC.
+
+### 2026-06-15 — TZ v1.1: §12 оптимизация инфраструктуры (spec only)
+
+- **`docs/TZ_PRODUCT_ALTERNATIVE.md`**: §12 требования FR-OPT-01…012, пересечения волн, метрики приёмки; §11 п.7; приложение E; §9 infra row.
+- **`docs/plans/2026-06-15-infra-optimization-design.md`**: статус «приложение к ТЗ §12», реализация отложена.
+- **`tz_product.html`**: §12 в TOC.
+
+### 2026-06-15 — Infra optimization design + TZ sizing profiles
+
+- **`docs/plans/2026-06-15-infra-optimization-design.md`**: roadmap снижения RAM/диска и роста throughput (9 этапов: Pilot compose → sharding).
+- **`docs/TZ_PRODUCT_ALTERNATIVE.md`**: §10.1.1 профили Pilot/Standard/Enterprise; §10.2.1 оптимизированные конфигурации.
+
+### 2026-06-15 — Альтернативное продуктовое ТЗ
+
+- **`docs/TZ_PRODUCT_ALTERNATIVE.md`**: полное продуктовое ТЗ для нетехнической аудитории — резюме, словарь, каталог возможностей, 27 кейсов использования, роли, безопасность, traceability к `tz_full.html`, roadmap развития, sizing-таблица 10k/100k/500k/1M пользователей.
+- **`tz_product.html`**: HTML-публикация (TOC, status-tags, таблицы) — стиль `tz_full.html`.
 
 - **`.github/workflows/ci.yml`**: `buildIntegrity` on push to any branch (not only main/develop).
 - **`.github/workflows/deploy-messaging-smoke.yml`**: fixed `:modules:web-client:assemble`; Ansible bootstrap log under `/tmp`; failure diagnostics; stack down on `always()`.

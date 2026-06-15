@@ -13,7 +13,7 @@
 | MinIO | minio | 256 | объекты, экспорт |
 | ZooKeeper | zoo | 256 | для Solr |
 | Solr | solr | 768 | JVM, самый тяжёлый инфра-сервис |
-| Keycloak | keycloak | 640 | Quarkus `start-dev` |
+| Keycloak | keycloak | 640 | Quarkus `start-dev` (QEMU/CI) |
 | core-api | core-api | 512 | JRE 25, Jetty |
 | ws-gateway | ws-gateway | 256 | JRE |
 | message-pipeline | message-pipeline | 256 | JRE |
@@ -31,6 +31,47 @@
 |--------|---------|---------------|
 | vCPU | 2 | 4 (сборка) / 2 (только runtime) |
 | Диск | 20 ГБ | 40 ГБ (образы + тома + однократная сборка) |
+
+## korus-server (pilot profile, FR-OPT-01)
+
+Compose: `docker/docker-compose.pilot.yml` + `docker/docker-compose.keycloak-prod.yml`. Без Solr/ZK; поиск — SQL fallback.
+
+| Компонент | Контейнер | RAM min, МБ | Примечание |
+|-----------|-----------|-------------|------------|
+| PostgreSQL hot | postgres-hot | 256 | единственная БД |
+| Redis | redis | 64 | |
+| NATS | nats | 128 | JetStream optional |
+| MinIO | minio | 256 | |
+| Keycloak | keycloak | **256–384** | `start --optimized`, `-Xmx256m`, `mem_limit=512m` |
+| core-api | core-api | 512 | `DB_POOL_SIZE=15`, `SEARCH_MODE=sql` |
+| ws-gateway | ws-gateway | 256 | |
+| message-pipeline | message-pipeline | 256 | |
+| **Сумма контейнеров (core)** | **8** | **~2 200** | + optional profiles |
+| Ubuntu + Docker Engine | | 800 | |
+| Запас 15–20 % | | 500 | |
+| **Итого RAM (runtime, idle)** | | **~3,5 ГБ** | контейнеры |
+| **Рекомендуется RAM (guest)** | | **12–16 ГБ** | §10.2.1 Pilot target; запас под пики и сборку |
+
+| Ресурс | Минимум | Рекомендуется (Pilot) |
+|--------|---------|------------------------|
+| vCPU | 4 | **8** |
+| Диск | 20 ГБ | 40 ГБ |
+
+**Wave 1 gate (2026-06-15):** pilot stack на server guest — RAM guest **~1.6 GiB used / 9.7 GiB** при idle; Keycloak prod RSS **~335 MiB** (`mem_limit=512m`, warm-up 120s); smokes + Playwright `api` green.
+
+Optional compose profiles: `push`, `retention`, `compliance` (archiver/deep/indexer/export-replay), `archive` (postgres-archive).
+
+- **Ansible QEMU:** `inventory/qemu/group_vars/all.yml` задаёт `korus_deploy_profile: pilot` по умолчанию для server guest.
+
+## Keycloak: dev vs prod mode (FR-OPT-02)
+
+| Режим | Command | RAM target | Когда |
+|-------|---------|------------|-------|
+| **Dev** | `start-dev --import-realm` | ~640 MB | QEMU full-server, CI |
+| **Pilot prod** | `start --optimized` + import | **256–512 MB** (heap `-Xmx256m`, `mem_limit=512m`) | `docker-compose.keycloak-prod.yml`, ≤10k RU |
+| **Standard HA** | 2× `start` + external DB | 2×512 MB | ≥50k RU (вне scope Wave 1) |
+
+> Строка §10.2 ТЗ «Keycloak 8 GB» — sizing production HA, не dev/pilot. См. сноску в `docs/TZ_PRODUCT_ALTERNATIVE.md` §10.2.1.
 
 ## korus-web
 
@@ -68,4 +109,4 @@
 
 ## Сокращение (не в минимальном full-server)
 
-Для уменьшения server-ВМ потребуется отдельный compose-профиль (без Solr/Zoo/archive/части workers) — в штатном `full-server` все перечисленные сервисы поднимаются.
+Для уменьшения server-ВМ используйте **pilot profile** (`docker/docker-compose.pilot.yml`, Ansible `korus_deploy_profile: pilot`) — см. раздел «korus-server (pilot profile)» выше. В штатном `full-server` все 14 сервисов поднимаются.

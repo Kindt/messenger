@@ -20,6 +20,8 @@ korus_set_path_env() {
   export KORUS_DOCKER_DIR="$root/docker"
   export KORUS_COMPOSE_DEV_MIN="$root/docker/docker-compose.dev-min.yml"
   export KORUS_COMPOSE_FULL_SERVER="$root/docker/docker-compose.full-server.yml"
+  export KORUS_COMPOSE_PILOT="$root/docker/docker-compose.pilot.yml"
+  export KORUS_COMPOSE_KEYCLOAK_PROD="$root/docker/docker-compose.keycloak-prod.yml"
   export KORUS_COMPOSE_LAN_PUBLISH="$root/docker/docker-compose.lan-publish.yml"
   export KORUS_DEV_OVERLAY_DIR="$root/dev-overlay"
   export KORUS_SCRIPTS_DIR="$root/scripts"

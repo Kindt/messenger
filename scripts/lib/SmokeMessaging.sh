@@ -39,7 +39,7 @@ smoke_login() {
   resp=$(curl -sS -X POST "${base%/}/api/v1/auth/login" \
     -H "Content-Type: application/json; charset=utf-8" \
     -d "{\"username\":\"$user\",\"password\":\"$pass\"}") || smoke_fail "login curl failed for $user"
-  python3 -c 'import json,sys; d=json.loads(sys.argv[1]); t=d.get("access_token") or d.get("accessToken"); (t and print(t)) or sys.exit(1)' "$resp" \
+  python3 -c 'import json,sys; d=json.loads(sys.argv[1]); t=d.get("access_token") or d.get("accessToken"); (sys.exit(1) if not t else None); print(t)' "$resp" \
     || smoke_fail "login parse failed for $user"
 }
 
@@ -63,7 +63,7 @@ smoke_user_id() {
   local base="$1" token="$2"
   local resp
   resp=$(smoke_curl_json GET "${base%/}/api/v1/users/me" "$token") || smoke_fail "users/me failed"
-  python3 -c 'import json,sys; d=json.loads(sys.argv[1]); uid=d.get("id") or d.get("user_id"); (uid and print(uid)) or sys.exit(1)' "$resp" \
+  python3 -c 'import json,sys; d=json.loads(sys.argv[1]); uid=d.get("id") or d.get("user_id"); (sys.exit(1) if not uid else None); print(uid)' "$resp" \
     || smoke_fail "users/me id missing"
 }
 
@@ -72,7 +72,7 @@ smoke_create_p2p() {
   local body resp
   body=$(python3 -c 'import json,sys; print(json.dumps({"type":"p2p","member_ids":[sys.argv[1]]}))' "$member_id")
   resp=$(smoke_curl_json POST "${base%/}/api/v1/chats" "$token" "$body") || smoke_fail "create p2p failed"
-  python3 -c 'import json,sys; d=json.loads(sys.argv[1]); cid=d.get("id") or d.get("chat_id"); (cid and print(cid)) or sys.exit(1)' "$resp" \
+  python3 -c 'import json,sys; d=json.loads(sys.argv[1]); cid=d.get("id") or d.get("chat_id"); (sys.exit(1) if not cid else None); print(cid)' "$resp" \
     || smoke_fail "p2p chat id missing"
 }
 
@@ -81,7 +81,7 @@ smoke_create_group() {
   local body resp
   body=$(python3 -c 'import json,sys; print(json.dumps({"type":"group","title":sys.argv[1],"member_ids":[x for x in sys.argv[2].split(",") if x]}))' "$title" "$members_csv")
   resp=$(smoke_curl_json POST "${base%/}/api/v1/chats" "$token" "$body") || smoke_fail "create group failed"
-  python3 -c 'import json,sys; d=json.loads(sys.argv[1]); cid=d.get("id") or d.get("chat_id"); (cid and print(cid)) or sys.exit(1)' "$resp" \
+  python3 -c 'import json,sys; d=json.loads(sys.argv[1]); cid=d.get("id") or d.get("chat_id"); (sys.exit(1) if not cid else None); print(cid)' "$resp" \
     || smoke_fail "group chat id missing"
 }
 
@@ -94,7 +94,7 @@ smoke_send_message() {
     body=$(python3 -c 'import json,sys; print(json.dumps({"type":"text","content":sys.argv[1]}))' "$content")
   fi
   resp=$(smoke_curl_json POST "${base%/}/api/v1/chats/${chat_id}/messages" "$token" "$body") || smoke_fail "send message failed"
-  python3 -c 'import json,sys; d=json.loads(sys.argv[1]); mid=d.get("id") or d.get("message_id"); (mid and print(mid)) or sys.exit(1)' "$resp" \
+  python3 -c 'import json,sys; d=json.loads(sys.argv[1]); mid=d.get("id") or d.get("message_id"); (sys.exit(1) if not mid else None); print(mid)' "$resp" \
     || smoke_fail "message id missing"
 }
 

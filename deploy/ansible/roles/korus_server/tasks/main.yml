@@ -37,9 +37,17 @@
       source "{{ korus_server_env_path }}"
       set +a
     fi
-    args=( )
+    profile="{{ korus_deploy_profile | default('standard') }}"
+    args=( --skip-ensure )
+    if [[ "$profile" == "pilot" ]]; then
+      script="scripts/pilot-stack-up.sh"
+      args+=( --down-full-first )
+    else
+      script="scripts/full-stack-up.sh"
+      args+=( --no-wait-ready )
+    fi
     if {{ korus_build_images | bool | lower }}; then args+=( --build ); fi
-    stdbuf -oL -eL bash scripts/full-stack-up.sh --skip-ensure --no-wait-ready "${args[@]}" 2>&1 \
+    stdbuf -oL -eL bash "$script" "${args[@]}" 2>&1 \
       | stdbuf -oL tee -a {{ korus_bootstrap_log }}
   args:
     executable: /bin/bash
@@ -83,3 +91,4 @@
   args:
     executable: /bin/bash
   changed_when: false
+  when: (korus_deploy_profile | default('standard')) != 'pilot'

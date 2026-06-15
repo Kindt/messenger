@@ -28,6 +28,7 @@
 | OpenAPI export compliance | `scripts/smoke-openapi-export-compliance.sh` | `export-compliance-smoke.yml` | `.ps1` |
 | Korus web basic smoke | `scripts/smoke-korus-web.sh` | manual (runtime) | `.ps1`, `.cmd`; optional — spec 002 parity smokes cover API/WS |
 | **Deploy acceptance (spec 003)** | `scripts/smoke-deploy-acceptance.sh` | `deploy-messaging-smoke.yml` | orchestrates ready, auth, messaging-e2e, parity-api |
+| **Pilot stack (spec 006 FR-OPT-01)** | `scripts/smoke-pilot-stack.sh` | manual (QEMU server guest) | `scripts/pilot-stack-up.sh`; no Solr/ZK; SQL search |
 | **Multi-user messaging E2E** | `scripts/smoke-messaging-e2e.sh` | `deploy-messaging-smoke.yml` | `.ps1`; lib `SmokeMessaging.sh` |
 | Auth smoke | `scripts/smoke-auth.sh` | manual | `.ps1` |
 | Stack readiness smoke | `scripts/smoke-ready.sh` | manual | `.ps1` |

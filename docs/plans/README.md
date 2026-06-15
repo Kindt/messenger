@@ -16,6 +16,7 @@
 | 8 | `08-hexagonal-refactoring.md` | Ports & Adapters Phase 2a (Chat) | Опционально | `completed` |
 | 9 | `09-code-health-backlog.md` | Серия малых PR по рефакторингу hotspot-зон | Высокий | `completed` |
 | 10 | `10-web-client-code-health-backlog.md` | Серия малых PR по оздоровлению web-client | Высокий | `completed` |
+| 11 | `2026-06-15-infra-optimization-design.md` | Infra: приложение к ТЗ §13 (spec only) | Высокий | `spec_draft` |
 
 ## Структура каждого плана
 

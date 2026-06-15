@@ -26,6 +26,11 @@ public final class SolrClientFactory {
     }
 
     public static Binding create(AppConfig config) {
+        var mode = config.searchMode();
+        if ("sql".equalsIgnoreCase(mode)) {
+            log.info("SEARCH_MODE=sql — Solr client disabled");
+            return Binding.empty();
+        }
         var zk = config.solrZkHosts();
         if (!zk.isBlank()) {
             var zkHosts = List.of(zk.split("\\s*,\\s*"));
@@ -45,6 +50,9 @@ public final class SolrClientFactory {
             return new Binding(client, false);
         }
         log.debug("Solr disabled (set SOLR_ZK or SOLR_URL)");
+        if ("solr".equalsIgnoreCase(mode)) {
+            log.warn("SEARCH_MODE=solr but SOLR_ZK/SOLR_URL not configured — SQL fallback at query time");
+        }
         return Binding.empty();
     }
 }

@@ -1,0 +1,354 @@
+# Pilot profile (FR-OPT-01): minimal hot-path stack for <=10k registered users.
+# No Solr/ZooKeeper; SQL search fallback when SOLR_URL is unset.
+# Optional profiles: push, retention, compliance, archive.
+#
+#   docker compose -f docker/docker-compose.pilot.yml -f docker/docker-compose.keycloak-prod.yml up -d
+#   docker compose -f docker/docker-compose.pilot.yml --profile push up -d
+#
+# Helper: ./scripts/pilot-stack-up.sh
+
+version: "3.8"
+
+services:
+  postgres-hot:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: avandocmsg_hot
+      POSTGRES_USER: avandocmsg
+      POSTGRES_PASSWORD: avandocmsg
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-hot-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U avandocmsg"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  postgres-archive:
+    profiles: ["archive"]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: avandocmsg_archive
+      POSTGRES_USER: avandocmsg
+      POSTGRES_PASSWORD: avandocmsg
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg-archive-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U avandocmsg"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["-js", "-sd", "/data"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8222/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: avandocmsg
+      MINIO_ROOT_PASSWORD: avandocmsg123
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    command: ["start-dev", "--import-realm"]
+    ports:
+      - "8081:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL_HOST: postgres-hot
+      KC_DB_URL_PORT: "5432"
+      KC_DB_URL_DATABASE: avandocmsg_hot
+      KC_DB_USERNAME: avandocmsg
+      KC_DB_PASSWORD: avandocmsg
+    volumes:
+      - ../keycloak:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+
+  core-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.core-api
+    ports:
+      - "8080:8080"
+    environment:
+      APP_PORT: 8080
+      DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      DB_USER: avandocmsg
+      DB_PASSWORD: avandocmsg
+      DB_POOL_SIZE: "15"
+      SEARCH_MODE: sql
+      MLS_WIRE_ENABLED: "false"
+      MLS_STATUS: stub
+      REDIS_URI: redis://redis:6379
+      NATS_URL: nats://nats:4222
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/avandocmsg
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/avandocmsg/protocol/openid-connect/certs
+      KEYCLOAK_MASTER_USER: admin
+      KEYCLOAK_MASTER_PASSWORD: admin
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: avandocmsg
+      MINIO_SECRET_KEY: avandocmsg123
+      MINIO_BUCKET: avandocmsg
+      EXPORT_DIR: /export
+      MEDIA_MAX_UPLOAD_BYTES: "52428800"
+      JITSI_MEET_BASE_URL: https://meet.jit.si
+      WEBRTC_STUN_URIS: stun:stun.l.google.com:19302
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_started
+      keycloak:
+        condition: service_started
+      minio:
+        condition: service_started
+    volumes:
+      - export-replay-data:/export
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/api/v1/health >/dev/null && curl -fsS http://127.0.0.1:8080/api/v1/health/ready >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 90s
+
+  ws-gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ws-gateway
+    ports:
+      - "8082:8081"
+    environment:
+      WS_PORT: 8081
+      NATS_URL: nats://nats:4222
+      KEYCLOAK_ISSUER: http://keycloak:8080/realms/avandocmsg
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/avandocmsg/protocol/openid-connect/certs
+      APP_LOCALE: ru
+    depends_on:
+      nats:
+        condition: service_started
+      keycloak:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8081/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  message-pipeline:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.message-pipeline
+    environment:
+      NATS_URL: nats://nats:4222
+      DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      DB_USER: avandocmsg
+      DB_PASSWORD: avandocmsg
+      NATS_JETSTREAM: "false"
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+      nats:
+        condition: service_started
+
+  push-worker:
+    profiles: ["push"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.push-worker
+    environment:
+      NATS_URL: nats://nats:4222
+      DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      DB_USER: avandocmsg
+      DB_PASSWORD: avandocmsg
+      PUSH_METRICS_PORT: "9191"
+    ports:
+      - "9194:9191"
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+      nats:
+        condition: service_started
+      message-pipeline:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:$$PUSH_METRICS_PORT/health >/dev/null || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+  retention-worker:
+    profiles: ["retention"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.retention-worker
+    environment:
+      RETENTION_WORKER_ENABLED: "true"
+      RETENTION_SCAN_INTERVAL_SECONDS: "3600"
+      RETENTION_INITIAL_DELAY_SECONDS: "30"
+      RETENTION_METRICS_PORT: "9191"
+      DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      DB_USER: avandocmsg
+      DB_PASSWORD: avandocmsg
+      NATS_URL: nats://nats:4222
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: avandocmsg
+      MINIO_SECRET_KEY: avandocmsg123
+      MINIO_BUCKET: avandocmsg
+    ports:
+      - "9192:9191"
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+      nats:
+        condition: service_started
+      minio:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9191/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  archiver-worker:
+    profiles: ["compliance"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.archiver-worker
+    environment:
+      NATS_URL: nats://nats:4222
+      ARCHIVE_JDBC_URL: jdbc:postgresql://postgres-archive:5432/avandocmsg_archive
+      ARCHIVE_DB_USER: avandocmsg
+      ARCHIVE_DB_PASSWORD: avandocmsg
+    depends_on:
+      nats:
+        condition: service_started
+      postgres-archive:
+        condition: service_healthy
+
+  deep-archiver-worker:
+    profiles: ["compliance"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.deep-archiver-worker
+    environment:
+      NATS_URL: nats://nats:4222
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: avandocmsg
+      MINIO_SECRET_KEY: avandocmsg123
+      MINIO_BUCKET: avandocmsg
+    depends_on:
+      nats:
+        condition: service_started
+      minio:
+        condition: service_started
+
+  indexer-worker:
+    profiles: ["compliance"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.indexer-worker
+    environment:
+      NATS_URL: nats://nats:4222
+      SOLR_URL: http://solr:8983
+      SOLR_COLLECTION: messages_meta
+    depends_on:
+      nats:
+        condition: service_started
+
+  export-replay-worker:
+    profiles: ["compliance"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.export-replay-worker
+    environment:
+      NATS_URL: nats://nats:4222
+      DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
+      DB_USER: avandocmsg
+      DB_PASSWORD: avandocmsg
+      EXPORT_DIR: /export
+      EXPORT_PUBLISH_COMPLETE: "true"
+      EXPORT_REPLAY_INCLUDE_VERSIONS: "true"
+      EXPORT_REPLAY_APPLY_MESSAGE_TTL_FILTER: "true"
+      EXPORT_REPLAY_MINIO_UPLOAD: "true"
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: avandocmsg
+      MINIO_SECRET_KEY: avandocmsg123
+      MINIO_BUCKET: avandocmsg
+      EXPORT_REPLAY_METRICS_PORT: "9191"
+    ports:
+      - "9193:9191"
+    volumes:
+      - export-replay-data:/export
+    depends_on:
+      postgres-hot:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9191/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+networks:
+  default:
+    name: korus_messenger_dev_min
+
+volumes:
+  pg-hot-data:
+  pg-archive-data:
+  nats-data:
+  minio-data:
+  export-replay-data:

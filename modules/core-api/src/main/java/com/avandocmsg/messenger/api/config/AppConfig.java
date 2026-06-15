@@ -60,6 +60,7 @@ public class AppConfig {
         override("SOLR_ZK", "solr.zk.hosts");
         override("SOLR_URL", "solr.http.url");
         override("SOLR_COLLECTION", "solr.collection");
+        override("SEARCH_MODE", "search.mode");
         override("FILE_PUBLIC_LINK_DEFAULT_TTL_SECONDS", "file.public.link.default.ttl.seconds");
         override("CORS_ALLOWED_ORIGINS", "cors.allowed.origins");
         override("RETENTION_DEFAULT_HOT_BODY_MAX_AGE_DAYS", "retention.default.hot_body_max_age_days");
@@ -278,6 +279,11 @@ public class AppConfig {
 
     public String solrCollection() {
         return props.getProperty("solr.collection", "messages_meta");
+    }
+
+    /** Explicit search backend: {@code sql}, {@code solr}, or empty (auto from Solr env). */
+    public String searchMode() {
+        return props.getProperty("search.mode", "").trim();
     }
 
     /** Default TTL for created public file links (ТЗ п. 15), seconds. */

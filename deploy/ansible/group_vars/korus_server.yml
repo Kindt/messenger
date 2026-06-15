@@ -1,5 +1,9 @@
 ---
+# Deploy profile: pilot (lite hot-path), standard (full-server), enterprise (future scale overlays).
+korus_deploy_profile: standard
 korus_compose_full_server: "{{ korus_repo_root }}/docker/docker-compose.full-server.yml"
+korus_compose_pilot: "{{ korus_repo_root }}/docker/docker-compose.pilot.yml"
+korus_compose_keycloak_prod: "{{ korus_repo_root }}/docker/docker-compose.keycloak-prod.yml"
 korus_compose_lan_publish: "{{ korus_repo_root }}/docker/docker-compose.lan-publish.yml"
 korus_use_lan_publish: false
 korus_configure_ufw: false
