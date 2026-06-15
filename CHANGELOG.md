@@ -15,6 +15,15 @@
 - **T306–T307:** NATS `msg.cache.invalidate` (pipeline → core-api); chat-list invalidation in `ChatService`.
 - **T308–T310:** `replica-stack-up.sh`, `enterprise-stack-up.sh`, Ansible `enterprise` profile, `nginx.conf.scale.template`.
 
+### 2026-06-15 — spec 006 Wave 3 guest gate T311 green
+
+- Guest: `sync-workers` (~246s), `enterprise-stack-up`, scale replica refresh, messaging smokes green.
+
+### 2026-06-15 — spec 006 Wave 3 guest tooling: qemu-sync-workers
+
+- **`rebuild-workers-guest.sh`**, **`qemu-sync-workers.ps1`**, **`qemu-dev-mode -Mode sync-workers`** — пересборка pipeline/indexer/deep-archiver на QEMU guest.
+- **`docs/NATS_SUBJECTS_INTEROP.md`**: `msg.cache.invalidate`; **`SMOKE_INDEX.md`**: enterprise stack row.
+
 ### 2026-06-15 — spec 006 Wave 2 guest smokes: E2EE-safe messaging scripts
 
 - **`SmokeMessaging.sh`**: polling по `message_id` / count (E2EE `e2ee-text`); `smoke_mark_read` → `POST /read-batch`.

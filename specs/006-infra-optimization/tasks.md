@@ -79,4 +79,8 @@
 - [x] T309 Ansible `enterprise` profile + `enterprise-stack-up.sh`
 - [x] T310 `nginx.conf.scale.template` (ip_hash WS sticky)
 
+### Verification gate (Wave 3)
+
+- [x] T311 Guest: `qemu-sync-workers` + `verify-nats-queue-group` + `load-message-pipeline` + `smoke-messaging-e2e --load-rounds 3`; optional `enterprise-stack-up.sh`
+
 ---

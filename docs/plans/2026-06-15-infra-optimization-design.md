@@ -1,7 +1,7 @@
 # Design: оптимизация инфраструктуры Korus Messenger
 
 **Дата:** 2026-06-15  
-**Статус:** specification draft — **приложение к ТЗ**, реализация отложена  
+**Статус:** **реализовано** (spec 006, Waves 1–3, T311 guest gate green 2026-06-15)  
 **Связанные документы:** [`docs/PRODUCT_PRESENTATION.md`](../PRODUCT_PRESENTATION.md) §12, §10, [`deploy/qemu/RESOURCES.md`](../../deploy/qemu/RESOURCES.md)
 
 > Этот документ **не является backlog на код**. Он детализирует требования §12 продуктового ТЗ. Порядок волн и пересечения этапов могут уточняться до начала реализации.

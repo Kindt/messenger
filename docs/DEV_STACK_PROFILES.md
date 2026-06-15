@@ -49,7 +49,7 @@ flowchart LR
 
 - Две VM (`korus-server`, `korus-web`), порты на хосте `18080` (API), `19088` (UI).
 - Web: `korus-web/docker-compose.yml` + при hotswap — `docker-compose.qemu-hotswap-overlay.yml`.
-- Скрипты `sync-api`, `sync-web`, `sync-ui`, `playwright-dev-loop.ps1`.
+- Скрипты `sync-api`, `sync-api-core`, `sync-workers`, `sync-web`, `sync-ui`, `playwright-dev-loop.ps1`.
 
 ### Чем dev отличается от full
 
@@ -76,7 +76,7 @@ flowchart LR
 |------------------------|--------|---------|
 | **`standard`** (default) | `scripts/full-stack-up.sh` | `docker/docker-compose.full-server.yml` |
 | **`pilot`** | `scripts/pilot-stack-up.sh` | `docker/docker-compose.pilot.yml` + `docker-compose.keycloak-prod.yml` |
-| **`enterprise`** | `scripts/scale-stack-up.sh` | `docker-compose.full-server.yml` + `docker-compose.scale.yml` (+ optional `docker-compose.replica.yml`) |
+| **`enterprise`** | `scripts/enterprise-stack-up.sh` | `docker-compose.full-server.yml` + `docker-compose.scale.yml` (+ optional `docker-compose.replica.yml`) |
 
 Compose overlays Wave 2 (guest / CI lab):
 
@@ -200,10 +200,10 @@ korus_deploy_profile: pilot
 ## 9. Переключение deploy profile на существующем QEMU dev-диске
 
 1. Задать `korus_deploy_profile` в inventory или `group_vars`.
-2. `qemu-dev-mode.ps1 -Mode sync-api` или `qemu-redeploy.ps1 -ServerOnly` (при смене pilot ↔ standard может понадобиться `-Rebuild`).
+2. `qemu-dev-mode.ps1 -Mode sync-api` / `sync-api-core` (только core-api) / `sync-workers` (pipeline, indexer, deep-archiver) или `qemu-redeploy.ps1 -ServerOnly` (при смене pilot ↔ standard может понадобиться `-Rebuild`).
 3. Для pilot вручную на guest: `scripts/pilot-stack-up.sh --down-full-first`.
 4. Smoke: `scripts/smoke-pilot-stack.sh` (pilot) или smokes из [`scripts/SMOKE_INDEX.md`](../scripts/SMOKE_INDEX.md) (full).
 
 ---
 
-*Последнее обновление: 2026-06-15 — spec 006 Wave 1, согласование QEMU dev/full vs pilot.*
+*Последнее обновление: 2026-06-15 — spec 006 complete (T311), sync-workers, enterprise profile.*
