@@ -49,7 +49,9 @@
 
 ## Phase 7 — W4 verification (operator)
 
-- [ ] T701 Outer gate `qemu-plan-orchestrator.ps1 -SkipVmUp` without manual wsUrl/SSH fix
+- [x] T701a `test-korus-wsurl.ps1` + `smoke-korus-web.ps1` ExpectWsHost (2026-06-15, QEMU live)
+- [x] T701b Inner Playwright `all-inner` green (2026-06-15)
+- [x] T701c Full outer `qemu-plan-orchestrator.ps1 -SkipVmUp` green (2026-06-15, runtime-gate-report)
 - [ ] T702 Guest `guest-smoke-platform-w2.sh` on live server guest
 
 ---

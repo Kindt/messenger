@@ -354,7 +354,7 @@ specs/007-platform-stage-readiness/
 - [x] Stage prep kit complete (US1 ready-to-run per `stage-tls-prep-contract.md`)
 - [x] E2EE rows 1–3 packet ready (`e2ee-security-signoff-packet-2026-06-15.md`)
 - [x] `CHANGELOG.md` [Unreleased] записи спринта
-- [ ] Outer gate green **без** ручного wsUrl / SSH key fix (T701 — operator re-run)
+- [x] Outer gate green **без** ручного wsUrl / SSH key fix (T701c 2026-06-15)
 - [ ] Load: pilot baseline JSON на QEMU/stage (T604 — k6 skeleton готов)
 - [ ] Stage deploy + human sign-offs (T601–T607 — blocked: no stage host)
 
