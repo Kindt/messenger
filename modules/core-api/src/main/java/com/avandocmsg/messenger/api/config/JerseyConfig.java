@@ -73,6 +73,7 @@ import com.avandocmsg.messenger.core.adapter.messaging.NatsConnectionOutbound;
 import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.PublicLinkPort;
+import com.avandocmsg.messenger.core.port.ReadCachePort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.minio.MinioClient;
@@ -125,6 +126,7 @@ public class JerseyConfig extends ResourceConfig {
                         AdminUiManifest adminUiManifest,
                         AdminServerStatsService adminServerStatsService,
                         RedisProbe redisProbe,
+                        ReadCachePort readCachePort,
                         LegalHoldRepository legalHoldRepository,
                         PurgeStatusService purgeStatusService) {
         register(new AbstractBinder() {
@@ -133,6 +135,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(dataSource).to(DataSource.class);
                 bind(appConfig).to(AppConfig.class);
                 bind(redisProbe).to(RedisProbe.class);
+                bind(readCachePort).to(ReadCachePort.class);
                 bind(userMessages).to(UserMessageSource.class);
                 bind(clock).to(Clock.class);
                 bind(uuidGenerator).to(UuidGenerator.class);

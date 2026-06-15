@@ -45,6 +45,7 @@ import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
 import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.api.search.MessageSearchService;
 import com.avandocmsg.messenger.core.adapter.messaging.NatsConnectionOutbound;
+import com.avandocmsg.messenger.core.port.ReadCachePort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.avandocmsg.messenger.api.mls.MlsGroupManager;
 import com.avandocmsg.messenger.api.mls.MlsGroupStateRepository;
@@ -123,6 +124,7 @@ public class MessengerApplication {
     private HotReloadWatcher watcher;
     private RedisConfig redisConfig;
     private RedisProbe redisProbe;
+    private ReadCachePort readCachePort;
     private SolrClient solrClient;
     private ExportReplayCompleteSubscriber exportCompleteSubscriber;
     private ExportSuggestedSubscriber exportSuggestedSubscriber;
@@ -177,9 +179,14 @@ public class MessengerApplication {
         ExportJobsDbCollector.registerDefault(dataSource, appConfig.exportProcessingStaleMinutes());
         // Prime labeled export counters for Prometheus scrape before first enqueue/cancel.
         ExportMetrics.ensureRegistered();
-        if (appConfig.rateLimitAuthEnabled()) {
+        if (appConfig.rateLimitAuthEnabled() || appConfig.redisReadCacheEnabled()) {
             this.redisConfig = new RedisConfig(appConfig);
-            log.info("Auth rate limiting enabled (Redis)");
+            if (appConfig.rateLimitAuthEnabled()) {
+                log.info("Auth rate limiting enabled (Redis)");
+            }
+            if (appConfig.redisReadCacheEnabled()) {
+                log.info("Redis read cache enabled");
+            }
         } else {
             this.redisConfig = null;
         }
@@ -300,6 +307,8 @@ public class MessengerApplication {
         var authRateLimiter = redisConfig != null
             ? AuthRateLimiter.redis(redisConfig.sync(), appConfig)
             : AuthRateLimiter.noop();
+        this.readCachePort = CoreModule.readCachePort(
+            redisConfig != null ? redisConfig.sync() : null, appConfig);
         var contactService = new ContactService(contactRepository, userRepository, blockRepository);
         var natsOutbound = new NatsConnectionOutbound(natsConnection, jetStreamOptional());
         var adminManifest = AdminUiManifest.load(MessengerApplication.class.getClassLoader());
@@ -359,7 +368,7 @@ public class MessengerApplication {
                 exportComplianceSeed,
                 organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,
                 publicLinkPort, messageSearchService, adminManifest, adminServerStatsService, redisProbe,
-                legalHoldRepository, purgeStatusService));
+                readCachePort, legalHoldRepository, purgeStatusService));
         Tomcat.addServlet(ctx, SERVLET_NAME, jerseyServlet);
         ctx.addServletMappingDecoded("/api/*", SERVLET_NAME);
 

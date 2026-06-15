@@ -12,6 +12,8 @@ import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageRepositoryAd
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrganizationRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcSavedChatAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcUserRepositoryAdapter;
+import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
+import com.avandocmsg.messenger.core.adapter.cache.RedisReadCacheAdapter;
 import com.avandocmsg.messenger.core.adapter.storage.FileProxyObjectStorageAdapter;
 import com.avandocmsg.messenger.core.adapter.storage.MinioObjectStorageAdapter;
 import com.avandocmsg.messenger.core.application.ChatApplicationService;
@@ -25,9 +27,12 @@ import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.core.port.ObjectStoragePort;
 import com.avandocmsg.messenger.core.port.OrganizationRepositoryPort;
 import com.avandocmsg.messenger.core.port.PublicLinkPort;
+import com.avandocmsg.messenger.core.port.ReadCachePort;
 import com.avandocmsg.messenger.core.port.SavedChatPort;
 import com.avandocmsg.messenger.core.port.UserRepositoryPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
+
+import io.lettuce.core.api.sync.RedisCommands;
 
 import io.minio.MinioClient;
 
@@ -102,5 +107,12 @@ public final class CoreModule {
     public static OrganizationApplicationService organizationApplicationService(DataSource dataSource,
                                                                                 UuidGenerator uuidGenerator) {
         return new OrganizationApplicationService(organizationRepositoryPort(dataSource, uuidGenerator));
+    }
+
+    public static ReadCachePort readCachePort(RedisCommands<String, String> redis, AppConfig appConfig) {
+        if (!appConfig.redisReadCacheEnabled() || redis == null) {
+            return NoOpReadCacheAdapter.INSTANCE;
+        }
+        return new RedisReadCacheAdapter(redis, appConfig);
     }
 }

@@ -8,6 +8,13 @@
 
 ## [Unreleased]
 
+### 2026-06-15 — spec 006 Wave 2 T201: ReadCachePort + Redis adapter (FR-OPT-03)
+
+- **`ReadCachePort`**, **`ReadCacheKeys`**, **`ReadCacheKind`**: cache-aside hex port; key patterns `chat:list`, `chat:unread`, `user:profile`, `user:presence`.
+- **`RedisReadCacheAdapter`**, **`NoOpReadCacheAdapter`**: Lettuce SETEX/DEL, fail-open; opt-in via `REDIS_READ_CACHE_ENABLED`.
+- **`AppConfig`**, **`CoreModule`**, HK2 bind in **`JerseyConfig`**; Redis client shared with rate limiter when cache enabled.
+- Unit tests: **`RedisReadCacheAdapterTest`**, **`ReadCacheKeysTest`**.
+
 ### 2026-06-15 — docs: справочник профилей стендов (dev / full / pilot)
 
 - **`docs/DEV_STACK_PROFILES.md`**: три оси (QEMU disk, Ansible deploy, product tier); матрицы full-server / pilot / dev-min; Keycloak dev vs prod; «что выбрать».

@@ -47,7 +47,7 @@
 
 ## Phase 2: Wave 2 — Cache + scale + replica (US3, US4, US5)
 
-- [ ] T201 [US3] Hex `ReadCachePort` + `RedisReadCacheAdapter`
+- [x] T201 [US3] Hex `ReadCachePort` + `RedisReadCacheAdapter`
 - [ ] T202 [US3] WS invalidation hooks; Prometheus cache hit/miss metrics
 - [ ] T203 [US4] `docker/docker-compose.scale.yml`
 - [ ] T204 [US4] NATS queue group verification; load script for msg/s

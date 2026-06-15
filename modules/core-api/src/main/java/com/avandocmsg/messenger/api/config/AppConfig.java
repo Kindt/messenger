@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.config;
 
+import com.avandocmsg.messenger.core.port.ReadCacheKind;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,6 +88,11 @@ public class AppConfig {
         override("MLS_STATUS", "mls.status");
         override("MLS_WIRE_ENABLED", "mls.wire.enabled");
         override("MLS_WIRE_SUBSCRIBER_ENABLED", "mls.wire.subscriber.enabled");
+        override("REDIS_READ_CACHE_ENABLED", "redis.read.cache.enabled");
+        override("REDIS_READ_CACHE_TTL_CHAT_LIST_SECONDS", "redis.read.cache.ttl.chat_list.seconds");
+        override("REDIS_READ_CACHE_TTL_CHAT_UNREAD_SECONDS", "redis.read.cache.ttl.chat_unread.seconds");
+        override("REDIS_READ_CACHE_TTL_USER_PROFILE_SECONDS", "redis.read.cache.ttl.user_profile.seconds");
+        override("REDIS_READ_CACHE_TTL_USER_PRESENCE_SECONDS", "redis.read.cache.ttl.user_presence.seconds");
     }
 
     private void override(String envKey, String propKey) {
@@ -141,6 +147,26 @@ public class AppConfig {
 
     public String redisUri() {
         return props.getProperty("redis.uri", "redis://localhost:6379");
+    }
+
+    /** Env: {@code REDIS_READ_CACHE_ENABLED}. Default false — opt-in for Standard tier. */
+    public boolean redisReadCacheEnabled() {
+        return Boolean.parseBoolean(props.getProperty("redis.read.cache.enabled", "false"));
+    }
+
+    /** TTL seconds for {@link com.avandocmsg.messenger.core.port.ReadCacheKind} (env overrides per kind). */
+    public int readCacheTtlSeconds(ReadCacheKind kind) {
+        var propKey = switch (kind) {
+            case CHAT_LIST -> "redis.read.cache.ttl.chat_list.seconds";
+            case CHAT_UNREAD -> "redis.read.cache.ttl.chat_unread.seconds";
+            case USER_PROFILE -> "redis.read.cache.ttl.user_profile.seconds";
+            case USER_PRESENCE -> "redis.read.cache.ttl.user_presence.seconds";
+        };
+        var raw = props.getProperty(propKey);
+        if (raw != null && !raw.isBlank()) {
+            return Integer.parseInt(raw.trim());
+        }
+        return kind.defaultTtlSeconds();
     }
 
     public String natsUrl() {
