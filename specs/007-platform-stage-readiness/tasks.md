@@ -37,15 +37,17 @@
 - [x] T502 `UserRepositoryPort.createLocalUser` + AuthService + H2 test
 - [x] T503 Push preview i18n + bundle parity test
 
-## Phase 6 — W3/W4 T-P1 (ops — blocked without stage)
+## Phase 6 — W3/W4 T-P1 (ops — deploy-only when host available)
 
-- [ ] T601 Stage DNS + vault encrypt + `site.yml` (US1 rows 1–3) — **automation:** `preflight-stage-deploy.ps1`, `validate-stage-inventory.ps1` ✅; operator on stage host
-- [ ] T602 Real TLS smoke on stage URL (US1 row 4) — **wrapper:** `stage-tls-smoke.ps1` ✅
-- [ ] T603 E2EE staging rows 4–6 — **partial smoke:** `smoke-e2ee-staging.ps1` ✅
-- [x] T604 k6 baseline JSON on QEMU (`scripts/run-k6-qemu-baseline.ps1`, `deploy/qemu/run/k6-pilot-baseline.json` fallback 2026-06-15; full k6 when installed)
-- [ ] T605 Hotplug `apply-hotplug-signoff.ps1` (US6) — script + template ✅; human signers pending
-- [ ] T606 E2EE QA formal sign (US7 row 8)
-- [ ] T607 Prod `tls_smoke` tag (US1 row 5)
+Engineering deliverables **READY** 2026-06-16 — [`docs/review/stage-prod-deploy-runbook.md`](../../docs/review/stage-prod-deploy-runbook.md), [`ops-signoff-log.md`](../004-deferred-phase2-closure/ops-signoff-log.md).
+
+- [ ] T601 Stage DNS + vault encrypt + `site.yml` (US1 rows 1–3) — **eng. ✅** preflight/validate; **ops ⏳** real FQDN
+- [ ] T602 Real TLS smoke on stage URL (US1 row 4) — **eng. ✅** `stage-tls-smoke.ps1`; **ops ⏳** after deploy
+- [ ] T603 E2EE staging rows 4–6 — **eng. ✅** `smoke-e2ee-staging.ps1`; **ops ⏳** HTTPS + admin token
+- [x] T604 k6 baseline JSON on QEMU (`run-k6-qemu-baseline.ps1`; stage: `run-k6-stage-baseline.ps1` ready)
+- [ ] T605 Hotplug `apply-hotplug-signoff.ps1` (US6) — **eng. ✅** script; **human ⏳** signers
+- [ ] T606 E2EE QA formal sign (US7 row 8) — **eng. ✅** Playwright QEMU; **human ⏳** staging URL
+- [ ] T607 Prod `tls_smoke` tag (US1 row 5) — **eng. ✅** tag; **ops ⏳** prod inventory
 
 ## Phase 7 — W4 verification (operator)
 
@@ -56,5 +58,5 @@
 
 ---
 
-**Engineering closure:** Phases 1–5 + T701–T702 complete → spec 007 engineering sign-off 2026-06-15.  
-**Ops backlog:** Phase 6 + T604 (k6 baseline) → resume when stage host / k6 installed.
+**Engineering closure:** Phases 1–5 + T701–T702 + Phase 6 eng. deliverables → spec 007 engineering sign-off 2026-06-16.  
+**Ops execution:** Phase 6 rows T601–T603, T607 — deploy-only when stage/prod hosts available (no code changes expected).

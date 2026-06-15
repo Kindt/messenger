@@ -19,7 +19,8 @@
 - **FR-OPT-08 dedup** — реализован в коде и презентации (`V031`, wave 4).
 - **§12 в HTML** — «Интеграции»; infra optimization — в §9/§10 и резюме §1.
 
-**Sprint A+B (2026-06-16):** stage preflight scripts ✅; VAPID/TURN Ansible wiring ✅; preview-worker compose ✅; ops deploy на stage — pending.
+**Sprint A+B (2026-06-16):** stage preflight scripts ✅; VAPID/TURN Ansible wiring ✅; preview-worker compose ✅.  
+**Deploy-ready (2026-06-16):** US1/US7 engineering closed — [`stage-prod-deploy-runbook.md`](../review/stage-prod-deploy-runbook.md); ops execution pending real hosts only.
 
 ---
 

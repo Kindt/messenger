@@ -1,5 +1,8 @@
 # Stage TLS smoke runbook (spec 004 US1 row 4)
 
+**Deploy-ready (2026-06-16):** скрипты и Ansible role `tls` в репозитории. Ops row 4 выполняется **после** `site.yml` на реальном FQDN.  
+**Master checklist:** [`stage-prod-deploy-runbook.md`](stage-prod-deploy-runbook.md)
+
 **When:** after `ansible-playbook -i inventory/stage/hosts.yml playbooks/site.yml` with `korus_tls_enabled: true`.
 
 **Script:** [`scripts/smoke-tls-redirect.ps1`](../../scripts/smoke-tls-redirect.ps1)
@@ -38,7 +41,7 @@ cd <repo-root>
 .\scripts\smoke-tls-redirect.ps1 -SkipTls
 ```
 
-Records in [`ops-signoff-log.md`](../../specs/004-deferred-phase2-closure/ops-signoff-log.md) as engineering dev path — **not** stage sign-off.
+Records in [`ops-signoff-log.md`](../../specs/004-deferred-phase2-closure/ops-signoff-log.md) as **US1 ops row 4** — **not** engineering dev path (`-SkipTls`).
 
 ---
 

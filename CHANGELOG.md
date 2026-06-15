@@ -8,7 +8,24 @@
 
 ## [Unreleased]
 
-### 2026-06-15 — Презентация сравнения с конкурентами
+### 2026-06-16 — US1/US7 deploy-ready (ops-signoff + runbook)
+
+- **`docs/review/stage-prod-deploy-runbook.md`**: однодневный чеклист ops при появлении stage/prod хостов (deploy-only, без доработки кода).
+- **`specs/004-deferred-phase2-closure/ops-signoff-log.md`**: модель deploy-ready — engineering READY / ops execution pending host / human signatures.
+- Обновлены: `inventory/stage/README.md`, `e2ee-staging-checklist.md`, `stage-tls-smoke-runbook.md`, `specs/007/tasks.md`, `ROADMAP_EPICS.md` §8.
+
+### 2026-06-15 — Презентация сравнения: legacy Jabber/XMPP (v1.2)
+
+- **`competitor_comparison.html`**: раздел 5.3 — Jabber/XMPP, ejabberd, Openfire, Sametime, Lync/SfB, Cisco UC; timeline, infra vs Korus, миграция.
+- **`docs/COMPETITOR_COMPARISON_METHODOLOGY.md`**: v1.2 — legacy-контур вне production-матрицы.
+
+### 2026-06-15 — Презентация сравнения с конкурентами (v1.1)
+
+- **`docs/COMPETITOR_COMPARISON_METHODOLOGY.md`**: v1.1 — якорь S-50k, детализация eXpress @100–1000, матрица возможностей.
+- **`competitor_comparison.html`**: расширенная презентация — eXpress infra/RAM, Enterprise TCO, доля лицензий, feature matrix, все якоря.
+- **`scripts/competitor_comparison_data.py`**, **`scripts/build-competitor-comparison-html.py`**: S-50k, ExpressTier с ролями, справочники Loop/Mattermost/VK Superapp.
+
+### 2026-06-15 — Презентация сравнения с конкурентами (v1.0)
 
 - **`docs/COMPETITOR_COMPARISON_METHODOLOGY.md`**: самодостаточная методика (Pilot=пробник, якоря Standard/Enterprise, floor 10k/100k).
 - **`competitor_comparison.html`**: наглядная презентация — SVG-графики TCO, таблицы Korus vs eXpress/Пачка/VK, плюсы/минусы.

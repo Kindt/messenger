@@ -53,6 +53,7 @@
 | **TURN reachability** | `scripts/smoke-turn.ps1` | manual | TCP 3478 + optional `web-client-env.js` ICE |
 | **Preview worker health** | `scripts/smoke-preview-worker.ps1` | manual | full-server `:9195/health` |
 | **Playwright staging gate** | `scripts/playwright-staging-gate.ps1` | manual | `-BaseUrl https://...` |
+| **Stage/prod deploy runbook** | `docs/review/stage-prod-deploy-runbook.md` | manual | US1/US7 deploy-only when hosts available |
 | **Playwright parity matrix** | `tests/e2e-web/` (9 specs) | `deploy-messaging-smoke.yml` (optional nightly job, `continue-on-error`) | spec 004 US5 T110–T115; operator template `specs/002-web-client-server-parity/runtime-gate-report.md` |
 
 ## Operator utilities

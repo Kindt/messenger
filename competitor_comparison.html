@@ -10,9 +10,9 @@
     h1 { font-size: 24px; margin-top: 0; color: #1e3a5f; }
     h2 { font-size: 19px; border-top: 2px solid #6366f1; padding-top: 18px; margin-top: 32px; color: #1e3a5f; }
     h3 { font-size: 16px; margin-top: 20px; color: #374151; }
-    h4 { font-size: 14px; margin: 8px 0 4px; color: #4b5563; }
-    table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
-    th, td { border: 1px solid #d1d5db; padding: 8px 10px; vertical-align: top; }
+    h4 { font-size: 14px; margin: 12px 0 6px; color: #4b5563; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13px; }
+    th, td { border: 1px solid #d1d5db; padding: 7px 9px; vertical-align: top; }
     th { background: #eef2ff; text-align: left; font-weight: 600; }
     tr:nth-child(even) { background: #f9fafb; }
     .comment { color: #374151; }
@@ -20,6 +20,7 @@
     .note { background: #eff6ff; border: 1px solid #93c5fd; padding: 14px; border-radius: 8px; margin: 14px 0; }
     .warn { background: #fff7ed; border: 1px solid #fdba74; padding: 14px; border-radius: 8px; margin: 14px 0; }
     .cost-box { background: #f0fdf4; border: 1px solid #86efac; padding: 14px; border-radius: 8px; margin: 14px 0; }
+    .legacy-box { background: #fafaf9; border: 1px solid #d6d3d1; padding: 14px; border-radius: 8px; margin: 14px 0; }
     .small { font-size: 12px; color: #6b7280; }
     .meta { color: #6b7280; font-size: 13px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; }
     .fig { margin: 20px 0; text-align: center; }
@@ -31,6 +32,8 @@
     .money { font-weight: 600; color: #047857; }
     .toc a { text-decoration: none; color: #4338ca; }
     .toc a:hover { text-decoration: underline; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
     @media print { body { margin: 12px; max-width: none; } .note, .warn, .fig { break-inside: avoid; } }
 </style>
 </head>
@@ -38,109 +41,221 @@
 
 <h1>Сравнение Korus Messenger с конкурентами</h1>
 <div class="meta">
-  <b>Версия:</b> 1.0 &nbsp;|&nbsp; <b>Дата ставок:</b> 2026-06-15 &nbsp;|&nbsp;
+  <b>Версия:</b> 1.2 &nbsp;|&nbsp; <b>Дата ставок:</b> 2026-06-15 &nbsp;|&nbsp;
   <b>Регион:</b> РФ (Москва / СПб, коммерческий сегмент) &nbsp;|&nbsp; <b>НДС:</b> Без НДС<br/>
-  <b>Аудитория:</b> руководство, продажи, архитекторы, закупки<br/>
-  <b>Методика (текст):</b> docs/COMPETITOR_COMPARISON_METHODOLOGY.md
+  <b>Методика:</b> docs/COMPETITOR_COMPARISON_METHODOLOGY.md
 </div>
 
 <div class="note">
-  <div class="req">Правила сравнения</div>
+  <div class="req">Production-матрица</div>
   <div class="comment">
-    <b>Pilot (пробник)</b> — только POC до 10&nbsp;000 пользователей; <b>не участвует</b> в TCO-battle с eXpress Corporate.<br/>
-    <b>Standard</b> — production от <b>10&nbsp;000</b> до <b>100&nbsp;000</b> RU. <b>Enterprise</b> — от <b>100&nbsp;000</b> до <b>1&nbsp;000&nbsp;000</b> RU.<br/>
-    Ниже 10&nbsp;000 RU production-строку Korus Standard <b>не считаем</b>. Цифры infra — учебный шаблон, не оферта.
+    <b>Pilot</b> — пробник, вне TCO-battle. <b>Standard</b> от 10&nbsp;000 RU (S-10k, S-50k, S-100k).
+    <b>Enterprise</b> от 100&nbsp;000 RU (E-500k, E-1M). eXpress @100–1000 — справочно, ниже floor Korus.
   </div>
 </div>
 
 <div class="toc small">
-  <b>Содержание:</b>
-  <a href="#s1">1. Профили и якоря</a> ·
-  <a href="#s2">2. Korus: infra по якорям</a> ·
-  <a href="#s3">3. TCO @10k и @100k</a> ·
-  <a href="#s4">4. ₽/user</a> ·
-  <a href="#s5">5. Матрица сравнения</a> ·
-  <a href="#s6">6. eXpress: железо</a> ·
-  <a href="#s7">7. Плюсы и минусы</a> ·
-  <a href="#s8">8. Дисклеймеры</a>
+  <a href="#s1">1 Профили</a> · <a href="#s2">2 Korus infra</a> · <a href="#s3">3 TCO</a> ·
+  <a href="#s4">4 eXpress</a> · <a href="#s5">5 Функции</a> · <a href="#s5legacy">5.3 Legacy</a> ·
+  <a href="#s6">6 Матрицы</a> ·
+  <a href="#s7">7 Плюсы/минусы</a> · <a href="#s8">8 Источники</a>
 </div>
 
-<h2 id="s1">1. Профили и якоря расчёta</h2>
-<figure class="fig"><svg viewBox="0 0 680 200" width="680" height="200" xmlns="http://www.w3.org/2000/svg">
-  <text x="340" y="22" text-anchor="middle" font-size="14" font-weight="bold">Профили Korus: пороги и якоря расчёта</text>
-  <rect x="20" y="40" width="200" height="56" rx="8" fill="#fef3c7" stroke="#f59e0b"/>
-  <text x="120" y="62" text-anchor="middle" font-size="12" font-weight="600">Pilot (пробник)</text>
-  <text x="120" y="80" text-anchor="middle" font-size="10" fill="#6b7280">до 10k · вне матрицы</text>
-  <rect x="240" y="40" width="200" height="56" rx="8" fill="#dcfce7" stroke="#22c55e"/>
-  <text x="340" y="62" text-anchor="middle" font-size="12" font-weight="600">Standard</text>
-  <text x="340" y="80" text-anchor="middle" font-size="10" fill="#6b7280">floor 10k · max 100k</text>
-  <rect x="460" y="40" width="200" height="56" rx="8" fill="#dbeafe" stroke="#3b82f6"/>
-  <text x="560" y="62" text-anchor="middle" font-size="12" font-weight="600">Enterprise</text>
-  <text x="560" y="80" text-anchor="middle" font-size="10" fill="#6b7280">floor 100k · max 1M</text>
-  <line x1="120" y1="110" x2="120" y2="130" stroke="#f59e0b" stroke-dasharray="4 3"/>
-  <line x1="280" y1="130" x2="400" y2="130" stroke="#22c55e" stroke-width="2"/>
-  <line x1="480" y1="130" x2="600" y2="130" stroke="#3b82f6" stroke-width="2"/>
-  <circle cx="280" cy="130" r="5" fill="#22c55e"/><text x="280" y="152" text-anchor="middle" font-size="9">S-10k</text>
-  <circle cx="340" cy="130" r="5" fill="#22c55e"/><text x="340" y="152" text-anchor="middle" font-size="9">S-100k</text>
-  <circle cx="480" cy="130" r="5" fill="#3b82f6"/><text x="480" y="152" text-anchor="middle" font-size="9">E-500k</text>
-  <circle cx="560" cy="130" r="5" fill="#3b82f6"/><text x="560" y="152" text-anchor="middle" font-size="9">E-1M</text>
-  <text x="340" y="178" text-anchor="middle" font-size="10" fill="#6b7280">Ниже 10k RU — не считаем Standard в production-матрице</text>
-</svg><figcaption class="fig-cap">Рис. 1. Pilot — только пробник; сравнение TCO — на якорях Standard и Enterprise.</figcaption></figure>
 
-<h2 id="s2">2. Korus Messenger: инфраструктура по якорям</h2>
-<figure class="fig"><svg viewBox="0 0 720 320" width="720" height="320" xmlns="http://www.w3.org/2000/svg"><text x="360" y="24" text-anchor="middle" font-size="14" font-weight="bold">Infra Korus: годовая стоимость по якорям</text><line x1="72" y1="272" x2="700" y2="272" stroke="#9ca3af"/><line x1="72" y1="272" x2="700" y2="272" stroke="#e5e7eb"/><text x="66" y="276" text-anchor="end" font-size="9" fill="#4b5563">0 ₽</text><line x1="72" y1="214" x2="700" y2="214" stroke="#e5e7eb"/><text x="66" y="218" text-anchor="end" font-size="9" fill="#4b5563">6 млн ₽</text><line x1="72" y1="156" x2="700" y2="156" stroke="#e5e7eb"/><text x="66" y="160" text-anchor="end" font-size="9" fill="#4b5563">12 млн ₽</text><line x1="72" y1="98" x2="700" y2="98" stroke="#e5e7eb"/><text x="66" y="102" text-anchor="end" font-size="9" fill="#4b5563">18 млн ₽</text><line x1="72" y1="40" x2="700" y2="40" stroke="#e5e7eb"/><text x="66" y="44" text-anchor="end" font-size="9" fill="#4b5563">24 млн ₽</text><rect x="82" y="259" width="80" height="13" fill="#86efac" rx="3"/><text x="122" y="253" text-anchor="middle" font-size="9" font-weight="600">1,3 млн ₽</text><text x="122" y="288" text-anchor="middle" font-size="9">S-10k</text><rect x="174" y="233" width="80" height="39" fill="#86efac" rx="3"/><text x="214" y="227" text-anchor="middle" font-size="9" font-weight="600">4 млн ₽</text><text x="214" y="288" text-anchor="middle" font-size="9">S-100k</text><rect x="266" y="156" width="80" height="116" fill="#6366f1" rx="3"/><text x="306" y="150" text-anchor="middle" font-size="9" font-weight="600">12 млн ₽</text><text x="306" y="288" text-anchor="middle" font-size="9">E-500k</text><rect x="358" y="40" width="80" height="232" fill="#6366f1" rx="3"/><text x="398" y="34" text-anchor="middle" font-size="9" font-weight="600">24 млн ₽</text><text x="398" y="288" text-anchor="middle" font-size="9">E-1M</text></svg><figcaption class="fig-cap">Только инфраструктура (аренда VM, диски, канал, ops). Ставки 2026-06-15; не оферта.</figcaption></figure>
+<div class="warn">
+  <div class="req">Пробник (Pilot) — вне production-матрицы</div>
+  <div class="comment">
+    Pilot @10k: infra <span class="money">736 200 ₽/год</span> (~6.1 ₽/user/мес),
+    RAM 12–16 GB, без Solr. Для оценки функционала, не для TCO-battle с eXpress Corporate.
+    Production-сравнение начинается с <b>Standard S-10k</b> (infra <span class="money">1 314 600 ₽/год</span>, полный функционал).
+  </div>
+</div>
+
+<h2 id="s1">1. Профили и якоря</h2>
+<figure class="fig"><svg viewBox="0 0 720 210" width="720" height="210" xmlns="http://www.w3.org/2000/svg">
+  <text x="360" y="22" text-anchor="middle" font-size="14" font-weight="bold">Профили Korus: пороги и якоря</text>
+  <rect x="20" y="44" width="210" height="52" rx="8" fill="#fef3c7" stroke="#f59e0b"/>
+  <text x="125" y="66" text-anchor="middle" font-size="12" font-weight="600">Pilot (пробник)</text>
+  <text x="125" y="84" text-anchor="middle" font-size="10" fill="#6b7280">до 10k · вне TCO-матрицы</text>
+  <rect x="250" y="44" width="210" height="52" rx="8" fill="#dcfce7" stroke="#22c55e"/>
+  <text x="355" y="66" text-anchor="middle" font-size="12" font-weight="600">Standard</text>
+  <text x="355" y="84" text-anchor="middle" font-size="10" fill="#6b7280">floor 10k · S-10k · S-50k · S-100k</text>
+  <rect x="480" y="44" width="210" height="52" rx="8" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="585" y="66" text-anchor="middle" font-size="12" font-weight="600">Enterprise</text>
+  <text x="585" y="84" text-anchor="middle" font-size="10" fill="#6b7280">floor 100k · E-500k · E-1M</text>
+  <line x1="250" y1="120" x2="460" y2="120" stroke="#22c55e" stroke-width="2"/>
+  <circle cx="280" cy="120" r="5" fill="#22c55e"/><text x="280" y="140" text-anchor="middle" font-size="9">10k</text>
+  <circle cx="355" cy="120" r="5" fill="#22c55e"/><text x="355" y="140" text-anchor="middle" font-size="9">50k</text>
+  <circle cx="430" cy="120" r="5" fill="#22c55e"/><text x="430" y="140" text-anchor="middle" font-size="9">100k</text>
+  <line x1="480" y1="120" x2="690" y2="120" stroke="#3b82f6" stroke-width="2"/>
+  <circle cx="540" cy="120" r="5" fill="#3b82f6"/><text x="540" y="140" text-anchor="middle" font-size="9">500k</text>
+  <circle cx="630" cy="120" r="5" fill="#3b82f6"/><text x="630" y="140" text-anchor="middle" font-size="9">1M</text>
+  <text x="360" y="168" text-anchor="middle" font-size="10" fill="#6b7280">eXpress @100–1000 RU — ниже floor Standard Korus (10k)</text>
+  <text x="360" y="184" text-anchor="middle" font-size="10" fill="#6b7280">Media eXpress: ~0,3 vCPU × участник; ~10% users в звонке одновременно</text>
+</svg><figcaption class="fig-cap">Рис. 1. Production-сравнение только на якорях ≥10k (Standard) и ≥100k (Enterprise).</figcaption></figure>
+
+<h2 id="s2">2. Korus: инфраструктура</h2>
+<figure class="fig"><svg viewBox="0 0 720 320" width="720" height="320" xmlns="http://www.w3.org/2000/svg"><text x="360" y="24" text-anchor="middle" font-size="14" font-weight="bold">Infra Korus: годовая стоимость по якорям</text><line x1="72" y1="272" x2="700" y2="272" stroke="#9ca3af"/><line x1="72" y1="272" x2="700" y2="272" stroke="#e5e7eb"/><text x="66" y="276" text-anchor="end" font-size="9" fill="#4b5563">0 ₽</text><line x1="72" y1="214" x2="700" y2="214" stroke="#e5e7eb"/><text x="66" y="218" text-anchor="end" font-size="9" fill="#4b5563">6 млн ₽</text><line x1="72" y1="156" x2="700" y2="156" stroke="#e5e7eb"/><text x="66" y="160" text-anchor="end" font-size="9" fill="#4b5563">12 млн ₽</text><line x1="72" y1="98" x2="700" y2="98" stroke="#e5e7eb"/><text x="66" y="102" text-anchor="end" font-size="9" fill="#4b5563">18 млн ₽</text><line x1="72" y1="40" x2="700" y2="40" stroke="#e5e7eb"/><text x="66" y="44" text-anchor="end" font-size="9" fill="#4b5563">24 млн ₽</text><rect x="80" y="259" width="72" height="13" fill="#86efac" rx="3"/><text x="116" y="253" text-anchor="middle" font-size="8" font-weight="600">1,3 млн ₽</text><text x="116" y="286" text-anchor="middle" font-size="8">S-10k</text><rect x="162" y="246" width="72" height="26" fill="#86efac" rx="3"/><text x="198" y="240" text-anchor="middle" font-size="8" font-weight="600">2,6 млн ₽</text><text x="198" y="286" text-anchor="middle" font-size="8">S-50k</text><rect x="244" y="233" width="72" height="39" fill="#86efac" rx="3"/><text x="280" y="227" text-anchor="middle" font-size="8" font-weight="600">4 млн ₽</text><text x="280" y="286" text-anchor="middle" font-size="8">S-100k</text><rect x="326" y="156" width="72" height="116" fill="#6366f1" rx="3"/><text x="362" y="150" text-anchor="middle" font-size="8" font-weight="600">12 млн ₽</text><text x="362" y="286" text-anchor="middle" font-size="8">E-500k</text><rect x="408" y="40" width="72" height="232" fill="#6366f1" rx="3"/><text x="444" y="34" text-anchor="middle" font-size="8" font-weight="600">24 млн ₽</text><text x="444" y="286" text-anchor="middle" font-size="8">E-1M</text></svg><figcaption class="fig-cap">Только OPEX infra. Ставки 2026-06-15; не оферта.</figcaption></figure>
 
 <table>
   <tr><th>Якорь</th><th>Профиль</th><th>RU</th><th>Пик онлайн</th><th>Пик msg/s</th>
       <th>RAM</th><th>Infra ₽/год</th><th>₽/user/мес</th><th>Примечание</th></tr>
-  <tr><td><b>S-10k</b></td><td>Standard</td><td>10 000</td><td>750</td><td>~15</td><td>~64 GB</td><td class="money">1 314 600 ₽</td><td>~11.0 ₽</td><td class="small">Полный функционал Standard, не пробник</td></tr><tr><td><b>S-100k</b></td><td>Standard</td><td>100 000</td><td>4 800</td><td>~120</td><td>~140 GB</td><td class="money">3 984 000 ₽</td><td>~3.3 ₽</td><td class="small"></td></tr><tr><td><b>E-500k</b></td><td>Enterprise</td><td>500 000</td><td>15 000</td><td>~400</td><td>~450 GB</td><td class="money">12 000 000 ₽</td><td>~2.0 ₽</td><td class="small">Оценка; load test на stage</td></tr><tr><td><b>E-1M</b></td><td>Enterprise</td><td>1 000 000</td><td>20 000</td><td>~600</td><td>~0,9–1,2 TB</td><td class="money">24 000 000 ₽</td><td>~2.0 ₽</td><td class="small">Оценка; load test на stage</td></tr>
+  <tr><td><b>S-10k</b></td><td>Standard</td><td>10 000</td><td>750</td><td>~15</td><td>~64 GB</td><td class="money">1 314 600 ₽</td><td>~11.0 ₽</td><td class="small">Полный функционал Standard, не пробник</td></tr><tr><td><b>S-50k</b></td><td>Standard</td><td>50 000</td><td>2 400</td><td>~90</td><td>~140 GB</td><td class="money">2 649 300 ₽</td><td>~4.4 ₽</td><td class="small">Интерполяция между S-10k и S-100k</td></tr><tr><td><b>S-100k</b></td><td>Standard</td><td>100 000</td><td>4 800</td><td>~120</td><td>~140 GB</td><td class="money">3 984 000 ₽</td><td>~3.3 ₽</td><td class="small"></td></tr><tr><td><b>E-500k</b></td><td>Enterprise</td><td>500 000</td><td>15 000</td><td>~400</td><td>~450 GB</td><td class="money">12 000 000 ₽</td><td>~2.0 ₽</td><td class="small">Оценка; load test на stage</td></tr><tr><td><b>E-1M</b></td><td>Enterprise</td><td>1 000 000</td><td>20 000</td><td>~600</td><td>~0,9–1,2 TB</td><td class="money">24 000 000 ₽</td><td>~2.0 ₽</td><td class="small">Оценка; load test на stage</td></tr>
 </table>
 
-<h2 id="s3">3. TCO: инфраструктура + лицензия</h2>
-<p class="small">Korus: лицензия на ПО — отдельная строка коммерческого предложения (на диаграммах = 0).
-  eXpress: 3&nbsp;000&nbsp;₽/пользователь/год (Corporate on-prem, публичный прайс).
-  Пачка и VK — облачная подписка без своего железа.</p>
-<figure class="fig"><svg viewBox="0 0 720 340" width="720" height="340" xmlns="http://www.w3.org/2000/svg"><text x="360" y="24" text-anchor="middle" font-size="14" font-weight="bold">TCO за год @ 10 000 пользователей (infra + лицензия)</text><rect x="20" y="36" width="12" height="12" fill="#86efac"/><text x="36" y="46" font-size="10">Infra</text><rect x="120" y="36" width="12" height="12" fill="#6366f1"/><text x="136" y="46" font-size="10">Лицензия</text><line x1="80" y1="284" x2="696" y2="284" stroke="#9ca3af"/><rect x="88" y="284" width="100" height="0" fill="#6366f1" rx="2"/><rect x="88" y="277" width="100" height="7" fill="#86efac" rx="2"/><text x="138" y="271" text-anchor="middle" font-size="9" font-weight="600">1,3 млн ₽</text><text x="138" y="302" text-anchor="middle" font-size="9">Korus</text><rect x="212" y="134" width="100" height="150" fill="#6366f1" rx="2"/><rect x="212" y="107" width="100" height="27" fill="#86efac" rx="2"/><text x="262" y="101" text-anchor="middle" font-size="9" font-weight="600">35,4 млн ₽</text><text x="262" y="302" text-anchor="middle" font-size="9">eXpress</text><rect x="336" y="46" width="100" height="238" fill="#6366f1" rx="2"/><rect x="336" y="44" width="100" height="2" fill="#86efac" rx="2"/><text x="386" y="38" text-anchor="middle" font-size="9" font-weight="600">47,9 млн ₽</text><text x="386" y="302" text-anchor="middle" font-size="9">Пачка (облако)</text><rect x="460" y="161" width="100" height="123" fill="#6366f1" rx="2"/><rect x="460" y="159" width="100" height="2" fill="#86efac" rx="2"/><text x="510" y="153" text-anchor="middle" font-size="9" font-weight="600">24,8 млн ₽</text><text x="510" y="302" text-anchor="middle" font-size="9">VK WorkSpace SaaS</text></svg><figcaption class="fig-cap">Korus: лицензия = 0 (строка КП). eXpress: 3 000 ₽/user/год. Пачка/VK — облачная подписка.</figcaption></figure>
-<figure class="fig"><svg viewBox="0 0 720 340" width="720" height="340" xmlns="http://www.w3.org/2000/svg"><text x="360" y="24" text-anchor="middle" font-size="14" font-weight="bold">TCO за год @ 100 000 пользователей (infra + лицензия)</text><rect x="20" y="36" width="12" height="12" fill="#86efac"/><text x="36" y="46" font-size="10">Infra</text><rect x="120" y="36" width="12" height="12" fill="#6366f1"/><text x="136" y="46" font-size="10">Лицензия</text><line x1="80" y1="284" x2="696" y2="284" stroke="#9ca3af"/><rect x="88" y="284" width="100" height="0" fill="#6366f1" rx="2"/><rect x="88" y="278" width="100" height="6" fill="#86efac" rx="2"/><text x="138" y="272" text-anchor="middle" font-size="9" font-weight="600">4 млн ₽</text><text x="138" y="302" text-anchor="middle" font-size="9">Korus</text><rect x="212" y="134" width="100" height="150" fill="#6366f1" rx="2"/><rect x="212" y="121" width="100" height="13" fill="#86efac" rx="2"/><text x="262" y="115" text-anchor="middle" font-size="9" font-weight="600">325 млн ₽</text><text x="262" y="302" text-anchor="middle" font-size="9">eXpress</text><rect x="336" y="46" width="100" height="238" fill="#6366f1" rx="2"/><rect x="336" y="44" width="100" height="2" fill="#86efac" rx="2"/><text x="386" y="38" text-anchor="middle" font-size="9" font-weight="600">478,8 млн ₽</text><text x="386" y="302" text-anchor="middle" font-size="9">Пачка (облако)</text><rect x="460" y="161" width="100" height="123" fill="#6366f1" rx="2"/><rect x="460" y="159" width="100" height="2" fill="#86efac" rx="2"/><text x="510" y="153" text-anchor="middle" font-size="9" font-weight="600">248,4 млн ₽</text><text x="510" y="302" text-anchor="middle" font-size="9">VK WorkSpace SaaS</text></svg><figcaption class="fig-cap">eXpress infra — оценка; уточняется у вендора. Korus — Standard @100k.</figcaption></figure>
-
-<h2 id="s4">4. Стоимость на одного пользователя в месяц (@10&nbsp;000)</h2>
-<figure class="fig"><svg viewBox="0 0 560 260" width="560" height="260" xmlns="http://www.w3.org/2000/svg"><text x="280" y="22" text-anchor="middle" font-size="13" font-weight="bold">₽/пользователь/мес @ 10 000 (лицензия vs infra Korus)</text><line x1="64" y1="196" x2="500" y2="196" stroke="#9ca3af"/><rect x="80" y="96" width="72" height="100" fill="#6366f1" rx="3"/><text x="116" y="90" text-anchor="middle" font-size="10" font-weight="600">250 ₽</text><text x="116" y="214" text-anchor="middle" font-size="9">eXpress</text><rect x="176" y="36" width="72" height="160" fill="#f59e0b" rx="3"/><text x="212" y="30" text-anchor="middle" font-size="10" font-weight="600">399 ₽</text><text x="212" y="214" text-anchor="middle" font-size="9">Пачка</text><rect x="272" y="113" width="72" height="83" fill="#93c5fd" rx="3"/><text x="308" y="107" text-anchor="middle" font-size="10" font-weight="600">207 ₽</text><text x="308" y="214" text-anchor="middle" font-size="9">VK SaaS</text><rect x="368" y="188" width="72" height="8" fill="#86efac" rx="3"/><text x="404" y="182" text-anchor="middle" font-size="10" font-weight="600">11 ₽</text><text x="404" y="214" text-anchor="middle" font-size="9">Korus infra</text></svg><figcaption class="fig-cap">Рис. 5. eXpress/Пачка/VK — лицензия; Korus — только infra OPEX (лицензия в КП отдельно).</figcaption></figure>
-
-<h2 id="s5">5. Матрица сравнения (production)</h2>
-<div class="cost-box">
-<h3>Якорь S-10k — 10 000 пользователей</h3><table><tr><th>Решение</th><th>Лицензия ₽/год</th><th>Infra ₽/год</th><th>Итого TCO</th></tr><tr><td>Korus Messenger</td><td class="money">по КП</td><td class="money">1 314 600 ₽</td><td class="money"><b>1 314 600 ₽</b></td></tr><tr><td>eXpress Corporate</td><td class="money">30 000 000 ₽</td><td class="money">5 400 000 ₽</td><td class="money"><b>35 400 000 ₽</b></td></tr><tr><td>Пачка (облако)</td><td class="money">47 880 000 ₽</td><td class="money">0 ₽</td><td class="money"><b>47 880 000 ₽</b></td></tr><tr><td>VK WorkSpace SaaS</td><td class="money">24 840 000 ₽</td><td class="money">0 ₽</td><td class="money"><b>24 840 000 ₽</b></td></tr></table><h3>Якорь S-100k — 100 000 пользователей</h3><table><tr><th>Решение</th><th>Лицензия ₽/год</th><th>Infra ₽/год</th><th>Итого TCO</th></tr><tr><td>Korus Messenger</td><td class="money">по КП</td><td class="money">3 984 000 ₽</td><td class="money"><b>3 984 000 ₽</b></td></tr><tr><td>eXpress Corporate</td><td class="money">300 000 000 ₽</td><td class="money">25 000 000 ₽</td><td class="money"><b>325 000 000 ₽</b></td></tr><tr><td>Пачка (облако)</td><td class="money">478 800 000 ₽</td><td class="money">0 ₽</td><td class="money"><b>478 800 000 ₽</b></td></tr><tr><td>VK WorkSpace SaaS</td><td class="money">248 400 000 ₽</td><td class="money">0 ₽</td><td class="money"><b>248 400 000 ₽</b></td></tr></table>
+<h2 id="s3">3. TCO и стоимость на пользователя</h2>
+<div class="grid-2">
+  <div><figure class="fig"><svg viewBox="0 0 720 340" width="720" height="340" xmlns="http://www.w3.org/2000/svg"><text x="360" y="24" text-anchor="middle" font-size="14" font-weight="bold">TCO @ 10 000 RU (infra + лицензия)</text><rect x="20" y="36" width="12" height="12" fill="#86efac"/><text x="36" y="46" font-size="10">Infra</text><rect x="120" y="36" width="12" height="12" fill="#6366f1"/><text x="136" y="46" font-size="10">Лицензия</text><line x1="80" y1="284" x2="696" y2="284" stroke="#9ca3af"/><rect x="84" y="282" width="88" height="2" fill="#6366f1" rx="2"/><rect x="84" y="277" width="88" height="5" fill="#86efac" rx="2"/><text x="128" y="271" text-anchor="middle" font-size="8" font-weight="600">1,3 млн ₽</text><text x="128" y="300" text-anchor="middle" font-size="8">Korus</text><rect x="188" y="133" width="88" height="151" fill="#6366f1" rx="2"/><rect x="188" y="116" width="88" height="17" fill="#86efac" rx="2"/><text x="232" y="110" text-anchor="middle" font-size="8" font-weight="600">33,5 млн ₽</text><text x="232" y="300" text-anchor="middle" font-size="8">eXpress</text><rect x="292" y="44" width="88" height="240" fill="#6366f1" rx="2"/><rect x="292" y="44" width="88" height="0" fill="#86efac" rx="2"/><text x="336" y="38" text-anchor="middle" font-size="8" font-weight="600">47,9 млн ₽</text><text x="336" y="300" text-anchor="middle" font-size="8">Пачка</text><rect x="396" y="159" width="88" height="125" fill="#6366f1" rx="2"/><rect x="396" y="159" width="88" height="0" fill="#86efac" rx="2"/><text x="440" y="153" text-anchor="middle" font-size="8" font-weight="600">24,8 млн ₽</text><text x="440" y="300" text-anchor="middle" font-size="8">VK VK</text></svg><figcaption class="fig-cap">Korus лицензия — строка КП. eXpress: 30 млн ₽/год лицензий.</figcaption></figure></div>
+  <div><figure class="fig"><svg viewBox="0 0 720 340" width="720" height="340" xmlns="http://www.w3.org/2000/svg"><text x="360" y="24" text-anchor="middle" font-size="14" font-weight="bold">TCO @ 100 000 RU (infra + лицензия)</text><rect x="20" y="36" width="12" height="12" fill="#86efac"/><text x="36" y="46" font-size="10">Infra</text><rect x="120" y="36" width="12" height="12" fill="#6366f1"/><text x="136" y="46" font-size="10">Лицензия</text><line x1="80" y1="284" x2="696" y2="284" stroke="#9ca3af"/><rect x="84" y="282" width="88" height="2" fill="#6366f1" rx="2"/><rect x="84" y="278" width="88" height="4" fill="#86efac" rx="2"/><text x="128" y="272" text-anchor="middle" font-size="8" font-weight="600">4 млн ₽</text><text x="128" y="300" text-anchor="middle" font-size="8">Korus</text><rect x="188" y="134" width="88" height="150" fill="#6366f1" rx="2"/><rect x="188" y="121" width="88" height="13" fill="#86efac" rx="2"/><text x="232" y="115" text-anchor="middle" font-size="8" font-weight="600">325 млн ₽</text><text x="232" y="300" text-anchor="middle" font-size="8">eXpress</text><rect x="292" y="44" width="88" height="240" fill="#6366f1" rx="2"/><rect x="292" y="44" width="88" height="0" fill="#86efac" rx="2"/><text x="336" y="38" text-anchor="middle" font-size="8" font-weight="600">478,8 млн ₽</text><text x="336" y="300" text-anchor="middle" font-size="8">Пачка</text><rect x="396" y="159" width="88" height="125" fill="#6366f1" rx="2"/><rect x="396" y="159" width="88" height="0" fill="#86efac" rx="2"/><text x="440" y="153" text-anchor="middle" font-size="8" font-weight="600">248,4 млн ₽</text><text x="440" y="300" text-anchor="middle" font-size="8">VK VK</text></svg><figcaption class="fig-cap">eXpress infra — оценка 25 млн ₽/год.</figcaption></figure></div>
 </div>
-
-<h2 id="s6">6. eXpress: опубликованное железо и mapping на якоря Korus</h2>
+<figure class="fig"><svg viewBox="0 0 720 340" width="720" height="340" xmlns="http://www.w3.org/2000/svg"><text x="360" y="24" text-anchor="middle" font-size="14" font-weight="bold">TCO Enterprise: E-500k и E-1M (Korus vs eXpress)</text><rect x="20" y="36" width="12" height="12" fill="#86efac"/><text x="36" y="46" font-size="10">Infra</text><rect x="120" y="36" width="12" height="12" fill="#6366f1"/><text x="136" y="46" font-size="10">Лицензия</text><line x1="80" y1="284" x2="696" y2="284" stroke="#9ca3af"/><rect x="84" y="282" width="88" height="2" fill="#6366f1" rx="2"/><rect x="84" y="278" width="88" height="4" fill="#86efac" rx="2"/><text x="128" y="272" text-anchor="middle" font-size="8" font-weight="600">12 млн ₽</text><text x="128" y="300" text-anchor="middle" font-size="8">Korus E-500k</text><rect x="188" y="170" width="88" height="114" fill="#6366f1" rx="2"/><rect x="188" y="164" width="88" height="6" fill="#86efac" rx="2"/><text x="232" y="158" text-anchor="middle" font-size="8" font-weight="600">1580 млн ₽</text><text x="232" y="300" text-anchor="middle" font-size="8">eXpre E-500k</text><rect x="292" y="282" width="88" height="2" fill="#6366f1" rx="2"/><rect x="292" y="278" width="88" height="4" fill="#86efac" rx="2"/><text x="336" y="272" text-anchor="middle" font-size="8" font-weight="600">24 млн ₽</text><text x="336" y="300" text-anchor="middle" font-size="8">Korus E-1M</text><rect x="396" y="55" width="88" height="229" fill="#6366f1" rx="2"/><rect x="396" y="44" width="88" height="11" fill="#86efac" rx="2"/><text x="440" y="38" text-anchor="middle" font-size="8" font-weight="600">3150 млн ₽</text><text x="440" y="300" text-anchor="middle" font-size="8">eXpre E-1M</text></svg><figcaption class="fig-cap">Infra eXpress @500k/1M — оценка; лицензия по публичному прайсу.</figcaption></figure>
+<figure class="fig"><svg viewBox="0 0 560 260" width="560" height="260" xmlns="http://www.w3.org/2000/svg"><text x="280" y="22" text-anchor="middle" font-size="13" font-weight="bold">₽/user/мес @ 10 000 RU</text><line x1="64" y1="196" x2="500" y2="196" stroke="#9ca3af"/><rect x="72" y="96" width="72" height="100" fill="#6366f1" rx="3"/><text x="108" y="90" text-anchor="middle" font-size="10" font-weight="600">250 ₽</text><text x="108" y="214" text-anchor="middle" font-size="9">eXpress lic</text><rect x="168" y="36" width="72" height="160" fill="#f59e0b" rx="3"/><text x="204" y="30" text-anchor="middle" font-size="10" font-weight="600">399 ₽</text><text x="204" y="214" text-anchor="middle" font-size="9">Пачка</text><rect x="264" y="113" width="72" height="83" fill="#93c5fd" rx="3"/><text x="300" y="107" text-anchor="middle" font-size="10" font-weight="600">207 ₽</text><text x="300" y="214" text-anchor="middle" font-size="9">VK SaaS</text><rect x="360" y="188" width="72" height="8" fill="#86efac" rx="3"/><text x="396" y="182" text-anchor="middle" font-size="10" font-weight="600">11 ₽</text><text x="396" y="214" text-anchor="middle" font-size="9">Korus infra</text></svg><figcaption class="fig-cap">eXpress/Пачка/VK — подписка; Korus — только infra OPEX.</figcaption></figure>
+<figure class="fig"><svg viewBox="0 0 520 220" width="520" height="220" xmlns="http://www.w3.org/2000/svg"><text x="260" y="22" text-anchor="middle" font-size="13" font-weight="bold">eXpress: доля лицензии в TCO</text><text x="40" y="64" font-size="10">@10k RU</text><rect x="100" y="50" width="359" height="22" fill="#6366f1"/><rect x="459" y="50" width="41" height="22" fill="#86efac"/><text x="510" y="65" font-size="10">90% lic</text><text x="40" y="100" font-size="10">@100k RU</text><rect x="100" y="86" width="369" height="22" fill="#6366f1"/><rect x="469" y="86" width="31" height="22" fill="#86efac"/><text x="510" y="101" font-size="10">92% lic</text></svg><figcaption class="fig-cap">Фиолетовый — лицензия; зелёный — infra (оценка).</figcaption></figure>
 
 <table>
-  <tr><th>RU (eXpress)</th><th>vCPU Σ</th><th>RAM Σ</th><th>SSD Σ</th><th>В матрице Korus</th></tr>
-  <tr><td>100</td><td>11</td><td>17 GB</td><td>431 GB</td><td class="small">Ниже floor 10k — не production</td></tr>
-  <tr><td>500</td><td>37</td><td>42 GB</td><td>~1,1 TB</td><td class="small">Ниже floor 10k</td></tr>
-  <tr><td>1 000</td><td>62</td><td>62 GB</td><td>~2,2 TB</td><td class="small">Ниже floor 10k</td></tr>
-  <tr><td>10 000</td><td>по КП / admin guide</td><td>—</td><td>—</td><td><b>S-10k</b></td></tr>
-  <tr><td>100 000</td><td>инд. проект</td><td>—</td><td>—</td><td><b>S-100k</b></td></tr>
-  <tr><td>500 000+</td><td>инд. проект</td><td>—</td><td>—</td><td><b>E-500k / E-1M</b></td></tr>
+  <tr><th>Решение</th><th>Модель</th><th>₽/user/мес (ориентир)</th><th>@10k ₽/год</th><th>@100k ₽/год</th></tr>
+  <tr><td>Korus infra</td><td>OPEX</td><td class="money">~11 / ~3.3</td>
+      <td class="money">1 314 600 ₽</td>
+      <td class="money">3 984 000 ₽</td></tr>
+  <tr><td>eXpress Corporate</td><td>лицензия + infra</td><td class="money">250 + infra</td>
+      <td class="money">33 468 000 ₽</td>
+      <td class="money">325 000 000 ₽</td></tr>
+  <tr><td>Пачка Корпорация</td><td>SaaS</td><td class="money">399</td>
+      <td class="money">47 880 000 ₽</td>
+      <td class="money">478 800 000 ₽</td></tr>
+  <tr><td>VK WorkSpace SaaS</td><td>SaaS</td><td class="money">207</td>
+      <td class="money">24 840 000 ₽</td>
+      <td class="money">248 400 000 ₽</td></tr>
+  <tr><td>Пачка Компания</td><td>SaaS</td><td class="money">159</td>
+      <td class="money">19 080 000 ₽</td>
+      <td class="money">190 800 000 ₽</td></tr>
 </table>
-<p class="small">Источник eXpress: публичная документация вендора (docs.express.ms), обзоры с таблицами sizing.</p>
+<p class="small">Ставки infra: 2026-06-15, VDS / dedicated.</p>
 
 
-<h2 id="s7">7. Плюсы и минусы (кратко)</h2>
-<div class="case"><h4>Korus Messenger</h4><p><b>Плюсы:</b></p><ul><li>Tiered infra: низкий OPEX на 10k–100k</li><li>Compliance by design: export, legal hold, dual-TTL</li><li>On-prem в изолированном контуре</li><li>Путь Pilot → Standard → Enterprise без смены UX</li></ul><p><b>Минусы / ограничения:</b></p><ul><li>Меньше готового супераппа (SmartApps, почта)</li><li>Mobile apps — в roadmap</li><li>Formal E2EE prod sign-off pending</li></ul></div><div class="case"><h4>eXpress Corporate</h4><p><b>Плюсы:</b></p><ul><li>ФСТЭК, зрелый суперапп (ВКС до 500, SmartApps)</li><li>Публичный per-user прайс</li><li>Мобильные клиенты iOS/Android/Аврора</li><li>Федерация между организациями</li></ul><p><b>Минусы / ограничения:</b></p><ul><li>Лицензия доминирует в TCO</li><li>Sizing &gt;1k частично закрыт (КП)</li><li>Тяжёлый медиа-стек (Kafka, transcoding)</li></ul></div><div class="case"><h4>Пачка (облако)</h4><p><b>Плюсы:</b></p><ul><li>Нет своего железа и DevOps</li><li>SLA 99,9%, поддержка 24/7</li><li>Быстрый старт</li></ul><p><b>Минусы / ограничения:</b></p><ul><li>Не on-prem в контуре</li><li>TCO @10k+ выше infra-only Korus</li><li>Нет публичного server sizing</li></ul></div><div class="case"><h4>VK WorkSpace SaaS</h4><p><b>Плюсы:</b></p><ul><li>Полный workspace (почта, диск, задачи)</li><li>Узнаваемый бренд</li><li>Известный SaaS-прайс</li></ul><p><b>Минусы / ограничения:</b></p><ul><li>Не изолированный on-prem</li><li>Мессенджer-only sizing не публикуется</li><li>TCO сопоставим с eXpress по порядку</li></ul></div>
+<h2 id="s4">4. eXpress — максимум публичных данных</h2>
+<figure class="fig"><svg viewBox="0 0 720 320" width="720" height="320" xmlns="http://www.w3.org/2000/svg"><text x="360" y="24" text-anchor="middle" font-size="14" font-weight="bold">eXpress: оценка infra ₽/год (публичные таблицы @100–1000)</text><line x1="72" y1="272" x2="700" y2="272" stroke="#9ca3af"/><line x1="72" y1="272" x2="700" y2="272" stroke="#e5e7eb"/><text x="66" y="276" text-anchor="end" font-size="9" fill="#4b5563">0 ₽</text><line x1="72" y1="214" x2="700" y2="214" stroke="#e5e7eb"/><text x="66" y="218" text-anchor="end" font-size="9" fill="#4b5563">409 тыс ₽</text><line x1="72" y1="156" x2="700" y2="156" stroke="#e5e7eb"/><text x="66" y="160" text-anchor="end" font-size="9" fill="#4b5563">819 тыс ₽</text><line x1="72" y1="98" x2="700" y2="98" stroke="#e5e7eb"/><text x="66" y="102" text-anchor="end" font-size="9" fill="#4b5563">1,2 млн ₽</text><line x1="72" y1="40" x2="700" y2="40" stroke="#e5e7eb"/><text x="66" y="44" text-anchor="end" font-size="9" fill="#4b5563">1,6 млн ₽</text><rect x="80" y="127" width="72" height="145" fill="#f59e0b" rx="3"/><text x="116" y="121" text-anchor="middle" font-size="8" font-weight="600">1 млн ₽</text><text x="116" y="286" text-anchor="middle" font-size="8">100 RU</text><rect x="162" y="94" width="72" height="178" fill="#f59e0b" rx="3"/><text x="198" y="88" text-anchor="middle" font-size="8" font-weight="600">1,3 млн ₽</text><text x="198" y="286" text-anchor="middle" font-size="8">500 RU</text><rect x="244" y="40" width="72" height="232" fill="#f59e0b" rx="3"/><text x="280" y="34" text-anchor="middle" font-size="8" font-weight="600">1,6 млн ₽</text><text x="280" y="286" text-anchor="middle" font-size="8">1000 RU</text></svg><figcaption class="fig-cap">Упаковка vCPU/RAM/SSD в VM по тем же ставкам, что Korus. Ниже 10k — не production-якорь Korus.</figcaption></figure>
+<figure class="fig"><svg viewBox="0 0 640 280" width="640" height="280" xmlns="http://www.w3.org/2000/svg"><text x="320" y="22" text-anchor="middle" font-size="13" font-weight="bold">Суммарная RAM (GB) — Korus vs eXpress</text><line x1="50" y1="220" x2="600" y2="220" stroke="#9ca3af"/><text x="110" y="240" text-anchor="middle" font-size="9">100 RU</text><rect x="70" y="206" width="36" height="14" fill="#f59e0b" rx="2"/><text x="88" y="202" text-anchor="middle" font-size="8">17</text><text x="240" y="240" text-anchor="middle" font-size="9">1k RU</text><rect x="200" y="170" width="36" height="50" fill="#f59e0b" rx="2"/><text x="218" y="166" text-anchor="middle" font-size="8">62</text><text x="370" y="240" text-anchor="middle" font-size="9">10k RU</text><rect x="330" y="169" width="36" height="51" fill="#86efac" rx="2"/><text x="348" y="165" text-anchor="middle" font-size="8">64</text><rect x="370" y="124" width="36" height="96" fill="#fcd34d" rx="2"/><text x="388" y="120" text-anchor="middle" font-size="8">120</text><text x="500" y="240" text-anchor="middle" font-size="9">100k RU</text><rect x="460" y="108" width="36" height="112" fill="#86efac" rx="2"/><text x="478" y="104" text-anchor="middle" font-size="8">140</text><rect x="500" y="60" width="36" height="160" fill="#fcd34d" rx="2"/><text x="518" y="56" text-anchor="middle" font-size="8">200</text></svg><figcaption class="fig-cap">* eXpress @10k/100k — оценка infra-модели; официальный sizing — инд. проект.</figcaption></figure>
+<div class="cost-box">
 
-<h2 id="s8">8. Дисклеймеры</h2>
+<h4>Сводка по масштабам eXpress</h4>
+<table>
+  <tr><th>RU</th><th>vCPU / RAM / SSD</th><th>Infra ₽/год</th><th>Лицензия ₽/год</th><th>TCO</th><th>Якорь Korus</th><th>Источник</th></tr>
+  <tr><td>100</td><td>11 / 17 GB / 0.43 TB</td><td class="money">1 026 096 ₽</td><td class="money">300 000 ₽</td><td class="money"><b>1 326 096 ₽</b></td><td>—</td><td class="small">docs.express.ms (официально @100 RU)</td></tr><tr><td>500</td><td>37 / 42 GB / 1.10 TB</td><td class="money">1 258 080 ₽</td><td class="money">1 500 000 ₽</td><td class="money"><b>2 758 080 ₽</b></td><td>—</td><td class="small">Обзор eXpress 3.48 / таблицы вендора</td></tr><tr><td>1 000</td><td>62 / 62 GB / 2.17 TB</td><td class="money">1 639 344 ₽</td><td class="money">3 000 000 ₽</td><td class="money"><b>4 639 344 ₽</b></td><td>—</td><td class="small">Обзор eXpress 3.48 / таблицы вендора</td></tr><tr><td>10 000</td><td>инд. проект</td><td class="money">3 468 000 ₽</td><td class="money">30 000 000 ₽</td><td class="money"><b>33 468 000 ₽</b></td><td>S-10k</td><td class="small">Экстраполяция от @1k + media 10% online</td></tr><tr><td>100 000</td><td>инд. проект</td><td class="money">25 000 000 ₽</td><td class="money">300 000 000 ₽</td><td class="money"><b>325 000 000 ₽</b></td><td>S-100k</td><td class="small">Индивидуальный проект вендора (infra — оценка)</td></tr>
+</table>
+<h4>Детализация ролей eXpress (@100–1000)</h4>
+<table>
+  <tr><th>RU</th><th>Роль</th><th>vCPU</th><th>RAM</th><th>SSD</th></tr>
+  <tr><td>100</td><td>Proxy</td><td>1</td><td>1 GB</td><td>0.045 TB</td></tr><tr><td>100</td><td>Media</td><td>3</td><td>2 GB</td><td>0.045 TB</td></tr><tr><td>100</td><td>Transcoding</td><td>2</td><td>4 GB</td><td>0.065 TB</td></tr><tr><td>100</td><td>Back CTS</td><td>4</td><td>8 GB</td><td>0.211 TB</td></tr><tr><td>100</td><td>Bot</td><td>1</td><td>2 GB</td><td>0.065 TB</td></tr><tr><td>500</td><td>Front CTS</td><td>2</td><td>1 GB</td><td>0.045 TB</td></tr><tr><td>500</td><td>Media</td><td>19</td><td>10 GB</td><td>0.045 TB</td></tr><tr><td>500</td><td>Transcoding</td><td>4</td><td>4 GB</td><td>0.065 TB</td></tr><tr><td>500</td><td>Back CTS</td><td>8</td><td>16 GB</td><td>0.797 TB</td></tr><tr><td>500</td><td>Bot</td><td>4</td><td>7 GB</td><td>0.145 TB</td></tr><tr><td>1000</td><td>Front CTS</td><td>2</td><td>2 GB</td><td>0.045 TB</td></tr><tr><td>1000</td><td>Media 1</td><td>18</td><td>10 GB</td><td>0.045 TB</td></tr><tr><td>1000</td><td>Media 2</td><td>18</td><td>10 GB</td><td>0.045 TB</td></tr><tr><td>1000</td><td>Transcoding</td><td>6</td><td>4 GB</td><td>0.065 TB</td></tr><tr><td>1000</td><td>Back CTS</td><td>12</td><td>24 GB</td><td>1.530 TB</td></tr><tr><td>1000</td><td>Bot</td><td>6</td><td>12 GB</td><td>0.245 TB</td></tr>
+</table>
+<h4>Тарифы eXpress (публично)</h4>
+<table>
+  <tr><th>Тариф</th><th>On-prem лицензия</th><th>Примечание</th></tr>
+  <tr><td>Corporate</td><td class="money">3 000 ₽/user/год</td><td>Без лимита CTS-серверов</td></tr>
+  <tr><td>Corporate + SmartApps</td><td class="money">5 000 ₽/user/год</td><td>Супераппы, интеграции</td></tr>
+  <tr><td>Lite (облако)</td><td class="money">200 ₽/user/мес</td><td>5–1000 users, Вымпелком</td></tr>
+  <tr><td>Продление SA Corporate</td><td class="money">1 500 ₽/user/год</td><td>После бессрочной лицензии</td></tr>
+  <tr><td>Стек</td><td colspan="2">Docker, PostgreSQL 14+, Kafka, etcd 3.5+, Redis 7.2+, CPU ≥3,6 GHz, сеть 1 Gbps</td></tr>
+</table>
+<p class="small">Диск eXpress: расчёт 1 GB журналов + 4 GB/user/год × 4 года (может расти при активном использовании).</p>
+
+</div>
+
+<h2 id="s5">5. Функциональное сравнение и справочники</h2>
+<h3>5.1 Матрица возможностей</h3>
+
+<table>
+  <tr><th>Критерий</th><th>Korus</th><th>eXpress</th><th>Пачка</th><th>VK SaaS</th><th>Loop</th></tr>
+  <tr><td>On-prem / изолированный контур</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>✓</td></tr><tr><td>Export / legal hold / dual-TTL</td><td>✓ ядро</td><td>DLP/политики</td><td>export API</td><td>зависит</td><td>плагины</td></tr><tr><td>Полнотекстовый поиск</td><td>Solr / SQL</td><td>✓</td><td>✓</td><td>✓</td><td>Elasticsearch</td></tr><tr><td>E2EE</td><td>MLS (sign-off)</td><td>✓ E2EE</td><td>—</td><td>—</td><td>опционально</td></tr><tr><td>ВКС</td><td>WebRTC mesh</td><td>до 500 уч.</td><td>до 10 уч.</td><td>✓</td><td>интеграции</td></tr><tr><td>Мобильные клиенты</td><td>roadmap</td><td>iOS/Android/Аврора</td><td>✓</td><td>✓</td><td>✓</td></tr><tr><td>SmartApps / суперапп</td><td>roadmap</td><td>✓</td><td>боты/API</td><td>workspace</td><td>apps</td></tr><tr><td>ФСТЭК / реестр РФ</td><td>в процессе</td><td>✓</td><td>✓</td><td>✓</td><td>✓ (Loop)</td></tr><tr><td>Публичный sizing</td><td>✓ якоря</td><td>частично</td><td>—</td><td>on-prem КП</td><td>✓ до 2k</td></tr><tr><td>Публичный прайс лицензии</td><td>КП</td><td>✓</td><td>✓</td><td>✓ SaaS</td><td>КП EE</td></tr>
+</table>
+<h3>5.2 Другие решения (справочно)</h3>
+
+<table>
+  <tr><th>Решение</th><th>Малый масштаб</th><th>Крупный масштаб</th><th>Примечание</th></tr>
+  <tr><td><b>Loop</b></td><td>1–2k RU: 2–4 GB RAM</td><td>Enterprise по запросу</td><td class="small">Mattermost-fork, РФ</td></tr><tr><td><b>Mattermost EE</b></td><td>15k concurrent ref-arch</td><td>100k concurrent ref-arch</td><td class="small">concurrent ≠ RU</td></tr><tr><td><b>Rocket.Chat</b></td><td>≤500 concurrent: 4+4 GB</td><td>Enterprise ≥500 concurrent</td><td class="small">MongoDB replica</td></tr><tr><td><b>VK Superapp on-prem</b></td><td>1–2k: 22 vCPU, 56 GB, 400 GB SSD</td><td>&gt;1,5k — инд. расчёт</td><td class="small">Почта+календарь, не только IM</td></tr>
+</table>
+
+<h3 id="s5legacy">5.3 Устаревшие платформы (Jabber / XMPP и аналоги)</h3>
+<div class="legacy-box">
+  <div class="comment">
+    Legacy-серверы <b>не входят</b> в production TCO-матрицу (§6) — отдельный контур для заказчиков
+    с действующим Jabber, Sametime, Lync/Skype for Business. Сравнение: функции, infra-only, сценарии миграции.
+  </div>
+</div>
+<figure class="fig"><svg viewBox="0 0 720 120" width="720" height="120" xmlns="http://www.w3.org/2000/svg">
+  <text x="360" y="18" text-anchor="middle" font-size="13" font-weight="bold">Эволюция корпоративного IM (упрощённо)</text>
+  <line x1="40" y1="60" x2="680" y2="60" stroke="#9ca3af" stroke-width="2"/>
+  <circle cx="80" cy="60" r="6" fill="#78716c"/><text x="80" y="82" text-anchor="middle" font-size="8">Jabber/XMPP</text>
+  <text x="80" y="94" text-anchor="middle" font-size="7" fill="#6b7280">~2000</text>
+  <circle cx="200" cy="60" r="6" fill="#78716c"/><text x="200" y="82" text-anchor="middle" font-size="8">Sametime</text>
+  <circle cx="320" cy="60" r="6" fill="#78716c"/><text x="320" y="82" text-anchor="middle" font-size="8">Lync/SfB</text>
+  <circle cx="440" cy="60" r="6" fill="#f59e0b"/><text x="440" y="82" text-anchor="middle" font-size="8">eXpress</text>
+  <circle cx="560" cy="60" r="6" fill="#22c55e"/><text x="560" y="82" text-anchor="middle" font-size="8">Korus</text>
+  <circle cx="640" cy="60" r="6" fill="#6366f1"/><text x="640" y="82" text-anchor="middle" font-size="8">VK/Пачка SaaS</text>
+  <text x="360" y="110" text-anchor="middle" font-size="9" fill="#6b7280">Legacy — справочно и для миграции; не в production TCO-матрице</text>
+</svg><figcaption class="fig-cap">Рис. Legacy-платформы vs современные якоря Korus.</figcaption></figure>
+
+<table>
+  <tr><th>Платформа</th><th>Эпоха</th><th>Протокол</th><th>Лицензия</th>
+      <th>Малый масштаб</th><th>Крупный масштаб</th><th>Статус</th></tr>
+  <tr><td><b>XMPP / Jabber (протокол)</b></td><td>2000–2010-е</td><td>XMPP (RFC 6120/6121)</td><td>Open source; клиенты и серверы разных вендоров</td><td>1 узел 2–4 GB RAM, до ~2k RU</td><td>Кластер 3+ узлов; &gt;10k — кастомная архитектура</td><td class="small">Legacy; новые внедрения редки</td></tr><tr><td><b>ejabberd</b></td><td>2000–2020-е</td><td>XMPP + MQTT (опционально)</td><td>GPL + коммерческая поддержка ProcessOne</td><td>4 GB RAM, тысячи одновременных сессий</td><td>Кластер: сотни тысяч RU (док. вендора)</td><td class="small">Активен, но нишевый; enterprise — через интегратора</td></tr><tr><td><b>Openfire (Spark)</b></td><td>2000–2010-е</td><td>XMPP</td><td>Apache 2.0; Ignite Realtime / Community</td><td>2–4 GB RAM, до ~5k RU (single node)</td><td>Clustering plugin; &gt;10k — не типовой сценарий</td><td class="small">Community поддерживается; enterprise — сторонние плагины</td></tr><tr><td><b>Prosody</b></td><td>2010–2020-е</td><td>XMPP</td><td>MIT / ISC</td><td>512 MB–2 GB RAM, малые команды</td><td>&gt;5k RU — не ref-arch; federation only</td><td class="small">Активен для малых контуров и federation</td></tr><tr><td><b>IBM / HCL Sametime</b></td><td>2000–2010-е</td><td>Проприетарный + частично XMPP/SIP</td><td>Коммерческая лицензия IBM → HCL</td><td>Отдельный сервер приложений + DB</td><td>Кластер Domino/Sametime; типично 10k–100k RU</td><td class="small">Legacy; HCL поддерживает, но рынок смещён</td></tr><tr><td><b>Microsoft Lync / Skype for Business</b></td><td>2010–2020-е</td><td>SIP / проприетарный (не XMPP)</td><td>Microsoft EA / подписка</td><td>Front End pool + SQL; от ~8 GB на роль</td><td>Enterprise pool + Edge; 100k+ RU</td><td class="small">Skype for Business → Teams migration path</td></tr><tr><td><b>Cisco Jabber (on-prem UC)</b></td><td>2010–2020-е</td><td>SIP/XMPP (зависит от CUCM/IMP)</td><td>Cisco Smart Net + лицензии CUCM/IMP</td><td>IMP + CUCM; от 16 GB RAM на кластер</td><td>Крупный UC: CUCM cluster + IMP cluster</td><td class="small">Cisco pushing Webex; on-prem — legacy</td></tr>
+</table>
+<p class="small comment">В production-матрице TCO legacy не участвуют — справочное и миграционное сравнение.</p>
+<figure class="fig"><svg viewBox="0 0 720 320" width="720" height="320" xmlns="http://www.w3.org/2000/svg"><text x="360" y="24" text-anchor="middle" font-size="14" font-weight="bold">Infra ₽/год: legacy XMPP (HA) vs Korus @10k / @100k</text><line x1="72" y1="272" x2="700" y2="272" stroke="#9ca3af"/><line x1="72" y1="272" x2="700" y2="272" stroke="#e5e7eb"/><text x="66" y="276" text-anchor="end" font-size="9" fill="#4b5563">0 ₽</text><line x1="72" y1="214" x2="700" y2="214" stroke="#e5e7eb"/><text x="66" y="218" text-anchor="end" font-size="9" fill="#4b5563">996 тыс ₽</text><line x1="72" y1="156" x2="700" y2="156" stroke="#e5e7eb"/><text x="66" y="160" text-anchor="end" font-size="9" fill="#4b5563">2 млн ₽</text><line x1="72" y1="98" x2="700" y2="98" stroke="#e5e7eb"/><text x="66" y="102" text-anchor="end" font-size="9" fill="#4b5563">3 млн ₽</text><line x1="72" y1="40" x2="700" y2="40" stroke="#e5e7eb"/><text x="66" y="44" text-anchor="end" font-size="9" fill="#4b5563">4 млн ₽</text><rect x="80" y="264" width="72" height="8" fill="#78716c" rx="3"/><text x="116" y="258" text-anchor="middle" font-size="8" font-weight="600">143 тыс ₽</text><text x="116" y="286" text-anchor="middle" font-size="8">XMPP HA @10k</text><rect x="162" y="195" width="72" height="77" fill="#86efac" rx="3"/><text x="198" y="189" text-anchor="middle" font-size="8" font-weight="600">1,3 млн ₽</text><text x="198" y="286" text-anchor="middle" font-size="8">Korus @10k</text><rect x="244" y="250" width="72" height="22" fill="#78716c" rx="3"/><text x="280" y="244" text-anchor="middle" font-size="8" font-weight="600">371 тыс ₽</text><text x="280" y="286" text-anchor="middle" font-size="8">XMPP HA @100k</text><rect x="326" y="40" width="72" height="232" fill="#86efac" rx="3"/><text x="362" y="34" text-anchor="middle" font-size="8" font-weight="600">4 млн ₽</text><text x="362" y="286" text-anchor="middle" font-size="8">Korus @100k</text></svg><figcaption class="fig-cap">Только OPEX infra. Legacy без compliance-стека; OSS license = 0.</figcaption></figure>
+
+<h4>Infra-only: XMPP-кластер vs Korus (те же ставки 2026-06-15)</h4>
+<table>
+  <tr><th>RU</th><th>Сценарий</th><th>XMPP HA ₽/год</th><th>XMPP 1-node ₽/год</th>
+      <th>Korus ₽/год</th><th>Δ HA</th></tr>
+  <tr><td>2 000</td><td>типичный хвост Openfire/Prosody</td><td class="money">55 000 ₽/год</td><td class="money">55 000 ₽/год</td><td class="money">—</td><td class="small"></td></tr><tr><td>10 000</td><td>S-10k (HA vs single-node)</td><td class="money">143 000 ₽/год</td><td class="money">72 000 ₽/год</td><td class="money">1 314 600 ₽</td><td class="small"> (+89% vs Korus)</td></tr><tr><td>100 000</td><td>S-100k (HA vs урезанный)</td><td class="money">371 000 ₽/год</td><td class="money">184 000 ₽/год</td><td class="money">3 984 000 ₽</td><td class="small"> (+91% vs Korus)</td></tr>
+</table>
+<p class="small comment">Legacy дешевле по infra, но без Solr, export gate, workers, Keycloak-tier ops.
+  Лицензия OSS = 0; скрытые costs — интеграция, поддержка, миграция, compliance DIY.</p>
+<h4>5.3.1 Функции: Korus vs legacy</h4>
+
+<table>
+  <tr><th>Критерий</th><th>Korus</th><th>XMPP / Jabber</th><th>IBM Sametime</th><th>Lync / SfB</th></tr>
+  <tr><td>On-prem в контуре</td><td>✓</td><td>✓ (OSS)</td><td>✓</td><td>✓ (Windows)</td></tr><tr><td>Современные моб. клиенты</td><td>roadmap</td><td>устар./сторонние</td><td>legacy mobile</td><td>Teams path</td></tr><tr><td>Полнотекстовый поиск</td><td>Solr / SQL</td><td>MAM / ограниченно</td><td>встроенный (legacy)</td><td>Exchange index</td></tr><tr><td>Export / legal hold / audit</td><td>✓ ядро</td><td>DIY / плагины</td><td>частично</td><td>eDiscovery (Teams)</td></tr><tr><td>E2EE</td><td>MLS (sign-off)</td><td>OMEMO (опц.)</td><td>—</td><td>—</td></tr><tr><td>ВКС / голос</td><td>WebRTC</td><td>внешние / Jingle (редко)</td><td>✓ (legacy)</td><td>✓ (SIP/Skype)</td></tr><tr><td>Федерация / multi-tenant org</td><td>org-shard</td><td>✓ XMPP federation</td><td>domino domains</td><td>AD forest</td></tr><tr><td>Вендор / LTS</td><td>Korus</td><td>community / integrator</td><td>HCL Sametime</td><td>Microsoft EoL → Teams</td></tr><tr><td>Публичный sizing @10k+</td><td>✓ якоря</td><td>нет единого</td><td>инд. IBM/HCL</td><td>Microsoft ref-arch</td></tr><tr><td>Лицензия ПО</td><td>КП</td><td>0 (OSS) + интеграция</td><td>коммерческая</td><td>EA / подписка</td></tr><tr><td>TCO @10k (infra, HA)</td><td>1,3 млн ₽</td><td>1,7 млн ₽</td><td>по КП</td><td>по КП</td></tr>
+</table>
+<h4>5.3.2 Миграция и плюсы/минусы</h4>
+<div class="case"><h4>Jabber / Openfire → Korus</h4><ul><li>Экспорт roster и истории (MAM) — кастомный ETL или параллельный read-only архив</li><li>Смена клиентов: XMPP-клиенты не совместимы с web/mobile Korus</li><li>Federation и внешние домены — пересмотр политики безопасности</li><li>Выигрыш: compliance (export, dual-TTL), поиск, единый вендор, путь к E2EE/MLS</li></ul></div><div class="case"><h4>Sametime / Lync → Korus</h4><ul><li>Отделение UC (голос/ВКС) от корпоративного чата — часто Teams остаётся для meeting</li><li>Архивы Sametime/Domino — отдельный compliance-проект</li><li>AD/LDAP интеграция — стандартный сценарий для Korus</li><li>Выигрыш: современный UX, on-prem чат без привязки к Windows/Domino</li></ul></div><h4>Угол миграции по платформам</h4><table><tr><th>Платформа</th><th>Типичный сценарий замены</th></tr><tr><td>XMPP / Jabber (протокол)</td><td class="small">Миграция истории (MAM), roster, federated domains</td></tr><tr><td>ejabberd</td><td class="small">Экспорт MAM/Roster; часто параллельный запуск с новым IM</td></tr><tr><td>Openfire (Spark)</td><td class="small">Типичный «банковский Jabber» 2005–2015; замена клиентов</td></tr><tr><td>Prosody</td><td class="small">Часто не целевой масштаб для 10k+</td></tr><tr><td>IBM / HCL Sametime</td><td class="small">Compliance-архивы, интеграция с почтой/календарём</td></tr><tr><td>Microsoft Lync / Skype for Business</td><td class="small">Голос/ВКС — отдельный контур; чат → Teams</td></tr><tr><td>Cisco Jabber (on-prem UC)</td><td class="small">UC-миграция vs выделенный корп. мессенджер</td></tr></table>
+<div class="case"><h4>XMPP / Jabber (legacy)</h4><p><b>Плюсы (исторически):</b></p><ul><li>Лицензия сервера 0 (OSS): ejabberd, Openfire, Prosody</li><li>Низкий infra на малых масштабах (1–2 узла)</li><li>Federation между доменами; открытый протокол</li><li>Многие гос/банки уже имели контур — знаком ops</li></ul><p><b>Минусы (сегодня):</b></p><ul><li>Нет единого вендора, mobile UX устарел</li><li>Compliance (export, legal hold) — самодельные скрипты</li><li>@10k+ HA — непрозрачный sizing; поиск слабый</li><li>Нет типового пути к E2EE и современному ВКС</li></ul></div><div class="case"><h4>IBM / HCL Sametime</h4><p><b>Плюсы (исторически):</b></p><ul><li>Зрелый enterprise-стек; интеграция с Domino/Notes</li><li>Знаком крупным заказчикам 2000–2010-х</li></ul><p><b>Минусы (сегодня):</b></p><ul><li>Legacy-лицензии и тяжёлый стек</li><li>Рынок смещён на Teams / отечественные мессенджеры</li><li>TCO поддержки и миграции часто выше нового внедрения</li></ul></div>
+
+<h2 id="s6">6. Матрицы TCO по всем якорям Korus</h2>
+<div class="cost-box">
+<h3>Якорь S-10k — 10 000 RU · Standard</h3><table><tr><th>Решение</th><th>Лицензия ₽/год</th><th>Infra ₽/год</th><th>Итого TCO</th></tr><tr><td>Korus Messenger</td><td class="money">по КП</td><td class="money">1 314 600 ₽</td><td class="money"><b>1 314 600 ₽</b></td></tr><tr><td>eXpress Corporate</td><td class="money">30 000 000 ₽</td><td class="money">3 468 000 ₽</td><td class="money"><b>33 468 000 ₽</b> (90% lic)</td></tr><tr><td>Пачка (облако)</td><td class="money">47 880 000 ₽</td><td class="money">0 ₽</td><td class="money"><b>47 880 000 ₽</b> (100% lic)</td></tr><tr><td>VK WorkSpace SaaS</td><td class="money">24 840 000 ₽</td><td class="money">0 ₽</td><td class="money"><b>24 840 000 ₽</b> (100% lic)</td></tr></table><h3>Якорь S-50k — 50 000 RU · Standard</h3><table><tr><th>Решение</th><th>Лицензия ₽/год</th><th>Infra ₽/год</th><th>Итого TCO</th></tr><tr><td>Korus Messenger</td><td class="money">по КП</td><td class="money">2 649 300 ₽</td><td class="money"><b>2 649 300 ₽</b></td></tr><tr><td>eXpress Corporate</td><td class="money">150 000 000 ₽</td><td class="money">Индивидуальный проект</td><td class="money"><b>150 000 000 ₽</b> (100% lic)</td></tr><tr><td>Пачка (облако)</td><td class="money">239 400 000 ₽</td><td class="money">0 ₽</td><td class="money"><b>239 400 000 ₽</b> (100% lic)</td></tr><tr><td>VK WorkSpace SaaS</td><td class="money">124 200 000 ₽</td><td class="money">0 ₽</td><td class="money"><b>124 200 000 ₽</b> (100% lic)</td></tr></table><h3>Якорь S-100k — 100 000 RU · Standard</h3><table><tr><th>Решение</th><th>Лицензия ₽/год</th><th>Infra ₽/год</th><th>Итого TCO</th></tr><tr><td>Korus Messenger</td><td class="money">по КП</td><td class="money">3 984 000 ₽</td><td class="money"><b>3 984 000 ₽</b></td></tr><tr><td>eXpress Corporate</td><td class="money">300 000 000 ₽</td><td class="money">25 000 000 ₽</td><td class="money"><b>325 000 000 ₽</b> (92% lic)</td></tr><tr><td>Пачка (облако)</td><td class="money">478 800 000 ₽</td><td class="money">0 ₽</td><td class="money"><b>478 800 000 ₽</b> (100% lic)</td></tr><tr><td>VK WorkSpace SaaS</td><td class="money">248 400 000 ₽</td><td class="money">0 ₽</td><td class="money"><b>248 400 000 ₽</b> (100% lic)</td></tr></table><h3>Якорь E-500k — 500 000 RU · Enterprise</h3><table><tr><th>Решение</th><th>Лицензия ₽/год</th><th>Infra ₽/год</th><th>Итого TCO</th></tr><tr><td>Korus Messenger</td><td class="money">по КП</td><td class="money">12 000 000 ₽</td><td class="money"><b>12 000 000 ₽</b></td></tr><tr><td>eXpress Corporate</td><td class="money">1 500 000 000 ₽</td><td class="money">80 000 000 ₽</td><td class="money"><b>1 580 000 000 ₽</b> (95% lic)</td></tr></table><h3>Якорь E-1M — 1 000 000 RU · Enterprise</h3><table><tr><th>Решение</th><th>Лицензия ₽/год</th><th>Infra ₽/год</th><th>Итого TCO</th></tr><tr><td>Korus Messenger</td><td class="money">по КП</td><td class="money">24 000 000 ₽</td><td class="money"><b>24 000 000 ₽</b></td></tr><tr><td>eXpress Corporate</td><td class="money">3 000 000 000 ₽</td><td class="money">150 000 000 ₽</td><td class="money"><b>3 150 000 000 ₽</b> (95% lic)</td></tr></table>
+</div>
+
+<h2 id="s7">7. Плюсы и минусы</h2>
+<div class="case"><h4>Korus Messenger</h4><p><b>Плюсы:</b></p><ul><li>Tiered infra: ~3,3 ₽/user/мес @100k (только OPEX)</li><li>Compliance by design: export gate, legal hold, dual-TTL, audit</li><li>On-prem, мультитenant org, путь Standard → Enterprise</li><li>Pilot (пробник) отделён от production-матрицы</li></ul><p><b>Минусы:</b></p><ul><li>Меньше готового супераппа (SmartApps, почта, ВКС 500)</li><li>Mobile native — в roadmap</li><li>Formal E2EE prod sign-off pending</li></ul></div><div class="case"><h4>eXpress Corporate</h4><p><b>Плюсы:</b></p><ul><li>ФСТЭК №4997, сертифицированный суперапп</li><li>Публичный прайс 3 000 ₽/user/год; CTS без лимита</li><li>ВКС до 500, SmartApps, федерация, iOS/Android/Аврора</li><li>Детальные таблицы sizing до ~1k RU</li></ul><p><b>Минусы:</b></p><ul><li>Лицензия 83–99% TCO @10k–100k</li><li>Sizing &gt;1k — КП; @10k+ инд. проект</li><li>Тяжёлый стек: Kafka, etcd, transcoding, media</li></ul></div><div class="case"><h4>Пачка (облако)</h4><p><b>Плюсы:</b></p><ul><li>Нет своего железа; SLA 99,9%</li><li>BYOK hybrid для корпораций</li><li>399 ₽/user/мес (год), оплата за активных</li></ul><p><b>Минусы:</b></p><ul><li>Не on-prem в контуре заказчика</li><li>TCO @100k ~480 млн ₽/год</li><li>Нет server sizing</li></ul></div><div class="case"><h4>VK WorkSpace SaaS</h4><p><b>Плюсы:</b></p><ul><li>Полный workspace: почта, диск, задачи, ВКС</li><li>207 ₽/user/мес (год) — прозрачный SaaS</li><li>On-prem Superapp @2k: 56 GB RAM (документировано)</li></ul><p><b>Минусы:</b></p><ul><li>On-prem мессенджer-only — инд. КП</li><li>TCO SaaS @100k ~248 млн ₽/год</li><li>Не сравнивать Superapp с «только чат» без оговорки</li></ul></div>
+
+<h2 id="s8">8. Источники и дисклеймеры</h2>
+
+<ul class="small comment">
+  <li><b>eXpress:</b> express.ms/prices, docs.express.ms (hardware @100, platform &lt;5k, architecture, DLPS)</li>
+  <li><b>eXpress sizing @500/1000:</b> обзор Anti-Malware.ru (таблицы вендора), admin_guide_install.pdf</li>
+  <li><b>Пачка:</b> pachca.com/prices, pachca.com/for-corporations</li>
+  <li><b>VK WorkSpace:</b> workspace.vk.ru, docs on-prem Superapp @2k</li>
+  <li><b>Loop:</b> docs.loop.ru (hardware requirements, Mattermost lineage)</li>
+  <li><b>ejabberd:</b> docs.ejabberd.im (cluster, scalability)</li>
+  <li><b>Openfire:</b> igniterealtime.org/docs/openfire (clustering, system requirements)</li>
+  <li><b>Prosody:</b> prosody.im doc (lightweight XMPP)</li>
+  <li><b>IBM/HCL Sametime:</b> HCL product docs (legacy enterprise)</li>
+  <li><b>Microsoft:</b> Skype for Business → Teams migration guides</li>
+  <li><b>Korus:</b> внутренний sizing Standard/Enterprise + ставки infra 2026-06-15</li>
+</ul>
+
 <div class="warn">
   <ul class="comment">
-    <li>Цифры infra Korus — ориентиры; formal load test до prod sign-off рекомендуется.</li>
-    <li>Активные видеозвонки и массовые ВКС могут <b>удвоить</b> сеть и CPU (особенно eXpress).</li>
-    <li>Ставки infra — усреднённые VDS/dedicated; подставьте прайс вашего провайдера в КП.</li>
-    <li>eXpress infra @100k+ — оценка или индивидуальный проект вендора.</li>
-    <li>Mattermost/Loop используют метрику <b>concurrent</b> — не смешивать с RU без пересчёта.</li>
-    <li>Enterprise @500k/@1M — оценочный sizing Korus; уточняется на stage.</li>
+    <li>Цифры infra — ориентиры; load test до prod sign-off рекомендуется.</li>
+    <li>ВКС и mass-call могут удвоить CPU/сеть (особенно eXpress Media).</li>
+    <li>eXpress @10k/100k infra — модельная оценка, не оферта вендора.</li>
+    <li>Mattermost concurrent ≠ RU Korus/eXpress.</li>
+    <li>Legacy XMPP infra — модель HA-кластера; реальные контуры часто undersized (1 node).</li>
+    <li>Sametime/Lync — не «только чат»; миграция часто параллельна с Teams/UC.</li>
   </ul>
 </div>
 
 <p class="small">Сборка: <code>python scripts/build-competitor-comparison-html.py</code></p>
-
 </body>
 </html>

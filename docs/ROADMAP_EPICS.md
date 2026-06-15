@@ -81,8 +81,8 @@
 
 | # | Эпик | Блокер | Действие |
 |---|------|--------|----------|
-| 1 | **Stage/prod TLS + Vault** (spec 004 US1) | Реальный stage host | T601–T602, T607 — **`deploy/ansible/inventory/stage/`**, **`stage-tls-smoke-runbook.md`** |
-| 2 | **E2EE formal sign-off** (US7) | Security/Product | T603, T606 — **`e2ee-security-signoff-packet-2026-06-15.md`** |
+| 1 | **Stage/prod TLS + Vault** (spec 004 US1) | Реальный stage host | **Eng. READY** — deploy-only: [`stage-prod-deploy-runbook.md`](review/stage-prod-deploy-runbook.md) |
+| 2 | **E2EE formal sign-off** (US7) | Security/Product + HTTPS stage | **Eng. READY** — smokes + packet; human signatures pending |
 | 3 | **Hotplug governance** (US6) | Именованные подписи | T605 — **`apply-hotplug-signoff.ps1`** |
 | 4 | **k6 load baseline** (T604) | k6 на хосте или stage | **`scripts/load/pilot-health.js`** → JSON отчёт |
 | 5 | **FR-OPT-08 dedup** | Нет | design-doc §8, MinIO content-hash |

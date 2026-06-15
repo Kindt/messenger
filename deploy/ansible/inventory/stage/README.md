@@ -1,6 +1,9 @@
-# Stage inventory — prep kit (P1)
+# Stage inventory — deploy-ready prep kit
 
-Prod-like **two-host** topology with TLS on the web host. Replace placeholder hostnames before first deploy.
+**Status (2026-06-16):** инженерная поставка US1/US7 **готова** — inventory, vault examples, Ansible roles, smokes.  
+**При появлении хостов:** только кастомизация ниже + deploy. Полный чеклист: [`docs/review/stage-prod-deploy-runbook.md`](../../../docs/review/stage-prod-deploy-runbook.md).
+
+Prod-like **two-host** topology with TLS on the web host. Placeholders (`example.com`) **намеренно** до первого deploy.
 
 ## 0. Windows host preflight (before Ansible on control node)
 
@@ -88,4 +91,6 @@ See [`docs/review/stage-tls-smoke-runbook.md`](../../../docs/review/stage-tls-sm
 
 ## 8. Sign-off
 
-Record gates in [`specs/004-deferred-phase2-closure/ops-signoff-log.md`](../../../specs/004-deferred-phase2-closure/ops-signoff-log.md) US1 table.
+Record gates in [`specs/004-deferred-phase2-closure/ops-signoff-log.md`](../../../specs/004-deferred-phase2-closure/ops-signoff-log.md) — разделы **US1 Ops execution** и **Signatures**.
+
+**Deploy-only runbook:** [`docs/review/stage-prod-deploy-runbook.md`](../../../docs/review/stage-prod-deploy-runbook.md).

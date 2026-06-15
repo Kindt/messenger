@@ -32,7 +32,9 @@ Windows dev: continue using `scripts/full-stack-up.ps1` and `scripts/server-host
 
 ## Secrets and TLS (prod / stage)
 
-**Stage prep kit:** [`inventory/stage/README.md`](inventory/stage/README.md) — DNS, vault, dry-run, TLS smoke.
+**Stage prep kit (deploy-ready 2026-06-16):** [`inventory/stage/README.md`](inventory/stage/README.md) — placeholders until real hosts.  
+**Deploy-only runbook (US1/US7):** [`docs/review/stage-prod-deploy-runbook.md`](../../docs/review/stage-prod-deploy-runbook.md).  
+**Sign-off matrix:** [`specs/004-deferred-phase2-closure/ops-signoff-log.md`](../../specs/004-deferred-phase2-closure/ops-signoff-log.md).
 
 ### Prod vault checklist
 
@@ -43,6 +45,7 @@ Windows dev: continue using `scripts/full-stack-up.ps1` and `scripts/server-host
    - `korus_keycloak_admin_password`
    - `korus_jwt_secret`
    - `korus_coturn_secret`
+   - `korus_vapid_public_key`, `korus_vapid_private_key`, `korus_vapid_subject` (Web Push)
 3. Encrypt: `ansible-vault encrypt group_vars/vault.yml`
 4. Run with `--ask-vault-pass` or `--vault-password-file`.
 5. Confirm `roles/korus_server` rendered `docker/.env.korus-server` on the server host (mode `0600`).
