@@ -3,6 +3,8 @@ package com.avandocmsg.messenger.core.application;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.domain.UserProfile;
+import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
 import com.avandocmsg.messenger.core.port.SavedChatPort;
 import com.avandocmsg.messenger.core.port.UserRepositoryPort;
 import org.junit.jupiter.api.Test;
@@ -19,7 +21,8 @@ class UserApplicationServiceTest {
     private final UUID targetId = UUID.randomUUID();
     private final StubUserPort userPort = new StubUserPort();
     private final StubSavedChatPort savedChatPort = new StubSavedChatPort();
-    private final UserApplicationService service = new UserApplicationService(userPort, savedChatPort);
+    private final UserApplicationService service = new UserApplicationService(
+        userPort, savedChatPort, NoOpReadCacheAdapter.INSTANCE, new AppConfig());
 
     @Test
     void getProfileForViewer_returnsFullProfileForSelf() {

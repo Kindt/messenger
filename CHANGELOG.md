@@ -8,6 +8,14 @@
 
 ## [Unreleased]
 
+### 2026-06-15 — spec 006 Wave 2 T202–T206: cache integration, scale, read replica
+
+- **T202 (FR-OPT-03):** `ReadCacheCoordinator`, `ReadCacheMetrics` (`read_cache_hit_total` / `read_cache_miss_total`); cache-aside в `ChatService`, `UserApplicationService`; invalidation на write-path (`MessageService`, `ReadReceiptService`, profile/presence updates).
+- **T203 (FR-OPT-04):** `docker/docker-compose.scale.yml` — 2× `message-pipeline`, 2× `ws-gateway`, `API_REPLICAS=2`; sticky WS notes в `korus-web/README.md`.
+- **T204:** `scripts/verify-nats-queue-group.sh`, `scripts/profiling/load-message-pipeline.sh`, `scripts/scale-stack-up.sh`.
+- **T205 (FR-OPT-05):** optional read pool в `DatabaseConfig` / `ChatRepository` / `MessageRepository`; lab overlay `docker/docker-compose.replica.yml`.
+- **T206:** `scripts/smoke-messaging-e2e.sh --load-rounds N` для нагрузочного прогона на scaled stack.
+
 ### 2026-06-15 — spec 006 Wave 2 T201: ReadCachePort + Redis adapter (FR-OPT-03)
 
 - **`ReadCachePort`**, **`ReadCacheKeys`**, **`ReadCacheKind`**: cache-aside hex port; key patterns `chat:list`, `chat:unread`, `user:profile`, `user:presence`.
@@ -30,6 +38,12 @@
 - **`deploy/qemu/RESOURCES.md`**: sizing Pilot + Keycloak dev vs prod; gate RAM ~2 GiB used на guest 9.7 GiB.
 - **`AppConfig`**: env `SEARCH_MODE=sql|solr` (explicit Solr toggle).
 - **`scripts/lib/SmokeMessaging.sh`**: fix Python 3 `print()` return в JSON helpers.
+
+### 2026-06-15 — tz_product v2.1: приложение I (каталог ресурсов API и клиента)
+
+- **`scripts/tz_product_resources.py`**: каталог 20 JAX-RS resources, ws-gateway `/ws`, webui/, admin-ui/, web-client servlets; генерация HTML/MD.
+- **`tz_product.html` v2.1**: приложение I с относительными ссылками на исходники; TOC `#app-i`.
+- **`docs/TZ_PRODUCT_ALTERNATIVE.md` v1.4**: то же приложение I для IT.
 
 ### 2026-06-15 — tz_product.html v2.0: автономная публикация для заказчика
 

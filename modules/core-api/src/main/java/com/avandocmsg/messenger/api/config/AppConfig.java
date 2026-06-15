@@ -35,6 +35,10 @@ public class AppConfig {
         override("DB_USER", "db.user");
         override("DB_PASSWORD", "db.password");
         override("DB_POOL_SIZE", "db.pool.size");
+        override("DB_READ_JDBC_URL", "db.read.jdbc.url");
+        override("DB_READ_POOL_SIZE", "db.read.pool.size");
+        override("API_REPLICAS", "api.replicas");
+        override("POSTGRES_MAX_CONNECTIONS", "postgres.max.connections");
         override("REDIS_URI", "redis.uri");
         override("NATS_URL", "nats.url");
         override("NATS_JETSTREAM", "nats.jetstream");
@@ -143,6 +147,25 @@ public class AppConfig {
 
     public int dbPoolSize() {
         return Integer.parseInt(props.getProperty("db.pool.size", "10"));
+    }
+
+    /** Optional read replica JDBC URL (spec 006 FR-OPT-05). Empty = route reads to primary. */
+    public String dbReadJdbcUrl() {
+        return props.getProperty("db.read.jdbc.url", "").trim();
+    }
+
+    public int dbReadPoolSize() {
+        return Integer.parseInt(props.getProperty("db.read.pool.size", "10"));
+    }
+
+    /** Declared core-api replica count for pool sizing warnings. Env: API_REPLICAS. */
+    public int apiReplicas() {
+        return Integer.parseInt(props.getProperty("api.replicas", "1"));
+    }
+
+    /** postgres max_connections for pool sizing warnings. Env: POSTGRES_MAX_CONNECTIONS. */
+    public int postgresMaxConnections() {
+        return Integer.parseInt(props.getProperty("postgres.max.connections", "100"));
     }
 
     public String redisUri() {

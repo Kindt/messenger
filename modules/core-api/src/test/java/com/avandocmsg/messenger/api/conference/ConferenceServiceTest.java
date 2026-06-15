@@ -7,6 +7,8 @@ import com.avandocmsg.messenger.api.conference.dto.CreateConferenceRequest;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ConferenceRepository;
+import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.junit.jupiter.api.Test;
@@ -130,7 +132,8 @@ class ConferenceServiceTest {
         String lastGroupTitle;
 
         RecordingChatService(ChatRepository chatRepository) {
-            super(chatRepository, null, null, null, NatsOutboundPort.noop(), Clock.systemUTC(), UuidGenerator.standard());
+            super(chatRepository, null, null, null, NatsOutboundPort.noop(), Clock.systemUTC(),
+                UuidGenerator.standard(), NoOpReadCacheAdapter.INSTANCE, new AppConfig());
         }
 
         @Override

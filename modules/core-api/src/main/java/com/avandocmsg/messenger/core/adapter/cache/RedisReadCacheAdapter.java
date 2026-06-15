@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.cache;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.api.metrics.ReadCacheMetrics;
 import com.avandocmsg.messenger.core.port.ReadCacheKind;
 import com.avandocmsg.messenger.core.port.ReadCachePort;
 import io.lettuce.core.api.sync.RedisCommands;
@@ -34,11 +35,14 @@ public final class RedisReadCacheAdapter implements ReadCachePort {
         try {
             var value = redis.get(key);
             if (value == null || value.isEmpty()) {
+                ReadCacheMetrics.miss(cacheKind(key));
                 return Optional.empty();
             }
+            ReadCacheMetrics.hit(cacheKind(key));
             return Optional.of(value);
         } catch (Exception e) {
             log.warn("Read cache get failed for key {}: {}", key, e.toString());
+            ReadCacheMetrics.miss(cacheKind(key));
             return Optional.empty();
         }
     }
@@ -67,5 +71,24 @@ public final class RedisReadCacheAdapter implements ReadCachePort {
         } catch (Exception e) {
             log.warn("Read cache invalidate failed for key {}: {}", key, e.toString());
         }
+    }
+
+    private static String cacheKind(String key) {
+        if (key == null) {
+            return "unknown";
+        }
+        if (key.contains(":chat:list:")) {
+            return "chat_list";
+        }
+        if (key.contains(":chat:unread:")) {
+            return "chat_unread";
+        }
+        if (key.contains(":user:profile:")) {
+            return "user_profile";
+        }
+        if (key.contains(":user:presence:")) {
+            return "user_presence";
+        }
+        return "unknown";
     }
 }

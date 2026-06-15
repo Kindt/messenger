@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.chats;
 
+import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
 import com.avandocmsg.messenger.api.chats.dto.ChatResponse;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
@@ -8,8 +9,13 @@ import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.common.dto.TypingEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.core.application.ReadCacheCoordinator;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
+import com.avandocmsg.messenger.core.port.ReadCacheKeys;
+import com.avandocmsg.messenger.core.port.ReadCacheKind;
+import com.avandocmsg.messenger.core.port.ReadCachePort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +29,8 @@ import java.util.UUID;
 public class ChatService {
     private static final Logger log = LoggerFactory.getLogger(ChatService.class);
     private static final ObjectMapper JSON = new ObjectMapper();
+    private static final TypeReference<List<ChatResponse>> CHAT_LIST_TYPE = new TypeReference<>() {
+    };
 
     private final ChatRepository chatRepository;
     private final BlockRepository blockRepository;
@@ -31,10 +39,13 @@ public class ChatService {
     private final NatsOutboundPort natsOutbound;
     private final Clock clock;
     private final UuidGenerator uuidGenerator;
+    private final ReadCachePort readCachePort;
+    private final AppConfig appConfig;
 
     public ChatService(ChatRepository chatRepository, BlockRepository blockRepository,
                        ChatReadRepository chatReadRepository, MessageRepository messageRepository,
-                       NatsOutboundPort natsOutbound, Clock clock, UuidGenerator uuidGenerator) {
+                       NatsOutboundPort natsOutbound, Clock clock, UuidGenerator uuidGenerator,
+                       ReadCachePort readCachePort, AppConfig appConfig) {
         this.chatRepository = chatRepository;
         this.blockRepository = blockRepository;
         this.chatReadRepository = chatReadRepository;
@@ -42,6 +53,8 @@ public class ChatService {
         this.natsOutbound = natsOutbound;
         this.clock = clock;
         this.uuidGenerator = uuidGenerator;
+        this.readCachePort = readCachePort;
+        this.appConfig = appConfig;
     }
 
     public ChatResponse createGroup(String title, UUID ownerId, List<String> memberIds) {
@@ -80,6 +93,26 @@ public class ChatService {
     }
 
     public List<ChatResponse> list(UUID userId) {
+        if (readCachePort.enabled()) {
+            var key = ReadCacheKeys.chatList(userId);
+            var cached = readCachePort.get(key);
+            if (cached.isPresent()) {
+                try {
+                    return JSON.readValue(cached.get(), CHAT_LIST_TYPE);
+                } catch (Exception e) {
+                    log.debug("chat list cache decode failed for {}: {}", userId, e.toString());
+                    readCachePort.invalidate(key);
+                }
+            }
+            var list = chatRepository.listByUser(userId);
+            try {
+                readCachePort.put(key, JSON.writeValueAsString(list),
+                    appConfig.readCacheTtlSeconds(ReadCacheKind.CHAT_LIST));
+            } catch (Exception e) {
+                log.debug("chat list cache encode failed for {}: {}", userId, e.toString());
+            }
+            return list;
+        }
         return chatRepository.listByUser(userId);
     }
 
@@ -170,12 +203,31 @@ public class ChatService {
         if (msg == null || !msg.chatId().equals(chatId.toString())) {
             return false;
         }
-        return chatReadRepository.upsertLastRead(userId, chatId, markId);
+        var ok = chatReadRepository.upsertLastRead(userId, chatId, markId);
+        if (ok) {
+            ReadCacheCoordinator.invalidateChatUnread(readCachePort, userId);
+        }
+        return ok;
     }
 
     public int unreadCount(UUID chatId, UUID userId) {
         if (chatRepository.getMemberRole(chatId, userId) == null) {
             return -1;
+        }
+        if (readCachePort.enabled()) {
+            var key = ReadCacheKeys.chatUnread(userId) + ":" + chatId;
+            var cached = readCachePort.get(key);
+            if (cached.isPresent()) {
+                try {
+                    return Integer.parseInt(cached.get().trim());
+                } catch (NumberFormatException e) {
+                    readCachePort.invalidate(key);
+                }
+            }
+            var count = chatReadRepository.countUnreadFromOthers(userId, chatId);
+            readCachePort.put(key, Integer.toString(count),
+                appConfig.readCacheTtlSeconds(ReadCacheKind.CHAT_UNREAD));
+            return count;
         }
         return chatReadRepository.countUnreadFromOthers(userId, chatId);
     }

@@ -67,8 +67,12 @@ public final class CoreModule {
         return new JdbcSavedChatAdapter(dataSource, uuidGenerator);
     }
 
-    public static UserApplicationService userApplicationService(DataSource dataSource, UuidGenerator uuidGenerator) {
-        return new UserApplicationService(userRepositoryPort(dataSource), savedChatPort(dataSource, uuidGenerator));
+    public static UserApplicationService userApplicationService(DataSource dataSource,
+                                                                UuidGenerator uuidGenerator,
+                                                                ReadCachePort readCachePort,
+                                                                AppConfig appConfig) {
+        return new UserApplicationService(
+            userRepositoryPort(dataSource), savedChatPort(dataSource, uuidGenerator), readCachePort, appConfig);
     }
 
     public static PublicLinkPort publicLinkPort(FilePublicLinkRepository legacy) {

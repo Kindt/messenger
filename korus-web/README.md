@@ -31,6 +31,15 @@ UI: **`http://localhost:9088`** (если не меняли **`KORUS_WEB_LB_PORT
 
 Переменные окружения см. **`.env.example`**. Рекомендуется скопировать в **`.env`** и выставить **`WEB_CLIENT_WS_PUBLIC_URL`** в соответствии с публичным адресом lb (по умолчанию **`ws://localhost:9088/ws`**). Ссылки и тестовые логины realm (запуск из корня репозитория): **`.\scripts\dev-ui-hints.ps1`** или **`./scripts/dev-ui-hints.sh`**.
 
+### Масштабирование ws-gateway (spec 006)
+
+При overlay **`docker/docker-compose.scale.yml`** (сервисы **ws-gateway** + **ws-gateway-2**) настройте nginx **sticky** upstream для **`/ws`**:
+
+- в attach-сети: **`KORUS_WS_GATEWAY_HOST=ws-gateway`**, второй upstream — **`ws-gateway-2:8081`** (кастомный шаблон lb с **`ip_hash`**);
+- на хосте: **`ip_hash`** на **`127.0.0.1:8082`** и второй порт проброса для **ws-gateway-2**.
+
+Без sticky-сессии WebSocket при 2× gateway возможны обрывы при переподключении через round-robin.
+
 ### Вместе с `docker-compose.dev-min.yml`
 
 1. Поднимите стенд с профилем **`web`** (**ws-gateway** на порту хоста **8082**, воркер **message-pipeline** для fan-out **`msg.send` → `msg.deliver.*`**):

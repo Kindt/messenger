@@ -76,7 +76,16 @@ flowchart LR
 |------------------------|--------|---------|
 | **`standard`** (default) | `scripts/full-stack-up.sh` | `docker/docker-compose.full-server.yml` |
 | **`pilot`** | `scripts/pilot-stack-up.sh` | `docker/docker-compose.pilot.yml` + `docker-compose.keycloak-prod.yml` |
-| **`enterprise`** | (зарезервировано) | scale overlays, Wave 2+ |
+| **`enterprise`** | `scripts/scale-stack-up.sh` | `docker-compose.full-server.yml` + `docker-compose.scale.yml` (+ optional `docker-compose.replica.yml`) |
+
+Compose overlays Wave 2 (guest / CI lab):
+
+| Overlay | Назначение |
+|---------|------------|
+| **`docker/docker-compose.scale.yml`** | 2× message-pipeline, 2× ws-gateway, `API_REPLICAS=2` |
+| **`docker/docker-compose.replica.yml`** | lab read-replica URL (тот же `postgres-hot` для smoke routing) |
+
+Sticky WS при 2× gateway: см. **`korus-web/README.md`** (`ip_hash` на `/ws`).
 
 ### QEMU inventory (Windows)
 

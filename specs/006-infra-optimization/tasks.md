@@ -45,14 +45,14 @@
 
 ---
 
-## Phase 2: Wave 2 — Cache + scale + replica (US3, US4, US5)
+## Phase 2: Wave 2 — Cache + scale + replica (US3, US4, US5) **COMPLETE**
 
 - [x] T201 [US3] Hex `ReadCachePort` + `RedisReadCacheAdapter`
-- [ ] T202 [US3] WS invalidation hooks; Prometheus cache hit/miss metrics
-- [ ] T203 [US4] `docker/docker-compose.scale.yml`
-- [ ] T204 [US4] NATS queue group verification; load script for msg/s
-- [ ] T205 [US5] Read replica compose + routing
-- [ ] T206 [US5] `scripts/smoke-messaging-e2e.sh` under load
+- [x] T202 [US3] WS invalidation hooks; Prometheus cache hit/miss metrics
+- [x] T203 [US4] `docker/docker-compose.scale.yml`
+- [x] T204 [US4] NATS queue group verification; load script for msg/s
+- [x] T205 [US5] Read replica compose + routing
+- [x] T206 [US5] `scripts/smoke-messaging-e2e.sh` under load
 
 ---
 

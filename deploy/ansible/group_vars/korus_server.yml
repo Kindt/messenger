@@ -4,6 +4,13 @@ korus_deploy_profile: standard
 korus_compose_full_server: "{{ korus_repo_root }}/docker/docker-compose.full-server.yml"
 korus_compose_pilot: "{{ korus_repo_root }}/docker/docker-compose.pilot.yml"
 korus_compose_keycloak_prod: "{{ korus_repo_root }}/docker/docker-compose.keycloak-prod.yml"
+korus_compose_scale: "{{ korus_repo_root }}/docker/docker-compose.scale.yml"
+korus_compose_replica: "{{ korus_repo_root }}/docker/docker-compose.replica.yml"
+# Scale overlays (Wave 2): merge korus_compose_scale / korus_compose_replica when korus_enable_scale|korus_enable_read_replica
+korus_enable_scale: false
+korus_enable_read_replica: false
+korus_ws_replicas: 2
+korus_pipeline_replicas: 2
 korus_compose_lan_publish: "{{ korus_repo_root }}/docker/docker-compose.lan-publish.yml"
 korus_use_lan_publish: false
 korus_configure_ufw: false

@@ -28,6 +28,7 @@ import com.avandocmsg.messenger.api.export.ExportSuggestedHandler;
 import com.avandocmsg.messenger.api.export.ExportSuggestedSubscriber;
 import com.avandocmsg.messenger.api.metrics.ExportJobsDbCollector;
 import com.avandocmsg.messenger.api.metrics.ExportMetrics;
+import com.avandocmsg.messenger.api.metrics.ReadCacheMetrics;
 import com.avandocmsg.messenger.api.crypto.CryptoProvider;
 import com.avandocmsg.messenger.api.crypto.E2EEService;
 import com.avandocmsg.messenger.api.crypto.KeyPackageRepository;
@@ -136,7 +137,10 @@ public class MessengerApplication {
         this.appConfig = new AppConfig();
         log.info("Starting AvandocMsg.Messenger core-api v{}", appConfig.version());
         CryptoProvider.ensureLoaded();
-        this.dataSource = new DatabaseConfig(appConfig).dataSource();
+        var databaseConfig = new DatabaseConfig(appConfig);
+        this.dataSource = databaseConfig.dataSource();
+        var readDs = databaseConfig.readDataSource().orElse(null);
+        databaseConfig.warnIfPoolOversubscribed();
         runMigrations();
         this.natsConnection = new NatsConfig(appConfig).connection();
         if (appConfig.natsJetstream()) {
@@ -153,8 +157,8 @@ public class MessengerApplication {
         this.userRepository = new UserRepository(dataSource);
         this.contactRepository = new ContactRepository(dataSource);
         this.blockRepository = new BlockRepository(dataSource);
-        this.chatRepository = new ChatRepository(dataSource, clock, uuidGenerator);
-        this.messageRepository = new MessageRepository(dataSource, clock);
+        this.chatRepository = new ChatRepository(dataSource, readDs, clock, uuidGenerator);
+        this.messageRepository = new MessageRepository(dataSource, readDs, clock);
         this.fileRepository = new FileRepository(dataSource);
         this.chatBanRepository = new ChatBanRepository(dataSource, clock, uuidGenerator);
         this.e2eeService = new E2EEService();
@@ -179,6 +183,7 @@ public class MessengerApplication {
         ExportJobsDbCollector.registerDefault(dataSource, appConfig.exportProcessingStaleMinutes());
         // Prime labeled export counters for Prometheus scrape before first enqueue/cancel.
         ExportMetrics.ensureRegistered();
+        ReadCacheMetrics.ensureRegistered();
         if (appConfig.rateLimitAuthEnabled() || appConfig.redisReadCacheEnabled()) {
             this.redisConfig = new RedisConfig(appConfig);
             if (appConfig.rateLimitAuthEnabled()) {
@@ -314,10 +319,10 @@ public class MessengerApplication {
         var adminManifest = AdminUiManifest.load(MessengerApplication.class.getClassLoader());
         var adminServerStatsService = new AdminServerStatsService(dataSource, appConfig, natsOutbound, redisProbe);
         var chatService = new ChatService(chatRepository, blockRepository, chatReadRepository,
-            messageRepository, natsOutbound, this.clock, this.uuidGenerator);
+            messageRepository, natsOutbound, this.clock, this.uuidGenerator, readCachePort, appConfig);
         var readReceiptService = new ReadReceiptService(messageReadReceiptRepository, chatRepository,
             messageRepository, chatReadRepository, userRepository, auditRepository, natsOutbound,
-            appConfig, this.clock);
+            appConfig, this.clock, readCachePort);
         var mlsGroupStateRepository = new MlsGroupStateRepository(dataSource, this.clock);
         var mlsWirePublisher = new MlsWirePublisher(natsOutbound, appConfig);
         var mlsGroupManager = new MlsGroupManager(mlsGroupStateRepository, mlsService,
@@ -325,7 +330,7 @@ public class MessengerApplication {
         var mlsMigrationService = new MlsMigrationService(dataSource, mlsGroupManager, chatRepository);
         var chatApplicationService = CoreModule.chatApplicationService(dataSource, chatRepository);
         var messageApplicationService = CoreModule.messageApplicationService(dataSource, chatRepository);
-        var userApplicationService = CoreModule.userApplicationService(dataSource, this.uuidGenerator);
+        var userApplicationService = CoreModule.userApplicationService(dataSource, this.uuidGenerator, readCachePort, appConfig);
         var objectStoragePort = CoreModule.objectStoragePort(appConfig, minioClient, fileProxy);
         var fileApplicationService = CoreModule.fileApplicationService(
             dataSource, messageRepository, objectStoragePort, this.uuidGenerator, appConfig);
@@ -334,7 +339,7 @@ public class MessengerApplication {
         var legalHoldRepository = new LegalHoldRepository(dataSource);
         var purgeStatusService = new PurgeStatusService(dataSource, auditRepository);
         var messageService = new MessageService(messageRepository, chatRepository, blockRepository,
-            mlsService, mlsMigrationService, natsOutbound, this.uuidGenerator,
+            mlsService, mlsMigrationService, natsOutbound, this.uuidGenerator, readCachePort,
             () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent());
         var fileService = new FileService(fileApplicationService, messageRepository);
         var exportComplianceSeed = new AdminExportComplianceSeed(

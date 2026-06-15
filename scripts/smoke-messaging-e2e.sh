@@ -6,14 +6,16 @@ BASE_URL="${BASE_URL:-http://127.0.0.1:8080}"
 WS_URL="${WS_URL:-ws://127.0.0.1:8082/ws}"
 PASS="${SMOKE_USER_PASS:-smokepass123}"
 SKIP_ENSURE_USERS=false
+LOAD_ROUNDS=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --url|-u) BASE_URL="$2"; shift 2 ;;
     --ws-url) WS_URL="$2"; shift 2 ;;
     --skip-ensure-users) SKIP_ENSURE_USERS=true; shift ;;
+    --load-rounds) LOAD_ROUNDS="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: $0 [--url BASE] [--ws-url WS] [--skip-ensure-users]"
+      echo "Usage: $0 [--url BASE] [--ws-url WS] [--skip-ensure-users] [--load-rounds N]"
       exit 0
       ;;
     *) echo "Unknown: $1" >&2; exit 2 ;;
@@ -95,13 +97,27 @@ echo "[OK] WS/REST delivery" >&2
 
 smoke_step "Read receipts: B reads, A sees read_by"
 smoke_mark_read "$BASE_URL" "$TOKEN_B" "$GROUP_CHAT" "$REPLY"
+READ_OK=false
 for _ in 1 2 3 4 5 6 7 8 9 10; do
   if smoke_read_receipt_has_user "$BASE_URL" "$TOKEN_A" "$GROUP_CHAT" "$REPLY" "$ID_B"; then
     echo "[OK] read_by contains B" >&2
-    echo ""
-    echo "[OK] smoke-messaging-e2e (spec 003)"
-    exit 0
+    READ_OK=true
+    break
   fi
   sleep 1
 done
-smoke_fail "read_by did not include B for message $REPLY"
+$READ_OK || smoke_fail "read_by did not include B for message $REPLY"
+
+if [[ "$LOAD_ROUNDS" -gt 0 ]]; then
+  smoke_step "Load: $LOAD_ROUNDS extra DM rounds"
+  for r in $(seq 1 "$LOAD_ROUNDS"); do
+    smoke_send_message "$BASE_URL" "$TOKEN_A" "$DM_CHAT" "smoke-load-$r-$(date +%s)" >/dev/null
+  done
+  smoke_poll_message "$BASE_URL" "$TOKEN_B" "$DM_CHAT" "smoke-load-$LOAD_ROUNDS" 30 \
+    || smoke_fail "load round delivery failed"
+  echo "[OK] load rounds complete" >&2
+fi
+
+echo ""
+echo "[OK] smoke-messaging-e2e (spec 003)"
+exit 0

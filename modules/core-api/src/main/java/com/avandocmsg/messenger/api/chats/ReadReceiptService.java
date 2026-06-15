@@ -12,7 +12,10 @@ import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.common.dto.ReadReceiptEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
+import com.avandocmsg.messenger.core.application.ReadCacheCoordinator;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
+import com.avandocmsg.messenger.core.port.ReadCachePort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +41,7 @@ public class ReadReceiptService {
     private final NatsOutboundPort natsOutbound;
     private final AppConfig appConfig;
     private final Clock clock;
+    private final ReadCachePort readCache;
 
     public ReadReceiptService(MessageReadReceiptRepository readReceiptRepository,
                               ChatRepository chatRepository,
@@ -48,6 +52,20 @@ public class ReadReceiptService {
                               NatsOutboundPort natsOutbound,
                               AppConfig appConfig,
                               Clock clock) {
+        this(readReceiptRepository, chatRepository, messageRepository, chatReadRepository, userRepository,
+            auditRepository, natsOutbound, appConfig, clock, NoOpReadCacheAdapter.INSTANCE);
+    }
+
+    public ReadReceiptService(MessageReadReceiptRepository readReceiptRepository,
+                              ChatRepository chatRepository,
+                              MessageRepository messageRepository,
+                              ChatReadRepository chatReadRepository,
+                              UserRepository userRepository,
+                              AuditRepository auditRepository,
+                              NatsOutboundPort natsOutbound,
+                              AppConfig appConfig,
+                              Clock clock,
+                              ReadCachePort readCache) {
         this.readReceiptRepository = readReceiptRepository;
         this.chatRepository = chatRepository;
         this.messageRepository = messageRepository;
@@ -57,6 +75,7 @@ public class ReadReceiptService {
         this.natsOutbound = natsOutbound;
         this.appConfig = appConfig;
         this.clock = clock;
+        this.readCache = readCache;
     }
 
     public enum MarkResult {
@@ -76,6 +95,7 @@ public class ReadReceiptService {
         }
         if (userRepository.isReadReceiptsDisabled(userId)) {
             chatReadRepository.upsertLastRead(userId, chatId, messageId);
+            ReadCacheCoordinator.invalidateChatUnread(readCache, userId);
             return MarkResult.OK;
         }
         var now = clock.instant();
@@ -87,6 +107,7 @@ public class ReadReceiptService {
             publishReceipt(ReadReceiptEvent.single(chatId.toString(), messageId.toString(), userId.toString(),
                 now.toEpochMilli()));
         }
+        ReadCacheCoordinator.invalidateChatUnread(readCache, userId);
         return MarkResult.OK;
     }
 
@@ -110,6 +131,7 @@ public class ReadReceiptService {
         }
         if (userRepository.isReadReceiptsDisabled(userId)) {
             upsertAggregateRead(chatId, userId, validated);
+            ReadCacheCoordinator.invalidateChatUnread(readCache, userId);
             return MarkResult.OK;
         }
         var now = clock.instant();
@@ -122,6 +144,7 @@ public class ReadReceiptService {
             var ids = validated.stream().map(UUID::toString).toList();
             publishReceipt(ReadReceiptEvent.batch(chatId.toString(), userId.toString(), now.toEpochMilli(), ids));
         }
+        ReadCacheCoordinator.invalidateChatUnread(readCache, userId);
         return MarkResult.OK;
     }
 

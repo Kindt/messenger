@@ -20,13 +20,27 @@ import java.util.UUID;
 public class ChatRepository {
     private static final Logger log = LoggerFactory.getLogger(ChatRepository.class);
     private final DataSource dataSource;
+    private final DataSource readDataSource;
     private final Clock clock;
     private final UuidGenerator uuidGenerator;
 
     public ChatRepository(DataSource dataSource, Clock clock, UuidGenerator uuidGenerator) {
+        this(dataSource, null, clock, uuidGenerator);
+    }
+
+    public ChatRepository(DataSource dataSource, DataSource readDataSource, Clock clock, UuidGenerator uuidGenerator) {
         this.dataSource = dataSource;
+        this.readDataSource = readDataSource != null ? readDataSource : dataSource;
         this.clock = clock;
         this.uuidGenerator = uuidGenerator;
+    }
+
+    private DataSource read() {
+        return readDataSource;
+    }
+
+    private DataSource write() {
+        return dataSource;
     }
 
     public boolean chatExists(UUID chatId) {
@@ -176,7 +190,7 @@ public class ChatRepository {
             ORDER BY c.updated_at DESC
             """;
         var result = new ArrayList<ChatResponse>();
-        try (var conn = dataSource.getConnection();
+        try (var conn = read().getConnection();
              var stmt = conn.prepareStatement(sql)) {
             stmt.setObject(1, userId);
             stmt.setObject(2, userId);
@@ -237,7 +251,7 @@ public class ChatRepository {
                 )
               )
             """;
-        try (var conn = dataSource.getConnection();
+        try (var conn = read().getConnection();
              var stmt = conn.prepareStatement(sql)) {
             stmt.setObject(1, userId);
             stmt.setObject(2, chatId);

@@ -17,7 +17,10 @@ import com.avandocmsg.messenger.common.dto.ReactionChangeEvent;
 import com.avandocmsg.messenger.common.dto.MessageSendEvent;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
+import com.avandocmsg.messenger.core.application.ReadCacheCoordinator;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
+import com.avandocmsg.messenger.core.port.ReadCachePort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -42,6 +45,7 @@ public class MessageService {
     private final MlsMigrationService mlsMigrationService;
     private final NatsOutboundPort natsOutbound;
     private final UuidGenerator uuidGenerator;
+    private final ReadCachePort readCachePort;
     private final BooleanSupplier indexerAvailable;
     private final Deque<MessageWorkerEvent> pendingIndexEvents = new ArrayDeque<>();
     private static final int MAX_PENDING_INDEX_EVENTS = 2048;
@@ -65,6 +69,16 @@ public class MessageService {
                           MlsService mlsService, MlsMigrationService mlsMigrationService,
                           NatsOutboundPort natsOutbound, UuidGenerator uuidGenerator,
                           BooleanSupplier indexerAvailable) {
+        this(messageRepository, chatRepository, blockRepository, mlsService, mlsMigrationService, natsOutbound,
+            uuidGenerator, NoOpReadCacheAdapter.INSTANCE, indexerAvailable);
+    }
+
+    public MessageService(MessageRepository messageRepository, ChatRepository chatRepository,
+                          BlockRepository blockRepository,
+                          MlsService mlsService, MlsMigrationService mlsMigrationService,
+                          NatsOutboundPort natsOutbound, UuidGenerator uuidGenerator,
+                          ReadCachePort readCachePort,
+                          BooleanSupplier indexerAvailable) {
         this.messageRepository = messageRepository;
         this.chatRepository = chatRepository;
         this.blockRepository = blockRepository;
@@ -72,6 +86,7 @@ public class MessageService {
         this.mlsMigrationService = mlsMigrationService;
         this.natsOutbound = natsOutbound;
         this.uuidGenerator = uuidGenerator;
+        this.readCachePort = readCachePort != null ? readCachePort : NoOpReadCacheAdapter.INSTANCE;
         this.indexerAvailable = indexerAvailable != null ? indexerAvailable : () -> true;
     }
 
@@ -156,8 +171,25 @@ public class MessageService {
             content, replyToMsgId, request.clientMsgId(), request.visibilityTtlSeconds(), attachmentFileId);
         if (msg != null) {
             publishSendEvent(msg, request.clientMsgId());
+            invalidateUnreadForChatMembers(chatId, senderId);
         }
         return msg;
+    }
+
+    private void invalidateUnreadForChatMembers(UUID chatId, UUID senderId) {
+        if (!readCachePort.enabled()) {
+            return;
+        }
+        for (var member : chatRepository.listMembers(chatId)) {
+            try {
+                var memberId = UUID.fromString(member.userId());
+                if (!memberId.equals(senderId)) {
+                    ReadCacheCoordinator.invalidateChatUnread(readCachePort, memberId);
+                }
+            } catch (IllegalArgumentException ignored) {
+                // skip malformed member id
+            }
+        }
     }
 
     private String typeForEncrypted(String type, com.avandocmsg.messenger.api.mls.dto.EncryptedMessage encrypted) {

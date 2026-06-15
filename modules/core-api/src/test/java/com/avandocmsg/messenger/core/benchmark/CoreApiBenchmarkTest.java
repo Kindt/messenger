@@ -2,6 +2,8 @@ package com.avandocmsg.messenger.core.benchmark;
 
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
 import com.avandocmsg.messenger.core.application.ChatApplicationService;
 import com.avandocmsg.messenger.core.application.FileApplicationService;
 import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
@@ -116,7 +118,7 @@ class CoreApiBenchmarkTest {
                 return Optional.empty();
             }
         };
-        var service = new UserApplicationService(port, savedChatPort);
+        var service = new UserApplicationService(port, savedChatPort, NoOpReadCacheAdapter.INSTANCE, new AppConfig());
 
         var start = System.nanoTime();
         for (int i = 0; i < 1000; i++) {

@@ -23,11 +23,21 @@ public class MessageRepository {
     public static final String SQL_MSG_VISIBILITY_TTL_VISIBLE =
         "(m.visibility_ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - m.created_at)) < m.visibility_ttl_seconds)";
     private final DataSource dataSource;
+    private final DataSource readDataSource;
     private final Clock clock;
 
     public MessageRepository(DataSource dataSource, Clock clock) {
+        this(dataSource, null, clock);
+    }
+
+    public MessageRepository(DataSource dataSource, DataSource readDataSource, Clock clock) {
         this.dataSource = dataSource;
+        this.readDataSource = readDataSource != null ? readDataSource : dataSource;
         this.clock = clock;
+    }
+
+    private DataSource read() {
+        return readDataSource;
     }
 
     public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
@@ -125,7 +135,7 @@ public class MessageRepository {
         sql.append(" ORDER BY m.created_at DESC LIMIT ?");
 
         var result = new ArrayList<MessageResponse>();
-        try (var conn = dataSource.getConnection();
+        try (var conn = read().getConnection();
              var stmt = conn.prepareStatement(sql.toString())) {
             int idx = 1;
             stmt.setObject(idx++, chatId);

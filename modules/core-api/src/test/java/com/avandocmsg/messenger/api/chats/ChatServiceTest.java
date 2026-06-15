@@ -2,6 +2,8 @@ package com.avandocmsg.messenger.api.chats;
 
 import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
 import com.avandocmsg.messenger.api.chats.dto.ChatResponse;
+import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.junit.jupiter.api.Test;
@@ -19,7 +21,7 @@ class ChatServiceTest {
     private final StubBlockRepository blockRepo = new StubBlockRepository();
     private final ChatService chatService = new ChatService(chatRepo, blockRepo, null, null,
         NatsOutboundPort.noop(), Clock.fixed(Instant.parse("2020-01-01T00:00:00Z"), ZoneOffset.UTC),
-        UuidGenerator.standard());
+        UuidGenerator.standard(), NoOpReadCacheAdapter.INSTANCE, new AppConfig());
 
     final UUID userA = UUID.randomUUID();
     final UUID userB = UUID.randomUUID();

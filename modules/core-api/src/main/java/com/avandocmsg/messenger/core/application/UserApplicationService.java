@@ -1,8 +1,12 @@
 package com.avandocmsg.messenger.core.application;
 
+import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.domain.UserProfile;
+import com.avandocmsg.messenger.core.port.ReadCacheKeys;
+import com.avandocmsg.messenger.core.port.ReadCacheKind;
+import com.avandocmsg.messenger.core.port.ReadCachePort;
 import com.avandocmsg.messenger.core.port.SavedChatPort;
 import com.avandocmsg.messenger.core.port.UserRepositoryPort;
 
@@ -12,10 +16,17 @@ import java.util.Optional;
 public final class UserApplicationService {
     private final UserRepositoryPort userRepositoryPort;
     private final SavedChatPort savedChatPort;
+    private final ReadCachePort readCachePort;
+    private final AppConfig appConfig;
 
-    public UserApplicationService(UserRepositoryPort userRepositoryPort, SavedChatPort savedChatPort) {
+    public UserApplicationService(UserRepositoryPort userRepositoryPort,
+                                  SavedChatPort savedChatPort,
+                                  ReadCachePort readCachePort,
+                                  AppConfig appConfig) {
         this.userRepositoryPort = userRepositoryPort;
         this.savedChatPort = savedChatPort;
+        this.readCachePort = readCachePort;
+        this.appConfig = appConfig;
     }
 
     public Optional<ChatId> getSavedChatId(UserId userId) {
@@ -23,14 +34,25 @@ public final class UserApplicationService {
     }
 
     public Optional<UserProfile> getProfileForViewer(UserId viewerId, UserId targetId) {
-        return userRepositoryPort.findById(targetId)
-            .flatMap(profile -> toViewerProfile(profile, viewerId));
+        if (viewerId.equals(targetId) && readCachePort.enabled()) {
+            var key = ReadCacheKeys.userProfile(targetId.value());
+            var cached = readCachePort.get(key).flatMap(ReadCacheJson::userProfileFromJson);
+            if (cached.isPresent()) {
+                return cached;
+            }
+            var loaded = loadProfileForViewer(viewerId, targetId);
+            loaded.flatMap(ReadCacheJson::userProfileToJson).ifPresent(json ->
+                readCachePort.put(key, json, appConfig.readCacheTtlSeconds(ReadCacheKind.USER_PROFILE)));
+            return loaded;
+        }
+        return loadProfileForViewer(viewerId, targetId);
     }
 
     public Optional<UserProfile> updateProfile(UserId userId, String displayName, String phone) {
         if (!userRepositoryPort.updateProfile(userId, displayName, phone)) {
             return Optional.empty();
         }
+        ReadCacheCoordinator.invalidateUserProfile(readCachePort, userId.value());
         return getProfileForViewer(userId, userId);
     }
 
@@ -38,6 +60,8 @@ public final class UserApplicationService {
         if (!userRepositoryPort.updatePresence(userId, presenceStatus)) {
             return Optional.empty();
         }
+        ReadCacheCoordinator.invalidateUserProfile(readCachePort, userId.value());
+        ReadCacheCoordinator.invalidateUserPresence(readCachePort, userId.value());
         return getProfileForViewer(userId, userId);
     }
 
@@ -45,6 +69,7 @@ public final class UserApplicationService {
         if (!userRepositoryPort.updatePrivacy(userId, disableReadReceipts)) {
             return Optional.empty();
         }
+        ReadCacheCoordinator.invalidateUserProfile(readCachePort, userId.value());
         return getProfileForViewer(userId, userId);
     }
 
@@ -52,11 +77,18 @@ public final class UserApplicationService {
         if (!userRepositoryPort.updateUiLocale(userId, uiLocale)) {
             return Optional.empty();
         }
+        ReadCacheCoordinator.invalidateUserProfile(readCachePort, userId.value());
         return getProfileForViewer(userId, userId);
     }
 
     public void touchHeartbeat(UserId userId) {
         userRepositoryPort.touchHeartbeat(userId);
+        ReadCacheCoordinator.invalidateUserPresence(readCachePort, userId.value());
+    }
+
+    private Optional<UserProfile> loadProfileForViewer(UserId viewerId, UserId targetId) {
+        return userRepositoryPort.findById(targetId)
+            .flatMap(profile -> toViewerProfile(profile, viewerId));
     }
 
     private static Optional<UserProfile> toViewerProfile(UserProfile profile, UserId viewerId) {
