@@ -86,3 +86,7 @@
 
 - [x] T602 `Dockerfile.bot-delivery-worker` + compose service (`bot-delivery-worker`)
 
+---
+
+**Engineering closure:** 2026-06-15 — phases 0–6 complete; `buildIntegrity` green; spec status **closed**. Platform follow-up → spec **009**.
+

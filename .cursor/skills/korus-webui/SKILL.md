@@ -66,7 +66,7 @@ Verify: `http://127.0.0.1:19088/`, API `http://127.0.0.1:18080/api/v1/health`.
 2. Replace hardcoded string with `L(...)` in JS
 3. If new Tailwind classes: `cd modules/web-client/webui-build && npm run build:css` (or Gradle build)
 4. Inner tier: `playwright-dev-loop.ps1 -Tier <ui-*|all-inner>`
-5. Update `specs/008-repository-cleanup/tasks.md` checkbox when applicable
+5. Update `specs/009-platform-modules/tasks.md` checkbox when applicable
 6. Notable behavior: `[Unreleased]` in `CHANGELOG.md`
 
 ## Docker web-client image

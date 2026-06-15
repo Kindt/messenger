@@ -1,6 +1,6 @@
 # Archived Specs (001–006)
 
-Closed Spec-Kit packages. **Active specs:** 007 (ops/stage), 008 (repository cleanup), 009 (platform modules).
+Closed Spec-Kit packages. **Active specs:** 007 (ops/stage tail), 009 (platform modules). **Closed (eng.):** 008 (repository cleanup).
 
 | # | Archive path | Status | Living docs |
 |---|--------------|--------|-------------|

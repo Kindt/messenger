@@ -3,7 +3,7 @@ alwaysApply: true
 ---
 
 <!-- SPECKIT START -->
-Current plan: `specs/008-repository-cleanup/plan.md`
+Current plan: `specs/009-platform-modules/plan.md`
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
 <!-- SPECKIT END -->

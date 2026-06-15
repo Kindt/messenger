@@ -6,6 +6,15 @@
 
 ---
 
+### 2026-06-16 — product_presentation v2.5.1: без внутренних ссылок
+
+- **`product_presentation.html` v2.5.1**, **`docs/PRODUCT_PRESENTATION.md` v1.8**: убраны ссылки на specs, docs/, deploy/, design-doc; snapshot и §17 — только продуктовый язык.
+
+### 2026-06-15 — Spec 008 repository cleanup closed
+
+- **Status:** all phases 0–6 complete; `specs/008-repository-cleanup/` → **closed** (engineering sign-off).
+- **Speckit:** active plan → `specs/009-platform-modules/` (`.specify/feature.json`, AGENTS.md).
+
 ### 2026-06-15 — Spec 009 smokes + metrics hotfix
 
 - **Smokes:** `smoke-us2-epic01-qemu.ps1` — SSH host key из `ssh-hostkeys.ps1`; `smoke-hotplug-indexer.ps1` — `INDEXER_METRICS_PORT`, без `/ready`; новый `smoke-bot-delivery-worker.ps1` + `SMOKE_INDEX.md`.
@@ -53,6 +62,11 @@
 - **`docs/review/stage-prod-deploy-runbook.md`**: однодневный чеклист ops при появлении stage/prod хостов (deploy-only, без доработки кода).
 - **`docs/review/ops-signoff-log.md`**: модель deploy-ready — engineering READY / ops execution pending host / human signatures.
 - Обновлены: `inventory/stage/README.md`, `e2ee-staging-checklist.md`, `stage-tls-smoke-runbook.md`, `specs/007/tasks.md`, `ROADMAP_EPICS.md` §8.
+
+### 2026-06-15 — Единицы измерения на диаграммах сравнения (v1.5)
+
+- **`competitor_comparison.html` v1.5**: подписи осей и столбцов — явно «₽/год», «₽/рег. пользов./мес», «рег. пользов.» вместо `RU`/`@10k`; НТ-график пропускной способности — `запр/с` и `сообщ/с`, не рубли.
+- **`scripts/competitor_comparison_data.py`**: хелперы `_fmt_reg_users`, `_fmt_chart_y_value`, `_fmt_per_user_month`; смешанные единицы на одном графике через 4-кортежи series.
 
 ### 2026-06-15 — Русификация презентации сравнения (v1.4)
 
@@ -103,7 +117,7 @@
 
 ### 2026-06-15 — product_presentation v2.5: профили вместо «оптимизации»
 
-- **`product_presentation.html` v2.5**: удалён §12 (FR-OPT); §10 — одна таблица sizing; §17 (бывш. §18) — Pilot / Standard / monolith (справ.); убран жаргон baseline/оптимиз.
+- **`docs/PRODUCT_PRESENTATION.md` v1.7**, **`product_presentation.html` v2.5**: синхронизация после удаления §12 «оптимизации»; MD §12–16 = HTML §12–16; стоимость только HTML §17.
 
 ### 2026-06-15 — product_presentation v2.4: статус по фактам репозитория
 

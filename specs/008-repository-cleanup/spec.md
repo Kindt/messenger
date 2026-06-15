@@ -1,7 +1,8 @@
 # Spec 008: Repository Cleanup
 
-**Status:** active (2026-06-15)  
-**Parent:** total cleanup program
+**Status:** `closed` (engineering sign-off 2026-06-15)  
+**Parent:** total cleanup program  
+**Successor:** platform tail → [`specs/009-platform-modules/`](../009-platform-modules/)
 
 ## Goal
 
@@ -23,7 +24,11 @@
 
 ## Success criteria
 
-- `./gradlew buildIntegrity` green after each PR
-- Inner Playwright `all-inner` green for UI/API-touching changes
-- 0 `scripts/*.cmd`, 0 orphan one-shot Python patch scripts
-- `MessageService.send` delegated to hex `MessageApplicationService`
+- `./gradlew buildIntegrity` green after each PR — ✅ 2026-06-15
+- Inner Playwright `all-inner` green for UI/API-touching changes — ✅ outer gate 2026-06-15 (spec 007 T701)
+- 0 `scripts/*.cmd`, 0 orphan one-shot Python patch scripts — ✅ phase 0–2
+- `MessageService.send` delegated to hex `MessageApplicationService` — ✅ phase 3 (T302)
+
+## Closure
+
+All tasks in [`tasks.md`](tasks.md) complete. Phase 6 deliverables (indexer/bot-delivery skeleton) tracked under **spec 009**.
