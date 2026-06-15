@@ -5,15 +5,17 @@ set -euo pipefail
 ATTACH=false
 TURN=false
 BUILD=false
+FORCE_RECREATE=false
 SKIP_KORUS_ENSURE="${SKIP_KORUS_ENSURE:-0}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --attach|-a) ATTACH=true ;;
     --turn|-t) TURN=true ;;
     --build|-b) BUILD=true ;;
+    --force-recreate|-r) FORCE_RECREATE=true ;;
     --skip-ensure|-S) SKIP_KORUS_ENSURE=1 ;;
     -h|--help)
-      echo "Usage: $0 [--attach|-a] [--turn|-t] [--build|-b] [--skip-ensure|-S]"
+      echo "Usage: $0 [--attach|-a] [--turn|-t] [--build|-b] [--force-recreate|-r] [--skip-ensure|-S]"
       echo "  Env SKIP_KORUS_ENSURE=1 also skips install-environment."
       exit 0
       ;;
@@ -71,6 +73,9 @@ fi
 args+=(up -d --remove-orphans)
 if "$BUILD"; then
   args+=(--build)
+fi
+if "$FORCE_RECREATE"; then
+  args+=(--force-recreate)
 fi
 
 echo "cd $KW" >&2

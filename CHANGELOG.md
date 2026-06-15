@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+### 2026-06-15 — outer gate green + korus-web env recreate on redeploy
+
+- **`runtime-gate-report.md`**: outer Playwright **30/30** on QEMU (2026-06-15).
+- **`korus_web` Ansible**: `--force-recreate` when `.env` template changes (wsUrl pickup after LAN IP change).
+- **`korus-web-up.sh`**: flag `--force-recreate` / `-r`.
+
 ### 2026-06-15 — product_presentation.html: публикация для заказчика
 
 - **`product_presentation.html` v2.2**: презентация продукта (не техническое ТЗ); §1–18, приложения, иллюстрации.
