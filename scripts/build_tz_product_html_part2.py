@@ -217,7 +217,7 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
   <li><b>Комплаенс (§13):</b> export с индикатором полноты; legal hold блокирует purge; audit admin-действий.</li>
   <li><b>SLA (§14):</b> согласованные RPO/RTO по профилю; сообщения не теряются при деградации P1.</li>
   <li><b>Профиль (§15):</b> ограничения Pilot доведены до заказчика до запуска.</li>
-  <li><b>Интеграции (§12):</b> REST API и WebSocket реализованы; SSO и публичный Bot API — в roadmap.</li>
+  <li><b>Интеграции (§12):</b> REST API, WebSocket и Bot API MVP реализованы; SSO — в roadmap.</li>
 </ol>
 
 <hr/>
@@ -230,14 +230,15 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
   <tr><td>Мгновенная доставка (WebSocket)</td><td>Клиенты</td><td>Realtime, «печатает…»</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Система входа (Keycloak)</td><td>IT</td><td>JWT, локальные пользователи</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Export / replay</td><td>Compliance</td><td>JSON/ZIP выгрузка</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Web Push</td><td>Пользователи</td><td>SW + push-worker; VAPID Ansible ✓</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Web Push</td><td>Пользователи</td><td>SW + push-worker; VAPID в конфигурации ✓</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Bot API (REST MVP)</td><td>IT, интеграторы</td><td>register, subscribe, sendMessage, webhook delivery</td><td><span class="tag tag-partial">Частично</span></td></tr>
 </table>
 <h3>12.2 Запланировано</h3>
 <table>
   <tr><th>Сценарий</th><th>Ожидание</th><th>Статус</th></tr>
   <tr><td>SSO Google / корпоративный портал</td><td>Единый вход без отдельного пароля</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
   <tr><td>LDAP / Active Directory</td><td>Учётки из AD</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>Bot API (REST / long-poll)</td><td>Service Desk, опросы, @mention</td><td><span class="tag tag-planned">Запланировано</span> — webhook MVP есть, публичный API — в roadmap</td></tr>
+  <tr><td>Bot API long-poll, pin/ban</td><td>Полный контракт Bot API</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
 </table>
 <p><b>Безопасность:</b> webhook только HTTPS; секреты не логируются; сбой бота не блокирует переписку людей.</p>
 
@@ -352,7 +353,8 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
   <tr><td>A23–A24</td><td>E2EE legacy / MLS</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>A25–A26</td><td>Web Push, PWA</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>A27–A31</td><td>Admin, ретенция, legal hold, audit, deep archive</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>A32–A34</td><td>Bot API, Live HLS, Mobile apps</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
+  <tr><td>A32</td><td>Bot API</td><td><span class="tag tag-partial">Частично</span> — MVP</td></tr>
+  <tr><td>A33–A34</td><td>Live HLS, Mobile apps</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
 </table>
 
 <h3>Приложение B. Глоссарий для юристов</h3>
@@ -414,7 +416,7 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
   <b>Korus Messenger (AvandocMsg)</b> — Продуктовая презентация v{PRODUCT_VERSION}, {PRODUCT_DATE}.<br/>
   Единый автономный документ для заказчика. Все цифры — ориентиры для планирования, не оферта.<br/>
   Статус на дату: веб-клиент и сервер реализованы; Playwright {PLAYWRIGHT_PASSED}/{PLAYWRIGHT_PASSED} ({PLAYWRIGHT_DATE});
-  E2EE/звонки/push/TLS — частично (ops/sign-off); mobile, Live HLS, Bot API — planned/out.
+  E2EE/звонки/push/TLS — частично (ops/sign-off; stage с сентября 2026); Bot API MVP — частично; mobile, Live HLS — planned/out.
 </p>
 </body>
 </html>

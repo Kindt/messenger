@@ -6,6 +6,11 @@
 
 ---
 
+### 2026-06-16 — product_presentation v2.5.2: Bot API MVP + продуктовый язык
+
+- **`product_presentation.html` v2.5.2**, **`docs/PRODUCT_PRESENTATION.md` v1.10**: Bot API → **Частично** (register, webhook, sendMessage); КУ-25 partial; убраны QEMU/Ansible/bot-delivery/tz_full из текста для заказчика; §8–§12, приложения D/H/G; §17 pricing сверен (61 350 / 109 550 / 332 000 ₽).
+- **`scripts/product_status.py`**, **`build-tz-product-html.py`**, **`build_tz_product_html_part2.py`**: единый snapshot и §12; post-build validation customer HTML.
+
 ### 2026-06-16 — product_presentation v2.5.1: без внутренних ссылок
 
 - **`product_presentation.html` v2.5.1**, **`docs/PRODUCT_PRESENTATION.md` v1.8**: убраны ссылки на specs, docs/, deploy/, design-doc; snapshot и §17 — только продуктовый язык.

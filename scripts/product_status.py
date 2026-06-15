@@ -2,7 +2,7 @@
 
 from html import escape
 
-PRODUCT_VERSION = "2.5.1"
+PRODUCT_VERSION = "2.5.2"
 PRODUCT_DATE = "16 июня 2026"
 PLAYWRIGHT_PASSED = 30
 PLAYWRIGHT_DATE = "2026-06-15"
@@ -20,13 +20,13 @@ FEATURES: tuple[tuple[str, str, str, str], ...] = (
     ("e2ee", "E2EE / hybrid MLS", "partial", "инженерная приёмка ✓; prod после sign-off"),
     ("calls", "Видеозвонки WebRTC (mesh)", "partial", "P2P из чата; TURN — ops"),
     ("push", "Web Push / PWA", "partial", "UI и worker; prod VAPID — ops"),
-    ("tls", "Prod HTTPS / TLS", "partial", "развёртывание на stage/prod — ops"),
+    ("tls", "Prod HTTPS / TLS", "partial", "развёртывание ✓; stage host — с сентября 2026"),
     ("gdpr_export", "Export GDPR completeness", "partial", "export JSON/ZIP ✓; legal checklist — заказчик"),
     ("fr_opt", "Профили Pilot / Standard", "done", "lean Pilot + масштабируемый Standard"),
     ("fr_opt_dedup", "Дедупликация файлов", "done", "одинаковые вложения хранятся один раз"),
     ("fr_opt_shard", "Sharding PostgreSQL", "planned", "Enterprise roadmap"),
-    ("load_test", "Formal load test на stage", "partial", "лабораторный baseline ✓; soak на stage — pending"),
-    ("bot_api", "Bot API (REST / long-poll)", "planned", "не публичный API"),
+    ("load_test", "Formal load test на stage", "partial", "тестовый стенд ✓; stage host — с сентября 2026"),
+    ("bot_api", "Bot API (REST MVP)", "partial", "register/subscribe/sendMessage; long-poll — roadmap"),
     ("sso", "SSO Google / LDAP / SAML", "planned", ""),
     ("live", "Live-streaming (HLS)", "planned", ""),
     ("mobile", "Мобильные iOS/Android", "out", "вне текущей поставки"),
@@ -53,9 +53,9 @@ def render_product_snapshot_html() -> str:
   <div class="comment">
     <b>Проверено автоматически:</b> Playwright <b>{PLAYWRIGHT_PASSED}/{PLAYWRIGHT_PASSED}</b> на тестовом стенде ({PLAYWRIGHT_DATE}),
     основные пользовательские сценарии и REST API покрыты приёмочными тестами.<br/>
-    <b>До промышленного запуска (ops):</b> TLS на stage/prod, formal sign-off E2EE, Web Push на prod,
-    TURN для звонков за NAT, нагрузочный тест на stage, юридическая политика GDPR export.<br/>
-    <b>Не в текущей поставке:</b> мобильные приложения, Live HLS, публичный Bot API, sharding PG на Enterprise.
+    <b>До промышленного запуска (ops):</b> TLS на stage/prod (стенд с <b>сентября 2026</b>), formal sign-off E2EE, Web Push на prod,
+    TURN для звонков за NAT, нагрузочный soak на stage, юридическая политика GDPR export.<br/>
+    <b>Не в текущей поставке:</b> мобильные приложения, Live HLS, полный Bot API (long-poll, pin/ban), sharding PG на Enterprise.
   </div>
 </div>
 """

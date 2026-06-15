@@ -58,7 +58,7 @@
 
 <h1>Продуктовая презентация<br/>Korus Messenger (AvandocMsg)</h1>
 <div class="meta">
-  <b>Версия:</b> 2.5.1 &nbsp;|&nbsp; <b>Дата:</b> 16 июня 2026 &nbsp;|&nbsp;
+  <b>Версия:</b> 2.5.2 &nbsp;|&nbsp; <b>Дата:</b> 16 июня 2026 &nbsp;|&nbsp;
   <b>Аудитория:</b> руководители, юристы, продажи, бухгалтерия, операторы, служба безопасности<br/>
   <b>Формат:</b> презентация продукта для заказчика; приложение I — каталог <b>страниц</b> клиента и админки
 </div>
@@ -85,9 +85,9 @@
   <div class="comment">
     <b>Проверено автоматически:</b> Playwright <b>30/30</b> на тестовом стенде (2026-06-15),
     основные пользовательские сценарии и REST API покрыты приёмочными тестами.<br/>
-    <b>До промышленного запуска (ops):</b> TLS на stage/prod, formal sign-off E2EE, Web Push на prod,
-    TURN для звонков за NAT, нагрузочный тест на stage, юридическая политика GDPR export.<br/>
-    <b>Не в текущей поставке:</b> мобильные приложения, Live HLS, публичный Bot API, sharding PG на Enterprise.
+    <b>До промышленного запуска (ops):</b> TLS на stage/prod (стенд с <b>сентября 2026</b>), formal sign-off E2EE, Web Push на prod,
+    TURN для звонков за NAT, нагрузочный soak на stage, юридическая политика GDPR export.<br/>
+    <b>Не в текущей поставке:</b> мобильные приложения, Live HLS, полный Bot API (long-poll, pin/ban), sharding PG на Enterprise.
   </div>
 </div>
 
@@ -316,15 +316,15 @@
 <ul>
   <li><b>Видеозвонки</b> — mesh WebRTC из чата; за NAT может потребоваться TURN-сервер</li>
   <li><b>E2EE (hybrid MLS)</b> — в браузере и на сервере; массовое prod после Product/Security sign-off</li>
-  <li><b>Web Push / PWA</b> — service worker и push-worker; VAPID vault→Ansible wiring ✓; delivery verify на stage — ops</li>
-  <li><b>HTTPS</b> — Ansible/TLS для stage/prod готов; выпуск сертификатов на контуре заказчика</li>
+  <li><b>Web Push / PWA</b> — service worker и push-worker; конфигурация VAPID в поставке ✓; проверка доставки на stage — ops</li>
+  <li><b>HTTPS</b> — автоматизация TLS для stage/prod в поставке; выпуск сертификатов на контуре заказчика</li>
 </ul>
 
 <h3>До промышленного запуска</h3>
 <ul>
-  <li>Formal load test на stage (k6)</li>
+  <li>Formal load test soak на stage (k6; стенд — с сентября 2026)</li>
   <li>Согласованная с юристами политика полноты export (GDPR)</li>
-  <li>Bot API, SSO federation, Live-streaming, мобильные клиенты — <b>не в текущей поставке</b> (§9)</li>
+  <li>SSO federation, Live-streaming, мобильные клиенты — <b>не в текущей поставке</b> (§9); Bot API MVP — <b>частично</b> (§12)</li>
 </ul>
 
 <hr/>
@@ -352,7 +352,7 @@
   <tr><td>Сервер и фоновые службы</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Мобильные приложения iOS/Android</td><td><span class="tag tag-out">Вне текущей поставки</span></td></tr>
   <tr><td>Desktop-клиент</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>Bot API (боты и интеграции)</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
+  <tr><td>Bot API (боты и интеграции)</td><td><span class="tag tag-partial">Частично</span> — MVP: register, webhook, sendMessage</td></tr>
   <tr><td>Прямые эфиры (all-hands на сотни зрителей)</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
 </table>
 
@@ -386,16 +386,16 @@
   <tr><td>Экспорт чата</td><td>JSON/ZIP архив</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Звонки</td><td>WebRTC mesh из чата, screen share; TURN — ops</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>E2EE</td><td>Hybrid MLS в браузере; prod после sign-off</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>Push / PWA</td><td>SW, push-worker, UI; VAPID Ansible vault ✓</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Push / PWA</td><td>SW, push-worker, UI; VAPID в конфигурации ✓</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>Админка</td><td><code>/admin/</code> — org, ретенция, legal hold, audit</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Ретенция и архив</td><td>Многоуровневое хранение, автоочистка</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Локализация</td><td>ru, en, be, kk, zh, ko</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Bot API</td><td>Боты для Service Desk и автоматизации</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
+  <tr><td>Bot API</td><td>Боты для Service Desk и автоматизации</td><td><span class="tag tag-partial">Частично</span> — MVP: register, webhook, sendMessage</td></tr>
   <tr><td>Live-streaming</td><td>All-hands, HLS-трансляции</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>Prod HTTPS</td><td>Ansible/TLS scaffolding ✓; deploy на stage — ops</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Prod HTTPS</td><td>Развёртывание TLS в поставке ✓; deploy на stage — ops</td><td><span class="tag tag-partial">Частично</span></td></tr>
 </table>
 <hr/><h2 id="s5">5. Кейсы использования</h2>
-<p>Формат: <b>ситуация → действия → результат</b>. 27 сценариев: <b>24 реализовано</b> (или частично) + <b>3 запланировано</b> (КУ-25…27).</p>
+<p>Формат: <b>ситуация → действия → результат</b>. 27 сценариев: <b>24 реализовано</b> (или частично) + <b>1 частично</b> (КУ-25) + <b>2 запланировано</b> (КУ-26…27).</p>
 <h3>5.1 Сотрудник</h3>
 <div class="case"><h4>КУ-01: Переписка с коллегой <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Нужно обсудить задачу с коллегой из другого отдела.<br/><b>Действия:</b> Найти коллегу → открыть чат → написать.<br/><b>Результат:</b> Сообщение доставлено мгновенно.</p></div>
 <div class="case"><h4>КУ-02: Проектная группа <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Запуск проекта на 8 человек.<br/><b>Действия:</b> Создать группу → пригласить участников.<br/><b>Результат:</b> Общая лента и обмен файлами.</p></div>
@@ -424,8 +424,9 @@
 <div class="case"><h4>КУ-22: Проверка удаления <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Данные по TTL удалены?<br/><b>Действия:</b> Проверить чат и purge status.<br/><b>Результат:</b> В UI не отображаются.</p></div>
 <div class="case"><h4>КУ-23: Аудит админов <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Несанкционированный доступ.<br/><b>Действия:</b> Журнал аудита.<br/><b>Результат:</b> Кто, когда, что изменил.</p></div>
 <div class="case"><h4>КУ-24: Prod HTTPS <span class="tag tag-partial">Частично</span></h4><p><b>Ситуация:</b> Перед выводом в интернет.<br/><b>Действия:</b> Checklist DNS, сертификаты.<br/><b>Результат:</b> Пользователи по HTTPS.</p></div>
-<h3>5.5 Запланированные сценарии</h3>
-<div class="case"><h4>КУ-25: Bot Service Desk <span class="tag tag-planned">Запланировано</span></h4><p><b>Ситуация:</b> Заявка через чат-бота.<br/><b>Действия:</b> Написать боту.<br/><b>Результат:</b> Тикет во внешней системе.</p></div>
+<h3>5.5 Интеграции (частично)</h3>
+<div class="case"><h4>КУ-25: Bot Service Desk <span class="tag tag-partial">Частично</span></h4><p><b>Ситуация:</b> Заявка через чат-бота.<br/><b>Действия:</b> Создать бота → подписать на чат → webhook/sendMessage.<br/><b>Результат:</b> MVP ✓; полный Service Desk — интеграция заказчика.</p></div>
+<h3>5.6 Запланированные сценарии</h3>
 <div class="case"><h4>КУ-26: All-hands 500+ <span class="tag tag-planned">Запланировано</span></h4><p><b>Ситуация:</b> Выступление гендиректора онлайн.<br/><b>Действия:</b> Live-стрим → HLS.<br/><b>Результат:</b> Массовая трансляция.</p></div>
 <div class="case"><h4>КУ-27: SSO Google/LDAP <span class="tag tag-planned">Запланировано</span></h4><p><b>Ситуация:</b> Единый вход без отдельного пароля.<br/><b>Действия:</b> «Войти через корпоративный портал».<br/><b>Результат:</b> Единый вход через IdP.</p></div>
 
@@ -491,8 +492,8 @@
   <tr><td>Вход, чаты, сообщения, TTL</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Hot/Archive/Deep, файлы, export</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Поиск Solr / SQL (Pilot)</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>TLS prod deploy</td><td><span class="tag tag-partial">Частично</span> (код/Ansible ✓)</td></tr>
-  <tr><td>Bot API</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
+  <tr><td>TLS prod deploy</td><td><span class="tag tag-partial">Частично</span> (развёртывание в поставке ✓)</td></tr>
+  <tr><td>Bot API</td><td><span class="tag tag-partial">Частично</span> — MVP REST: register, webhook, sendMessage</td></tr>
   <tr><td>Push-уведомления</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>Live-streaming</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
   <tr><td>Звонки</td><td><span class="tag tag-partial">Частично</span></td></tr>
@@ -508,11 +509,11 @@
 <tr><td>E2EE prod enable</td><td>Конфиденциальность переписки</td></tr>
 <tr><td>Web Push, TURN</td><td>Уведомления и звонки за firewall</td></tr>
 <tr><td>GDPR export policy</td><td>Юридически полная выгрузка</td></tr>
-<tr><td>Formal load test (k6)</td><td>Подтверждение sizing §10 на stage</td></tr>
+<tr><td>Formal load test (k6)</td><td>Подтверждение sizing §10; stage — с сентября 2026</td></tr>
 </table>
 <h3>6–12 месяцев</h3>
 <table><tr><th>Направление</th><th>Ценность</th></tr>
-<tr><td>Bot API</td><td>Service Desk, автоматизация</td></tr>
+<tr><td>Bot API (long-poll, pin/ban)</td><td>Расширение контракта Bot API</td></tr>
 <tr><td>SSO Google/LDAP</td><td>Enterprise-вход</td></tr>
 <tr><td>Dedup файлов (content-hash)</td><td>Экономия диска на вложениях</td></tr>
 <tr><td>Sharding PG (Enterprise)</td><td>Масштаб до 1M — scaffold, full router в roadmap</td></tr>
@@ -601,7 +602,7 @@ DAU (активных в день) = Пользователи × доля акт
   <li><b>Комплаенс (§13):</b> export с индикатором полноты; legal hold блокирует purge; audit admin-действий.</li>
   <li><b>SLA (§14):</b> согласованные RPO/RTO по профилю; сообщения не теряются при деградации P1.</li>
   <li><b>Профиль (§15):</b> ограничения Pilot доведены до заказчика до запуска.</li>
-  <li><b>Интеграции (§12):</b> REST API и WebSocket реализованы; SSO и публичный Bot API — в roadmap.</li>
+  <li><b>Интеграции (§12):</b> REST API, WebSocket и Bot API MVP реализованы; SSO — в roadmap.</li>
 </ol>
 
 <hr/>
@@ -614,14 +615,15 @@ DAU (активных в день) = Пользователи × доля акт
   <tr><td>Мгновенная доставка (WebSocket)</td><td>Клиенты</td><td>Realtime, «печатает…»</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Система входа (Keycloak)</td><td>IT</td><td>JWT, локальные пользователи</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Export / replay</td><td>Compliance</td><td>JSON/ZIP выгрузка</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Web Push</td><td>Пользователи</td><td>SW + push-worker; VAPID Ansible ✓</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Web Push</td><td>Пользователи</td><td>SW + push-worker; VAPID в конфигурации ✓</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Bot API (REST MVP)</td><td>IT, интеграторы</td><td>register, subscribe, sendMessage, webhook delivery</td><td><span class="tag tag-partial">Частично</span></td></tr>
 </table>
 <h3>12.2 Запланировано</h3>
 <table>
   <tr><th>Сценарий</th><th>Ожидание</th><th>Статус</th></tr>
   <tr><td>SSO Google / корпоративный портал</td><td>Единый вход без отдельного пароля</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
   <tr><td>LDAP / Active Directory</td><td>Учётки из AD</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>Bot API (REST / long-poll)</td><td>Service Desk, опросы, @mention</td><td><span class="tag tag-planned">Запланировано</span> — webhook MVP есть, публичный API — в roadmap</td></tr>
+  <tr><td>Bot API long-poll, pin/ban</td><td>Полный контракт Bot API</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
 </table>
 <p><b>Безопасность:</b> webhook только HTTPS; секреты не логируются; сбой бота не блокирует переписку людей.</p>
 
@@ -747,7 +749,8 @@ DAU (активных в день) = Пользователи × доля акт
   <tr><td>A23–A24</td><td>E2EE legacy / MLS</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>A25–A26</td><td>Web Push, PWA</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>A27–A31</td><td>Admin, ретенция, legal hold, audit, deep archive</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>A32–A34</td><td>Bot API, Live HLS, Mobile apps</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
+  <tr><td>A32</td><td>Bot API</td><td><span class="tag tag-partial">Частично</span> — MVP</td></tr>
+  <tr><td>A33–A34</td><td>Live HLS, Mobile apps</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
 </table>
 
 <h3>Приложение B. Глоссарий для юристов</h3>
@@ -978,10 +981,10 @@ DAU (активных в день) = Пользователи × доля акт
 
 <hr/>
 <p class="small" style="margin-top:40px;padding-top:20px;border-top:2px solid #e5e7eb;">
-  <b>Korus Messenger (AvandocMsg)</b> — Продуктовая презентация v2.5.1, 16 июня 2026.<br/>
+  <b>Korus Messenger (AvandocMsg)</b> — Продуктовая презентация v2.5.2, 16 июня 2026.<br/>
   Единый автономный документ для заказчика. Все цифры — ориентиры для планирования, не оферта.<br/>
   Статус на дату: веб-клиент и сервер реализованы; Playwright 30/30 (2026-06-15);
-  E2EE/звонки/push/TLS — частично (ops/sign-off); mobile, Live HLS, Bot API — planned/out.
+  E2EE/звонки/push/TLS — частично (ops/sign-off; stage с сентября 2026); Bot API MVP — частично; mobile, Live HLS — planned/out.
 </p>
 </body>
 </html>

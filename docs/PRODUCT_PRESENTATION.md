@@ -1,7 +1,7 @@
 # Продуктовая презентация: Korus Messenger (AvandocMsg)
 
-**Версия документа:** 1.8 (исходник для сборки HTML) 
-**Публикация для заказчика:** [`product_presentation.html`](../product_presentation.html) **v2.5.1** — презентация продукта (не техническое ТЗ). 
+**Версия документа:** 1.10 (исходник для сборки HTML) 
+**Публикация для заказчика:** [`product_presentation.html`](../product_presentation.html) **v2.5.2** — презентация продукта (не техническое ТЗ). 
 **Дата:** 2026-06-16 
 
 ---
@@ -33,21 +33,21 @@
 - Личное «Хранилище»; экспорт переписки JSON/ZIP.
 - Админ-консоль (`/admin/`): организации, ретенция, legal hold, аудит, E2EE dashboard.
 - Интерфейс на 6 языках (ru, en, be, kk, zh, ko).
-- Автотесты UI: **30/30** Playwright на QEMU (2026-06-15).
-- Профили развёртывания **Pilot** и **Standard** в поставке (compose + Ansible).
+- Автотесты UI: **30/30** Playwright на тестовом стенде (2026-06-15).
+- Профили развёртывания **Pilot** и **Standard** в поставке.
 
 ### Частично готово (код есть, нужен ops / sign-off)
 
-- **Видеозвонки** — mesh WebRTC из чата; TURN overlay в Ansible; deploy на stage — ops.
-- **E2EE (hybrid MLS)** — engineering gate пройден; prod `MLS_STATUS=active` после Product/Security sign-off.
-- **Web Push / PWA** — SW, push-worker, UI; VAPID vault→Ansible→compose.
-- **HTTPS** — Ansible/TLS scaffolding готов; сертификаты на контуре заказчика.
+- **Видеозвонки** — mesh WebRTC из чата; TURN для звонков за firewall — ops.
+- **E2EE (hybrid MLS)** — инженерная приёмка пройдена; массовое включение в prod после sign-off Product/Security/Ops.
+- **Web Push / PWA** — service worker, push-worker, UI; prod VAPID — ops.
+- **HTTPS** — развёртывание TLS в поставке; сертификаты на контуре заказчика.
 
 ### До промышленного запуска
 
-- Formal load test soak на stage (k6).
+- Formal load test soak на stage (k6; **стенд с сентября 2026**).
 - Согласованная с юристами политика полноты export (GDPR).
-- Bot API, SSO federation, Live-streaming, мобильные клиенты — **не в текущей поставке** (§9).
+- SSO federation, Live-streaming, мобильные клиенты — **не в текущей поставке** (§9); **Bot API MVP — частично** (§12).
 
 ---
 
@@ -78,7 +78,7 @@
 | Сервер и фоновые службы | **Реализовано** |
 | Мобильные приложения (iOS/Android) | **Запланировано** / вне текущего репозитория |
 | Desktop-клиент | **Запланировано** |
-| Bot API (интеграции, боты) | **Запланировано** |
+| Bot API (интеграции, боты) | **Частично** — MVP: register, webhook, sendMessage |
 | Прямые эфиры (Live-streaming, RTMP/HLS) | **Запланировано** (исходное ТЗ §28) |
 
 ---
@@ -120,10 +120,10 @@
 | Ретенция и архив | Dual-TTL, deep-archive, purge | Реализовано (backend) |
 | Локализация | ru, en, be, kk, zh, ko | Реализовано |
 | Read receipts | По сообщению, с privacy | Реализовано |
-| Bot API | Webhook/long-poll боты | Запланировано |
+| Bot API | register, webhook, sendMessage (REST MVP) | Частично |
 | Live-streaming | RTMP/SRT, HLS, до 10k зрителей | Запланировано |
 | Мобильные клиенты | iOS/Android | Запланировано / вне репо |
-| Prod HTTPS + vault | Защищённый доступ, секреты не в git | Частично (scaffold готов) |
+| Prod HTTPS | Защищённый доступ, секреты не в открытом виде | Частично (развёртывание в поставке) |
 
 ---
 
@@ -305,7 +305,7 @@
 - **Ситуация:** Перед выводом в интернет — проверка HTTPS.
 - **Действия:** Ops checklist: DNS, vault, smoke TLS redirect.
 - **Результат:** Пользователи подключаются по HTTPS/WSS.
-- **Статус:** Частично (scaffold готов, real host pending)
+- **Статус:** Частично (развёртывание TLS в поставке; выпуск на контуре заказчика — ops)
 
 ### 5.5 Запланированные сценарии (из исходного ТЗ)
 
@@ -314,14 +314,14 @@
 - **Ситуация:** Сотрудник создаёт заявку через чат-бота.
 - **Действия:** Написать боту → бот создаёт тикет во внешней системе.
 - **Результат:** Интеграция без ручного копирования.
-- **Статус:** Запланировано (Bot API, §17 tz_full)
+- **Статус:** Частично — Bot API MVP (register, webhook, sendMessage); полный Service Desk — интеграция заказчика
 
 #### КУ-26: All-hands на 500+ зрителей
 
 - **Ситуация:** Гендиректор выступает перед всей компанией онлайн.
 - **Действия:** Запустить live-стрим → зрители смотрят через HLS.
 - **Результат:** Масштабируемая трансляция с задержкой 2–5 сек.
-- **Статус:** Запланировано (§28 tz_full)
+- **Статус:** Запланировано (live-streaming в roadmap)
 
 #### КУ-27: Вход через корпоративный Google/LDAP
 
@@ -376,22 +376,22 @@
 
 - **Без E2EE:** сервер хранит текст сообщений (в зашифрованном виде на диске, но может прочитать при запросе).
 - **С E2EE (MLS):** текст шифруется на устройстве пользователя до отправки; сервер видит только «конверт» (ciphertext).
-- **Статус:** инженерно работает в dev/QEMU; **production enable** — после formal sign-off Product/Security/Ops.
+- **Статус:** инженерная приёмка пройдена на тестовом стенде; **production enable** — после formal sign-off Product/Security/Ops.
 
 ### Что ещё pending перед prod
 
 | Требование | Статус |
 |------------|--------|
 | HTTPS/WSS для всех пользователей | Частично |
-| Секреты (пароли БД) не в git — Ansible Vault | Частично |
+| Секреты (пароли БД) не в открытом виде | Частично |
 | Formal E2EE sign-off | Частично |
 | Полная GDPR-политика состава export | Запланировано |
 
 ---
 
-## 8. Сравнение с исходным ТЗ (traceability)
+## 8. Сравнение с исходным техническим ТЗ
 
-| Раздел tz_full | Тема | Статус | Комментарий |
+| Раздел исходного ТЗ | Тема | Статус | Комментарий |
 |----------------|------|--------|-------------|
 | §7 | Регистрация, auth, устройства | Реализовано | Keycloak + JWT; OTP из ТЗ — не primary |
 | §8 | Приватность, online, hidden mode | Реализовано | Presence, privacy settings |
@@ -402,22 +402,22 @@
 | §13 | Hot/Archive/Deep tiers | Реализовано | Workers + admin API |
 | §14 | Поиск Solr | Реализовано | Indexer worker |
 | §15 | Файлы, MinIO, публичные ссылки | Реализовано | File proxy resize — planned |
-| §16 | Превью ссылок | Частично | Preview worker не в prod compose |
-| §17 | Bot API | Запланировано | NATS subject есть |
+| §16 | Превью ссылок | Частично | Preview worker — planned |
+| §17 | Bot API | Частично | MVP REST (register, webhook, sendMessage); long-poll — roadmap |
 | §18 | Push mobile/web/desktop | Частично | Web push UI; mobile — planned |
 | §19 | WebSocket, presence, typing | Реализовано | |
 | §20 | NATS JetStream | Реализовано | |
 | §21 | Аудит | Реализовано | |
 | §22 | Prometheus, observability | Реализовано | Zabbix — не в scope |
 | §23 | Админ, multi-tenant org | Реализовано | |
-| §24 | Безопасность | Частично | Timing audit scaffold |
-| §25 | Dev-стенды | Реализовано | Docker, Ansible, QEMU |
+| §24 | Безопасность | Частично | Timing audit — в roadmap |
+| §25 | Развёртывание и стенды | Реализовано | Docker-профили Pilot/Standard |
 | §26 | Prod sizing 1M users | Модель §10 | Load test soak — stage |
-| Профили Pilot / Standard | Развёртывание | Реализовано | compose + Ansible; dedup файлов ✓ |
+| Профили Pilot / Standard | Развёртывание | Реализовано | lean Pilot + Standard; dedup файлов ✓ |
 | §28 | Live-streaming | Запланировано | |
 | §29 | Аудио/видео звонки | Частично | WebRTC mesh; SFU — planned |
 | §30 | «Хранилище» | Реализовано | |
-| §6.X | Core + Peripheral split | Частично | Hotplug ADR; prod sign-off pending |
+| §6.X | Core + Peripheral split | Частично | Hot-plug workers; prod sign-off pending |
 
 ---
 
@@ -427,7 +427,7 @@
 
 | Направление | Бизнес-ценность | Зависимости |
 |-------------|-----------------|-------------|
-| Prod TLS + Ansible Vault | Безопасный доступ для всех пользователей | Real stage/prod host, DNS |
+| Prod TLS + защита секретов | Безопасный доступ для всех пользователей | Stage/prod host, DNS (с сентября 2026) |
 | Formal E2EE prod enable | Конфиденциальность переписки на уровне Signal/WhatsApp | Security review 8/8 |
 | Web Push production | Уведомления без постоянно открытой вкладки | VAPID, push-worker |
 | TURN для звонков | Стабильные звонки за NAT/firewall | coturn deploy |
@@ -438,9 +438,9 @@
 
 | Направление | Бизнес-ценность | Зависимости |
 |-------------|-----------------|-------------|
-| Bot API | Service Desk, опросы, автоматизация | Webhook infra |
+| Bot API (long-poll, pin/ban) | Service Desk, опросы, расширенная модерация | MVP ✓; расширение — roadmap |
 | SSO Google / LDAP / SAML | Enterprise-вход | Keycloak federation |
-| Sharding PG (full router) | Enterprise tier, масштаб до 1M | ADR, load test |
+| Sharding PG (full router) | Enterprise tier, масштаб до 1M | load test, roadmap |
 
 ### Долгий горизонт (12+ месяцев)
 
@@ -518,7 +518,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 
 > **Устойчивость:** доставка сообщений (P0) не зависит от поиска, push и архива — при сбое второстепенных служб чаты продолжают работать.
 
-> **Keycloak sizing:** Pilot prod — `start --optimized` (`docker-compose.keycloak-prod.yml`). Строки «8 GB» в детальных таблицах sizing — production HA, не dev/pilot.
+> **Keycloak sizing:** в Pilot prod используется оптимизированный режим Keycloak. Строки «8 GB» в детальных таблицах sizing — production HA, не dev/pilot.
 
 > **Справочно:** full-stack monolith на одном хосте (~64 GB RAM) — не рекомендуемый профиль для пилота; см. [`product_presentation.html`](../product_presentation.html) §17 (monolith ~44% дороже Pilot).
 
@@ -533,9 +533,9 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 **Сценарий C — «Федеральный масштаб» (1M пользователей, профиль ТЗ-max)** 
 100M сообщений/день, пик ~4000 msg/s. Распределённый кластер, sharded PostgreSQL, SolrCloud 9+ nodes, geo-реплика MinIO. Отдельная команда SRE 24/7. **Обязателен** load test перед sign-off.
 
-### 10.5 Замеры НТ на QEMU (engineering baseline, 2026-06-15)
+### 10.5 Замеры НТ на тестовом стенде (лабораторный baseline, 2026-06-15)
 
-Стенд: QEMU guest full-server, API через `127.0.0.1:18080`. 
+Стенд: профиль full-server на лабораторной VM; API через перенаправленный порт стенда.
 
 | Сценарий | Результат | Примечание |
 |----------|-----------|------------|
@@ -548,7 +548,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 
 ### 10.6 Дисклеймер
 
-- QEMU baseline (§10.3.1) — **не** заменяет formal soak на stage; только engineering smoke.
+- Лабораторный baseline (§10.5) — **не** заменяет formal soak на stage; только инженерная проверка.
 - Активные видеозвонки и live-стримы могут **удвоить** сетевые и CPU требования.
 - Рекомендация: validation phase (k6/Locust) на 10–20% целевой нагрузки перед prod.
 
@@ -559,25 +559,25 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 1. **Пользователь** выполняет все основные сценарии из раздела 5 через веб-браузер без обращения к CLI.
 2. **Автоматические UI-сценарии:** **30/30** Playwright на тестовом стенде (2026-06-15).
 3. **Администратор** управляет организациями, политиками хранения и аудитом через веб-консоль.
-4. **Production:** HTTPS/WSS, секреты не в git, formal security sign-off для E2EE перед массовым включением MLS в prod.
-5. **Экспорт и ретенция:** purge не выполняется без прохождения export gate (export_v1).
+4. **Production:** HTTPS/WSS, секреты не в открытом виде, formal security sign-off для E2EE перед массовым включением MLS в prod.
+5. **Экспорт и ретенция:** окончательное удаление только после прохождения export gate.
 6. **Локализация:** интерфейс и ошибки API на языке пользователя (минимум ru + en).
 7. **Развёртывание:** профиль Pilot или Standard разворачивается по документации; load test soak на stage при go-live.
 8. **Комплаенс (§13):** export с индикатором полноты; legal hold блокирует purge; audit admin-действий.
 9. **SLA (§14):** профиль Pilot/Standard/Enterprise с согласованными RPO/RTO; hot path при деградации P1.
 10. **Профиль (§15):** ограничения Pilot доведены до заказчика до запуска.
-11. **Интеграции (§12):** REST API и WebSocket реализованы; SSO и публичный Bot API — в roadmap.
+11. **Интеграции (§12):** REST API, WebSocket и Bot API MVP реализованы; SSO — в roadmap.
 
 ---
 
 ## 12. Интеграции и экосистема
 
-> **Статус раздела:** частично (REST API, WebSocket, export, Keycloak — **реализовано**; SSO federation, Bot API — **запланировано**). 
-> Связь: КУ-25, КУ-27 (§5); §9 roadmap; исходное ТЗ §17 (Bot API), единый вход через корпоративный IdP (roadmap).
+> **Статус раздела:** частично (REST API, WebSocket, export, Keycloak, **Bot API MVP** — **частично**; SSO federation — **запланировано**).
+> Связь: КУ-25, КУ-27 (§5); §9 roadmap.
 
 ### 12.1 Зачем нужен раздел
 
-Организация-заказчик ожидает, что мессенджер **встраивается** в существующий IT-ландшафт: единый вход, боты для Service Desk, выгрузки в архивы, уведомления. Раздел фиксирует **продуктовые** требования к интеграциям — без детализации эндпоинтов (они в ).
+Организация-заказчик ожидает, что мессенджер **встраивается** в существующий IT-ландшафт: единый вход, боты для Service Desk, выгрузки в архивы, уведомления. Раздел фиксирует **продуктовые** требования к интеграциям — без детализации эндпоинтов (в комплекте документации для IT).
 
 ### 12.2 Что уже доступно (без доработок продукта)
 
@@ -588,9 +588,10 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 | **Keycloak (локальные пользователи)** | IT | Регистрация, JWT, роли admin | Реализовано |
 | **Export / replay** | Compliance, архив | JSON/ZIP выгрузка; server-side replay stub | Реализовано |
 | **Web Push (VAPID)** | Пользователи | Уведомления в браузере | Частично (prod gate) |
+| **Bot API (REST MVP)** | IT, интеграторы | register, subscribe, sendMessage, webhook | Частично |
 | **Prometheus metrics** | Ops / мониторинг | `/metrics`, health/ready | Реализовано |
 
-**Требование FR-INT-01:** документация для IT заказчика **перечисляет** поддерживаемые каналы интеграции и их назначение (приложение C + REST API).
+**Требование FR-INT-01:** документация для IT заказчика **перечисляет** поддерживаемые каналы интеграции и их назначение (комплект документации для IT + REST API).
 
 ### 12.3 Единый вход (SSO / корпоративный IdP)
 
@@ -611,12 +612,12 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 
 | Элемент | Описание для заказчика | Статус |
 |---------|------------------------|--------|
-| **Бот как участник чата** | @имя_бота в группе; ответы в переписке | Запланировано |
-| **Права бота** | Только по @mention или чтение всех сообщений (решение модератора) | Запланировано |
-| **Доставка событий** | Webhook или long-poll; повторы допустимы — бот дедуплицирует | Запланировано |
-| **Методы бота** | Отправка/удаление сообщений, pin, ban/mute в группе | Запланировано |
-| **Self-host бота** | Код бота **не** на сервере мессенджера | Запланировано |
-| **Аудит** | Создание бота, webhook URL, export событий бота | Запланировано |
+| **Бот как участник чата** | @имя_бота в группе; ответы в переписке | Частично (MVP) |
+| **Права бота** | Только по @mention или чтение всех сообщений (решение модератора) | Частично (MENTIONS_ONLY / READ_ALL) |
+| **Доставка событий** | Webhook или long-poll; повторы допустимы — бот дедуплицирует | Частично (webhook; long-poll — roadmap) |
+| **Методы бота** | Отправка/удаление сообщений, pin, ban/mute в группе | Частично (sendMessage ✓; остальное — roadmap) |
+| **Self-host бота** | Код бота **не** на сервере мессенджера | Частично (MVP) |
+| **Аудит** | Создание бота, webhook URL, export событий бота | Частично |
 
 **Требование FR-INT-04:** Bot API **не блокирует** hot path чатов — сбой бота не мешает переписке людей.
 
@@ -629,7 +630,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 | Паттерн | Пример | Как сегодня / план |
 |---------|--------|-------------------|
 | **Pull export** | SIEM забирает архив чата | Export JSON/ZIP + audit | Реализовано |
-| **Push webhook (бот)** | Jira создаёт тикет из сообщения | Bot API webhook | Запланировано |
+| **Push webhook (бот)** | Jira создаёт тикет из сообщения | Bot API webhook MVP | Частично |
 | **Batch replay** | Миграция из legacy IM | export-replay worker | Частично |
 | **Directory sync** | HR → контакты | Импорт контактов CSV/API | Реализовано (импорт); AD sync — planned |
 | **Email fallback** | Уведомление без push | Не в v1 web | Запланировано (§9) |
@@ -653,15 +654,15 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 |-------------|:-----:|:--------:|:----------:|
 | REST + WS для custom apps | ✓ | ✓ | ✓ |
 | SSO OIDC/SAML | опционально | ✓ | ✓ multi-IdP |
-| Bot API | — | ✓ после release | ✓ + SLA webhook |
+| Bot API | MVP ✓ | ✓ prod | ✓ + SLA webhook |
 | Dedicated integration env | — | staging | staging + prod |
 
 ---
 
 ## 13. Комплаенс, персональные данные и юридические требования
 
-> **Статус раздела:** частично реализовано (техника есть; **юридическое согласование политик** — на стороне заказчика). 
-> Операторский справочник: , .
+> **Статус раздела:** частично реализовано (техника есть; **юридическое согласование политик** — на стороне заказчика).
+> Операторский справочник передаётся при внедрении (см. Приложение E).
 
 ### 13.1 Область применения
 
@@ -697,7 +698,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 
 **Требование FR-COMP-01:** сроки хранения задаются **явной политикой** (org и при необходимости chat), а не «бессрочно по умолчанию» — дефолты платформы документируются при внедрении.
 
-**Требование FR-COMP-02:** перед агрессивным удалением (purge) система **может требовать** наличие успешного export (`export_v1`) — gate уже реализован.
+**Требование FR-COMP-02:** перед агрессивным удалением (purge) система **может требовать** наличие успешного export — gate уже реализован.
 
 ### 13.4 Экспорт данных (состав пакета)
 
@@ -843,7 +844,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 | Legal hold / ретенция admin | ✓ базовая | ✓ полная | ✓ + geo policies |
 | Web Push | опционально | ✓ | ✓ HA |
 | Видеозвонки | ✓ (TURN может быть нужен) | ✓ | ✓ + SFU (planned) |
-| E2EE MLS в prod | dev/QEMU | после sign-off | mass enable |
+| E2EE MLS в prod | тестовый стенд | после sign-off | mass enable |
 | Админ-консоль | ✓ | ✓ | ✓ multi-region ops |
 | Реком. max пользователей | **10 000** | **100 000** | **1 000 000** |
 | Реком. peak online | ~750 | ~5 000 | ~20 000+ |
@@ -859,7 +860,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 
 ### 15.3 Standard — типовая корпорация
 
-Полный функционал §5 для сотрудника без оговорок, кроме planned (Bot API, Live). Поиск, export, push, ретенция — production-grade.
+Полный функционал §5 для сотрудника без оговорок, кроме частично готовых (E2EE prod, push) и planned (Live). Поиск, export, ретенция — production-grade; Bot API MVP — для интеграций.
 
 ### 15.4 Enterprise — крупный контур
 
@@ -879,7 +880,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 
 ## Стоимость владения
 
-Примеры расчётов infra (Pilot **61 350 ₽/мес**, Standard **332 000 ₽/мес**, monolith справочно **109 550 ₽/мес**) — в [`product_presentation.html`](../product_presentation.html) **§17**. Генератор: , .
+Примеры расчётов infra (Pilot **61 350 ₽/мес**, Standard **332 000 ₽/мес**, monolith справочно **109 550 ₽/мес**, ставки на **2026-06-15**) — в [`product_presentation.html`](../product_presentation.html) **§17**.
 
 ---
 
@@ -920,7 +921,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 | A29 | Legal hold | Заморозка удаления | Реализовано |
 | A30 | Audit log | Журнал действий | Реализовано |
 | A31 | Deep archive | Старые тела в объектном хранилище | Реализовано |
-| A32 | Bot API | Внешние боты | Запланировано |
+| A32 | Bot API | Внешние боты | Частично (MVP) |
 | A33 | Live HLS | Прямой эфир | Запланировано |
 | A34 | Mobile apps | iOS/Android | Запланировано |
 
@@ -945,17 +946,17 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 | **Multi-tenant** | Изоляция данных разных org | Org_id во всех сущностях |
 | **DPA / договор** | Распределение ролей оператор/обработчик | Вне продукта; §13 |
 
-### Приложение D. Ключевые вехи относительно tz_full
+### Приложение D. Ключевые вехи продукта
 
 | Дата (UTC) | Веха |
 |------------|------|
-| 2026-05 | Spec 002 parity baseline |
-| 2026-05-27 | Spec 003 Docker + Ansible |
-| 2026-06-09 | Spec 004 engineering start; E2EE MLS phase 1 |
-| 2026-06-12 | Spec 004 engineering closure; Playwright 26/26 |
-| 2026-06-14 | Spec 005 i18n; Playwright 27/27; hotswap WS |
-| 2026-06-15 | Spec 006/007 engineering; Playwright 30/30; dedup файлов |
-| 2026-06-16 | Презентация v2.5.1: без ссылок на внутренние документы |
+| 2026-05 | Базовая parity веб-клиента и API |
+| 2026-05-27 | Docker-профили развёртывания |
+| 2026-06-09 | E2EE MLS — инженерная фаза 1 |
+| 2026-06-12 | Playwright 26/26 на тестовом стенде |
+| 2026-06-14 | i18n 6 языков; Playwright 27/27 |
+| 2026-06-15 | Playwright 30/30; dedup файлов; Bot API MVP |
+| 2026-06-16 | Презентация v2.5.2: продуктовый язык без внутренних ссылок |
 
 ---
 
@@ -989,7 +990,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 | G3 | Keycloak — единая точка аутентификации | SSO требует ops-настройки |
 | G4 | Load test выполняется на **≥10%** целевой нагрузки перед prod | Цифры §10 — только ориентир |
 | G5 | Юрист заказчика утверждает сроки хранения и export policy | FR-COMP настраиваются post-factum |
-| G6 | E2EE в prod — только после Security sign-off | MLS остаётся в dev/QEMU |
+| G6 | E2EE в prod — только после Security sign-off | MLS остаётся на тестовом стенде до enable |
 
 **G.2 Матрица рисков (продуктовый уровень)**
 
@@ -1001,7 +1002,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 | E2EE блокирует расследование | Средняя | Среднее | FR-COMP-05, политика до enable |
 | Bot webhook compromise | Низкая | Высокое | FR-INT-05, HTTPS, audit |
 | Solr/indexer lag | Средняя | Низкое | Деградация P1 §14; SQL fallback Pilot |
-| wsUrl / DNS misconfig | Средняя | Среднее | Runbook, smoke scripts |
+| wsUrl / DNS misconfig | Средняя | Среднее | Runbook, smoke-проверки |
 | Рост диска быстрее плана | Средняя | Среднее | zstd archive, dedup, ретенция §13 |
 
 **G.3 Out of scope (явно не обещается в v1)**
@@ -1014,7 +1015,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 
 ### Приложение H. One-pager: исходное ТЗ vs презентация (для руководства)
 
-| Критерий | `tz_full.html` | Продуктовая презентация (этот документ) |
+| Критерий | Исходное техническое ТЗ | Продуктовая презентация (этот документ) |
 |----------|-----------------------------------|-----------------------------------|
 | **Аудитория** | Разработчики, архитекторы | Руководство, юристы, ops |
 | **Язык** | Технический (REST, NATS, JetStream) | Бизнес + статусы реализации |
@@ -1023,13 +1024,13 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 | **Sizing** | §26 формулы | §10 таблицы 10k–1M + профили |
 | **Комплаенс** | Разрозненно по § | **§13** FR-COMP + чеклист F |
 | **SLA / RPO/RTO** | §26 кратко | **§14** по профилям |
-| **Профили Pilot/Standard** | Не выделено | **§10** + design-doc (внутренний) |
-| **Интеграции** | §17 Bot API | **§12** SSO + Bot + паттерны |
-| **Стоимость infra** | Не в MD | **HTML §17** (`tz_product_pricing.py`) |
-| **Traceability** | — | **§8** матрица к tz_full |
+| **Профили Pilot/Standard** | Не выделено | **§10** + **§15** |
+| **Интеграции** | Bot API и SSO | **§12** SSO + Bot + паттерны |
+| **Стоимость infra** | Не в MD | **HTML §17** (таблицы ₽) |
+| **Traceability** | — | **§8** матрица к исходному ТЗ |
 | **Статус фич** | Все как требования | **Реализовано / Частично / Planned** |
 
-**Вывод для CIO:** презентация — **контрактно-продуктовый слой** поверх `tz_full.html`; техническая детализация остаётся в исходном ТЗ и specs.
+**Вывод для CIO:** презентация — **контрактно-продуктовый слой** поверх исходного ТЗ; техническая детализация передаётся отдельным комплектом при внедрении.
 
 ---
 

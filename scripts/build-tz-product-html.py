@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Generate product_presentation.html v2.5 — product presentation for customer (non-technical)."""
+"""Generate product_presentation.html — product presentation for customer (non-technical)."""
 from pathlib import Path
+import re
 import sys
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -18,6 +19,18 @@ from tz_product_sizing import render_fig_ram_svg  # noqa: E402
 
 OUT = Path(__file__).resolve().parents[1] / "product_presentation.html"
 LEGACY_OUT = Path(__file__).resolve().parents[1] / "tz_product.html"
+
+# Customer-facing HTML must not leak internal repo jargon or doc paths.
+FORBIDDEN_IN_HTML = re.compile(
+    r"QEMU|bot-delivery|tz_full|Ansible|docs/|specs/|deploy/|\.md\b|127\.0\.0\.1",
+    re.IGNORECASE,
+)
+
+
+def validate_customer_html(html: str) -> None:
+    match = FORBIDDEN_IN_HTML.search(html)
+    if match:
+        raise SystemExit(f"Customer HTML validation failed: forbidden token {match.group()!r}")
 
 CSS = """
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.45; margin: 24px auto; color: #111; max-width: 980px; padding: 0 16px; }
@@ -398,15 +411,15 @@ def main():
 <ul>
   <li><b>Видеозвонки</b> — mesh WebRTC из чата; за NAT может потребоваться TURN-сервер</li>
   <li><b>E2EE (hybrid MLS)</b> — в браузере и на сервере; массовое prod после Product/Security sign-off</li>
-  <li><b>Web Push / PWA</b> — service worker и push-worker; VAPID vault→Ansible wiring ✓; delivery verify на stage — ops</li>
-  <li><b>HTTPS</b> — Ansible/TLS для stage/prod готов; выпуск сертификатов на контуре заказчика</li>
+  <li><b>Web Push / PWA</b> — service worker и push-worker; конфигурация VAPID в поставке ✓; проверка доставки на stage — ops</li>
+  <li><b>HTTPS</b> — автоматизация TLS для stage/prod в поставке; выпуск сертификатов на контуре заказчика</li>
 </ul>
 
 <h3>До промышленного запуска</h3>
 <ul>
-  <li>Formal load test на stage (k6)</li>
+  <li>Formal load test soak на stage (k6; стенд — с сентября 2026)</li>
   <li>Согласованная с юристами политика полноты export (GDPR)</li>
-  <li>Bot API, SSO federation, Live-streaming, мобильные клиенты — <b>не в текущей поставке</b> (§9)</li>
+  <li>SSO federation, Live-streaming, мобильные клиенты — <b>не в текущей поставке</b> (§9); Bot API MVP — <b>частично</b> (§12)</li>
 </ul>
 """)
 
@@ -437,7 +450,7 @@ def main():
   <tr><td>Сервер и фоновые службы</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Мобильные приложения iOS/Android</td><td><span class="tag tag-out">Вне текущей поставки</span></td></tr>
   <tr><td>Desktop-клиент</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>Bot API (боты и интеграции)</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
+  <tr><td>Bot API (боты и интеграции)</td><td><span class="tag tag-partial">Частично</span> — MVP: register, webhook, sendMessage</td></tr>
   <tr><td>Прямые эфиры (all-hands на сотни зрителей)</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
 </table>
 
@@ -474,18 +487,18 @@ def main():
   <tr><td>Экспорт чата</td><td>JSON/ZIP архив</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Звонки</td><td>WebRTC mesh из чата, screen share; TURN — ops</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>E2EE</td><td>Hybrid MLS в браузере; prod после sign-off</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>Push / PWA</td><td>SW, push-worker, UI; VAPID Ansible vault ✓</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Push / PWA</td><td>SW, push-worker, UI; VAPID в конфигурации ✓</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>Админка</td><td><code>/admin/</code> — org, ретенция, legal hold, audit</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Ретенция и архив</td><td>Многоуровневое хранение, автоочистка</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Локализация</td><td>ru, en, be, kk, zh, ko</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Bot API</td><td>Боты для Service Desk и автоматизации</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
+  <tr><td>Bot API</td><td>Боты для Service Desk и автоматизации</td><td><span class="tag tag-partial">Частично</span> — MVP: register, webhook, sendMessage</td></tr>
   <tr><td>Live-streaming</td><td>All-hands, HLS-трансляции</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>Prod HTTPS</td><td>Ansible/TLS scaffolding ✓; deploy на stage — ops</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Prod HTTPS</td><td>Развёртывание TLS в поставке ✓; deploy на stage — ops</td><td><span class="tag tag-partial">Частично</span></td></tr>
 </table>
 """)
 
     # §5 cases
-    parts.append('<hr/><h2 id="s5">5. Кейсы использования</h2>\n<p>Формат: <b>ситуация → действия → результат</b>. 27 сценариев: <b>24 реализовано</b> (или частично) + <b>3 запланировано</b> (КУ-25…27).</p>\n<h3>5.1 Сотрудник</h3>\n')
+    parts.append('<hr/><h2 id="s5">5. Кейсы использования</h2>\n<p>Формат: <b>ситуация → действия → результат</b>. 27 сценариев: <b>24 реализовано</b> (или частично) + <b>1 частично</b> (КУ-25) + <b>2 запланировано</b> (КУ-26…27).</p>\n<h3>5.1 Сотрудник</h3>\n')
     cases_emp = [
         ("КУ-01: Переписка с коллегой", "done", "Нужно обсудить задачу с коллегой из другого отдела.", "Найти коллегу → открыть чат → написать.", "Сообщение доставлено мгновенно."),
         ("КУ-02: Проектная группа", "done", "Запуск проекта на 8 человек.", "Создать группу → пригласить участников.", "Общая лента и обмен файлами."),
@@ -530,9 +543,14 @@ def main():
     ]:
         parts.append(case(*c))
 
-    parts.append("<h3>5.5 Запланированные сценарии</h3>\n")
+    parts.append("<h3>5.5 Интеграции (частично)</h3>\n")
     for c in [
-        ("КУ-25: Bot Service Desk", "planned", "Заявка через чат-бота.", "Написать боту.", "Тикет во внешней системе."),
+        ("КУ-25: Bot Service Desk", "partial", "Заявка через чат-бота.", "Создать бота → подписать на чат → webhook/sendMessage.", "MVP ✓; полный Service Desk — интеграция заказчика."),
+    ]:
+        parts.append(case(*c))
+
+    parts.append("<h3>5.6 Запланированные сценарии</h3>\n")
+    for c in [
         ("КУ-26: All-hands 500+", "planned", "Выступление гендиректора онлайн.", "Live-стрим → HLS.", "Массовая трансляция."),
         ("КУ-27: SSO Google/LDAP", "planned", "Единый вход без отдельного пароля.", "«Войти через корпоративный портал».", "Единый вход через IdP."),
     ]:
@@ -596,8 +614,8 @@ def main():
   <tr><td>Вход, чаты, сообщения, TTL</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Hot/Archive/Deep, файлы, export</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Поиск Solr / SQL (Pilot)</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>TLS prod deploy</td><td><span class="tag tag-partial">Частично</span> (код/Ansible ✓)</td></tr>
-  <tr><td>Bot API</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
+  <tr><td>TLS prod deploy</td><td><span class="tag tag-partial">Частично</span> (развёртывание в поставке ✓)</td></tr>
+  <tr><td>Bot API</td><td><span class="tag tag-partial">Частично</span> — MVP REST: register, webhook, sendMessage</td></tr>
   <tr><td>Push-уведомления</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>Live-streaming</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
   <tr><td>Звонки</td><td><span class="tag tag-partial">Частично</span></td></tr>
@@ -616,11 +634,11 @@ def main():
 <tr><td>E2EE prod enable</td><td>Конфиденциальность переписки</td></tr>
 <tr><td>Web Push, TURN</td><td>Уведомления и звонки за firewall</td></tr>
 <tr><td>GDPR export policy</td><td>Юридически полная выгрузка</td></tr>
-<tr><td>Formal load test (k6)</td><td>Подтверждение sizing §10 на stage</td></tr>
+<tr><td>Formal load test (k6)</td><td>Подтверждение sizing §10; stage — с сентября 2026</td></tr>
 </table>
 <h3>6–12 месяцев</h3>
 <table><tr><th>Направление</th><th>Ценность</th></tr>
-<tr><td>Bot API</td><td>Service Desk, автоматизация</td></tr>
+<tr><td>Bot API (long-poll, pin/ban)</td><td>Расширение контракта Bot API</td></tr>
 <tr><td>SSO Google/LDAP</td><td>Enterprise-вход</td></tr>
 <tr><td>Dedup файлов (content-hash)</td><td>Экономия диска на вложениях</td></tr>
 <tr><td>Sharding PG (Enterprise)</td><td>Масштаб до 1M — scaffold, full router в roadmap</td></tr>
@@ -682,6 +700,7 @@ DAU (активных в день) = Пользователи × доля акт
     append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST)
 
     content = "".join(parts)
+    validate_customer_html(content)
     OUT.write_text(content, encoding="utf-8")
     LEGACY_OUT.write_text(
         """<!doctype html>
