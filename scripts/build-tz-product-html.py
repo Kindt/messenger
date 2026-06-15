@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Generate product_presentation.html v2.2 — product presentation for customer (non-technical)."""
+"""Generate product_presentation.html v2.3 — product presentation for customer (non-technical)."""
 from pathlib import Path
 import sys
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from build_tz_product_html_part2 import append_sections_11_18  # noqa: E402
+from tz_product_pricing import render_fig_cost_monthly_svg  # noqa: E402
 
 OUT = Path(__file__).resolve().parents[1] / "product_presentation.html"
 LEGACY_OUT = Path(__file__).resolve().parents[1] / "tz_product.html"
@@ -268,25 +269,7 @@ FIG_PROFILES = """<figure class="fig"><svg viewBox="0 0 620 180" width="620" hei
   <text x="310" y="175" text-anchor="middle" font-size="12" fill="#6b7280">Рост масштаба → больше отказоустойчивости и скорости поиска</text>
 </svg><figcaption class="fig-cap">Рис. 3. Три профиля развёртывания — платите за нужный масштаб</figcaption></figure>"""
 
-FIG_COST = """<figure class="fig"><svg viewBox="0 0 560 260" width="560" height="260" xmlns="http://www.w3.org/2000/svg">
-  <text x="280" y="24" text-anchor="middle" font-size="13" font-weight="bold">Сравнение: инфраструктура в месяц (10 000 пользователей, Pilot)</text>
-  <line x1="64" y1="200" x2="500" y2="200" stroke="#9ca3af"/>
-  <line x1="64" y1="200" x2="64" y2="48" stroke="#9ca3af"/>
-  <line x1="64" y1="88" x2="500" y2="88" stroke="#e5e7eb"/>
-  <line x1="64" y1="136" x2="500" y2="136" stroke="#e5e7eb"/>
-  <text x="58" y="204" text-anchor="end" font-size="9">0</text>
-  <text x="58" y="140" text-anchor="end" font-size="9">50k</text>
-  <text x="58" y="92" text-anchor="end" font-size="9">100k</text>
-  <rect x="92" y="56" width="96" height="144" fill="#fca5a5" rx="3"/>
-  <text x="140" y="48" text-anchor="middle" font-size="11" font-weight="600">96 000 ₽</text>
-  <text x="140" y="218" text-anchor="middle" font-size="10">Без оптимизации</text>
-  <rect x="232" y="107" width="96" height="93" fill="#86efac" rx="3"/>
-  <text x="280" y="99" text-anchor="middle" font-size="11" font-weight="600">61 350 ₽</text>
-  <text x="280" y="218" text-anchor="middle" font-size="10">Pilot (цель)</text>
-  <rect x="372" y="83" width="96" height="117" fill="#93c5fd" rx="3"/>
-  <text x="420" y="75" text-anchor="middle" font-size="11" font-weight="600">78 000 ₽</text>
-  <text x="420" y="218" text-anchor="middle" font-size="10">Облако (аналог)</text>
-</svg><figcaption class="fig-cap">Рис. 7. Пример сравнения ежемесячных затрат (условные тарифы, см. §18)</figcaption></figure>"""
+FIG_COST = render_fig_cost_monthly_svg()
 
 FIG_RAM = """<figure class="fig"><svg viewBox="0 0 560 240" width="560" height="240" xmlns="http://www.w3.org/2000/svg">
   <text x="300" y="22" text-anchor="middle" font-size="13" font-weight="bold">Оперативная память (ГБ) — без оптимизации и цель §12</text>
@@ -353,7 +336,7 @@ def main():
 
 <h1>Продуктовая презентация<br/>Korus Messenger (AvandocMsg)</h1>
 <div class="meta">
-  <b>Версия:</b> 2.2 &nbsp;|&nbsp; <b>Дата:</b> 15 июня 2026 &nbsp;|&nbsp;
+  <b>Версия:</b> 2.3 &nbsp;|&nbsp; <b>Дата:</b> 15 июня 2026 &nbsp;|&nbsp;
   <b>Аудитория:</b> руководители, юристы, продажи, бухгалтерия, операторы, служба безопасности<br/>
   <b>Формат:</b> презентация продукта для заказчика; приложение I — каталог <b>страниц</b> клиента и админки
 </div>
@@ -618,6 +601,7 @@ def main():
   <tr><td>Push-уведомления</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>Live-streaming</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
   <tr><td>Звонки</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Оптимизация infra (§12, FR-OPT)</td><td><span class="tag tag-done">Реализовано</span> (01–07 ✓; 08–09 + load test — roadmap)</td></tr>
   <tr><td>Sizing 1M пользователей</td><td>§10 — ориентиры</td></tr>
 </table>
 """)
@@ -637,7 +621,14 @@ def main():
 <table><tr><th>Направление</th><th>Ценность</th></tr>
 <tr><td>Bot API</td><td>Service Desk, автоматизация</td></tr>
 <tr><td>SSO Google/LDAP</td><td>Enterprise-вход</td></tr>
-<tr><td>Оптимизация infra (§12)</td><td>Меньше RAM, больше пользователей</td></tr>
+<tr><td>FR-OPT-08 dedup, FR-OPT-09 sharding</td><td>Enterprise tier, §12 волна 4</td></tr>
+<tr><td>Formal load test (k6)</td><td>Подтверждение §10.4 на stage при go-live</td></tr>
+</table>
+<h3>Уже в коде (spec 006, волны 1–3)</h3>
+<table><tr><th>Направление</th><th>Ценность</th></tr>
+<tr><td>Pilot compose + Keycloak prod (FR-OPT-01/02)</td><td>Пилот на 12–16 ГБ RAM</td></tr>
+<tr><td>Read cache, scale WS/pipeline, replica (03–05)</td><td>Standard без лишних серверов</td></tr>
+<tr><td>zstd archive + batch Solr (06–07)</td><td>Меньше диска и CPU на поиске</td></tr>
 </table>
 <h3>12+ месяцев</h3>
 <ul><li>Live-streaming (all-hands)</li><li>Мобильные клиенты</li><li>SFU для звонков &gt;20 участников</li></ul>

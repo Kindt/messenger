@@ -3,47 +3,24 @@
 from html import escape
 
 from tz_product_resources import render_appendix_i_html
-
-# §18.7 — annual server cost breakdown (monthly × 12 from §18.2–18.3)
-PILOT_SERVERS_MONTHLY = [
-    ("Сервер приложений (16 ГБ)", 28_000, "#6366f1"),
-    ("Web-шлюз (8 ГБ)", 15_000, "#3b82f6"),
-    ("Диск SSD (hot DB)", 1_750, "#8b5cf6"),
-    ("Диск HDD (файлы+архив)", 3_600, "#a855f7"),
-    ("Канал 200 Мбит/с", 8_000, "#f59e0b"),
-    ("Backup + мониторинг", 5_000, "#10b981"),
-]
-
-STANDARD_SERVERS_MONTHLY = [
-    ("Серверы приложений ×3", 135_000, "#6366f1"),
-    ("Web + LB ×2", 30_000, "#3b82f6"),
-    ("PostgreSQL primary + replica", 90_000, "#2563eb"),
-    ("Redis cluster", 25_000, "#dc2626"),
-    ("Solr + ZK ×3", 75_000, "#7c3aed"),
-    ("MinIO / файлы (~30 ТБ)", 24_000, "#059669"),
-    ("NATS, Keycloak, workers", 45_000, "#0891b2"),
-    ("Канал 1 Гбит/с", 35_000, "#f59e0b"),
-    ("Ops (backup, monitoring)", 15_000, "#10b981"),
-]
-
-STANDARD_OPT_RATIO = 332_000 / 474_000  # §18.3 optimized vs baseline
-
-
-def _fmt_rub(amount: int) -> str:
-    return f"{amount:,}".replace(",", " ") + " ₽"
-
-
-def _fmt_rub_short(amount: int) -> str:
-    """Compact axis labels (avoid clipping in SVG)."""
-    if amount >= 1_000_000:
-        whole = amount // 1_000_000
-        frac = round((amount % 1_000_000) / 100_000)
-        if frac in (0, 10):
-            return f"{whole} млн ₽" if frac == 0 else f"{whole + 1} млн ₽"
-        return f"{whole},{frac} млн ₽"
-    if amount >= 1_000:
-        return f"{amount // 1_000} тыс ₽"
-    return f"{amount} ₽"
+from tz_product_pricing import (
+    PILOT_BASELINE,
+    PILOT_OPTIMIZED,
+    PRICE_AS_OF,
+    STANDARD_BASELINE,
+    STANDARD_OPT_RATIO,
+    cloud_pilot_monthly,
+    fmt_rub,
+    fmt_rub_short,
+    pilot_baseline_monthly,
+    pilot_optimized_monthly,
+    render_legend_rate_table_html,
+    render_price_methodology_html,
+    render_section_18_examples_html,
+    standard_baseline_monthly,
+    standard_optimized_monthly,
+    cloud_pilot_monthly,
+)
 
 
 def _stacked_bar_svg(
@@ -70,15 +47,15 @@ def _stacked_bar_svg(
 
 
 def render_section_18_7() -> str:
-    pilot_items = PILOT_SERVERS_MONTHLY
+    pilot_items = [(line.label, line.monthly, line.color) for line in PILOT_OPTIMIZED]
     std_items = [
-        (name, round(monthly * STANDARD_OPT_RATIO), color)
-        for name, monthly, color in STANDARD_SERVERS_MONTHLY
+        (line.label, round(line.monthly * STANDARD_OPT_RATIO), line.color)
+        for line in STANDARD_BASELINE
     ]
-    pilot_total = sum(m * 12 for _, m, _ in pilot_items)
-    std_total = sum(m * 12 for _, m, _ in std_items)
-    std_baseline_total = sum(m * 12 for _, m, _ in STANDARD_SERVERS_MONTHLY)
-    pilot_baseline_total = 96_000 * 12
+    pilot_total = pilot_optimized_monthly() * 12
+    std_total = standard_optimized_monthly() * 12
+    std_baseline_total = standard_baseline_monthly() * 12
+    pilot_baseline_total = pilot_baseline_monthly() * 12
 
     compare = [
         ("Pilot 10k", "без оптим.", pilot_baseline_total, "#fca5a5"),
@@ -101,7 +78,7 @@ def render_section_18_7() -> str:
         y = base_y1 - chart_h1 * i // 4
         y_ticks.append(
             f'<line x1="{chart_left}" y1="{y}" x2="{chart_right}" y2="{y}" stroke="#e5e7eb" stroke-width="1"/>'
-            f'<text x="{chart_left - 8}" y="{y + 4}" text-anchor="end" font-size="9" fill="#4b5563">{_fmt_rub_short(val)}</text>'
+            f'<text x="{chart_left - 8}" y="{y + 4}" text-anchor="end" font-size="9" fill="#4b5563">{fmt_rub_short(val)}</text>'
         )
 
     compare_bars = []
@@ -112,7 +89,7 @@ def render_section_18_7() -> str:
         y = base_y1 - h
         compare_bars.append(
             f'<rect x="{x}" y="{y}" width="{bar_w}" height="{h}" fill="{color}" rx="3"/>'
-            f'<text x="{x + bar_w // 2}" y="{y - 8}" text-anchor="middle" font-size="9" font-weight="600">{_fmt_rub(annual)}</text>'
+            f'<text x="{x + bar_w // 2}" y="{y - 8}" text-anchor="middle" font-size="9" font-weight="600">{fmt_rub(annual)}</text>'
         )
         compare_labels.append(
             f'<text x="{x + bar_w // 2}" y="{base_y1 + 14}" text-anchor="middle" font-size="9" font-weight="600">{escape(profile)}</text>'
@@ -131,13 +108,13 @@ def render_section_18_7() -> str:
     profile_label_y1 = base_y2 + 16
     profile_label_y2 = base_y2 + 30
 
-    legend_items = pilot_items + std_items
+    legend_items = list(PILOT_OPTIMIZED) + list(STANDARD_BASELINE)
     seen: set[str] = set()
     unique_legend: list[tuple[str, str]] = []
-    for name, _m, color in legend_items:
-        if name not in seen:
-            seen.add(name)
-            unique_legend.append((name, color))
+    for line in legend_items:
+        if line.label not in seen:
+            seen.add(line.label)
+            unique_legend.append((line.label, line.color))
     legend_cols = 3
     legend_row_h = 17
     legend_y0 = profile_label_y2 + 18
@@ -154,31 +131,35 @@ def render_section_18_7() -> str:
     svg_h = legend_y0 + ((len(unique_legend) + legend_cols - 1) // legend_cols) * legend_row_h + 16
 
     table_rows = []
-    std_by_name = {n: m for n, m, _ in std_items}
-    for name, monthly, _ in pilot_items:
-        std_m = std_by_name.get(name)
-        std_cell = f'<td class="money">{_fmt_rub(std_m * 12)}</td>' if std_m else "<td>—</td>"
+    std_by_name = {line.label: round(line.monthly * STANDARD_OPT_RATIO) for line in STANDARD_BASELINE}
+    for line in PILOT_OPTIMIZED:
+        std_m = std_by_name.get(line.label)
+        std_cell = f'<td class="money">{fmt_rub(std_m * 12)}</td>' if std_m else "<td>—</td>"
         table_rows.append(
-            f"<tr><td>{escape(name)}</td>"
-            f'<td class="money">{_fmt_rub(monthly * 12)}</td>{std_cell}</tr>'
+            f"<tr><td>{escape(line.label)}</td>"
+            f'<td class="money">{fmt_rub(line.monthly * 12)}</td>{std_cell}</tr>'
         )
-    for name, monthly, _ in std_items:
-        if name in {n for n, _, _ in pilot_items}:
+    for line in STANDARD_BASELINE:
+        if line.label in {ln.label for ln in PILOT_OPTIMIZED}:
             continue
+        std_m = round(line.monthly * STANDARD_OPT_RATIO)
         table_rows.append(
-            f"<tr><td>{escape(name)}</td><td>—</td>"
-            f'<td class="money">{_fmt_rub(monthly * 12)}</td></tr>'
+            f"<tr><td>{escape(line.label)}</td><td>—</td>"
+            f'<td class="money">{fmt_rub(std_m * 12)}</td></tr>'
         )
     table_rows.append(
         f'<tr><th>Итого infra / год</th>'
-        f'<th class="money">{_fmt_rub(pilot_total)}</th>'
-        f'<th class="money">{_fmt_rub(std_total)}</th></tr>'
+        f'<th class="money">{fmt_rub(pilot_total)}</th>'
+        f'<th class="money">{fmt_rub(std_total)}</th></tr>'
     )
+
+    legend_rates_html = render_legend_rate_table_html(tuple(legend_items))
 
     return f"""
 <h3 id="s18-7">18.7 Сравнение стоимости серверов за год</h3>
 <p class="small">Все суммы — <b>только инфраструктура</b> (аренда/амортизация серверов, дисков, канала, ops).
-  Расчёт: месячные ставки из §18.2–18.3 × 12. Standard «оптимиз.» — −30% к baseline (§12).</p>
+  Расчёт: <b>кол-во × ставка §18.1</b> (дата {PRICE_AS_OF}), затем × 12 для годовых столбцов.
+  Standard «оптимиз.» — baseline × {STANDARD_OPT_RATIO:.3f} (§12).</p>
 
 <table>
   <tr><th>Сервер / статья</th><th>Pilot 10k ₽/год</th><th>Standard 100k (оптим.) ₽/год</th></tr>
@@ -206,20 +187,24 @@ def render_section_18_7() -> str:
   {_stacked_bar_svg(pilot_items, pilot_x, stack_w, base_y2, pilot_bar_h)}
   {_stacked_bar_svg(std_items, std_x, stack_w, base_y2, stack_h)}
   <text x="{pilot_x + stack_w // 2}" y="{profile_label_y1}" text-anchor="middle" font-size="10">Pilot 10k</text>
-  <text x="{pilot_x + stack_w // 2}" y="{profile_label_y2}" text-anchor="middle" font-size="9" fill="#6b7280">{_fmt_rub(pilot_total)}</text>
+  <text x="{pilot_x + stack_w // 2}" y="{profile_label_y2}" text-anchor="middle" font-size="9" fill="#6b7280">{fmt_rub(pilot_total)}</text>
   <text x="{std_x + stack_w // 2}" y="{profile_label_y1}" text-anchor="middle" font-size="10">Standard 100k</text>
-  <text x="{std_x + stack_w // 2}" y="{profile_label_y2}" text-anchor="middle" font-size="9" fill="#6b7280">{_fmt_rub(std_total)}</text>
+  <text x="{std_x + stack_w // 2}" y="{profile_label_y2}" text-anchor="middle" font-size="9" fill="#6b7280">{fmt_rub(std_total)}</text>
   {''.join(legend_svg)}
 </svg>
-<figcaption class="fig-cap">Рис. 8. Сравнительная диаграмма годовой стоимости серверов (условные тарифы §18.1; не оферта)</figcaption>
+<figcaption class="fig-cap">Рис. 8. Годовая стоимость infra: Σ(кол-во × §18.1) × 12; дата ставок {PRICE_AS_OF}. Красный — full-server baseline, зелёный — целевой профиль §12. Не оферта.</figcaption>
 </figure>
+
+<h4>Ставки за единицу (легенда нижнего ряда)</h4>
+<p class="small">Цвета сегментов на диаграмме соответствуют статьям §18.2–18.3. Сумма сегмента = кол-во × ставка из таблицы §18.1.</p>
+{legend_rates_html}
 
 <div class="note">
   <div class="req">Как читать диаграмму</div>
   <div class="comment">
-    <b>Верхний ряд</b> — итоговая стоимость infra за год по профилю (красный — без оптимизации §12, зелёный — целевой профиль).
-    <b>Нижний ряд</b> — из чего складывается годовая сумма для оптимизированных Pilot и Standard (цветные сегменты = типы серверов, легенда под диаграммой).
-    Лицензия ПО, внедрение и поддержка L2 — в §18.4 и §18.6.
+    <b>Верхний ряд</b> — итоговая стоимость infra за год (baseline §18.2 / Standard §18.3 vs оптимизированный профиль §12).
+    <b>Нижний ряд</b> — состав годовой суммы для оптимизированных Pilot и Standard; таблица выше — откуда взята каждая ставка за единицу.
+    Лицензия ПО, внедрение и L2 — §18.4 и §18.6.
   </div>
 </div>
 """
@@ -236,7 +221,7 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
   <li><b>Production:</b> HTTPS, секреты не в открытом виде, sign-off E2EE перед массовым включением.</li>
   <li><b>Экспорт и ретенция:</b> окончательное удаление только после прохождения export gate.</li>
   <li><b>Локализация:</b> интерфейс минимум на русском и английском.</li>
-  <li><b>Инфраструктура (§12):</b> при оптимизации — достижение целевых показателей §10.4 после load test.</li>
+  <li><b>Инфраструктура (§12):</b> FR-OPT-01…07 реализованы; целевые §10.4 подтверждаются load test на stage при go-live.</li>
   <li><b>Комплаенс (§14):</b> export с индикатором полноты; legal hold блокирует purge; audit admin-действий.</li>
   <li><b>SLA (§15):</b> согласованные RPO/RTO по профилю; сообщения не теряются при деградации P1.</li>
   <li><b>Профиль (§16):</b> ограничения Pilot доведены до заказчика до запуска.</li>
@@ -245,27 +230,40 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
 
 <hr/>
 <h2 id="s12">12. Оптимизация инфраструктуры</h2>
-<p><span class="tag tag-planned">Запланировано</span> — зафиксировано в дорожной карте продукта; реализация отложена.</p>
+<p><span class="tag tag-done">Реализовано</span> — spec 006: волны 1–3 закрыты (FR-OPT-01…07 в коде, smokes на QEMU, outer gate 30/30).
+  <b>В roadmap:</b> FR-OPT-08 (dedup файлов), FR-OPT-09 (sharding), formal load test §12.3 на stage (k6-скрипты готовы).
+  Dev/QEMU по умолчанию — <code>korus_deploy_profile: standard</code> (full-server); pilot — явный override
+  (см. <code>deploy/ansible/inventory/qemu/group_vars/all.yml</code>, <code>deploy/qemu/RESOURCES.md</code>).</p>
 <h3>12.1 Зачем это нужно</h3>
 <ol>
   <li><b>Пилот на modest hardware</b> — десятки ГБ RAM, а не сотни.</li>
   <li><b>Больше сотрудников</b> на том же сервере по мере роста.</li>
   <li><b>Длинная история</b> без линейного роста дисков (сжатие архива, dedup файлов).</li>
 </ol>
-<h3>12.2 Направления оптимизации</h3>
+<h3>12.2 Направления оптимизации (FR-OPT)</h3>
 <table>
-  <tr><th>№</th><th>Что должно быть достигнуто</th><th>Зачем бизнесу</th><th>Профиль</th></tr>
-  <tr><td>01</td><td>Минимальный состав серверов Pilot (без поискового кластера)</td><td>−75% стоимость пилота</td><td>Pilot</td></tr>
-  <tr><td>02</td><td>Аутентификация в production-режиме</td><td>Стабильный pilot</td><td>Pilot+</td></tr>
-  <tr><td>03</td><td>Кэш частых чтений (список чатов)</td><td>Больше пользователей без новых серверов</td><td>Standard</td></tr>
-  <tr><td>04</td><td>Масштабирование доставки сообщений</td><td>Рост онлайна</td><td>Standard+</td></tr>
-  <tr><td>05</td><td>Разделение чтения и записи БД</td><td>Утренние рассылки без пиков</td><td>Standard+</td></tr>
-  <tr><td>06</td><td>Сжатие архивных данных</td><td>−60% диска на старых сообщениях</td><td>Standard+</td></tr>
-  <tr><td>07</td><td>Пакетная индексация поиска</td><td>Меньше CPU</td><td>Standard+</td></tr>
-  <tr><td>08</td><td>Дедупликация одинаковых файлов</td><td>−35% диска на вложениях</td><td>Standard+</td></tr>
-  <tr><td>09</td><td>Разделение данных крупных org (sharding)</td><td>Путь к 1M</td><td>Enterprise</td></tr>
+  <tr><th>№</th><th>Что должно быть достигнуто</th><th>Зачем бизнесу</th><th>Профиль</th><th>Статус</th></tr>
+  <tr><td>01</td><td>Минимальный состав серверов Pilot (без Solr/ZK)</td><td>−75% стоимость пилота</td><td>Pilot</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>02</td><td>Keycloak production-режим (<code>start --optimized</code>)</td><td>Стабильный pilot</td><td>Pilot+</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>03</td><td>Кэш частых чтений (список чатов, профиль)</td><td>Больше пользователей без новых серверов</td><td>Standard</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>04</td><td>Масштабирование WS и message-pipeline</td><td>Рост онлайна и msg/s</td><td>Standard+</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>05</td><td>Read replica PostgreSQL</td><td>Утренние рассылки без пиков</td><td>Standard+</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>06</td><td>Сжатие deep-archive (zstd)</td><td>−60% диска на старых сообщениях</td><td>Standard+</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>07</td><td>Пакетная индексация Solr</td><td>Меньше CPU при том же потоке</td><td>Standard+</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>08</td><td>Дедупликация одинаковых файлов (MinIO)</td><td>−35% диска на вложениях</td><td>Standard+</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
+  <tr><td>09</td><td>Sharding PostgreSQL по org</td><td>Путь к 1M пользователей</td><td>Enterprise</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
 </table>
-<p><b>Ключевое правило:</b> доставка сообщения (P0) не зависит от поиска, push и архива (P1/P2) — при сбое второстепенных служб чаты продолжают работать.</p>
+<p class="small">Источник статусов: <code>specs/006-infra-optimization/tasks.md</code> (волны 1–3 [x]), <code>specs/007-platform-stage-readiness/</code> (инженерная приёмка).</p>
+<p><b>Ключевое правило (FR-OPT-010):</b> доставка сообщения (P0) не зависит от поиска, push и архива (P1/P2) — при сбое второстепенных служб чаты продолжают работать.</p>
+
+<h3>12.3 Целевые метрики и приёмка</h3>
+<p>Цифры §10.4 — <b>проектные цели</b> после FR-OPT; formal load test (20% peak, 24h soak) — <b>при go-live на stage</b> (инженерная приёмка на QEMU ✓).</p>
+<table>
+  <tr><th>Tier</th><th>RAM ≤ (цель)</th><th>Пик msg/s ≥</th><th>Условие sign-off</th><th>Статус</th></tr>
+  <tr><td>10k Pilot</td><td>16 ГБ</td><td>15</td><td>Load test + pilot smokes</td><td><span class="tag tag-done">Smokes ✓</span> load test — stage</td></tr>
+  <tr><td>100k Standard</td><td>160 ГБ</td><td>120</td><td>Load test + scale/replica smokes</td><td><span class="tag tag-done">Smokes ✓</span> load test — stage</td></tr>
+  <tr><td>500k / 1M</td><td>500 ГБ / 1,2 ТБ</td><td>400 / 600</td><td>Load test + sharding plan</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
+</table>
 
 <hr/>
 <h2 id="s13">13. Интеграции и экосистема</h2>
@@ -440,107 +438,17 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
 {render_appendix_i_html()}
 """)
 
-    # §18 Cost - the key section for sales/accounting
+    # §18 Cost - generated from tz_product_pricing.py (single source of truth)
     parts.append(f"""
 <hr/>
 <h2 id="s18">18. Стоимость владения — примеры расчётов</h2>
 {FIG_COST}
+<p class="small"><b>Рис. 7 — как считаются столбцы:</b> «Без оптимизации» = Σ строк baseline §18.2 ({fmt_rub(pilot_baseline_monthly())}/мес, full-server);
+  «Pilot (цель)» = Σ §18.2 ({fmt_rub(pilot_optimized_monthly())}/мес, <code>docker-compose.pilot.yml</code>);
+  «Облако (анalog)» = Σ §18.3.1 ({fmt_rub(cloud_pilot_monthly())}/мес). Ставки — §18.1, дата {PRICE_AS_OF}.</p>
 
-<div class="note">
-  <div class="req">Для продаж и бухгалтерии</div>
-  <div class="comment">
-    Ниже — <b>учебные примеры</b> на условных тарифах (руб./мес.). Реальная стоимость зависит от: own hardware vs облако vs colocation,
-    регион, скидки поставщика, НДС, трудозатрат внедрения и поддержки. Используйте таблицы как <b>шаблон для КП</b>, подставляя свои ставки в колонку «Цена за ед.».
-  </div>
-</div>
-
-<h3>18.1 Условные тарифы (шаблон)</h3>
-<table>
-  <tr><th>Статья</th><th>Единица</th><th>Условная цена</th><th>Комментарий</th></tr>
-  <tr><td>Сервер приложений</td><td>16 ГБ RAM, 8 vCPU</td><td class="money">28 000 ₽/мес</td><td>On-prem амортизация или облако</td></tr>
-  <tr><td>Сервер приложений</td><td>32 ГБ RAM, 8 vCPU</td><td class="money">45 000 ₽/мес</td><td>Standard tier</td></tr>
-  <tr><td>Веб + балансировщик</td><td>8 ГБ RAM, 4 vCPU</td><td class="money">15 000 ₽/мес</td><td>2 реплики для Pilot</td></tr>
-  <tr><td>Диск SSD</td><td>1 ТБ</td><td class="money">3 500 ₽/мес</td><td>Оперативные данные</td></tr>
-  <tr><td>Диск HDD (архив)</td><td>1 ТБ</td><td class="money">800 ₽/мес</td><td>Файлы и deep archive</td></tr>
-  <tr><td>TURN (звонки)</td><td>4 vCPU</td><td class="money">12 000 ₽/мес</td><td>Опционально Pilot</td></tr>
-  <tr><td>Мониторинг, backup</td><td>контур</td><td class="money">5 000 ₽/мес</td><td>Базовый ops</td></tr>
-  <tr><td>Канал связи</td><td>200 Мбит/с</td><td class="money">8 000 ₽/мес</td><td>10k Pilot</td></tr>
-  <tr><td>Канал связи</td><td>1 Гбит/с</td><td class="money">35 000 ₽/мес</td><td>100k Standard</td></tr>
-</table>
-
-<h3>18.2 Пример A — Pilot, 10 000 пользователей (оптимизированный профиль)</h3>
-<div class="cost-box">
-<p><b>Исходные:</b> 10 000 зарегистрированных; ~5 000 активных в день; ~750 одновременно онлайн; диск ~5 ТБ на первый год (§10.4).</p>
-<table>
-  <tr><th>Статья расходов</th><th>Кол-во</th><th>Цена/ед.</th><th>₽/мес</th></tr>
-  <tr><td>Сервер приложений (16 ГБ, Pilot compose)</td><td>1</td><td>28 000</td><td class="money">28 000</td></tr>
-  <tr><td>Веб-шлюз (8 ГБ)</td><td>1</td><td>15 000</td><td class="money">15 000</td></tr>
-  <tr><td>Диск SSD (500 ГБ hot DB)</td><td>0,5 ТБ</td><td>3 500</td><td class="money">1 750</td></tr>
-  <tr><td>Диск HDD (4,5 ТБ файлы+архив)</td><td>4,5 ТБ</td><td>800</td><td class="money">3 600</td></tr>
-  <tr><td>Канал 200 Мбит/с</td><td>1</td><td>8 000</td><td class="money">8 000</td></tr>
-  <tr><td>Backup + мониторинг</td><td>1</td><td>5 000</td><td class="money">5 000</td></tr>
-  <tr><td>TURN (опционально)</td><td>1</td><td>12 000</td><td class="money">12 000</td></tr>
-  <tr><th colspan="3">Итого infra (с TURN)</th><th class="money">73 350</th></tr>
-  <tr><th colspan="3">Итого infra (без TURN)</th><th class="money">61 350</th></tr>
-</table>
-<p><b>На пользователя:</b> 61 350 ÷ 10 000 = <span class="money">~6,1 ₽/пользователь/мес</span> (только инфраструктура).</p>
-<p><b>Сравнение с baseline (~64 ГБ без оптимизации):</b> потребовалось бы ~2 сервера по 32 ГБ + полный Solr ≈ <span class="money">~96 000 ₽/мес</span> — экономия Pilot-профиля <b>~36%</b>.</p>
-</div>
-
-<h3>18.3 Пример B — Standard, 100 000 пользователей</h3>
-<div class="cost-box">
-<table>
-  <tr><th>Статья</th><th>Кол-во</th><th>₽/мес</th></tr>
-  <tr><td>Серверы приложений 64 ГБ (×3)</td><td>3</td><td class="money">135 000</td></tr>
-  <tr><td>Web + LB (×2)</td><td>2</td><td class="money">30 000</td></tr>
-  <tr><td>PostgreSQL primary + replica</td><td>2</td><td class="money">90 000</td></tr>
-  <tr><td>Redis cluster</td><td>1</td><td class="money">25 000</td></tr>
-  <tr><td>Solr + ZK (×3)</td><td>3</td><td class="money">75 000</td></tr>
-  <tr><td>MinIO / файлы (~30 ТБ HDD baseline)</td><td>30 ТБ</td><td class="money">24 000</td></tr>
-  <tr><td>NATS, Keycloak, workers</td><td>набор</td><td class="money">45 000</td></tr>
-  <tr><td>Канал 1 Гбит/с</td><td>1</td><td class="money">35 000</td></tr>
-  <tr><td>Ops (backup, monitoring)</td><td>1</td><td class="money">15 000</td></tr>
-  <tr><th>Итого baseline</th><th></th><th class="money">~474 000</th></tr>
-  <tr><th>Итого после оптимизации (§12, −30% RAM+disk)</th><th></th><th class="money">~332 000</th></tr>
-</table>
-<p><b>На пользователя (оптимиз.):</b> 332 000 ÷ 100 000 = <span class="money">~3,3 ₽/пользователь/мес</span>.</p>
-</div>
-
-<h3>18.4 Пример C — TCO на 3 года (Pilot 10k)</h3>
-<div class="cost-box">
-<table>
-  <tr><th>Статья</th><th>Разово</th><th>₽/мес × 36 мес</th><th>Итого 3 года</th></tr>
-  <tr><td>Infra (без TURN)</td><td>—</td><td>61 350</td><td class="money">2 208 600</td></tr>
-  <tr><td>Внедрение (развёртывание, обучение admin)</td><td class="money">600 000</td><td>—</td><td class="money">600 000</td></tr>
-  <tr><td>Поддержка L2 (15% от infra/год)</td><td>—</td><td>~9 200</td><td class="money">331 200</td></tr>
-  <tr><th colspan="3">TCO 3 года</th><th class="money">~3 140 000</th></tr>
-</table>
-<p><b>TCO на пользователя за 3 года:</b> 3 140 000 ÷ 10 000 = <span class="money">~314 ₽/пользователь</span> (~8,7 ₽/мес all-in с внедрением).</p>
-</div>
-
-<h3>18.5 Пример D — рост диска (бухгалтерия, 100k users)</h3>
-<div class="cost-box">
-<p><b>Формула:</b> Диск файлов/год ≈ Пользователи × ГБ на пользователя/год</p>
-<p>100 000 × 0,4 ГБ = <b>40 ТБ новых файлов в год</b></p>
-<p>При тарифе 800 ₽/ТБ/мес HDD: 40 × 800 = <span class="money">32 000 ₽/мес</span> <b>дополнительно</b> каждый год (если не сжимать архив).</p>
-<p>С оптимизацией §12 (dedup −35%, zstd archive −60% на телах): ориентир <span class="money">~18 000 ₽/мес</span> прироста вместо 32 000.</p>
-</div>
-
-<h3>18.6 Строки для коммерческого предложения (шаблон)</h3>
-<table>
-  <tr><th>Позиция КП</th><th>Ед.</th><th>Пример цены</th></tr>
-  <tr><td>Лицензия / право использования (perpetual или subscription)</td><td>пользователь/год</td><td>по прайсу вендора</td></tr>
-  <tr><td>Внедрение Pilot</td><td>контур</td><td class="money">400 000 – 800 000 ₽</td></tr>
-  <tr><td>Внедрение Standard</td><td>контур</td><td class="money">1 500 000 – 3 000 000 ₽</td></tr>
-  <tr><td>Обучение администраторов (1 день)</td><td>сессия</td><td class="money">50 000 – 120 000 ₽</td></tr>
-  <tr><td>Поддержка L2 (8×5)</td><td>% от infra или фикс</td><td class="money">10–18%</td></tr>
-  <tr><td>Infra (см. примеры A–B)</td><td>мес</td><td>по §18.2–18.3</td></tr>
-</table>
-
-<div class="warn">
-  <div class="req">Налоги и учёт</div>
-  <div class="comment">Infra может учитываться как OPEX (облако/аренда) или амортизация CAPEX (собственные серверы). Лицензия ПО — по политике заказчика (немaterial актив или subscription). Уточняйте у бухгалтерии заказчика до фиксации КП.</div>
-</div>
+{render_price_methodology_html()}
+{render_section_18_examples_html()}
 
 {render_section_18_7()}
 """)

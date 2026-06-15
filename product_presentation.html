@@ -58,7 +58,7 @@
 
 <h1>Продуктовая презентация<br/>Korus Messenger (AvandocMsg)</h1>
 <div class="meta">
-  <b>Версия:</b> 2.2 &nbsp;|&nbsp; <b>Дата:</b> 15 июня 2026 &nbsp;|&nbsp;
+  <b>Версия:</b> 2.3 &nbsp;|&nbsp; <b>Дата:</b> 15 июня 2026 &nbsp;|&nbsp;
   <b>Аудитория:</b> руководители, юристы, продажи, бухгалтерия, операторы, служба безопасности<br/>
   <b>Формат:</b> презентация продукта для заказчика; приложение I — каталог <b>страниц</b> клиента и админки
 </div>
@@ -477,6 +477,7 @@
   <tr><td>Push-уведомления</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>Live-streaming</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
   <tr><td>Звонки</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Оптимизация infra (§12, FR-OPT)</td><td><span class="tag tag-done">Реализовано</span> (01–07 ✓; 08–09 + load test — roadmap)</td></tr>
   <tr><td>Sizing 1M пользователей</td><td>§10 — ориентиры</td></tr>
 </table>
 
@@ -493,7 +494,14 @@
 <table><tr><th>Направление</th><th>Ценность</th></tr>
 <tr><td>Bot API</td><td>Service Desk, автоматизация</td></tr>
 <tr><td>SSO Google/LDAP</td><td>Enterprise-вход</td></tr>
-<tr><td>Оптимизация infra (§12)</td><td>Меньше RAM, больше пользователей</td></tr>
+<tr><td>FR-OPT-08 dedup, FR-OPT-09 sharding</td><td>Enterprise tier, §12 волна 4</td></tr>
+<tr><td>Formal load test (k6)</td><td>Подтверждение §10.4 на stage при go-live</td></tr>
+</table>
+<h3>Уже в коде (spec 006, волны 1–3)</h3>
+<table><tr><th>Направление</th><th>Ценность</th></tr>
+<tr><td>Pilot compose + Keycloak prod (FR-OPT-01/02)</td><td>Пилот на 12–16 ГБ RAM</td></tr>
+<tr><td>Read cache, scale WS/pipeline, replica (03–05)</td><td>Standard без лишних серверов</td></tr>
+<tr><td>zstd archive + batch Solr (06–07)</td><td>Меньше диска и CPU на поиске</td></tr>
 </table>
 <h3>12+ месяцев</h3>
 <ul><li>Live-streaming (all-hands)</li><li>Мобильные клиенты</li><li>SFU для звонков &gt;20 участников</li></ul>
@@ -592,7 +600,7 @@ DAU (активных в день) = Пользователи × доля акт
   <li><b>Production:</b> HTTPS, секреты не в открытом виде, sign-off E2EE перед массовым включением.</li>
   <li><b>Экспорт и ретенция:</b> окончательное удаление только после прохождения export gate.</li>
   <li><b>Локализация:</b> интерфейс минимум на русском и английском.</li>
-  <li><b>Инфраструктура (§12):</b> при оптимизации — достижение целевых показателей §10.4 после load test.</li>
+  <li><b>Инфраструктура (§12):</b> FR-OPT-01…07 реализованы; целевые §10.4 подтверждаются load test на stage при go-live.</li>
   <li><b>Комплаенс (§14):</b> export с индикатором полноты; legal hold блокирует purge; audit admin-действий.</li>
   <li><b>SLA (§15):</b> согласованные RPO/RTO по профилю; сообщения не теряются при деградации P1.</li>
   <li><b>Профиль (§16):</b> ограничения Pilot доведены до заказчика до запуска.</li>
@@ -601,27 +609,40 @@ DAU (активных в день) = Пользователи × доля акт
 
 <hr/>
 <h2 id="s12">12. Оптимизация инфраструктуры</h2>
-<p><span class="tag tag-planned">Запланировано</span> — зафиксировано в дорожной карте продукта; реализация отложена.</p>
+<p><span class="tag tag-done">Реализовано</span> — spec 006: волны 1–3 закрыты (FR-OPT-01…07 в коде, smokes на QEMU, outer gate 30/30).
+  <b>В roadmap:</b> FR-OPT-08 (dedup файлов), FR-OPT-09 (sharding), formal load test §12.3 на stage (k6-скрипты готовы).
+  Dev/QEMU по умолчанию — <code>korus_deploy_profile: standard</code> (full-server); pilot — явный override
+  (см. <code>deploy/ansible/inventory/qemu/group_vars/all.yml</code>, <code>deploy/qemu/RESOURCES.md</code>).</p>
 <h3>12.1 Зачем это нужно</h3>
 <ol>
   <li><b>Пилот на modest hardware</b> — десятки ГБ RAM, а не сотни.</li>
   <li><b>Больше сотрудников</b> на том же сервере по мере роста.</li>
   <li><b>Длинная история</b> без линейного роста дисков (сжатие архива, dedup файлов).</li>
 </ol>
-<h3>12.2 Направления оптимизации</h3>
+<h3>12.2 Направления оптимизации (FR-OPT)</h3>
 <table>
-  <tr><th>№</th><th>Что должно быть достигнуто</th><th>Зачем бизнесу</th><th>Профиль</th></tr>
-  <tr><td>01</td><td>Минимальный состав серверов Pilot (без поискового кластера)</td><td>−75% стоимость пилота</td><td>Pilot</td></tr>
-  <tr><td>02</td><td>Аутентификация в production-режиме</td><td>Стабильный pilot</td><td>Pilot+</td></tr>
-  <tr><td>03</td><td>Кэш частых чтений (список чатов)</td><td>Больше пользователей без новых серверов</td><td>Standard</td></tr>
-  <tr><td>04</td><td>Масштабирование доставки сообщений</td><td>Рост онлайна</td><td>Standard+</td></tr>
-  <tr><td>05</td><td>Разделение чтения и записи БД</td><td>Утренние рассылки без пиков</td><td>Standard+</td></tr>
-  <tr><td>06</td><td>Сжатие архивных данных</td><td>−60% диска на старых сообщениях</td><td>Standard+</td></tr>
-  <tr><td>07</td><td>Пакетная индексация поиска</td><td>Меньше CPU</td><td>Standard+</td></tr>
-  <tr><td>08</td><td>Дедупликация одинаковых файлов</td><td>−35% диска на вложениях</td><td>Standard+</td></tr>
-  <tr><td>09</td><td>Разделение данных крупных org (sharding)</td><td>Путь к 1M</td><td>Enterprise</td></tr>
+  <tr><th>№</th><th>Что должно быть достигнуто</th><th>Зачем бизнесу</th><th>Профиль</th><th>Статус</th></tr>
+  <tr><td>01</td><td>Минимальный состав серверов Pilot (без Solr/ZK)</td><td>−75% стоимость пилота</td><td>Pilot</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>02</td><td>Keycloak production-режим (<code>start --optimized</code>)</td><td>Стабильный pilot</td><td>Pilot+</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>03</td><td>Кэш частых чтений (список чатов, профиль)</td><td>Больше пользователей без новых серверов</td><td>Standard</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>04</td><td>Масштабирование WS и message-pipeline</td><td>Рост онлайна и msg/s</td><td>Standard+</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>05</td><td>Read replica PostgreSQL</td><td>Утренние рассылки без пиков</td><td>Standard+</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>06</td><td>Сжатие deep-archive (zstd)</td><td>−60% диска на старых сообщениях</td><td>Standard+</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>07</td><td>Пакетная индексация Solr</td><td>Меньше CPU при том же потоке</td><td>Standard+</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td>08</td><td>Дедупликация одинаковых файлов (MinIO)</td><td>−35% диска на вложениях</td><td>Standard+</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
+  <tr><td>09</td><td>Sharding PostgreSQL по org</td><td>Путь к 1M пользователей</td><td>Enterprise</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
 </table>
-<p><b>Ключевое правило:</b> доставка сообщения (P0) не зависит от поиска, push и архива (P1/P2) — при сбое второстепенных служб чаты продолжают работать.</p>
+<p class="small">Источник статусов: <code>specs/006-infra-optimization/tasks.md</code> (волны 1–3 [x]), <code>specs/007-platform-stage-readiness/</code> (инженерная приёмка).</p>
+<p><b>Ключевое правило (FR-OPT-010):</b> доставка сообщения (P0) не зависит от поиска, push и архива (P1/P2) — при сбое второстепенных служб чаты продолжают работать.</p>
+
+<h3>12.3 Целевые метрики и приёмка</h3>
+<p>Цифры §10.4 — <b>проектные цели</b> после FR-OPT; formal load test (20% peak, 24h soak) — <b>при go-live на stage</b> (инженерная приёмка на QEMU ✓).</p>
+<table>
+  <tr><th>Tier</th><th>RAM ≤ (цель)</th><th>Пик msg/s ≥</th><th>Условие sign-off</th><th>Статус</th></tr>
+  <tr><td>10k Pilot</td><td>16 ГБ</td><td>15</td><td>Load test + pilot smokes</td><td><span class="tag tag-done">Smokes ✓</span> load test — stage</td></tr>
+  <tr><td>100k Standard</td><td>160 ГБ</td><td>120</td><td>Load test + scale/replica smokes</td><td><span class="tag tag-done">Smokes ✓</span> load test — stage</td></tr>
+  <tr><td>500k / 1M</td><td>500 ГБ / 1,2 ТБ</td><td>400 / 600</td><td>Load test + sharding plan</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
+</table>
 
 <hr/>
 <h2 id="s13">13. Интеграции и экосистема</h2>
@@ -834,120 +855,128 @@ DAU (активных в день) = Пользователи × доля акт
   <text x="58" y="140" text-anchor="end" font-size="9">50k</text>
   <text x="58" y="92" text-anchor="end" font-size="9">100k</text>
   <rect x="92" y="56" width="96" height="144" fill="#fca5a5" rx="3"/>
-  <text x="140" y="48" text-anchor="middle" font-size="11" font-weight="600">96 000 ₽</text>
+  <text x="140" y="48" text-anchor="middle" font-size="11" font-weight="600">109 550 ₽</text>
   <text x="140" y="218" text-anchor="middle" font-size="10">Без оптимизации</text>
-  <rect x="232" y="107" width="96" height="93" fill="#86efac" rx="3"/>
-  <text x="280" y="99" text-anchor="middle" font-size="11" font-weight="600">61 350 ₽</text>
+  <rect x="232" y="119" width="96" height="81" fill="#86efac" rx="3"/>
+  <text x="280" y="111" text-anchor="middle" font-size="11" font-weight="600">61 350 ₽</text>
   <text x="280" y="218" text-anchor="middle" font-size="10">Pilot (цель)</text>
-  <rect x="372" y="83" width="96" height="117" fill="#93c5fd" rx="3"/>
-  <text x="420" y="75" text-anchor="middle" font-size="11" font-weight="600">78 000 ₽</text>
-  <text x="420" y="218" text-anchor="middle" font-size="10">Облако (аналог)</text>
-</svg><figcaption class="fig-cap">Рис. 7. Пример сравнения ежемесячных затрат (условные тарифы, см. §18)</figcaption></figure>
+  <rect x="372" y="97" width="96" height="103" fill="#93c5fd" rx="3"/>
+  <text x="420" y="89" text-anchor="middle" font-size="11" font-weight="600">78 000 ₽</text>
+  <text x="420" y="218" text-anchor="middle" font-size="10">Облако (анalog)</text>
+</svg><figcaption class="fig-cap">Рис. 7. Ежемесячные затраты infra: сумма строк §18.2 (Pilot), §18.2 baseline (full-server) и §18.3.1 (облако). Ставки §18.1, дата 2026-06-15; не оферта.</figcaption></figure>
+<p class="small"><b>Рис. 7 — как считаются столбцы:</b> «Без оптимизации» = Σ строк baseline §18.2 (109 550 ₽/мес, full-server);
+  «Pilot (цель)» = Σ §18.2 (61 350 ₽/мес, <code>docker-compose.pilot.yml</code>);
+  «Облако (анalog)» = Σ §18.3.1 (78 000 ₽/мес). Ставки — §18.1, дата 2026-06-15.</p>
 
+
+<h3 id="s18-1">18.1 Условные тарифы и методика расчёта</h3>
 <div class="note">
-  <div class="req">Для продаж и бухгалтерии</div>
+  <div class="req">Источник и дата ставок</div>
   <div class="comment">
-    Ниже — <b>учебные примеры</b> на условных тарифах (руб./мес.). Реальная стоимость зависит от: own hardware vs облако vs colocation,
-    регион, скидки поставщика, НДС, трудозатрат внедрения и поддержки. Используйте таблицы как <b>шаблон для КП</b>, подставляя свои ставки в колонку «Цена за ед.».
+    <b>Дата актуальности:</b> 2026-06-15. <b>Регион:</b> РФ (Москва / СПб, коммерческий сегмент). <b>НДС:</b> Без НДС.
+    Ставки — <b>учебный шаблон для КП</b>, не коммерческое предложение и не обязательство закупки.
+    Перед подписанием договора подставьте прайс выбранного провайдера (on-prem / colocation / облако).
   </div>
 </div>
-
-<h3>18.1 Условные тарифы (шаблон)</h3>
+<p class="small">Сумма по строке = <b>Кол-во × Цена за ед.</b> (₽/мес). Годовые суммы на диаграммах = месячный итог × 12. Standard «оптимиз.» = baseline × коэффициент §12 (332000/474000 ≈ −30% к RAM/диску после FR-OPT).</p>
+<p class="small">Состав профилей: Pilot — <code>docker-compose.pilot.yml</code> (8 hot-path контейнеров, без Solr; см. <code>deploy/qemu/RESOURCES.md</code>); baseline «без оптимизации» — <code>docker-compose.full-server.yml</code> (14 сервисов, Solr+ZK). Целевой Pilot после §12 — тот же compose, Keycloak <code>start --optimized</code>.</p>
 <table>
-  <tr><th>Статья</th><th>Единица</th><th>Условная цена</th><th>Комментарий</th></tr>
-  <tr><td>Сервер приложений</td><td>16 ГБ RAM, 8 vCPU</td><td class="money">28 000 ₽/мес</td><td>On-prem амортизация или облако</td></tr>
-  <tr><td>Сервер приложений</td><td>32 ГБ RAM, 8 vCPU</td><td class="money">45 000 ₽/мес</td><td>Standard tier</td></tr>
-  <tr><td>Веб + балансировщик</td><td>8 ГБ RAM, 4 vCPU</td><td class="money">15 000 ₽/мес</td><td>2 реплики для Pilot</td></tr>
-  <tr><td>Диск SSD</td><td>1 ТБ</td><td class="money">3 500 ₽/мес</td><td>Оперативные данные</td></tr>
-  <tr><td>Диск HDD (архив)</td><td>1 ТБ</td><td class="money">800 ₽/мес</td><td>Файлы и deep archive</td></tr>
-  <tr><td>TURN (звонки)</td><td>4 vCPU</td><td class="money">12 000 ₽/мес</td><td>Опционально Pilot</td></tr>
-  <tr><td>Мониторинг, backup</td><td>контур</td><td class="money">5 000 ₽/мес</td><td>Базовый ops</td></tr>
-  <tr><td>Канал связи</td><td>200 Мбит/с</td><td class="money">8 000 ₽/мес</td><td>10k Pilot</td></tr>
-  <tr><td>Канал связи</td><td>1 Гбит/с</td><td class="money">35 000 ₽/мес</td><td>100k Standard</td></tr>
+  <tr><th>Категория источника</th><th>Как интерпретировать</th></tr>
+  <tr><td>VDS / dedicated</td><td>Усреднённые публичные тарифы аренды VM (8–64 ГБ RAM, 4–8 vCPU), ориентир H1 2026; не прайс-лист конкретного провайдера.</td></tr><tr><td>Диски</td><td>Block SSD и HDD archive tier, ₽/ТБ/мес; объёмы — из §10.3–10.4 презентации.</td></tr><tr><td>Канал</td><td>Выделенный интернет / DIA 200 Мбит/с и 1 Гбит/с, без last-mile и без TURN.</td></tr><tr><td>Облако (аналог)</td><td>Сводный IaaS-пакет (VM + managed DB + object storage + egress), эквивалентный ресурсам Pilot; не оферта Yandex/VK/MWS.</td></tr><tr><td>Ops</td><td>Базовый backup + мониторинг (Pilot) или расширенный контур (Standard).</td></tr>
 </table>
+<table>
+  <tr><th>Статья</th><th>Единица</th><th>Цена за ед.</th><th>Назначение</th><th>Источник</th></tr>
+  <tr><td>Сервер приложений</td><td>16 ГБ RAM, 8 vCPU, 1 VM</td><td class="money">28 000 ₽</td><td>Pilot hot-path (core-api, pipeline, PG hot)</td><td>VDS / dedicated</td></tr><tr><td>Сервер приложений</td><td>32 ГБ RAM, 8 vCPU, 1 VM</td><td class="money">45 000 ₽</td><td>Standard tier / хост two-host</td><td>VDS / dedicated</td></tr><tr><td>Сервер (full stack)</td><td>64 ГБ RAM, 16 vCPU, 1 VM</td><td class="money">72 000 ₽</td><td>Baseline §10.2 @10k: full-server на одном хосте</td><td>VDS / dedicated</td></tr><tr><td>Веб + балансировщик</td><td>8 ГБ RAM, 4 vCPU, 1 VM</td><td class="money">15 000 ₽</td><td>korus-web (2 реплики Tomcat + nginx lb)</td><td>VDS / dedicated</td></tr><tr><td>Solr + ZK (overhead full-server)</td><td>доля JVM/RAM в baseline</td><td class="money">3 000 ₽</td><td>Доп. к server_64 vs pilot: Solr+ZK в full-server</td><td>VDS / dedicated</td></tr><tr><td>PostgreSQL primary + replica</td><td>2 × 32 ГБ VM</td><td class="money">90 000 ₽</td><td>2 × 45 000 ₽ (выделенные узлы БД)</td><td>VDS / dedicated</td></tr><tr><td>Redis cluster</td><td>3 узла managed</td><td class="money">25 000 ₽</td><td>Кэш + pub/sub Standard</td><td>VDS / dedicated</td></tr><tr><td>Solr + ZK</td><td>3 × 16 ГБ VM</td><td class="money">75 000 ₽</td><td>3 × 25 000 ₽/узел</td><td>VDS / dedicated</td></tr><tr><td>NATS, Keycloak, workers</td><td>набор JVM на Standard</td><td class="money">45 000 ₽</td><td>Lump-sum: NATS, Keycloak HA-path, фоновые workers</td><td>VDS / dedicated</td></tr><tr><td>Диск SSD</td><td>1 ТБ</td><td class="money">3 500 ₽</td><td>Hot DB / оперативные данные</td><td>Диски</td></tr><tr><td>Диск HDD (архив)</td><td>1 ТБ</td><td class="money">800 ₽</td><td>MinIO, файлы, deep archive</td><td>Диски</td></tr><tr><td>TURN (звонки)</td><td>4 vCPU VM</td><td class="money">12 000 ₽</td><td>Опционально Pilot</td><td>VDS / dedicated</td></tr><tr><td>Backup + мониторинг</td><td>контур Pilot</td><td class="money">5 000 ₽</td><td>Базовый ops</td><td>Ops</td></tr><tr><td>Ops (backup, monitoring)</td><td>контур Standard</td><td class="money">15 000 ₽</td><td>Расширенный ops</td><td>Ops</td></tr><tr><td>Канал связи</td><td>200 Мбит/с</td><td class="money">8 000 ₽</td><td>Pilot / 10k</td><td>Канал</td></tr><tr><td>Канал связи</td><td>1 Гбит/с</td><td class="money">35 000 ₽</td><td>Standard / 100k</td><td>Канал</td></tr><tr><td>Облако: compute</td><td>экв. 24 vCPU·GB Pilot</td><td class="money">42 000 ₽</td><td>IaaS VM bundle</td><td>Облако (аналог)</td></tr><tr><td>Облако: managed DB</td><td>500 ГБ</td><td class="money">12 000 ₽</td><td>Managed PostgreSQL</td><td>Облако (аналог)</td></tr><tr><td>Облако: object storage</td><td>5 ТБ</td><td class="money">8 500 ₽</td><td>S3-compatible</td><td>Облако (аналог)</td></tr><tr><td>Облако: egress / канал</td><td>200 Мбит/с экв.</td><td class="money">9 000 ₽</td><td>Исходящий трафик + IP</td><td>Облако (анalog)</td></tr><tr><td>Облако: monitoring</td><td>контур</td><td class="money">6 500 ₽</td><td>Logs + metrics SaaS</td><td>Облако (анalog)</td></tr>
+</table>
+
 
 <h3>18.2 Пример A — Pilot, 10 000 пользователей (оптимизированный профиль)</h3>
 <div class="cost-box">
-<p><b>Исходные:</b> 10 000 зарегистрированных; ~5 000 активных в день; ~750 одновременно онлайн; диск ~5 ТБ на первый год (§10.4).</p>
+<p><b>Исходные:</b> 10 000 зарегистрированных; ~5 000 DAU; ~750 peak online; диск ~5 ТБ на первый год (§10.4).
+  Профиль: <code>docker-compose.pilot.yml</code> + Keycloak prod.</p>
 <table>
-  <tr><th>Статья расходов</th><th>Кол-во</th><th>Цена/ед.</th><th>₽/мес</th></tr>
-  <tr><td>Сервер приложений (16 ГБ, Pilot compose)</td><td>1</td><td>28 000</td><td class="money">28 000</td></tr>
-  <tr><td>Веб-шлюз (8 ГБ)</td><td>1</td><td>15 000</td><td class="money">15 000</td></tr>
-  <tr><td>Диск SSD (500 ГБ hot DB)</td><td>0,5 ТБ</td><td>3 500</td><td class="money">1 750</td></tr>
-  <tr><td>Диск HDD (4,5 ТБ файлы+архив)</td><td>4,5 ТБ</td><td>800</td><td class="money">3 600</td></tr>
-  <tr><td>Канал 200 Мбит/с</td><td>1</td><td>8 000</td><td class="money">8 000</td></tr>
-  <tr><td>Backup + мониторинг</td><td>1</td><td>5 000</td><td class="money">5 000</td></tr>
-  <tr><td>TURN (опционально)</td><td>1</td><td>12 000</td><td class="money">12 000</td></tr>
-  <tr><th colspan="3">Итого infra (с TURN)</th><th class="money">73 350</th></tr>
-  <tr><th colspan="3">Итого infra (без TURN)</th><th class="money">61 350</th></tr>
+  <tr><th>Статья расходов</th><th>Кол-во</th><th>Цена за ед. (§18.1)</th><th>₽/мес</th></tr>
+  <tr><td>Сервер приложений (16 ГБ)</td><td>1</td><td>28 000 ₽ <span class="small">(16 ГБ RAM  8 vCPU  1 VM)</span></td><td class="money">28 000</td></tr><tr><td>Web-шлюз (8 ГБ)</td><td>1</td><td>15 000 ₽ <span class="small">(8 ГБ RAM  4 vCPU  1 VM)</span></td><td class="money">15 000</td></tr><tr><td>Диск SSD (hot DB)</td><td>0 5</td><td>3 500 ₽ <span class="small">(1 ТБ)</span></td><td class="money">1 750</td></tr><tr><td>Диск HDD (файлы+архив)</td><td>4 5</td><td>800 ₽ <span class="small">(1 ТБ)</span></td><td class="money">3 600</td></tr><tr><td>Канал 200 Мбит/с</td><td>1</td><td>8 000 ₽ <span class="small">(200 Мбит/с)</span></td><td class="money">8 000</td></tr><tr><td>Backup + мониторинг</td><td>1</td><td>5 000 ₽ <span class="small">(контур Pilot)</span></td><td class="money">5 000</td></tr>
+  <tr><td>TURN (опционально)</td><td>1</td><td>12 000 ₽ <span class="small">(4 vCPU VM)</span></td>
+      <td class="money">12,000</td></tr>
+  <tr><th colspan="3">Итого infra (с TURN)</th><th class="money">73 350 ₽</th></tr>
+  <tr><th colspan="3">Итого infra (без TURN)</th><th class="money">61 350 ₽</th></tr>
 </table>
-<p><b>На пользователя:</b> 61 350 ÷ 10 000 = <span class="money">~6,1 ₽/пользователь/мес</span> (только инфраструктура).</p>
-<p><b>Сравнение с baseline (~64 ГБ без оптимизации):</b> потребовалось бы ~2 сервера по 32 ГБ + полный Solr ≈ <span class="money">~96 000 ₽/мес</span> — экономия Pilot-профиля <b>~36%</b>.</p>
+<p><b>На пользователя:</b> 61,350 ÷ 10 000 = <span class="money">~6.1 ₽/пользователь/мес</span> (только infra).</p>
+<p><b>Сравнение с baseline (full-server §10.2, без §12):</b> см. таблицу ниже — экономия Pilot-профиля <b>~44%</b>.</p>
+<table class="small">
+  <tr><th>Статья (baseline)</th><th>Кол-во</th><th>Цена за ед.</th><th>₽/мес</th></tr>
+  <tr><td>Сервер full stack (64 ГБ  §10.2)</td><td>1</td><td>72 000 ₽ <span class="small">(64 ГБ RAM  16 vCPU  1 VM)</span></td><td class="money">72 000</td></tr><tr><td>Web-шлюз (8 ГБ)</td><td>1</td><td>15 000 ₽ <span class="small">(8 ГБ RAM  4 vCPU  1 VM)</span></td><td class="money">15 000</td></tr><tr><td>Solr + ZK (overhead full-server)</td><td>1</td><td>3 000 ₽ <span class="small">(доля JVM/RAM в baseline)</span></td><td class="money">3 000</td></tr><tr><td>Диск SSD (hot DB)</td><td>0 5</td><td>3 500 ₽ <span class="small">(1 ТБ)</span></td><td class="money">1 750</td></tr><tr><td>Диск HDD (baseline §10.3)</td><td>6</td><td>800 ₽ <span class="small">(1 ТБ)</span></td><td class="money">4 800</td></tr><tr><td>Канал 200 Мбит/с</td><td>1</td><td>8 000 ₽ <span class="small">(200 Мбит/с)</span></td><td class="money">8 000</td></tr><tr><td>Backup + мониторинг</td><td>1</td><td>5 000 ₽ <span class="small">(контур Pilot)</span></td><td class="money">5 000</td></tr>
+  <tr><th colspan="3">Итого baseline</th><th class="money">109 550 ₽</th></tr>
+</table>
 </div>
 
 <h3>18.3 Пример B — Standard, 100 000 пользователей</h3>
 <div class="cost-box">
 <table>
-  <tr><th>Статья</th><th>Кол-во</th><th>₽/мес</th></tr>
-  <tr><td>Серверы приложений 64 ГБ (×3)</td><td>3</td><td class="money">135 000</td></tr>
-  <tr><td>Web + LB (×2)</td><td>2</td><td class="money">30 000</td></tr>
-  <tr><td>PostgreSQL primary + replica</td><td>2</td><td class="money">90 000</td></tr>
-  <tr><td>Redis cluster</td><td>1</td><td class="money">25 000</td></tr>
-  <tr><td>Solr + ZK (×3)</td><td>3</td><td class="money">75 000</td></tr>
-  <tr><td>MinIO / файлы (~30 ТБ HDD baseline)</td><td>30 ТБ</td><td class="money">24 000</td></tr>
-  <tr><td>NATS, Keycloak, workers</td><td>набор</td><td class="money">45 000</td></tr>
-  <tr><td>Канал 1 Гбит/с</td><td>1</td><td class="money">35 000</td></tr>
-  <tr><td>Ops (backup, monitoring)</td><td>1</td><td class="money">15 000</td></tr>
-  <tr><th>Итого baseline</th><th></th><th class="money">~474 000</th></tr>
-  <tr><th>Итого после оптимизации (§12, −30% RAM+disk)</th><th></th><th class="money">~332 000</th></tr>
+  <tr><th>Статья</th><th>Кол-во</th><th>Цена за ед. (§18.1)</th><th>₽/мес</th></tr>
+  <tr><td>Серверы приложений ×3</td><td>3</td><td>45 000 ₽ <span class="small">(32 ГБ RAM  8 vCPU  1 VM)</span></td><td class="money">135 000</td></tr><tr><td>Web + LB ×2</td><td>2</td><td>15 000 ₽ <span class="small">(8 ГБ RAM  4 vCPU  1 VM)</span></td><td class="money">30 000</td></tr><tr><td>PostgreSQL primary + replica</td><td>1</td><td>90 000 ₽ <span class="small">(2 × 32 ГБ VM)</span></td><td class="money">90 000</td></tr><tr><td>Redis cluster</td><td>1</td><td>25 000 ₽ <span class="small">(3 узла managed)</span></td><td class="money">25 000</td></tr><tr><td>Solr + ZK ×3</td><td>1</td><td>75 000 ₽ <span class="small">(3 × 16 ГБ VM)</span></td><td class="money">75 000</td></tr><tr><td>MinIO / файлы (~30 ТБ)</td><td>30</td><td>800 ₽ <span class="small">(1 ТБ)</span></td><td class="money">24 000</td></tr><tr><td>NATS  Keycloak  workers</td><td>1</td><td>45 000 ₽ <span class="small">(набор JVM на Standard)</span></td><td class="money">45 000</td></tr><tr><td>Канал 1 Гбит/с</td><td>1</td><td>35 000 ₽ <span class="small">(1 Гбит/с)</span></td><td class="money">35 000</td></tr><tr><td>Ops (backup  monitoring)</td><td>1</td><td>15 000 ₽ <span class="small">(контур Standard)</span></td><td class="money">15 000</td></tr>
+  <tr><th colspan="3">Итого baseline</th><th class="money">474 000 ₽</th></tr>
+  <tr><th colspan="3">Итого после оптимизации (§12, ×0.700)</th><th class="money">332 000 ₽</th></tr>
 </table>
-<p><b>На пользователя (оптимиз.):</b> 332 000 ÷ 100 000 = <span class="money">~3,3 ₽/пользователь/мес</span>.</p>
+<p><b>На пользователя (оптимиз.):</b> 332,000 ÷ 100 000 = <span class="money">~3.3 ₽/пользователь/мес</span>.</p>
+</div>
+
+<h3>18.3.1 Облако (анalog) — Pilot 10k для Рис. 7</h3>
+<div class="cost-box">
+<p class="small">Сводный IaaS-пакет с тем же порядком ресурсов, что Pilot on-prem; ставки §18.1, категория «Облако (анalog)».</p>
+<table>
+  <tr><th>Статья</th><th>Кол-во</th><th>Цена за ед.</th><th>₽/мес</th></tr>
+  <tr><td>Облако: compute</td><td>1</td><td>42 000 ₽ <span class="small">(экв. 24 vCPU·GB Pilot)</span></td><td class="money">42 000</td></tr><tr><td>Облако: managed DB</td><td>1</td><td>12 000 ₽ <span class="small">(500 ГБ)</span></td><td class="money">12 000</td></tr><tr><td>Облако: object storage</td><td>1</td><td>8 500 ₽ <span class="small">(5 ТБ)</span></td><td class="money">8 500</td></tr><tr><td>Облако: egress / канал</td><td>1</td><td>9 000 ₽ <span class="small">(200 Мбит/с экв.)</span></td><td class="money">9 000</td></tr><tr><td>Облако: monitoring</td><td>1</td><td>6 500 ₽ <span class="small">(контур)</span></td><td class="money">6 500</td></tr>
+  <tr><th colspan="3">Итого облако (анalog)</th><th class="money">78 000 ₽</th></tr>
+</table>
 </div>
 
 <h3>18.4 Пример C — TCO на 3 года (Pilot 10k)</h3>
 <div class="cost-box">
 <table>
   <tr><th>Статья</th><th>Разово</th><th>₽/мес × 36 мес</th><th>Итого 3 года</th></tr>
-  <tr><td>Infra (без TURN)</td><td>—</td><td>61 350</td><td class="money">2 208 600</td></tr>
-  <tr><td>Внедрение (развёртывание, обучение admin)</td><td class="money">600 000</td><td>—</td><td class="money">600 000</td></tr>
-  <tr><td>Поддержка L2 (15% от infra/год)</td><td>—</td><td>~9 200</td><td class="money">331 200</td></tr>
-  <tr><th colspan="3">TCO 3 года</th><th class="money">~3 140 000</th></tr>
+  <tr><td>Infra (без TURN)</td><td>—</td><td>61,350</td><td class="money">2 208 600 ₽</td></tr>
+  <tr><td>Внедрение (развёртывание, обучение admin)</td><td class="money">600 000 ₽</td><td>—</td><td class="money">600 000 ₽</td></tr>
+  <tr><td>Поддержка L2 (15% от infra/год)</td><td>—</td><td>~9,202</td><td class="money">331 290 ₽</td></tr>
+  <tr><th colspan="3">TCO 3 года</th><th class="money">3 139 890 ₽</th></tr>
 </table>
-<p><b>TCO на пользователя за 3 года:</b> 3 140 000 ÷ 10 000 = <span class="money">~314 ₽/пользователь</span> (~8,7 ₽/мес all-in с внедрением).</p>
 </div>
 
 <h3>18.5 Пример D — рост диска (бухгалтерия, 100k users)</h3>
 <div class="cost-box">
 <p><b>Формула:</b> Диск файлов/год ≈ Пользователи × ГБ на пользователя/год</p>
 <p>100 000 × 0,4 ГБ = <b>40 ТБ новых файлов в год</b></p>
-<p>При тарифе 800 ₽/ТБ/мес HDD: 40 × 800 = <span class="money">32 000 ₽/мес</span> <b>дополнительно</b> каждый год (если не сжимать архив).</p>
-<p>С оптимизацией §12 (dedup −35%, zstd archive −60% на телах): ориентир <span class="money">~18 000 ₽/мес</span> прироста вместо 32 000.</p>
+<p>При тарифе 800 ₽/ТБ/мес (§18.1, 2026-06-15): 40 × 800 = <span class="money">32 000 ₽</span> <b>дополнительно</b> каждый год (если не сжимать архив).</p>
+<p>С оптимизацией §12 (dedup −35%, zstd archive −60% на телах): ориентир <span class="money">~14 560 ₽</span> прироста вместо 32 000 ₽.</p>
 </div>
 
 <h3>18.6 Строки для коммерческого предложения (шаблон)</h3>
 <table>
   <tr><th>Позиция КП</th><th>Ед.</th><th>Пример цены</th></tr>
-  <tr><td>Лицензия / право использования (perpetual или subscription)</td><td>пользователь/год</td><td>по прайсу вендора</td></tr>
+  <tr><td>Лицензия / право использования</td><td>пользователь/год</td><td>по прайсу вендора</td></tr>
   <tr><td>Внедрение Pilot</td><td>контур</td><td class="money">400 000 – 800 000 ₽</td></tr>
   <tr><td>Внедрение Standard</td><td>контур</td><td class="money">1 500 000 – 3 000 000 ₽</td></tr>
   <tr><td>Обучение администраторов (1 день)</td><td>сессия</td><td class="money">50 000 – 120 000 ₽</td></tr>
   <tr><td>Поддержка L2 (8×5)</td><td>% от infra или фикс</td><td class="money">10–18%</td></tr>
-  <tr><td>Infra (см. примеры A–B)</td><td>мес</td><td>по §18.2–18.3</td></tr>
+  <tr><td>Infra (см. примеры §18.2–18.3)</td><td>мес</td><td>по таблице §18.1</td></tr>
 </table>
 
 <div class="warn">
   <div class="req">Налоги и учёт</div>
-  <div class="comment">Infra может учитываться как OPEX (облако/аренда) или амортизация CAPEX (собственные серверы). Лицензия ПО — по политике заказчика (немaterial актив или subscription). Уточняйте у бухгалтерии заказчика до фиксации КП.</div>
+  <div class="comment">Infra — OPEX (облако/аренда) или амортизация CAPEX (собственные серверы). Лицензия ПО — по политике заказчика. Уточняйте у бухгалтерии до фиксации КП.</div>
 </div>
+
 
 
 <h3 id="s18-7">18.7 Сравнение стоимости серверов за год</h3>
 <p class="small">Все суммы — <b>только инфраструктура</b> (аренда/амортизация серверов, дисков, канала, ops).
-  Расчёт: месячные ставки из §18.2–18.3 × 12. Standard «оптимиз.» — −30% к baseline (§12).</p>
+  Расчёт: <b>кол-во × ставка §18.1</b> (дата 2026-06-15), затем × 12 для годовых столбцов.
+  Standard «оптимиз.» — baseline × 0.700 (§12).</p>
 
 <table>
   <tr><th>Сервер / статья</th><th>Pilot 10k ₽/год</th><th>Standard 100k (оптим.) ₽/год</th></tr>
-  <tr><td>Сервер приложений (16 ГБ)</td><td class="money">336 000 ₽</td><td>—</td></tr><tr><td>Web-шлюз (8 ГБ)</td><td class="money">180 000 ₽</td><td>—</td></tr><tr><td>Диск SSD (hot DB)</td><td class="money">21 000 ₽</td><td>—</td></tr><tr><td>Диск HDD (файлы+архив)</td><td class="money">43 200 ₽</td><td>—</td></tr><tr><td>Канал 200 Мбит/с</td><td class="money">96 000 ₽</td><td>—</td></tr><tr><td>Backup + мониторинг</td><td class="money">60 000 ₽</td><td>—</td></tr><tr><td>Серверы приложений ×3</td><td>—</td><td class="money">1 134 684 ₽</td></tr><tr><td>Web + LB ×2</td><td>—</td><td class="money">252 156 ₽</td></tr><tr><td>PostgreSQL primary + replica</td><td>—</td><td class="money">756 456 ₽</td></tr><tr><td>Redis cluster</td><td>—</td><td class="money">210 132 ₽</td></tr><tr><td>Solr + ZK ×3</td><td>—</td><td class="money">630 384 ₽</td></tr><tr><td>MinIO / файлы (~30 ТБ)</td><td>—</td><td class="money">201 720 ₽</td></tr><tr><td>NATS, Keycloak, workers</td><td>—</td><td class="money">378 228 ₽</td></tr><tr><td>Канал 1 Гбит/с</td><td>—</td><td class="money">294 180 ₽</td></tr><tr><td>Ops (backup, monitoring)</td><td>—</td><td class="money">126 072 ₽</td></tr><tr><th>Итого infra / год</th><th class="money">736 200 ₽</th><th class="money">3 984 012 ₽</th></tr>
+  <tr><td>Сервер приложений (16 ГБ)</td><td class="money">336 000 ₽</td><td>—</td></tr><tr><td>Web-шлюз (8 ГБ)</td><td class="money">180 000 ₽</td><td>—</td></tr><tr><td>Диск SSD (hot DB)</td><td class="money">21 000 ₽</td><td>—</td></tr><tr><td>Диск HDD (файлы+архив)</td><td class="money">43 200 ₽</td><td>—</td></tr><tr><td>Канал 200 Мбит/с</td><td class="money">96 000 ₽</td><td>—</td></tr><tr><td>Backup + мониторинг</td><td class="money">60 000 ₽</td><td>—</td></tr><tr><td>Серверы приложений ×3</td><td>—</td><td class="money">1 134 684 ₽</td></tr><tr><td>Web + LB ×2</td><td>—</td><td class="money">252 156 ₽</td></tr><tr><td>PostgreSQL primary + replica</td><td>—</td><td class="money">756 456 ₽</td></tr><tr><td>Redis cluster</td><td>—</td><td class="money">210 132 ₽</td></tr><tr><td>Solr + ZK ×3</td><td>—</td><td class="money">630 384 ₽</td></tr><tr><td>MinIO / файлы (~30 ТБ)</td><td>—</td><td class="money">201 720 ₽</td></tr><tr><td>NATS, Keycloak, workers</td><td>—</td><td class="money">378 228 ₽</td></tr><tr><td>Канал 1 Гбит/с</td><td>—</td><td class="money">294 180 ₽</td></tr><tr><td>Ops (backup, monitoring)</td><td>—</td><td class="money">126 072 ₽</td></tr><tr><th>Итого infra / год</th><th class="money">736 200 ₽</th><th class="money">3 984 000 ₽</th></tr>
 </table>
 
 <figure class="fig">
@@ -958,7 +987,7 @@ DAU (активных в день) = Пользователи × доля акт
   <line x1="78" y1="268" x2="500" y2="268" stroke="#9ca3af"/>
   <line x1="78" y1="268" x2="78" y2="68" stroke="#9ca3af"/>
   <line x1="78" y1="268" x2="500" y2="268" stroke="#e5e7eb" stroke-width="1"/><text x="70" y="272" text-anchor="end" font-size="9" fill="#4b5563">0 ₽</text><line x1="78" y1="218" x2="500" y2="218" stroke="#e5e7eb" stroke-width="1"/><text x="70" y="222" text-anchor="end" font-size="9" fill="#4b5563">1,4 млн ₽</text><line x1="78" y1="168" x2="500" y2="168" stroke="#e5e7eb" stroke-width="1"/><text x="70" y="172" text-anchor="end" font-size="9" fill="#4b5563">2,8 млн ₽</text><line x1="78" y1="118" x2="500" y2="118" stroke="#e5e7eb" stroke-width="1"/><text x="70" y="122" text-anchor="end" font-size="9" fill="#4b5563">4,3 млн ₽</text><line x1="78" y1="68" x2="500" y2="68" stroke="#e5e7eb" stroke-width="1"/><text x="70" y="72" text-anchor="end" font-size="9" fill="#4b5563">5,7 млн ₽</text>
-  <rect x="86" y="227" width="92" height="41" fill="#fca5a5" rx="3"/><text x="132" y="219" text-anchor="middle" font-size="9" font-weight="600">1 152 000 ₽</text><rect x="206" y="242" width="92" height="26" fill="#86efac" rx="3"/><text x="252" y="234" text-anchor="middle" font-size="9" font-weight="600">736 200 ₽</text><rect x="326" y="68" width="92" height="200" fill="#fca5a5" rx="3"/><text x="372" y="60" text-anchor="middle" font-size="9" font-weight="600">5 688 000 ₽</text><rect x="446" y="128" width="92" height="140" fill="#86efac" rx="3"/><text x="492" y="120" text-anchor="middle" font-size="9" font-weight="600">3 984 012 ₽</text>
+  <rect x="86" y="222" width="92" height="46" fill="#fca5a5" rx="3"/><text x="132" y="214" text-anchor="middle" font-size="9" font-weight="600">1 314 600 ₽</text><rect x="206" y="242" width="92" height="26" fill="#86efac" rx="3"/><text x="252" y="234" text-anchor="middle" font-size="9" font-weight="600">736 200 ₽</text><rect x="326" y="68" width="92" height="200" fill="#fca5a5" rx="3"/><text x="372" y="60" text-anchor="middle" font-size="9" font-weight="600">5 688 000 ₽</text><rect x="446" y="128" width="92" height="140" fill="#86efac" rx="3"/><text x="492" y="120" text-anchor="middle" font-size="9" font-weight="600">3 984 000 ₽</text>
   <text x="132" y="282" text-anchor="middle" font-size="9" font-weight="600">Pilot 10k</text><text x="132" y="295" text-anchor="middle" font-size="9" fill="#6b7280">без оптим.</text><text x="252" y="282" text-anchor="middle" font-size="9" font-weight="600">Pilot 10k</text><text x="252" y="295" text-anchor="middle" font-size="9" fill="#6b7280">оптимиз.</text><text x="372" y="282" text-anchor="middle" font-size="9" font-weight="600">Standard 100k</text><text x="372" y="295" text-anchor="middle" font-size="9" fill="#6b7280">без оптим.</text><text x="492" y="282" text-anchor="middle" font-size="9" font-weight="600">Standard 100k</text><text x="492" y="295" text-anchor="middle" font-size="9" fill="#6b7280">оптимиз.</text>
   <rect x="90" y="302" width="10" height="10" fill="#fca5a5"/><text x="106" y="311" font-size="9">без оптимизации</text>
   <rect x="210" y="302" width="10" height="10" fill="#86efac"/><text x="226" y="311" font-size="9">оптимизированный профиль</text>
@@ -973,18 +1002,22 @@ DAU (активных в день) = Пользователи × доля акт
   <text x="250" y="506" text-anchor="middle" font-size="10">Pilot 10k</text>
   <text x="250" y="520" text-anchor="middle" font-size="9" fill="#6b7280">736 200 ₽</text>
   <text x="430" y="506" text-anchor="middle" font-size="10">Standard 100k</text>
-  <text x="430" y="520" text-anchor="middle" font-size="9" fill="#6b7280">3 984 012 ₽</text>
+  <text x="430" y="520" text-anchor="middle" font-size="9" fill="#6b7280">3 984 000 ₽</text>
   <rect x="36" y="528" width="10" height="10" fill="#6366f1"/><text x="50" y="538" font-size="9">Сервер приложений (16 ГБ)</text><rect x="256" y="528" width="10" height="10" fill="#3b82f6"/><text x="270" y="538" font-size="9">Web-шлюз (8 ГБ)</text><rect x="476" y="528" width="10" height="10" fill="#8b5cf6"/><text x="490" y="538" font-size="9">Диск SSD (hot DB)</text><rect x="36" y="545" width="10" height="10" fill="#a855f7"/><text x="50" y="555" font-size="9">Диск HDD (файлы+архив)</text><rect x="256" y="545" width="10" height="10" fill="#f59e0b"/><text x="270" y="555" font-size="9">Канал 200 Мбит/с</text><rect x="476" y="545" width="10" height="10" fill="#10b981"/><text x="490" y="555" font-size="9">Backup + мониторинг</text><rect x="36" y="562" width="10" height="10" fill="#6366f1"/><text x="50" y="572" font-size="9">Серверы приложений ×3</text><rect x="256" y="562" width="10" height="10" fill="#3b82f6"/><text x="270" y="572" font-size="9">Web + LB ×2</text><rect x="476" y="562" width="10" height="10" fill="#2563eb"/><text x="490" y="572" font-size="9">PostgreSQL primary + replica</text><rect x="36" y="579" width="10" height="10" fill="#dc2626"/><text x="50" y="589" font-size="9">Redis cluster</text><rect x="256" y="579" width="10" height="10" fill="#7c3aed"/><text x="270" y="589" font-size="9">Solr + ZK ×3</text><rect x="476" y="579" width="10" height="10" fill="#059669"/><text x="490" y="589" font-size="9">MinIO / файлы (~30 ТБ)</text><rect x="36" y="596" width="10" height="10" fill="#0891b2"/><text x="50" y="606" font-size="9">NATS, Keycloak, workers</text><rect x="256" y="596" width="10" height="10" fill="#f59e0b"/><text x="270" y="606" font-size="9">Канал 1 Гбит/с</text><rect x="476" y="596" width="10" height="10" fill="#10b981"/><text x="490" y="606" font-size="9">Ops (backup, monitoring)</text>
 </svg>
-<figcaption class="fig-cap">Рис. 8. Сравнительная диаграмма годовой стоимости серверов (условные тарифы §18.1; не оферта)</figcaption>
+<figcaption class="fig-cap">Рис. 8. Годовая стоимость infra: Σ(кол-во × §18.1) × 12; дата ставок 2026-06-15. Красный — full-server baseline, зелёный — целевой профиль §12. Не оферта.</figcaption>
 </figure>
+
+<h4>Ставки за единицу (легенда нижнего ряда)</h4>
+<p class="small">Цвета сегментов на диаграмме соответствуют статьям §18.2–18.3. Сумма сегмента = кол-во × ставка из таблицы §18.1.</p>
+<table class="small"><tr><th></th><th>Сегмент диаграммы</th><th>Ед.</th><th>Ставка (2026-06-15)</th><th>Источник</th></tr><tr><td><span style="display:inline-block;width:10px;height:10px;background:#6366f1"></span></td><td>Сервер приложений — Сервер приложений (16 ГБ)</td><td>16 ГБ RAM, 8 vCPU, 1 VM</td><td class="money">28 000 ₽</td><td>VDS / dedicated</td></tr><tr><td><span style="display:inline-block;width:10px;height:10px;background:#3b82f6"></span></td><td>Веб + балансировщик — Web-шлюз (8 ГБ)</td><td>8 ГБ RAM, 4 vCPU, 1 VM</td><td class="money">15 000 ₽</td><td>VDS / dedicated</td></tr><tr><td><span style="display:inline-block;width:10px;height:10px;background:#8b5cf6"></span></td><td>Диск SSD — Диск SSD (hot DB)</td><td>1 ТБ</td><td class="money">3 500 ₽</td><td>Диски</td></tr><tr><td><span style="display:inline-block;width:10px;height:10px;background:#a855f7"></span></td><td>Диск HDD (архив) — Диск HDD (файлы+архив)</td><td>1 ТБ</td><td class="money">800 ₽</td><td>Диски</td></tr><tr><td><span style="display:inline-block;width:10px;height:10px;background:#f59e0b"></span></td><td>Канал связи — Канал 200 Мбит/с</td><td>200 Мбит/с</td><td class="money">8 000 ₽</td><td>Канал</td></tr><tr><td><span style="display:inline-block;width:10px;height:10px;background:#10b981"></span></td><td>Backup + мониторинг — Backup + мониторинг</td><td>контур Pilot</td><td class="money">5 000 ₽</td><td>Ops</td></tr><tr><td><span style="display:inline-block;width:10px;height:10px;background:#6366f1"></span></td><td>Сервер приложений — Серверы приложений ×3</td><td>32 ГБ RAM, 8 vCPU, 1 VM</td><td class="money">45 000 ₽</td><td>VDS / dedicated</td></tr><tr><td><span style="display:inline-block;width:10px;height:10px;background:#2563eb"></span></td><td>PostgreSQL primary + replica — PostgreSQL primary + replica</td><td>2 × 32 ГБ VM</td><td class="money">90 000 ₽</td><td>VDS / dedicated</td></tr><tr><td><span style="display:inline-block;width:10px;height:10px;background:#dc2626"></span></td><td>Redis cluster — Redis cluster</td><td>3 узла managed</td><td class="money">25 000 ₽</td><td>VDS / dedicated</td></tr><tr><td><span style="display:inline-block;width:10px;height:10px;background:#7c3aed"></span></td><td>Solr + ZK — Solr + ZK ×3</td><td>3 × 16 ГБ VM</td><td class="money">75 000 ₽</td><td>VDS / dedicated</td></tr><tr><td><span style="display:inline-block;width:10px;height:10px;background:#0891b2"></span></td><td>NATS, Keycloak, workers — NATS, Keycloak, workers</td><td>набор JVM на Standard</td><td class="money">45 000 ₽</td><td>VDS / dedicated</td></tr><tr><td><span style="display:inline-block;width:10px;height:10px;background:#f59e0b"></span></td><td>Канал связи — Канал 1 Гбит/с</td><td>1 Гбит/с</td><td class="money">35 000 ₽</td><td>Канал</td></tr><tr><td><span style="display:inline-block;width:10px;height:10px;background:#10b981"></span></td><td>Ops (backup, monitoring) — Ops (backup, monitoring)</td><td>контур Standard</td><td class="money">15 000 ₽</td><td>Ops</td></tr></table>
 
 <div class="note">
   <div class="req">Как читать диаграмму</div>
   <div class="comment">
-    <b>Верхний ряд</b> — итоговая стоимость infra за год по профилю (красный — без оптимизации §12, зелёный — целевой профиль).
-    <b>Нижний ряд</b> — из чего складывается годовая сумма для оптимизированных Pilot и Standard (цветные сегменты = типы серверов, легенда под диаграммой).
-    Лицензия ПО, внедрение и поддержка L2 — в §18.4 и §18.6.
+    <b>Верхний ряд</b> — итоговая стоимость infra за год (baseline §18.2 / Standard §18.3 vs оптимизированный профиль §12).
+    <b>Нижний ряд</b> — состав годовой суммы для оптимизированных Pilot и Standard; таблица выше — откуда взята каждая ставка за единицу.
+    Лицензия ПО, внедрение и L2 — §18.4 и §18.6.
   </div>
 </div>
 

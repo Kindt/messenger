@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+### 2026-06-15 — §12 product presentation closure (FR-OPT 01–07)
+
+- **`docs/PRODUCT_PRESENTATION.md`**, **`product_presentation.html` v2.3**: §12 → реализовано (волны 1–3); traceability и §9 infra обновлены; 08–09 + formal load test — roadmap.
+
 ### 2026-06-15 — Close plan #12 + spec 007 platform-stage-readiness (engineering)
 
 - **`specs/007-platform-stage-readiness/`**: spec/plan/tasks/contracts/quickstart; Phases 1–5 [x], ops Phase 6–7 open.
