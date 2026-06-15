@@ -76,11 +76,21 @@ subprojects {
     }
 }
 
+/** Python unittest for scripts/competitors/registry.json (competitor presentation). */
+tasks.register<Exec>("checkCompetitorRegistry") {
+    group = "verification"
+    description = "Validate competitor comparison registry (Python unittest)"
+    workingDir = rootDir
+    val pythonCmd = System.getenv("PYTHON")
+        ?: if (System.getProperty("os.name").lowercase().contains("win")) "python" else "python3"
+    commandLine(pythonCmd, "scripts/test_competitor_products.py")
+}
+
 /** Runs `build` (compile, test, assemble) on every subproject — CI smoke / integrity gate. */
 tasks.register("buildIntegrity") {
     group = "verification"
     description = "Compile, run all unit tests, and assemble every module"
-    dependsOn("checkBundleParity")
+    dependsOn("checkBundleParity", "checkCompetitorRegistry")
     subprojects.forEach { sub ->
         dependsOn(sub.tasks.named("build"))
     }

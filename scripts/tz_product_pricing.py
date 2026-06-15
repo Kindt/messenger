@@ -42,10 +42,8 @@ PRICE_FORMULA = (
 )
 
 COMPOSE_NOTE = (
-    "Состав профилей: <b>Pilot</b> — <code>full-server.yml</code> + <code>pilot-overrides.yml</code> "
-    "(8 hot-path контейнеров, без Solr; см. <code>deploy/qemu/RESOURCES.md</code>); "
-    "<b>Standard</b> — <code>docker-compose.full-server.yml</code> с масштабированием "
-    "(Solr+ZK, replica PG, кэш). "
+    "Состав профилей: <b>Pilot</b> — lean-стек (8 служб hot-path, без Solr, SQL-поиск); "
+    "<b>Standard</b> — полный кластер (Solr+ZK, replica PostgreSQL, кэш, масштабирование WS). "
     "Full-stack monolith на одном хосте (64 ГБ) — справочное сравнение для Pilot, не рекомендуемый профиль."
 )
 
@@ -423,7 +421,7 @@ def render_section_18_examples_html() -> str:
 <h3>17.2 Пример A — Pilot, 10 000 пользователей</h3>
 <div class="cost-box">
 <p><b>Исходные:</b> 10 000 зарегистрированных; ~5 000 DAU; ~750 peak online; диск ~5 ТБ на первый год (§10.3).
-  Профиль: <code>full-server.yml</code> + <code>pilot-overrides.yml</code>.</p>
+  Профиль: <b>Pilot</b> (lean-стек, без Solr).</p>
 <table>
   <tr><th>Статья расходов</th><th>Кол-во</th><th>Цена за ед. (§17.1)</th><th>₽/мес</th></tr>
   {_cost_table_rows(PILOT_PROFILE)}

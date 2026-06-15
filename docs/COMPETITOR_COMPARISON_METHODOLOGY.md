@@ -1,10 +1,15 @@
 # Методика сравнения Korus Messenger с конкурентами
 
-**Версия:** 1.3  
+**Версия:** 1.5  
 **Дата:** 2026-06-15  
 **Назначение:** единые правила для презентаций, КП и переговоров. Документ **самодостаточен** — не ссылается на внутренние артефакты репозитория.
 
-**Визуальная презентация:** [`competitor_comparison.html`](../competitor_comparison.html) (генерация: `python scripts/build-competitor-comparison-html.py`).
+**Визуальная презентация:**
+
+| Файл | Назначение | Сборка |
+|------|------------|--------|
+| [`competitor_comparison_brief.html`](../competitor_comparison_brief.html) | One-pager для встречи / PDF (~6–8 стр.) | `python scripts/build-competitor-comparison-html.py --brief-only` |
+| [`competitor_comparison.html`](../competitor_comparison.html) | Полная версия (TCO, legacy, НТ, 11 продуктов) | `python scripts/build-competitor-comparison-html.py` (оба файла по умолчанию) |
 
 ---
 
@@ -94,6 +99,25 @@ Standard на 10 000 — **полный production-функционал** (Solr,
 ---
 
 ## 6. Сопоставление конкурентов
+
+### 6.0 Tier-модель (презентация v2.2)
+
+**Реестр данных:** `scripts/competitors/registry.json` — продукты, 18 критериев, pros/cons, radar, pricing constants. Загрузка: `scripts/competitor_registry_loader.py`; проверка: `python scripts/test_competitor_products.py` (входит в `./gradlew buildIntegrity`). Экспорт после правок Python: `python scripts/export_competitor_registry_json.py`.
+
+| Tier | Решения | TCO @якорях | Feature matrix |
+|------|---------|-------------|----------------|
+| **A** | Korus, eXpress, Пачка, VK SaaS | полный (§7) | да |
+| **B** | Loop, Rocket.Chat, Mattermost EE, VK Superapp on-prem | оценочный @10k | да |
+| **C** | МТС Линк Чаты, Compass, TrueConf Server | прайс/КП | да |
+| **Legacy** | XMPP, Sametime, Lync, … | infra-only справочно | §5.3 |
+
+**Tier C (рынок РФ, 2026):**
+
+| Решение | Публичный прайс | Примечание |
+|---------|-----------------|------------|
+| **МТС Линк Чаты** | по КП | on-prem + SaaS; реестр РФ; преемник Dialog |
+| **Compass** | 390 ₽/мес облако; 490 ₽/мес on-prem | getcompass.ru/pricing |
+| **TrueConf Server** | от 23 000 ₽/год | UC+чат; PRO/online/guest, не linear ₽/reg |
 
 ```
 RU < 10 000   →  не production; пробник или «ниже порога»

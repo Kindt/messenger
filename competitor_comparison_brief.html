@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Korus Messenger — one-pager для продаж</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.45;
+           margin: 24px auto; color: #111; max-width: 1240px; padding: 0 20px; }
+    h1 { font-size: 26px; margin-top: 0; color: #1e3a5f; }
+    h2 { font-size: 20px; border-top: 2px solid #6366f1; padding-top: 18px; margin-top: 32px; color: #1e3a5f; }
+    h3 { font-size: 17px; margin-top: 20px; color: #374151; }
+    h4 { font-size: 15px; margin: 12px 0 6px; color: #4b5563; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+    th, td { border: 1px solid #d1d5db; padding: 8px 10px; vertical-align: top; }
+    th { background: #eef2ff; text-align: left; font-weight: 600; }
+    tr:nth-child(even) { background: #f9fafb; }
+    .matrix-wide { font-size: 12px; min-width: 960px; }
+    .matrix-scroll { overflow-x: auto; margin: 12px 0; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .comment { color: #374151; }
+    .req { font-weight: 600; color: #1e3a5f; }
+    .note { background: #eff6ff; border: 1px solid #93c5fd; padding: 14px; border-radius: 8px; margin: 14px 0; }
+    .warn { background: #fff7ed; border: 1px solid #fdba74; padding: 14px; border-radius: 8px; margin: 14px 0; }
+    .cost-box { background: #f0fdf4; border: 1px solid #86efac; padding: 14px; border-radius: 8px; margin: 14px 0; }
+    .legacy-box { background: #fafaf9; border: 1px solid #d6d3d1; padding: 14px; border-radius: 8px; margin: 14px 0; }
+    .small { font-size: 13px; color: #6b7280; }
+    .meta { color: #6b7280; font-size: 14px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; }
+    .meta-link { display: inline-block; margin-top: 6px; }
+    .meta-link a { color: #4338ca; font-weight: 600; }
+    .fig { margin: 24px 0; text-align: center; }
+    .fig svg { display: block; margin: 0 auto; max-width: 100%; height: auto; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; }
+    .fig-wide svg { min-width: min(100%, 880px); }
+    .fig-scroll { overflow-x: auto; margin: 20px 0; -webkit-overflow-scrolling: touch; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 4px; background: #fafafa; }
+    .fig-scroll svg { min-width: 900px; }
+    .fig-cap { font-size: 14px; color: #6b7280; margin-top: 10px; }
+    .fig-stack { display: flex; flex-direction: column; gap: 20px; }
+    .case { margin: 10px 0; padding: 12px 14px; background: #fafafa; border-left: 4px solid #6366f1; border-radius: 0 8px 8px 0; }
+    .case h4 { margin: 0 0 6px; color: #111; }
+    .case ul { margin: 6px 0; padding-left: 20px; }
+    .money { font-weight: 600; color: #047857; }
+    .toc a { text-decoration: none; color: #4338ca; }
+    .toc a:hover { text-decoration: underline; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .grid-2 .fig svg { width: 100%; }
+    .scenario { padding: 12px 14px; background: #fafafa; border-radius: 8px; border: 1px solid #e5e7eb; }
+    .scenario h4 { margin: 0 0 8px; font-size: 15px; color: #1e3a5f; }
+    .scenario-korus { background: #f0fdf4; border-color: #86efac; }
+    .scenario-rec { margin: 10px 0 0; font-size: 13px; }
+    .rec-korus { color: #047857; font-weight: 700; }
+    .hero-subtitle { font-size: 16px; margin: -8px 0 20px; color: #4b5563; }
+    .hero { background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%); color: #fff;
+            padding: 28px 32px; border-radius: 12px; margin-bottom: 24px; }
+    .hero-lead { font-size: 17px; line-height: 1.5; margin: 0 0 20px; max-width: 920px; }
+    .hero-note { margin: 16px 0 0; opacity: 0.85; }
+    .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .stat-card { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+                  border-radius: 10px; padding: 16px; text-align: center; }
+    .stat-korus { background: rgba(34,197,94,0.25); border-color: #86efac; }
+    .stat-value { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .stat-label { font-size: 13px; line-height: 1.35; opacity: 0.95; }
+    .audience-nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0 28px; }
+    .audience-card { display: block; padding: 14px; background: #fff; border: 1px solid #c7d2fe;
+                     border-radius: 8px; text-decoration: none; color: inherit; transition: box-shadow .15s; }
+    .audience-card:hover { box-shadow: 0 4px 12px rgba(99,102,241,.15); border-color: #6366f1; }
+    .audience-role { display: block; font-weight: 700; color: #4338ca; font-size: 14px; margin-bottom: 4px; }
+    .audience-hint { display: block; font-size: 12px; color: #6b7280; line-height: 1.35; }
+    .positioning { background: #f8fafc; border: 1px solid #cbd5e1; padding: 18px 20px; border-radius: 10px; margin: 20px 0; }
+    .positioning-tagline { margin: 14px 0 0; padding-top: 12px; border-top: 1px dashed #cbd5e1; }
+    .decision-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .decision-card { background: #fff; border: 1px solid #d1d5db; border-radius: 8px; padding: 14px; }
+    .decision-card-muted { background: #f9fafb; }
+    .decision-q { font-weight: 700; color: #1e3a5f; margin-bottom: 8px; font-size: 14px; }
+    .decision-a { font-size: 13px; color: #374151; }
+    .decision-a ul { margin: 8px 0 0; padding-left: 18px; }
+    .cta-box { background: #eef2ff; border: 2px solid #6366f1; padding: 18px 22px; border-radius: 10px; margin: 28px 0; }
+    .row-korus { background: #f0fdf4 !important; }
+    .row-korus td:first-child + td { font-weight: 700; color: #047857; }
+    .case-korus { background: #f0fdf4; border-left-color: #22c55e; }
+    .meta-tech { margin-top: 8px; }
+    .tier-a { background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    .tier-b { background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    .tier-c { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    details.express-details { margin: 12px 0; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; }
+    details.express-details summary { cursor: pointer; font-weight: 600; color: #1e3a5f; }
+    .brief-badge { display: inline-block; background: #6366f1; color: #fff; font-size: 12px; font-weight: 600;
+                   padding: 3px 10px; border-radius: 999px; margin-left: 8px; vertical-align: middle; }
+    @media (max-width: 900px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .hero-stats { grid-template-columns: 1fr; }
+      .audience-nav { grid-template-columns: 1fr 1fr; }
+      .decision-cards { grid-template-columns: 1fr; }
+    }
+    @media print {
+      body { margin: 10mm; max-width: none; font-size: 10.5pt; }
+      .toc, .audience-nav, .meta-tech, .technical-only { display: none !important; }
+      h1, h2, h3 { break-after: avoid; }
+      table { font-size: 9pt; }
+      .note, .warn, .fig, .hero, .positioning, .cta-box, details.express-details { break-inside: avoid; }
+      .fig-scroll { overflow: visible; border: none; background: transparent; }
+      .hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+</style>
+</head>
+<body class="brief-doc">
+
+
+<h1>Korus Messenger vs рынок<span class="brief-badge">ONE-PAGER</span></h1>
+<p class="hero-subtitle comment">Краткая версия для первой встречи, email и печати в PDF · ~6–8 страниц</p>
+
+
+<div class="hero">
+  <p class="hero-lead">Корпоративный мессенджер в контуре заказчика: <b>прозрачная экономика</b>,
+  <b>комплаенс из коробки</b> и сравнение с рынком РФ по единой методике якорей.</p>
+  <div class="hero-stats">
+    <div class="stat-card stat-korus">
+      <div class="stat-value">3.3 ₽/рег. пользов./мес</div>
+      <div class="stat-label">OPEX инфра Korus при 100&nbsp;тыс. рег.<br/><span class="small">без лицензии per-user</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">30 млн ₽</div>
+      <div class="stat-label">лицензия eXpress / год @10&nbsp;тыс. рег.<br/><span class="small">~90% TCO — доминирует</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">11.0 ₽/рег. пользов./мес</div>
+      <div class="stat-label">OPEX инфра Korus @10&nbsp;тыс. рег.<br/><span class="small">полный «Стандарт», не пробник</span></div>
+    </div>
+  </div>
+  <p class="hero-note small">Цифры — ориентиры для переговоров и КП; детали и дисклеймеры — §8. Сравнение честное: сильные стороны конкурентов не скрываем.</p>
+</div>
+
+<div class="meta">
+  <b>Актуальность ставок:</b> 2026-06-15 &nbsp;|&nbsp;
+  <b>Регион:</b> РФ (Москва / СПб, коммерческий сегмент) &nbsp;|&nbsp; <b>НДС:</b> Без НДС &nbsp;|&nbsp;
+  <b>Версия:</b> 2.5 (краткая версия для встречи / PDF)<span class="brief-badge">ONE-PAGER</span><br/>
+  <span class="meta-link">Полное сравнение: <a href="competitor_comparison.html">competitor_comparison.html</a></span>
+</div>
+
+
+<div class="note" id="summary">
+  <div class="req">Сценарии выбора — кому что предлагать</div>
+  <p class="comment">Материал для КП, защиты тендера и переговоров. Все суммы — по единой методике якорей (от 10&nbsp;000 рег. пользов.).</p>
+  <div class="grid-2">
+    <div class="scenario scenario-korus">
+      <h4>Контур заказчика + комплаенс</h4>
+      <p class="comment">Экспорт, legal hold, audit, ретенция — «из коробки», а не через интеграторов.</p>
+      <p class="scenario-rec"><b>Рекомендация:</b> <span class="rec-korus">Korus Messenger</span> — основной пitch;
+      <b>eXpress</b> — если нужен ФСТЭК/суперапп и бюджет на лицензию.</p>
+    </div>
+    <div class="scenario">
+      <h4>Облако, быстрый старт</h4>
+      <p class="comment">Нет своего ЦОД, нужен прозрачный ₽/пользов./мес и SLA вендора.</p>
+      <p class="scenario-rec"><b>Рекомендация:</b> <b>Пачка</b> (фокус на чат) или <b>VK WorkSpace</b> (workspace bundle).</p>
+    </div>
+    <div class="scenario">
+      <h4>Миграция с Jabber / Sametime / Lync</h4>
+      <p class="comment">Legacy дешевле по железу, но без современного UX, Solr и compliance-ядра.</p>
+      <p class="scenario-rec"><b>Рекомендация:</b> <span class="rec-korus">Korus</span> или <b>eXpress</b>; облако — если политика допускает.</p>
+    </div>
+    <div class="scenario">
+      <h4>Российский рынок, прайс на сайте</h4>
+      <p class="comment">Compass, МТС Линк, TrueConf — альтернативы для shortlist и ценового давления.</p>
+      <p class="scenario-rec"><b>Рекомендация:</b> сравнить с Korus по §5 (функции) и §3.1 (уровень C).</p>
+    </div>
+  </div>
+</div>
+
+<div class="positioning" id="positioning">
+  <div class="req">Позиционирование Korus Messenger</div>
+  <div class="grid-2">
+    <div>
+      <p class="comment"><b>Korus — сильный выбор, когда:</b></p>
+      <ul class="comment">
+        <li>Нужен <b>изолированный контур</b> и предсказуемый OPEX без «налога» per-user лицензии.</li>
+        <li>Критичны <b>экспорт, legal hold, dual-TTL, audit</b> — не плагины «на доработку».</li>
+        <li>Масштаб от <b>10&nbsp;000 рег. пользов.</b> (Стандарт) до федерального контура (Корпоративный).</li>
+        <li>Важна <b>мультитenant org-shard</b> и путь от пилота к production без смешения матриц.</li>
+      </ul>
+    </div>
+    <div>
+      <p class="comment"><b>Честно: рассмотрите альтернативу, если:</b></p>
+      <ul class="comment">
+        <li>Нужен <b>готовый суперапп</b> (почта, SmartApps, ВКС 500+) — eXpress / VK Superapp.</li>
+        <li>Допустимо только <b>облако</b> и быстрый старт — Пачка, VK WorkSpace.</li>
+        <li>Обязателен <b>сертификат ФСТЭК уже сегодня</b> — eXpress №4997 (у Korus — в процессе).</li>
+        <li>Фокус <b>UC/ВКС</b>, а чат вторичен — TrueConf, МТС Линк.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="positioning-tagline comment">Ключевое сообщение для рынка:
+  <b>«Комплаенс и TCO в контуре — без сюрприза лицензии на каждого пользователя»</b>
+  (infra ~3.3 ₽/рег. пользов./мес при 100&nbsp;тыс. рег. vs доминирующая лицензия eXpress).</p>
+</div>
+
+<div class="cost-box" id="decision">
+  <div class="req">Быстрый выбор решения</div>
+  <div class="decision-cards">
+    <div class="decision-card">
+      <div class="decision-q">Нужен контур заказчика?</div>
+      <div class="decision-a"><b>Да</b> → нужен export / legal hold «из коробки»?
+        <ul>
+          <li><b>Да</b> → <span class="rec-korus">Korus</span> · eXpress (ФСТЭК)</li>
+          <li><b>Нет</b> → Loop · Rocket.Chat · Mattermost · VK Superapp*</li>
+        </ul>
+      </div>
+    </div>
+    <div class="decision-card">
+      <div class="decision-q">Облако допустимо?</div>
+      <div class="decision-a"><b>Да</b> → только чат?
+        <ul>
+          <li><b>Да</b> → Пачка · VK WorkSpace</li>
+          <li><b>Нет</b> (UC/ВКС) → TrueConf · МТС Линк · Compass</li>
+        </ul>
+      </div>
+    </div>
+    <div class="decision-card decision-card-muted">
+      <div class="decision-q">Миграция с Jabber / XMPP?</div>
+      <div class="decision-a">§5.3 — справочно; целевой путь: <span class="rec-korus">Korus</span> или eXpress.</div>
+    </div>
+  </div>
+  <p class="small comment">* VK Superapp — почта, календарь, диск; не «только мессенджер».</p>
+</div>
+
+<h2 id="s0">Карта рынка (кратко)</h2>
+
+<table>
+  <tr><th>Уровень</th><th>Решение</th><th>Развёртывание</th><th>Участие в TCO</th></tr>
+  <tr class="row-korus"><td><span class="tier-a">Уровень A</span></td><td><b>Korus</b></td><td>в контуре</td><td>полный TCO @якорях</td></tr><tr><td><span class="tier-a">Уровень A</span></td><td><b>eXpress</b></td><td>в контуре</td><td>полный TCO @якорях</td></tr><tr><td><span class="tier-a">Уровень A</span></td><td><b>Пачка</b></td><td>облако</td><td>полный TCO @якорях</td></tr><tr><td><span class="tier-a">Уровень A</span></td><td><b>VK SaaS</b></td><td>облако</td><td>полный TCO @якорях</td></tr><tr><td><span class="tier-b">Уровень B</span></td><td><b>Loop</b></td><td>в контуре / облако</td><td>оценочный TCO @10k</td></tr><tr><td><span class="tier-b">Уровень B</span></td><td><b>Rocket.Chat</b></td><td>в контуре / облако</td><td>оценочный TCO @10k</td></tr><tr><td><span class="tier-b">Уровень B</span></td><td><b>Mattermost</b></td><td>в контуре / облако</td><td>оценочный TCO @10k</td></tr><tr><td><span class="tier-b">Уровень B</span></td><td><b>VK Superapp</b></td><td>в контуре</td><td>оценочный TCO @10k</td></tr><tr><td><span class="tier-c">Уровень C</span></td><td><b>МТС Линк</b></td><td>облако / в контуре</td><td>прайс/КП</td></tr><tr><td><span class="tier-c">Уровень C</span></td><td><b>Compass</b></td><td>облако / в контуре</td><td>прайс/КП</td></tr><tr><td><span class="tier-c">Уровень C</span></td><td><b>TrueConf</b></td><td>в контуре / UC</td><td>прайс/КП</td></tr>
+</table>
+<p class="small comment">Уровень A — полная промышленная матрица TCO. Уровень B — альтернативы в контуре (функции + оценочный TCO). Уровень C — рынок РФ (функции + прайс где есть).</p>
+
+<h2 id="s3">Экономика @10 тыс. рег. пользов.</h2>
+<div class="grid-2">
+  <div><figure class="fig fig-wide"><svg viewBox="0 0 1040 420" width="1040" height="420" xmlns="http://www.w3.org/2000/svg"><text x="520" y="28" text-anchor="middle" font-size="16" font-weight="bold">TCO при 10 000 рег. пользов. (₽/год: инфра + лицензия)</text><text x="18" y="202" text-anchor="middle" font-size="11" fill="#6b7280" transform="rotate(-90 18 202)">₽/год</text><rect x="40" y="46" width="14" height="14" fill="#86efac"/><text x="58" y="58" font-size="12">Инфра</text><rect x="156" y="46" width="14" height="14" fill="#6366f1"/><text x="174" y="58" font-size="12">Лицензия</text><line x1="108" y1="348" x2="1016" y2="348" stroke="#9ca3af"/><line x1="108" y1="348" x2="1016" y2="348" stroke="#e5e7eb"/><text x="100" y="353" text-anchor="end" font-size="11" fill="#4b5563">0 ₽</text><line x1="108" y1="275" x2="1016" y2="275" stroke="#e5e7eb"/><text x="100" y="280" text-anchor="end" font-size="11" fill="#4b5563">12 млн ₽</text><line x1="108" y1="202" x2="1016" y2="202" stroke="#e5e7eb"/><text x="100" y="207" text-anchor="end" font-size="11" fill="#4b5563">23,9 млн ₽</text><line x1="108" y1="129" x2="1016" y2="129" stroke="#e5e7eb"/><text x="100" y="134" text-anchor="end" font-size="11" fill="#4b5563">35,9 млн ₽</text><line x1="108" y1="56" x2="1016" y2="56" stroke="#e5e7eb"/><text x="100" y="61" text-anchor="end" font-size="11" fill="#4b5563">47,9 млн ₽</text><rect x="116" y="346" width="100" height="2" fill="#6366f1" rx="2"/><rect x="116" y="340" width="100" height="6" fill="#86efac" rx="2"/><text x="166" y="332" text-anchor="middle" font-size="10" font-weight="600">1,3 млн ₽</text><text x="166" y="368" text-anchor="middle" font-size="10">Korus</text><rect x="236" y="165" width="100" height="183" fill="#6366f1" rx="2"/><rect x="236" y="144" width="100" height="21" fill="#86efac" rx="2"/><text x="286" y="136" text-anchor="middle" font-size="10" font-weight="600">33,5 млн ₽</text><text x="286" y="368" text-anchor="middle" font-size="10">eXpress</text><rect x="356" y="56" width="100" height="292" fill="#6366f1" rx="2"/><rect x="356" y="56" width="100" height="0" fill="#86efac" rx="2"/><text x="406" y="48" text-anchor="middle" font-size="10" font-weight="600">47,9 млн ₽</text><text x="406" y="368" text-anchor="middle" font-size="10">Пачка</text><rect x="476" y="197" width="100" height="151" fill="#6366f1" rx="2"/><rect x="476" y="197" width="100" height="0" fill="#86efac" rx="2"/><text x="526" y="189" text-anchor="middle" font-size="10" font-weight="600">24,8 млн ₽</text><text x="526" y="368" text-anchor="middle" font-size="10">VK VK</text></svg><figcaption class="fig-cap">Korus лицензия — строка КП. eXpress: 30 млн ₽/год лицензий.</figcaption></figure></div>
+  <div><figure class="fig fig-wide"><svg viewBox="0 0 880 280" width="880" height="280" xmlns="http://www.w3.org/2000/svg"><text x="440" y="28" text-anchor="middle" font-size="16" font-weight="bold">eXpress: доля лицензии в TCO (₽/год)</text><text x="48" y="90" font-size="12">10 тыс. рег.</text><rect x="160" y="72" width="556" height="28" fill="#6366f1"/><rect x="716" y="72" width="64" height="28" fill="#86efac"/><text x="820" y="92" font-size="12">90% лиц.</text><text x="48" y="142" font-size="12">100 тыс. рег.</text><rect x="160" y="124" width="572" height="28" fill="#6366f1"/><rect x="732" y="124" width="48" height="28" fill="#86efac"/><text x="820" y="144" font-size="12">92% лиц.</text></svg><figcaption class="fig-cap">Фиолетовый — лицензия ₽/год; зелёный — инфра ₽/год (оценка).</figcaption></figure></div>
+</div>
+<figure class="fig fig-wide"><svg viewBox="0 0 1040 340" width="1040" height="340" xmlns="http://www.w3.org/2000/svg"><text x="520" y="28" text-anchor="middle" font-size="16" font-weight="bold">₽/рег. пользов./мес при 10 000 рег. пользов.</text><line x1="88" y1="248" x2="500" y2="248" stroke="#9ca3af"/><rect x="104" y="123" width="120" height="125" fill="#6366f1" rx="3"/><text x="164" y="115" text-anchor="middle" font-size="11" font-weight="600">250 ₽/мес</text><text x="164" y="270" text-anchor="middle" font-size="11">eXpress лиц.</text><rect x="252" y="48" width="120" height="200" fill="#f59e0b" rx="3"/><text x="312" y="40" text-anchor="middle" font-size="11" font-weight="600">399 ₽/мес</text><text x="312" y="270" text-anchor="middle" font-size="11">Пачка</text><rect x="400" y="144" width="120" height="104" fill="#93c5fd" rx="3"/><text x="460" y="136" text-anchor="middle" font-size="11" font-weight="600">207 ₽/мес</text><text x="460" y="270" text-anchor="middle" font-size="11">VK облако</text><rect x="548" y="238" width="120" height="10" fill="#86efac" rx="3"/><text x="608" y="230" text-anchor="middle" font-size="11" font-weight="600">11 ₽/мес</text><text x="608" y="270" text-anchor="middle" font-size="11">Korus инфра</text></svg><figcaption class="fig-cap">eXpress/Пачка/VK — подписка; Korus — только эксплуатационные расходы (OPEX) инфраструктуры.</figcaption></figure>
+
+<h2 id="s5">Профиль «в контуре»</h2>
+<figure class="fig fig-wide"><svg viewBox="0 0 720 640" width="720" height="640" xmlns="http://www.w3.org/2000/svg"><text x="360" y="28" text-anchor="middle" font-size="16" font-weight="bold">В контуре @10 тыс. рег.: лепестковая диаграмма (оценка 0–5)</text><polygon points="360.0,262.0 392.9,281.0 392.9,319.0 360.0,338.0 327.1,319.0 327.1,281.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,224.0 425.8,262.0 425.8,338.0 360.0,376.0 294.2,338.0 294.2,262.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,186.0 458.7,243.0 458.7,357.0 360.0,414.0 261.3,357.0 261.3,243.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,148.0 491.6,224.0 491.6,376.0 360.0,452.0 228.4,376.0 228.4,224.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,110.0 524.5,205.0 524.5,395.0 360.0,490.0 195.5,395.0 195.5,205.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><line x1="360" y1="300" x2="360.0" y2="110.0" stroke="#d1d5db"/><text x="360.0" y="74.0" text-anchor="middle" font-size="11">Комплаенс</text><line x1="360" y1="300" x2="524.5" y2="205.0" stroke="#d1d5db"/><text x="555.7" y="187.0" text-anchor="start" font-size="11">E2EE / ИБ</text><line x1="360" y1="300" x2="524.5" y2="395.0" stroke="#d1d5db"/><text x="555.7" y="413.0" text-anchor="start" font-size="11">Экономика</text><line x1="360" y1="300" x2="360.0" y2="490.0" stroke="#d1d5db"/><text x="360.0" y="526.0" text-anchor="middle" font-size="11">Функции</text><line x1="360" y1="300" x2="195.5" y2="395.0" stroke="#d1d5db"/><text x="164.3" y="413.0" text-anchor="end" font-size="11">Масштабирование</text><line x1="360" y1="300" x2="195.5" y2="205.0" stroke="#d1d5db"/><text x="164.3" y="187.0" text-anchor="end" font-size="11">Реестр / ФСТЭК</text><polygon points="360.0,110.0 491.6,224.0 491.6,376.0 360.0,452.0 195.5,395.0 261.3,243.0" fill="#22c55e" fill-opacity="0.15" stroke="#22c55e" stroke-width="2.5"/><polygon points="360.0,148.0 524.5,205.0 425.8,338.0 360.0,490.0 261.3,357.0 195.5,205.0" fill="#6366f1" fill-opacity="0.15" stroke="#6366f1" stroke-width="2.5"/><polygon points="360.0,224.0 458.7,243.0 491.6,376.0 360.0,452.0 294.2,338.0 228.4,224.0" fill="#f59e0b" fill-opacity="0.15" stroke="#f59e0b" stroke-width="2.5"/><polygon points="360.0,224.0 425.8,262.0 458.7,357.0 360.0,452.0 261.3,357.0 261.3,243.0" fill="#ec4899" fill-opacity="0.15" stroke="#ec4899" stroke-width="2.5"/><polygon points="360.0,186.0 425.8,262.0 425.8,338.0 360.0,452.0 294.2,338.0 195.5,205.0" fill="#ef4444" fill-opacity="0.15" stroke="#ef4444" stroke-width="2.5"/><polygon points="360.0,224.0 458.7,243.0 425.8,338.0 360.0,452.0 261.3,357.0 294.2,262.0" fill="#0ea5e9" fill-opacity="0.15" stroke="#0ea5e9" stroke-width="2.5"/><rect x="32" y="556" width="12" height="12" fill="#22c55e"/><text x="50" y="568" font-size="11">Korus</text><rect x="252" y="556" width="12" height="12" fill="#6366f1"/><text x="270" y="568" font-size="11">eXpress</text><rect x="472" y="556" width="12" height="12" fill="#f59e0b"/><text x="490" y="568" font-size="11">Loop</text><rect x="32" y="584" width="12" height="12" fill="#ec4899"/><text x="50" y="596" font-size="11">Compass</text><rect x="252" y="584" width="12" height="12" fill="#ef4444"/><text x="270" y="596" font-size="11">МТС Линк</text><rect x="472" y="584" width="12" height="12" fill="#0ea5e9"/><text x="490" y="596" font-size="11">Rocket.Chat</text></svg><figcaption class="fig-cap">Шкала 0–5: комплаенс, E2EE, экономика (прозрачность TCO), функции, sizing, реестр/ФСТЭК. Субъективная модель для переговоров, не рейтинг вендора.</figcaption></figure>
+
+<h2 id="s7">Korus vs eXpress</h2>
+<p class="comment">Ключевое сравнение для КП в контуре заказчика @10k+ рег. пользов.</p><div class="case case-korus"><h4>Korus Messenger</h4><p><b>Плюсы:</b></p><ul><li>Предсказуемый OPEX: ~3,3 ₽/рег. пользов./мес при 100 тыс. рег. — без per-user лицензии</li><li>Комплаенс в ядре: экспорт, legal hold, dual-TTL, audit — не «на доработку»</li><li>В контуре заказчика: мультитenant, путь Пробник → Стандарт → Корпоративный</li><li>Пилот отделён от production-матрицы — честный TCO с 10 тыс. рег.</li></ul><p><b>Ограничения:</b></p><ul><li>Меньше готового супераппа (SmartApps, почта, ВКС 500)</li><li>Нативные мобильные — в дорожной карте</li><li>Промышленная приёмка E2EE — в процессе</li></ul></div><div class="case"><h4>eXpress Corporate</h4><p><b>Плюсы:</b></p><ul><li>ФСТЭК №4997, сертифицированный суперапп</li><li>Публичный прайс 3 000 ₽/рег. пользов./год</li><li>ВКС до 500, SmartApps, федерация, iOS/Android/Аврора</li><li>Детальные таблицы sizing до ~1 тыс. рег. пользов.</li></ul><p><b>Ограничения:</b></p><ul><li>Лицензия 83–99% TCO при 10–100 тыс. рег.</li><li>Sizing от 10 тыс. рег. — инд. проект</li><li>Тяжёлый стек: Kafka, etcd, transcoding, media</li></ul></div>
+
+
+<div class="cta-box">
+  <div class="req">Следующий шаг с заказчиком</div>
+  <ol class="comment">
+    <li><b>Квалификация</b> — контур (в контуре / облако), масштаб рег. пользов., требования ИБ (§ «Дерево выбора»).</li>
+    <li><b>Пилот</b> — функциональная оценка на пробнике (вне TCO-матрицы); production — с якоря S-10k.</li>
+    <li><b>КП</b> — infra по якорю + лицензия Korus; для конкурента — те же якоря (§3, §6).</li>
+    <li><b>ИБ-воркшоп</b> — export gate, ретенция, roadmap E2EE/ФСТЭК.</li>
+  </ol>
+</div>
+
+<h2 id="s8">Оговорки</h2>
+
+<div class="warn">
+  <ul class="comment">
+    <li>Цифры infra и TCO — ориентиры для переговоров; финальное КП — по sizing заказчика.</li>
+    <li>eXpress @10/100 тыс. рег. — модельная оценка infra; лицензия — публичный прайс express.ms.</li>
+    <li>Полная матрица (11 продуктов, legacy, НТ): см. <code>competitor_comparison.html</code>.</li>
+  </ul>
+</div>
+
+<p class="small comment">Детали: 18 критериев, legacy, НТ, матрицы @50k/100k/500k — в
+<a href="competitor_comparison.html">competitor_comparison.html</a>.</p>
+
+
+</body>
+</html>

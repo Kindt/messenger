@@ -58,7 +58,7 @@
 
 <h1>Продуктовая презентация<br/>Korus Messenger (AvandocMsg)</h1>
 <div class="meta">
-  <b>Версия:</b> 2.5 &nbsp;|&nbsp; <b>Дата:</b> 16 июня 2026 &nbsp;|&nbsp;
+  <b>Версия:</b> 2.5.1 &nbsp;|&nbsp; <b>Дата:</b> 16 июня 2026 &nbsp;|&nbsp;
   <b>Аудитория:</b> руководители, юристы, продажи, бухгалтерия, операторы, служба безопасности<br/>
   <b>Формат:</b> презентация продукта для заказчика; приложение I — каталог <b>страниц</b> клиента и админки
 </div>
@@ -83,14 +83,11 @@
 <div class="note">
   <div class="req">Состояние продукта на 16 июня 2026</div>
   <div class="comment">
-    <b>Проверено автоматически:</b> Playwright <b>30/30</b> на QEMU (2026-06-15),
-    parity user-endpoints covered (spec 002), инженерная приёмка spec 004/006/007.<br/>
-    <b>До промышленного запуска (ops):</b> TLS deploy на stage/prod, formal sign-off E2EE, Web Push delivery verify на stage,
-    TURN smoke за NAT, load test soak на stage, юридическая политика GDPR export.<br/>
-    <b>Не в текущей поставке:</b> мобильные приложения, Live HLS, публичный Bot API, full PG sharding (FR-OPT-09).<br/>
-    <span class="small">Источник: <code>docs/parity/runtime-gate-report.md</code>,
-    <code>deploy/qemu/RESOURCES.md</code>,
-    <code>docs/review/e2ee-security-gate-signoff-2026-06-10.md</code>.</span>
+    <b>Проверено автоматически:</b> Playwright <b>30/30</b> на тестовом стенде (2026-06-15),
+    основные пользовательские сценарии и REST API покрыты приёмочными тестами.<br/>
+    <b>До промышленного запуска (ops):</b> TLS на stage/prod, formal sign-off E2EE, Web Push на prod,
+    TURN для звонков за NAT, нагрузочный тест на stage, юридическая политика GDPR export.<br/>
+    <b>Не в текущей поставке:</b> мобильные приложения, Live HLS, публичный Bot API, sharding PG на Enterprise.
   </div>
 </div>
 
@@ -312,7 +309,7 @@
   <li>Личное «Хранилище»; экспорт переписки JSON/ZIP</li>
   <li>Админ-консоль (<code>/admin/</code>): организации, ретенция, legal hold, аудит, E2EE dashboard</li>
   <li>Интерфейс на 6 языках</li>
-  <li>Автотесты UI: <b>30/30</b> Playwright на QEMU (2026-06-15)</li>
+  <li>Автотесты UI: <b>30/30</b> Playwright на тестовом стенде (2026-06-15)</li>
 </ul>
 
 <h3>Частично готово (код есть, нужен ops / sign-off)</h3>
@@ -472,7 +469,7 @@
   <tr><td>Без E2EE</td><td>Текст сообщений (хранится на сервере организации)</td></tr>
   <tr><td>С E2EE (MLS active)</td><td>Шифротекст; plaintext-preview отключён; расшифровка на клиенте</td></tr>
 </table>
-<p><span class="tag tag-partial">Частично</span> — engineering gate пройден (spec 004); промышленное <code>MLS_STATUS=active</code> после formal sign-off Product/Security/Ops.</p>
+<p><span class="tag tag-partial">Частично</span> — инженерная приёмка пройдена; массовое включение E2EE в prod после formal sign-off Product/Security/Ops.</p>
 
 <hr/>
 <h2 id="s8">8. Сравнение с исходным техническим ТЗ</h2>
@@ -517,8 +514,8 @@
 <table><tr><th>Направление</th><th>Ценность</th></tr>
 <tr><td>Bot API</td><td>Service Desk, автоматизация</td></tr>
 <tr><td>SSO Google/LDAP</td><td>Enterprise-вход</td></tr>
-<tr><td>Dedup файлов (FR-OPT-08)</td><td>Экономия диска на вложениях</td></tr>
-<tr><td>Sharding PG (FR-OPT-09)</td><td>Enterprise tier, масштаб до 1M</td></tr>
+<tr><td>Dedup файлов (content-hash)</td><td>Экономия диска на вложениях</td></tr>
+<tr><td>Sharding PG (Enterprise)</td><td>Масштаб до 1M — scaffold, full router в roadmap</td></tr>
 </table>
 <h3>12+ месяцев</h3>
 <ul><li>Live-streaming (all-hands)</li><li>Мобильные клиенты</li><li>SFU для звонков &gt;20 участников</li></ul>
@@ -595,7 +592,7 @@ DAU (активных в день) = Пользователи × доля акт
 <h2 id="s11">11. Критерии приёмки продукта</h2>
 <ol>
   <li><b>Пользователь</b> выполняет все основные сценарии из §5 через веб-браузер.</li>
-  <li><b>Автотесты UI:</b> 30/30 Playwright на QEMU (2026-06-15); см. runtime-gate-report spec 002.</li>
+  <li><b>Автотесты UI:</b> 30/30 Playwright на тестовом стенде (2026-06-15).</li>
   <li><b>Администратор</b> управляет организациями, политиками хранения и аудитом через веб-консоль.</li>
   <li><b>Production:</b> HTTPS, секреты не в открытом виде, sign-off E2EE перед массовым включением.</li>
   <li><b>Экспорт и ретенция:</b> окончательное удаление только после прохождения export gate.</li>
@@ -624,7 +621,7 @@ DAU (активных в день) = Пользователи × доля акт
   <tr><th>Сценарий</th><th>Ожидание</th><th>Статус</th></tr>
   <tr><td>SSO Google / корпоративный портал</td><td>Единый вход без отдельного пароля</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
   <tr><td>LDAP / Active Directory</td><td>Учётки из AD</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>Bot API (REST / long-poll)</td><td>Service Desk, опросы, @mention</td><td><span class="tag tag-planned">Запланировано</span> — есть MVP webhook worker (<code>bot-delivery</code>), не публичный API</td></tr>
+  <tr><td>Bot API (REST / long-poll)</td><td>Service Desk, опросы, @mention</td><td><span class="tag tag-planned">Запланировано</span> — webhook MVP есть, публичный API — в roadmap</td></tr>
 </table>
 <p><b>Безопасность:</b> webhook только HTTPS; секреты не логируются; сбой бота не блокирует переписку людей.</p>
 
@@ -842,7 +839,7 @@ DAU (активных в день) = Пользователи × доля акт
   </div>
 </div>
 <p class="small">Сумма по строке = <b>Кол-во × Цена за ед.</b> (₽/мес). Годовые суммы на диаграммах = месячный итог × 12.</p>
-<p class="small">Состав профилей: <b>Pilot</b> — <code>full-server.yml</code> + <code>pilot-overrides.yml</code> (8 hot-path контейнеров, без Solr; см. <code>deploy/qemu/RESOURCES.md</code>); <b>Standard</b> — <code>docker-compose.full-server.yml</code> с масштабированием (Solr+ZK, replica PG, кэш). Full-stack monolith на одном хосте (64 ГБ) — справочное сравнение для Pilot, не рекомендуемый профиль.</p>
+<p class="small">Состав профилей: <b>Pilot</b> — lean-стек (8 служб hot-path, без Solr, SQL-поиск); <b>Standard</b> — полный кластер (Solr+ZK, replica PostgreSQL, кэш, масштабирование WS). Full-stack monolith на одном хосте (64 ГБ) — справочное сравнение для Pilot, не рекомендуемый профиль.</p>
 <table>
   <tr><th>Категория источника</th><th>Как интерпретировать</th></tr>
   <tr><td>VDS / dedicated</td><td>Усреднённые публичные тарифы аренды VM (8–64 ГБ RAM, 4–8 vCPU), ориентир H1 2026; не прайс-лист конкретного провайдера.</td></tr><tr><td>Диски</td><td>Block SSD и HDD archive tier, ₽/ТБ/мес; объёмы — из §10.3 презентации.</td></tr><tr><td>Канал</td><td>Выделенный интернет / DIA 200 Мбит/с и 1 Гбит/с, без last-mile и без TURN.</td></tr><tr><td>Облако (аналог)</td><td>Сводный IaaS-пакет (VM + managed DB + object storage + egress), эквивалентный ресурсам Pilot; не оферта Yandex/VK/MWS.</td></tr><tr><td>Ops</td><td>Базовый backup + мониторинг (Pilot) или расширенный контур (Standard).</td></tr>
@@ -856,7 +853,7 @@ DAU (активных в день) = Пользователи × доля акт
 <h3>17.2 Пример A — Pilot, 10 000 пользователей</h3>
 <div class="cost-box">
 <p><b>Исходные:</b> 10 000 зарегистрированных; ~5 000 DAU; ~750 peak online; диск ~5 ТБ на первый год (§10.3).
-  Профиль: <code>full-server.yml</code> + <code>pilot-overrides.yml</code>.</p>
+  Профиль: <b>Pilot</b> (lean-стек, без Solr).</p>
 <table>
   <tr><th>Статья расходов</th><th>Кол-во</th><th>Цена за ед. (§17.1)</th><th>₽/мес</th></tr>
   <tr><td>Сервер приложений (16 ГБ)</td><td>1</td><td>28 000 ₽ <span class="small">(16 ГБ RAM  8 vCPU  1 VM)</span></td><td class="money">28 000</td></tr><tr><td>Web-шлюз (8 ГБ)</td><td>1</td><td>15 000 ₽ <span class="small">(8 ГБ RAM  4 vCPU  1 VM)</span></td><td class="money">15 000</td></tr><tr><td>Диск SSD (hot DB)</td><td>0 5</td><td>3 500 ₽ <span class="small">(1 ТБ)</span></td><td class="money">1 750</td></tr><tr><td>Диск HDD (файлы+архив)</td><td>4 5</td><td>800 ₽ <span class="small">(1 ТБ)</span></td><td class="money">3 600</td></tr><tr><td>Канал 200 Мбит/с</td><td>1</td><td>8 000 ₽ <span class="small">(200 Мбит/с)</span></td><td class="money">8 000</td></tr><tr><td>Backup + мониторинг</td><td>1</td><td>5 000 ₽ <span class="small">(контур Pilot)</span></td><td class="money">5 000</td></tr>
@@ -981,7 +978,7 @@ DAU (активных в день) = Пользователи × доля акт
 
 <hr/>
 <p class="small" style="margin-top:40px;padding-top:20px;border-top:2px solid #e5e7eb;">
-  <b>Korus Messenger (AvandocMsg)</b> — Продуктовая презентация v2.5, 16 июня 2026.<br/>
+  <b>Korus Messenger (AvandocMsg)</b> — Продуктовая презентация v2.5.1, 16 июня 2026.<br/>
   Единый автономный документ для заказчика. Все цифры — ориентиры для планирования, не оферта.<br/>
   Статус на дату: веб-клиент и сервер реализованы; Playwright 30/30 (2026-06-15);
   E2EE/звонки/push/TLS — частично (ops/sign-off); mobile, Live HLS, Bot API — planned/out.

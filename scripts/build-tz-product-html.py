@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate product_presentation.html v2.3 — product presentation for customer (non-technical)."""
+"""Generate product_presentation.html v2.5 — product presentation for customer (non-technical)."""
 from pathlib import Path
 import sys
 
@@ -391,7 +391,7 @@ def main():
   <li>Личное «Хранилище»; экспорт переписки JSON/ZIP</li>
   <li>Админ-консоль (<code>/admin/</code>): организации, ретенция, legal hold, аудит, E2EE dashboard</li>
   <li>Интерфейс на 6 языках</li>
-  <li>Автотесты UI: <b>{PLAYWRIGHT_PASSED}/{PLAYWRIGHT_PASSED}</b> Playwright на QEMU ({PLAYWRIGHT_DATE})</li>
+  <li>Автотесты UI: <b>{PLAYWRIGHT_PASSED}/{PLAYWRIGHT_PASSED}</b> Playwright на тестовом стенде ({PLAYWRIGHT_DATE})</li>
 </ul>
 
 <h3>Частично готово (код есть, нужен ops / sign-off)</h3>
@@ -574,7 +574,7 @@ def main():
   <tr><td>Без E2EE</td><td>Текст сообщений (хранится на сервере организации)</td></tr>
   <tr><td>С E2EE (MLS active)</td><td>Шифротекст; plaintext-preview отключён; расшифровка на клиенте</td></tr>
 </table>
-<p><span class="tag tag-partial">Частично</span> — engineering gate пройден (spec 004); промышленное <code>MLS_STATUS=active</code> после formal sign-off Product/Security/Ops.</p>
+<p><span class="tag tag-partial">Частично</span> — инженерная приёмка пройдена; массовое включение E2EE в prod после formal sign-off Product/Security/Ops.</p>
 
 <hr/>
 <h2 id="s8">8. Сравнение с исходным техническим ТЗ</h2>
@@ -622,8 +622,8 @@ def main():
 <table><tr><th>Направление</th><th>Ценность</th></tr>
 <tr><td>Bot API</td><td>Service Desk, автоматизация</td></tr>
 <tr><td>SSO Google/LDAP</td><td>Enterprise-вход</td></tr>
-<tr><td>Dedup файлов (FR-OPT-08)</td><td>Экономия диска на вложениях</td></tr>
-<tr><td>Sharding PG (FR-OPT-09)</td><td>Enterprise tier, масштаб до 1M</td></tr>
+<tr><td>Dedup файлов (content-hash)</td><td>Экономия диска на вложениях</td></tr>
+<tr><td>Sharding PG (Enterprise)</td><td>Масштаб до 1M — scaffold, full router в roadmap</td></tr>
 </table>
 <h3>12+ месяцев</h3>
 <ul><li>Live-streaming (all-hands)</li><li>Мобильные клиенты</li><li>SFU для звонков &gt;20 участников</li></ul>

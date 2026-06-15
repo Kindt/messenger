@@ -208,7 +208,7 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
 <h2 id="s11">11. Критерии приёмки продукта</h2>
 <ol>
   <li><b>Пользователь</b> выполняет все основные сценарии из §5 через веб-браузер.</li>
-  <li><b>Автотесты UI:</b> {PLAYWRIGHT_PASSED}/{PLAYWRIGHT_PASSED} Playwright на QEMU ({PLAYWRIGHT_DATE}); см. runtime-gate-report spec 002.</li>
+  <li><b>Автотесты UI:</b> {PLAYWRIGHT_PASSED}/{PLAYWRIGHT_PASSED} Playwright на тестовом стенде ({PLAYWRIGHT_DATE}).</li>
   <li><b>Администратор</b> управляет организациями, политиками хранения и аудитом через веб-консоль.</li>
   <li><b>Production:</b> HTTPS, секреты не в открытом виде, sign-off E2EE перед массовым включением.</li>
   <li><b>Экспорт и ретенция:</b> окончательное удаление только после прохождения export gate.</li>
@@ -237,7 +237,7 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
   <tr><th>Сценарий</th><th>Ожидание</th><th>Статус</th></tr>
   <tr><td>SSO Google / корпоративный портал</td><td>Единый вход без отдельного пароля</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
   <tr><td>LDAP / Active Directory</td><td>Учётки из AD</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>Bot API (REST / long-poll)</td><td>Service Desk, опросы, @mention</td><td><span class="tag tag-planned">Запланировано</span> — есть MVP webhook worker (<code>bot-delivery</code>), не публичный API</td></tr>
+  <tr><td>Bot API (REST / long-poll)</td><td>Service Desk, опросы, @mention</td><td><span class="tag tag-planned">Запланировано</span> — webhook MVP есть, публичный API — в roadmap</td></tr>
 </table>
 <p><b>Безопасность:</b> webhook только HTTPS; секреты не логируются; сбой бота не блокирует переписку людей.</p>
 
