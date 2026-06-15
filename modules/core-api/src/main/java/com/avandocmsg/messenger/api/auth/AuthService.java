@@ -94,7 +94,7 @@ public class AuthService {
         if (keycloakUserId == null) {
             return RegisterOutcome.failure(RegisterOutcome.Status.KEYCLOAK_UNAVAILABLE);
         }
-        if (!userRepository.create(keycloakUserId, request.username(), request.displayName())) {
+        if (!userRepositoryPort.createLocalUser(UserId.of(keycloakUserId), request.username(), request.displayName())) {
             log.warn("Local user row not created for {} (id={})", request.username(), keycloakUserId);
             if (userRepository.findByUsername(request.username()).isPresent()) {
                 return RegisterOutcome.failure(RegisterOutcome.Status.USERNAME_EXISTS);

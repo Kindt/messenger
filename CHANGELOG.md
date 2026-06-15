@@ -8,6 +8,38 @@
 
 ## [Unreleased]
 
+### 2026-06-15 — Close plan #12 + spec 007 platform-stage-readiness (engineering)
+
+- **`specs/007-platform-stage-readiness/`**: spec/plan/tasks/contracts/quickstart; Phases 1–5 [x], ops Phase 6–7 open.
+- **`docs/plans/2026-06-15-unfinished-development-plan.md`**: status `completed` (engineering); §10 closure; DoD updated.
+- **`docs/plans/README.md`**: row 12 → `completed`.
+
+### 2026-06-15 — W2/W3 hybrid sprint: stage prep, k6, replica lab, hex register, push i18n
+
+- **W2 T-P1:** `stage-tls-smoke-runbook.md`, `e2ee-security-signoff-packet-2026-06-15.md`, k6 `scripts/load/pilot-*.js`.
+- **W3 T-P2:** `docker/REPLICA_LAB.md`, `replica-lab-up.sh`, `smoke-read-replica-env.sh`; `UserRepositoryPort.createLocalUser`; push preview i18n bundles.
+
+### 2026-06-15 — W2 platform hardening: wsUrl force redeploy + P1 prep kit
+
+- **wsUrl remediate:** `Start-KorusQemuGuestRedeploy -Force` when reason is wsUrl mismatch; auto-remediate + plan orchestrator use it.
+- **`scripts/test-korus-wsurl.ps1`**: host probe for `web-client-env.js` vs `host-lan-ip.txt`.
+- **`scripts/guest-smoke-platform-w2.sh`**: guest gate (NATS queue group + optional export-replay).
+- **Stage prep:** `inventory/stage/README.md`, `vault.yml.example`; E2EE + hotplug sign-off templates in `docs/review/`.
+- **Hex 2b:** `MessageResource.edit` ACL via `MessageApplicationService.getMessageForMember` before write.
+
+### 2026-06-15 — W1 platform hardening: redeploy lock PID + SSH host key refresh
+
+- **`deploy/qemu/lib/Korus-QemuRedeployLock.ps1`**: PID-aware stale lock detection; shared by redeploy, auto-remediate, monitored redeploy.
+- **`Get-KorusEd25519HostKey`**: validates cached key via plink; re-probes and updates `ssh-hostkeys.ps1` on mismatch.
+- **`ops-signoff-log.md`**: Playwright counts synced to **30/30** (2026-06-15).
+- **`ROADMAP_EPICS.md`**, infra design doc § Related changes: spec 006 closure noted.
+
+### 2026-06-15 — product_presentation §18: методика тарифов
+
+- **`scripts/tz_product_pricing.py`**: единый источник ставок §18.1 (дата 2026-06-15), формула «кол-во × цена за ед.»; диаграммы Рис. 7–8 и таблицы генерируются из него.
+- Baseline Pilot (full-server) пересчитан по строкам §18.1 (**109 550 ₽/мес**, не округление 96 000).
+- Под легендами Рис. 7 и §18.7 — откуда взяты ставки, дата и источник категории.
+
 ### 2026-06-15 — outer gate green + korus-web env recreate on redeploy
 
 - **`runtime-gate-report.md`**: outer Playwright **30/30** on QEMU (2026-06-15).

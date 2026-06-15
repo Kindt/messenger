@@ -106,7 +106,7 @@ public class PushWorker {
         } catch (Exception e) {
             log.debug(workerMessages.format("worker.push.chat_title_failed", e.getMessage()));
         }
-        var preview = PushNotificationPreview.forEvent(event, chatTitle);
+        var preview = PushNotificationPreview.forEvent(event, chatTitle, workerMessages);
         var sent = 0;
         var failed = 0;
         var expired = 0;

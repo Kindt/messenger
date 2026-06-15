@@ -32,6 +32,8 @@ Windows dev: continue using `scripts/full-stack-up.ps1` and `scripts/server-host
 
 ## Secrets and TLS (prod / stage)
 
+**Stage prep kit:** [`inventory/stage/README.md`](inventory/stage/README.md) — DNS, vault, dry-run, TLS smoke.
+
 ### Prod vault checklist
 
 1. Copy `group_vars/vault.example.yml` → `group_vars/vault.yml`.

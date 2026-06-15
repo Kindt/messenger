@@ -63,12 +63,16 @@ function Set-MonTcgState {
 }
 
 function Clear-KorusRedeployLocks {
+    $lockLib = Join-Path $Root "deploy\qemu\lib\Korus-QemuRedeployLock.ps1"
+    if (Test-Path $lockLib) { . $lockLib }
     foreach ($role in @("server", "web")) {
-        $lock = Join-Path $RunDir "qemu-redeploy-$role.lock"
-        if (Test-Path $lock) {
-            $age = [math]::Round(((Get-Date) - (Get-Item $lock).LastWriteTime).TotalMinutes, 1)
-            Remove-Item $lock -Force -ErrorAction SilentlyContinue
-            Write-MonLog "cleared qemu-redeploy-$role.lock (age ${age}m)" "Yellow"
+        if (Clear-KorusStaleRedeployLock -RunDir $RunDir -Role $role) {
+            Write-MonLog "cleared stale qemu-redeploy-$role.lock" "Yellow"
+        }
+        elseif (Test-Path -LiteralPath (Get-KorusRedeployLockPath -RunDir $RunDir -Role $role)) {
+            $lock = Get-KorusRedeployLockPath -RunDir $RunDir -Role $role
+            $age = [math]::Round(((Get-Date) - (Get-Item -LiteralPath $lock).LastWriteTime).TotalMinutes, 1)
+            Write-MonLog "qemu-redeploy-$role.lock active (age ${age}m)" "DarkGray"
         }
     }
 }

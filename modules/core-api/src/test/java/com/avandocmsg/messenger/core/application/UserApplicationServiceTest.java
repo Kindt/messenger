@@ -238,5 +238,10 @@ class UserApplicationServiceTest {
         @Override
         public void upsertFromKeycloak(UserId id, String username, String displayName) {
         }
+
+        @Override
+        public boolean createLocalUser(UserId id, String username, String displayName) {
+            return false;
+        }
     }
 }

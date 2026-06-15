@@ -23,20 +23,22 @@ class AuthServiceTest {
 
     @Test
     void register_createsUserInLocalDbWithKeycloakId() {
-        var service = new TestingAuthService(keycloakUserId, userRepo);
+        var userPort = new StubUserRepositoryPort();
+        var service = new TestingAuthService(keycloakUserId, userPort);
         var request = new RegisterRequest("newuser", "password123", "New User");
         var outcome = service.register(request);
 
         assertInstanceOf(RegisterOutcome.Success.class, outcome);
         var response = ((RegisterOutcome.Success) outcome).response();
         assertEquals("newuser", response.username());
-        assertEquals(keycloakUserId, userRepo.created.get("newuser"));
+        assertEquals(keycloakUserId, userPort.created.get("newuser"));
         assertEquals(keycloakUserId.toString(), response.userId());
     }
 
     @Test
     void register_failsWhenKeycloakUnavailable() {
-        var service = new TestingAuthService(null);
+        var userPort = new StubUserRepositoryPort();
+        var service = new TestingAuthService(null, userPort);
         var request = new RegisterRequest("newuser", "password123", "New User");
         var outcome = service.register(request);
 
@@ -44,13 +46,14 @@ class AuthServiceTest {
         assertEquals(
             RegisterOutcome.Status.KEYCLOAK_UNAVAILABLE,
             ((RegisterOutcome.Failure) outcome).status());
-        assertTrue(userRepo.created.isEmpty());
+        assertTrue(userPort.created.isEmpty());
     }
 
     @Test
     void register_failsWhenCreateReturnsFalse() {
-        userRepo.failOnCreate = true;
-        var service = new TestingAuthService(keycloakUserId, userRepo);
+        var userPort = new StubUserRepositoryPort();
+        userPort.failOnCreate = true;
+        var service = new TestingAuthService(keycloakUserId, userPort);
         var request = new RegisterRequest("failuser", "password123", "Fail User");
         var outcome = service.register(request);
 
@@ -79,16 +82,16 @@ class AuthServiceTest {
             this(provisionedId, false);
         }
 
+        TestingAuthService(UUID provisionedId, StubUserRepositoryPort userPort) {
+            super(new StubAppConfig(), new StubUserRepository(), userPort, new StubSavedChatPort());
+            this.provisionedId = provisionedId;
+            this.usernameExists = false;
+        }
+
         TestingAuthService(UUID provisionedId, boolean usernameExists) {
             super(new StubAppConfig(), new StubUserRepository(), new StubUserRepositoryPort(), new StubSavedChatPort());
             this.provisionedId = provisionedId;
             this.usernameExists = usernameExists;
-        }
-
-        TestingAuthService(UUID provisionedId, StubUserRepository userRepo) {
-            super(new StubAppConfig(), userRepo, new StubUserRepositoryPort(), new StubSavedChatPort());
-            this.provisionedId = provisionedId;
-            this.usernameExists = false;
         }
         @Override
         protected UUID provisionKeycloakUser(RegisterRequest request) {
@@ -128,6 +131,9 @@ class AuthServiceTest {
     }
 
     static class StubUserRepositoryPort implements UserRepositoryPort {
+        final Map<String, UUID> created = new HashMap<>();
+        boolean failOnCreate = false;
+
         @Override
         public Optional<com.avandocmsg.messenger.core.domain.UserProfile> findById(UserId id) {
             return Optional.empty();
@@ -160,6 +166,15 @@ class AuthServiceTest {
 
         @Override
         public void upsertFromKeycloak(UserId id, String username, String displayName) {
+        }
+
+        @Override
+        public boolean createLocalUser(UserId id, String username, String displayName) {
+            if (failOnCreate) {
+                return false;
+            }
+            created.put(username, id.value());
+            return true;
         }
     }
 

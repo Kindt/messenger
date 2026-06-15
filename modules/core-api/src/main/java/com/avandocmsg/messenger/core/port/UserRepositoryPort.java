@@ -21,4 +21,7 @@ public interface UserRepositoryPort {
 
     /** After Keycloak login: upsert local user row from JWT claims. */
     void upsertFromKeycloak(UserId id, String username, String displayName);
+
+    /** After Keycloak registration: insert local user row (Phase 2c write-path). */
+    boolean createLocalUser(UserId id, String username, String displayName);
 }

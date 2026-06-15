@@ -1,0 +1,16 @@
+# Stage secrets template. Copy → vault.yml, replace CHANGE_ME, encrypt:
+#
+#   cp deploy/ansible/inventory/stage/group_vars/vault.yml.example \
+#      deploy/ansible/inventory/stage/group_vars/vault.yml
+#   ansible-vault encrypt deploy/ansible/inventory/stage/group_vars/vault.yml
+#
+# Run:
+#   ansible-playbook -i inventory/stage/hosts.yml playbooks/site.yml --ask-vault-pass
+#
+# Maps to compose env via roles/korus_server and korus_web (see deploy/ansible/README.md).
+
+korus_db_password: "CHANGE_ME"
+korus_minio_secret_key: "CHANGE_ME"
+korus_keycloak_admin_password: "CHANGE_ME"
+korus_jwt_secret: "CHANGE_ME"
+korus_coturn_secret: "CHANGE_ME"

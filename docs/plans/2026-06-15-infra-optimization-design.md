@@ -508,10 +508,10 @@ Attachments ~40 TB @ 100k → **~25 TB (−35%)** (aligns with TZ optimized colu
 ## Связанные изменения документации
 
 - [x] This design doc
-- [ ] `docs/PRODUCT_PRESENTATION.md` §10 — profiles Pilot/Standard/Enterprise
-- [ ] `deploy/qemu/RESOURCES.md` — Pilot row
-- [ ] `docs/plans/README.md` — epic 11
-- [ ] `CHANGELOG.md` [Unreleased]
+- [x] `docs/PRODUCT_PRESENTATION.md` §10 — profiles Pilot/Standard/Enterprise (measured §10.2 — pending load test)
+- [x] `deploy/qemu/RESOURCES.md` — Pilot row
+- [x] `docs/plans/README.md` — epic 11
+- [x] `CHANGELOG.md` [Unreleased]
 
 ---
 

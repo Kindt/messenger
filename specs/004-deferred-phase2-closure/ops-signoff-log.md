@@ -1,6 +1,6 @@
 # Ops Sign-Off Log: Spec 004
 
-**Date**: 2026-06-09 (engineering closure 2026-06-12)  
+**Date**: 2026-06-15 (engineering closure 2026-06-12; outer gate refresh 2026-06-15)  
 **Environment**: local dev / QEMU (stage prod gates marked pending)
 
 ## Automated verification (engineering)
@@ -11,15 +11,15 @@
 | E2EE unit | `.\gradlew.bat :modules:core-api:test --tests "*Mls*"` | **PASS** (2026-06-09) | 17 tests |
 | TLS smoke (dev) | `.\scripts\smoke-tls-redirect.ps1 -SkipTls` | **PASS** | HTTP-only path |
 | Hex write unit | `.\gradlew.bat :modules:core-api:test --tests "*ApplicationServiceTest*"` | PASS | User/Org/File |
-| Playwright full-stack | `npx playwright test` @ `http://127.0.0.1:19088` | **PASS** (2026-06-14, 27/27) | QEMU hotswap+lb; spec 005 i18n |
+| Playwright full-stack | `npx playwright test` @ `http://127.0.0.1:19088` | **PASS** (2026-06-15, 30/30) | QEMU hotswap+lb; spec 006 infra |
 
 ## US9 — Fast acceptance (inner / outer)
 
 | Check | Command | Result | Notes |
 |-------|---------|--------|-------|
 | Inner tier `api` | `.\scripts\playwright-dev-loop.ps1 -Tier api` | **PASS** (2026-06-12, 10 tests) | ~10s |
-| Inner `all-inner` | `.\scripts\playwright-dev-loop.ps1 -Tier all-inner` | **PASS** (2026-06-14) | 27/27; hotswap nginx lb |
-| Outer gate | `.\scripts\qemu-plan-orchestrator.ps1 -SkipVmUp` | **PASS** (2026-06-14, 27/27 + runtime-gate-report) | green backup `2026-06-14_122224_green-2026-06-14` |
+| Inner `all-inner` | `.\scripts\playwright-dev-loop.ps1 -Tier all-inner` | **PASS** (2026-06-15) | 30/30; hotswap nginx lb |
+| Outer gate | `.\scripts\qemu-plan-orchestrator.ps1 -SkipVmUp` | **PASS** (2026-06-15, 30/30 + runtime-gate-report) | Ansible web `--force-recreate` on `.env` change |
 | Exited(255) probe | auto-remediate on KeepDisks | implemented | Server redeploy once / 10m cooldown |
 
 ## US1 — Stage/prod TLS (ops)
@@ -33,6 +33,8 @@
 | 5 | `ansible-playbook ... --tags tls_smoke` (prod inventory) | Ops | ⏳ pending |
 
 **Local dev**: `.\scripts\smoke-tls-redirect.ps1 -SkipTls` → exit 0 (2026-06-14 re-verified).
+
+**Stage runbook**: [`docs/review/stage-tls-smoke-runbook.md`](../../docs/review/stage-tls-smoke-runbook.md) (US1 row 4 placeholders).
 
 ## Engineering backlog closure (2026-06-14)
 
@@ -92,4 +94,4 @@ Update [runtime-gate-report.md](../../002-web-client-server-parity/runtime-gate-
 | Stage TLS | | |
 | E2EE security (8/8) | | |
 | Hotplug ADR | | |
-| Playwright full-stack | | |
+| Playwright full-stack | | 2026-06-15 (30/30 engineering) |

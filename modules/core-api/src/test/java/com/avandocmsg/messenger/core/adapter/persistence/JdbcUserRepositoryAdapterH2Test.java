@@ -114,4 +114,13 @@ class JdbcUserRepositoryAdapterH2Test {
         assertTrue(adapter.touchHeartbeat(UserId.of(userId)));
         assertNotNull(adapter.findById(UserId.of(userId)).orElseThrow().lastSeenAt());
     }
+
+    @Test
+    void createLocalUser_insertsRow() {
+        var newId = UUID.randomUUID();
+        assertTrue(adapter.createLocalUser(UserId.of(newId), "reg-user", "Reg User"));
+        var profile = adapter.findById(UserId.of(newId)).orElseThrow();
+        assertEquals("reg-user", profile.username());
+        assertEquals("Reg User", profile.displayName());
+    }
 }

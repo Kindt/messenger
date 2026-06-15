@@ -160,6 +160,29 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
         }
     }
 
+    @Override
+    public boolean createLocalUser(UserId id, String username, String displayName) {
+        if (dataSource == null) {
+            return false;
+        }
+        var sql = """
+            INSERT INTO users (id, username, display_name, created_at, updated_at)
+            VALUES (?, ?, ?, now(), now())
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, id.value());
+            stmt.setString(2, username);
+            stmt.setString(3, displayName != null ? displayName : username);
+            stmt.executeUpdate();
+            return true;
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(JdbcUserRepositoryAdapter.class)
+                .error("Failed to create user: {}", username, e);
+            return false;
+        }
+    }
+
     private static UserProfile mapRow(java.sql.ResultSet rs) throws Exception {
         var lastSeenTs = rs.getTimestamp("last_seen_at");
         Instant lastSeen = lastSeenTs != null ? lastSeenTs.toInstant() : null;

@@ -17,6 +17,7 @@
 | 9 | `09-code-health-backlog.md` | Серия малых PR по рефакторингу hotspot-зон | Высокий | `completed` |
 | 10 | `10-web-client-code-health-backlog.md` | Серия малых PR по оздоровлению web-client | Высокий | `completed` |
 | 11 | `2026-06-15-infra-optimization-design.md` | Infra optimization (spec 006): pilot, cache, scale, zstd, batch Solr | Высокий | `completed` |
+| 12 | `2026-06-15-unfinished-development-plan.md` | Inventory + hybrid sprint D closure → [`specs/007-platform-stage-readiness/`](../specs/007-platform-stage-readiness/) | Справочник | `completed` |
 
 ## Структура каждого плана
 

@@ -44,6 +44,7 @@ $Plink = "${env:ProgramFiles}\PuTTY\plink.exe"
 . (Join-Path $Lib "Test-KorusQemuProcess.ps1")
 . (Join-Path $Lib "Get-KorusQemuHostHealth.ps1")
 . (Join-Path $Lib "Get-KorusGuestBootstrapPhase.ps1")
+. (Join-Path $Lib "Korus-QemuRedeployLock.ps1")
 
 $buildFlag = if ($Rebuild) { "1" } else { "0" }
 $mode = if ($Rebuild) { "rebuild" } else { "sync" }
@@ -124,17 +125,13 @@ $lockRoles = @()
 if ($doServer) { $lockRoles += "server" }
 if ($doWeb) { $lockRoles += "web" }
 foreach ($lockRole in $lockRoles) {
-    $lock = Join-Path $RunDir "qemu-redeploy-$lockRole.lock"
-    if (Test-Path $lock) {
-        $age = ((Get-Date) - (Get-Item $lock).LastWriteTime).TotalMinutes
-        $stackUp = Test-KorusQemuStackRunning -RunDir $RunDir
-        if ($age -lt 45 -and $stackUp) {
-            Write-Error "qemu-redeploy-$lockRole already running (${age}m). See deploy\qemu\run\status-remediate.log"
-        }
-        Write-Host "Removing stale qemu-redeploy-$lockRole lock (age $([math]::Round($age,1))m stackUp=$stackUp)" -ForegroundColor Yellow
-        Remove-Item $lock -Force -ErrorAction SilentlyContinue
+    if (-not (Enter-KorusRedeployLock -RunDir $RunDir -Role $lockRole -ProcessId $PID)) {
+        $lock = Get-KorusRedeployLockPath -RunDir $RunDir -Role $lockRole
+        $age = if (Test-Path -LiteralPath $lock) {
+            [math]::Round(((Get-Date) - (Get-Item -LiteralPath $lock).LastWriteTime).TotalMinutes, 1)
+        } else { 0 }
+        Write-Error "qemu-redeploy-$lockRole already running (${age}m). See deploy\qemu\run\status-remediate.log"
     }
-    Set-Content -Path $lock -Value ((Get-Date).ToString("o")) -Encoding ascii
 }
 try {
 
@@ -217,6 +214,6 @@ foreach ($u in @("http://127.0.0.1:18080/api/v1/health", "http://127.0.0.1:19088
 }
 } finally {
     foreach ($lockRole in $lockRoles) {
-        Remove-Item (Join-Path $RunDir "qemu-redeploy-$lockRole.lock") -Force -ErrorAction SilentlyContinue
+        Exit-KorusRedeployLock -RunDir $RunDir -Role $lockRole
     }
 }

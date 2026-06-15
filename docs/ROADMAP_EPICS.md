@@ -66,6 +66,15 @@
 
 ---
 
+## 7. Инфраструктурная оптимизация (spec 006)
+
+| Приоритет | Содержание |
+|-----------|------------|
+| Высокий | **Закрыто (2026-06-15):** Pilot compose, Keycloak prod, read cache, scale overlays, zstd deep-archive, batch Solr, NATS cache invalidation, replica/enterprise Ansible. См. **`specs/006-infra-optimization/`**, **`docs/plans/2026-06-15-infra-optimization-design.md`**. |
+| Средний | **Хвост:** load test matrix (k6/Locust), file dedup, PG sharding — см. **`docs/plans/2026-06-15-unfinished-development-plan.md`**. |
+
+---
+
 ## Связанные документы
 
 | Документ | Роль |

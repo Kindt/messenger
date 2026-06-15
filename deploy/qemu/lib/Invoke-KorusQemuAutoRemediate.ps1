@@ -20,6 +20,7 @@ function Invoke-KorusQemuAutoRemediate {
     $ErrorActionPreference = "SilentlyContinue"
     . (Join-Path $Root "deploy\qemu\lib\Test-KorusQemuProcess.ps1")
     . (Join-Path $Root "deploy\qemu\lib\Start-KorusQemuGuestRedeploy.ps1")
+    . (Join-Path $Root "deploy\qemu\lib\Korus-QemuRedeployLock.ps1")
     . (Join-Path $Root "deploy\qemu\lib\Get-KorusQemuLoadingState.ps1")
     $Plink = "${env:ProgramFiles}\PuTTY\plink.exe"
     $StatePath = Join-Path $RunDir "status-remediate.json"
@@ -196,17 +197,6 @@ fi
         return $false
     }
 
-    function Test-KorusRedeployLockActive {
-        param([int]$MaxAgeMin = 45)
-        foreach ($role in @("server", "web")) {
-            $lock = Join-Path $RunDir "qemu-redeploy-$role.lock"
-            if (-not (Test-Path $lock)) { continue }
-            $age = ((Get-Date) - (Get-Item $lock).LastWriteTime).TotalMinutes
-            if ($age -lt $MaxAgeMin) { return $true }
-        }
-        return $false
-    }
-
     function Start-GuestDockerCacheLoad {
         param([string]$HostKey)
         if (-not (Test-Path $Plink) -or -not $HostKey) { return $false }
@@ -336,8 +326,8 @@ fi
         if (Test-KorusWebClientWsHostMismatch -RunDir $RunDir) {
             $wsLan = Read-KorusQemuLanHostIp -RunDir $RunDir
             if (Test-CooldownOk -LastAt $state.lastWebRedeployAt -Minutes 10) {
-                Write-RemLog "ACTION web redeploy wsUrl mismatch expected=$wsLan"
-                $rd = Start-KorusQemuGuestRedeploy -Role web -RunDir $RunDir -Root $Root -Reason "wsUrl mismatch expect $wsLan"
+                Write-RemLog "ACTION web redeploy wsUrl mismatch expected=$wsLan (force)"
+                $rd = Start-KorusQemuGuestRedeploy -Role web -RunDir $RunDir -Root $Root -Reason "wsUrl mismatch expect $wsLan" -Force
                 if ($rd.Summary) { $actions.Add($rd.Summary) | Out-Null }
                 $state.lastWebRedeployAt = (Get-Date).ToString("o")
                 Set-RemState $state
@@ -396,7 +386,7 @@ fi
         return @{ Actions = $actions; Summary = ($actions -join "; ") }
     }
 
-    $redeployActive = Test-KorusRedeployLockActive
+    $redeployActive = Test-KorusRedeployLockActive -RunDir $RunDir
 
     $pullStuck = ($Activity -eq "docker pull") -or ($BootstrapStates -contains "docker-pull") -or ($loadingState.Kind -eq 'docker-pull')
     if ($pullStuck -and $korusQemuUp -and -not $loadingState.Loading -and -not $redeployActive) {

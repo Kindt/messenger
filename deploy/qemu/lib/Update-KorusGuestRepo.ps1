@@ -88,6 +88,23 @@ function Save-KorusSshHostKey {
     Set-Content -Path $cache -Value ($lines -join "`n") -Encoding utf8
 }
 
+function Test-KorusPlinkHostKeyValid {
+    param(
+        [string]$HostKey,
+        [int]$Port,
+        [string]$Plink = "${env:ProgramFiles}\PuTTY\plink.exe"
+    )
+    if (-not $HostKey -or $Port -le 0 -or -not (Test-Path $Plink)) { return $false }
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $null = & $Plink -batch -hostkey $HostKey -pw korus -P $Port korus@127.0.0.1 exit 2>&1
+        return $LASTEXITCODE -eq 0
+    } finally {
+        $ErrorActionPreference = $prevEap
+    }
+}
+
 function Get-KorusPlinkHostKeyProbe {
     param(
         [int]$Port,
@@ -113,7 +130,10 @@ function Get-KorusEd25519HostKey {
     if ($cache -and (Test-Path $cache) -and $Role) {
         . $cache
         if ($script:KorusQemuSshHostKeys -and $script:KorusQemuSshHostKeys[$Role]) {
-            return $script:KorusQemuSshHostKeys[$Role]
+            $cached = $script:KorusQemuSshHostKeys[$Role]
+            if ($SshPort -le 0 -or (Test-KorusPlinkHostKeyValid -HostKey $cached -Port $SshPort)) {
+                return $cached
+            }
         }
     }
     if (Test-Path $SerialPath) {
@@ -125,6 +145,13 @@ function Get-KorusEd25519HostKey {
         }
         if ($m) {
             $hk = "ssh-ed25519 255 SHA256:$($m.Matches[0].Groups[1].Value)"
+            if ($Role -and $SshPort -gt 0 -and -not (Test-KorusPlinkHostKeyValid -HostKey $hk -Port $SshPort)) {
+                $probed = Get-KorusPlinkHostKeyProbe -Port $SshPort
+                if ($probed) {
+                    Save-KorusSshHostKey -RunDir $runDir -Role $Role -HostKey $probed
+                    return $probed
+                }
+            }
             if ($Role) { Save-KorusSshHostKey -RunDir $runDir -Role $Role -HostKey $hk }
             return $hk
         }

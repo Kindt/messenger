@@ -6,20 +6,25 @@ function Start-KorusQemuGuestRedeploy {
         [string]$Role,
         [Parameter(Mandatory)][string]$RunDir,
         [Parameter(Mandatory)][string]$Root,
-        [string]$Reason = ""
+        [string]$Reason = "",
+        [switch]$Force
     )
 
-    $lock = Join-Path $RunDir "qemu-redeploy-$Role.lock"
-    if (Test-Path $lock) {
-        $age = ((Get-Date) - (Get-Item $lock).LastWriteTime).TotalMinutes
-        if ($age -lt 45) { return @{ Started = $false; Summary = "redeploy-$Role already running (${age}m)" } }
-        Remove-Item $lock -Force -ErrorAction SilentlyContinue
+    $lockLib = Join-Path $Root "deploy\qemu\lib\Korus-QemuRedeployLock.ps1"
+    if (Test-Path $lockLib) { . $lockLib }
+
+    if (Test-KorusRedeployLockActive -RunDir $RunDir) {
+        $lock = Get-KorusRedeployLockPath -RunDir $RunDir -Role $Role
+        $age = if (Test-Path -LiteralPath $lock) {
+            [math]::Round(((Get-Date) - (Get-Item -LiteralPath $lock).LastWriteTime).TotalMinutes, 1)
+        } else { 0 }
+        return @{ Started = $false; Summary = "redeploy-$Role already running (${age}m)" }
     }
 
-    Set-Content -Path $lock -Value ((Get-Date).ToString("o")) -Encoding ascii
     $redeploy = Join-Path $Root "scripts\qemu-redeploy.ps1"
     $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", $redeploy)
     if ($Role -eq "server") { $args += "-ServerOnly" } else { $args += "-WebOnly" }
+    if ($Force) { $args += "-Force" }
 
     $log = Join-Path $RunDir "status-remediate.log"
     "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [redeploy-$Role] spawn background reason=$Reason" | Add-Content -Path $log -Encoding utf8

@@ -308,7 +308,8 @@ function Invoke-KorusPlanFailureRemediate {
         }
         "redeploy_web" {
             . (Join-Path $Root "deploy\qemu\lib\Start-KorusQemuGuestRedeploy.ps1")
-            $r = Start-KorusQemuGuestRedeploy -Role web -RunDir $RunDir -Root $Root -Reason $Reason
+            $force = $Reason -match '(?i)wsurl|ws_url|ws url'
+            $r = Start-KorusQemuGuestRedeploy -Role web -RunDir $RunDir -Root $Root -Reason $Reason -Force:$force
             return @{ Ok = [bool]$r.Started; Summary = $r.Summary }
         }
         "wait_stack_or_redeploy_server" {
