@@ -100,7 +100,8 @@ public final class CoreModule {
             legacy,
             objectStoragePort,
             uuidGenerator,
-            appConfig.mediaMaxUploadBytes());
+            appConfig.mediaMaxUploadBytes(),
+            appConfig.fileDedupEnabled());
     }
 
     public static OrganizationRepositoryPort organizationRepositoryPort(DataSource dataSource,

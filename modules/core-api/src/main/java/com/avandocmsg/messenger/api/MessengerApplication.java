@@ -7,6 +7,7 @@ import com.avandocmsg.messenger.api.chats.ChatService;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanService;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.config.DatabaseConfig;
+import com.avandocmsg.messenger.api.config.OrganizationShardRouter;
 import com.avandocmsg.messenger.api.config.HotReloadWatcher;
 import com.avandocmsg.messenger.api.config.JerseyConfig;
 import com.avandocmsg.messenger.api.config.SolrClientFactory;
@@ -143,6 +144,7 @@ public class MessengerApplication {
         this.dataSource = databaseConfig.dataSource();
         var readDs = databaseConfig.readDataSource().orElse(null);
         databaseConfig.warnIfPoolOversubscribed();
+        OrganizationShardRouter.logShardConfig(databaseConfig);
         runMigrations();
         this.natsConnection = new NatsConfig(appConfig).connection();
         if (appConfig.natsJetstream()) {

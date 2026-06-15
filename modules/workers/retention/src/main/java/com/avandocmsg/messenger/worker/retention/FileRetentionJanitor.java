@@ -21,7 +21,7 @@ final class FileRetentionJanitor {
     private static final String AUDIT_ACTION = "file.retention.deleted";
 
     private static final String SELECT_CANDIDATES = """
-        SELECT fm.id, fm.filename
+        SELECT fm.id, fm.filename, fm.content_hash, fm.storage_key
         FROM file_metadata fm
         WHERE fm.created_at < now() - make_interval(days => ?)
           AND NOT EXISTS (
@@ -48,6 +48,15 @@ final class FileRetentionJanitor {
         """;
 
     private static final String DELETE_METADATA = "DELETE FROM file_metadata WHERE id = ?";
+
+    private static final String DECREMENT_BLOB_REF = """
+        UPDATE file_blob SET ref_count = ref_count - 1
+        WHERE content_hash = ? AND ref_count > 0
+        """;
+
+    private static final String SELECT_BLOB_REF = "SELECT ref_count FROM file_blob WHERE content_hash = ?";
+
+    private static final String DELETE_BLOB_ZERO = "DELETE FROM file_blob WHERE content_hash = ? AND ref_count <= 0";
 
     private static final String INSERT_AUDIT = """
         INSERT INTO audit_events (actor_user_id, action, resource_type, resource_id, details_json)
@@ -109,7 +118,9 @@ final class FileRetentionJanitor {
                 while (rs.next()) {
                     list.add(new Candidate(
                         rs.getObject("id", UUID.class),
-                        rs.getString("filename")));
+                        rs.getString("filename"),
+                        rs.getString("content_hash"),
+                        rs.getString("storage_key")));
                 }
             }
         }
@@ -125,20 +136,7 @@ final class FileRetentionJanitor {
         boolean auditEnabled,
         UserMessageSource workerMessages
     ) throws Exception {
-        var objectName = c.fileId() + "/" + (c.filename() != null && !c.filename().isBlank() ? c.filename() : "file");
-        if (minioEnabled && minioClient != null && minioBucket != null && !minioBucket.isBlank()) {
-            try {
-                minioClient.removeObject(RemoveObjectArgs.builder()
-                    .bucket(minioBucket)
-                    .object(objectName)
-                    .build());
-                RetentionMetrics.minioObjectDeleted();
-            } catch (Exception e) {
-                RetentionMetrics.purgeError("minio_delete");
-                log.warn(workerMessages.format("worker.retention.file.minio_delete_failed", c.fileId(), objectName, e.getMessage()));
-                return false;
-            }
-        }
+        var objectName = resolveObjectName(c);
         int rows;
         try (var conn = dataSource.getConnection();
              var ps = conn.prepareStatement(DELETE_METADATA)) {
@@ -149,10 +147,79 @@ final class FileRetentionJanitor {
             return false;
         }
         RetentionMetrics.fileMetadataDeleted();
+        if (c.contentHash() != null && !c.contentHash().isBlank()) {
+            decrementBlobRef(dataSource, c.contentHash());
+            var remaining = blobRefCount(dataSource, c.contentHash());
+            if (remaining.isPresent() && remaining.get() <= 0) {
+                deleteMinioObject(minioClient, minioEnabled, minioBucket, objectName, c.fileId(), workerMessages);
+                deleteZeroBlobRow(dataSource, c.contentHash());
+            }
+        } else {
+            deleteMinioObject(minioClient, minioEnabled, minioBucket, objectName, c.fileId(), workerMessages);
+        }
         if (auditEnabled) {
             insertAudit(dataSource, c.fileId(), objectName);
         }
         return true;
+    }
+
+    private static String resolveObjectName(Candidate c) {
+        if (c.storageKey() != null && !c.storageKey().isBlank()) {
+            return c.storageKey();
+        }
+        return c.fileId() + "/" + (c.filename() != null && !c.filename().isBlank() ? c.filename() : "file");
+    }
+
+    private static void deleteMinioObject(
+        MinioClient minioClient,
+        boolean minioEnabled,
+        String minioBucket,
+        String objectName,
+        UUID fileId,
+        UserMessageSource workerMessages
+    ) {
+        if (!minioEnabled || minioClient == null || minioBucket == null || minioBucket.isBlank()) {
+            return;
+        }
+        try {
+            minioClient.removeObject(RemoveObjectArgs.builder()
+                .bucket(minioBucket)
+                .object(objectName)
+                .build());
+            RetentionMetrics.minioObjectDeleted();
+        } catch (Exception e) {
+            RetentionMetrics.purgeError("minio_delete");
+            log.warn(workerMessages.format("worker.retention.file.minio_delete_failed", fileId, objectName, e.getMessage()));
+        }
+    }
+
+    private static void decrementBlobRef(DataSource dataSource, String contentHash) throws SQLException {
+        try (var conn = dataSource.getConnection();
+             var ps = conn.prepareStatement(DECREMENT_BLOB_REF)) {
+            ps.setString(1, contentHash);
+            ps.executeUpdate();
+        }
+    }
+
+    private static java.util.Optional<Integer> blobRefCount(DataSource dataSource, String contentHash) throws SQLException {
+        try (var conn = dataSource.getConnection();
+             var ps = conn.prepareStatement(SELECT_BLOB_REF)) {
+            ps.setString(1, contentHash);
+            try (var rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return java.util.Optional.of(rs.getInt(1));
+                }
+            }
+        }
+        return java.util.Optional.empty();
+    }
+
+    private static void deleteZeroBlobRow(DataSource dataSource, String contentHash) throws SQLException {
+        try (var conn = dataSource.getConnection();
+             var ps = conn.prepareStatement(DELETE_BLOB_ZERO)) {
+            ps.setString(1, contentHash);
+            ps.executeUpdate();
+        }
     }
 
     private static void insertAudit(DataSource dataSource, UUID fileId, String objectName) throws SQLException {
@@ -166,6 +233,6 @@ final class FileRetentionJanitor {
         }
     }
 
-    record Candidate(UUID fileId, String filename) {
+    record Candidate(UUID fileId, String filename, String contentHash, String storageKey) {
     }
 }

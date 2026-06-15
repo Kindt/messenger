@@ -37,6 +37,7 @@ public class AppConfig {
         override("DB_POOL_SIZE", "db.pool.size");
         override("DB_READ_JDBC_URL", "db.read.jdbc.url");
         override("DB_READ_POOL_SIZE", "db.read.pool.size");
+        override("DB_SHARD_JDBC_URL", "db.shard.jdbc.url");
         override("API_REPLICAS", "api.replicas");
         override("POSTGRES_MAX_CONNECTIONS", "postgres.max.connections");
         override("REDIS_URI", "redis.uri");
@@ -59,6 +60,7 @@ public class AppConfig {
         override("RATE_LIMIT_LOGIN_PER_MINUTE", "rate.limit.auth.login.per.minute");
         override("RATE_LIMIT_REGISTER_PER_HOUR", "rate.limit.auth.register.per.hour");
         override("MEDIA_MAX_UPLOAD_BYTES", "media.max.upload.bytes");
+        override("FILE_DEDUP_ENABLED", "file.dedup.enabled");
         override("JITSI_MEET_BASE_URL", "jitsi.meet.base.url");
         override("CONFERENCE_ROOM_PREFIX", "conference.room.prefix");
         override("WEBRTC_STUN_URIS", "webrtc.stun.uris");
@@ -156,6 +158,11 @@ public class AppConfig {
 
     public int dbReadPoolSize() {
         return Integer.parseInt(props.getProperty("db.read.pool.size", "10"));
+    }
+
+    /** Optional FR-OPT-09 shard JDBC URL (scaffold). Empty = single primary pool only. */
+    public String dbShardJdbcUrl() {
+        return props.getProperty("db.shard.jdbc.url", "").trim();
     }
 
     /** Declared core-api replica count for pool sizing warnings. Env: API_REPLICAS. */
@@ -299,6 +306,11 @@ public class AppConfig {
     /** Максимальный размер загрузки файла (байты), синхронно с лимитом {@link com.avandocmsg.messenger.api.files.FileService}. */
     public long mediaMaxUploadBytes() {
         return Long.parseLong(props.getProperty("media.max.upload.bytes", "52428800"));
+    }
+
+    /** FR-OPT-08: content-hash deduplication on upload (default on). */
+    public boolean fileDedupEnabled() {
+        return Boolean.parseBoolean(props.getProperty("file.dedup.enabled", "true"));
     }
 
     /** Базовый URL Jitsi Meet (без завершающего слэша); комната = {@code base + "/" + room_slug}. */

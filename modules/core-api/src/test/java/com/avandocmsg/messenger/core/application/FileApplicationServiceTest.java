@@ -29,7 +29,7 @@ class FileApplicationServiceTest {
     private final StubMessageRepository messageRepo = new StubMessageRepository();
     private final StubObjectStorage storage = new StubObjectStorage();
     private final FileApplicationService service = new FileApplicationService(
-        filePort, messageRepo, storage, () -> fileId, 1024);
+        filePort, messageRepo, storage, () -> fileId, 1024, false);
 
     @Test
     void getMetadataForUser_returnsFileForOwner() {
@@ -100,6 +100,20 @@ class FileApplicationServiceTest {
         assertFalse(storage.objects.containsKey(fileId + "/doc.pdf"));
     }
 
+    @Test
+    void upload_dedup_reusesBlobWithoutSecondPut() throws IOException {
+        var dedupService = new FileApplicationService(
+            filePort, messageRepo, storage, () -> UUID.randomUUID(), 1024, true);
+        var data = "same-content".getBytes(StandardCharsets.UTF_8);
+        var first = dedupService.uploadStream(
+            new ByteArrayInputStream(data), "a.txt", "text/plain", UserId.of(ownerId)).orElseThrow();
+        var second = dedupService.uploadStream(
+            new ByteArrayInputStream(data), "b.txt", "text/plain", UserId.of(ownerId)).orElseThrow();
+        assertNotEquals(first.file().id(), second.file().id());
+        assertEquals(1, storage.objects.size());
+        assertTrue(storage.objects.keySet().iterator().next().startsWith("objects/sha256/"));
+    }
+
     private StoredFile sampleFile() {
         return new StoredFile(FileId.of(fileId), "doc.pdf", "application/pdf", 42, UserId.of(ownerId));
     }
@@ -108,6 +122,7 @@ class FileApplicationServiceTest {
         StoredFile file;
         StoredFile inserted;
         boolean deleteOk;
+        final java.util.Map<String, com.avandocmsg.messenger.core.domain.FileBlob> blobs = new HashMap<>();
 
         @Override
         public Optional<StoredFile> findById(FileId id) {
@@ -125,6 +140,51 @@ class FileApplicationServiceTest {
         public boolean delete(FileId id) {
             file = null;
             return deleteOk;
+        }
+
+        @Override
+        public Optional<com.avandocmsg.messenger.core.domain.FileBlob> findBlobByContentHash(String contentHash) {
+            return Optional.ofNullable(blobs.get(contentHash));
+        }
+
+        @Override
+        public boolean insertBlob(String contentHash, String storageKey, long blobSize) {
+            if (blobs.containsKey(contentHash)) {
+                return false;
+            }
+            blobs.put(contentHash, new com.avandocmsg.messenger.core.domain.FileBlob(contentHash, storageKey, blobSize, 1));
+            return true;
+        }
+
+        @Override
+        public boolean incrementBlobRefCount(String contentHash) {
+            var blob = blobs.get(contentHash);
+            if (blob == null) {
+                return false;
+            }
+            blobs.put(contentHash, new com.avandocmsg.messenger.core.domain.FileBlob(
+                blob.contentHash(), blob.storageKey(), blob.blobSize(), blob.refCount() + 1));
+            return true;
+        }
+
+        @Override
+        public Optional<Integer> decrementBlobRefCount(String contentHash) {
+            var blob = blobs.get(contentHash);
+            if (blob == null) {
+                return Optional.empty();
+            }
+            var next = blob.refCount() - 1;
+            blobs.put(contentHash, new com.avandocmsg.messenger.core.domain.FileBlob(
+                blob.contentHash(), blob.storageKey(), blob.blobSize(), next));
+            return Optional.of(next);
+        }
+
+        @Override
+        public Optional<StoredFile> insertWithStorage(FileId id, String filename, String mimeType, long size,
+                                                      UserId uploadedBy, String contentHash, String storageKey) {
+            inserted = new StoredFile(id, filename, mimeType, size, uploadedBy, contentHash, storageKey);
+            file = inserted;
+            return Optional.of(inserted);
         }
     }
 

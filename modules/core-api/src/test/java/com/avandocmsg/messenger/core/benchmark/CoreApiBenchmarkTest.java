@@ -152,6 +152,32 @@ class CoreApiBenchmarkTest {
             public boolean delete(FileId id) {
                 return false;
             }
+
+            @Override
+            public Optional<com.avandocmsg.messenger.core.domain.FileBlob> findBlobByContentHash(String contentHash) {
+                return Optional.empty();
+            }
+
+            @Override
+            public boolean insertBlob(String contentHash, String storageKey, long blobSize) {
+                return false;
+            }
+
+            @Override
+            public boolean incrementBlobRefCount(String contentHash) {
+                return false;
+            }
+
+            @Override
+            public Optional<Integer> decrementBlobRefCount(String contentHash) {
+                return Optional.empty();
+            }
+
+            @Override
+            public Optional<StoredFile> insertWithStorage(FileId id, String filename, String mimeType, long size,
+                                                          UserId uploadedBy, String contentHash, String storageKey) {
+                return Optional.empty();
+            }
         };
         MessageRepository legacy = new MessageRepository(null, Clock.systemUTC());
         ObjectStoragePort storage = new ObjectStoragePort() {
@@ -166,7 +192,7 @@ class CoreApiBenchmarkTest {
             @Override
             public void delete(String objectName) throws Exception {}
         };
-        var service = new FileApplicationService(port, legacy, storage, UuidGenerator.standard(), 1_000_000);
+        var service = new FileApplicationService(port, legacy, storage, UuidGenerator.standard(), 1_000_000, false);
 
         var start = System.nanoTime();
         for (int i = 0; i < 1000; i++) {

@@ -27,7 +27,7 @@ class MessageApplicationServiceTest {
 
     @Test
     void getMessageForMember_returnsMessageForMember() {
-        chatRepo.roles.put(chatId, "member");
+        chatRepo.put(chatId, memberId, "member");
         messagePort.message = sampleMessage();
 
         var result = service.getMessageForMember(ChatId.of(chatId), MessageId.of(messageId), UserId.of(memberId));
@@ -44,7 +44,7 @@ class MessageApplicationServiceTest {
 
     @Test
     void getMessageForMember_rejectsWrongChat() {
-        chatRepo.roles.put(chatId, "member");
+        chatRepo.put(chatId, memberId, "member");
         messagePort.message = new Message(
             MessageId.of(messageId),
             ChatId.of(UUID.randomUUID()),
@@ -59,6 +59,13 @@ class MessageApplicationServiceTest {
             null);
 
         assertTrue(service.getMessageForMember(ChatId.of(chatId), MessageId.of(messageId), UserId.of(memberId)).isEmpty());
+    }
+
+    @Test
+    void isChatMember_reflectsRepositoryRole() {
+        chatRepo.put(chatId, memberId, "member");
+        assertTrue(service.isChatMember(ChatId.of(chatId), UserId.of(memberId)));
+        assertFalse(service.isChatMember(ChatId.of(chatId), UserId.of(outsiderId)));
     }
 
     private Message sampleMessage() {
@@ -77,15 +84,19 @@ class MessageApplicationServiceTest {
     }
 
     static final class StubChatRepository extends ChatRepository {
-        final java.util.Map<UUID, String> roles = new java.util.HashMap<>();
+        final java.util.Map<String, String> roles = new java.util.HashMap<>();
 
         StubChatRepository() {
             super(null, java.time.Clock.systemUTC(), com.avandocmsg.messenger.core.port.UuidGenerator.standard());
         }
 
+        void put(UUID chatId, UUID userId, String role) {
+            roles.put(chatId + ":" + userId, role);
+        }
+
         @Override
         public String getMemberRole(UUID chatId, UUID userId) {
-            return roles.get(chatId);
+            return roles.get(chatId + ":" + userId);
         }
     }
 

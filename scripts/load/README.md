@@ -35,6 +35,18 @@ k6 prints `http_req_duration` p95. Save JSON for §10.2 baseline:
 k6 run --out json=deploy/qemu/run/k6-pilot-baseline.json scripts/load/pilot-health.js
 ```
 
+Or use the host runner (k6 or PowerShell fallback):
+
+```powershell
+.\scripts\run-k6-qemu-baseline.ps1
+```
+
+Stage prep checklist (T601–T607 artifacts):
+
+```powershell
+.\scripts\stage-readiness-checklist.ps1
+```
+
 ## Scripts
 
 | File | Purpose |

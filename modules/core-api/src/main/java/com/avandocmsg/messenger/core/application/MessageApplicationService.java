@@ -26,4 +26,9 @@ public final class MessageApplicationService {
         return messageRepositoryPort.findById(messageId)
             .filter(m -> m.chatId().equals(chatId));
     }
+
+    /** Phase 2b: membership gate before write-path (send stays in MessageService until port insert). */
+    public boolean isChatMember(ChatId chatId, UserId userId) {
+        return legacyChatRepository.getMemberRole(chatId.value(), userId.value()) != null;
+    }
 }

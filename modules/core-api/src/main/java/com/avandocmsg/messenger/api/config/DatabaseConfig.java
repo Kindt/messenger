@@ -30,6 +30,16 @@ public class DatabaseConfig {
         return Optional.of(buildPool(url, "avandocmsg-hot-read", poolSize));
     }
 
+    /** Optional shard pool (FR-OPT-09 phase A scaffold). */
+    public Optional<DataSource> shardDataSource() {
+        var url = appConfig.dbShardJdbcUrl();
+        if (url == null || url.isBlank()) {
+            return Optional.empty();
+        }
+        var poolSize = Math.max(2, appConfig.dbReadPoolSize());
+        return Optional.of(buildPool(url, "avandocmsg-shard-0", poolSize));
+    }
+
     public void warnIfPoolOversubscribed() {
         var replicas = appConfig.apiReplicas();
         var pool = appConfig.dbPoolSize();

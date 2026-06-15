@@ -95,6 +95,11 @@ public class MessageResource {
         if (request.replyToMsgId() != null && !request.replyToMsgId().isBlank()) {
             replyToMsgId = UuidParams.required(request.replyToMsgId(), "reply_to_msg_id");
         }
+        if (!messageApplicationService.isChatMember(ChatId.of(chatId), UserId.of(userId))) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(new ApiError(403, messages.get("error.message.send_denied.not_member")))
+                .build();
+        }
         var msg = messageService.sendMessage(chatId, userId, request, replyToMsgId);
         if (msg == null) {
             var denied = messageService.sendBlockedReason(chatId, userId);

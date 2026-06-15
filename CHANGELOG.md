@@ -8,10 +8,29 @@
 
 ## [Unreleased]
 
+### 2026-06-16 — Presentation gaps implementation plan
+
+- **`docs/plans/2026-06-16-presentation-gaps-implementation-plan.md`**: inventory незакрытых блоков презентации, спринты A–D (ops, prod, integrations, scale).
+
+### 2026-06-15 — Roadmap wave 4 engineering (FR-OPT-08, T604, hex 2b, shard scaffold)
+
+- **FR-OPT-08 file dedup:** `V031__file_content_hash_dedup.sql`, `file_blob` + content-hash upload in `FileApplicationService`, metric `storage_dedup_saved_bytes_total`, `FileRetentionJanitor` refcount-aware delete.
+- **FR-OPT-09 scaffold:** `OrganizationShardRouter`, `DB_SHARD_JDBC_URL` / `db.shard.jdbc.url` (routing still primary-only).
+- **Hex 2b:** `MessageApplicationService.isChatMember` + send ACL gate in `MessageResource`.
+- **T604:** `scripts/run-k6-qemu-baseline.ps1`, `scripts/stage-readiness-checklist.ps1`; QEMU fallback baseline JSON in `deploy/qemu/run/`.
+
 ### 2026-06-15 — Roadmap post–spec 007: §12 closure + next priorities
 
 - **`docs/ROADMAP_EPICS.md`**: §7 presentation §12 note; new §8 priority table (stage TLS, E2EE, k6, FR-OPT-08/09).
 - **`docs/plans/2026-06-15-unfinished-development-plan.md`**: load test note aligned with §12 presentation closure.
+
+### 2026-06-15 — product_presentation v2.5: профили вместо «оптимизации»
+
+- **`product_presentation.html` v2.5**: удалён §12 (FR-OPT); §10 — одна таблица sizing; §17 (бывш. §18) — Pilot / Standard / monolith (справ.); убран жаргон baseline/оптимиз.
+
+### 2026-06-15 — product_presentation v2.4: статус по фактам репозитория
+
+- **`product_presentation.html` v2.4**: блок «Состояние продукта»; Playwright **30/30** (2026-06-15); E2EE/звонки/push/TLS — «частично»; §5 — 24 done + 3 planned; §13 Bot API vs `bot-delivery` MVP; Рис. 4 из `tz_product_sizing.py`; единый источник статусов — `scripts/product_status.py`.
 
 ### 2026-06-15 — §12 product presentation closure (FR-OPT 01–07)
 

@@ -90,6 +90,17 @@ class AdminExportComplianceSeedH2Test {
                   mime_type VARCHAR(128) NOT NULL DEFAULT 'application/octet-stream',
                   size BIGINT NOT NULL DEFAULT 0,
                   uploaded_by UUID NOT NULL REFERENCES users(id),
+                  content_hash VARCHAR(64),
+                  storage_key VARCHAR(512),
+                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """);
+            st.execute("""
+                CREATE TABLE file_blob (
+                  content_hash VARCHAR(64) PRIMARY KEY,
+                  storage_key VARCHAR(512) NOT NULL,
+                  blob_size BIGINT NOT NULL DEFAULT 0,
+                  ref_count INT NOT NULL DEFAULT 0,
                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """);
@@ -141,7 +152,8 @@ class AdminExportComplianceSeedH2Test {
             messageRepository,
             new FileProxyObjectStorageAdapter(fileProxy),
             uuidGen,
-            appConfig.mediaMaxUploadBytes());
+            appConfig.mediaMaxUploadBytes(),
+            false);
         var fileService = new FileService(fileApplicationService, messageRepository);
         var messageService = new MessageService(
             messageRepository,
