@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+### 2026-06-15 — Презентация сравнения с конкурентами
+
+- **`docs/COMPETITOR_COMPARISON_METHODOLOGY.md`**: самодостаточная методика (Pilot=пробник, якоря Standard/Enterprise, floor 10k/100k).
+- **`competitor_comparison.html`**: наглядная презентация — SVG-графики TCO, таблицы Korus vs eXpress/Пачка/VK, плюсы/минусы.
+- **`scripts/competitor_comparison_data.py`**, **`scripts/build-competitor-comparison-html.py`**: генерация HTML из единых ставок infra.
+
 ### 2026-06-16 — Sprint A+B: stage ops scripts + prod wiring (Push/TURN/preview, presentation v2.5)
 
 - **Sprint A (stage preflight):** `preflight-stage-deploy.ps1`, `validate-stage-inventory.ps1`, `stage-tls-smoke.ps1`, `smoke-e2ee-staging.ps1`, `run-k6-stage-baseline.ps1`, `stage-ansible-dry-run.ps1`, `playwright-staging-gate.ps1`.
