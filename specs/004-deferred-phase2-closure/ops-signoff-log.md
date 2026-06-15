@@ -1,6 +1,6 @@
 # Ops Sign-Off Log: Spec 004
 
-**Date**: 2026-06-15 (engineering closure 2026-06-12; outer gate refresh 2026-06-15)  
+**Date**: 2026-06-16 (engineering closure 2026-06-12; outer gate refresh 2026-06-15; Sprint A+B ops automation 2026-06-16)  
 **Environment**: local dev / QEMU (stage prod gates marked pending)
 
 ## Automated verification (engineering)
@@ -12,6 +12,9 @@
 | TLS smoke (dev) | `.\scripts\smoke-tls-redirect.ps1 -SkipTls` | **PASS** | HTTP-only path |
 | Hex write unit | `.\gradlew.bat :modules:core-api:test --tests "*ApplicationServiceTest*"` | PASS | User/Org/File |
 | Playwright full-stack | `npx playwright test` @ `http://127.0.0.1:19088` | **PASS** (2026-06-15, 30/30) | QEMU hotswap+lb; spec 006 infra |
+| Preview worker (guest) | `curl http://127.0.0.1:9195/health` on server guest | **PASS** (2026-06-16) | after `docker compose build preview-worker` |
+| k6 QEMU baseline (fallback) | `.\scripts\run-k6-qemu-baseline.ps1` | **PASS** (2026-06-16) | k6 not on host; health probe JSON |
+| Stage preflight kit | `.\scripts\preflight-stage-deploy.ps1 -SkipVaultCheck` | **PASS** artifacts / **FAIL** placeholders | expected until real inventory |
 
 ## US9 — Fast acceptance (inner / outer)
 
@@ -31,6 +34,8 @@
 | 3 | `ansible-playbook -i inventory/stage playbooks/site.yml --ask-vault-pass` | Ops | ⏳ pending |
 | 4 | `smoke-tls-redirect.ps1` with real `-HttpUrl`/`-HttpsUrl` | Ops | ⏳ pending |
 | 5 | `ansible-playbook ... --tags tls_smoke` (prod inventory) | Ops | ⏳ pending |
+
+**Automation ready (2026-06-16):** `preflight-stage-deploy.ps1`, `validate-stage-inventory.ps1`, `stage-tls-smoke.ps1`, `smoke-e2ee-staging.ps1`, `run-k6-stage-baseline.ps1`, `playwright-staging-gate.ps1`, `docs/review/web-push-prod-runbook.md`.
 
 **Local dev**: `.\scripts\smoke-tls-redirect.ps1 -SkipTls` → exit 0 (2026-06-14 re-verified).
 
