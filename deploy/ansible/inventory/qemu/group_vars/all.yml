@@ -12,5 +12,5 @@ korus_configure_ufw: false
 korus_browser_ws_port: 19088
 korus_docker_buildkit: "0"
 korus_compose_bake: "0"
-# Wave 1 FR-OPT-01: QEMU server guest uses pilot compose (no Solr/ZK) by default.
-korus_deploy_profile: pilot
+# Deploy profile: default standard (full-server). Pilot: uncomment korus_deploy_profile: pilot
+# See docs/DEV_STACK_PROFILES.md

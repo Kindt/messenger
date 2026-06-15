@@ -61,7 +61,7 @@ Compose: `docker/docker-compose.pilot.yml` + `docker/docker-compose.keycloak-pro
 
 Optional compose profiles: `push`, `retention`, `compliance` (archiver/deep/indexer/export-replay), `archive` (postgres-archive).
 
-- **Ansible QEMU:** `inventory/qemu/group_vars/all.yml` задаёт `korus_deploy_profile: pilot` по умолчанию для server guest.
+- **QEMU deploy profile:** по умолчанию `standard` (full-server); pilot — явный override `korus_deploy_profile: pilot` в inventory. См. [`docs/DEV_STACK_PROFILES.md`](../../docs/DEV_STACK_PROFILES.md).
 
 ## Keycloak: dev vs prod mode (FR-OPT-02)
 
@@ -109,4 +109,4 @@ Optional compose profiles: `push`, `retention`, `compliance` (archiver/deep/inde
 
 ## Сокращение (не в минимальном full-server)
 
-Для уменьшения server-ВМ используйте **pilot profile** (`docker/docker-compose.pilot.yml`, Ansible `korus_deploy_profile: pilot`) — см. раздел «korus-server (pilot profile)» выше. В штатном `full-server` все 14 сервисов поднимаются.
+Для уменьшения server-ВМ используйте **pilot profile** (`docker/docker-compose.pilot.yml`, Ansible `korus_deploy_profile: pilot`) — см. раздел «korus-server (pilot profile)» выше и [`docs/DEV_STACK_PROFILES.md`](../../docs/DEV_STACK_PROFILES.md). В штатном `full-server` все 14 сервисов поднимаются.

@@ -24,6 +24,7 @@
 | **`deploy/two-host/`** | **Два хоста в LAN:** машина 1 — **`scripts/server-host-up.*`** или **Ansible** `deploy/ansible/playbooks/server-only.yml`; машина 2 — **`scripts/web-host-up.*`** или Ansible `web-only.yml`. Linux: **`deploy/ansible/playbooks/site.yml`**. Hot-swap UI: **`dev-overlay/`**, … Чеклист: **`deploy/two-host/README.md`**. |
 | **`specs/003-docker-ansible-autotest/`** | Docker + Ansible deploy, messaging E2E smokes, CI nightly, Playwright P1 — **`specs/003-docker-ansible-autotest/quickstart.md`**. |
 | **`deploy/qemu/`** | **QEMU на Windows:** две Ubuntu ВМ (192.168.76.10/20), bootstrap через **Ansible** (`run-ansible-local.sh`). **`.\scripts\qemu-up.ps1`**, redeploy **`.\scripts\qemu-redeploy.ps1`**. См. **`deploy/qemu/README.md`**. |
+| **`docs/DEV_STACK_PROFILES.md`** | Профили стендов: QEMU **dev/full**, deploy **pilot/standard**, compose **full-server / pilot / dev-min** |
 | **`deploy/ansible/`** | Ansible roles/playbooks для Linux/CI/QEMU-guest; acceptance: **`scripts/smoke-deploy-acceptance.sh`**. |
 | **`tests/e2e-web/`** | Playwright: login → group → message (**`npm test`** в каталоге). |
 | **`CHANGELOG.md`** | Журнал изменений |

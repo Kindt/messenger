@@ -1,5 +1,7 @@
 # QEMU: две ВМ (dev-сервер + веб-клиент)
 
+> **Профили стендов:** QEMU **dev/full**, deploy **pilot/standard**, compose **full-server / pilot / dev-min** — см. канонический справочник [`docs/DEV_STACK_PROFILES.md`](../../docs/DEV_STACK_PROFILES.md).
+
 Две виртуальные машины Ubuntu 24.04 (cloud image) в одной виртуальной LAN **192.168.76.0/24**:
 
 | ВМ | IP | Роль | Порты на хосте Windows |
@@ -99,7 +101,9 @@ UI sync после подъёма: `.\scripts\qemu-dev-mode.ps1 -Mode sync-ui` (
 
 ## Справочник стендов
 
-Краткая карта **всех конфигурированных стендов** в репозитории. На Windows dev-хосте runtime — **только QEMU** (строки ниже с пометкой Windows); `full-stack-up.ps1` на хосте Windows **не использовать** (см. `.cursor/rules/qemu-host-isolation.mdc`).
+Краткая карта команд ниже. **Смысл профилей** (dev ≠ pilot, full-server vs product tier) — в [`docs/DEV_STACK_PROFILES.md`](../../docs/DEV_STACK_PROFILES.md).
+
+На Windows dev-хосте runtime — **только QEMU**; `full-stack-up.ps1` на хосте Windows **не использовать** (см. `.cursor/rules/qemu-host-isolation.mdc`).
 
 ### Windows QEMU (две VM, профили дисков)
 
@@ -137,7 +141,7 @@ Two-host на Windows вручную: `server-host-up.ps1` + `web-host-up.ps1`. 
 
 | Inventory | Топология | TLS | Playbook / стек | Назначение |
 |-----------|-----------|-----|-----------------|------------|
-| `inventory/qemu/` | 2 VM | нет | `qemu-server-local` → `full-stack-up.sh`; `qemu-web-local` → `korus-web-up.sh` | Windows QEMU |
+| `inventory/qemu/` | 2 VM | нет | `qemu-server-local` → `full-stack-up.sh` или `pilot-stack-up.sh` (`korus_deploy_profile`); `qemu-web-local` → `korus-web-up.sh` | Windows QEMU |
 | `inventory/local/` | 1 node | нет | `ci-local.yml` | CI, Linux all-in-one |
 | `inventory/two-host/` | server + web LAN | опционально | `site.yml` | два Linux-хоста |
 | `inventory/stage/` | two-host | да (LE/BYO) | `site.yml` + role `tls` | pre-prod |

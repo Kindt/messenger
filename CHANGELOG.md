@@ -8,6 +8,12 @@
 
 ## [Unreleased]
 
+### 2026-06-15 — docs: справочник профилей стендов (dev / full / pilot)
+
+- **`docs/DEV_STACK_PROFILES.md`**: три оси (QEMU disk, Ansible deploy, product tier); матрицы full-server / pilot / dev-min; Keycloak dev vs prod; «что выбрать».
+- **`deploy/qemu/README.md`**, **`AGENTS.md`**, **`RESOURCES.md`**: ссылки на справочник.
+- **QEMU inventory:** default deploy profile снова **standard** (full-server); pilot — явный override.
+
 ### 2026-06-15 — spec 006 Wave 1: pilot compose + Keycloak prod (FR-OPT-01/02)
 
 - **`docker/docker-compose.pilot.yml`**: 8 core services + optional profiles (`push`, `retention`, `compliance`, `archive`); без Solr/ZK; `SEARCH_MODE=sql`, `MLS_WIRE_ENABLED=false` для infra-smokes.

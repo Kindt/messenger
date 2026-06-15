@@ -305,6 +305,7 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 | Документ | Назначение |
 |----------|------------|
 | [`deploy/qemu/README.md`](deploy/qemu/README.md) | QEMU golden path, порты, troubleshooting |
+| [`docs/DEV_STACK_PROFILES.md`](docs/DEV_STACK_PROFILES.md) | QEMU dev/full, pilot/standard, full-server vs dev-min |
 | [`deploy/ansible/README.md`](deploy/ansible/README.md) | Ansible inventories, playbooks |
 | [`docs/CI_AND_REPO_HYGIENE.md`](docs/CI_AND_REPO_HYGIENE.md) | CI, Dependabot, smoke policy |
 | [`tests/e2e-web/README.md`](tests/e2e-web/README.md) | Playwright tiers, inner/outer loop |
@@ -324,7 +325,7 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 
 ## Dev runtime (QEMU)
 
-На **Windows host** runtime только через две QEMU VM:
+На **Windows host** runtime только через две QEMU VM. **Профили стендов** (dev/full vs pilot/standard vs compose): [`docs/DEV_STACK_PROFILES.md`](docs/DEV_STACK_PROFILES.md).
 
 | VM | Guest IP | Host ports |
 |----|----------|------------|
