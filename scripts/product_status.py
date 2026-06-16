@@ -29,7 +29,7 @@ FEATURES: tuple[tuple[str, str, str, str], ...] = (
     ("fr_opt_shard", "Sharding PostgreSQL", "planned", "Enterprise roadmap"),
     ("load_test", "Formal load test на stage", "partial", "тестовый стенд ✓; stage host — с сентября 2026"),
     ("bot_api", "Bot API (REST L2)", "partial", "long-poll, pin/ban, token rotate ✓; prod webhook SLA — ops"),
-    ("sso", "SSO Google / LDAP / SAML", "partial", "Keycloak broker template + runbook; IdP secrets — ops"),
+    ("sso", "SSO Google / LDAP / SAML", "partial", "OIDC + LDAP enable scripts + runbook; live IdP/AD — ops"),
     ("live", "Live-streaming (HLS)", "planned", ""),
     ("mobile", "Мобильные iOS/Android", "out", "вне текущей поставки"),
     ("desktop", "Desktop-клиент", "planned", ""),

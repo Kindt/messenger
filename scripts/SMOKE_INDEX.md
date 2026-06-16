@@ -62,6 +62,7 @@
 | **File image resize (P1-4)** | `scripts/smoke-file-resize.ps1` | manual | host `:18080`; upload PNG → `/resize?w=32&h=32` |
 | **Export-replay non-stub (P2-4)** | `scripts/smoke-export-replay-non-stub.ps1` | manual | export_v1 gate via `smoke-export-replay-before-purge` |
 | **SSO Keycloak broker (P2-2)** | `docs/runbooks/sso-keycloak-federation.md` | manual | `scripts/keycloak-enable-identity-provider.sh` on IdP host |
+| **LDAP/AD federation (P2-3)** | `docs/runbooks/sso-keycloak-federation.md` § LDAP | manual | `scripts/keycloak-enable-ldap-federation.sh` on Keycloak host |
 | **Preview worker health** | `scripts/smoke-preview-worker.ps1` | manual | full-server `:9195/health`; QEMU: `smoke-preview-worker-qemu.ps1` |
 | **Playwright staging gate** | `scripts/playwright-staging-gate.ps1` | manual | `-BaseUrl https://...` |
 | **Stage/prod deploy runbook** | `docs/review/stage-prod-deploy-runbook.md` | manual | US1/US7 deploy-only when hosts available |

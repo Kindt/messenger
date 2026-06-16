@@ -18,6 +18,11 @@
 - **Live-streaming renumbered:** `specs/011-live-streaming` → **`specs/012-live-streaming`** → **`specs/013-live-streaming`** (spec 011 = cloud; spec 012 = presentation spider).
 - **`docs/plans/2026-06-15-korus-cloud-platform-design.md`**: redirect stub → spec 011.
 
+### 2026-06-16 — P2-3 LDAP/AD Keycloak federation script
+
+- `scripts/keycloak-enable-ldap-federation.sh` — Admin REST enable LDAP user storage (P2-3).
+- Runbook + presentation gaps plan updated; engineering backlog P1–P2 closed (P0 ops → Sep 2026).
+
 ### 2026-06-16 — Spec 012 Phase C complete (v3.1 P2)
 
 - `competitor_comparison_talktrack.html` — сценарии 5 / 15 / 45 мин; ссылка из reading guide.

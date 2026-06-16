@@ -16,7 +16,8 @@
 | `keycloak/avandocmsg-realm.json` | Realm + **отключённые** IdP Google/Yandex + роли user/admin |
 | `keycloak/identity-provider-corporate-oidc.example.json` | Generic OIDC (Azure AD, Okta, corporate portal) |
 | `keycloak/user-federation-ldap.example.json` | LDAP/AD user federation |
-| `scripts/keycloak-enable-identity-provider.sh` | Включение IdP через Admin REST (curl) |
+| `scripts/keycloak-enable-identity-provider.sh` | Включение OIDC IdP через Admin REST (curl) |
+| `scripts/keycloak-enable-ldap-federation.sh` | Включение LDAP/AD user federation через Admin REST |
 
 ## OIDC (Google / корпоративный portal)
 
@@ -46,10 +47,24 @@ Keycloak → **Authentication** → **Required actions** / **Realm settings** �
 
 ## LDAP / Active Directory
 
-1. Keycloak Admin → **User federation** → **Add LDAP**.
-2. Параметры см. `keycloak/user-federation-ldap.example.json` (URL, `usersDn`, `bindDn`, `bindCredential` из vault).
-3. **Sync mode:** `IMPORT` или `LEGACY` по политике заказчика.
-4. Mapper **username** / **email** → realm attributes; роль `admin` назначается **вручную** (FR-INT-03).
+1. Параметры см. `keycloak/user-federation-ldap.example.json` (URL, `usersDn`, `bindDn`, `bindCredential` из vault).
+2. На хосте с Keycloak:
+
+```bash
+export KEYCLOAK_URL=http://127.0.0.1:8080
+export KEYCLOAK_ADMIN=admin
+export KEYCLOAK_ADMIN_PASSWORD='***'
+export LDAP_FEDERATION_NAME=corp-ldap
+export LDAP_CONNECTION_URL='ldap://ad.example.com:389'
+export LDAP_USERS_DN='OU=Users,DC=example,DC=com'
+export LDAP_BIND_DN='CN=svc-korus,OU=Service,DC=example,DC=com'
+export LDAP_BIND_PASSWORD='***'
+bash scripts/keycloak-enable-ldap-federation.sh
+```
+
+3. Keycloak Admin → **User federation** → `<name>` → **Synchronize all users** (или по расписанию).
+4. **Sync mode:** `IMPORT` / `READ_ONLY` — `LDAP_EDIT_MODE` в скрипте; регистрация только через AD.
+5. Mapper **username** / **email** → realm attributes; роль `admin` назначается **вручную** (FR-INT-03).
 
 ## Проверка
 

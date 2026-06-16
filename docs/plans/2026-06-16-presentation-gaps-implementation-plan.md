@@ -66,7 +66,7 @@
 |----|------|-----------|--------|-------------|
 | **P2-1** | **Bot API** | REST MVP ✅ (spec 009); long-poll, deleteMessage/pin/ban — backlog | — | `smoke-bot-api.ps1` green на QEMU |
 | **P2-2** | **SSO OIDC** | Keycloak identity broker template + admin doc | 1–2 нед. | ✅ runbook + `keycloak-enable-identity-provider.sh`; live IdP — ops |
-| **P2-3** | **LDAP/AD** | Keycloak user federation playbook | 1 нед. | P2-2 |
+| **P2-3** | **LDAP/AD** | Keycloak user federation playbook | 1 нед. | ✅ `keycloak-enable-ldap-federation.sh` + example JSON |
 | **P2-4** | **Batch replay** (traceability) | Довести export-replay до non-stub policy | 2 нед. | ✅ `EXPORT_REPLAY_REQUIRE_JDBC` + smoke |
 
 **Рекомендация:** spec **008-bot-api-sso** (speckit) перед кодом P2-1.
@@ -156,5 +156,7 @@ flowchart LR
 10. **P2-2 SSO:** ✅ Keycloak broker template + runbook (IdP creds — ops).
 11. **P2-4 batch replay:** ✅ `EXPORT_REPLAY_REQUIRE_JDBC` + non-stub smoke.
 12. **P0 ops:** T601–T607 — backlog до Sep 2026.
+13. **Spec 012:** competitor spider-web v3.1 + talk track — ✅ 2026-06-16.
+14. **P2-3 LDAP:** ✅ `keycloak-enable-ldap-federation.sh` + runbook (live AD — ops).
 
 Связанные документы: [`2026-06-15-unfinished-development-plan.md`](2026-06-15-unfinished-development-plan.md), [`ROADMAP_EPICS.md`](../ROADMAP_EPICS.md) §8.
