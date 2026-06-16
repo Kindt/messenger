@@ -42,7 +42,7 @@
 
 |-------|-------|------|
 
-| A | TURN/Push/Bot QEMU smokes + Playwright `ui-bot` | ✅ guest smokes; **T110 outer 33/33** |
+| A | TURN/Push/Bot QEMU smokes + Playwright `ui-bot` | ✅ guest smokes; **T110 outer 34/34** |
 
 | C | Bot API L2 (long-poll, moderation, rotate, rate limit) | ✅ code + smokes |
 

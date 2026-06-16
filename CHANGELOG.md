@@ -6,6 +6,13 @@
 
 ---
 
+### 2026-06-16 — Docs sync: Playwright 34/34, plugin P2/P3, parity reports
+
+- **Презентация:** `product_status.py` / `product_presentation.html` v2.5.4 — **34/34** Playwright; `docs/PRODUCT_PRESENTATION.md` актуализирован.
+- **Parity:** `docs/parity/runtime-gate-report.md` ↔ `specs/002/.../runtime-gate-report.md` (34 passed, outer gate 2026-06-16).
+- **Spec 010/014:** T110, ops-signoff-log, presentation plans — 34/34.
+- **Plugin P2/P3:** exchange/storage bridges, OCR/AI sidecars, legacy echo, V037, smokes (см. Phase P2/P3 ниже).
+
 ### 2026-06-16 — Spec 014 S3: all-inner green + SnapshotPartCodec zstd fix
 
 - **Playwright:** `all-inner` 34/34 green на QEMU (`127.0.0.1:18080` / `:19088`); mesh tests с mocked WebRTC.
@@ -51,6 +58,13 @@
 ### 2026-06-16 — План: security CI gate + презентация (без ФСТЭК)
 
 - **`docs/plans/2026-06-16-code-security-presentation-plan.md`**: S1–S3 (zero-warning buildIntegrity, security smokes, PRES sync); ФСТЭК/реестр out of scope.
+
+### 2026-06-15 — Spec 014 Phase P2/P3: bridges, OCR, AI triage, legacy echo
+
+- **Workers:** `exchange-bridge` (:8093), `storage-bridge` (:8094) — Plugin Runtime API + mock Graph/storage.
+- **Sidecars:** `ocr-invoice-demo` (:8095, on-prem OCR mock), `ai-triage-demo` (:8096, L3 triage mock).
+- **Legacy echo:** `echo-java8`, `echo-vbnet48` (Linux .NET 8 stand-in), presets V037.
+- **Mocks:** exchange/storage/ocr/ai fixtures; gateway routes; smokes exchange/ocr/ai.
 
 ### 2026-06-15 — Spec 014 Phase P1: connectors, outbound, QEMU integrations VM
 
@@ -134,7 +148,7 @@
 - **`GET /api/v1/files/{fileId}/resize?w=&h=`** — on-the-fly JPEG thumbnail in core-api (`ImageResizeService`, `FILE_RESIZE_*` env).
 - Smoke: `scripts/smoke-file-resize.ps1` (upload PNG → resize → non-image 400).
 
-### 2026-06-16 — Outer gate T110 (QEMU Playwright 33/33)
+### 2026-06-16 — Outer gate T110 (QEMU Playwright 34/34)
 
 - Full suite green: `tests/e2e-web` `npx playwright test` against `:19088`/`:18080`.
 - Guest smokes T109: turn, push-worker, bot-api — OK.

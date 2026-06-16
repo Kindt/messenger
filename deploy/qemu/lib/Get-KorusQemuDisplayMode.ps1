@@ -11,7 +11,7 @@ function Get-KorusQemuDisplayMode {
 
 function Get-KorusQemuDisplayArgs {
     param(
-        [Parameter(Mandatory)][ValidateSet("server", "web")]
+        [Parameter(Mandatory)][ValidateSet("server", "web", "integrations")]
         [string]$Role,
         [ValidateSet("", "none", "gtk", "sdl", "default")]
         [string]$ModeOverride = ""

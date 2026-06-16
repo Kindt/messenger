@@ -7,7 +7,9 @@
 ```powershell
 cd D:\proj\korus_messenger
 .\gradlew :modules:core-api:test --tests "com.avandocmsg.messenger.api.plugins.*" `
-  :modules:workers:connector-runtime:test
+  :modules:workers:connector-runtime:test `
+  :modules:workers:exchange-bridge:test `
+  :modules:workers:storage-bridge:test
 python scripts\validate-l0-plugin-menu.py integrations\examples\hr-faq-menu.json
 ```
 
@@ -15,7 +17,10 @@ python scripts\validate-l0-plugin-menu.py integrations\examples\hr-faq-menu.json
 
 ## Integrations VM (`korus-integrations` · 192.168.76.30)
 
-> **T01427:** автоматический подъём 3-й ВМ в `qemu-up.ps1` — в работе. Пока — вручную на guest после bootstrap.
+```powershell
+.\scripts\qemu-up.ps1 -WithIntegrations
+# host debug: gateway :18190, bridges :18093-:18096
+```
 
 ```bash
 cd /mnt/korus
@@ -54,8 +59,10 @@ Example L0 body:
 ## Smokes
 
 ```powershell
-# PHP echo sidecar (port 8088 when compose published on host tunnel)
-.\scripts\smoke-plugin-echo-php.ps1 -BaseUrl http://127.0.0.1:8088
+.\scripts\smoke-plugin-echo-php.ps1 -BaseUrl http://127.0.0.1:18088
+.\scripts\smoke-plugin-exchange.ps1 -BaseUrl http://127.0.0.1:18093
+.\scripts\smoke-plugin-ocr-mock.ps1 -BaseUrl http://127.0.0.1:18095
+.\scripts\smoke-plugin-ai-triage.ps1 -BaseUrl http://127.0.0.1:18096
 ```
 
 ---

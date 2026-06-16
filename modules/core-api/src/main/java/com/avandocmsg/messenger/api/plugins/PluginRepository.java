@@ -31,6 +31,14 @@ public class PluginRepository {
         String capabilitiesJson
     ) {}
 
+    public record OrgPolicyRow(
+        UUID orgId,
+        List<String> allowedPresetIds,
+        String llmMode,
+        boolean ocrOnPremOnly,
+        Instant updatedAt
+    ) {}
+
     public record InstanceRow(
         UUID id,
         UUID orgId,
@@ -143,6 +151,49 @@ public class PluginRepository {
         }
     }
 
+    public Optional<OrgPolicyRow> findOrgPolicy(UUID orgId) {
+        var sql = """
+            SELECT org_id, allowed_preset_ids::text, llm_mode, ocr_on_prem_only, updated_at
+            FROM org_plugin_policies
+            WHERE org_id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, orgId);
+            try (var rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapPolicy(rs));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("findOrgPolicy failed: {}", e.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    public boolean upsertOrgPolicy(OrgPolicyRow row) {
+        var sql = """
+            INSERT INTO org_plugin_policies (org_id, allowed_preset_ids, llm_mode, ocr_on_prem_only, updated_at)
+            VALUES (?, ?::jsonb, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT (org_id) DO UPDATE SET
+              allowed_preset_ids = EXCLUDED.allowed_preset_ids,
+              llm_mode = EXCLUDED.llm_mode,
+              ocr_on_prem_only = EXCLUDED.ocr_on_prem_only,
+              updated_at = CURRENT_TIMESTAMP
+            """;
+        try (var conn = dataSource.getConnection();
+             var ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, row.orgId());
+            ps.setString(2, MAPPER.writeValueAsString(row.allowedPresetIds()));
+            ps.setString(3, row.llmMode());
+            ps.setBoolean(4, row.ocrOnPremOnly());
+            return ps.executeUpdate() >= 1;
+        } catch (Exception e) {
+            log.warn("upsertOrgPolicy failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
     public boolean configureOutbound(UUID id, UUID targetChatId, UUID actorUserId, String tokenHash) {
         var sql = """
             UPDATE plugin_instances
@@ -161,6 +212,26 @@ public class PluginRepository {
             log.warn("configureOutbound failed: {}", e.getMessage());
             return false;
         }
+    }
+
+    private static OrgPolicyRow mapPolicy(java.sql.ResultSet rs) throws Exception {
+        List<String> allowed = new ArrayList<>();
+        var allowedJson = rs.getString(2);
+        if (allowedJson != null && !allowedJson.isBlank()) {
+            var node = MAPPER.readTree(allowedJson);
+            if (node.isArray()) {
+                for (JsonNode item : node) {
+                    allowed.add(item.asText());
+                }
+            }
+        }
+        return new OrgPolicyRow(
+            (UUID) rs.getObject(1),
+            List.copyOf(allowed),
+            rs.getString(3),
+            rs.getBoolean(4),
+            rs.getTimestamp(5).toInstant()
+        );
     }
 
     private static InstanceRow mapInstance(java.sql.ResultSet rs) throws Exception {

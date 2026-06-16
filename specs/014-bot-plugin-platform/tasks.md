@@ -27,16 +27,16 @@
 
 ## Phase P2
 
-- [ ] T01416 exchange-bridge
-- [ ] T01417 storage-bridge
+- [x] T01416 exchange-bridge
+- [x] T01417 storage-bridge
 - [x] T01418 1c-bridge family design spike
-- [ ] T01419 ocr-worker on-prem
-- [x] T01420 Legacy demos: java8, vbnet, powershell51 (powershell51 scaffold)
+- [x] T01419 ocr-worker on-prem
+- [x] T01420 Legacy demos: java8, vbnet, powershell51
 
 ## Phase P3
 
-- [ ] T01421 ai-bridge + org LLM policy
-- [ ] T01422 L3 triage demo
+- [x] T01421 ai-bridge + org LLM policy
+- [x] T01422 L3 triage demo
 
 ---
 
@@ -47,7 +47,9 @@
 - [x] T01426 QEMU cloud-init `korus-integrations` + `config.ps1` constants (D12)
 - [x] T01427 `qemu-up.ps1 -WithIntegrations` + Ansible `qemu-integrations-local.yml`
 - [x] T01428 `docker-compose.integrations.yml` on guest `.30`; server `INTEGRATIONS_BASE_URL`
+- [x] T01429 `scripts/qemu-integrations-up.ps1` + `smoke-plugin-qemu.ps1` (host forwards 18088–18096)
 
 ---
 
-*Phase P0 engineering: 2026-06-15 — router, migration, connector-runtime, demos, smokes.*
+*Phase P0–P3 engineering scaffold: 2026-06-15 — full demo catalog runnable on integrations VM.*
+*QEMU verify: 2026-06-16 — `playwright all-inner` 34/34; plugin smokes via `smoke-plugin-qemu.ps1`.*

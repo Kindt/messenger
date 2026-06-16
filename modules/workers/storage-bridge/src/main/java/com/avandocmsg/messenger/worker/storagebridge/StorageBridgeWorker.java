@@ -7,7 +7,7 @@ import com.avandocmsg.messenger.common.plugin.PluginButton;
 import com.avandocmsg.messenger.common.plugin.PluginCard;
 import com.avandocmsg.messenger.common.plugin.PluginEvent;
 import com.avandocmsg.messenger.common.plugin.PluginResponse;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.avandocmsg.messenger.common.plugin.integration.WebDavStorageClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import org.slf4j.Logger;
@@ -15,14 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -31,9 +24,6 @@ import java.util.concurrent.Executors;
 public final class StorageBridgeWorker {
     private static final Logger log = LoggerFactory.getLogger(StorageBridgeWorker.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final HttpClient HTTP = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(5))
-        .build();
 
     private StorageBridgeWorker() {}
 
@@ -96,7 +86,7 @@ public final class StorageBridgeWorker {
         }
         if (lower.startsWith("/file ") || lower.startsWith("/storage ") || isStoragePreset(event)) {
             var query = extractQuery(text);
-            return searchMock(query);
+            return searchResponse(query);
         }
         return new PluginResponse(
             List.of(com.avandocmsg.messenger.common.plugin.PluginMessage.markdown(
@@ -123,43 +113,12 @@ public final class StorageBridgeWorker {
         return snap != null && "storage-bridge".equals(String.valueOf(snap.get("preset_id")));
     }
 
-    private static PluginResponse searchMock(String query) {
+    private static PluginResponse searchResponse(String query) {
         try {
-            var q = query.isBlank() ? "report" : query;
-            var json = fetchJson(mockBase() + "/storage/v1/search.json?q=" + URLEncoder.encode(q, StandardCharsets.UTF_8));
-            var items = json.path("items");
-            if (!items.isArray() || items.isEmpty()) {
-                return PluginResponse.text("Файлы не найдены: " + q);
-            }
-            var lines = new ArrayList<String>();
-            for (JsonNode item : items) {
-                lines.add("- **" + item.path("name").asText("?") + "** → `" + item.path("path").asText("?") + "`");
-            }
-            return PluginResponse.text("**Результаты поиска:**\n" + String.join("\n", lines));
+            return PluginResponse.text(WebDavStorageClient.formatMarkdown(WebDavStorageClient.search(query)));
         } catch (Exception e) {
-            return PluginResponse.text("Storage mock недоступен: " + e.getMessage());
+            return PluginResponse.text("Storage недоступен: " + e.getMessage());
         }
-    }
-
-    private static JsonNode fetchJson(String url) throws Exception {
-        var request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .timeout(Duration.ofSeconds(8))
-            .GET()
-            .build();
-        var response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException("HTTP " + response.statusCode());
-        }
-        return MAPPER.readTree(response.body());
-    }
-
-    private static String mockBase() {
-        var base = System.getenv("MOCK_API_BASE");
-        if (base == null || base.isBlank()) {
-            return "http://mock-apis:8080";
-        }
-        return base.endsWith("/") ? base.substring(0, base.length() - 1) : base;
     }
 
     private static int parsePort(String raw, int defaultPort) {

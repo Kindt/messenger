@@ -4,7 +4,7 @@ from html import escape
 
 PRODUCT_VERSION = "2.5.4"
 PRODUCT_DATE = "16 июня 2026"
-PLAYWRIGHT_PASSED = 33
+PLAYWRIGHT_PASSED = 34
 PLAYWRIGHT_DATE = "2026-06-16"
 
 # (id, label, status, note) — status: done | partial | planned | out

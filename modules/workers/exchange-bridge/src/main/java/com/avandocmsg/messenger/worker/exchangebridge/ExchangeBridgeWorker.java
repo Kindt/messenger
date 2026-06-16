@@ -5,30 +5,20 @@ import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.plugin.PluginEvent;
 import com.avandocmsg.messenger.common.plugin.PluginResponse;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.avandocmsg.messenger.common.plugin.integration.GraphCalendarClient;
 import com.sun.net.httpserver.HttpServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.Executors;
 
 /** Spec 014 P2: MS Exchange / Graph calendar bridge (mock-backed demo). */
 public final class ExchangeBridgeWorker {
     private static final Logger log = LoggerFactory.getLogger(ExchangeBridgeWorker.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final HttpClient HTTP = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(5))
-        .build();
 
     private ExchangeBridgeWorker() {}
 
@@ -58,9 +48,9 @@ public final class ExchangeBridgeWorker {
                     return;
                 }
                 var body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                var event = MAPPER.readValue(body, PluginEvent.class);
+                var event = new com.fasterxml.jackson.databind.ObjectMapper().readValue(body, PluginEvent.class);
                 var response = handle(event);
-                var json = MAPPER.writeValueAsBytes(response);
+                var json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsBytes(response);
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
                 exchange.sendResponseHeaders(200, json.length);
                 exchange.getResponseBody().write(json);
@@ -90,7 +80,7 @@ public final class ExchangeBridgeWorker {
             return PluginResponse.text("pong (exchange-bridge)");
         }
         if (lower.startsWith("/calendar") || lower.startsWith("/freebusy") || isExchangePreset(event)) {
-            return calendarFromMock();
+            return calendarResponse();
         }
         return PluginResponse.text("Exchange bridge. Команды: `ping`, `/calendar`, `/freebusy`");
     }
@@ -103,43 +93,12 @@ public final class ExchangeBridgeWorker {
         return "exchange-bridge".equals(String.valueOf(snap.get("preset_id")));
     }
 
-    private static PluginResponse calendarFromMock() {
+    private static PluginResponse calendarResponse() {
         try {
-            var json = fetchJson(mockBase() + "/exchange/v1.0/me/calendarview.json");
-            var events = json.path("value");
-            if (!events.isArray() || events.isEmpty()) {
-                return PluginResponse.text("Календарь пуст (mock Graph API)");
-            }
-            var sb = new StringBuilder("**Ближайшие события (mock):**\n");
-            for (JsonNode node : events) {
-                sb.append("- ").append(node.path("subject").asText("?"))
-                    .append(" (").append(node.path("start").path("dateTime").asText("?")).append(")\n");
-            }
-            return PluginResponse.text(sb.toString().trim());
+            return PluginResponse.text(GraphCalendarClient.formatMarkdown(GraphCalendarClient.fetchUpcoming()));
         } catch (Exception e) {
-            return PluginResponse.text("Exchange mock недоступен: " + e.getMessage());
+            return PluginResponse.text("Exchange недоступен: " + e.getMessage());
         }
-    }
-
-    private static JsonNode fetchJson(String url) throws Exception {
-        var request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .timeout(Duration.ofSeconds(8))
-            .GET()
-            .build();
-        var response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException("HTTP " + response.statusCode());
-        }
-        return MAPPER.readTree(response.body());
-    }
-
-    private static String mockBase() {
-        var base = System.getenv("MOCK_API_BASE");
-        if (base == null || base.isBlank()) {
-            return "http://mock-apis:8080";
-        }
-        return base.endsWith("/") ? base.substring(0, base.length() - 1) : base;
     }
 
     private static int parsePort(String raw, int defaultPort) {

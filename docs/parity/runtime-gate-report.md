@@ -12,7 +12,7 @@
 ## Playwright
 
 - Inner tiers: **all pass** (`playwright-dev-loop.ps1 -Tier all-inner`, 2026-06-16)
-- **Outer gate**: **33 passed** (2.6m) — `npx playwright test` in `tests/e2e-web`
+- **Outer gate**: **34 passed** — `npx playwright test` in `tests/e2e-web` (2026-06-16, orchestrator)
 - Env: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:19088`, `KORUS_API_URL=http://127.0.0.1:18080`
 
 ## QEMU smokes (spec 010 Phase A)

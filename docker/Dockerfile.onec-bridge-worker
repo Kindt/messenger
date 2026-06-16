@@ -1,0 +1,12 @@
+FROM eclipse-temurin:25-jdk AS builder
+WORKDIR /app
+COPY . .
+RUN gradle --console=plain :modules:workers:onec-bridge:installDist --no-daemon -x test
+
+FROM eclipse-temurin:25-jre
+WORKDIR /app
+COPY --from=builder /app/modules/workers/onec-bridge/build/install/onec-bridge /app/onec-bridge
+ENV ONEC_BRIDGE_PORT=8097
+ENV ONEC_BRIDGE_METRICS_PORT=9197
+EXPOSE 8097 9197
+ENTRYPOINT ["/app/onec-bridge/bin/onec-bridge"]

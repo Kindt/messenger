@@ -150,7 +150,7 @@ flowchart LR
 4. **P1-5 timing:** ✅ TTFB audit PASS (~0.2%); normalization 220ms + not-found padding.
 5. **P1-6 GDPR export:** ✅ admin `completeness_policy` + smoke; `EXPORT_COMPLETENESS_STRICT` prod — ops.
 6. **Inner gate:** ✅ `playwright-dev-loop -Tier all-inner` (2026-06-16).
-7. **Outer gate (T110):** ✅ **33/33** Playwright on QEMU (2026-06-16).
+7. **Outer gate (T110):** ✅ **34/34** Playwright on QEMU (2026-06-16).
 8. **P1-4 file resize:** ✅ `GET /v1/files/{id}/resize` embedded + smoke (2026-06-16).
 9. **P1b presentation sync:** ✅ v2.5.3 HTML + traceability (2026-06-16).
 10. **P2-2 SSO:** ✅ Keycloak broker template + runbook (IdP creds — ops).

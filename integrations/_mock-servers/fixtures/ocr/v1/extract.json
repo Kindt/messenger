@@ -1,0 +1,10 @@
+{
+  "file_id": "invoice-demo.pdf",
+  "fields": {
+    "vendor": "ООО Ромашка",
+    "amount": "125000.00",
+    "currency": "RUB",
+    "date": "2026-06-10",
+    "invoice_no": "INV-2026-0042"
+  }
+}

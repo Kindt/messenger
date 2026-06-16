@@ -1,0 +1,8 @@
+id: ai-triage
+plugin_class: L3
+runtime_kind: bridge
+llm_policy: on_prem_default
+commands:
+  - match: { slash: "/triage" }
+    http:
+      path: /ai/v1/triage.json

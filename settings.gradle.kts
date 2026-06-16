@@ -14,6 +14,8 @@ include(
     "modules:workers:push",
     "modules:workers:bot-delivery",
     "modules:workers:connector-runtime",
+    "modules:workers:exchange-bridge",
+    "modules:workers:storage-bridge",
     "modules:workers:export-replay",
     "modules:workers:retention"
 )

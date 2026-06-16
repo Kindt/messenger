@@ -19,7 +19,7 @@
 | US3 | PUSH-2 compose audit, PUSH-UX onboarding | Eng |
 | US4 | BOT-5 Playwright, BOT-6 webhook test | Eng |
 
-**Exit:** all QEMU smokes green; **Playwright outer gate 33/33** (2026-06-16).
+**Exit:** all QEMU smokes green; **Playwright outer gate 34/34** (2026-06-16).
 
 ### Phase B — Ops / Sign-off (Sep 2026+)
 

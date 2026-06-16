@@ -1,0 +1,8 @@
+{
+  "category": "it_support",
+  "priority": "high",
+  "draft_ticket": {
+    "title": "VPN access for contractor",
+    "queue": "ServiceDesk L2"
+  }
+}

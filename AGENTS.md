@@ -239,7 +239,7 @@ Set-Location ../..
 | Контур | Когда | Критерий |
 |--------|-------|----------|
 | **Inner** | каждая правка test/UI | tier green, `< 2 min` при живом стеке |
-| **Outer** | перед merge / sign-off | smoke + 26/26 Playwright + `runtime-gate-report.md` |
+| **Outer** | перед merge / sign-off | smoke + **34/34** Playwright + `runtime-gate-report.md` |
 
 Preflight fail → **не** гонять full suite. Outer orchestrator → **blocked**, не blind retry.
 
@@ -421,6 +421,7 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 - **Grep tier manifest**: паттерн `|media capabilities` (без `include`) ломает regex — использовать `media capabilities include` + `conference-rtc.spec.ts` в api tier.
 - **`Register-PlanFailure` / orchestrator**: `Write-Output` в `Emit-PlanChatTick` ломает `$state` (массив вместо hashtable) → только `Write-Host`.
 - **26/26** достижимо на живом QEMU (2026-06-12); MLS active required для e2ee-browser-roundtrip.
+- **34/34** outer gate на QEMU (2026-06-16): mesh tests + mocked WebRTC; отчёт `specs/002-web-client-server-parity/runtime-gate-report.md`.
 
 ### Architecture / code
 

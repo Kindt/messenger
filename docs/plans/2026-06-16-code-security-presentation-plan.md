@@ -116,7 +116,7 @@
 |----|--------|------|
 | S3-1 | TURN hostfwd `:3478` на web VM или документировать `-GuestOnly` в inner gate | CALL |
 | S3-2 | SSO: smoke OIDC broker на QEMU Keycloak | P2-2/3 presentation plan |
-| S3-3 | Playwright tier `all-inner` green (33/33+) | US9 |
+| S3-3 | Playwright tier `all-inner` green (34/34) | US9 |
 | S3-4 | k6 QEMU baseline JSON → §10.2.1 «измерено» | T604 QEMU substitute |
 | S3-5 | Live spec 011 — только L0/L1 (ADR + contracts), без L2 code | Phase D |
 

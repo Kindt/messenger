@@ -1,0 +1,8 @@
+id: ocr-invoice
+plugin_class: L2
+runtime_kind: bridge
+on_prem: true
+commands:
+  - match: { type: attachment }
+    http:
+      path: /ocr/v1/extract.json

@@ -16,7 +16,7 @@
 - [x] T107 BOT-5 Playwright `bot-api.spec.ts` + tier manifest
 - [x] T108 BOT-6 webhook delivery test with mock HTTP server
 - [x] T109 Verify smokes: `smoke-turn-qemu.ps1`, `smoke-push-worker-qemu.ps1`, `smoke-bot-api.ps1` — guest OK (2026-06-16)
-- [x] T110 Playwright outer gate — **33/33** `npx playwright test` on QEMU `:19088`/`:18080` (2026-06-16)
+- [x] T110 Playwright outer gate — **34/34** `npx playwright test` on QEMU `:19088`/`:18080` (2026-06-16)
 
 ## Phase B — Ops (Sep 2026+, spec 007 overlap)
 

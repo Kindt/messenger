@@ -1,0 +1,12 @@
+FROM eclipse-temurin:25-jdk AS builder
+WORKDIR /app
+COPY . .
+RUN gradle --console=plain :modules:workers:storage-bridge:installDist --no-daemon -x test
+
+FROM eclipse-temurin:25-jre
+WORKDIR /app
+COPY --from=builder /app/modules/workers/storage-bridge/build/install/storage-bridge /app/storage-bridge
+ENV STORAGE_BRIDGE_PORT=8094
+ENV STORAGE_BRIDGE_METRICS_PORT=9194
+EXPOSE 8094 9194
+ENTRYPOINT ["/app/storage-bridge/bin/storage-bridge"]
