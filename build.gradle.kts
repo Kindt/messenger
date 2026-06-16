@@ -9,6 +9,7 @@ version = "0.1.0-SNAPSHOT"
 
 spotless {
     java {
+        ratchetFrom("origin/main")
         target("modules/**/src/main/java/**/*.java", "modules/**/src/test/java/**/*.java", "services/**/src/**/*.java")
         toggleOffOn()
         removeUnusedImports()
@@ -60,7 +61,9 @@ subprojects {
         jvmArgs(
             "-Djdk.attach.allowAttachSelf=true",
             // Mockito / ByteBuddy on JDK 25 (inline mocks)
-            "-Dnet.bytebuddy.experimental=true"
+            "-Dnet.bytebuddy.experimental=true",
+            // Suppress dynamic agent warnings on JDK 21+
+            "-XX:+EnableDynamicAgentLoading"
         )
     }
 
@@ -93,11 +96,37 @@ tasks.register("checkCellManifest") {
     dependsOn("checkCompetitorRegistry")
 }
 
+/** npm audit for webui-build (spec 014 S1-3). */
+tasks.register<Exec>("checkNpmAudit") {
+    group = "verification"
+    description = "npm audit --audit-level=high in modules/web-client/webui-build"
+    workingDir = file("modules/web-client/webui-build")
+    val npmCmd = if (System.getProperty("os.name").lowercase().contains("win")) "npm.cmd" else "npm"
+    commandLine(npmCmd, "audit", "--audit-level=high")
+}
+
+/** Avoid Gradle 9 implicit-deps failure when spotless runs parallel to subproject build. */
+tasks.named("spotlessJava") {
+    subprojects.forEach { sub ->
+        mustRunAfter(sub.tasks.named("build"))
+    }
+    mustRunAfter(tasks.named("checkBundleParity"))
+    mustRunAfter(tasks.named("checkCompetitorRegistry"))
+    mustRunAfter(tasks.named("checkNpmAudit"))
+    mustRunAfter(project(":modules:core-api").tasks.named("benchmark"))
+}
+
 /** Runs `build` (compile, test, assemble) on every subproject — CI smoke / integrity gate. */
 tasks.register("buildIntegrity") {
     group = "verification"
-    description = "Compile, run all unit tests, and assemble every module"
-    dependsOn("checkBundleParity", "checkCompetitorRegistry")
+    description = "Compile, run all unit tests, assemble, spotless (ratchet), npm audit, benchmark"
+    dependsOn(
+        "checkBundleParity",
+        "checkCompetitorRegistry",
+        "checkNpmAudit",
+        "spotlessCheck",
+        ":modules:core-api:benchmark"
+    )
     subprojects.forEach { sub ->
         dependsOn(sub.tasks.named("build"))
     }

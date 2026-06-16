@@ -39,9 +39,5 @@ jobs:
         run: npm ci
         working-directory: modules/web-client/webui-build
 
-      - name: "buildIntegrity (all modules: compile, test, assemble)"
+      - name: "buildIntegrity (compile, test, spotless ratchet, npm audit, benchmark)"
         run: chmod +x gradlew && ./gradlew buildIntegrity --no-daemon
-
-      - name: "benchmark (core-api timing guards, non-blocking)"
-        run: ./gradlew :modules:core-api:benchmark --no-daemon
-        continue-on-error: true

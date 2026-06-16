@@ -58,7 +58,7 @@
 
 <h1>Продуктовая презентация<br/>Korus Messenger (AvandocMsg)</h1>
 <div class="meta">
-  <b>Версия:</b> 2.5.3 &nbsp;|&nbsp; <b>Дата:</b> 16 июня 2026 &nbsp;|&nbsp;
+  <b>Версия:</b> 2.5.4 &nbsp;|&nbsp; <b>Дата:</b> 16 июня 2026 &nbsp;|&nbsp;
   <b>Аудитория:</b> руководители, юристы, продажи, бухгалтерия, операторы, служба безопасности<br/>
   <b>Формат:</b> презентация продукта для заказчика; приложение I — каталог <b>страниц</b> клиента и админки
 </div>
@@ -83,11 +83,14 @@
 <div class="note">
   <div class="req">Состояние продукта на 16 июня 2026</div>
   <div class="comment">
-    <b>Проверено автоматически:</b> Playwright <b>33/33</b> на тестовом стенде (2026-06-16),
-    основные пользовательские сценарии и REST API покрыты приёмочными тестами.<br/>
-    <b>До промышленного запуска (ops):</b> TLS на stage/prod (стенд с <b>сентября 2026</b>), formal sign-off E2EE, Web Push на prod,
-    TURN для звонков за NAT, нагрузочный soak на stage, юридическая политика GDPR export (strict).<br/>
-    <b>Не в текущей поставке:</b> мобильные приложения, Live HLS, sharding PG на Enterprise.
+    <b>Проверено автоматически:</b> Playwright <b>33/33</b> на тестовом стенде (2026-06-16);
+    PR gate <b>buildIntegrity</b> (spotless ratchet, npm audit, benchmark, unit-тесты).<br/>
+    <b>Инженерная безопасность (§24):</b> security headers, rate limit, timing normalization, WebSocket origin — <b>реализовано</b>;
+    автоматическая проверка <code>security-gate</code> на тестовом стенде.<br/>
+    <b>До промышленного запуска (ops):</b> TLS на stage/prod (стенд с <b>сентября 2026</b>), formal sign-off E2EE, Web Push VAPID prod,
+    TURN за NAT на prod, нагрузочный soak на stage, GDPR export strict policy.<br/>
+    <b>ФСТЭК / реестр ПО:</b> отдельный организационный трек, <b>без обещания срока</b> в материалах для заказчика.<br/>
+    <b>Не в текущей поставке:</b> мобильные приложения, Live §28 (код), sharding PG на Enterprise.
   </div>
 </div>
 
@@ -987,7 +990,7 @@ DAU (активных в день) = Пользователи × доля акт
 
 <hr/>
 <p class="small" style="margin-top:40px;padding-top:20px;border-top:2px solid #e5e7eb;">
-  <b>Korus Messenger (AvandocMsg)</b> — Продуктовая презентация v2.5.3, 16 июня 2026.<br/>
+  <b>Korus Messenger (AvandocMsg)</b> — Продуктовая презентация v2.5.4, 16 июня 2026.<br/>
   Единый автономный документ для заказчика. Все цифры — ориентиры для планирования, не оферта.<br/>
   Статус на дату: веб-клиент и сервер реализованы; Playwright 33/33 (2026-06-16);
   E2EE/звонки/push/TLS — частично (ops/sign-off; stage с сентября 2026); Bot API MVP — частично; mobile, Live HLS — planned/out.

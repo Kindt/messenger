@@ -409,6 +409,7 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 - **Hotswap WS:** `docker-compose.hotswap-qemu.yml` = `web-dev` + nginx **lb** (`/ws` → ws-gateway); Tomcat-only hotswap давал WS **404** на `:19088/ws`.
 - **sync-ui locales:** `New-KorusWebuiSnapshot` → `npm run build:assets` (tailwind + копия из `webui-build/locales/messages/`).
 - **Git push GitHub:** `.\scripts\git-push.ps1` или `git -c http.proxy= -c https.proxy= push`.
+- **L2 live (QEMU, parallel agents):** API smoke `.\scripts\smoke-live-session.ps1`; UI — `enable-hotswap` + `sync-ui` (не `rebuild-web`); LiveKit `:17880` без `qemu-down` — `.\scripts\livekit-host-tunnel.ps1` (отдельный терминал); secret ≥32 байт (`korus-dev-livekit-secret-32bytes!`).
 - **QEMU backup:** `qemu-backup.ps1` / `qemu-restore.ps1` (ВМ остановлены).
 - **VM падают ~10 мин в server redeploy** (WHPX/host load): цикл retry через monitored script; при повторе — `KORUS_QEMU_FORCE_TCG=1` или проверка RAM (~13 ГБ).
 

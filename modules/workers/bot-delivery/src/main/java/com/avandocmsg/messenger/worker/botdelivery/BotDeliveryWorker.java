@@ -41,16 +41,20 @@ public class BotDeliveryWorker {
     private final DataSource dataSource;
     private final HttpClient httpClient;
     private final String fallbackWebhookUrl;
+    private final String webhookHmacSecret;
     private final boolean subscriptionsEnabled;
     private final UserMessageSource workerMessages;
 
     private final ConcurrentHashMap<String, Boolean> delivered = new ConcurrentHashMap<>();
 
     public BotDeliveryWorker(String natsUrl, DataSource dataSource, String fallbackWebhookUrl,
-                             boolean subscriptionsEnabled, UserMessageSource workerMessages) throws Exception {
+                             String webhookHmacSecret, boolean subscriptionsEnabled,
+                             UserMessageSource workerMessages) throws Exception {
         this.dataSource = dataSource;
         this.fallbackWebhookUrl =
             fallbackWebhookUrl != null && !fallbackWebhookUrl.isBlank() ? fallbackWebhookUrl.trim() : null;
+        this.webhookHmacSecret =
+            webhookHmacSecret != null && !webhookHmacSecret.isBlank() ? webhookHmacSecret.trim() : null;
         this.subscriptionsEnabled = subscriptionsEnabled;
         this.workerMessages = workerMessages;
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
@@ -183,18 +187,22 @@ public class BotDeliveryWorker {
         if (!first) {
             log.warn(workerMessages.format("worker.bot_delivery.duplicate_delivery", event.messageId(), webhookUrl));
         }
-        var status = postWebhook(httpClient, webhookUrl, json);
+        var status = postWebhook(httpClient, webhookUrl, json, webhookHmacSecret);
         log.info(workerMessages.format("worker.bot_delivery.webhook_status",
             status, event.messageId(), webhookUrl));
     }
 
     /** Package-visible for unit tests (BOT-6 mock HTTP server). */
-    static int postWebhook(HttpClient httpClient, String webhookUrl, String json) throws Exception {
-        var req = HttpRequest.newBuilder(URI.create(webhookUrl))
+    static int postWebhook(HttpClient httpClient, String webhookUrl, String json, String hmacSecret) throws Exception {
+        var builder = HttpRequest.newBuilder(URI.create(webhookUrl))
             .timeout(Duration.ofSeconds(20))
             .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
-            .build();
+            .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8));
+        var signature = BotWebhookSigner.signSha256Hex(hmacSecret, json);
+        if (signature != null) {
+            builder.header(BotWebhookSigner.SIGNATURE_HEADER, signature);
+        }
+        var req = builder.build();
         var resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         return resp.statusCode();
     }
@@ -255,6 +263,7 @@ public class BotDeliveryWorker {
         var user = System.getenv().getOrDefault("DB_USER", "avandocmsg");
         var password = System.getenv().getOrDefault("DB_PASSWORD", "avandocmsg");
         var fallback = System.getenv("BOT_WEBHOOK_URL");
+        var hmacSecret = System.getenv("BOT_WEBHOOK_HMAC_SECRET");
 
         var ds = HikariDataSources.createOptionalPool(jdbcUrl, user, password, 5, "bot-delivery-db");
         if (ds == null) {
@@ -266,7 +275,7 @@ public class BotDeliveryWorker {
         var subs = detectSubscriptionsTable(ds, workerMessages);
 
         try {
-            var worker = new BotDeliveryWorker(natsUrl, ds, fallback, subs, workerMessages);
+            var worker = new BotDeliveryWorker(natsUrl, ds, fallback, hmacSecret, subs, workerMessages);
             worker.start();
             Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));
             Thread.currentThread().join();

@@ -13,6 +13,7 @@ korus_tls_key_path: "/etc/letsencrypt/live/{{ korus_tls_domain }}/privkey.pem"
 korus_tls_proxy_api: true
 
 korus_cors_allowed_origins: "https://messenger.stage.example.com"
+korus_csp_policy: "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
 
 # TURN (coturn on web host): public hostname/IP for ICE + --turn-prod overlay
 korus_turn_host: "messenger.stage.example.com"

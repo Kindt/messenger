@@ -81,7 +81,10 @@ application {
 tasks.register<Test>("benchmark") {
     group = "verification"
     description = "Lightweight CoreApi/MLS timing guards (*BenchmarkTest)"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
     filter {
+        isFailOnNoMatchingTests = true
         includeTestsMatching("*Benchmark*")
     }
 }

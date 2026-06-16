@@ -13,6 +13,8 @@ korus_tls_key_path: "/etc/ssl/korus/privkey.pem"
 korus_tls_proxy_api: true
 
 korus_cors_allowed_origins: "https://messenger.example.com"
+# API CSP (JSON responses); tune for your reverse proxy / admin UI embed needs
+korus_csp_policy: "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
 
 # TURN (coturn on web host): set public hostname/IP for ICE + --turn-prod overlay
 korus_turn_host: "messenger.example.com"

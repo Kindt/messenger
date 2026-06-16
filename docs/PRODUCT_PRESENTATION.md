@@ -410,7 +410,7 @@
 | §21 | Аудит | Реализовано | |
 | §22 | Prometheus, observability | Реализовано | Zabbix — не в scope |
 | §23 | Админ, multi-tenant org | Реализовано | |
-| §24 | Безопасность | Частично | Timing audit ✓ на QEMU; formal prod — ops |
+| §24 | Безопасность | Реализовано | Headers, rate limit, timing audit, WS origin; CI `buildIntegrity` + `security-gate`; prod TLS/E2EE — ops |
 | §25 | Развёртывание и стенды | Реализовано | Docker-профили Pilot/Standard |
 | §26 | Prod sizing 1M users | Модель §10 | Load test soak — stage |
 | Профили Pilot / Standard | Развёртывание | Реализовано | lean Pilot + Standard; dedup файлов ✓ |
@@ -614,8 +614,8 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 |---------|------------------------|--------|
 | **Бот как участник чата** | @имя_бота в группе; ответы в переписке | Частично (MVP) |
 | **Права бота** | Только по @mention или чтение всех сообщений (решение модератора) | Частично (MENTIONS_ONLY / READ_ALL) |
-| **Доставка событий** | Webhook или long-poll; повторы допустимы — бот дедуплицирует | Частично (webhook; long-poll — roadmap) |
-| **Методы бота** | Отправка/удаление сообщений, pin, ban/mute в группе | Частично (sendMessage ✓; остальное — roadmap) |
+| **Доставка событий** | Webhook или long-poll; повторы допустимы — бот дедуплицирует | Частично (webhook + long-poll ✓; prod SLA — ops) |
+| **Методы бота** | Отправка/удаление сообщений, pin, ban/mute в группе | Частично (L2 API ✓; prod webhook SLA — ops) |
 | **Self-host бота** | Код бота **не** на сервере мессенджера | Частично (MVP) |
 | **Аудит** | Создание бота, webhook URL, export событий бота | Частично |
 

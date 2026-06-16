@@ -14,6 +14,19 @@
 - **Ops:** `docker/docker-compose.livekit-dev.yml` (standalone overlay), LiveKit in `docker-compose.full-server.yml`, smoke `scripts/smoke-live-session.ps1`; contract `specs/013-live-streaming/contracts/live-session-api-contract.md`.
 - **ADR:** LiveKit accepted for L2 POC (`docs/adr/ADR-live-streaming-media-stack.md`).
 
+### 2026-06-16 — Spec 014 S2: HMAC webhook, timing tests, CSP ansible
+
+- **Bot webhook HMAC:** `BOT_WEBHOOK_HMAC_SECRET`, header `X-Korus-Webhook-Signature: sha256=…`.
+- **Tests:** `BotWebhookSignerTest`, `TimingAttackPreventionTest` delta guards.
+- **Ansible:** `korus_csp_policy` stage/prod → `CSP_POLICY` in server env.
+- **Baseline:** `run-k6-qemu-baseline.ps1` → `deploy/qemu/run/k6-pilot-baseline.json`.
+
+### 2026-06-16 — Spec 014 PRES + S2: презентация v2.5.4, audit-timing probes
+
+- **`product_presentation.html` v2.5.4**: §24 безопасность → реализовано (eng); snapshot без overclaim ФСТЭК.
+- **`audit-timing.ps1`**: probes chat + user + login; **`docs/SECURITY.md`** matrix CI/QEMU/ops.
+- **Competitor FAQ/methodology:** radar reg:3 honest; ФСТЭК без обещания даты.
+
 ### 2026-06-16 — Spec 014: security CI gate + presentation sync (S1)
 
 - **`specs/014-code-security-presentation/`**: spec, plan, tasks, security-gate contract.
@@ -24,6 +37,11 @@
 ### 2026-06-16 — План: security CI gate + презентация (без ФСТЭК)
 
 - **`docs/plans/2026-06-16-code-security-presentation-plan.md`**: S1–S3 (zero-warning buildIntegrity, security smokes, PRES sync); ФСТЭК/реестр out of scope.
+
+### 2026-06-15 — Spec 014: Bot-Plugin Platform (brainstorming → draft)
+
+- **`specs/014-bot-plugin-platform/design/demo-plugin-catalog.md`**: полный каталог демо (~43): vitrine, L0–L3, интеграции, polyglot echo (12 стеков).
+- **Redirect:** `docs/plans/2026-06-15-bot-plugin-platform-design.md` → spec 014.
 
 ### 2026-06-15 — Spec 012: Competitor presentation spider-web (speckit)
 

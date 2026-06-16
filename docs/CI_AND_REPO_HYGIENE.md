@@ -11,11 +11,11 @@
 | **JDK** | **25** (Temurin), кэш Gradle через **`setup-java@v5`** (`**cache: gradle**`) |
 | **Проверка wrapper** | **`gradle/actions/wrapper-validation@v5`** — контроль целостности **`gradle-wrapper.jar`** (файл **должен** быть в репозитории; не игнорировать **`*.jar`** для `gradle/wrapper/`, см. **`!gradle/wrapper/gradle-wrapper.jar`** в **`.gitignore`**) |
 | **Checkout** | **`actions/checkout@v6`** (рантайм экшенов на Node.js **24**, см. [changelog GitHub Actions](https://github.blog/changelog/)) |
-| **Команда** | **`chmod +x gradlew && ./gradlew buildIntegrity --no-daemon`** — корневая задача **`buildIntegrity`** вызывает **`build`** у всех subprojects (компиляция, тесты, **`jar`**) |
+| **Команда** | **`chmod +x gradlew && ./gradlew buildIntegrity --no-daemon`** — **`buildIntegrity`** = subproject **`build`** + **`checkBundleParity`** + **`checkCompetitorRegistry`** + **`spotlessCheck`** (ratchet `origin/main`) + **`checkNpmAudit`** + **`:modules:core-api:benchmark`** (spec 014) |
 | **Права** | **`permissions: contents: read`** у job |
 | **Concurrency** | Одна активная сборка на ветку; новый запуск отменяет предыдущий (**`cancel-in-progress: true`**) |
 
-Локально тот же контур: **`./gradlew buildIntegrity`** (или **`.\gradlew.bat buildIntegrity`** на Windows). Для только тестов без сборки артефактов: **`./gradlew test`**.
+Локально тот же контур: **`./gradlew buildIntegrity`** (или **`.\gradlew.bat buildIntegrity`** на Windows). QEMU security smokes: **`.\scripts\security-gate.ps1`** (spec 014). Для только тестов без сборки артефактов: **`./gradlew test`**.
 
 **JDK в корневом `gradle.properties`:** не задавайте **`org.gradle.java.home`** с путём одной ОС в репозитории — на **Linux** (GitHub Actions) такой путь сломает любой **`./gradlew`**. Локально укажите JDK в **`JAVA_HOME`**, в **`~/.gradle/gradle.properties`** или в настройках IDE.
 
