@@ -69,6 +69,11 @@ public class AppConfig {
         override("FILE_DEDUP_ENABLED", "file.dedup.enabled");
         override("JITSI_MEET_BASE_URL", "jitsi.meet.base.url");
         override("CONFERENCE_ROOM_PREFIX", "conference.room.prefix");
+        override("LIVEKIT_URL", "livekit.url");
+        override("LIVEKIT_API_KEY", "livekit.api.key");
+        override("LIVEKIT_API_SECRET", "livekit.api.secret");
+        override("LIVESTREAM_ROOM_PREFIX", "livestream.room.prefix");
+        override("LIVESTREAM_MAX_WEBRTC_VIEWERS", "livestream.max.webrtc.viewers");
         override("WEBRTC_STUN_URIS", "webrtc.stun.uris");
         override("SOLR_ZK", "solr.zk.hosts");
         override("SOLR_URL", "solr.http.url");
@@ -347,6 +352,31 @@ public class AppConfig {
     /** Префикс имени комнаты до уникального суффикса. */
     public String conferenceRoomPrefix() {
         return props.getProperty("conference.room.prefix", "avandocmsg-");
+    }
+
+    /** WebSocket URL LiveKit (wss://…); empty = live-streaming API disabled for token issue. */
+    public String livekitUrl() {
+        return props.getProperty("livekit.url", "").trim();
+    }
+
+    public String livekitApiKey() {
+        return props.getProperty("livekit.api.key", "").trim();
+    }
+
+    public String livekitApiSecret() {
+        return props.getProperty("livekit.api.secret", "").trim();
+    }
+
+    public boolean liveStreamingEnabled() {
+        return !livekitUrl().isEmpty() && !livekitApiKey().isEmpty() && !livekitApiSecret().isEmpty();
+    }
+
+    public String livestreamRoomPrefix() {
+        return props.getProperty("livestream.room.prefix", "korus-live-");
+    }
+
+    public int livestreamMaxWebrtcViewers() {
+        return Integer.parseInt(props.getProperty("livestream.max.webrtc.viewers", "200"));
     }
 
     /** Список STUN через запятую (ICE для WebRTC у клиента). */

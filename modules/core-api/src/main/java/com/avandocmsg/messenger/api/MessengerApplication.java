@@ -60,10 +60,6 @@ import com.avandocmsg.messenger.api.mls.MlsWireHandler;
 import com.avandocmsg.messenger.api.mls.MlsWirePublisher;
 import com.avandocmsg.messenger.api.mls.MlsWireSubscriber;
 import com.avandocmsg.messenger.api.mls.SessionRepository;
-import com.avandocmsg.messenger.core.application.ChatApplicationService;
-import com.avandocmsg.messenger.core.application.FileApplicationService;
-import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
-import com.avandocmsg.messenger.core.application.UserApplicationService;
 import com.avandocmsg.messenger.core.bootstrap.CoreModule;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatBanRepository;
@@ -372,6 +368,12 @@ public class MessengerApplication {
         var conferenceService = new com.avandocmsg.messenger.api.conference.ConferenceService(
             conferenceRepository, chatRepository, chatService, natsOutbound, userMessages);
 
+        var liveKitTokenService = new com.avandocmsg.messenger.api.live.LiveKitTokenService(appConfig);
+        var liveSessionRepository = new com.avandocmsg.messenger.api.repository.LiveSessionRepository(
+            dataSource, appConfig, this.uuidGenerator);
+        var liveSessionService = new com.avandocmsg.messenger.api.live.LiveSessionService(
+            liveSessionRepository, chatRepository, liveKitTokenService, natsOutbound, userMessages);
+
         var botRepository = new BotRepository(dataSource);
         var botService = new BotService(botRepository, chatRepository, messageApplicationService,
             messageService, chatBanService, auditRepository, this.uuidGenerator);
@@ -387,7 +389,7 @@ public class MessengerApplication {
                 minioClient, fileRepository, fileService,
                 chatBanRepository, chatBanService,
                 e2eeService, keyPackageRepository, sessionRepository, mlsService, mlsGroupManager,
-                mlsMigrationService, mlsWirePublisher, fileProxy, conferenceService,
+                mlsMigrationService, mlsWirePublisher, fileProxy, conferenceService, liveSessionService,
                 auditRepository, exportJobRepository, exportJobEnqueuer, exportFileAccess, this.exportSuggestedHandler,
                 exportComplianceSeed,
                 organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,

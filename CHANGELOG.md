@@ -6,6 +6,18 @@
 
 ---
 
+### 2026-06-15 — Spec 010 Phase D / Spec 013 L2: Live-streaming WebRTC POC
+
+- **LiveKit SFU POC (≤200 viewers):** REST `/v1/chats/{id}/live-sessions`, `/v1/live-sessions/{id}/join|leave|end`; Flyway `V034__live_sessions`.
+- **NATS** `live.session` → message-pipeline fan-out; media capabilities `live_streaming_enabled`, `livekit_url`.
+- **Web UI:** секция «Прямой эфир» в панели звонков (`ui-live-session.js`), отдельно от mesh/Jitsi.
+- **Ops:** `docker/docker-compose.livekit-dev.yml`, smoke `scripts/smoke-live-session.ps1`; contract `specs/013-live-streaming/contracts/live-session-api-contract.md`.
+- **ADR:** LiveKit accepted for L2 POC (`docs/adr/ADR-live-streaming-media-stack.md`).
+
+### 2026-06-16 — План: security CI gate + презентация (без ФСТЭК)
+
+- **`docs/plans/2026-06-16-code-security-presentation-plan.md`**: S1–S3 (zero-warning buildIntegrity, security smokes, PRES sync); ФСТЭК/реестр out of scope.
+
 ### 2026-06-15 — Spec 012: Competitor presentation spider-web (speckit)
 
 - **`specs/012-competitor-presentation-spider/`**: spec, plan, tasks (T01201–T01228), research, quickstart, design, acceptance contract.

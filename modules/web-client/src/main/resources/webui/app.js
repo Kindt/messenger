@@ -207,6 +207,12 @@
     conferenceBusy: false,
     conferenceParticipantsList: null,
     conferenceParticipantsConfId: null,
+    activeLiveSession: null,
+    activeLiveSessionByChat: {},
+    chatLiveSessions: null,
+    liveSessionBusy: false,
+    liveKitRoom: null,
+    liveKitRole: null,
     jitsiIframeEl: null,
     contactImportText: "",
     callStream: null,
@@ -3529,12 +3535,19 @@
         clearJitsiIframe();
       }
       stopMeshCallMedia();
+      if (global.KorusUiLiveSession) {
+        KorusUiLiveSession.disconnectLiveKitRoom(state);
+        state.activeLiveSession = null;
+      }
       render();
       return;
     }
     try {
       await loadActiveConferences();
       await loadChatConferences();
+      if (global.KorusUiLiveSession) {
+        await KorusUiLiveSession.loadChatLiveSessions(state, apiJson);
+      }
       if (!meshCallChatReady() && state.callMode === "mesh") {
         state.callMode = "jitsi";
       }
@@ -5230,6 +5243,21 @@
           scheduleRender();
           return;
         }
+        if (global.KorusUiLiveSession && KorusUiLiveSession.isLiveSessionChangeEvent(data)) {
+          sendHeartbeatThrottled();
+          KorusUiLiveSession.applyLiveSessionChangeEvent(state, data, {
+            onCreated: function (evt) {
+              state.statusMessage = evt.title
+                ? L("live.createdNamed", { title: evt.title })
+                : L("live.createdDefault");
+            },
+            onEnded: function () {
+              state.statusMessage = L("live.ended");
+            },
+          });
+          scheduleRender();
+          return;
+        }
         if (!isMessageSendEvent(data)) return;
         sendHeartbeatThrottled();
         setChatPreviewFromSendEvent(data);
@@ -5903,6 +5931,15 @@
         confSec.appendChild(el("p", "call-conf-empty", L("conference.noneActive")));
       }
       panel.appendChild(confSec);
+      if (global.KorusUiLiveSession) {
+        KorusUiLiveSession.renderLiveSection(panel, state, {
+          el: el,
+          iconBtn: iconBtn,
+          L: L,
+          apiJson: apiJson,
+          render: render,
+        });
+      }
     }
     if (state.callMode === "mesh" && !meshCallChatReady()) {
       panel.appendChild(el("p", "call-hint call-hint-warn", L("conference.meshNeedsChatHint")));

@@ -45,7 +45,7 @@
 
 - [x] T401 L0 ADR Janus vs LiveKit (OD-4)
 - [x] T402 L1 create spec 013-live-streaming + contracts (was 012; renumbered 2026-06-15)
-- [ ] T403 L2 WebRTC live ≤200 POC
+- [x] T403 L2 WebRTC live ≤200 POC
 - [ ] T404 L3 RTMP/SRT ingest + stream key API
 - [ ] T405 L4 HLS egress + webui player
 - [ ] T406 L5 DVR + moderation §28.5
@@ -53,6 +53,6 @@
 
 ---
 
-**Phase A** engineering complete; T110 outer gate optional before merge. **Phase B** blocked until Sep 2026 host. **Phase D** L0–L1 done; L2–L6 backlog per PO full §28 scope.
+**Phase A** engineering complete; T110 outer gate optional before merge. **Phase B** blocked until Sep 2026 host. **Phase D** L2 POC done (2026-06-15); L3–L6 backlog per PO full §28 scope.
 
 **Engineering closure:** 2026-06-16 — Phases A/C + D L0–L1; Phase B ops deferred Sep 2026+.

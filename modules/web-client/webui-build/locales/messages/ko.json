@@ -97,6 +97,28 @@
     "startInChat": "이 채팅에서 통화",
     "ended": "회의가 종료되었습니다"
   },
+  "live": {
+    "sectionTitle": "Live stream",
+    "hint": "Broadcast (SFU, up to 200 viewers) is separate from mesh/Jitsi calls.",
+    "start": "Go live",
+    "starting": "Starting…",
+    "join": "Watch",
+    "live": "live",
+    "noneActive": "No active live sessions.",
+    "refreshList": "Refresh",
+    "notConfigured": "LiveKit is not configured on the server.",
+    "titlePrompt": "Stream title (optional)",
+    "needsChat": "Select a chat to start a live stream",
+    "createFailed": "Could not create live session",
+    "joinFailed": "Could not join live session",
+    "endFailed": "Could not end live session",
+    "created": "Live session created",
+    "createdNamed": "Live: {title}",
+    "createdDefault": "Live stream started",
+    "ended": "Live session ended",
+    "leave": "Leave",
+    "endAll": "End stream"
+  },
   "media": {
     "deviceNotFound": "카메라 또는 마이크를 찾을 수 없습니다",
     "denied": "접근이 거부되었습니다",

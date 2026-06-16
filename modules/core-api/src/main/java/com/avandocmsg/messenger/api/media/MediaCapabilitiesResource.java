@@ -35,7 +35,7 @@ public class MediaCapabilitiesResource {
             .filter(s -> !s.isEmpty())
             .toList();
         var types = List.of("text", "image", "video", "audio", "file");
-        var note = "Видеозвонки: создайте конференцию в чате (POST .../chats/{id}/conferences), откройте join_url в WebView/Jitsi или используйте room_slug со своим клиентом WebRTC. Медиапоток не проходит через core-api.";
+        var note = "Видеозвонки (mesh): конференция в чате. Прямой эфир (SFU): POST .../chats/{id}/live-sessions — отдельно от звонка (spec 013 L2).";
         return new MediaCapabilitiesResponse(
             appConfig.mediaMaxUploadBytes(),
             types,
@@ -44,7 +44,10 @@ public class MediaCapabilitiesResource {
             appConfig.jitsiMeetBaseUrl(),
             note,
             appConfig.e2eeSchemes(),
-            appConfig.mlsStatus()
+            appConfig.mlsStatus(),
+            appConfig.liveStreamingEnabled(),
+            appConfig.livekitUrl(),
+            appConfig.livestreamMaxWebrtcViewers()
         );
     }
 }

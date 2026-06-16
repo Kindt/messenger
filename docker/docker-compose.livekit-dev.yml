@@ -1,0 +1,20 @@
+# LiveKit overlay for dev / QEMU (spec 013 L2 POC)
+#
+# Usage (inside server guest or with full-server stack):
+#   docker compose -f docker/docker-compose.full-server.yml \
+#     -f docker/docker-compose.livekit-dev.yml up -d livekit
+#
+# core-api env (example dev keys match --dev server):
+#   LIVEKIT_URL=ws://livekit:7880
+#   LIVEKIT_API_KEY=devkey
+#   LIVEKIT_API_SECRET=secret
+
+services:
+  livekit:
+    image: livekit/livekit-server:v1.8.4
+    command: --dev --bind 0.0.0.0
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    restart: unless-stopped

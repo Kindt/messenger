@@ -31,6 +31,7 @@ class WebUiParityAssetsTest {
             "ui-format-utils.js",
             "ui-messages-utils.js",
             "ui-rtc-utils.js",
+            "ui-live-session.js",
             "ui-pwa-settings-utils.js",
             "korus-mls-wasm.js",
             "ui-export-utils.js",
@@ -108,6 +109,18 @@ class WebUiParityAssetsTest {
         assertTrue(rtc.contains("chatId"), "chatId field");
         assertTrue(rtc.contains("payload"), "payload field");
         assertTrue(rtc.contains("\"hangup\""), "hangup kind");
+    }
+
+    @Test
+    void liveSessionModule_wiredInIndexAndApp() throws Exception {
+        var html = readResource("webui/index.html");
+        var live = readResource("webui/ui-live-session.js");
+        var app = readResource("webui/app.js");
+        assertTrue(html.contains("ui-live-session.js"), "index loads live module");
+        assertTrue(live.contains("KorusUiLiveSession"), "live module export");
+        assertTrue(live.contains("live_session_id"), "live session event field");
+        assertTrue(app.contains("KorusUiLiveSession"), "app uses live module");
+        assertTrue(app.contains("renderLiveSection"), "call panel live section");
     }
 
     @Test

@@ -97,6 +97,28 @@
     "startInChat": "Call in this chat",
     "ended": "Conference ended"
   },
+  "live": {
+    "sectionTitle": "Live stream",
+    "hint": "Broadcast (SFU, up to 200 viewers) is separate from mesh/Jitsi calls. Host publishes via LiveKit.",
+    "start": "Go live",
+    "starting": "Starting…",
+    "join": "Watch",
+    "live": "live",
+    "noneActive": "No active live sessions.",
+    "refreshList": "Refresh",
+    "notConfigured": "LiveKit is not configured on the server.",
+    "titlePrompt": "Stream title (optional)",
+    "needsChat": "Select a chat to start a live stream",
+    "createFailed": "Could not create live session",
+    "joinFailed": "Could not join live session",
+    "endFailed": "Could not end live session",
+    "created": "Live session created",
+    "createdNamed": "Live: {title}",
+    "createdDefault": "Live stream started",
+    "ended": "Live session ended",
+    "leave": "Leave",
+    "endAll": "End stream"
+  },
   "media": {
     "deviceNotFound": "camera or microphone not found",
     "denied": "access denied",

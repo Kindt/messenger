@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.worker.pipeline;
 
 import com.avandocmsg.messenger.common.dto.MessageChangeEvent;
 import com.avandocmsg.messenger.common.dto.ConferenceChangeEvent;
+import com.avandocmsg.messenger.common.dto.LiveSessionChangeEvent;
 import com.avandocmsg.messenger.common.dto.PinChangeEvent;
 import com.avandocmsg.messenger.common.dto.ReadReceiptEvent;
 import com.avandocmsg.messenger.common.dto.ReactionChangeEvent;
@@ -44,6 +45,7 @@ public class MessagePipelineWorker {
     private static final String REACTION_QUEUE_GROUP = "reaction-pipeline-workers";
     private static final String PIN_QUEUE_GROUP = "pin-pipeline-workers";
     private static final String CONFERENCE_QUEUE_GROUP = "conference-pipeline-workers";
+    private static final String LIVE_SESSION_QUEUE_GROUP = "live-session-pipeline-workers";
     private static final String READ_RECEIPT_QUEUE_GROUP = "read-receipt-pipeline-workers";
 
     private final DataSource dataSource;
@@ -91,6 +93,7 @@ public class MessagePipelineWorker {
         subscribeReactionFanout();
         subscribePinFanout();
         subscribeConferenceFanout();
+        subscribeLiveSessionFanout();
         subscribeReadReceiptFanout();
     }
 
@@ -259,6 +262,36 @@ public class MessagePipelineWorker {
         }
         log.debug(workerMessages.format("worker.pipeline.conference_debug",
             evt.change(), evt.conferenceId(), chatId, members.size()));
+    }
+
+    private void subscribeLiveSessionFanout() {
+        var dispatcher = natsConnection.createDispatcher(this::handleLiveSessionCoreMessage);
+        dispatcher.subscribe(NatsSubjects.LIVE_SESSION, LIVE_SESSION_QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed_for", NatsSubjects.LIVE_SESSION, LIVE_SESSION_QUEUE_GROUP, "live sessions"));
+    }
+
+    private void handleLiveSessionCoreMessage(Message msg) {
+        try {
+            handleLiveSessionPayload(msg.getData());
+        } catch (Exception e) {
+            log.error(workerMessages.get("worker.pipeline.live_session_fanout_failed"), e);
+        }
+    }
+
+    private void handleLiveSessionPayload(byte[] raw) throws Exception {
+        var evt = MAPPER.readValue(raw, LiveSessionChangeEvent.class);
+        var chatId = UUID.fromString(evt.chatId());
+        var actor = UUID.fromString(evt.actorId());
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, actor, workerMessages)) {
+            log.warn(workerMessages.format("worker.pipeline.live_session_dropped", actor, chatId));
+            return;
+        }
+        var members = PipelineFanoutLogic.loadAllChatMemberUserIds(dataSource, chatId, workerMessages);
+        for (var memberId : members) {
+            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
+        }
+        log.debug(workerMessages.format("worker.pipeline.live_session_debug",
+            evt.change(), evt.liveSessionId(), chatId, members.size()));
     }
 
     private void handleTypingCoreMessage(Message msg) {

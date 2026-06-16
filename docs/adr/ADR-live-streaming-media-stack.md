@@ -1,6 +1,6 @@
 # ADR: Live-streaming media stack (§28 TZ)
 
-**Status:** proposed  
+**Status:** accepted (L2 POC: LiveKit SFU)  
 **Date:** 2026-06-16  
 **Spec:** [`specs/013-live-streaming/spec.md`](../../specs/013-live-streaming/spec.md)
 
@@ -8,9 +8,9 @@
 
 Korus Messenger §28 requires full live-streaming: WebRTC+E2EE ≤200 viewers, HLS >200 to 10k, RTMP/SRT ingest, DVR, moderation. Mesh WebRTC calls (§29) do not scale to all-hands.
 
-## Decision (recommended)
+## Decision
 
-Evaluate **Janus Gateway** or **LiveKit self-hosted** as primary SFU/ingress; nginx for HLS egress. Reject mediamtx-only for v1 (insufficient WebRTC live ≤200 + E2EE path).
+**LiveKit self-hosted** for L2 WebRTC live ≤200 POC (SFU). Janus remains alternative for L3+ if ops requires; nginx for future HLS egress.
 
 ## Architecture
 

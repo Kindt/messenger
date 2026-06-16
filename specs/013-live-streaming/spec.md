@@ -1,8 +1,9 @@
 # Spec 013: Live-streaming (full §28)
 
-**Status:** `draft` — L0/L1; implementation blocked until ADR sign-off  
+**Status:** `draft` — L2 POC implemented (2026-06-15); L3–L6 backlog  
 **Parent:** spec 010 US6  
-**ADR:** [`docs/adr/ADR-live-streaming-media-stack.md`](../../docs/adr/ADR-live-streaming-media-stack.md)
+**ADR:** [`docs/adr/ADR-live-streaming-media-stack.md`](../../docs/adr/ADR-live-streaming-media-stack.md)  
+**Contract:** [`contracts/live-session-api-contract.md`](contracts/live-session-api-contract.md)
 
 > **Note:** Renumbered from spec **011** → **012** → **013** (2026-06-15) — spec **011** = Korus Cloud platform; spec **012** = competitor presentation spider-web.
 

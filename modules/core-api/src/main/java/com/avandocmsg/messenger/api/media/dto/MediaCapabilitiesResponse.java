@@ -13,5 +13,8 @@ public record MediaCapabilitiesResponse(
     @JsonProperty("jitsi_base_url") String jitsiBaseUrl,
     @JsonProperty("note") String note,
     @JsonProperty("e2ee_schemes") List<String> e2eeSchemes,
-    @JsonProperty("mls_status") String mlsStatus
+    @JsonProperty("mls_status") String mlsStatus,
+    @JsonProperty("live_streaming_enabled") boolean liveStreamingEnabled,
+    @JsonProperty("livekit_url") String livekitUrl,
+    @JsonProperty("live_max_webrtc_viewers") int liveMaxWebrtcViewers
 ) {}

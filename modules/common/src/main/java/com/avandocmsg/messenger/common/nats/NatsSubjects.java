@@ -29,6 +29,9 @@ public final class NatsSubjects {
     /** Конференция в чате (JSON {@link com.avandocmsg.messenger.common.dto.ConferenceChangeEvent}). */
     public static final String MSG_CONFERENCE = "msg.conference";
 
+    /** Live-streaming session (JSON {@link com.avandocmsg.messenger.common.dto.LiveSessionChangeEvent}). */
+    public static final String LIVE_SESSION = "live.session";
+
     /** Metadata-only downstream events (JSON {@link com.avandocmsg.messenger.common.dto.MessageWorkerEvent}). */
     public static final String MSG_EVENT_INDEX = "msg.event.index";
     public static final String MSG_EVENT_PUSH = "msg.event.push";

@@ -36,7 +36,7 @@
 | **Scale stack (spec 006 FR-OPT-04)** | `scripts/smoke-messaging-e2e.sh --load-rounds N` | manual (guest) | `scripts/scale-stack-up.sh`; `scripts/verify-nats-queue-group.sh`; `scripts/profiling/load-message-pipeline.sh` |
 | **Enterprise stack (spec 006 FR-OPT-04/05)** | `scripts/smoke-messaging-e2e.sh --load-rounds N` | manual (guest) | `scripts/enterprise-stack-up.sh`; optional `KORUS_ENABLE_READ_REPLICA=1` + `replica-stack-up.sh` |
 | **Multi-user messaging E2E** | `scripts/smoke-messaging-e2e.sh` | `deploy-messaging-smoke.yml` | `.ps1`; lib `SmokeMessaging.sh`; `--load-rounds` for Wave 2 load |
-| Auth smoke | `scripts/smoke-auth.sh` | manual | `.ps1` |
+| **Security gate (spec 014 PR + QEMU)** | `scripts/security-gate.ps1` | local / manual | `buildIntegrity` + optional headers/rate-limit/timing smokes |
 | Stack readiness smoke | `scripts/smoke-ready.sh` | manual | `.ps1` |
 | Retention worker health smoke | `scripts/smoke-retention-worker.ps1` | manual | none |
 | US2 Epic01 (QEMU wrapper) | `scripts/smoke-us2-epic01-qemu.ps1` | manual | `smoke-us2-epic01.ps1` |

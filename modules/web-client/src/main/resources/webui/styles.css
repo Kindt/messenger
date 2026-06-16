@@ -621,6 +621,32 @@ button {
   font-weight: 500;
 }
 
+.call-live-sessions {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--tw-border, rgba(255, 255, 255, 0.08));
+}
+
+.call-live-stage {
+  margin-top: 0.5rem;
+}
+
+.call-live-videos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.call-live-track {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 0.375rem;
+  background: #111;
+}
+
 .conference-live-banner {
   display: flex;
   align-items: center;

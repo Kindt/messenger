@@ -9,7 +9,6 @@ import com.avandocmsg.messenger.api.chats.ChatService;
 import com.avandocmsg.messenger.api.chats.ReadReceiptService;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanResource;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanService;
-import com.avandocmsg.messenger.api.config.RedisProbe;
 import com.avandocmsg.messenger.api.config.openapi.OpenApiConfig;
 import com.avandocmsg.messenger.api.contacts.ContactResource;
 import com.avandocmsg.messenger.api.contacts.ContactService;
@@ -26,6 +25,9 @@ import com.avandocmsg.messenger.api.blocks.BlocksResource;
 import com.avandocmsg.messenger.api.conference.ChatConferenceResource;
 import com.avandocmsg.messenger.api.conference.ConferenceResource;
 import com.avandocmsg.messenger.api.conference.ConferenceService;
+import com.avandocmsg.messenger.api.live.ChatLiveSessionResource;
+import com.avandocmsg.messenger.api.live.LiveSessionResource;
+import com.avandocmsg.messenger.api.live.LiveSessionService;
 import com.avandocmsg.messenger.api.export.AdminExportComplianceSeed;
 import com.avandocmsg.messenger.api.export.ExportFileAccess;
 import com.avandocmsg.messenger.api.export.ExportJobEnqueuer;
@@ -118,6 +120,7 @@ public class JerseyConfig extends ResourceConfig {
                         SessionRepository sessionRepository, MlsService mlsService, MlsGroupManager mlsGroupManager,
                         MlsMigrationService mlsMigrationService, MlsWirePublisher mlsWirePublisher,
                         FileProxy fileProxy, ConferenceService conferenceService,
+                        LiveSessionService liveSessionService,
                         AuditRepository auditRepository,
                         ExportJobRepository exportJobRepository,
                         ExportJobEnqueuer exportJobEnqueuer,
@@ -182,6 +185,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(mlsMigrationService).to(MlsMigrationService.class);
                 bind(mlsWirePublisher).to(MlsWirePublisher.class);
                 bind(conferenceService).to(ConferenceService.class);
+                bind(liveSessionService).to(LiveSessionService.class);
                 bind(auditRepository).to(AuditRepository.class);
                 bind(exportJobRepository).to(ExportJobRepository.class);
                 bind(exportJobEnqueuer).to(ExportJobEnqueuer.class);
@@ -224,6 +228,8 @@ public class JerseyConfig extends ResourceConfig {
         register(ExportResource.class);
         register(ConferenceResource.class);
         register(ChatConferenceResource.class);
+        register(LiveSessionResource.class);
+        register(ChatLiveSessionResource.class);
         register(MediaCapabilitiesResource.class);
         register(BotResource.class);
         register(PrometheusMetricsResource.class);
