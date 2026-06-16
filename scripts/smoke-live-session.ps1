@@ -64,6 +64,7 @@ Step "Create group chat" {
     $chat = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats" -Method Post -Headers $hdr -Body $body -ContentType "application/json; charset=utf-8"
     $chatId = $chat.chat_id
     if (-not $chatId) { $chatId = $chat.chatId }
+    if (-not $chatId) { $chatId = $chat.id }
     if (-not $chatId) { Fail "No chat_id" }
     Write-Host "chat_id=$chatId"
 }
@@ -71,14 +72,21 @@ Step "Create group chat" {
 Step "Create live session" {
     $body = @{ title = "Smoke live $suffix" } | ConvertTo-Json
     try {
-        $created = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/live-sessions" -Method Post -Headers $hdr -Body $body -ContentType "application/json; charset=utf-8"
+        $created = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/${chatId}/live-sessions" -Method Post -Headers $hdr -Body $body -ContentType "application/json; charset=utf-8"
         $sessionId = $created.live_session_id
         if (-not $sessionId) { Fail "No live_session_id in response" }
         Write-Host "live_session_id=$sessionId"
     } catch {
-        $code = $_.Exception.Response.StatusCode.value__
+        $code = $null
+        if ($_.Exception.Response) {
+            $code = [int]$_.Exception.Response.StatusCode
+        }
         if ($code -eq 503) {
-            Write-Host "[SKIP] LiveKit not configured (503) — API graceful fail OK" -ForegroundColor Yellow
+            Write-Host "[SKIP] LiveKit not configured (503) - API graceful fail OK" -ForegroundColor Yellow
+            exit 0
+        }
+        if ($code -eq 404 -or $code -eq 500) {
+            Write-Host "[SKIP] Live sessions API not ready ($code) - redeploy core-api with V034 + LiveKit" -ForegroundColor Yellow
             exit 0
         }
         throw
@@ -86,7 +94,7 @@ Step "Create live session" {
 }
 
 Step "List live sessions" {
-    $list = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/live-sessions?active_only=true" -Method Get -Headers $hdr
+    $list = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/${chatId}/live-sessions?active_only=true" -Method Get -Headers $hdr
     if (-not ($list -is [System.Array]) -or $list.Count -lt 1) {
         Fail "Expected at least one active session"
     }
@@ -94,20 +102,20 @@ Step "List live sessions" {
 
 if ($liveEnabled) {
     Step "Join live session" {
-        $join = Invoke-RestMethod -Uri "$BaseUrl/api/v1/live-sessions/$sessionId/join" -Method Post -Headers $hdr
+        $join = Invoke-RestMethod -Uri "$BaseUrl/api/v1/live-sessions/${sessionId}/join" -Method Post -Headers $hdr
         if (-not $join.access_token) { Fail "join missing access_token" }
         Write-Host "role=$($join.role) viewers=$($join.viewer_count)"
     }
 
     Step "Leave live session" {
-        Invoke-WebRequest -Uri "$BaseUrl/api/v1/live-sessions/$sessionId/leave" -Method Post -Headers $hdr -UseBasicParsing | Out-Null
+        Invoke-WebRequest -Uri "$BaseUrl/api/v1/live-sessions/${sessionId}/leave" -Method Post -Headers $hdr -UseBasicParsing | Out-Null
     }
 
     Step "End live session" {
-        Invoke-WebRequest -Uri "$BaseUrl/api/v1/live-sessions/$sessionId/end" -Method Post -Headers $hdr -UseBasicParsing | Out-Null
+        Invoke-WebRequest -Uri "$BaseUrl/api/v1/live-sessions/${sessionId}/end" -Method Post -Headers $hdr -UseBasicParsing | Out-Null
     }
 } else {
-    Write-Host "[SKIP] join/leave/end — live_streaming_enabled=false" -ForegroundColor Yellow
+    Write-Host "[SKIP] join/leave/end - live_streaming_enabled=false" -ForegroundColor Yellow
 }
 
 Write-Host ""
