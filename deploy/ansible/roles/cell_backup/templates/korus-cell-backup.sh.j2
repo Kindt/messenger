@@ -1,20 +1,99 @@
 #!/usr/bin/env bash
-# Korus Cell backup stub — {{ cell_backup_cell_id }} (preset {{ cell_backup_preset }})
+# Korus Cell backup — {{ cell_backup_cell_id }} (preset {{ cell_backup_preset }})
 set -euo pipefail
+
 CELL_ID="{{ cell_backup_cell_id }}"
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT_DIR="/var/backups/korus/${CELL_ID}/${TS}"
 mkdir -p "${OUT_DIR}"
 
-echo "[${TS}] cell=${CELL_ID} preset={{ cell_backup_preset }} targets={{ cell_backup_targets | length }}"
+log() { echo "[${TS}] $*"; }
 
-# Phase 1: local postgres dump when compose stack is up on server host
-if command -v docker >/dev/null 2>&1; then
-  PG_CID="$(docker ps -q -f name=postgres 2>/dev/null | head -1 || true)"
-  if [[ -n "${PG_CID}" ]]; then
-    docker exec "${PG_CID}" pg_dump -U korus -Fc korus > "${OUT_DIR}/postgres_hot.dump" || true
+log "cell=${CELL_ID} preset={{ cell_backup_preset }} targets={{ cell_backup_targets | length }}"
+
+dump_postgres() {
+  if ! command -v docker >/dev/null 2>&1; then
+    log "WARN docker missing; skip postgres dump"
+    return 0
   fi
-fi
+  local pg_cid
+  pg_cid="$(docker ps -q -f name=postgres 2>/dev/null | head -1 || true)"
+  if [[ -z "${pg_cid}" ]]; then
+    log "WARN postgres container not running; skip dump"
+    return 0
+  fi
+  docker exec "${pg_cid}" pg_dump -U korus -Fc korus > "${OUT_DIR}/postgres_hot.dump"
+  log "OK postgres_hot.dump"
+}
 
-# Phase 2: S3 / air-gap upload per expanded manifest targets
+dump_minio_snapshot() {
+  if ! command -v docker >/dev/null 2>&1; then
+    return 0
+  fi
+  local mc_cid
+  mc_cid="$(docker ps -q -f name=minio 2>/dev/null | head -1 || true)"
+  if [[ -z "${mc_cid}" ]]; then
+    log "WARN minio container not running; skip minio snapshot"
+    return 0
+  fi
+  # Best-effort: list buckets via mc alias inside stack (requires mc configured in guest)
+  if docker exec "${mc_cid}" mc ls local/ >/dev/null 2>&1; then
+    mkdir -p "${OUT_DIR}/minio"
+    docker exec "${mc_cid}" mc mirror --overwrite local/ "${OUT_DIR}/minio/" || log "WARN minio mirror failed"
+    log "OK minio mirror"
+  else
+    log "WARN mc not configured in minio container; skip minio"
+  fi
+}
+
+upload_s3() {
+  local bucket="$1" prefix="$2" target_id="$3"
+  if [[ "${CELL_BACKUP_S3_ENABLED:-0}" != "1" ]]; then
+    log "SKIP s3 target=${target_id} (CELL_BACKUP_S3_ENABLED!=1)"
+    return 0
+  fi
+  if ! command -v aws >/dev/null 2>&1; then
+    log "WARN aws CLI missing; skip s3://${bucket}/${prefix}"
+    return 0
+  fi
+  if [[ -z "${AWS_ACCESS_KEY_ID:-}" && -z "${AWS_PROFILE:-}" ]]; then
+    log "WARN S3 credentials not set; skip s3://${bucket}/${prefix}"
+    return 0
+  fi
+  local dest="s3://${bucket}/${prefix}${TS}/"
+  local aws_args=()
+  if [[ -n "${CELL_BACKUP_S3_ENDPOINT:-}" ]]; then
+    aws_args+=(--endpoint-url "${CELL_BACKUP_S3_ENDPOINT}")
+  fi
+  aws s3 sync "${OUT_DIR}/" "${dest}" "${aws_args[@]}" --only-show-errors
+  log "OK uploaded to ${dest} (target=${target_id})"
+}
+
+upload_filesystem() {
+  local dest_base="$1" target_id="$2"
+  local dest="${dest_base%/}/${TS}"
+  mkdir -p "${dest}"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a "${OUT_DIR}/" "${dest}/"
+  else
+    cp -a "${OUT_DIR}/." "${dest}/"
+  fi
+  log "OK air-gap copy to ${dest} (target=${target_id})"
+}
+
+dump_postgres
+{% set _includes = cell_backup_targets | map(attribute='include') | list | flatten | list %}
+{% if 'minio' in _includes or 'minio_full' in _includes %}
+dump_minio_snapshot
+{% endif %}
+
+{% for t in cell_backup_targets %}
+{% if t.provider == 's3' %}
+upload_s3 "{{ t.bucket }}" "{{ t.prefix }}" "{{ t.id }}"
+{% elif t.provider == 'filesystem' %}
+upload_filesystem "{{ t.path }}" "{{ t.id }}"
+{% endif %}
+{% endfor %}
+
+log "backup complete out=${OUT_DIR}"
 exit 0

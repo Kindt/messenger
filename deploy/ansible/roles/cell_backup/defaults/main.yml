@@ -3,4 +3,9 @@ cell_backup_cell_id: "{{ korus_cell_id | default('unknown') }}"
 cell_backup_preset: default
 cell_backup_targets: []
 cell_backup_script_path: /usr/local/bin/korus-cell-backup.sh
+cell_backup_env_path: /etc/korus/cell-backup.env
 cell_backup_cron_user: root
+# Set to 1 when AWS_* or AWS_PROFILE configured on server host (ops)
+cell_backup_s3_enabled: 0
+# Optional MinIO / on-prem S3 endpoint URL
+cell_backup_s3_endpoint: ""

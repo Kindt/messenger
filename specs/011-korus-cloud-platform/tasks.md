@@ -72,7 +72,7 @@
 
 - [x] T01119 `docs/runbooks/cell-restore.md`
 
-- [ ] T01120 Backup preset `bank` (S3 daily + air-gap weekly) — **role upload Phase 2 ops**
+- [x] T01120 Backup preset `bank` (S3 daily + air-gap weekly) — **role upload + runbook**; live bucket/IAM → ops Sep 2026+
 
 - [x] T01121 Example manifests: `internal-dev` (`platform_subdomain`) + `acme-prod-example` (`customer_cname`)
 

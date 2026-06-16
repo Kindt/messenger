@@ -1,11 +1,18 @@
 ---
-# Cell backup role (spec 011 T01114) — Phase 1: cron + local pg_dump stub; S3 upload Phase 2.
+# Cell backup role (spec 011 T01114/T01120) — cron + pg_dump + S3/air-gap upload when configured.
 
 - name: Require backup targets or preset
   ansible.builtin.assert:
     that:
       - (cell_backup_targets | length > 0) or (cell_backup_preset | length > 0)
     fail_msg: "Set cell_backup_targets or cell_backup_preset (expand manifest via cell-manifest-expand.py)"
+
+- name: Install backup env file
+  ansible.builtin.template:
+    src: korus-cell-backup.env.j2
+    dest: "{{ cell_backup_env_path }}"
+    mode: "0640"
+  when: inventory_hostname in groups.get('korus_server', [])
 
 - name: Install backup script
   ansible.builtin.template:
@@ -14,11 +21,11 @@
     mode: "0750"
   when: inventory_hostname in groups.get('korus_server', [])
 
-- name: Daily backup cron (s3_daily schedule from preset)
+- name: Daily backup cron (02:00 UTC)
   ansible.builtin.cron:
     name: "korus-cell-backup-{{ cell_backup_cell_id }}"
     minute: "0"
     hour: "2"
-    job: "{{ cell_backup_script_path }} >> /var/log/korus-cell-backup.log 2>&1"
+    job: "set -a && . {{ cell_backup_env_path }} && set +a && {{ cell_backup_script_path }} >> /var/log/korus-cell-backup.log 2>&1"
     user: "{{ cell_backup_cron_user }}"
   when: inventory_hostname in groups.get('korus_server', [])

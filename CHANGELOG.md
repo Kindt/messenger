@@ -18,6 +18,11 @@
 - **Live-streaming renumbered:** `specs/011-live-streaming` → **`specs/012-live-streaming`** → **`specs/013-live-streaming`** (spec 011 = cloud; spec 012 = presentation spider).
 - **`docs/plans/2026-06-15-korus-cloud-platform-design.md`**: redirect stub → spec 011.
 
+### 2026-06-16 — Spec 011 T01120 cell backup S3 upload scaffold
+
+- `cell_backup` role: aws s3 sync + air-gap filesystem copy; env file + runbook `cell-backup-s3.md`.
+- Engineering complete; live S3 bucket/IAM — ops Sep 2026+.
+
 ### 2026-06-16 — P2-3 LDAP/AD Keycloak federation script
 
 - `scripts/keycloak-enable-ldap-federation.sh` — Admin REST enable LDAP user storage (P2-3).

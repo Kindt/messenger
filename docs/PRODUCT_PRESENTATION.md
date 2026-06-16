@@ -600,7 +600,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 | Логин/пароль в мессенджере | Как сейчас | Keycloak realm local | Реализовано |
 | «Войти через Google» | Без отдельного пароля | Keycloak OIDC broker | Частично (template + runbook) |
 | «Войти через корпоративный портал» | SAML/OIDC enterprise IdP | Keycloak federation | Частично (OIDC script; SAML — Admin Console) |
-| LDAP / Active Directory | Учётки из AD | Keycloak user federation | Частично (example JSON + runbook) |
+| LDAP / Active Directory | Учётки из AD | Keycloak user federation | Частично (`keycloak-enable-ldap-federation.sh` + example JSON) |
 
 **Требование FR-INT-02:** при включении SSO **локальный пароль может быть отключён** политикой org (настройка Keycloak, не отдельный модуль мессенджера).
 
