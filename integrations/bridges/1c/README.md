@@ -1,17 +1,24 @@
-# 1C bridge family — design spike (spec 014 T01418)
+# 1C bridge (spec 014)
 
-**Status:** spike only — no production bridge in this phase.
+**Worker:** `modules/workers/onec-bridge` — Plugin Runtime API on port **8097**.
 
-## Scope
+## Commands
 
-- OData/HTTP services for 1C:Enterprise 8.3
-- Read-only catalog + document status in v1
-- On-prem only; credentials in org plugin policy vault
+- `ping`
+- `/catalog` — OData catalog top N
+- `/doc SalesOrder-1001` — document status
 
-## Planned worker
+## Backends
 
-`modules/workers/1c-bridge/` — hot-plug worker mirroring `connector-runtime` Plugin Runtime API.
+| Mode | Configuration |
+|------|----------------|
+| mock/auto | `MOCK_API_BASE` fixtures under `_mock-servers/fixtures/1c/` |
+| live | `ONEC_BASE_URL`, `ONEC_USER`, `ONEC_PASSWORD`, optional `ONEC_CATALOG_ENTITY` |
 
-## Demo path
+Set `INTEGRATIONS_BACKEND_MODE=live` on integrations guest when credentials are configured.
 
-Mock fixtures under `integrations/_mock-servers/fixtures/1c/` (future).
+## Smoke
+
+```powershell
+.\scripts\smoke-plugin-1c.ps1 -BaseUrl http://127.0.0.1:18097
+```

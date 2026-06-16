@@ -1,11 +1,14 @@
 # Build stage
-FROM eclipse-temurin:25-jdk AS builder
+FROM gradle:jdk25-noble AS builder
 WORKDIR /app
 COPY . .
 RUN gradle --console=plain :modules:workers:connector-runtime:installDist --no-daemon -x test
 
 # Runtime stage
 FROM eclipse-temurin:25-jre
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl \
+  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/modules/workers/connector-runtime/build/install/connector-runtime /app/connector-runtime
 ENV CONNECTOR_RUNTIME_PORT=8091

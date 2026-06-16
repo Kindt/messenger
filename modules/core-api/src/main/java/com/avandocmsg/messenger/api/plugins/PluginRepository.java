@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -153,7 +152,7 @@ public class PluginRepository {
 
     public Optional<OrgPolicyRow> findOrgPolicy(UUID orgId) {
         var sql = """
-            SELECT org_id, allowed_preset_ids::text, llm_mode, ocr_on_prem_only, updated_at
+            SELECT org_id, allowed_preset_ids, llm_mode, ocr_on_prem_only, updated_at
             FROM org_plugin_policies
             WHERE org_id = ?
             """;

@@ -46,7 +46,7 @@ function Invoke-PlinkShell {
 function Update-KorusGuestRepo {
     param(
         [Parameter(Mandatory)]
-        [ValidateSet("server", "web")]
+        [ValidateSet("server", "web", "integrations")]
         [string]$Role,
         [int]$SshPort,
         [string]$HostKey,

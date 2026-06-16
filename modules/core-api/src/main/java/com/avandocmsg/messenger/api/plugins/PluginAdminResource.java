@@ -8,7 +8,6 @@ import com.avandocmsg.messenger.api.plugins.PluginAdminDtos.InvokePluginRequest;
 import com.avandocmsg.messenger.api.plugins.PluginAdminDtos.PresetJson;
 import com.avandocmsg.messenger.api.plugins.PluginAdminDtos.PresetListResponse;
 import com.avandocmsg.messenger.common.plugin.PluginEvent;
-import com.avandocmsg.messenger.common.plugin.PluginResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,11 +37,17 @@ public class PluginAdminResource {
 
     private final PluginRepository repository;
     private final PluginPlatformService platformService;
+    private final PluginPolicyService policyService;
 
     @Inject
-    public PluginAdminResource(PluginRepository repository, PluginPlatformService platformService) {
+    public PluginAdminResource(
+        PluginRepository repository,
+        PluginPlatformService platformService,
+        PluginPolicyService policyService
+    ) {
         this.repository = repository;
         this.platformService = platformService;
+        this.policyService = policyService;
     }
 
     @GET
@@ -70,6 +75,30 @@ public class PluginAdminResource {
         }
         var rows = repository.listInstances(orgId).stream().map(PluginAdminResource::toJson).toList();
         return new InstanceListResponse(rows);
+    }
+
+    @GET
+    @Path("policies")
+    @Operation(summary = "Get org plugin policy (LLM mode, OCR, allowlist)")
+    public PluginPolicyService.PolicyJson getPolicy(@QueryParam("org_id") UUID orgId) {
+        if (orgId == null) {
+            return null;
+        }
+        return PluginPolicyService.toJson(policyService.getOrDefault(orgId));
+    }
+
+    @POST
+    @Path("policies")
+    @Operation(summary = "Update org plugin policy")
+    public Response updatePolicy(@QueryParam("org_id") UUID orgId, PluginPolicyService.UpdatePolicyRequest request) {
+        if (orgId == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        var updated = policyService.update(orgId, request);
+        if (updated.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(error("error.plugin.policy_invalid")).build();
+        }
+        return Response.ok(PluginPolicyService.toJson(updated.get())).build();
     }
 
     @POST
@@ -143,6 +172,8 @@ public class PluginAdminResource {
             case NOT_FOUND -> Response.status(Response.Status.NOT_FOUND)
                 .entity(error(result.errorKey())).build();
             case DISABLED -> Response.status(Response.Status.CONFLICT)
+                .entity(error(result.errorKey())).build();
+            case POLICY_DENIED -> Response.status(Response.Status.FORBIDDEN)
                 .entity(error(result.errorKey())).build();
             case RUNTIME_ERROR -> Response.status(Response.Status.BAD_GATEWAY)
                 .entity(error(result.errorKey())).build();

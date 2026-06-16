@@ -59,6 +59,13 @@
 
 - **`docs/plans/2026-06-16-code-security-presentation-plan.md`**: S1–S3 (zero-warning buildIntegrity, security smokes, PRES sync); ФСТЭК/реестр out of scope.
 
+### 2026-06-15 — Spec 014: live backends, org policy, 1c-bridge, live gate prep
+
+- **common/integration:** mock/live/auto clients (Graph, WebDAV, 1C OData, OCR HTTP, OpenAI-compatible LLM).
+- **Admin:** `GET/POST /v1/admin/plugins/policies` — `llm_mode`, `ocr_on_prem_only`, preset allowlist; invoke guard.
+- **Worker:** `onec-bridge` (:8097); V038 preset; `integrations/.env.example`.
+- **Gate prep:** `smoke-integrations-gate.ps1`, `plugin-integrations.spec.ts`, `integrations-live-gate.md` contract.
+
 ### 2026-06-15 — Spec 014 Phase P2/P3: bridges, OCR, AI triage, legacy echo
 
 - **Workers:** `exchange-bridge` (:8093), `storage-bridge` (:8094) — Plugin Runtime API + mock Graph/storage.

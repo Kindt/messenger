@@ -40,6 +40,8 @@ curl -fsS http://127.0.0.1:8091/v1/plugin/handle \
 |--------|------|
 | GET | `/api/v1/admin/plugins/presets` |
 | GET | `/api/v1/admin/plugins/instances?org_id={uuid}` |
+| GET | `/api/v1/admin/plugins/policies?org_id={uuid}` |
+| POST | `/api/v1/admin/plugins/policies?org_id={uuid}` |
 | POST | `/api/v1/admin/plugins/instances/l0` |
 | POST | `/api/v1/admin/plugins/instances/{id}/invoke` |
 
@@ -62,8 +64,11 @@ Example L0 body:
 .\scripts\smoke-plugin-echo-php.ps1 -BaseUrl http://127.0.0.1:18088
 .\scripts\smoke-plugin-exchange.ps1 -BaseUrl http://127.0.0.1:18093
 .\scripts\smoke-plugin-ocr-mock.ps1 -BaseUrl http://127.0.0.1:18095
-.\scripts\smoke-plugin-ai-triage.ps1 -BaseUrl http://127.0.0.1:18096
+.\scripts\smoke-plugin-1c.ps1 -BaseUrl http://127.0.0.1:18097
+.\scripts\smoke-integrations-gate.ps1
 ```
+
+Live backends: copy `integrations/.env.example` → `.env` on guest, set `INTEGRATIONS_BACKEND_MODE=live`.
 
 ---
 

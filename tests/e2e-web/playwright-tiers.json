@@ -15,9 +15,10 @@
         "specs/profile-settings.spec.ts",
         "specs/e2ee-capabilities.spec.ts",
         "specs/contacts-search.spec.ts",
-        "specs/conference-rtc.spec.ts"
+        "specs/conference-rtc.spec.ts",
+        "specs/plugin-integrations.spec.ts"
       ],
-      "grep": "global search API|blocks list API|device register API|capabilities advertise|legacy e2ee|mls active exposes|plaintext-preview|authenticated user can upload|send with e2ee_scheme|media capabilities include|register subscribe sendMessage|long-poll updates|token rotate"
+      "grep": "global search API|blocks list API|device register API|capabilities advertise|legacy e2ee|mls active exposes|plaintext-preview|authenticated user can upload|send with e2ee_scheme|media capabilities include|register subscribe sendMessage|long-poll updates|token rotate|admin lists plugin|admin org plugin"
     },
     "ui-auth": {
       "description": "Auth session UI",

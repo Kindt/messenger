@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.api.plugins;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,16 +19,16 @@ public final class PluginPolicyService {
     }
 
     public record PolicyJson(
-        UUID orgId,
-        List<String> allowedPresetIds,
-        String llmMode,
-        boolean ocrOnPremOnly
+        @JsonProperty("org_id") UUID orgId,
+        @JsonProperty("allowed_preset_ids") List<String> allowedPresetIds,
+        @JsonProperty("llm_mode") String llmMode,
+        @JsonProperty("ocr_on_prem_only") boolean ocrOnPremOnly
     ) {}
 
     public record UpdatePolicyRequest(
-        List<String> allowedPresetIds,
-        String llmMode,
-        Boolean ocrOnPremOnly
+        @JsonProperty("allowed_preset_ids") @JsonAlias("allowedPresetIds") List<String> allowedPresetIds,
+        @JsonProperty("llm_mode") @JsonAlias("llmMode") String llmMode,
+        @JsonProperty("ocr_on_prem_only") @JsonAlias("ocrOnPremOnly") Boolean ocrOnPremOnly
     ) {}
 
     public PluginRepository.OrgPolicyRow getOrDefault(UUID orgId) {

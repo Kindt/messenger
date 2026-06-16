@@ -1,15 +1,49 @@
 #!/usr/bin/env python3
-"""Spec 014 P3: L3 AI triage demo (on-prem LLM mock)."""
+"""Spec 014: L3 AI triage demo (mock or OpenAI-compatible live LLM)."""
 from __future__ import annotations
 
 import json
 import os
-import urllib.request
+import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "_lib"))
+import integration_backend as ib  # noqa: E402
 
-MOCK_BASE = os.environ.get("MOCK_API_BASE", "http://mock-apis:8080").rstrip("/")
 PORT = int(os.environ.get("AI_BRIDGE_PORT", "8096"))
+
+
+def triage(text: str, snapshot: dict | None) -> dict:
+    on_prem = (os.environ.get("LLM_ON_PREM_URL") or "").strip()
+    cloud = (os.environ.get("LLM_BASE_URL") or "").strip()
+    live = bool(on_prem or cloud)
+    if ib.use_mock(live):
+        return ib.fetch_json(f"{ib.mock_base()}/ai/v1/triage.json", method="POST", body={"text": text})
+    mode = ib.llm_mode_from_snapshot(snapshot)
+    base = on_prem or cloud
+    if mode == "on_prem_only" and ib.is_cloud_host(base):
+        return ib.fetch_json(f"{ib.mock_base()}/ai/v1/triage.json", method="POST", body={"text": text})
+    if not base:
+        return ib.fetch_json(f"{ib.mock_base()}/ai/v1/triage.json", method="POST", body={"text": text})
+    headers = {}
+    api_key = (os.environ.get("LLM_API_KEY") or "").strip()
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    model = (os.environ.get("LLM_MODEL") or "gpt-4o-mini").strip()
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "Classify support thread. Reply JSON: category,priority,draft_title"},
+            {"role": "user", "content": text},
+        ],
+    }
+    resp = ib.fetch_json(f"{base.rstrip('/')}/v1/chat/completions", method="POST", body=payload, headers=headers)
+    content = resp.get("choices", [{}])[0].get("message", {}).get("content", "")
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        return {"category": "general", "priority": "normal", "draft_title": content[:120]}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -28,43 +62,28 @@ class Handler(BaseHTTPRequestHandler):
             return
         length = int(self.headers.get("Content-Length", "0"))
         raw = self.rfile.read(length).decode("utf-8") if length else "{}"
-        try:
-            event = json.loads(raw)
-        except json.JSONDecodeError:
-            event = {}
+        event = json.loads(raw) if raw else {}
         text = (event.get("text") or "").strip()
         if text.lower() == "ping":
             self._json(200, {"messages": [{"text": "pong (ai-bridge)", "format": "markdown"}]})
             return
         if not text:
-            self._json(
-                200,
-                {"messages": [{"text": "AI triage (L3). Отправьте текст треда или `/triage <text>`", "format": "markdown"}]},
-            )
+            self._json(200, {"messages": [{"text": "AI triage (L3). `/triage <text>`", "format": "markdown"}]})
             return
         if text.lower().startswith("/triage "):
             text = text[8:].strip()
         try:
-            body = json.dumps({"text": text}).encode("utf-8")
-            req = urllib.request.Request(
-                f"{MOCK_BASE}/ai/v1/triage.json",
-                data=body,
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=8) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
+            data = triage(text, event.get("config_snapshot"))
         except Exception as exc:  # noqa: BLE001
-            self._json(200, {"messages": [{"text": f"AI mock offline: {exc}", "format": "markdown"}]})
+            self._json(200, {"messages": [{"text": f"AI error: {exc}", "format": "markdown"}]})
             return
-        category = data.get("category", "general")
-        priority = data.get("priority", "normal")
-        draft = data.get("draft_ticket", {})
+        draft = data.get("draft_ticket") or {}
+        title = draft.get("title") if isinstance(draft, dict) else data.get("draft_title", "?")
         msg = (
-            f"**L3 triage (mock LLM)**\n"
-            f"- Категория: **{category}**\n"
-            f"- Приоритет: **{priority}**\n"
-            f"- Черновик: {draft.get('title', '?')}"
+            f"**L3 triage**\n"
+            f"- Категория: **{data.get('category', 'general')}**\n"
+            f"- Приоритет: **{data.get('priority', 'normal')}**\n"
+            f"- Черновик: {title}"
         )
         self._json(
             200,

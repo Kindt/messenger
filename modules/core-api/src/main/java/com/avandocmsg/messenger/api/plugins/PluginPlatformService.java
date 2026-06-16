@@ -18,16 +18,22 @@ public class PluginPlatformService {
 
     private final PluginRepository repository;
     private final IntegrationRouterClient routerClient;
+    private final PluginPolicyService policyService;
     private final UserMessageSource messages;
 
-    public PluginPlatformService(PluginRepository repository, IntegrationRouterClient routerClient,
-                                 UserMessageSource messages) {
+    public PluginPlatformService(
+        PluginRepository repository,
+        IntegrationRouterClient routerClient,
+        PluginPolicyService policyService,
+        UserMessageSource messages
+    ) {
         this.repository = repository;
         this.routerClient = routerClient;
+        this.policyService = policyService;
         this.messages = messages;
     }
 
-    public enum InvokeOutcome { SUCCESS, NOT_FOUND, DISABLED, RUNTIME_ERROR }
+    public enum InvokeOutcome { SUCCESS, NOT_FOUND, DISABLED, RUNTIME_ERROR, POLICY_DENIED }
 
     public record InvokeResult(InvokeOutcome outcome, PluginResponse response, String errorKey) {}
 
@@ -39,6 +45,9 @@ public class PluginPlatformService {
         var row = instance.get();
         if (!row.enabled()) {
             return new InvokeResult(InvokeOutcome.DISABLED, null, "error.plugin.instance_disabled");
+        }
+        if (!policyService.isPresetAllowed(row.orgId(), row.presetId())) {
+            return new InvokeResult(InvokeOutcome.POLICY_DENIED, null, "error.plugin.preset_not_allowed");
         }
         var enriched = enrichEvent(event, row);
         try {
@@ -107,12 +116,13 @@ public class PluginPlatformService {
         return repository.findInstance(instanceId);
     }
 
-    private static PluginEvent enrichEvent(PluginEvent event, PluginRepository.InstanceRow row) {
+    private PluginEvent enrichEvent(PluginEvent event, PluginRepository.InstanceRow row) {
         Map<String, Object> snapshot = new HashMap<>();
         if (row.configJson() != null) {
             snapshot.putAll(MAPPER.convertValue(row.configJson(), Map.class));
         }
         snapshot.put("preset_id", row.presetId());
+        policyService.applyPolicyToSnapshot(snapshot, row.orgId());
         return new PluginEvent(
             event.eventId(),
             row.id(),

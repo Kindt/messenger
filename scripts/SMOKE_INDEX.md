@@ -45,9 +45,12 @@
 | Bot-delivery worker (guest) | `scripts/smoke-bot-delivery-worker.ps1` | manual | QEMU server guest via SSH; profile `push`/`full` |
 | **Push-worker (QEMU guest)** | `scripts/smoke-push-worker-qemu.ps1` | manual | server guest `:9194/health` via SSH `:12221` |
 | **Preview-worker (QEMU guest)** | `scripts/smoke-preview-worker-qemu.ps1` | manual | server guest `:9195/health` via SSH `:12221` |
-| **Bot API REST (spec 009/010)** | `scripts/smoke-bot-api.sh` | manual | `.ps1`; host `:18080`; register/subscribe/sendMessage; Playwright `bot-api.spec.ts` |
+| **Plugin integrations gate (spec 014)** | `scripts/smoke-integrations-gate.ps1` | manual (QEMU `-WithIntegrations`) | host forwards :18088–:18097, :18190 |
 | **Live streaming L2 (spec 013)** | `scripts/smoke-live-session.ps1` | manual | host `:18080`; needs `V034` + LiveKit env |
 | **LiveKit tunnel (QEMU, no VM restart)** | `scripts/livekit-host-tunnel.ps1` | manual | host `:17880` -> guest `:7880`; parallel-agent friendly |
+| **Plugin platform (spec 014, integrations VM)** | `scripts/smoke-plugin-qemu.ps1` | manual | `qemu-integrations-up.ps1` first; ports 18088–18096 |
+| **Plugin echo PHP** | `scripts/smoke-plugin-echo-php.ps1` | manual | `-BaseUrl http://127.0.0.1:18088` |
+| **Plugin exchange/storage/ocr/ai** | `scripts/smoke-plugin-{exchange,storage,ocr-mock,ai-triage}.ps1` | manual | host forwards from integrations guest |
 | Read receipts (API + WS) | `scripts/smoke-read-receipts.ps1` | manual | UI ✓✓ check optional |
 | Retention hot-row purge status | `scripts/smoke-retention-purge.ps1` | manual | requires admin token + stack |
 | Retention file cleanup metrics | `scripts/smoke-retention-file-cleanup.ps1` | manual | metrics on retention worker port |

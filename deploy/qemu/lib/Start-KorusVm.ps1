@@ -63,6 +63,7 @@ function Start-KorusQemuVm {
                 "hostfwd=tcp:0.0.0.0:18094-:8094",
                 "hostfwd=tcp:0.0.0.0:18095-:8095",
                 "hostfwd=tcp:0.0.0.0:18096-:8096",
+                "hostfwd=tcp:0.0.0.0:18097-:8097",
                 "hostfwd=tcp:0.0.0.0:18087-:8080",
                 "hostfwd=tcp:0.0.0.0:12223-:22"
             ) -join ","

@@ -16,6 +16,7 @@ include(
     "modules:workers:connector-runtime",
     "modules:workers:exchange-bridge",
     "modules:workers:storage-bridge",
+    "modules:workers:onec-bridge",
     "modules:workers:export-replay",
     "modules:workers:retention"
 )

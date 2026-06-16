@@ -51,5 +51,8 @@
 
 ---
 
-*Phase P0–P3 engineering scaffold: 2026-06-15 — full demo catalog runnable on integrations VM.*
-*QEMU verify: 2026-06-16 — `playwright all-inner` 34/34; plugin smokes via `smoke-plugin-qemu.ps1`.*
+## Live gate (QEMU `korus-integrations`)
+
+- [x] T01429 `smoke-integrations-gate.ps1` on host forwards (mock/auto) — 2026-06-16 QEMU
+- [x] T01430 Playwright `plugin-integrations.spec.ts` (admin presets/policy; gateway test optional `KORUS_INTEGRATIONS_GATE_URL`)
+- [ ] T01431 Optional live-backend verification per `contracts/integrations-live-gate.md`

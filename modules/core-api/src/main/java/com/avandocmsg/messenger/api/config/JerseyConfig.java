@@ -142,6 +142,7 @@ public class JerseyConfig extends ResourceConfig {
                         BotService botService,
                         com.avandocmsg.messenger.api.plugins.PluginRepository pluginRepository,
                         com.avandocmsg.messenger.api.plugins.PluginPlatformService pluginPlatformService,
+                        com.avandocmsg.messenger.api.plugins.PluginPolicyService pluginPolicyService,
                         com.avandocmsg.messenger.api.plugins.PluginOutboundService pluginOutboundService) {
         register(new AbstractBinder() {
             @Override
@@ -209,6 +210,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(botService).to(BotService.class);
                 bind(pluginRepository).to(com.avandocmsg.messenger.api.plugins.PluginRepository.class);
                 bind(pluginPlatformService).to(com.avandocmsg.messenger.api.plugins.PluginPlatformService.class);
+                bind(pluginPolicyService).to(com.avandocmsg.messenger.api.plugins.PluginPolicyService.class);
                 bind(pluginOutboundService).to(com.avandocmsg.messenger.api.plugins.PluginOutboundService.class);
                 bind(BotRateLimiter.fromEnv()).to(BotRateLimiter.class);
             }

@@ -1,15 +1,27 @@
 #!/usr/bin/env python3
-"""Spec 014 P2: on-prem OCR invoice demo (mock extraction)."""
+"""Spec 014: on-prem OCR invoice demo (mock or live OCR_HTTP_URL)."""
 from __future__ import annotations
 
 import json
 import os
-import urllib.request
+import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "_lib"))
+import integration_backend as ib  # noqa: E402
 
-MOCK_BASE = os.environ.get("MOCK_API_BASE", "http://mock-apis:8080").rstrip("/")
 PORT = int(os.environ.get("OCR_WORKER_PORT", "8095"))
+
+
+def extract_fields(file_id: str, snapshot: dict | None) -> dict:
+    live_url = (os.environ.get("OCR_HTTP_URL") or "").strip()
+    if ib.use_mock(bool(live_url)) or (ib.ocr_on_prem_only(snapshot) and "azure.com" in live_url.lower()):
+        fid = file_id or "invoice-demo.pdf"
+        data = ib.fetch_json(f"{ib.mock_base()}/ocr/v1/extract.json?file_id={fid}")
+        return data.get("fields") or {}
+    data = ib.fetch_json(f"{live_url.rstrip('/')}/v1/extract", method="POST", body={"file_id": file_id})
+    return data.get("fields") or {}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -28,27 +40,21 @@ class Handler(BaseHTTPRequestHandler):
             return
         length = int(self.headers.get("Content-Length", "0"))
         raw = self.rfile.read(length).decode("utf-8") if length else "{}"
-        try:
-            event = json.loads(raw)
-        except json.JSONDecodeError:
-            event = {}
+        event = json.loads(raw) if raw else {}
         text = (event.get("text") or "").strip().lower()
         if text == "ping":
             self._json(200, {"messages": [{"text": "pong (ocr-worker)", "format": "markdown"}]})
             return
-        file_id = "invoice-demo.pdf"
         payload = event.get("payload") or {}
-        if isinstance(payload, dict) and payload.get("file_id"):
-            file_id = str(payload["file_id"])
+        file_id = payload.get("file_id") if isinstance(payload, dict) else None
+        file_id = str(file_id or "invoice-demo.pdf")
         try:
-            with urllib.request.urlopen(f"{MOCK_BASE}/ocr/v1/extract.json?file_id={file_id}", timeout=8) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
+            fields = extract_fields(file_id, event.get("config_snapshot"))
         except Exception as exc:  # noqa: BLE001
-            self._json(200, {"messages": [{"text": f"OCR mock offline: {exc}", "format": "markdown"}]})
+            self._json(200, {"messages": [{"text": f"OCR error: {exc}", "format": "markdown"}]})
             return
-        fields = data.get("fields") or {}
         msg = (
-            f"**OCR (on-prem mock)** — `{file_id}`\n"
+            f"**OCR** — `{file_id}`\n"
             f"- Поставщик: **{fields.get('vendor', '?')}**\n"
             f"- Сумма: **{fields.get('amount', '?')}** {fields.get('currency', 'RUB')}\n"
             f"- Дата: {fields.get('date', '?')}"

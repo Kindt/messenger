@@ -43,5 +43,12 @@ Admin API: `GET /api/v1/admin/plugins/presets`
 .\scripts\smoke-plugin-exchange.ps1
 .\scripts\smoke-plugin-ocr-mock.ps1
 .\scripts\smoke-plugin-ai-triage.ps1
+.\scripts\smoke-plugin-1c.ps1
+.\scripts\smoke-integrations-gate.ps1
 python scripts\validate-l0-plugin-menu.py integrations\examples\hr-faq-menu.json
 ```
+
+## Live vs mock backends
+
+`INTEGRATIONS_BACKEND_MODE=auto|mock|live` — см. [`.env.example`](.env.example).  
+Java clients: `modules/common/.../plugin/integration/` (Graph, WebDAV, 1C OData, OCR HTTP, LLM).

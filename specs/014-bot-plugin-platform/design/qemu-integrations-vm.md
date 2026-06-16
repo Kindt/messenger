@@ -97,7 +97,7 @@ Stop integrations VM целиком → все плагины degraded; **чат
 - [ ] `config.ps1`: `KorusQemuIntegrationsIp`, memory constants
 - [ ] `images/integrations-dev.qcow2`, cloud-init `integrations/`
 - [ ] `qemu-up.ps1` optional 3rd VM (`-WithIntegrations` or default on for spec 014 dev)
-- [ ] `smoke-plugin-*.ps1` target `.30` via guest SSH or host tunnel `18190`
+- [x] `smoke-plugin-*.ps1` target `.30` via host forwards `18088`–`18096` (`scripts/qemu-integrations-up.ps1`)
 - [ ] Firewall: server → integrations :8000–8100 allow
 
 ---
