@@ -53,6 +53,6 @@
 
 ## Live gate (QEMU `korus-integrations`)
 
-- [x] T01429 `smoke-integrations-gate.ps1` on host forwards (mock/auto) — 2026-06-16 QEMU
-- [x] T01430 Playwright `plugin-integrations.spec.ts` (admin presets/policy; gateway test optional `KORUS_INTEGRATIONS_GATE_URL`)
-- [ ] T01431 Optional live-backend verification per `contracts/integrations-live-gate.md`
+- [x] T01429 `smoke-integrations-gate.ps1` on host forwards (mock/auto) — 2026-06-16 QEMU green (stack restart on guest)
+- [x] T01430 Playwright `plugin-integrations.spec.ts` — **3/3** with `KORUS_INTEGRATIONS_GATE_URL` (2026-06-16)
+- [ ] T01431 Optional live-backend verification per `contracts/integrations-live-gate.md` (needs real Graph/WebDAV/1C/OCR/LLM creds)
