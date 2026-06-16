@@ -11,8 +11,15 @@
 - **LiveKit SFU POC (≤200 viewers):** REST `/v1/chats/{id}/live-sessions`, `/v1/live-sessions/{id}/join|leave|end`; Flyway `V034__live_sessions`.
 - **NATS** `live.session` → message-pipeline fan-out; media capabilities `live_streaming_enabled`, `livekit_url`.
 - **Web UI:** секция «Прямой эфир» в панели звонков (`ui-live-session.js`), отдельно от mesh/Jitsi.
-- **Ops:** `docker/docker-compose.livekit-dev.yml`, smoke `scripts/smoke-live-session.ps1`; contract `specs/013-live-streaming/contracts/live-session-api-contract.md`.
+- **Ops:** `docker/docker-compose.livekit-dev.yml` (standalone overlay), LiveKit in `docker-compose.full-server.yml`, smoke `scripts/smoke-live-session.ps1`; contract `specs/013-live-streaming/contracts/live-session-api-contract.md`.
 - **ADR:** LiveKit accepted for L2 POC (`docs/adr/ADR-live-streaming-media-stack.md`).
+
+### 2026-06-16 — Spec 014: security CI gate + presentation sync (S1)
+
+- **`specs/014-code-security-presentation/`**: spec, plan, tasks, security-gate contract.
+- **`buildIntegrity`**: spotless ratchet, `checkNpmAudit`, blocking `:core-api:benchmark`.
+- **`scripts/security-gate.ps1`**: buildIntegrity + optional QEMU smokes.
+- **CI:** single blocking `buildIntegrity` step (benchmark merged).
 
 ### 2026-06-16 — План: security CI gate + презентация (без ФСТЭК)
 

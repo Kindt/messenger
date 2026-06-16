@@ -139,6 +139,9 @@ services:
       MEDIA_MAX_UPLOAD_BYTES: "52428800"
       JITSI_MEET_BASE_URL: https://meet.jit.si
       WEBRTC_STUN_URIS: stun:stun.l.google.com:19302
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://127.0.0.1:7880}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
     depends_on:
       postgres-hot:
         condition: service_healthy
@@ -150,8 +153,19 @@ services:
         condition: service_started
       minio:
         condition: service_started
+      livekit:
+        condition: service_started
     volumes:
       - export-replay-data:/export
+
+  livekit:
+    image: livekit/livekit-server:v1.8.4
+    command: --dev --bind 0.0.0.0
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    restart: unless-stopped
 
   ws-gateway:
     build:

@@ -1,0 +1,10 @@
+---
+- name: LiveKit client URL env for QEMU (host browser via :17880)
+  ansible.builtin.copy:
+    dest: "{{ korus_repo_root }}/docker/.env.livekit"
+    mode: "0644"
+    content: |
+      LIVEKIT_URL={{ korus_livekit_url }}
+      LIVEKIT_API_KEY={{ korus_livekit_api_key }}
+      LIVEKIT_API_SECRET={{ korus_livekit_api_secret }}
+  when: korus_livekit_url is defined

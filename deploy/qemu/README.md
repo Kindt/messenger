@@ -6,7 +6,7 @@
 
 | ВМ | IP | Роль | Порты на хосте Windows |
 |----|-----|------|------------------------|
-| `korus-server` | 192.168.76.10 | Docker + **Ansible** `qemu-server-local` | 18080→8080, 18082→8082, 18081→8081 |
+| `korus-server` | 192.168.76.10 | Docker + **Ansible** `qemu-server-local` | 18080→8080, 18082→8082, 18081→8081, **17880→7880** (LiveKit L2) |
 | `korus-web` | 192.168.76.20 | Docker + **Ansible** `qemu-web-local` | 19088→9088 |
 
 Репозиторий попадает в гости через **HTTP snapshot** с хоста: `http://10.0.2.2:18890/repo.tgz` → `/mnt/korus`.
@@ -21,7 +21,7 @@ Bootstrap и redeploy внутри ВМ — **`deploy/qemu/vm-bootstrap/run-ansi
 | web | `playbooks/qemu-web-local.yml` | `inventory/qemu/localhost.yml` + `korus_qemu_host_lan_ip` (LAN IP Windows для WS в браузере) |
 
 Между ВМ: API **`http://192.168.76.10:8080`**, ws-gateway **`192.168.76.10:8082`**.  
-Браузер на Windows: API **`http://127.0.0.1:18080`**, UI **`http://127.0.0.1:19088`**, WS **`ws://<host-lan-ip>:19088/ws`**.
+Браузер на Windows: API **`http://127.0.0.1:18080`**, UI **`http://127.0.0.1:19088`**, WS **`ws://<host-lan-ip>:19088/ws`**, LiveKit **`ws://127.0.0.1:17880`** (spec 013 L2, после redeploy с `livekit` в full-server).
 
 Ручной redeploy без сброса дисков:
 

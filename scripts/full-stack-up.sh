@@ -48,6 +48,12 @@ if [[ ! -f "$COMPOSE" ]]; then
 fi
 
 cd "$ROOT"
+if [[ -f "$ROOT/docker/.env.livekit" ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  source "$ROOT/docker/.env.livekit"
+  set +a
+fi
 # Limit parallel compose builds by default — avoids OOM on 8–10G RAM hosts during redeploy.
 export COMPOSE_PARALLEL_LIMIT="${COMPOSE_PARALLEL_LIMIT:-1}"
 if [ "${KORUS_QEMU_CONSOLE:-0}" = "1" ]; then

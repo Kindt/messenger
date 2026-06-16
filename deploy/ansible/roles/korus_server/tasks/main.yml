@@ -1,4 +1,7 @@
 ---
+- name: LiveKit env file for compose (QEMU host browser URL)
+  ansible.builtin.import_tasks: livekit-env.yml
+
 - name: Template server secrets env from vault
   ansible.builtin.template:
     src: korus-server.env.j2
@@ -38,6 +41,12 @@
       set -a
       # shellcheck source=/dev/null
       source "{{ korus_server_env_path }}"
+      set +a
+    fi
+    if [[ -f "{{ korus_repo_root }}/docker/.env.livekit" ]]; then
+      set -a
+      # shellcheck source=/dev/null
+      source "{{ korus_repo_root }}/docker/.env.livekit"
       set +a
     fi
     profile="{{ korus_deploy_profile | default('standard') }}"

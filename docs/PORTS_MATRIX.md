@@ -12,6 +12,7 @@ Single source of truth for commonly used host ports across local run modes.
 | `full-server` | retention-worker | `9192` | Metrics/health (`/metrics`, `/health`) |
 | `full-server` | export-replay-worker | `9193` | Metrics/health (`/metrics`, `/health`) |
 | `full-server` | push-worker | `9194` | Health (`/health`) |
+| `full-server` | livekit | `7880` | WebSocket SFU (L2); `7881`/`7882` RTC |
 | `dev-min --profile web` | ws-gateway | `8082` | WebSocket endpoint `/ws` |
 | `dev-min --profile web` | push-worker | `9193` | Health (`/health`) |
 
@@ -22,6 +23,7 @@ Single source of truth for commonly used host ports across local run modes.
 | `korus-server` | core-api | `18080` | Forward to guest `8080` |
 | `korus-server` | ws-gateway | `18082` | Forward to guest `8081` |
 | `korus-server` | keycloak | `18081` | Forward to guest `8080` |
+| `korus-server` | livekit (WebRTC SFU) | `17880` | WS/API; `17881` TCP RTC; `17882/udp` media |
 | `korus-web` | web LB | `19088` | Forward to guest `9088` |
 | `korus-web` | coturn (dev TURN) | `3478` | TCP+UDP forward to guest; ICE `turn:127.0.0.1:3478` |
 | `korus-server` | SSH | `12221` | `ssh korus@127.0.0.1 -p 12221` |
