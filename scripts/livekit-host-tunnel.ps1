@@ -30,4 +30,4 @@ $hk = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "server-serial.log"
 if (-not $hk) { throw "server SSH host key not ready (QEMU up?)" }
 
 Write-Host "LiveKit tunnel 127.0.0.1:$LocalPort -> guest:$GuestPort (Ctrl+C to stop)" -ForegroundColor Cyan
-& $Plink -batch -hostkey $hk -P $SshPort -L "${LocalPort}:127.0.0.1:${GuestPort}" -N korus@127.0.0.1
+& $Plink -batch -hostkey $hk -pw korus -P $SshPort -L "${LocalPort}:127.0.0.1:${GuestPort}" -N korus@127.0.0.1
