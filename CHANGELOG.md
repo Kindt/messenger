@@ -55,6 +55,12 @@
 - **`scripts/security-gate.ps1`**: buildIntegrity + optional QEMU smokes.
 - **CI:** single blocking `buildIntegrity` step (benchmark merged).
 
+### 2026-06-16 — Spec 014: integrations mock gate green on QEMU
+
+- **Gate:** `smoke-integrations-gate.ps1` 6/6, Playwright `plugin-integrations.spec.ts` 3/3 (`KORUS_INTEGRATIONS_GATE_URL`).
+- **Fix:** mock-apis `/ai/v1/triage.json` accepts POST; ai-triage mock path uses GET; smoke fails on `AI error:`.
+- **Scripts:** `integrations-gate-preflight.ps1`, `qemu-sync-integrations.ps1` (`-MocksOnly`, fresh `repo.tgz`).
+
 ### 2026-06-16 — План: security CI gate + презентация (без ФСТЭК)
 
 - **`docs/plans/2026-06-16-code-security-presentation-plan.md`**: S1–S3 (zero-warning buildIntegrity, security smokes, PRES sync); ФСТЭК/реестр out of scope.

@@ -19,13 +19,13 @@ def triage(text: str, snapshot: dict | None) -> dict:
     cloud = (os.environ.get("LLM_BASE_URL") or "").strip()
     live = bool(on_prem or cloud)
     if ib.use_mock(live):
-        return ib.fetch_json(f"{ib.mock_base()}/ai/v1/triage.json", method="POST", body={"text": text})
+        return ib.fetch_json(f"{ib.mock_base()}/ai/v1/triage.json")
     mode = ib.llm_mode_from_snapshot(snapshot)
     base = on_prem or cloud
     if mode == "on_prem_only" and ib.is_cloud_host(base):
-        return ib.fetch_json(f"{ib.mock_base()}/ai/v1/triage.json", method="POST", body={"text": text})
+        return ib.fetch_json(f"{ib.mock_base()}/ai/v1/triage.json")
     if not base:
-        return ib.fetch_json(f"{ib.mock_base()}/ai/v1/triage.json", method="POST", body={"text": text})
+        return ib.fetch_json(f"{ib.mock_base()}/ai/v1/triage.json")
     headers = {}
     api_key = (os.environ.get("LLM_API_KEY") or "").strip()
     if api_key:

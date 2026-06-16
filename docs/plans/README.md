@@ -20,6 +20,7 @@
 | 12 | `2026-06-15-unfinished-development-plan.md` | Inventory + hybrid sprint D closure → [`specs/007-platform-stage-readiness/`](../specs/007-platform-stage-readiness/) | Справочник | `completed` |
 | 13 | `2026-06-16-presentation-gaps-implementation-plan.md` | Закрытие «Частично»/«Запланировано» в продуктовой презентации (P0–P4) | Высокий | `active` |
 | 14 | `2026-06-16-code-security-presentation-plan.md` | Security CI gate (zero warnings) + синхронизация презентации/radar (без ФСТЭК) → [`specs/014-code-security-presentation/`](../specs/014-code-security-presentation/) | Высокий | `active` |
+| 15 | `2026-06-16-performance-scalability-plan.md` | Perf/scalability hardening: WS hub, streaming upload, fan-out, docker limits, JDBC timeout (code review 2026-06-16) | **P0** | `not_started` |
 
 ## Структура каждого плана
 

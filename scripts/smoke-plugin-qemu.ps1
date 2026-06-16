@@ -30,7 +30,7 @@ function Test-PluginPort {
 function Wait-IntegrationsReady {
     param([int]$MaxSec)
     $deadline = (Get-Date).AddSeconds($MaxSec)
-    $ports = @(18190, 18088, 18093, 18094, 18095, 18096)
+    $ports = @(18190, 18088, 18093, 18094, 18095, 18096, 18097)
     while ((Get-Date) -lt $deadline) {
         $ok = $true
         foreach ($p in $ports) {
@@ -69,7 +69,8 @@ try {
         @{ Name = "exchange"; Script = "smoke-plugin-exchange.ps1"; Args = @{ BaseUrl = "http://127.0.0.1:18093" } },
         @{ Name = "storage"; Script = "smoke-plugin-storage.ps1"; Args = @{ BaseUrl = "http://127.0.0.1:18094" } },
         @{ Name = "ocr"; Script = "smoke-plugin-ocr-mock.ps1"; Args = @{ BaseUrl = "http://127.0.0.1:18095" } },
-        @{ Name = "ai-triage"; Script = "smoke-plugin-ai-triage.ps1"; Args = @{ BaseUrl = "http://127.0.0.1:18096" } }
+        @{ Name = "ai-triage"; Script = "smoke-plugin-ai-triage.ps1"; Args = @{ BaseUrl = "http://127.0.0.1:18096" } },
+        @{ Name = "1c"; Script = "smoke-plugin-1c.ps1"; Args = @{ BaseUrl = "http://127.0.0.1:18097" } }
     )
 
     foreach ($s in $smokes) {

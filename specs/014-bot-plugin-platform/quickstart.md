@@ -61,14 +61,25 @@ Example L0 body:
 ## Smokes
 
 ```powershell
+.\scripts\integrations-gate-preflight.ps1 -Online
+.\scripts\qemu-integrations-up.ps1
+.\scripts\smoke-integrations-gate.ps1
+$env:KORUS_INTEGRATIONS_GATE_URL = "http://127.0.0.1:18190"
+.\scripts\playwright-dev-loop.ps1 -Tier api   # includes plugin-integrations.spec.ts
+```
+
+Per-sidecar:
+
+```powershell
 .\scripts\smoke-plugin-echo-php.ps1 -BaseUrl http://127.0.0.1:18088
 .\scripts\smoke-plugin-exchange.ps1 -BaseUrl http://127.0.0.1:18093
 .\scripts\smoke-plugin-ocr-mock.ps1 -BaseUrl http://127.0.0.1:18095
 .\scripts\smoke-plugin-1c.ps1 -BaseUrl http://127.0.0.1:18097
-.\scripts\smoke-integrations-gate.ps1
 ```
 
-Live backends: copy `integrations/.env.example` → `.env` on guest, set `INTEGRATIONS_BACKEND_MODE=live`.
+Guest code refresh (no Docker Hub): `.\scripts\qemu-sync-integrations.ps1 -MocksOnly`
+
+Live backends: copy `integrations/.env.example` → `.env` on guest, set `INTEGRATIONS_BACKEND_MODE=live`, then `qemu-sync-integrations.ps1` (full rebuild when network allows).
 
 ---
 

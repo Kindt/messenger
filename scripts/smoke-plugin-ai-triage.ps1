@@ -10,4 +10,6 @@ $body = @{
 } | ConvertTo-Json
 $r = Invoke-RestMethod -Method Post -Uri "$BaseUrl/v1/plugin/handle" -ContentType "application/json" -Body $body
 if (-not $r.messages[0].text) { throw "empty response" }
-Write-Host "[OK] ai-bridge:" $r.messages[0].text.Substring(0, [Math]::Min(100, $r.messages[0].text.Length))
+$text = [string]$r.messages[0].text
+if ($text -match 'AI error:') { throw $text }
+Write-Host "[OK] ai-bridge:" $text.Substring(0, [Math]::Min(100, $text.Length))

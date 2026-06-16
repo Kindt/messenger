@@ -46,6 +46,8 @@
 | **Push-worker (QEMU guest)** | `scripts/smoke-push-worker-qemu.ps1` | manual | server guest `:9194/health` via SSH `:12221` |
 | **Preview-worker (QEMU guest)** | `scripts/smoke-preview-worker-qemu.ps1` | manual | server guest `:9195/health` via SSH `:12221` |
 | **Plugin integrations gate (spec 014)** | `scripts/smoke-integrations-gate.ps1` | manual (QEMU `-WithIntegrations`) | host forwards :18088–:18097, :18190 |
+| **Integrations preflight (offline/online)** | `scripts/integrations-gate-preflight.ps1 [-Online]` | manual | before live stand |
+| **Sync integrations guest** | `scripts/qemu-sync-integrations.ps1 [-MocksOnly]` | manual | refresh repo + compose on `.30` |
 | **Live streaming L2 (spec 013)** | `scripts/smoke-live-session.ps1` | manual | host `:18080`; needs `V034` + LiveKit env |
 | **LiveKit tunnel (QEMU, no VM restart)** | `scripts/livekit-host-tunnel.ps1` | manual | host `:17880` -> guest `:7880`; parallel-agent friendly |
 | **Plugin platform (spec 014, integrations VM)** | `scripts/smoke-plugin-qemu.ps1` | manual | `qemu-integrations-up.ps1` first; ports 18088–18096 |
