@@ -55,6 +55,10 @@
 - **`scripts/security-gate.ps1`**: buildIntegrity + optional QEMU smokes.
 - **CI:** single blocking `buildIntegrity` step (benchmark merged).
 
+### 2026-06-16 — CI: fix TimingNormalization nanos padding (TimingAttackPreventionTest)
+
+- **`TimingNormalization`:** `LockSupport.parkNanos` вместо `Thread.sleep(ms)` — точное выдерживание minimum duration на Linux CI.
+
 ### 2026-06-16 — Spec 014: integrations mock gate green on QEMU
 
 - **Gate:** `smoke-integrations-gate.ps1` 6/6, Playwright `plugin-integrations.spec.ts` 3/3 (`KORUS_INTEGRATIONS_GATE_URL`).
