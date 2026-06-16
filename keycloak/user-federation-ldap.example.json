@@ -1,0 +1,24 @@
+{
+  "name": "corp-ldap",
+  "providerId": "ldap",
+  "providerType": "org.keycloak.storage.UserStorageProvider",
+  "parentId": "avandocmsg",
+  "config": {
+    "enabled": ["false"],
+    "priority": ["0"],
+    "editMode": ["READ_ONLY"],
+    "syncRegistrations": ["false"],
+    "vendor": ["ad"],
+    "usernameLDAPAttribute": ["sAMAccountName"],
+    "rdnLDAPAttribute": ["cn"],
+    "uuidLDAPAttribute": ["objectGUID"],
+    "userObjectClasses": ["person, organizationalPerson, user"],
+    "connectionUrl": ["ldap://ad.example.com:389"],
+    "usersDn": ["OU=Users,DC=example,DC=com"],
+    "bindDn": ["CN=svc-korus,OU=Service,DC=example,DC=com"],
+    "bindCredential": ["REPLACE_WITH_VAULT"],
+    "searchScope": ["2"],
+    "useTruststoreSpi": ["ldapsOnly"],
+    "pagination": ["true"]
+  }
+}

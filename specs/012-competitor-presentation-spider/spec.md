@@ -2,7 +2,7 @@
 
 **Feature branch:** `012-competitor-presentation-spider`  
 **Created:** 2026-06-15  
-**Status:** `draft`  
+**Status:** `approved`  
 **Input:** Gap-анализ «паутинки» после v2.8 — полное покрытие осей product × scenario × anchor × persona × format.
 
 **Design:** [`design/spider-web-model.md`](design/spider-web-model.md)

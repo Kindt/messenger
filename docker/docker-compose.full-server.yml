@@ -385,6 +385,7 @@ services:
       EXPORT_REPLAY_INCLUDE_EXPORT_COMPLETENESS: "true"
       EXPORT_REQUIRED_FIELDS: "messages,chat,chat_members,referenced_users,referenced_files,gdpr_disclosures"
       EXPORT_COMPLETENESS_STRICT: "false"
+      EXPORT_REPLAY_REQUIRE_JDBC: "true"
     ports:
       - "9193:9191"
     volumes:

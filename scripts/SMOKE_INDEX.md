@@ -59,6 +59,9 @@
 | **TURN (QEMU)** | `scripts/smoke-turn-qemu.ps1` | manual | guest coturn + host `:3478` after web VM hostfwd; `-GuestOnly` |
 | **Cell multi-org (spec 011)** | `scripts/smoke-cell-multi-org-qemu.ps1` | manual | host `:18080`; creates 2 orgs via admin API |
 | **GDPR export completeness (P1-6)** | `scripts/smoke-export-gdpr-fulfillment.ps1` | manual | admin export-compliance-guide + parity API |
+| **File image resize (P1-4)** | `scripts/smoke-file-resize.ps1` | manual | host `:18080`; upload PNG → `/resize?w=32&h=32` |
+| **Export-replay non-stub (P2-4)** | `scripts/smoke-export-replay-non-stub.ps1` | manual | export_v1 gate via `smoke-export-replay-before-purge` |
+| **SSO Keycloak broker (P2-2)** | `docs/runbooks/sso-keycloak-federation.md` | manual | `scripts/keycloak-enable-identity-provider.sh` on IdP host |
 | **Preview worker health** | `scripts/smoke-preview-worker.ps1` | manual | full-server `:9195/health`; QEMU: `smoke-preview-worker-qemu.ps1` |
 | **Playwright staging gate** | `scripts/playwright-staging-gate.ps1` | manual | `-BaseUrl https://...` |
 | **Stage/prod deploy runbook** | `docs/review/stage-prod-deploy-runbook.md` | manual | US1/US7 deploy-only when hosts available |

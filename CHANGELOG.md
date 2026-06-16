@@ -18,6 +18,40 @@
 - **Live-streaming renumbered:** `specs/011-live-streaming` → **`specs/012-live-streaming`** → **`specs/013-live-streaming`** (spec 011 = cloud; spec 012 = presentation spider).
 - **`docs/plans/2026-06-15-korus-cloud-platform-design.md`**: redirect stub → spec 011.
 
+### 2026-06-16 — Spec 012 Phase C complete (v3.1 P2)
+
+- `competitor_comparison_talktrack.html` — сценарии 5 / 15 / 45 мин; ссылка из reading guide.
+- Registry test: каждый продукт имеет ≥1 scenario_fit ≠ «—»; spec 012 status `approved`.
+
+### 2026-06-16 — Spec 012 Phase B complete (v3.0 P1)
+
+- Tier C stacked TCO chart (`render_fig_tco_tier_c_svg()`); tier-C radar + TrueConf in registry.
+- Deployment models table (on-prem / hosted Cell B / SaaS) linked to spec 011.
+- Persona extracts (CFO / ИБ / закупка) in segment HTML; methodology v1.6.
+
+### 2026-06-16 — Spec 012 Phase A complete (v2.9 P0)
+
+- Battle cards: Compass, МТС Линк, Loop, TrueConf (`render_battle_cards_extended_html()`).
+- TCO chart **S-50k** (`render_fig_tco_s50k_svg()`); Enterprise SaaS callout (`render_enterprise_saas_callout_html()`).
+- Segment bank: ФСТЭК/reестр block; segment industry: Compass @10k mini-TCO.
+- `competitor_comparison*.html` rebuilt; methodology note in brief disclaimers.
+
+### 2026-06-16 — Spec 012 Phase A start (scenario matrix v2.9)
+
+- `registry.json`: `scenario_fit` S1–S4 for 11 products; matrix `render_product_scenario_matrix_html()`.
+- `competitor_comparison*.html` rebuilt at VERSION **2.9**.
+
+### 2026-06-16 — P1b/P2-2/P2-4 presentation sync + SSO + export-replay policy
+
+- **P1b:** `product_status.py` v2.5.3, `PRODUCT_PRESENTATION.md` traceability (resize, preview, batch replay, SSO partial).
+- **P2-2:** `docs/runbooks/sso-keycloak-federation.md`, `keycloak/*example.json`, `scripts/keycloak-enable-identity-provider.sh`.
+- **P2-4:** `EXPORT_REPLAY_REQUIRE_JDBC` fail-fast; pilot/full compose; `smoke-export-replay-non-stub.ps1`.
+
+### 2026-06-16 — P1-4 embedded file image resize
+
+- **`GET /api/v1/files/{fileId}/resize?w=&h=`** — on-the-fly JPEG thumbnail in core-api (`ImageResizeService`, `FILE_RESIZE_*` env).
+- Smoke: `scripts/smoke-file-resize.ps1` (upload PNG → resize → non-image 400).
+
 ### 2026-06-16 — Outer gate T110 (QEMU Playwright 33/33)
 
 - Full suite green: `tests/e2e-web` `npx playwright test` against `:19088`/`:18080`.

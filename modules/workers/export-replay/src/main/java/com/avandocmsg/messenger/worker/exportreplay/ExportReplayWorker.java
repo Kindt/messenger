@@ -175,6 +175,12 @@ public class ExportReplayWorker {
         var dir = Path.of(System.getenv().getOrDefault("EXPORT_DIR", "export-output"));
         var publishComplete = Boolean.parseBoolean(System.getenv().getOrDefault("EXPORT_PUBLISH_COMPLETE", "false"));
         var jdbcUrl = System.getenv("DB_JDBC_URL");
+        var requireJdbc = Boolean.parseBoolean(
+            System.getenv().getOrDefault("EXPORT_REPLAY_REQUIRE_JDBC", "false"));
+        if (requireJdbc && (jdbcUrl == null || jdbcUrl.isBlank())) {
+            log.error(workerMessages.get("worker.export_replay.require_jdbc_missing"));
+            System.exit(1);
+        }
         var maxMessages = parsePositiveInt(System.getenv("EXPORT_REPLAY_MAX_MESSAGES"), 100_000);
         var maxVersionRows = parsePositiveInt(System.getenv("EXPORT_REPLAY_MAX_MESSAGE_VERSIONS"), 500_000);
         var includeVersions = Boolean.parseBoolean(System.getenv().getOrDefault("EXPORT_REPLAY_INCLUDE_VERSIONS", "true"));

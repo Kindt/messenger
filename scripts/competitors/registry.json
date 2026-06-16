@@ -104,6 +104,12 @@
         "multitenant": "org-shard",
         "federation": "org-level",
         "ops": "Java monolith + workers"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "~",
+        "S3": "✓",
+        "S4": "✓"
       }
     },
     {
@@ -130,6 +136,12 @@
         "multitenant": "✓",
         "federation": "✓",
         "ops": "Kafka, etcd, Redis"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "—",
+        "S3": "✓",
+        "S4": "~"
       }
     },
     {
@@ -156,6 +168,12 @@
         "multitenant": "◐",
         "federation": "—",
         "ops": "SaaS"
+      },
+      "scenario_fit": {
+        "S1": "—",
+        "S2": "✓",
+        "S3": "—",
+        "S4": "✓"
       }
     },
     {
@@ -182,6 +200,12 @@
         "multitenant": "◐",
         "federation": "—",
         "ops": "SaaS"
+      },
+      "scenario_fit": {
+        "S1": "—",
+        "S2": "✓",
+        "S3": "—",
+        "S4": "✓"
       }
     },
     {
@@ -208,6 +232,12 @@
         "multitenant": "◐",
         "federation": "—",
         "ops": "Mattermost-fork"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "✓",
+        "S3": "~",
+        "S4": "✓"
       }
     },
     {
@@ -234,6 +264,12 @@
         "multitenant": "◐",
         "federation": "◐",
         "ops": "MongoDB replica"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "✓",
+        "S3": "~",
+        "S4": "~"
       }
     },
     {
@@ -260,6 +296,12 @@
         "multitenant": "◐",
         "federation": "—",
         "ops": "Go + PostgreSQL"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "✓",
+        "S3": "✓",
+        "S4": "~"
       }
     },
     {
@@ -286,6 +328,12 @@
         "multitenant": "◐",
         "federation": "—",
         "ops": "Superapp bundle"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "—",
+        "S3": "~",
+        "S4": "~"
       }
     },
     {
@@ -312,6 +360,12 @@
         "multitenant": "◐",
         "federation": "—",
         "ops": "МТС"
+      },
+      "scenario_fit": {
+        "S1": "~",
+        "S2": "~",
+        "S3": "—",
+        "S4": "~"
       }
     },
     {
@@ -338,6 +392,12 @@
         "multitenant": "◐",
         "federation": "—",
         "ops": "SaaS / on-prem"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "✓",
+        "S3": "~",
+        "S4": "✓"
       }
     },
     {
@@ -364,6 +424,12 @@
         "multitenant": "◐",
         "federation": "SIP/H.323",
         "ops": "UC-платформа"
+      },
+      "scenario_fit": {
+        "S1": "~",
+        "S2": "—",
+        "S3": "—",
+        "S4": "~"
       }
     }
   ],
@@ -629,12 +695,44 @@
           3,
           2
         ]
+      },
+      {
+        "id": "trueconf",
+        "label": "TrueConf",
+        "color": "#8b5cf6",
+        "scores": [
+          2,
+          3,
+          2,
+          3,
+          4,
+          4
+        ]
       }
     ]
   },
   "pricing_constants": {
     "loop_pro_rub_month": 199,
     "compass_onprem_rub_month": 490,
-    "korus_s10k_infra": 1314600
-  }
+    "korus_s10k_infra": 1314600,
+    "trueconf_server_min_yearly": 23000
+  },
+  "scenarios": [
+    {
+      "id": "S1",
+      "title": "Изолированный контур + комплаенс"
+    },
+    {
+      "id": "S2",
+      "title": "Облако / быстрый старт"
+    },
+    {
+      "id": "S3",
+      "title": "Миграция с legacy IM"
+    },
+    {
+      "id": "S4",
+      "title": "Ценовое давление (рынок РФ)"
+    }
+  ]
 }

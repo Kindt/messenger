@@ -42,6 +42,13 @@
     .toc a:hover { text-decoration: underline; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
     .grid-2 .fig svg { width: 100%; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+    .persona-extracts { margin: 16px 0; }
+    .persona-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; }
+    .persona-card .req { font-size: 13px; margin-bottom: 6px; }
+    .talk-track { margin: 16px 0; }
+    .talk-slot { margin: 10px 0; padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+    .talk-slot summary { cursor: pointer; font-weight: 600; }
     .scenario { padding: 12px 14px; background: #fafafa; border-radius: 8px; border: 1px solid #e5e7eb; }
     .scenario h4 { margin: 0 0 8px; font-size: 15px; color: #1e3a5f; }
     .scenario-korus { background: #f0fdf4; border-color: #86efac; }
@@ -119,6 +126,7 @@
     .segment-links a { font-weight: 600; }
     @media (max-width: 900px) {
       .grid-2 { grid-template-columns: 1fr; }
+      .grid-3 { grid-template-columns: 1fr; }
       .hero-stats { grid-template-columns: 1fr; }
       .audience-nav { grid-template-columns: 1fr 1fr; }
       .decision-cards { grid-template-columns: 1fr; }
@@ -142,7 +150,7 @@
 <div class="meta">
   <b>Актуальность ставок:</b> 2026-06-15 &nbsp;|&nbsp;
   <b>Регион:</b> РФ (Москва / СПб, коммерческий сегмент) &nbsp;|&nbsp; <b>НДС:</b> Без НДС &nbsp;|&nbsp;
-  <b>Версия:</b> 2.8 (сегмент: ПРОМ · 10–100K)<br/>
+  <b>Версия:</b> 3.1 (сегмент: ПРОМ · 10–100K)<br/>
   <span class="meta-link">Полное: <a href="competitor_comparison.html">competitor_comparison.html</a> ·
   <a href="competitor_comparison_brief.html">one-pager</a></span>
 </div>
@@ -179,6 +187,11 @@
     Сравниваемся с eXpress, облаком и рынком РФ по <b>единой методике</b> — без «красивых» цифр в вакууме.
   </p>
 </div>
+
+<div class="persona-extracts" id="personas-industry">
+  <div class="req">Extract для аудитории (1 абзац на роль)</div>
+  <div class="grid-3"><div class="persona-card"><div class="req">CFO</div><p class="comment">Якоря S-10k / S-50k / S-100k — единая шкала OPEX; лицензия Korus отдельной строкой КП. Compass @10k — публичный per-user on-prem для бенчмарка; infra ЦОД — сверху.</p></div><div class="persona-card"><div class="req">ИБ / комплаенс</div><p class="comment">Миграция с legacy XMPP — выигрыш export и audit; HA XMPP @10k дороже Korus infra, но без compliance-стека. E2EE — только с явным sign-off MLS.</p></div><div class="persona-card"><div class="req">Закупка</div><p class="comment">Не округляйте Standard вниз: &amp;lt;10k RU — пробник, не production-матрица. Battle cards eXpress/Compass/Loop — аргументы для защиты тендера, не оферта.</p></div></div>
+</div>
 <p class="section-lead comment">Фокус: TCO @10k–100k, sizing по якорям, миграция с legacy IM.</p>
 
 <div class="scenario scenario-korus">
@@ -198,8 +211,22 @@
     <li>Legacy XMPP — дешевле по железу, дороже по миграции и комплаенсу.</li>
   </ul>
 </div>
+
+<div class="cost-box" id="compass-10k-mini">
+  <div class="req">Compass @10k — mini-TCO (публичный on-prem прайс)</div>
+  <table>
+    <tr><th>Статья</th><th>Korus @10k</th><th>Compass on-prem @10k</th></tr>
+    <tr><td>Лицензия / год</td><td class="money">КП (не per-user)</td><td class="money"><b>58 800 000 ₽</b></td></tr>
+    <tr><td>Infra / год (ориентир)</td><td class="money"><b>1 314 600 ₽</b></td><td class="money">+ ЦОД заказчика (не в прайсе Compass)</td></tr>
+    <tr><td>Export / legal hold</td><td><b>Ядро</b></td><td>◐</td></tr>
+  </table>
+  <p class="small comment">Источник Compass: getcompass.ru/pricing (490 ₽/рег. пользов./мес on-prem). Полный TCO — только с infra @вашем якоре.</p>
+</div>
 <div class="grid-2">
   <div><figure class="fig fig-wide"><svg viewBox="0 0 1040 420" width="1040" height="420" xmlns="http://www.w3.org/2000/svg"><text x="520" y="28" text-anchor="middle" font-size="16" font-weight="bold">TCO при 10 000 рег. пользов. (₽/год: инфра + лицензия)</text><text x="18" y="202" text-anchor="middle" font-size="11" fill="#6b7280" transform="rotate(-90 18 202)">₽/год</text><rect x="40" y="46" width="14" height="14" fill="#86efac"/><text x="58" y="58" font-size="12">Инфра</text><rect x="156" y="46" width="14" height="14" fill="#6366f1"/><text x="174" y="58" font-size="12">Лицензия</text><line x1="108" y1="348" x2="1016" y2="348" stroke="#9ca3af"/><line x1="108" y1="348" x2="1016" y2="348" stroke="#e5e7eb"/><text x="100" y="353" text-anchor="end" font-size="11" fill="#4b5563">0 ₽</text><line x1="108" y1="275" x2="1016" y2="275" stroke="#e5e7eb"/><text x="100" y="280" text-anchor="end" font-size="11" fill="#4b5563">12 млн ₽</text><line x1="108" y1="202" x2="1016" y2="202" stroke="#e5e7eb"/><text x="100" y="207" text-anchor="end" font-size="11" fill="#4b5563">23,9 млн ₽</text><line x1="108" y1="129" x2="1016" y2="129" stroke="#e5e7eb"/><text x="100" y="134" text-anchor="end" font-size="11" fill="#4b5563">35,9 млн ₽</text><line x1="108" y1="56" x2="1016" y2="56" stroke="#e5e7eb"/><text x="100" y="61" text-anchor="end" font-size="11" fill="#4b5563">47,9 млн ₽</text><rect x="116" y="346" width="100" height="2" fill="#6366f1" rx="2"/><rect x="116" y="340" width="100" height="6" fill="#86efac" rx="2"/><text x="166" y="332" text-anchor="middle" font-size="10" font-weight="600">1,3 млн ₽</text><text x="166" y="368" text-anchor="middle" font-size="10">Korus</text><rect x="236" y="165" width="100" height="183" fill="#6366f1" rx="2"/><rect x="236" y="144" width="100" height="21" fill="#86efac" rx="2"/><text x="286" y="136" text-anchor="middle" font-size="10" font-weight="600">33,5 млн ₽</text><text x="286" y="368" text-anchor="middle" font-size="10">eXpress</text><rect x="356" y="56" width="100" height="292" fill="#6366f1" rx="2"/><rect x="356" y="56" width="100" height="0" fill="#86efac" rx="2"/><text x="406" y="48" text-anchor="middle" font-size="10" font-weight="600">47,9 млн ₽</text><text x="406" y="368" text-anchor="middle" font-size="10">Пачка</text><rect x="476" y="197" width="100" height="151" fill="#6366f1" rx="2"/><rect x="476" y="197" width="100" height="0" fill="#86efac" rx="2"/><text x="526" y="189" text-anchor="middle" font-size="10" font-weight="600">24,8 млн ₽</text><text x="526" y="368" text-anchor="middle" font-size="10">VK VK</text></svg><figcaption class="fig-cap">Korus лицензия — строка КП. eXpress: 30 млн ₽/год лицензий.</figcaption></figure></div>
+  <div><figure class="fig fig-wide"><svg viewBox="0 0 1040 420" width="1040" height="420" xmlns="http://www.w3.org/2000/svg"><text x="520" y="28" text-anchor="middle" font-size="16" font-weight="bold">TCO при 50 000 рег. пользов. (₽/год: инфра + лицензия)</text><text x="18" y="202" text-anchor="middle" font-size="11" fill="#6b7280" transform="rotate(-90 18 202)">₽/год</text><rect x="40" y="46" width="14" height="14" fill="#86efac"/><text x="58" y="58" font-size="12">Инфра</text><rect x="156" y="46" width="14" height="14" fill="#6366f1"/><text x="174" y="58" font-size="12">Лицензия</text><line x1="108" y1="348" x2="1016" y2="348" stroke="#9ca3af"/><line x1="108" y1="348" x2="1016" y2="348" stroke="#e5e7eb"/><text x="100" y="353" text-anchor="end" font-size="11" fill="#4b5563">0 ₽</text><line x1="108" y1="275" x2="1016" y2="275" stroke="#e5e7eb"/><text x="100" y="280" text-anchor="end" font-size="11" fill="#4b5563">59,8 млн ₽</text><line x1="108" y1="202" x2="1016" y2="202" stroke="#e5e7eb"/><text x="100" y="207" text-anchor="end" font-size="11" fill="#4b5563">119,7 млн ₽</text><line x1="108" y1="129" x2="1016" y2="129" stroke="#e5e7eb"/><text x="100" y="134" text-anchor="end" font-size="11" fill="#4b5563">179,6 млн ₽</text><line x1="108" y1="56" x2="1016" y2="56" stroke="#e5e7eb"/><text x="100" y="61" text-anchor="end" font-size="11" fill="#4b5563">239,4 млн ₽</text><rect x="116" y="346" width="100" height="2" fill="#6366f1" rx="2"/><rect x="116" y="342" width="100" height="4" fill="#86efac" rx="2"/><text x="166" y="334" text-anchor="middle" font-size="10" font-weight="600">2,6 млн ₽</text><text x="166" y="368" text-anchor="middle" font-size="10">Korus</text><rect x="236" y="165" width="100" height="183" fill="#6366f1" rx="2"/><rect x="236" y="165" width="100" height="0" fill="#86efac" rx="2"/><text x="286" y="157" text-anchor="middle" font-size="10" font-weight="600">150 млн ₽</text><text x="286" y="368" text-anchor="middle" font-size="10">eXpress</text><rect x="356" y="56" width="100" height="292" fill="#6366f1" rx="2"/><rect x="356" y="56" width="100" height="0" fill="#86efac" rx="2"/><text x="406" y="48" text-anchor="middle" font-size="10" font-weight="600">239,4 млн ₽</text><text x="406" y="368" text-anchor="middle" font-size="10">Пачка</text><rect x="476" y="197" width="100" height="151" fill="#6366f1" rx="2"/><rect x="476" y="197" width="100" height="0" fill="#86efac" rx="2"/><text x="526" y="189" text-anchor="middle" font-size="10" font-weight="600">124,2 млн ₽</text><text x="526" y="368" text-anchor="middle" font-size="10">VK VK</text></svg><figcaption class="fig-cap">Якорь S-50k — интерполяция между S-10k и S-100k; Korus лицензия — строка КП.</figcaption></figure></div>
+</div>
+<div class="grid-2">
   <div><figure class="fig fig-wide"><svg viewBox="0 0 1040 420" width="1040" height="420" xmlns="http://www.w3.org/2000/svg"><text x="520" y="28" text-anchor="middle" font-size="16" font-weight="bold">TCO при 100 000 рег. пользов. (₽/год: инфра + лицензия)</text><text x="18" y="202" text-anchor="middle" font-size="11" fill="#6b7280" transform="rotate(-90 18 202)">₽/год</text><rect x="40" y="46" width="14" height="14" fill="#86efac"/><text x="58" y="58" font-size="12">Инфра</text><rect x="156" y="46" width="14" height="14" fill="#6366f1"/><text x="174" y="58" font-size="12">Лицензия</text><line x1="108" y1="348" x2="1016" y2="348" stroke="#9ca3af"/><line x1="108" y1="348" x2="1016" y2="348" stroke="#e5e7eb"/><text x="100" y="353" text-anchor="end" font-size="11" fill="#4b5563">0 ₽</text><line x1="108" y1="275" x2="1016" y2="275" stroke="#e5e7eb"/><text x="100" y="280" text-anchor="end" font-size="11" fill="#4b5563">119,7 млн ₽</text><line x1="108" y1="202" x2="1016" y2="202" stroke="#e5e7eb"/><text x="100" y="207" text-anchor="end" font-size="11" fill="#4b5563">239,4 млн ₽</text><line x1="108" y1="129" x2="1016" y2="129" stroke="#e5e7eb"/><text x="100" y="134" text-anchor="end" font-size="11" fill="#4b5563">359,1 млн ₽</text><line x1="108" y1="56" x2="1016" y2="56" stroke="#e5e7eb"/><text x="100" y="61" text-anchor="end" font-size="11" fill="#4b5563">478,8 млн ₽</text><rect x="116" y="346" width="100" height="2" fill="#6366f1" rx="2"/><rect x="116" y="342" width="100" height="4" fill="#86efac" rx="2"/><text x="166" y="334" text-anchor="middle" font-size="10" font-weight="600">4 млн ₽</text><text x="166" y="368" text-anchor="middle" font-size="10">Korus</text><rect x="236" y="165" width="100" height="183" fill="#6366f1" rx="2"/><rect x="236" y="150" width="100" height="15" fill="#86efac" rx="2"/><text x="286" y="142" text-anchor="middle" font-size="10" font-weight="600">325 млн ₽</text><text x="286" y="368" text-anchor="middle" font-size="10">eXpress</text><rect x="356" y="56" width="100" height="292" fill="#6366f1" rx="2"/><rect x="356" y="56" width="100" height="0" fill="#86efac" rx="2"/><text x="406" y="48" text-anchor="middle" font-size="10" font-weight="600">478,8 млн ₽</text><text x="406" y="368" text-anchor="middle" font-size="10">Пачка</text><rect x="476" y="197" width="100" height="151" fill="#6366f1" rx="2"/><rect x="476" y="197" width="100" height="0" fill="#86efac" rx="2"/><text x="526" y="189" text-anchor="middle" font-size="10" font-weight="600">248,4 млн ₽</text><text x="526" y="368" text-anchor="middle" font-size="10">VK VK</text></svg><figcaption class="fig-cap">Инфра eXpress — оценка 25 млн ₽/год.</figcaption></figure></div>
 </div>
 <figure class="fig fig-wide"><svg viewBox="0 0 1040 340" width="1040" height="340" xmlns="http://www.w3.org/2000/svg"><text x="520" y="28" text-anchor="middle" font-size="16" font-weight="bold">₽/рег. пользов./мес при 10 000 рег. пользов.</text><line x1="88" y1="248" x2="500" y2="248" stroke="#9ca3af"/><rect x="104" y="123" width="120" height="125" fill="#6366f1" rx="3"/><text x="164" y="115" text-anchor="middle" font-size="11" font-weight="600">250 ₽/мес</text><text x="164" y="270" text-anchor="middle" font-size="11">eXpress лиц.</text><rect x="252" y="48" width="120" height="200" fill="#f59e0b" rx="3"/><text x="312" y="40" text-anchor="middle" font-size="11" font-weight="600">399 ₽/мес</text><text x="312" y="270" text-anchor="middle" font-size="11">Пачка</text><rect x="400" y="144" width="120" height="104" fill="#93c5fd" rx="3"/><text x="460" y="136" text-anchor="middle" font-size="11" font-weight="600">207 ₽/мес</text><text x="460" y="270" text-anchor="middle" font-size="11">VK облако</text><rect x="548" y="238" width="120" height="10" fill="#86efac" rx="3"/><text x="608" y="230" text-anchor="middle" font-size="11" font-weight="600">11 ₽/мес</text><text x="608" y="270" text-anchor="middle" font-size="11">Korus инфра</text></svg><figcaption class="fig-cap">eXpress/Пачка/VK — подписка; Korus — только эксплуатационные расходы (OPEX) инфраструктуры.</figcaption></figure>
@@ -278,6 +305,7 @@ Korus Messenger для промышленного контура @10k–100k р�
   <ul class="comment">
     <li>Цифры infra и TCO — ориентиры для переговоров; финальное КП — по sizing заказчика.</li>
     <li>eXpress @10/100 тыс. рег. — модельная оценка infra; лицензия — публичный прайс express.ms.</li>
+    <li>Enterprise E-500k/E-1M: облачный SaaS (Пачка, VK) не сравнивается с on-prem якорями.</li>
     <li>Полная матрица (11 продуктов, legacy, НТ): см. <code>competitor_comparison.html</code>.</li>
   </ul>
 </div>

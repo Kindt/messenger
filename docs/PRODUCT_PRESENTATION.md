@@ -401,16 +401,16 @@
 | §12 | Сообщения, TTL, версии | Реализовано | Dual-TTL, edit history |
 | §13 | Hot/Archive/Deep tiers | Реализовано | Workers + admin API |
 | §14 | Поиск Solr | Реализовано | Indexer worker |
-| §15 | Файлы, MinIO, публичные ссылки | Реализовано | File proxy resize — planned |
-| §16 | Превью ссылок | Частично | Preview worker — planned |
-| §17 | Bot API | Частично | MVP REST (register, webhook, sendMessage); long-poll — roadmap |
+| §15 | Файлы, MinIO, публичные ссылки, resize | Реализовано | GET `/files/{id}/resize` embedded |
+| §16 | Превью ссылок | Реализовано | Preview worker в full/pilot compose |
+| §17 | Bot API | Частично | L2: long-poll, pin/ban, token rotate; prod SLA — ops |
 | §18 | Push mobile/web/desktop | Частично | Web push UI; mobile — planned |
 | §19 | WebSocket, presence, typing | Реализовано | |
 | §20 | NATS JetStream | Реализовано | |
 | §21 | Аудит | Реализовано | |
 | §22 | Prometheus, observability | Реализовано | Zabbix — не в scope |
 | §23 | Админ, multi-tenant org | Реализовано | |
-| §24 | Безопасность | Частично | Timing audit — в roadmap |
+| §24 | Безопасность | Частично | Timing audit ✓ на QEMU; formal prod — ops |
 | §25 | Развёртывание и стенды | Реализовано | Docker-профили Pilot/Standard |
 | §26 | Prod sizing 1M users | Модель §10 | Load test soak — stage |
 | Профили Pilot / Standard | Развёртывание | Реализовано | lean Pilot + Standard; dedup файлов ✓ |
@@ -598,9 +598,9 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 | Сценарий | Ожидание пользователя | Техническая основа | Статус |
 |----------|----------------------|-------------------|--------|
 | Логин/пароль в мессенджере | Как сейчас | Keycloak realm local | Реализовано |
-| «Войти через Google» | Без отдельного пароля | Keycloak OIDC broker | Запланировано |
-| «Войти через корпоративный портал» | SAML/OIDC enterprise IdP | Keycloak federation | Запланировано |
-| LDAP / Active Directory | Учётки из AD | Keycloak user federation | Запланировано |
+| «Войти через Google» | Без отдельного пароля | Keycloak OIDC broker | Частично (template + runbook) |
+| «Войти через корпоративный портал» | SAML/OIDC enterprise IdP | Keycloak federation | Частично (OIDC script; SAML — Admin Console) |
+| LDAP / Active Directory | Учётки из AD | Keycloak user federation | Частично (example JSON + runbook) |
 
 **Требование FR-INT-02:** при включении SSO **локальный пароль может быть отключён** политикой org (настройка Keycloak, не отдельный модуль мессенджера).
 
@@ -631,7 +631,7 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 |---------|--------|-------------------|
 | **Pull export** | SIEM забирает архив чата | Export JSON/ZIP + audit | Реализовано |
 | **Push webhook (бот)** | Jira создаёт тикет из сообщения | Bot API webhook MVP | Частично |
-| **Batch replay** | Миграция из legacy IM | export-replay worker | Частично |
+| **Batch replay** | Миграция из legacy IM | export-replay worker + JDBC | Реализовано (export_v1; stub disabled in prod compose) |
 | **Directory sync** | HR → контакты | Импорт контактов CSV/API | Реализовано (импорт); AD sync — planned |
 | **Email fallback** | Уведомление без push | Не в v1 web | Запланировано (§9) |
 

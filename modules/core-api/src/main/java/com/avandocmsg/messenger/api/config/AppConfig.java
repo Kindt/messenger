@@ -58,6 +58,10 @@ public class AppConfig {
         override("FILE_PROXY_MODE", "file.proxy.mode");
         override("FILE_PROXY_URL", "file.proxy.url");
         override("FILE_PROXY_AUTH_TOKEN", "file.proxy.auth.token");
+        override("FILE_RESIZE_ENABLED", "file.resize.enabled");
+        override("FILE_RESIZE_MAX_WIDTH", "file.resize.max.width");
+        override("FILE_RESIZE_MAX_HEIGHT", "file.resize.max.height");
+        override("FILE_RESIZE_MAX_SOURCE_PIXELS", "file.resize.max.source.pixels");
         override("RATE_LIMIT_AUTH_ENABLED", "rate.limit.auth.enabled");
         override("RATE_LIMIT_LOGIN_PER_MINUTE", "rate.limit.auth.login.per.minute");
         override("RATE_LIMIT_REGISTER_PER_HOUR", "rate.limit.auth.register.per.hour");
@@ -290,6 +294,26 @@ public class AppConfig {
 
     public String fileProxyAuthToken() {
         return props.getProperty("file.proxy.auth.token", "");
+    }
+
+    /** Embedded on-the-fly image resize in core-api (remote file-proxy sidecar — future). */
+    public boolean fileResizeEnabled() {
+        return Boolean.parseBoolean(props.getProperty("file.resize.enabled", "true"));
+    }
+
+    /** Upper bound for resize query param {@code w}. */
+    public int fileResizeMaxWidth() {
+        return Integer.parseInt(props.getProperty("file.resize.max.width", "2048"));
+    }
+
+    /** Upper bound for resize query param {@code h}. */
+    public int fileResizeMaxHeight() {
+        return Integer.parseInt(props.getProperty("file.resize.max.height", "2048"));
+    }
+
+    /** Reject resize when source width×height exceeds this (DoS guard). */
+    public long fileResizeMaxSourcePixels() {
+        return Long.parseLong(props.getProperty("file.resize.max.source.pixels", "25000000"));
     }
 
     /** When true, Redis must be reachable (see {@link com.avandocmsg.messenger.api.config.RedisConfig}). */

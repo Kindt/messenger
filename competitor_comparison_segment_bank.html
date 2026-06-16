@@ -42,6 +42,13 @@
     .toc a:hover { text-decoration: underline; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
     .grid-2 .fig svg { width: 100%; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+    .persona-extracts { margin: 16px 0; }
+    .persona-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; }
+    .persona-card .req { font-size: 13px; margin-bottom: 6px; }
+    .talk-track { margin: 16px 0; }
+    .talk-slot { margin: 10px 0; padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+    .talk-slot summary { cursor: pointer; font-weight: 600; }
     .scenario { padding: 12px 14px; background: #fafafa; border-radius: 8px; border: 1px solid #e5e7eb; }
     .scenario h4 { margin: 0 0 8px; font-size: 15px; color: #1e3a5f; }
     .scenario-korus { background: #f0fdf4; border-color: #86efac; }
@@ -119,6 +126,7 @@
     .segment-links a { font-weight: 600; }
     @media (max-width: 900px) {
       .grid-2 { grid-template-columns: 1fr; }
+      .grid-3 { grid-template-columns: 1fr; }
       .hero-stats { grid-template-columns: 1fr; }
       .audience-nav { grid-template-columns: 1fr 1fr; }
       .decision-cards { grid-template-columns: 1fr; }
@@ -142,7 +150,7 @@
 <div class="meta">
   <b>Актуальность ставок:</b> 2026-06-15 &nbsp;|&nbsp;
   <b>Регион:</b> РФ (Москва / СПб, коммерческий сегмент) &nbsp;|&nbsp; <b>НДС:</b> Без НДС &nbsp;|&nbsp;
-  <b>Версия:</b> 2.8 (сегмент: БАНК · ГОС)<br/>
+  <b>Версия:</b> 3.1 (сегмент: БАНК · ГОС)<br/>
   <span class="meta-link">Полное: <a href="competitor_comparison.html">competitor_comparison.html</a> ·
   <a href="competitor_comparison_brief.html">one-pager</a></span>
 </div>
@@ -178,6 +186,11 @@
     через <b>инфраструктуру</b>, а не через лицензию на каждого пользователя.
     Сравниваемся с eXpress, облаком и рынком РФ по <b>единой методике</b> — без «красивых» цифр в вакууме.
   </p>
+</div>
+
+<div class="persona-extracts" id="personas-bank">
+  <div class="req">Extract для аудитории (1 абзац на роль)</div>
+  <div class="grid-3"><div class="persona-card"><div class="req">ИБ / комплаенс</div><p class="comment">Сверяйте export/legal hold и dual-TTL в ядре, а не в roadmap интеграций. ФСТЭК: eXpress №4997 — hard gate сегодня; у Korus — «в процессе», согласуйте план до подписания.</p></div><div class="persona-card"><div class="req">CFO</div><p class="comment">TCO в контуре = infra + КП вендора; не смешивайте с SaaS per-user на Enterprise якорях. eXpress @10k — ~90% лицензия; Korus — OPEX infra без «налога» на каждого рег. пользов.</p></div><div class="persona-card"><div class="req">Закупка</div><p class="comment">В RFP: реестр ПО, контур данных, export gate, sizing @10k+. Tier C (Compass, МТС Линк) — в шорт-лист для ценового давления; полный TCO — только с infra.</p></div></div>
 </div>
 <p class="section-lead comment">Фокус: data governance, export/legal hold, честное сравнение с eXpress по ФСТЭК.</p>
 
@@ -224,6 +237,17 @@
     <li><b>ФСТЭК</b> — у eXpress №4997 сегодня; у Korus — roadmap, обсуждаем план.</li>
     <li><b>E2EE / MLS</b> — engineering roadmap; не обещаем «уже в prod» без sign-off.</li>
   </ul>
+</div>
+
+<div class="note" id="fstec-bank">
+  <div class="req">ФСТЭК / реестр ПО — сравнение для банка и госсектора</div>
+  <table>
+    <tr><th>Продукт</th><th>ФСТЭК / реестр</th><th>Комментарий для ИБ</th></tr>
+    <tr class="row-korus"><td><b>Korus Messenger</b></td><td>в процессе</td><td>Export/legal hold в ядре; roadmap сертификации — обсуждаем план с заказчиком</td></tr>
+    <tr><td>eXpress Corporate</td><td><b>№4997</b></td><td>Hard requirement «сертификат до подписания» — типичный шорт-лист</td></tr>
+    <tr><td>Пачка / VK SaaS</td><td>заявлен</td><td>Облако; данные вне контура — отдельное решение ИБ</td></tr>
+    <tr><td>Loop / МТС Линк / Compass</td><td>реестр / ◐</td><td>Сверять актуальный статус на дату КП</td></tr>
+  </table>
 </div>
 
 <div class="battle-card" id="battle">
@@ -274,6 +298,46 @@
     </tr>
   </table>
   <p class="small comment">* Korus @10k — полный «Стандарт» (infra), не пробник. VK WorkSpace и tier B/C — см. полную версию.</p>
+
+  <details class="battle-card-ext">
+    <summary><b>Battle card: Korus vs Compass @10k</b> (лицензия + infra)</summary>
+    <table class="battle-table">
+      <tr><th>Критерий</th><th class="col-korus">Korus</th><th>Compass on-prem</th></tr>
+      <tr><td>Лицензия @10k/год</td><td class="col-korus">КП (не per-user)</td><td><b>58 800 000 ₽</b> (490 ₽/мес)</td></tr>
+      <tr><td>Infra @10k/год</td><td class="col-korus"><b>1 314 600 ₽</b></td><td>+ свой ЦОД (не в прайсе)</td></tr>
+      <tr><td>Export / legal hold</td><td class="col-korus"><b>Ядро</b></td><td>◐</td></tr>
+      <tr><td>Когда выигрываем</td><td class="col-korus">Compliance + sizing @10k+</td><td>UX, публичный прайс, ценовое давление</td></tr>
+    </table>
+  </details>
+  <details class="battle-card-ext">
+    <summary><b>Battle card: Korus vs МТС Линк</b> (UC-first)</summary>
+    <table class="battle-table">
+      <tr><th>Критерий</th><th class="col-korus">Korus</th><th>МТС Линк Чаты</th></tr>
+      <tr><td>Позиционирование</td><td class="col-korus"><b>Мессенджер + compliance</b></td><td>UC / ВКС / команды + ИИ (bundle)</td></tr>
+      <tr><td>TCO @10k</td><td class="col-korus">Infra 1 314 600 ₽/год + КП</td><td>Только по КП (mts-link.ru)</td></tr>
+      <tr><td>Dialog → Линк</td><td class="col-korus">—</td><td>Footnote: миграция пользователей Dialog в экосистему МТС</td></tr>
+      <tr><td>Когда выигрываем</td><td class="col-korus">Export gate, dual-TTL, свой контур</td><td>Нужен UC + операторская экосистема «под ключ»</td></tr>
+    </table>
+  </details>
+  <details class="battle-card-ext">
+    <summary><b>Battle card: Korus vs Loop @10k</b></summary>
+    <table class="battle-table">
+      <tr><th>Критерий</th><th class="col-korus">Korus</th><th>Loop (облако Pro)</th></tr>
+      <tr><td>Лицензия @10k/год</td><td class="col-korus">КП</td><td><b>23 880 000 ₽</b> (199 ₽/мес cloud)</td></tr>
+      <tr><td>Infra @10k/год</td><td class="col-korus"><b>1 314 600 ₽</b></td><td>0 (SaaS) или ЦОД для «Корп.»</td></tr>
+      <tr><td>Стек</td><td class="col-korus">Java monolith + workers</td><td>Mattermost-fork, плагины</td></tr>
+      <tr><td>Когда выигрываем</td><td class="col-korus">Compliance, единый вендор</td><td>Быстрый чат, зрелая IT-команда OSS</td></tr>
+    </table>
+  </details>
+  <details class="battle-card-ext">
+    <summary><b>Battle card: Korus vs TrueConf</b> (опционально, UC overlap)</summary>
+    <table class="battle-table">
+      <tr><th>Критерий</th><th class="col-korus">Korus</th><th>TrueConf Server</th></tr>
+      <tr><td>Фокус</td><td class="col-korus"><b>Переписка + файлы + export</b></td><td>ВКС / UC ядро, чат вторичен</td></tr>
+      <tr><td>Лицензия</td><td class="col-korus">КП + infra</td><td>от 23 000 ₽/год (PRO), не ₽/reg</td></tr>
+      <tr><td>Когда выигрываем</td><td class="col-korus">IM-first, compliance переписки</td><td>Видеоконференции 500+ участников</td></tr>
+    </table>
+  </details>
 </div>
 
 <div class="faq" id="faq">
@@ -305,7 +369,7 @@
     Не скрываем. Если hard requirement «ФСТЭК до подписания» — eXpress; если приоритет data governance и TCO — Korus + план сертификации.</p>
   </details>
 </div>
-<figure class="fig fig-wide"><svg viewBox="0 0 720 640" width="720" height="640" xmlns="http://www.w3.org/2000/svg"><text x="360" y="28" text-anchor="middle" font-size="16" font-weight="bold">В контуре @10 тыс. рег.: лепестковая диаграмма (оценка 0–5)</text><polygon points="360.0,262.0 392.9,281.0 392.9,319.0 360.0,338.0 327.1,319.0 327.1,281.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,224.0 425.8,262.0 425.8,338.0 360.0,376.0 294.2,338.0 294.2,262.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,186.0 458.7,243.0 458.7,357.0 360.0,414.0 261.3,357.0 261.3,243.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,148.0 491.6,224.0 491.6,376.0 360.0,452.0 228.4,376.0 228.4,224.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,110.0 524.5,205.0 524.5,395.0 360.0,490.0 195.5,395.0 195.5,205.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><line x1="360" y1="300" x2="360.0" y2="110.0" stroke="#d1d5db"/><text x="360.0" y="74.0" text-anchor="middle" font-size="11">Комплаенс</text><line x1="360" y1="300" x2="524.5" y2="205.0" stroke="#d1d5db"/><text x="555.7" y="187.0" text-anchor="start" font-size="11">E2EE / ИБ</text><line x1="360" y1="300" x2="524.5" y2="395.0" stroke="#d1d5db"/><text x="555.7" y="413.0" text-anchor="start" font-size="11">Экономика</text><line x1="360" y1="300" x2="360.0" y2="490.0" stroke="#d1d5db"/><text x="360.0" y="526.0" text-anchor="middle" font-size="11">Функции</text><line x1="360" y1="300" x2="195.5" y2="395.0" stroke="#d1d5db"/><text x="164.3" y="413.0" text-anchor="end" font-size="11">Масштабирование</text><line x1="360" y1="300" x2="195.5" y2="205.0" stroke="#d1d5db"/><text x="164.3" y="187.0" text-anchor="end" font-size="11">Реестр / ФСТЭК</text><polygon points="360.0,110.0 491.6,224.0 491.6,376.0 360.0,452.0 195.5,395.0 261.3,243.0" fill="#22c55e" fill-opacity="0.15" stroke="#22c55e" stroke-width="2.5"/><polygon points="360.0,148.0 524.5,205.0 425.8,338.0 360.0,490.0 261.3,357.0 195.5,205.0" fill="#6366f1" fill-opacity="0.15" stroke="#6366f1" stroke-width="2.5"/><polygon points="360.0,224.0 458.7,243.0 491.6,376.0 360.0,452.0 294.2,338.0 228.4,224.0" fill="#f59e0b" fill-opacity="0.15" stroke="#f59e0b" stroke-width="2.5"/><polygon points="360.0,224.0 425.8,262.0 458.7,357.0 360.0,452.0 261.3,357.0 261.3,243.0" fill="#ec4899" fill-opacity="0.15" stroke="#ec4899" stroke-width="2.5"/><polygon points="360.0,186.0 425.8,262.0 425.8,338.0 360.0,452.0 294.2,338.0 195.5,205.0" fill="#ef4444" fill-opacity="0.15" stroke="#ef4444" stroke-width="2.5"/><polygon points="360.0,224.0 458.7,243.0 425.8,338.0 360.0,452.0 261.3,357.0 294.2,262.0" fill="#0ea5e9" fill-opacity="0.15" stroke="#0ea5e9" stroke-width="2.5"/><rect x="32" y="556" width="12" height="12" fill="#22c55e"/><text x="50" y="568" font-size="11">Korus</text><rect x="252" y="556" width="12" height="12" fill="#6366f1"/><text x="270" y="568" font-size="11">eXpress</text><rect x="472" y="556" width="12" height="12" fill="#f59e0b"/><text x="490" y="568" font-size="11">Loop</text><rect x="32" y="584" width="12" height="12" fill="#ec4899"/><text x="50" y="596" font-size="11">Compass</text><rect x="252" y="584" width="12" height="12" fill="#ef4444"/><text x="270" y="596" font-size="11">МТС Линк</text><rect x="472" y="584" width="12" height="12" fill="#0ea5e9"/><text x="490" y="596" font-size="11">Rocket.Chat</text></svg><figcaption class="fig-cap">Шкала 0–5: комплаенс, E2EE, экономика (прозрачность TCO), функции, sizing, реестр/ФСТЭК. Субъективная модель для переговоров, не рейтинг вендора.</figcaption></figure>
+<figure class="fig fig-wide"><svg viewBox="0 0 720 668" width="720" height="668" xmlns="http://www.w3.org/2000/svg"><text x="360" y="28" text-anchor="middle" font-size="16" font-weight="bold">В контуре @10 тыс. рег.: лепестковая диаграмма (оценка 0–5)</text><polygon points="360.0,262.0 392.9,281.0 392.9,319.0 360.0,338.0 327.1,319.0 327.1,281.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,224.0 425.8,262.0 425.8,338.0 360.0,376.0 294.2,338.0 294.2,262.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,186.0 458.7,243.0 458.7,357.0 360.0,414.0 261.3,357.0 261.3,243.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,148.0 491.6,224.0 491.6,376.0 360.0,452.0 228.4,376.0 228.4,224.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><polygon points="360.0,110.0 524.5,205.0 524.5,395.0 360.0,490.0 195.5,395.0 195.5,205.0" fill="none" stroke="#e5e7eb" stroke-width="1"/><line x1="360" y1="300" x2="360.0" y2="110.0" stroke="#d1d5db"/><text x="360.0" y="74.0" text-anchor="middle" font-size="11">Комплаенс</text><line x1="360" y1="300" x2="524.5" y2="205.0" stroke="#d1d5db"/><text x="555.7" y="187.0" text-anchor="start" font-size="11">E2EE / ИБ</text><line x1="360" y1="300" x2="524.5" y2="395.0" stroke="#d1d5db"/><text x="555.7" y="413.0" text-anchor="start" font-size="11">Экономика</text><line x1="360" y1="300" x2="360.0" y2="490.0" stroke="#d1d5db"/><text x="360.0" y="526.0" text-anchor="middle" font-size="11">Функции</text><line x1="360" y1="300" x2="195.5" y2="395.0" stroke="#d1d5db"/><text x="164.3" y="413.0" text-anchor="end" font-size="11">Масштабирование</text><line x1="360" y1="300" x2="195.5" y2="205.0" stroke="#d1d5db"/><text x="164.3" y="187.0" text-anchor="end" font-size="11">Реестр / ФСТЭК</text><polygon points="360.0,110.0 491.6,224.0 491.6,376.0 360.0,452.0 195.5,395.0 261.3,243.0" fill="#22c55e" fill-opacity="0.15" stroke="#22c55e" stroke-width="2.5"/><polygon points="360.0,148.0 524.5,205.0 425.8,338.0 360.0,490.0 261.3,357.0 195.5,205.0" fill="#6366f1" fill-opacity="0.15" stroke="#6366f1" stroke-width="2.5"/><polygon points="360.0,224.0 458.7,243.0 491.6,376.0 360.0,452.0 294.2,338.0 228.4,224.0" fill="#f59e0b" fill-opacity="0.15" stroke="#f59e0b" stroke-width="2.5"/><polygon points="360.0,224.0 425.8,262.0 458.7,357.0 360.0,452.0 261.3,357.0 261.3,243.0" fill="#ec4899" fill-opacity="0.15" stroke="#ec4899" stroke-width="2.5"/><polygon points="360.0,186.0 425.8,262.0 425.8,338.0 360.0,452.0 294.2,338.0 195.5,205.0" fill="#ef4444" fill-opacity="0.15" stroke="#ef4444" stroke-width="2.5"/><polygon points="360.0,224.0 458.7,243.0 425.8,338.0 360.0,452.0 261.3,357.0 294.2,262.0" fill="#0ea5e9" fill-opacity="0.15" stroke="#0ea5e9" stroke-width="2.5"/><polygon points="360.0,224.0 458.7,243.0 425.8,338.0 360.0,414.0 228.4,376.0 228.4,224.0" fill="#8b5cf6" fill-opacity="0.15" stroke="#8b5cf6" stroke-width="2.5"/><rect x="32" y="548" width="12" height="12" fill="#22c55e"/><text x="50" y="560" font-size="11">Korus</text><rect x="252" y="548" width="12" height="12" fill="#6366f1"/><text x="270" y="560" font-size="11">eXpress</text><rect x="472" y="548" width="12" height="12" fill="#f59e0b"/><text x="490" y="560" font-size="11">Loop</text><rect x="32" y="576" width="12" height="12" fill="#ec4899"/><text x="50" y="588" font-size="11">Compass</text><rect x="252" y="576" width="12" height="12" fill="#ef4444"/><text x="270" y="588" font-size="11">МТС Линк</text><rect x="472" y="576" width="12" height="12" fill="#0ea5e9"/><text x="490" y="588" font-size="11">Rocket.Chat</text><rect x="32" y="604" width="12" height="12" fill="#8b5cf6"/><text x="50" y="616" font-size="11">TrueConf</text></svg><figcaption class="fig-cap">Шкала 0–5: комплаенс, E2EE, экономика (прозрачность TCO), функции, sizing, реестр/ФСТЭК. Субъективная модель для переговоров, не рейтинг вендора.</figcaption></figure>
 <p class="comment">Ключевое сравнение для КП в контуре заказчика @10k+ рег. пользов.</p><div class="case case-korus"><h4>Korus Messenger</h4><p><b>Плюсы:</b></p><ul><li>Предсказуемый OPEX: ~3,3 ₽/рег. пользов./мес при 100 тыс. рег. — без per-user лицензии</li><li>Комплаенс в ядре: экспорт, legal hold, dual-TTL, audit — не «на доработку»</li><li>В контуре заказчика: мультитenant, путь Пробник → Стандарт → Корпоративный</li><li>Пилот отделён от production-матрицы — честный TCO с 10 тыс. рег.</li></ul><p><b>Ограничения:</b></p><ul><li>Меньше готового супераппа (SmartApps, почта, ВКС 500)</li><li>Нативные мобильные — в дорожной карте</li><li>Промышленная приёмка E2EE — в процессе</li></ul></div><div class="case"><h4>eXpress Corporate</h4><p><b>Плюсы:</b></p><ul><li>ФСТЭК №4997, сертифицированный суперапп</li><li>Публичный прайс 3 000 ₽/рег. пользов./год</li><li>ВКС до 500, SmartApps, федерация, iOS/Android/Аврора</li><li>Детальные таблицы sizing до ~1 тыс. рег. пользов.</li></ul><p><b>Ограничения:</b></p><ul><li>Лицензия 83–99% TCO при 10–100 тыс. рег.</li><li>Sizing от 10 тыс. рег. — инд. проект</li><li>Тяжёлый стек: Kafka, etcd, transcoding, media</li></ul></div>
 
 <details class="email-snippet">
@@ -338,6 +402,7 @@
   <ul class="comment">
     <li>Цифры infra и TCO — ориентиры для переговоров; финальное КП — по sizing заказчика.</li>
     <li>eXpress @10/100 тыс. рег. — модельная оценка infra; лицензия — публичный прайс express.ms.</li>
+    <li>Enterprise E-500k/E-1M: облачный SaaS (Пачка, VK) не сравнивается с on-prem якорями.</li>
     <li>Полная матрица (11 продуктов, legacy, НТ): см. <code>competitor_comparison.html</code>.</li>
   </ul>
 </div>

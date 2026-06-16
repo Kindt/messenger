@@ -42,6 +42,13 @@
     .toc a:hover { text-decoration: underline; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
     .grid-2 .fig svg { width: 100%; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+    .persona-extracts { margin: 16px 0; }
+    .persona-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; }
+    .persona-card .req { font-size: 13px; margin-bottom: 6px; }
+    .talk-track { margin: 16px 0; }
+    .talk-slot { margin: 10px 0; padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+    .talk-slot summary { cursor: pointer; font-weight: 600; }
     .scenario { padding: 12px 14px; background: #fafafa; border-radius: 8px; border: 1px solid #e5e7eb; }
     .scenario h4 { margin: 0 0 8px; font-size: 15px; color: #1e3a5f; }
     .scenario-korus { background: #f0fdf4; border-color: #86efac; }
@@ -119,6 +126,7 @@
     .segment-links a { font-weight: 600; }
     @media (max-width: 900px) {
       .grid-2 { grid-template-columns: 1fr; }
+      .grid-3 { grid-template-columns: 1fr; }
       .hero-stats { grid-template-columns: 1fr; }
       .audience-nav { grid-template-columns: 1fr 1fr; }
       .decision-cards { grid-template-columns: 1fr; }
@@ -142,7 +150,7 @@
 <div class="meta">
   <b>Актуальность ставок:</b> 2026-06-15 &nbsp;|&nbsp;
   <b>Регион:</b> РФ (Москва / СПб, коммерческий сегмент) &nbsp;|&nbsp; <b>НДС:</b> Без НДС &nbsp;|&nbsp;
-  <b>Версия:</b> 2.8 (сегмент: ОБЛАКО)<br/>
+  <b>Версия:</b> 3.1 (сегмент: ОБЛАКО)<br/>
   <span class="meta-link">Полное: <a href="competitor_comparison.html">competitor_comparison.html</a> ·
   <a href="competitor_comparison_brief.html">one-pager</a></span>
 </div>
@@ -161,10 +169,34 @@
   </ul>
 </div>
 
+<div class="persona-extracts" id="personas-cloud">
+  <div class="req">Extract для аудитории (1 абзац на роль)</div>
+  <div class="grid-3"><div class="persona-card"><div class="req">Закупка</div><p class="comment">Если допустимо только SaaS — Пачка/VK выигрывают по time-to-value. Korus — когда политика сменится на контур или появится export/legal hold.</p></div><div class="persona-card"><div class="req">CFO</div><p class="comment">Сравнивайте подписку ₽/reg/мес с полным TCO контура (infra + ops + КП). Enterprise E-500k+ — облачный SaaS не в той же матрице, что on-prem якоря.</p></div><div class="persona-card"><div class="req">ИБ / комплаенс</div><p class="comment">Облако = данные у вендора; отдельное решение ИБ. Путь «SaaS сейчас → hosted Cell позже» согласуйте со spec 011 (dedicated Cell B) до shared pool (A).</p></div></div>
+</div>
+
 <div class="scenario">
   <h4>Облако-first / без ЦОД</h4>
   <p class="comment">Скорость важнее контура. Прозрачный ₽/пользов./мес и SLA вендора.</p>
   <p class="scenario-rec"><b>Рекомендация:</b> <b>Пачка</b> или <b>VK WorkSpace</b>. Korus — после смены политики на контур.</p>
+</div>
+
+<div class="note" id="deployment-models">
+  <div class="req">Модели развёртывания: on-prem · hosted Cell · SaaS</div>
+  <table>
+    <tr><th>Модель</th><th>Кто держит infra</th><th>Типичный buyer</th><th>Примеры на рынке</th><th>Korus</th></tr>
+    <tr class="row-korus"><td><b>On-prem (ЦОД заказчика)</b></td><td>Заказчик</td><td>Банк, пром, госсектор</td>
+        <td>eXpress, Korus, Compass on-prem, Loop «Корп.»</td>
+        <td><b>Основной SKU</b> — Docker/Ansible в контуре</td></tr>
+    <tr><td><b>Hosted Cell (dedicated B)</b></td><td>Платформа Korus (VM у оператора)</td>
+        <td>Комплаенс без своего ЦОД</td><td>Spec 011 Cell — 1 клиент = 1 Cell</td>
+        <td>Commercial v1: <code>deploy/cloud/cells/_template/cell.yaml.example</code></td></tr>
+    <tr><td><b>SaaS (multi-tenant облако)</b></td><td>Вендор</td><td>Быстрый старт, &lt;10k RU</td>
+        <td>Пачка, VK WorkSpace, Compass cloud</td>
+        <td>Shared Cell (model A) — после опыта B; не смешивать с Enterprise TCO</td></tr>
+  </table>
+  <p class="small comment">Spec 011 (<code>specs/011-korus-cloud-platform/</code>): internal Cell (C) для dogfood;
+    dedicated hosted Cell (B) — первый коммерческий SKU; managed SaaS (A) — hybrid PG, blocked до pen-test.
+    Схема: <code>deploy/cloud/schemas/cell-manifest.schema.json</code>.</p>
 </div>
 <p class="section-lead comment">Сравнение облака и контура @10k — чтобы не oversell Korus там, где нужен SaaS.</p>
 <div class="grid-2">
@@ -267,6 +299,7 @@
   <ul class="comment">
     <li>Цифры infra и TCO — ориентиры для переговоров; финальное КП — по sizing заказчика.</li>
     <li>eXpress @10/100 тыс. рег. — модельная оценка infra; лицензия — публичный прайс express.ms.</li>
+    <li>Enterprise E-500k/E-1M: облачный SaaS (Пачка, VK) не сравнивается с on-prem якорями.</li>
     <li>Полная матрица (11 продуктов, legacy, НТ): см. <code>competitor_comparison.html</code>.</li>
   </ul>
 </div>

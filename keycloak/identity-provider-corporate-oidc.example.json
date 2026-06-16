@@ -1,0 +1,18 @@
+{
+  "alias": "corporate-oidc",
+  "displayName": "Corporate SSO",
+  "providerId": "oidc",
+  "enabled": false,
+  "trustEmail": true,
+  "storeToken": false,
+  "firstBrokerLoginFlowAlias": "first broker login",
+  "config": {
+    "clientId": "REPLACE_WITH_VAULT",
+    "clientSecret": "REPLACE_WITH_VAULT",
+    "discoveryUrl": "https://login.example.com/.well-known/openid-configuration",
+    "clientAuthMethod": "client_secret_post",
+    "defaultScope": "openid profile email",
+    "syncMode": "IMPORT",
+    "useJwksUrl": "true"
+  }
+}

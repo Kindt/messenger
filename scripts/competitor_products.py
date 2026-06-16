@@ -11,6 +11,8 @@ _REG = load_registry()
 PRODUCT_COLUMNS = _REG.product_columns
 COMPARISON_CRITERIA = _REG.comparison_criteria
 PRODUCT_FEATURES = _REG.product_features
+PRODUCT_SCENARIO_FIT = _REG.product_scenario_fit
+SCENARIO_COLUMNS = _REG.scenario_columns
 PROS_CONS_BY_PRODUCT = _REG.pros_cons_by_product
 TIER_LABELS = _REG.tier_labels
 RADAR_AXES = _REG.radar_axes
@@ -19,6 +21,7 @@ RADAR_MAX = _REG.radar_max
 LOOP_PRO_RUB_MONTH = _REG.loop_pro_rub_month
 COMPASS_ONPREM_RUB_MONTH = _REG.compass_onprem_rub_month
 KORUS_S10K_INFRA = _REG.korus_s10k_infra
+TRUECONF_SERVER_MIN_YEARLY = _REG.trueconf_server_min_yearly
 
 
 @dataclass(frozen=True)
@@ -106,6 +109,16 @@ def tier_c_market_rows() -> tuple[TierCMarketRow, ...]:
     )
 
 
+def tier_c_tco_chart_items() -> tuple[tuple[str, int, int], ...]:
+    """Stacked TCO @10k for tier C products with public or floor license numbers."""
+    compass_lic = COMPASS_ONPREM_RUB_MONTH * 12 * 10_000
+    return (
+        ("Korus", KORUS_S10K_INFRA, 0),
+        ("Compass", 0, compass_lic),
+        ("TrueConf", 0, TRUECONF_SERVER_MIN_YEARLY),
+    )
+
+
 def heatmap_color(cell: str) -> str:
     c = cell.strip()
     if c.startswith("✓") and "◐" not in c:
@@ -131,6 +144,13 @@ def validate_product_registry() -> list[str]:
         for cid in crit_ids:
             if cid not in feats:
                 errors.append(f"{pid}: missing criterion {cid!r}")
+        fit = PRODUCT_SCENARIO_FIT.get(pid)
+        if not fit:
+            errors.append(f"missing PRODUCT_SCENARIO_FIT[{pid!r}]")
+        else:
+            for sid, _title in SCENARIO_COLUMNS:
+                if sid not in fit:
+                    errors.append(f"{pid}: missing scenario_fit {sid!r}")
     for name, (pros, cons) in PROS_CONS_BY_PRODUCT.items():
         if len(pros) < 3:
             errors.append(f"{name}: fewer than 3 pros")

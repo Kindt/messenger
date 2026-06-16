@@ -2,10 +2,10 @@
 
 from html import escape
 
-PRODUCT_VERSION = "2.5.2"
+PRODUCT_VERSION = "2.5.3"
 PRODUCT_DATE = "16 июня 2026"
-PLAYWRIGHT_PASSED = 30
-PLAYWRIGHT_DATE = "2026-06-15"
+PLAYWRIGHT_PASSED = 33
+PLAYWRIGHT_DATE = "2026-06-16"
 
 # (id, label, status, note) — status: done | partial | planned | out
 FEATURES: tuple[tuple[str, str, str, str], ...] = (
@@ -21,13 +21,15 @@ FEATURES: tuple[tuple[str, str, str, str], ...] = (
     ("calls", "Видеозвонки WebRTC (mesh)", "partial", "P2P из чата; TURN — ops"),
     ("push", "Web Push / PWA", "partial", "UI и worker; prod VAPID — ops"),
     ("tls", "Prod HTTPS / TLS", "partial", "развёртывание ✓; stage host — с сентября 2026"),
-    ("gdpr_export", "Export GDPR completeness", "partial", "export JSON/ZIP ✓; legal checklist — заказчик"),
+    ("gdpr_export", "Export GDPR completeness", "partial", "export JSON/ZIP + guide ✓; legal strict — ops"),
+    ("file_resize", "Миниатюры изображений (/resize)", "done", "embedded в core-api"),
+    ("batch_replay", "Batch replay (export-replay)", "done", "JDBC + export_v1; stub отключён в prod compose"),
     ("fr_opt", "Профили Pilot / Standard", "done", "lean Pilot + масштабируемый Standard"),
     ("fr_opt_dedup", "Дедупликация файлов", "done", "одинаковые вложения хранятся один раз"),
     ("fr_opt_shard", "Sharding PostgreSQL", "planned", "Enterprise roadmap"),
     ("load_test", "Formal load test на stage", "partial", "тестовый стенд ✓; stage host — с сентября 2026"),
-    ("bot_api", "Bot API (REST MVP)", "partial", "register/subscribe/sendMessage; long-poll — roadmap"),
-    ("sso", "SSO Google / LDAP / SAML", "planned", ""),
+    ("bot_api", "Bot API (REST L2)", "partial", "long-poll, pin/ban, token rotate ✓; prod webhook SLA — ops"),
+    ("sso", "SSO Google / LDAP / SAML", "partial", "Keycloak broker template + runbook; IdP secrets — ops"),
     ("live", "Live-streaming (HLS)", "planned", ""),
     ("mobile", "Мобильные iOS/Android", "out", "вне текущей поставки"),
     ("desktop", "Desktop-клиент", "planned", ""),
@@ -54,8 +56,8 @@ def render_product_snapshot_html() -> str:
     <b>Проверено автоматически:</b> Playwright <b>{PLAYWRIGHT_PASSED}/{PLAYWRIGHT_PASSED}</b> на тестовом стенде ({PLAYWRIGHT_DATE}),
     основные пользовательские сценарии и REST API покрыты приёмочными тестами.<br/>
     <b>До промышленного запуска (ops):</b> TLS на stage/prod (стенд с <b>сентября 2026</b>), formal sign-off E2EE, Web Push на prod,
-    TURN для звонков за NAT, нагрузочный soak на stage, юридическая политика GDPR export.<br/>
-    <b>Не в текущей поставке:</b> мобильные приложения, Live HLS, полный Bot API (long-poll, pin/ban), sharding PG на Enterprise.
+    TURN для звонков за NAT, нагрузочный soak на stage, юридическая политика GDPR export (strict).<br/>
+    <b>Не в текущей поставке:</b> мобильные приложения, Live HLS, sharding PG на Enterprise.
   </div>
 </div>
 """

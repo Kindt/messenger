@@ -49,8 +49,11 @@ Full list in HTML `render_sources_html()` — keep in sync on price updates.
 
 | Role | Date | Phase | Notes |
 |------|------|-------|-------|
-| — | — | A | pending |
-| — | — | B | pending |
+| Engineering | 2026-06-16 | A | scenario matrix, battle cards, S-50k, segments — tests green |
+| Engineering | 2026-06-16 | B | tier C chart, deployment table, personas, methodology v1.6 — tests green |
+| Engineering | 2026-06-16 | C | talk track HTML, scenario_fit test, VERSION 3.1 |
+| Product / Marketing | — | A | pending |
+| Presales lead | — | A+B | pending |
 | — | — | C | pending |
 
 ---
@@ -59,4 +62,18 @@ Full list in HTML `render_sources_html()` — keep in sync on price updates.
 
 1. **TrueConf battle card** — P0 optional or defer to P1 if HTML length concern?
 2. **ФСТЭК wording** — «в процессе» vs target certification date (product input).
-3. **Talk track** — separate HTML vs expandable brief section (prefer separate file if >2 screens).
+3. **Talk track** — separate HTML (`competitor_comparison_talktrack.html`); linked from reading guide (v3.1).
+
+---
+
+## Sales walkthrough (Phase C, 2026-06-16)
+
+| Step | Artifact | Audience |
+|------|----------|----------|
+| 1 | `competitor_comparison_talktrack.html` 5 min | Любой stakeholder |
+| 2 | `competitor_comparison_brief.html` | Presales first call |
+| 3 | Segment one-pager (bank / industry / cloud) | ИБ / CFO / cloud-first |
+| 4 | `competitor_comparison.html` Part II | Тендер, закупка |
+| 5 | Methodology v1.6 + sources § | CFO sign-off |
+
+Engineering acceptance: `test_competitor_products.py` green; default build → 5 baseline HTML + talk track.

@@ -16,7 +16,7 @@
 | **US1** TLS/Vault | ✅ **READY** | ⏳ pending 2 hosts + DNS | ⏳ Stage TLS signature |
 | **US7** E2EE | ✅ **READY** (auto 2/7/8 eng.) | ⏳ smokes on HTTPS URL | ⏳ rows 1–3, 8 formal |
 | **US6** Hotplug | ✅ script + template | — | ⏳ 3 named signers |
-| **US9** Playwright | ✅ 30/30 QEMU | ⏳ optional staging gate | ✅ engineering 2026-06-15 |
+| **US9** Playwright | ✅ 33/33 QEMU | ⏳ optional staging gate | ✅ engineering 2026-06-16 |
 
 **Prod `MLS_STATUS=active`:** только после US7 8/8 + signatures. До этого — `pilot` / engineering на QEMU.
 
@@ -30,7 +30,7 @@
 | E2EE unit | `:modules:core-api:test --tests "*Mls*"` | **PASS** (2026-06-09) | 17 tests |
 | TLS smoke (dev) | `smoke-tls-redirect.ps1 -SkipTls` | **PASS** | HTTP QEMU path; not US1 row 4 |
 | Hex write unit | `*ApplicationServiceTest*` | **PASS** | User/Org/File |
-| Playwright | @ `http://127.0.0.1:19088` | **PASS** (2026-06-15, 30/30) | outer gate + runtime-gate-report |
+| Playwright | @ `http://127.0.0.1:19088` | **PASS** (2026-06-16, 33/33) | outer gate + runtime-gate-report |
 | Preview worker | guest `:9195/health` | **PASS** (2026-06-16) | full-server compose |
 | k6 baseline | `run-k6-qemu-baseline.ps1` | **PASS** (2026-06-16) | fallback JSON; full k6 on stage |
 | Stage preflight kit | `preflight-stage-deploy.ps1 -SkipVaultCheck` | **READY** | FAIL placeholders until real FQDN |
@@ -41,7 +41,7 @@
 
 | Check | Command | Result | Notes |
 |-------|---------|--------|-------|
-| Inner `all-inner` | `playwright-dev-loop.ps1 -Tier all-inner` | **PASS** (2026-06-15) | 30/30 |
+| Inner `all-inner` | `playwright-dev-loop.ps1 -Tier all-inner` | **PASS** (2026-06-16) | 33/33 |
 | Outer gate | `qemu-plan-orchestrator.ps1 -SkipVmUp` | **PASS** (2026-06-15) | runtime-gate-report |
 | Staging gate (optional) | `playwright-staging-gate.ps1 -BaseUrl https://…` | ⏳ | script ready; needs stage URL |
 
@@ -137,7 +137,7 @@
 
 ## US5 — Playwright operator gate
 
-[`runtime-gate-report.md`](../parity/runtime-gate-report.md) — 30/30 engineering 2026-06-15.
+[`runtime-gate-report.md`](../parity/runtime-gate-report.md) — 33/33 engineering 2026-06-16.
 
 ---
 
@@ -148,5 +148,5 @@
 | Stage TLS (US1 ops rows 1–4) | | | deploy-only; eng. READY |
 | E2EE security (US7 8/8) | | | rows 4–6 after HTTPS deploy |
 | Hotplug ADR (US6) | | | |
-| Playwright full-stack | engineering | 2026-06-15 | 30/30 QEMU |
+| Playwright full-stack | engineering | 2026-06-16 | 33/33 QEMU |
 | Playwright staging (US7 row 8) | | | `playwright-staging-gate.ps1` |

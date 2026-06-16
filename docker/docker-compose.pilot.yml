@@ -321,6 +321,9 @@ services:
       MINIO_SECRET_KEY: avandocmsg123
       MINIO_BUCKET: avandocmsg
       EXPORT_REPLAY_METRICS_PORT: "9191"
+      EXPORT_REPLAY_INCLUDE_EXPORT_COMPLETENESS: "true"
+      EXPORT_REQUIRED_FIELDS: "messages,chat,chat_members,referenced_users,referenced_files,gdpr_disclosures"
+      EXPORT_REPLAY_REQUIRE_JDBC: "true"
     ports:
       - "9193:9191"
     volumes:

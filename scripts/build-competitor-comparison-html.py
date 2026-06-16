@@ -19,6 +19,8 @@ from competitor_comparison_data import (  # noqa: E402
     render_comparison_matrix_html,
     render_cta_footer_html,
     render_decision_tree_html,
+    render_deployment_models_html,
+    render_product_scenario_matrix_html,
     render_elevator_pitch_html,
     render_email_snippet_html,
     render_executive_summary_html,
@@ -35,6 +37,10 @@ from competitor_comparison_data import (  # noqa: E402
     render_fig_tco_enterprise_svg,
     render_fig_tco_s100k_svg,
     render_fig_tco_s10k_svg,
+    render_fig_tco_s50k_svg,
+    render_fig_tco_tier_c_svg,
+    render_fig_tier_c_radar_svg,
+    render_enterprise_saas_callout_html,
     render_fig_legacy_infra_svg,
     render_fig_legacy_timeline_svg,
     render_full_disclaimers_html,
@@ -65,13 +71,15 @@ from competitor_comparison_data import (  # noqa: E402
     render_tier_b_tco_html,
     render_tier_c_market_html,
     render_tier_overview_html,
+    render_talk_track_html,
 )
 from tz_product_pricing import PRICE_REGION, PRICE_VAT  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OUT_FULL = REPO_ROOT / "competitor_comparison.html"
 OUT_BRIEF = REPO_ROOT / "competitor_comparison_brief.html"
-VERSION = "2.8"
+OUT_TALKTRACK = REPO_ROOT / "competitor_comparison_talktrack.html"
+VERSION = "3.1"
 
 CSS = """
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.45;
@@ -111,6 +119,13 @@ CSS = """
     .toc a:hover { text-decoration: underline; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
     .grid-2 .fig svg { width: 100%; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+    .persona-extracts { margin: 16px 0; }
+    .persona-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; }
+    .persona-card .req { font-size: 13px; margin-bottom: 6px; }
+    .talk-track { margin: 16px 0; }
+    .talk-slot { margin: 10px 0; padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+    .talk-slot summary { cursor: pointer; font-weight: 600; }
     .scenario { padding: 12px 14px; background: #fafafa; border-radius: 8px; border: 1px solid #e5e7eb; }
     .scenario h4 { margin: 0 0 8px; font-size: 15px; color: #1e3a5f; }
     .scenario-korus { background: #f0fdf4; border-color: #86efac; }
@@ -188,6 +203,7 @@ CSS = """
     .segment-links a { font-weight: 600; }
     @media (max-width: 900px) {
       .grid-2 { grid-template-columns: 1fr; }
+      .grid-3 { grid-template-columns: 1fr; }
       .hero-stats { grid-template-columns: 1fr; }
       .audience-nav { grid-template-columns: 1fr 1fr; }
       .decision-cards { grid-template-columns: 1fr; }
@@ -240,6 +256,20 @@ def _wrap_page(*, title: str, body: str, brief: bool) -> str:
 </html>"""
 
 
+def build_talktrack_html() -> str:
+    body = f"""
+<h1>Talk track — Korus vs рынок</h1>
+<p class="hero-subtitle comment">Сценарии встречи 5 / 15 / 45 мин · spec 012 Phase C</p>
+{_meta_block(brief=False)}
+{render_reading_guide_html()}
+{render_talk_track_html()}
+{render_segment_links_html()}
+<p class="small comment">Полная презентация: <a href="competitor_comparison.html">competitor_comparison.html</a> ·
+<a href="competitor_comparison_brief.html">one-pager</a></p>
+"""
+    return _wrap_page(title="Korus Messenger — talk track (5/15/45 мин)", body=body, brief=False)
+
+
 def build_full_html() -> str:
     body = f"""
 <h1>Korus Messenger vs рынок корпоративных мессенджеров</h1>
@@ -269,6 +299,7 @@ def build_full_html() -> str:
 {render_korus_positioning_html()}
 {render_battle_card_html()}
 {render_decision_tree_html()}
+{render_product_scenario_matrix_html()}
 {render_objections_faq_html()}
 {render_segment_cards_html()}
 
@@ -313,8 +344,12 @@ def build_full_html() -> str:
 {_section_lead("Уровень A: Korus, eXpress, облако (Пачка/VK) на одних якорях рег. пользов.")}
 <div class="grid-2">
   <div>{render_fig_tco_s10k_svg()}</div>
+  <div>{render_fig_tco_s50k_svg()}</div>
+</div>
+<div class="grid-2">
   <div>{render_fig_tco_s100k_svg()}</div>
 </div>
+{render_enterprise_saas_callout_html()}
 {render_fig_tco_enterprise_svg()}
 <p class="small comment">График «Корпоративный»: Korus и eXpress в контуре. Облако (Пачка, VK) на E-500k/E-1M не применимо без облачного контура.</p>
 {render_fig_license_per_user_svg()}
@@ -324,12 +359,15 @@ def build_full_html() -> str:
 <h3 id="s3b">Альтернативы уровней B и C</h3>
 {render_tier_b_tco_html()}
 {render_tier_c_market_html()}
+{render_fig_tco_tier_c_svg()}
+{render_deployment_models_html()}
 
 <h2 id="s5">Функции и возможности</h2>
 {_section_lead("18 критериев + heatmap: функциональный gap analysis для RFP и ИБ.")}
 <h3>Обзор: тепловая карта и профиль «в контуре»</h3>
 {render_feature_heatmap_svg()}
 {render_fig_onprem_radar_svg()}
+{render_fig_tier_c_radar_svg()}
 <h3>Детальная матрица (18 критериев)</h3>
 {render_feature_matrix_html()}
 <h3>Справочно: open-source и EE (уровень B)</h3>
@@ -380,7 +418,7 @@ def build_full_html() -> str:
 
 <details class="meta-tech small">
   <summary>Техническая информация для аналитиков</summary>
-  <p>Методика: docs/COMPETITOR_COMPARISON_METHODOLOGY.md · Охват: A (4) + B (4) + C (3) + legacy (7)<br/>
+  <p>Методика: docs/COMPETITOR_COMPARISON_METHODOLOGY.md (v1.6) · Охват: A (4) + B (4) + C (3) + legacy (7) · Talk track: competitor_comparison_talktrack.html<br/>
   Сборка: <code>python scripts/build-competitor-comparison-html.py</code></p>
 </details>
 """
@@ -433,6 +471,7 @@ def build_brief_html() -> str:
 {render_korus_positioning_html()}
 {render_battle_card_html()}
 {render_decision_tree_html()}
+{render_product_scenario_matrix_html()}
 {render_objections_faq_html()}
 {render_segment_cards_html()}
 
@@ -476,6 +515,11 @@ def main() -> None:
     parser.add_argument("--full-only", action="store_true", help="Only competitor_comparison.html")
     parser.add_argument("--brief-only", action="store_true", help="Only competitor_comparison_brief.html")
     parser.add_argument(
+        "--talktrack-only",
+        action="store_true",
+        help="Only competitor_comparison_talktrack.html",
+    )
+    parser.add_argument(
         "--segments-only",
         action="store_true",
         help="Only segment one-pagers (bank, industry, cloud)",
@@ -487,15 +531,17 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    build_full = build_brief = build_segments = True
+    build_full = build_brief = build_segments = build_talktrack = True
     if args.full_only:
-        build_brief = build_segments = False
+        build_brief = build_segments = build_talktrack = False
     if args.brief_only:
-        build_full = build_segments = False
+        build_full = build_segments = build_talktrack = False
+    if args.talktrack_only:
+        build_full = build_brief = build_segments = False
     if args.segments_only:
-        build_full = build_brief = False
+        build_full = build_brief = build_talktrack = False
     if args.segment:
-        build_full = build_brief = False
+        build_full = build_brief = build_talktrack = False
         build_segments = True
 
     if build_full:
@@ -510,6 +556,9 @@ def main() -> None:
             out = REPO_ROOT / SEGMENT_SPECS[slug]["filename"]
             out.write_text(build_segment_html(slug), encoding="utf-8")
             print(f"Wrote {out}")
+    if build_talktrack:
+        OUT_TALKTRACK.write_text(build_talktrack_html(), encoding="utf-8")
+        print(f"Wrote {OUT_TALKTRACK}")
 
 
 if __name__ == "__main__":

@@ -58,7 +58,7 @@
 
 <h1>Продуктовая презентация<br/>Korus Messenger (AvandocMsg)</h1>
 <div class="meta">
-  <b>Версия:</b> 2.5.2 &nbsp;|&nbsp; <b>Дата:</b> 16 июня 2026 &nbsp;|&nbsp;
+  <b>Версия:</b> 2.5.3 &nbsp;|&nbsp; <b>Дата:</b> 16 июня 2026 &nbsp;|&nbsp;
   <b>Аудитория:</b> руководители, юристы, продажи, бухгалтерия, операторы, служба безопасности<br/>
   <b>Формат:</b> презентация продукта для заказчика; приложение I — каталог <b>страниц</b> клиента и админки
 </div>
@@ -83,11 +83,11 @@
 <div class="note">
   <div class="req">Состояние продукта на 16 июня 2026</div>
   <div class="comment">
-    <b>Проверено автоматически:</b> Playwright <b>30/30</b> на тестовом стенде (2026-06-15),
+    <b>Проверено автоматически:</b> Playwright <b>33/33</b> на тестовом стенде (2026-06-16),
     основные пользовательские сценарии и REST API покрыты приёмочными тестами.<br/>
     <b>До промышленного запуска (ops):</b> TLS на stage/prod (стенд с <b>сентября 2026</b>), formal sign-off E2EE, Web Push на prod,
-    TURN для звонков за NAT, нагрузочный soak на stage, юридическая политика GDPR export.<br/>
-    <b>Не в текущей поставке:</b> мобильные приложения, Live HLS, полный Bot API (long-poll, pin/ban), sharding PG на Enterprise.
+    TURN для звонков за NAT, нагрузочный soak на stage, юридическая политика GDPR export (strict).<br/>
+    <b>Не в текущей поставке:</b> мобильные приложения, Live HLS, sharding PG на Enterprise.
   </div>
 </div>
 
@@ -305,11 +305,11 @@
   <li>Личные и групповые чаты: отправка, редактирование, удаление, пересылка, реакции, закрепление, ответы, TTL</li>
   <li>Мгновенная доставка в браузере; восстановление после обрыва связи</li>
   <li>Контакты, поиск коллег и поиск по переписке (Solr в Standard; SQL в Pilot)</li>
-  <li>Файлы: загрузка, просмотр, скачивание, публичные ссылки с отзывом</li>
+  <li>Файлы: загрузка, просмотр, скачивание, публичные ссылки с отзывом; миниатюры изображений</li>
   <li>Личное «Хранилище»; экспорт переписки JSON/ZIP</li>
   <li>Админ-консоль (<code>/admin/</code>): организации, ретенция, legal hold, аудит, E2EE dashboard</li>
   <li>Интерфейс на 6 языках</li>
-  <li>Автотесты UI: <b>30/30</b> Playwright на тестовом стенде (2026-06-15)</li>
+  <li>Автотесты UI: <b>33/33</b> Playwright на тестовом стенде (2026-06-16)</li>
 </ul>
 
 <h3>Частично готово (код есть, нужен ops / sign-off)</h3>
@@ -480,7 +480,7 @@
   <tr><td>Аудитория</td><td>Разработчики</td><td>Руководство, юристы, продажи</td></tr>
   <tr><td>Язык</td><td>Технический</td><td>Бизнес + статусы</td></tr>
   <tr><td>Клиенты</td><td>Web + mobile + desktop</td><td>Web ✓; mobile/desktop — вне репо / planned</td></tr>
-  <tr><td>Автотесты UI</td><td>—</td><td>30/30 Playwright (2026-06-15)</td></tr>
+  <tr><td>Автотесты UI</td><td>—</td><td>33/33 Playwright (2026-06-16)</td></tr>
   <tr><td>Кейсы</td><td>Требования списком</td><td>24 реализовано + 3 planned (§5)</td></tr>
   <tr><td>Sizing и стоимость</td><td>Формулы</td><td>Таблицы + примеры ₽ (§10, §17)</td></tr>
   <tr><td>Комплаенс</td><td>Разрозненно</td><td>§13 + чеклист</td></tr>
@@ -493,7 +493,9 @@
   <tr><td>Hot/Archive/Deep, файлы, export</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Поиск Solr / SQL (Pilot)</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>TLS prod deploy</td><td><span class="tag tag-partial">Частично</span> (развёртывание в поставке ✓)</td></tr>
-  <tr><td>Bot API</td><td><span class="tag tag-partial">Частично</span> — MVP REST: register, webhook, sendMessage</td></tr>
+  <tr><td>Bot API</td><td><span class="tag tag-partial">Частично</span> — REST L2: long-poll, pin/ban</td></tr>
+  <tr><td>SSO OIDC/LDAP</td><td><span class="tag tag-partial">Частично</span> — Keycloak template + runbook</td></tr>
+  <tr><td>Batch export-replay</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Push-уведомления</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>Live-streaming</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
   <tr><td>Звонки</td><td><span class="tag tag-partial">Частично</span></td></tr>
@@ -515,7 +517,7 @@
 <table><tr><th>Направление</th><th>Ценность</th></tr>
 <tr><td>Bot API (long-poll, pin/ban)</td><td>Расширение контракта Bot API</td></tr>
 <tr><td>SSO Google/LDAP</td><td>Enterprise-вход</td></tr>
-<tr><td>Dedup файлов (content-hash)</td><td>Экономия диска на вложениях</td></tr>
+<tr><td>Dedup файлов (content-hash)</td><td><span class="tag tag-done">Реализовано</span></td></tr>
 <tr><td>Sharding PG (Enterprise)</td><td>Масштаб до 1M — scaffold, full router в roadmap</td></tr>
 </table>
 <h3>12+ месяцев</h3>
@@ -593,7 +595,7 @@ DAU (активных в день) = Пользователи × доля акт
 <h2 id="s11">11. Критерии приёмки продукта</h2>
 <ol>
   <li><b>Пользователь</b> выполняет все основные сценарии из §5 через веб-браузер.</li>
-  <li><b>Автотесты UI:</b> 30/30 Playwright на тестовом стенде (2026-06-15).</li>
+  <li><b>Автотесты UI:</b> 33/33 Playwright на тестовом стенде (2026-06-16).</li>
   <li><b>Администратор</b> управляет организациями, политиками хранения и аудитом через веб-консоль.</li>
   <li><b>Production:</b> HTTPS, секреты не в открытом виде, sign-off E2EE перед массовым включением.</li>
   <li><b>Экспорт и ретенция:</b> окончательное удаление только после прохождения export gate.</li>
@@ -602,7 +604,7 @@ DAU (активных в день) = Пользователи × доля акт
   <li><b>Комплаенс (§13):</b> export с индикатором полноты; legal hold блокирует purge; audit admin-действий.</li>
   <li><b>SLA (§14):</b> согласованные RPO/RTO по профилю; сообщения не теряются при деградации P1.</li>
   <li><b>Профиль (§15):</b> ограничения Pilot доведены до заказчика до запуска.</li>
-  <li><b>Интеграции (§12):</b> REST API, WebSocket и Bot API MVP реализованы; SSO — в roadmap.</li>
+  <li><b>Интеграции (§12):</b> REST API, WebSocket, Bot API L2 и batch export-replay реализованы; SSO — template + runbook (IdP — ops).</li>
 </ol>
 
 <hr/>
@@ -616,14 +618,18 @@ DAU (активных в день) = Пользователи × доля акт
   <tr><td>Система входа (Keycloak)</td><td>IT</td><td>JWT, локальные пользователи</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Export / replay</td><td>Compliance</td><td>JSON/ZIP выгрузка</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Web Push</td><td>Пользователи</td><td>SW + push-worker; VAPID в конфигурации ✓</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>Bot API (REST MVP)</td><td>IT, интеграторы</td><td>register, subscribe, sendMessage, webhook delivery</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Bot API (REST L2)</td><td>IT, интеграторы</td><td>register, webhook, sendMessage, long-poll, pin/ban</td><td><span class="tag tag-partial">Частично</span></td></tr>
 </table>
-<h3>12.2 Запланировано</h3>
+<h3>12.2 SSO и каталог (template + ops)</h3>
 <table>
   <tr><th>Сценарий</th><th>Ожидание</th><th>Статус</th></tr>
-  <tr><td>SSO Google / корпоративный портал</td><td>Единый вход без отдельного пароля</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>LDAP / Active Directory</td><td>Учётки из AD</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>Bot API long-poll, pin/ban</td><td>Полный контракт Bot API</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
+  <tr><td>SSO Google / корпоративный portal (OIDC)</td><td>Единый вход без отдельного пароля</td><td><span class="tag tag-partial">Частично</span> — Keycloak broker template</td></tr>
+  <tr><td>LDAP / Active Directory</td><td>Учётки из AD</td><td><span class="tag tag-partial">Частично</span> — federation example</td></tr>
+</table>
+<h3>12.3 Запланировано</h3>
+<table>
+  <tr><th>Сценарий</th><th>Ожидание</th><th>Статус</th></tr>
+  <tr><td>Email fallback уведомлений</td><td>Оповещение без push</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
 </table>
 <p><b>Безопасность:</b> webhook только HTTPS; секреты не логируются; сбой бота не блокирует переписку людей.</p>
 
@@ -981,9 +987,9 @@ DAU (активных в день) = Пользователи × доля акт
 
 <hr/>
 <p class="small" style="margin-top:40px;padding-top:20px;border-top:2px solid #e5e7eb;">
-  <b>Korus Messenger (AvandocMsg)</b> — Продуктовая презентация v2.5.2, 16 июня 2026.<br/>
+  <b>Korus Messenger (AvandocMsg)</b> — Продуктовая презентация v2.5.3, 16 июня 2026.<br/>
   Единый автономный документ для заказчика. Все цифры — ориентиры для планирования, не оферта.<br/>
-  Статус на дату: веб-клиент и сервер реализованы; Playwright 30/30 (2026-06-15);
+  Статус на дату: веб-клиент и сервер реализованы; Playwright 33/33 (2026-06-16);
   E2EE/звонки/push/TLS — частично (ops/sign-off; stage с сентября 2026); Bot API MVP — частично; mobile, Live HLS — planned/out.
 </p>
 </body>

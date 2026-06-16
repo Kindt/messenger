@@ -15,6 +15,7 @@ from competitor_products import (  # noqa: E402
     KORUS_S10K_INFRA,
     LOOP_PRO_RUB_MONTH,
     COMPASS_ONPREM_RUB_MONTH,
+    TRUECONF_SERVER_MIN_YEARLY,
     PRODUCT_COLUMNS,
     PRODUCT_FEATURES,
     PROS_CONS_BY_PRODUCT,
@@ -55,6 +56,7 @@ data = {
         "loop_pro_rub_month": LOOP_PRO_RUB_MONTH,
         "compass_onprem_rub_month": COMPASS_ONPREM_RUB_MONTH,
         "korus_s10k_infra": KORUS_S10K_INFRA,
+        "trueconf_server_min_yearly": TRUECONF_SERVER_MIN_YEARLY,
     },
 }
 

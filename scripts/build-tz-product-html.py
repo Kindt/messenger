@@ -400,7 +400,7 @@ def main():
   <li>Личные и групповые чаты: отправка, редактирование, удаление, пересылка, реакции, закрепление, ответы, TTL</li>
   <li>Мгновенная доставка в браузере; восстановление после обрыва связи</li>
   <li>Контакты, поиск коллег и поиск по переписке (Solr в Standard; SQL в Pilot)</li>
-  <li>Файлы: загрузка, просмотр, скачивание, публичные ссылки с отзывом</li>
+  <li>Файлы: загрузка, просмотр, скачивание, публичные ссылки с отзывом; миниатюры изображений</li>
   <li>Личное «Хранилище»; экспорт переписки JSON/ZIP</li>
   <li>Админ-консоль (<code>/admin/</code>): организации, ретенция, legal hold, аудит, E2EE dashboard</li>
   <li>Интерфейс на 6 языках</li>
@@ -615,7 +615,9 @@ def main():
   <tr><td>Hot/Archive/Deep, файлы, export</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Поиск Solr / SQL (Pilot)</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>TLS prod deploy</td><td><span class="tag tag-partial">Частично</span> (развёртывание в поставке ✓)</td></tr>
-  <tr><td>Bot API</td><td><span class="tag tag-partial">Частично</span> — MVP REST: register, webhook, sendMessage</td></tr>
+  <tr><td>Bot API</td><td><span class="tag tag-partial">Частично</span> — REST L2: long-poll, pin/ban</td></tr>
+  <tr><td>SSO OIDC/LDAP</td><td><span class="tag tag-partial">Частично</span> — Keycloak template + runbook</td></tr>
+  <tr><td>Batch export-replay</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Push-уведомления</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>Live-streaming</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
   <tr><td>Звонки</td><td><span class="tag tag-partial">Частично</span></td></tr>
@@ -640,7 +642,7 @@ def main():
 <table><tr><th>Направление</th><th>Ценность</th></tr>
 <tr><td>Bot API (long-poll, pin/ban)</td><td>Расширение контракта Bot API</td></tr>
 <tr><td>SSO Google/LDAP</td><td>Enterprise-вход</td></tr>
-<tr><td>Dedup файлов (content-hash)</td><td>Экономия диска на вложениях</td></tr>
+<tr><td>Dedup файлов (content-hash)</td><td><span class="tag tag-done">Реализовано</span></td></tr>
 <tr><td>Sharding PG (Enterprise)</td><td>Масштаб до 1M — scaffold, full router в roadmap</td></tr>
 </table>
 <h3>12+ месяцев</h3>

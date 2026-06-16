@@ -17,6 +17,7 @@ import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.core.application.FileApplicationService;
 import com.avandocmsg.messenger.core.application.FileDomainMapper;
+import com.avandocmsg.messenger.core.application.ImageResizeService;
 import com.avandocmsg.messenger.core.domain.FileId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -281,6 +282,86 @@ public class FileResource {
             .header("Content-Disposition", "attachment; filename=\"" + info.filename() + "\"")
             .header("Content-Type", info.mimeType())
             .build();
+    }
+
+    @GET
+    @Path("/{fileId}/resize")
+    @Produces("image/jpeg")
+    @Operation(summary = "Resize image", description = "On-the-fly thumbnail (embedded mode); JPEG output; w/h capped by server config")
+    @ApiResponse(responseCode = "200", description = "Resized JPEG")
+    @ApiResponse(responseCode = "400", description = "Not an image or invalid dimensions",
+        content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @ApiResponse(responseCode = "403", description = "Not allowed",
+        content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @ApiResponse(responseCode = "404", description = "File not found or resize disabled",
+        content = @Content(schema = @Schema(implementation = ApiError.class)))
+    public Response resize(@PathParam("fileId") String fileId,
+                           @QueryParam("w") @DefaultValue("200") int width,
+                           @QueryParam("h") @DefaultValue("200") int height,
+                           @Context SecurityContext securityContext) {
+        var fid = UuidParams.required(fileId, "file_id");
+        if (!appConfig.fileResizeEnabled()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.file.resize_disabled")))
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+        }
+        var userId = CurrentUserId.uuid(securityContext);
+        var fileIdDomain = FileId.of(fid);
+        var meta = fileApplicationService.getMetadataForUser(UserId.of(userId), fileIdDomain);
+        if (meta.isEmpty()) {
+            if (fileApplicationService.findById(fileIdDomain).isEmpty()) {
+                return Response.status(Response.Status.NOT_FOUND)
+                    .entity(new ApiError(404, messages.get("error.file.not_found")))
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+            }
+            ApiDeniedMetrics.fileAccessDenied();
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(new ApiError(403, messages.get("error.file.not_allowed")))
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+        }
+        var stored = meta.get();
+        if (!ImageResizeService.isResizableMimeType(stored.mimeType())) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.file.resize_not_image")))
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+        }
+        var maxW = appConfig.fileResizeMaxWidth();
+        var maxH = appConfig.fileResizeMaxHeight();
+        var targetW = Math.min(Math.max(width, 1), maxW);
+        var targetH = Math.min(Math.max(height, 1), maxH);
+        var stream = fileApplicationService.download(fileIdDomain);
+        if (stream == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.file.not_found")))
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+        }
+        try (stream) {
+            var resized = ImageResizeService.resizeToJpeg(
+                stream, targetW, targetH, appConfig.fileResizeMaxSourcePixels());
+            if (resized.isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ApiError(400, messages.get("error.file.resize_failed")))
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+            }
+            var baseName = stored.filename();
+            var dot = baseName.lastIndexOf('.');
+            var thumbName = (dot > 0 ? baseName.substring(0, dot) : baseName) + "-thumb.jpg";
+            return Response.ok(resized.get())
+                .header("Content-Disposition", "inline; filename=\"" + thumbName + "\"")
+                .header("Content-Type", "image/jpeg")
+                .build();
+        } catch (IOException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.file.resize_failed")))
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+        }
     }
 
     @DELETE

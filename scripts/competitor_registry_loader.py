@@ -17,6 +17,8 @@ class LoadedRegistry:
     product_columns: tuple[tuple[str, str, Tier, str], ...]
     comparison_criteria: tuple[tuple[str, str], ...]
     product_features: dict[str, dict[str, str]]
+    product_scenario_fit: dict[str, dict[str, str]]
+    scenario_columns: tuple[tuple[str, str], ...]
     pros_cons_by_product: dict[str, tuple[list[str], list[str]]]
     tier_labels: dict[str, str]
     radar_axes: tuple[tuple[str, str], ...]
@@ -25,15 +27,19 @@ class LoadedRegistry:
     loop_pro_rub_month: int
     compass_onprem_rub_month: int
     korus_s10k_infra: int
+    trueconf_server_min_yearly: int
 
 
 def load_registry(path: Path = DEFAULT_REGISTRY) -> LoadedRegistry:
     data = json.loads(path.read_text(encoding="utf-8"))
     criteria = tuple((c["id"], c["title"]) for c in data["criteria"])
     crit_ids = {c[0] for c in criteria}
+    scenarios = tuple((s["id"], s["title"]) for s in data.get("scenarios", []))
+    scenario_ids = {s[0] for s in scenarios}
 
     columns: list[tuple[str, str, Tier, str]] = []
     features: dict[str, dict[str, str]] = {}
+    scenario_fit: dict[str, dict[str, str]] = {}
     for p in data["products"]:
         pid = p["id"]
         tier: Tier = p["tier"]  # type: ignore[assignment]
@@ -43,6 +49,12 @@ def load_registry(path: Path = DEFAULT_REGISTRY) -> LoadedRegistry:
         if missing:
             raise ValueError(f"product {pid}: missing features {sorted(missing)}")
         features[pid] = feats
+        if scenario_ids:
+            fit = dict(p.get("scenario_fit", {}))
+            missing_sc = scenario_ids - fit.keys()
+            if missing_sc:
+                raise ValueError(f"product {pid}: missing scenario_fit {sorted(missing_sc)}")
+            scenario_fit[pid] = fit
 
     pros_cons: dict[str, tuple[list[str], list[str]]] = {}
     for name, block in data["pros_cons"].items():
@@ -60,6 +72,8 @@ def load_registry(path: Path = DEFAULT_REGISTRY) -> LoadedRegistry:
         product_columns=tuple(columns),
         comparison_criteria=criteria,
         product_features=features,
+        product_scenario_fit=scenario_fit,
+        scenario_columns=scenarios,
         pros_cons_by_product=pros_cons,
         tier_labels=dict(data["tier_labels"]),
         radar_axes=radar_axes,
@@ -68,4 +82,5 @@ def load_registry(path: Path = DEFAULT_REGISTRY) -> LoadedRegistry:
         loop_pro_rub_month=int(pricing["loop_pro_rub_month"]),
         compass_onprem_rub_month=int(pricing["compass_onprem_rub_month"]),
         korus_s10k_infra=int(pricing["korus_s10k_infra"]),
+        trueconf_server_min_yearly=int(pricing.get("trueconf_server_min_yearly", 23000)),
     )

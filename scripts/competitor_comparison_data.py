@@ -23,14 +23,18 @@ from competitor_products import (  # noqa: E402
     COMPASS_ONPREM_RUB_MONTH,
     PRODUCT_COLUMNS,
     PRODUCT_FEATURES,
+    PRODUCT_SCENARIO_FIT,
     PROS_CONS_BY_PRODUCT,
     RADAR_AXES,
     RADAR_MAX,
     RADAR_ONPREM,
+    SCENARIO_COLUMNS,
     TIER_LABELS,
     heatmap_color,
     tier_b_tco_rows,
     tier_c_market_rows,
+    tier_c_tco_chart_items,
+    TRUECONF_SERVER_MIN_YEARLY,
 )
 
 # --- Pricing constants (public sources) ---
@@ -150,7 +154,51 @@ def render_reading_guide_html() -> str:
       <a href="competitor_comparison_segment_bank.html">банк/госсектор</a>,
       <a href="competitor_comparison_segment_industry.html">промышленность</a>,
       <a href="competitor_comparison_segment_cloud.html">облако-first</a>.</li>
+    <li><b>Talk track (5 / 15 / 45 мин):</b> <a href="competitor_comparison_talktrack.html">competitor_comparison_talktrack.html</a>.</li>
   </ul>
+</div>"""
+
+
+def render_talk_track_html() -> str:
+    return f"""
+<div class="talk-track" id="talk-track">
+  <div class="req">Сценарий встречи с заказчиком</div>
+  <p class="comment">Ориентиры по времени; якорь масштаба — <b>10&nbsp;000 рег. пользов.</b> (Стандарт). Полные матрицы — в
+  <a href="competitor_comparison.html">полной версии</a> · сегменты — по аудитории ниже.</p>
+
+  <details open class="talk-slot">
+    <summary><b>5 минут — elevator + позиция</b></summary>
+    <ol class="comment">
+      <li>«Korus — мессенджер в контуре заказчика с export/legal hold в ядре, без per-user лицензии как у eXpress.»</li>
+      <li>Открыть <a href="competitor_comparison_brief.html#positioning">позиционирование</a> — когда Korus / когда альтернатива.</li>
+      <li>Один якорь TCO @10k: infra Korus vs доминирующая лицензия eXpress/облака (<a href="competitor_comparison_brief.html#s3">brief §экономика</a>).</li>
+      <li>CTA: пилот или sizing workshop — не обещать ФСТЭК «уже есть».</li>
+    </ol>
+  </details>
+
+  <details class="talk-slot">
+    <summary><b>15 минут — первая встреча (presales)</b></summary>
+    <ol class="comment">
+      <li><b>0–3 мин:</b> elevator + <a href="competitor_comparison.html#scenario-matrix">матрица 11×4</a> — какой сценарий у заказчика (S1–S4).</li>
+      <li><b>3–8 мин:</b> <a href="competitor_comparison.html#battle">battle card</a> vs eXpress/Пачка @10k; при шорт-листе РФ — Compass/МТС Линк (details).</li>
+      <li><b>8–12 мин:</b> radar @10k + 2–3 пункта из <a href="competitor_comparison.html#faq">FAQ</a> (export, облако, ФСТЭК).</li>
+      <li><b>12–15 мин:</b> сегментный one-pager: <a href="competitor_comparison_segment_bank.html">банк</a> /
+        <a href="competitor_comparison_segment_industry.html">пром</a> /
+        <a href="competitor_comparison_segment_cloud.html">облако</a> · email snippet из brief.</li>
+    </ol>
+  </details>
+
+  <details class="talk-slot">
+    <summary><b>45 минут — тендер / архитектор / закупка</b></summary>
+    <ol class="comment">
+      <li><b>0–10 мин:</b> Часть I полной версии — positioning, decision tree, battle cards extended, persona extracts в сегменте.</li>
+      <li><b>10–25 мин:</b> Часть II — TCO S-10k / S-50k / S-100k, Enterprise callout (no SaaS), tier B/C chart, deployment models (spec 011 Cell).</li>
+      <li><b>25–35 мин:</b> heatmap 18×11, tier C radar, compliance checklist (банк) или legacy migration (пром).</li>
+      <li><b>35–45 мин:</b> сводные матрицы §6, sources, oговорки; зафиксировать якорь RU и дату прайсов ({PRICE_AS_OF}).</li>
+    </ol>
+  </details>
+
+  <p class="small comment">Методика: docs/COMPETITOR_COMPARISON_METHODOLOGY.md v1.6 · не оферта · concurrent ≠ RU (Mattermost).</p>
 </div>"""
 
 
@@ -947,6 +995,14 @@ def render_fig_tco_s100k_svg() -> str:
     )
 
 
+def render_fig_tco_s50k_svg() -> str:
+    return _stacked_tco_svg(
+        f"TCO при {_fmt_reg_users(50_000)} (₽/год: инфра + лицензия)",
+        _tco_items_for_anchor(KORUS_ANCHORS[1]),
+        caption="Якорь S-50k — интерполяция между S-10k и S-100k; Korus лицензия — строка КП.",
+    )
+
+
 def render_fig_tco_enterprise_svg() -> str:
     items = []
     for anchor in (KORUS_ANCHORS[3], KORUS_ANCHORS[4]):
@@ -1278,6 +1334,94 @@ def render_battle_card_html() -> str:
     </tr>
   </table>
   <p class="small comment">* Korus @10k — полный «Стандарт» (infra), не пробник. VK WorkSpace и tier B/C — см. полную версию.</p>
+{render_battle_cards_extended_html()}
+</div>"""
+
+
+def render_battle_cards_extended_html() -> str:
+    s10 = KORUS_ANCHORS[0]
+    korus_infra = s10.infra_yearly
+    compass_lic = COMPASS_ONPREM_RUB_MONTH * 12 * 10_000
+    loop_lic = LOOP_PRO_RUB_MONTH * 12 * 10_000
+    return f"""
+  <details class="battle-card-ext">
+    <summary><b>Battle card: Korus vs Compass @10k</b> (лицензия + infra)</summary>
+    <table class="battle-table">
+      <tr><th>Критерий</th><th class="col-korus">Korus</th><th>Compass on-prem</th></tr>
+      <tr><td>Лицензия @10k/год</td><td class="col-korus">КП (не per-user)</td><td><b>{fmt_rub(compass_lic)}</b> ({COMPASS_ONPREM_RUB_MONTH} ₽/мес)</td></tr>
+      <tr><td>Infra @10k/год</td><td class="col-korus"><b>{fmt_rub(korus_infra)}</b></td><td>+ свой ЦОД (не в прайсе)</td></tr>
+      <tr><td>Export / legal hold</td><td class="col-korus"><b>Ядро</b></td><td>◐</td></tr>
+      <tr><td>Когда выигрываем</td><td class="col-korus">Compliance + sizing @10k+</td><td>UX, публичный прайс, ценовое давление</td></tr>
+    </table>
+  </details>
+  <details class="battle-card-ext">
+    <summary><b>Battle card: Korus vs МТС Линк</b> (UC-first)</summary>
+    <table class="battle-table">
+      <tr><th>Критерий</th><th class="col-korus">Korus</th><th>МТС Линк Чаты</th></tr>
+      <tr><td>Позиционирование</td><td class="col-korus"><b>Мессенджер + compliance</b></td><td>UC / ВКС / команды + ИИ (bundle)</td></tr>
+      <tr><td>TCO @10k</td><td class="col-korus">Infra {fmt_rub(korus_infra)}/год + КП</td><td>Только по КП (mts-link.ru)</td></tr>
+      <tr><td>Dialog → Линк</td><td class="col-korus">—</td><td>Footnote: миграция пользователей Dialog в экосистему МТС</td></tr>
+      <tr><td>Когда выигрываем</td><td class="col-korus">Export gate, dual-TTL, свой контур</td><td>Нужен UC + операторская экосистема «под ключ»</td></tr>
+    </table>
+  </details>
+  <details class="battle-card-ext">
+    <summary><b>Battle card: Korus vs Loop @10k</b></summary>
+    <table class="battle-table">
+      <tr><th>Критерий</th><th class="col-korus">Korus</th><th>Loop (облако Pro)</th></tr>
+      <tr><td>Лицензия @10k/год</td><td class="col-korus">КП</td><td><b>{fmt_rub(loop_lic)}</b> ({LOOP_PRO_RUB_MONTH} ₽/мес cloud)</td></tr>
+      <tr><td>Infra @10k/год</td><td class="col-korus"><b>{fmt_rub(korus_infra)}</b></td><td>0 (SaaS) или ЦОД для «Корп.»</td></tr>
+      <tr><td>Стек</td><td class="col-korus">Java monolith + workers</td><td>Mattermost-fork, плагины</td></tr>
+      <tr><td>Когда выигрываем</td><td class="col-korus">Compliance, единый вендор</td><td>Быстрый чат, зрелая IT-команда OSS</td></tr>
+    </table>
+  </details>
+  <details class="battle-card-ext">
+    <summary><b>Battle card: Korus vs TrueConf</b> (опционально, UC overlap)</summary>
+    <table class="battle-table">
+      <tr><th>Критерий</th><th class="col-korus">Korus</th><th>TrueConf Server</th></tr>
+      <tr><td>Фокус</td><td class="col-korus"><b>Переписка + файлы + export</b></td><td>ВКС / UC ядро, чат вторичен</td></tr>
+      <tr><td>Лицензия</td><td class="col-korus">КП + infra</td><td>от 23 000 ₽/год (PRO), не ₽/reg</td></tr>
+      <tr><td>Когда выигрываем</td><td class="col-korus">IM-first, compliance переписки</td><td>Видеоконференции 500+ участников</td></tr>
+    </table>
+  </details>"""
+
+
+def render_enterprise_saas_callout_html() -> str:
+    return """
+<div class="warn" id="enterprise-saas-callout">
+  <div class="req">Enterprise якоря E-500k / E-1M — не сравнивать с облачным SaaS per-user</div>
+  <p class="comment">Пачка, VK WorkSpace и прочие облачные подписки <b>не участвуют</b> в матрице TCO @500k+ зарегистрированных пользователей:
+  нет развёртывания в изолированном контуре заказчика. Сравнение «Enterprise on-prem» vs «SaaS ₽/пользов./мес» на этих якорях — методологическая ошибка.</p>
+  <p class="small comment">См. также примечание в блоке «Промышленная матрица» Part II и FAQ по облаку.</p>
+</div>"""
+
+
+def render_fstec_compliance_block_html() -> str:
+    return """
+<div class="note" id="fstec-bank">
+  <div class="req">ФСТЭК / реестр ПО — сравнение для банка и госсектора</div>
+  <table>
+    <tr><th>Продукт</th><th>ФСТЭК / реестр</th><th>Комментарий для ИБ</th></tr>
+    <tr class="row-korus"><td><b>Korus Messenger</b></td><td>в процессе</td><td>Export/legal hold в ядре; roadmap сертификации — обсуждаем план с заказчиком</td></tr>
+    <tr><td>eXpress Corporate</td><td><b>№4997</b></td><td>Hard requirement «сертификат до подписания» — типичный шорт-лист</td></tr>
+    <tr><td>Пачка / VK SaaS</td><td>заявлен</td><td>Облако; данные вне контура — отдельное решение ИБ</td></tr>
+    <tr><td>Loop / МТС Линк / Compass</td><td>реестр / ◐</td><td>Сверять актуальный статус на дату КП</td></tr>
+  </table>
+</div>"""
+
+
+def render_compass_min_tco_10k_html() -> str:
+    s10 = KORUS_ANCHORS[0]
+    compass_lic = COMPASS_ONPREM_RUB_MONTH * 12 * 10_000
+    return f"""
+<div class="cost-box" id="compass-10k-mini">
+  <div class="req">Compass @10k — mini-TCO (публичный on-prem прайс)</div>
+  <table>
+    <tr><th>Статья</th><th>Korus @10k</th><th>Compass on-prem @10k</th></tr>
+    <tr><td>Лицензия / год</td><td class="money">КП (не per-user)</td><td class="money"><b>{fmt_rub(compass_lic)}</b></td></tr>
+    <tr><td>Infra / год (ориентир)</td><td class="money"><b>{fmt_rub(s10.infra_yearly)}</b></td><td class="money">+ ЦОД заказчика (не в прайсе Compass)</td></tr>
+    <tr><td>Export / legal hold</td><td><b>Ядро</b></td><td>◐</td></tr>
+  </table>
+  <p class="small comment">Источник Compass: getcompass.ru/pricing ({COMPASS_ONPREM_RUB_MONTH} ₽/рег. пользов./мес on-prem). Полный TCO — только с infra @вашем якоре.</p>
 </div>"""
 
 
@@ -1464,6 +1608,39 @@ def render_decision_tree_html() -> str:
 </div>"""
 
 
+def render_product_scenario_matrix_html() -> str:
+    if not SCENARIO_COLUMNS:
+        return ""
+    header = "<tr><th>Продукт</th><th>Уровень</th>" + "".join(
+        f"<th>{escape(sid)}<br/><span class=\"small\">{escape(title)}</span></th>"
+        for sid, title in SCENARIO_COLUMNS
+    ) + "</tr>"
+    rows = []
+    for pid, label, tier, deployment in PRODUCT_COLUMNS:
+        cells = "".join(
+            f'<td class="{"rec-korus" if pid == "korus" else ""}">'
+            f"{escape(PRODUCT_SCENARIO_FIT.get(pid, {}).get(sid, '—'))}</td>"
+            for sid, _title in SCENARIO_COLUMNS
+        )
+        row_cls = "row-korus" if pid == "korus" else ""
+        rows.append(
+            f'<tr class="{row_cls}"><td><b>{escape(label)}</b><br/>'
+            f'<span class="small">{escape(deployment)}</span></td>'
+            f"<td>{escape(_tier_ru(tier))}</td>{cells}</tr>"
+        )
+    return f"""
+<div class="cost-box" id="scenario-matrix">
+  <div class="req">Матрица продукт × сценарий (11×4)</div>
+  <p class="small comment">✓ — сильное попадание · ~ — частично / с оговорками · — не целевой сценарий. S2 для SaaS вне контура заказчика — см. ячейку «—».</p>
+  <div class="matrix-scroll">
+    <table class="matrix-wide">
+      {header}
+      {"".join(rows)}
+    </table>
+  </div>
+</div>"""
+
+
 def render_extended_feature_matrix_html() -> str:
     header = "<tr><th>Критерий</th>" + "".join(
         f"<th>{escape(label)}<br/><span class=\"small\">{escape(_tier_ru(tier))}</span></th>"
@@ -1540,18 +1717,24 @@ def render_feature_heatmap_svg() -> str:
     return "".join(parts)
 
 
-def render_fig_onprem_radar_svg() -> str:
-    """Radar chart: on-prem @10k (экспертные оценки)."""
+def _render_radar_svg(
+    title: str,
+    caption: str,
+    series: tuple[tuple[str, str, str, tuple[int, ...]], ...],
+) -> str:
+    """Shared radar renderer for on-prem and tier-C subsets."""
     import math
 
     n = len(RADAR_AXES)
-    width, height = 720, 640
+    n_series = len(series)
+    legend_rows = max(1, (n_series + 2) // 3)
+    height = 640 + max(0, legend_rows - 2) * 28
+    width = 720
     cx, cy, r = width // 2, 300, 190
     parts = [
         f'<figure class="fig fig-wide"><svg viewBox="0 0 {width} {height}" width="{width}" height="{height}" '
         f'xmlns="http://www.w3.org/2000/svg">',
-        f'<text x="{width // 2}" y="28" text-anchor="middle" font-size="16" font-weight="bold">'
-        f"В контуре @10 тыс. рег.: лепестковая диаграмма (оценка 0–5)</text>",
+        f'<text x="{width // 2}" y="28" text-anchor="middle" font-size="16" font-weight="bold">{escape(title)}</text>',
     ]
     for level in range(1, RADAR_MAX + 1):
         rr = r * level / RADAR_MAX
@@ -1577,7 +1760,7 @@ def render_fig_onprem_radar_svg() -> str:
         parts.append(
             f'<text x="{lx:.1f}" y="{ly:.1f}" text-anchor="{anchor}" font-size="11">{escape(label)}</text>'
         )
-    for _pid, name, color, scores in RADAR_ONPREM:
+    for _pid, _name, color, scores in series:
         pts = []
         for i, sc in enumerate(scores):
             ang = math.radians(-90 + i * 360 / n)
@@ -1587,21 +1770,40 @@ def render_fig_onprem_radar_svg() -> str:
             f'<polygon points="{" ".join(pts)}" fill="{color}" fill-opacity="0.15" '
             f'stroke="{color}" stroke-width="2.5"/>'
         )
-    ly1, ly2 = height - 72, height - 44
-    lx = 32
+    legend_base = height - 24 - legend_rows * 28
     col_w = 220
-    for idx, (_pid, name, color, _scores) in enumerate(RADAR_ONPREM):
+    lx = 32
+    for idx, (_pid, name, color, _scores) in enumerate(series):
         row = idx // 3
         col = idx % 3
         x = lx + col * col_w
-        y = ly1 if row == 0 else ly2
+        y = legend_base + row * 28
         parts.append(f'<rect x="{x}" y="{y - 12}" width="12" height="12" fill="{color}"/>')
         parts.append(f'<text x="{x + 18}" y="{y}" font-size="11">{escape(name)}</text>')
-    parts.append(
-        '</svg><figcaption class="fig-cap">Шкала 0–5: комплаенс, E2EE, экономика (прозрачность TCO), '
-        "функции, sizing, реестр/ФСТЭК. Субъективная модель для переговоров, не рейтинг вендора.</figcaption></figure>"
-    )
+    parts.append(f'</svg><figcaption class="fig-cap">{escape(caption)}</figcaption></figure>')
     return "".join(parts)
+
+
+def render_fig_onprem_radar_svg() -> str:
+    """Radar chart: on-prem @10k (экспертные оценки)."""
+    return _render_radar_svg(
+        "В контуре @10 тыс. рег.: лепестковая диаграмма (оценка 0–5)",
+        "Шкала 0–5: комплаенс, E2EE, экономика (прозрачность TCO), функции, sizing, реестр/ФСТЭК. "
+        "Субъективная модель для переговоров, не рейтинг вендора.",
+        RADAR_ONPREM,
+    )
+
+
+def render_fig_tier_c_radar_svg() -> str:
+    """Radar subset: tier C (рынок РФ) + Korus для сравнения."""
+    tier_c_ids = {pid for pid, _label, tier, _dep in PRODUCT_COLUMNS if tier == "C"}
+    tier_c_ids.add("korus")
+    series = tuple(s for s in RADAR_ONPREM if s[0] in tier_c_ids)
+    return _render_radar_svg(
+        "Уровень C @10 тыс. рег.: Korus vs МТС Линк · Compass · TrueConf",
+        "Tier C — российский шорт-лист; оценки субъективны. Полный radar (Loop, Rocket.Chat) — выше.",
+        series,
+    )
 
 
 def render_tier_b_tco_html() -> str:
@@ -1647,6 +1849,109 @@ def render_tier_c_market_html() -> str:
   {"".join(rows)}
 </table>
 <p class="small comment">Dialog (МТС) эволюционировал в линейку МТС Линк Чаты — уточнять актуальный бренд у вендора.</p>"""
+
+
+def render_fig_tco_tier_c_svg() -> str:
+    return _stacked_tco_svg(
+        f"Уровень C @{_fmt_reg_users(10_000)} (₽/год: infra + лицензия)",
+        list(tier_c_tco_chart_items()),
+        caption=(
+            "Korus — infra якоря S-10k; Compass — публичный on-prem прайс (без ЦОД); "
+            f"TrueConf — минимум {fmt_rub(TRUECONF_SERVER_MIN_YEARLY)}/год (не ₽/reg). "
+            "МТС Линк — только по КП, на графике не показан."
+        ),
+    )
+
+
+def render_deployment_models_html() -> str:
+    return """
+<div class="note" id="deployment-models">
+  <div class="req">Модели развёртывания: on-prem · hosted Cell · SaaS</div>
+  <table>
+    <tr><th>Модель</th><th>Кто держит infra</th><th>Типичный buyer</th><th>Примеры на рынке</th><th>Korus</th></tr>
+    <tr class="row-korus"><td><b>On-prem (ЦОД заказчика)</b></td><td>Заказчик</td><td>Банк, пром, госсектор</td>
+        <td>eXpress, Korus, Compass on-prem, Loop «Корп.»</td>
+        <td><b>Основной SKU</b> — Docker/Ansible в контуре</td></tr>
+    <tr><td><b>Hosted Cell (dedicated B)</b></td><td>Платформа Korus (VM у оператора)</td>
+        <td>Комплаенс без своего ЦОД</td><td>Spec 011 Cell — 1 клиент = 1 Cell</td>
+        <td>Commercial v1: <code>deploy/cloud/cells/_template/cell.yaml.example</code></td></tr>
+    <tr><td><b>SaaS (multi-tenant облако)</b></td><td>Вендор</td><td>Быстрый старт, &lt;10k RU</td>
+        <td>Пачка, VK WorkSpace, Compass cloud</td>
+        <td>Shared Cell (model A) — после опыта B; не смешивать с Enterprise TCO</td></tr>
+  </table>
+  <p class="small comment">Spec 011 (<code>specs/011-korus-cloud-platform/</code>): internal Cell (C) для dogfood;
+    dedicated hosted Cell (B) — первый коммерческий SKU; managed SaaS (A) — hybrid PG, blocked до pen-test.
+    Схема: <code>deploy/cloud/schemas/cell-manifest.schema.json</code>.</p>
+</div>"""
+
+
+def render_persona_extracts_html(slug: str) -> str:
+    extracts: dict[str, tuple[tuple[str, str], ...]] = {
+        "bank": (
+            (
+                "ИБ / комплаенс",
+                "Сверяйте export/legal hold и dual-TTL в ядре, а не в roadmap интеграций. "
+                "ФСТЭК: eXpress №4997 — hard gate сегодня; у Korus — «в процессе», согласуйте план до подписания.",
+            ),
+            (
+                "CFO",
+                "TCO в контуре = infra + КП вендора; не смешивайте с SaaS per-user на Enterprise якорях. "
+                "eXpress @10k — ~90% лицензия; Korus — OPEX infra без «налога» на каждого рег. пользов.",
+            ),
+            (
+                "Закупка",
+                "В RFP: реестр ПО, контур данных, export gate, sizing @10k+. "
+                "Tier C (Compass, МТС Линк) — в шорт-лист для ценового давления; полный TCO — только с infra.",
+            ),
+        ),
+        "industry": (
+            (
+                "CFO",
+                "Якоря S-10k / S-50k / S-100k — единая шкала OPEX; лицензия Korus отдельной строкой КП. "
+                "Compass @10k — публичный per-user on-prem для бенчмарка; infra ЦОД — сверху.",
+            ),
+            (
+                "ИБ / комплаенс",
+                "Миграция с legacy XMPP — выигрыш export и audit; HA XMPP @10k дороже Korus infra, "
+                "но без compliance-стека. E2EE — только с явным sign-off MLS.",
+            ),
+            (
+                "Закупка",
+                "Не округляйте Standard вниз: &lt;10k RU — пробник, не production-матрица. "
+                "Battle cards eXpress/Compass/Loop — аргументы для защиты тендера, не оферта.",
+            ),
+        ),
+        "cloud": (
+            (
+                "Закупка",
+                "Если допустимо только SaaS — Пачка/VK выигрывают по time-to-value. "
+                "Korus — когда политика сменится на контур или появится export/legal hold.",
+            ),
+            (
+                "CFO",
+                "Сравнивайте подписку ₽/reg/мес с полным TCO контура (infra + ops + КП). "
+                "Enterprise E-500k+ — облачный SaaS не в той же матрице, что on-prem якоря.",
+            ),
+            (
+                "ИБ / комплаенс",
+                "Облако = данные у вендора; отдельное решение ИБ. Путь «SaaS сейчас → hosted Cell позже» "
+                "согласуйте со spec 011 (dedicated Cell B) до shared pool (A).",
+            ),
+        ),
+    }
+    blocks = extracts.get(slug)
+    if not blocks:
+        return ""
+    items = "".join(
+        f'<div class="persona-card"><div class="req">{escape(role)}</div>'
+        f'<p class="comment">{escape(text)}</p></div>'
+        for role, text in blocks
+    )
+    return f"""
+<div class="persona-extracts" id="personas-{slug}">
+  <div class="req">Extract для аудитории (1 абзац на роль)</div>
+  <div class="grid-3">{items}</div>
+</div>"""
 
 
 def render_feature_matrix_html() -> str:
@@ -2098,6 +2403,7 @@ def render_brief_disclaimers_html() -> str:
   <ul class="comment">
     <li>Цифры infra и TCO — ориентиры для переговоров; финальное КП — по sizing заказчика.</li>
     <li>eXpress @10/100 тыс. рег. — модельная оценка infra; лицензия — публичный прайс express.ms.</li>
+    <li>Enterprise E-500k/E-1M: облачный SaaS (Пачка, VK) не сравнивается с on-prem якорями.</li>
     <li>Полная матрица (11 продуктов, legacy, НТ): см. <code>competitor_comparison.html</code>.</li>
   </ul>
 </div>"""
@@ -2312,10 +2618,12 @@ def render_segment_page_body(slug: str) -> str:
 <p class="hero-subtitle comment">{spec["subtitle"]}</p>
 {render_hero_html()}
 {render_elevator_pitch_html()}
+{render_persona_extracts_html("bank")}
 {_section_lead("Фокус: data governance, export/legal hold, честное сравнение с eXpress по ФСТЭК.")}
 {render_segment_scenario_bank_html()}
 {render_korus_positioning_html()}
 {render_compliance_checklist_html()}
+{render_fstec_compliance_block_html()}
 {render_battle_card_html()}
 {render_objections_faq_html()}
 {render_fig_onprem_radar_svg()}
@@ -2329,11 +2637,16 @@ def render_segment_page_body(slug: str) -> str:
 <p class="hero-subtitle comment">{spec["subtitle"]}</p>
 {render_hero_html()}
 {render_elevator_pitch_html()}
+{render_persona_extracts_html("industry")}
 {_section_lead("Фокус: TCO @10k–100k, sizing по якорям, миграция с legacy IM.")}
 {render_segment_scenario_industry_html()}
 {render_industry_tco_pitch_html()}
+{render_compass_min_tco_10k_html()}
 <div class="grid-2">
   <div>{render_fig_tco_s10k_svg()}</div>
+  <div>{render_fig_tco_s50k_svg()}</div>
+</div>
+<div class="grid-2">
   <div>{render_fig_tco_s100k_svg()}</div>
 </div>
 {render_fig_license_per_user_svg()}
@@ -2349,7 +2662,9 @@ def render_segment_page_body(slug: str) -> str:
 <h1>{spec["title"]}<span class="segment-doc-badge">{spec["badge"]}</span></h1>
 <p class="hero-subtitle comment">{spec["subtitle"]}</p>
 {render_cloud_honest_pitch_html()}
+{render_persona_extracts_html("cloud")}
 {render_segment_scenario_cloud_html()}
+{render_deployment_models_html()}
 {_section_lead("Сравнение облака и контура @10k — чтобы не oversell Korus там, где нужен SaaS.")}
 <div class="grid-2">
   <div>{render_fig_tco_s10k_svg()}</div>

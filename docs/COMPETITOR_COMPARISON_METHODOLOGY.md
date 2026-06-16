@@ -1,7 +1,7 @@
 # Методика сравнения Korus Messenger с конкурентами
 
-**Версия:** 1.5  
-**Дата:** 2026-06-15  
+**Версия:** 1.6  
+**Дата:** 2026-06-16  
 **Назначение:** единые правила для презентаций, КП и переговоров. Документ **самодостаточен** — не ссылается на внутренние артефакты репозитория.
 
 **Визуальная презентация:**
@@ -9,11 +9,14 @@
 | Файл | Назначение | Сборка |
 |------|------------|--------|
 | [`competitor_comparison_brief.html`](../competitor_comparison_brief.html) | One-pager для встречи / PDF (~6–8 стр.) | `python scripts/build-competitor-comparison-html.py --brief-only` |
-| [`competitor_comparison.html`](../competitor_comparison.html) | Полная версия (TCO, legacy, НТ, 11 продуктов) | `python scripts/build-competitor-comparison-html.py` (по умолчанию — все 5 HTML) |
+| [`competitor_comparison.html`](../competitor_comparison.html) | Полная версия (TCO, legacy, НТ, 11 продуктов) | `python scripts/build-competitor-comparison-html.py` (по умолчанию — 5 HTML + talk track) |
+| [`competitor_comparison_talktrack.html`](../competitor_comparison_talktrack.html) | Сценарии встречи 5 / 15 / 45 мин | `--talktrack-only` или default build |
 
 **Сегментные one-pager'ы (v2.8):** `competitor_comparison_segment_bank.html`, `_industry.html`, `_cloud.html` — `--segments-only` или `--segment bank`.
 
-**Структура HTML v2.7:** Часть I — продажи (сценарии, battle card, FAQ); Часть II — обоснование КП (TCO, функции, матрицы); Часть III — справочник (eXpress, legacy, источники). В начале — «Как читать» и глоссарий.
+**Структура HTML v3.0 (spec 012):** Часть I — продажи (матрица 11×4 сценариев, battle cards, FAQ); Часть II — TCO (S-10k…E-1M, tier B/C charts, deployment models); Часть III — справочник. Сегменты bank/industry/cloud — persona extracts (CFO / ИБ / закупка).
+
+**Структура HTML v2.7–v2.9:** Часть I — продажи (сценарии, battle card, FAQ); Часть II — обоснование КП (TCO, функции, матрицы); Часть III — справочник (eXpress, legacy, источники). В начале — «Как читать» и глоссарий.
 
 ---
 
@@ -112,7 +115,7 @@ Standard на 10 000 — **полный production-функционал** (Solr,
 |------|---------|-------------|----------------|
 | **A** | Korus, eXpress, Пачка, VK SaaS | полный (§7) | да |
 | **B** | Loop, Rocket.Chat, Mattermost EE, VK Superapp on-prem | оценочный @10k | да |
-| **C** | МТС Линк Чаты, Compass, TrueConf Server | прайс/КП | да |
+| **C** | МТС Линк Чаты, Compass, TrueConf Server | прайс/КП + chart @10k (v3.0) | да |
 | **Legacy** | XMPP, Sametime, Lync, … | infra-only справочно | §5.3 |
 
 **Tier C (рынок РФ, 2026):**
@@ -218,6 +221,20 @@ HA XMPP @10k **дороже** Korus infra (нет оптимизации monolit
 | 3 | S-100k | 100 000 | eXpress, VK, Пачка |
 | 4 | E-500k | 500 000 | eXpress (КП) |
 | 5 | E-1M | 1 000 000 | eXpress (КП) |
+
+**Enterprise vs SaaS (v2.9+):** на якорях E-500k / E-1M облачные подписки (Пачка, VK WorkSpace) **не сравниваются** с on-prem TCO — нет изолированного контура заказчика.
+
+**Tier C chart (v3.0):** stacked TCO @10k для Korus (infra), Compass (публичный on-prem лицензия), TrueConf (минимум server license). МТС Линк — только КП, вне графика.
+
+---
+
+## 7.1. Модели развёртывания (v3.0)
+
+| Модель | Описание | Korus |
+|--------|----------|-------|
+| **On-prem** | ЦОД заказчика, Docker/Ansible | Основной SKU |
+| **Hosted Cell (B)** | Dedicated VM у оператора, 1 клиент = 1 Cell | Spec 011; manifest `deploy/cloud/cells/_template/cell.yaml.example` |
+| **SaaS** | Multi-tenant облако вендора | Shared Cell (A) — после опыта B; Пачка/VK — конкуренты tier A |
 
 ---
 

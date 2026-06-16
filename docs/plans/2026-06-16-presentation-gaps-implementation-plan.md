@@ -44,7 +44,7 @@
 | **P1-1** | Web Push prod (§4, A25, §12 Web Push) | VAPID в vault, push-worker prod compose, smoke | spec **008** или 007 tail | `smoke-push-worker-qemu.ps1` green ✅; prod VAPID — ops |
 | **P1-2** | TURN / звонки за NAT (§4, КУ-08, A21–A22) | coturn Ansible overlay, `korus-web` turn env | deploy 003 | `smoke-turn-qemu.ps1 -GuestOnly` green ✅; host `:3478` — restart web VM |
 | **P1-3** | Preview worker (traceability §16) | Добавить в prod/pilot compose profile | 003 / ops | `smoke-preview-worker-qemu.ps1` green ✅ |
-| **P1-4** | File proxy resize (traceability §15) | Hot-plug или sidecar в compose | ADR optional | resize endpoint smoke |
+| **P1-4** | File proxy resize (traceability §15) | Hot-plug или sidecar в compose | ADR optional | ✅ embedded `/resize` + `smoke-file-resize.ps1` |
 | **P1-5** | Security timing (§24) | `audit-timing.ps1` TTFB + GET chat normalization | plan 04 | ✅ PASS ~0.2% delta on QEMU (2026-06-16) |
 | **P1-6** | GDPR export completeness (§13, КУ-21, A20) | `EXPORT_REQUIRED_FIELDS` strict + admin UI indicator | plan 03 + legal | ✅ guide `completeness_policy` + smoke; strict prod — ops |
 
@@ -65,9 +65,9 @@
 | ID | Фича | MVP scope | Оценка | Зависимости |
 |----|------|-----------|--------|-------------|
 | **P2-1** | **Bot API** | REST MVP ✅ (spec 009); long-poll, deleteMessage/pin/ban — backlog | — | `smoke-bot-api.ps1` green на QEMU |
-| **P2-2** | **SSO OIDC** | Keycloak identity broker template + admin doc | 1–2 нед. | stage Keycloak, DNS |
+| **P2-2** | **SSO OIDC** | Keycloak identity broker template + admin doc | 1–2 нед. | ✅ runbook + `keycloak-enable-identity-provider.sh`; live IdP — ops |
 | **P2-3** | **LDAP/AD** | Keycloak user federation playbook | 1 нед. | P2-2 |
-| **P2-4** | **Batch replay** (traceability) | Довести export-replay до non-stub policy | 2 нед. | plan 03 |
+| **P2-4** | **Batch replay** (traceability) | Довести export-replay до non-stub policy | 2 нед. | ✅ `EXPORT_REPLAY_REQUIRE_JDBC` + smoke |
 
 **Рекомендация:** spec **008-bot-api-sso** (speckit) перед кодом P2-1.
 
@@ -151,6 +151,10 @@ flowchart LR
 5. **P1-6 GDPR export:** ✅ admin `completeness_policy` + smoke; `EXPORT_COMPLETENESS_STRICT` prod — ops.
 6. **Inner gate:** ✅ `playwright-dev-loop -Tier all-inner` (2026-06-16).
 7. **Outer gate (T110):** ✅ **33/33** Playwright on QEMU (2026-06-16).
-8. **P0 ops:** T601–T607 — backlog до Sep 2026.
+8. **P1-4 file resize:** ✅ `GET /v1/files/{id}/resize` embedded + smoke (2026-06-16).
+9. **P1b presentation sync:** ✅ v2.5.3 HTML + traceability (2026-06-16).
+10. **P2-2 SSO:** ✅ Keycloak broker template + runbook (IdP creds — ops).
+11. **P2-4 batch replay:** ✅ `EXPORT_REPLAY_REQUIRE_JDBC` + non-stub smoke.
+12. **P0 ops:** T601–T607 — backlog до Sep 2026.
 
 Связанные документы: [`2026-06-15-unfinished-development-plan.md`](2026-06-15-unfinished-development-plan.md), [`ROADMAP_EPICS.md`](../ROADMAP_EPICS.md) §8.
