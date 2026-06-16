@@ -13,6 +13,7 @@ include(
     "modules:workers:preview",
     "modules:workers:push",
     "modules:workers:bot-delivery",
+    "modules:workers:connector-runtime",
     "modules:workers:export-replay",
     "modules:workers:retention"
 )

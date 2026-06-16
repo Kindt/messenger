@@ -40,11 +40,13 @@ public final class SnapshotPartCodec {
             return stored;
         }
         if (looksLikeZstd(payload)) {
-            long size = Zstd.decompressedSize(payload);
+            long size = Zstd.getFrameContentSize(payload);
             if (size <= 0 || size > Integer.MAX_VALUE) {
                 throw new IllegalStateException("invalid zstd payload size");
             }
-            return Zstd.decompress(payload, (int) size);
+            byte[] out = new byte[(int) size];
+            Zstd.decompress(out, payload);
+            return out;
         }
         return gunzip(payload);
     }

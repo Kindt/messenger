@@ -89,21 +89,45 @@ Optional compose profiles: `push`, `retention`, `compliance` (archiver/deep/inde
 | vCPU | 1 | 2 |
 | Диск | 10 ГБ | 24 ГБ |
 
-## Хост Windows (обе ВМ + QEMU)
+## korus-integrations (spec 014 — bots/plugins)
+
+| Компонент | Контейнеры (типично) | RAM min, МБ |
+|-----------|----------------------|-------------|
+| integrations gateway | lb / router nginx | 64 |
+| connector-runtime | 1 | 512 |
+| bridges (subset) | 2–4 × 384 | 768–1536 |
+| demo sidecars | 3–5 × 128 | 384–640 |
+| mocks (vitrine-light) | wiremock ×2 | 256 |
+| Ubuntu + Docker | | 600 |
+| Запас | | 512 |
+| **Итого RAM (vitrine-light)** | | **~3–4 ГБ** |
+| **Рекомендуется RAM** | | **8 ГБ** (`config.ps1`) |
+| **vitrine-heavy** (+ Bitrix, Jira) | +2–4 ГБ | **12 ГБ** |
+
+| Ресурс | Минимум | Рекомендуется |
+|--------|---------|---------------|
+| vCPU | 2 | 2 |
+| Диск | 24 ГБ | 32 ГБ |
+
+> IP: **192.168.76.30**; host debug port **18190**. См. [`specs/014-bot-plugin-platform/design/qemu-integrations-vm.md`](../../specs/014-bot-plugin-platform/design/qemu-integrations-vm.md).
+
+## Хост Windows (три ВМ + QEMU)
 
 | | Минимум | Рекомендуется |
 |---|---------|---------------|
-| RAM гостей | 6 + 2 ≈ **8 ГБ** | 10 + 3 = **13 ГБ** |
-| RAM хоста (гости + ~10 % QEMU) | **9 ГБ** | **16 ГБ** |
-| vCPU хоста | 4 | 6–8 |
-| Диск (образы qcow2 + repo.tgz) | 50 ГБ | 80 ГБ |
+| RAM гостей (server+web) | 6 + 2 ≈ **8 ГБ** | 10 + 3 = **13 ГБ** |
+| + integrations (spec 014) | +4 ГБ | +8 ГБ |
+| RAM хоста (3 VM + ~10 % QEMU) | **13 ГБ** | **22–24 ГБ** |
+| vCPU хоста | 6 | 8–10 |
+| Диск (образы qcow2 + repo.tgz) | 60 ГБ | 100 ГБ |
 
 ## Текущие значения в `config.ps1`
 
 | ВМ | RAM | vCPU | Диск |
 |----|-----|------|------|
-| server | 10240 МБ | 2 | 40 ГБ |
+| server | 10240 МБ | 4 | 40 ГБ |
 | web | 3072 МБ | 1 | 24 ГБ |
+| integrations | 8192 МБ (12288 heavy) | 2 | 32 ГБ |
 
 Ранее **2048 МБ на ВМ** недостаточно для server (14 контейнеров + сборка): отсюда `no space left on device`, зависший `docker ps`, connection reset на API.
 

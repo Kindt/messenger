@@ -139,7 +139,10 @@ public class JerseyConfig extends ResourceConfig {
                         LegalHoldRepository legalHoldRepository,
                         PurgeStatusService purgeStatusService,
                         BotRepository botRepository,
-                        BotService botService) {
+                        BotService botService,
+                        com.avandocmsg.messenger.api.plugins.PluginRepository pluginRepository,
+                        com.avandocmsg.messenger.api.plugins.PluginPlatformService pluginPlatformService,
+                        com.avandocmsg.messenger.api.plugins.PluginOutboundService pluginOutboundService) {
         register(new AbstractBinder() {
             @Override
             protected void configure() {
@@ -204,6 +207,9 @@ public class JerseyConfig extends ResourceConfig {
                 bind(purgeStatusService).to(PurgeStatusService.class);
                 bind(botRepository).to(BotRepository.class);
                 bind(botService).to(BotService.class);
+                bind(pluginRepository).to(com.avandocmsg.messenger.api.plugins.PluginRepository.class);
+                bind(pluginPlatformService).to(com.avandocmsg.messenger.api.plugins.PluginPlatformService.class);
+                bind(pluginOutboundService).to(com.avandocmsg.messenger.api.plugins.PluginOutboundService.class);
                 bind(BotRateLimiter.fromEnv()).to(BotRateLimiter.class);
             }
         });
@@ -232,6 +238,8 @@ public class JerseyConfig extends ResourceConfig {
         register(ChatLiveSessionResource.class);
         register(MediaCapabilitiesResource.class);
         register(BotResource.class);
+        register(com.avandocmsg.messenger.api.plugins.PluginAdminResource.class);
+        register(com.avandocmsg.messenger.api.plugins.PluginOutboundResource.class);
         register(PrometheusMetricsResource.class);
 
         register(OpenApiConfig.create(appConfig.version()).getClass());

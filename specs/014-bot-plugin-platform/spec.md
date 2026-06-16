@@ -2,7 +2,7 @@
 
 **Feature branch:** `014-bot-plugin-platform`  
 **Created:** 2026-06-15  
-**Status:** `draft`  
+**Status:** `draft` — **Phase P0** implemented (2026-06-15); QEMU 3rd VM orchestration pending (T01427)  
 **Input:** Система ботов-плагинов базового исполнения с админкой; интеграции Exchange, диски, 1С, Jira, Confluence, Naumen, **Bitrix24**; polyglot + legacy-friendly demos.
 
 **Full design:** [`design/bot-plugin-platform-design.md`](design/bot-plugin-platform-design.md)

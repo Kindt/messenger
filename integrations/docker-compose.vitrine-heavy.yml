@@ -1,0 +1,15 @@
+# Spec 014 vitrine-heavy: merge after integrations + vitrine
+# docker compose -f integrations/docker-compose.integrations.yml \
+#   -f integrations/docker-compose.vitrine.yml \
+#   -f integrations/docker-compose.vitrine-heavy.yml up -d
+
+services:
+  connector-runtime:
+    environment:
+      CONNECTOR_PROFILE_PACK: "jira,confluence,naumen,bitrix"
+  vitrine-heavy-marker:
+    image: busybox:1.36
+    command: ["sh", "-c", "echo vitrine-heavy: mocks emulate Jira/Confluence/Naumen/Bitrix; sleep infinity"]
+    depends_on:
+      mock-apis:
+        condition: service_healthy

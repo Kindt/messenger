@@ -3,7 +3,7 @@
 # Usage: run-ansible-local.sh server|web
 set -eu
 
-ROLE="${1:?usage: run-ansible-local.sh server|web}"
+ROLE="${1:?usage: run-ansible-local.sh server|web|integrations}"
 REPO="${KORUS_REPO_ROOT:-/mnt/korus}"
 ANSIBLE_DIR="$REPO/deploy/ansible"
 LOG="${KORUS_BOOTSTRAP_LOG:-/var/log/korus-bootstrap.log}"
@@ -194,6 +194,23 @@ case "$ROLE" in
       -e "korus_repo_root=$REPO" \
       -e "korus_qemu_host_lan_ip=$LAN_IP" $extra
     echo "=== QEMU web ansible deploy done ==="
+    ;;
+  integrations)
+    wait_repo "integrations/docker-compose.integrations.yml"
+    normalize_scripts
+    ensure_ansible
+    ansible_env
+    cd "$ANSIBLE_DIR"
+    extra=""
+    if [ "$BUILD" = "1" ]; then
+      extra="-e korus_build_images=true"
+    else
+      extra="-e korus_build_images=false"
+    fi
+    # shellcheck disable=SC2086
+    ansible-playbook -i inventory/qemu/localhost.yml playbooks/qemu-integrations-local.yml \
+      -e "korus_repo_root=$REPO" $extra
+    echo "=== QEMU integrations ansible deploy done ==="
     ;;
   *)
     echo "ERROR: unknown role $ROLE"

@@ -1,0 +1,10 @@
+id: jira-connector
+plugin_class: L1
+runtime_kind: connector
+mock_base: http://mock-apis:8080
+commands:
+  - match: { slash: "/jira" }
+    http:
+      method: GET
+      path: "/jira/rest/api/2/issue/{issue_key}.json"
+    response: "Issue {summary} — status {status}"

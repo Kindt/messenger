@@ -1,6 +1,6 @@
 function New-KorusCidataSeed {
     param(
-        [Parameter(Mandatory)][ValidateSet("server", "web")]
+        [Parameter(Mandatory)][ValidateSet("server", "web", "integrations")]
         [string]$Role
     )
     . (Join-Path $PSScriptRoot "..\config.ps1")

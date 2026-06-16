@@ -28,10 +28,13 @@ function Set-KorusQemuStackProfile {
 function Get-KorusVmDiskName {
     param(
         [Parameter(Mandatory)]
-        [ValidateSet("server", "web")]
+        [ValidateSet("server", "web", "integrations")]
         [string]$Role,
         [string]$StackProfile = (Get-KorusQemuStackProfile)
     )
+    if ($Role -eq "integrations") {
+        return "integrations-dev"
+    }
     return "${Role}-${StackProfile}"
 }
 

@@ -378,6 +378,14 @@ public class MessengerApplication {
         var botService = new BotService(botRepository, chatRepository, messageApplicationService,
             messageService, chatBanService, auditRepository, this.uuidGenerator);
 
+        var pluginRepository = new com.avandocmsg.messenger.api.plugins.PluginRepository(dataSource);
+        var integrationRouterClient = new com.avandocmsg.messenger.api.plugins.IntegrationRouterClient(
+            appConfig.integrationsBaseUrl());
+        var pluginPlatformService = new com.avandocmsg.messenger.api.plugins.PluginPlatformService(
+            pluginRepository, integrationRouterClient, userMessages);
+        var pluginOutboundService = new com.avandocmsg.messenger.api.plugins.PluginOutboundService(
+            pluginRepository, messageApplicationService, userMessages);
+
         var jerseyServlet = new ServletContainer(
             new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
                 userRepository, contactRepository, contactService,
@@ -394,7 +402,8 @@ public class MessengerApplication {
                 exportComplianceSeed,
                 organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,
                 publicLinkPort, messageSearchService, adminManifest, adminServerStatsService, redisProbe,
-                readCachePort, legalHoldRepository, purgeStatusService, botRepository, botService));
+                readCachePort, legalHoldRepository, purgeStatusService, botRepository, botService,
+                pluginRepository, pluginPlatformService, pluginOutboundService));
         Tomcat.addServlet(ctx, SERVLET_NAME, jerseyServlet);
         ctx.addServletMappingDecoded("/api/*", SERVLET_NAME);
 

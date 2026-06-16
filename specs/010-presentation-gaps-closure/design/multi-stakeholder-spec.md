@@ -109,7 +109,8 @@ flowchart TD
 - **FR-CALL-004:** Screen share MUST передаваться отдельным video track с renegotiation.
 - **FR-CALL-005:** ICE servers MUST включать STUN и TURN с time-limited credentials на prod.
 - **FR-CALL-006:** При ICE failure UI MUST показывать локализованное сообщение с рекомендацией обратиться к IT.
-- **FR-CALL-007:** Ops MUST обеспечить coturn `--external-ip` и firewall relay ports 10000–10100/udp.
+- **FR-CALL-008:** Mesh MUST default to **audio-only** join (`getUserMedia` audio); video track added on demand with renegotiation.
+- **FR-CALL-009:** UI MUST show participant **initials avatar** when camera off; highlight **active speaker** and **screen sharer** (client-side).
 
 ### Key Entities
 
@@ -128,7 +129,7 @@ flowchart TD
 
 ### Edge Cases
 
-- Участник без камеры — только audio track
+- Участник без камеры — только audio track (**реализовано:** audio-first join; cam по кнопке)
 - Jitsi fallback при `callMode=jitsi` — внешний meet.jit.si (privacy concern для gov)
 - 21-й участник — отказ с понятным сообщением (до SFU)
 - TURN secret rotation — web redeploy для новых ICE credentials

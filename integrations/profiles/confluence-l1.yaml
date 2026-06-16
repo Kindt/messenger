@@ -1,0 +1,10 @@
+id: confluence-connector
+plugin_class: L1
+runtime_kind: connector
+mock_base: http://mock-apis:8080
+commands:
+  - match: { slash: "/wiki" }
+    http:
+      method: GET
+      path: "/confluence/rest/api/content/search"
+    response: "First hit: {title}"

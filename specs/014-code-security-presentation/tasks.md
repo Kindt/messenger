@@ -9,7 +9,7 @@
 - [x] T1401 S1-1 spotlessCheck + ratchetFrom in buildIntegrity
 - [x] T1402 S1-2 benchmark blocking in buildIntegrity / CI
 - [x] T1403 S1-3 checkNpmAudit Gradle task + CI
-- [ ] T1404 S1-4 javac deprecation cleanup (S2 backlog if warnings remain)
+- [x] T1404 S1-4 javac deprecation cleanup (SnapshotPartCodec zstd API)
 - [x] T1405 S1-5 JVM test args EnableDynamicAgentLoading
 - [x] T1406 S1-6 scripts/security-gate.ps1
 - [x] T1407 S1-7 SMOKE_INDEX + CI docs update
@@ -34,7 +34,7 @@
 
 - [x] T1431 S3-1 TURN inner gate: `smoke-turn-qemu.ps1 -GuestOnly` documented in SMOKE_INDEX
 - [x] T1433 S3-4 k6 QEMU baseline JSON (`deploy/qemu/run/k6-pilot-baseline.json`, fallback probe)
-- [ ] T1432 S3-3 all-inner Playwright green (blocked: API ECONNRESET mid-run — retry after `sync-api-core`)
+- [x] T1432 S3-3 all-inner Playwright green (34/34, 2026-06-16)
 
 ---
 

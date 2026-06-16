@@ -34,6 +34,7 @@
 | D9 | **Duplicate demo bots** на modern + legacy стеках (один сценарий — N языков) |
 | D10 | Demo backends: **mock default (CI)** + **vitrine-heavy** (Bitrix box + Jira) for presales |
 | D11 | **Full demo catalog** ~43 artifacts — [`demo-plugin-catalog.md`](demo-plugin-catalog.md) |
+| D12 | **Dedicated QEMU VM** `korus-integrations` @ **192.168.76.30** — all plugin execution; server = router only — [`qemu-integrations-vm.md`](qemu-integrations-vm.md) |
 
 ---
 
@@ -41,25 +42,35 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ core-api + Admin UI (plugin registry, 3-level config, audit)  │
-│ integration-router: PluginEvent → runtime → PluginResponse    │
-│ outbound: integration.outbound → sendMessage (bot identity)   │
-└────────────┬─────────────────────────────────────────────────┘
-             │ HTTPS JSON (Plugin Runtime API v1)
-   ┌─────────┼──────────┬────────────┬──────────────┐
-   ▼         ▼          ▼            ▼              ▼
-connector-  exchange-  1c-bridge   bitrix24-     ocr-worker
-runtime     bridge     naumen-     bridge (PHP)   ai-bridge
-(C)         storage-   bridge                       (L3)
-            bridge
-             │
-             ▼
-      customer sidecar (D) — any language / legacy stack
+│ korus-server · core-api + Admin UI                            │
+│ plugin registry · integration-router (HTTP client only)       │
+│ bot-delivery-worker · PG/Redis/NATS                           │
+└────────────────────────────┬─────────────────────────────────┘
+                             │ LAN HTTP
+                             ▼
+┌──────────────────────────────────────────────────────────────┐
+│ korus-integrations · 192.168.76.30  (spec 014)               │
+│ connector-runtime (C) · *-bridge (B) · demo sidecars (D)      │
+│ mocks · vitrine-light/heavy compose                           │
+└────────────────────────────┬─────────────────────────────────┘
+                             │ HTTPS (optional)
+                             ▼
+                   customer sidecar (D) on customer LAN
 ```
 
-**§17 TZ:** plugin code **не** в Tomcat core-api — только router + config.
+**Legacy single-box diagram (deprecated):** bridges co-located on `korus-server` — replaced by **D12**.
 
-**Hot-plug:** bridges = отдельные workers (`/health`, `/ready`, NATS optional для async jobs), см. ADR hot-plug.
+```
+┌──────────────────────────────────────────────────────────────┐
+│ core-api + Admin UI (plugin registry, 3-level config, audit)  │
+│ integration-router: PluginEvent → HTTP → integrations VM      │
+│ outbound: integration.outbound → sendMessage (bot identity)   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**§17 TZ:** plugin bytecode **не** в Tomcat core-api — исполнение только на **integrations node** (QEMU: `korus-integrations`).
+
+**Hot-plug:** bridges heartbeat → NATS на **server**; `docker compose` на **integrations guest** — см. [`qemu-integrations-vm.md`](qemu-integrations-vm.md).
 
 ---
 
@@ -232,4 +243,4 @@ runtime     bridge     naumen-     bridge (PHP)   ai-bridge
 
 ---
 
-*Brainstorming session 2026-06-15 — decisions D1–D11.*
+*Brainstorming session 2026-06-15 — decisions D1–D12.*

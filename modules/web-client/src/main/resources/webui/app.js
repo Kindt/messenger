@@ -217,12 +217,17 @@
     contactImportText: "",
     callStream: null,
     callScreenStream: null,
+    callMediaMode: "audio",
     callThumbTimer: null,
-    callCamOn: true,
+    callCamOn: false,
     callMicOn: true,
     rtcPeerIds: [],
+    rtcPeerMeta: {},
+    rtcSpeakingPeers: {},
+    rtcSharingPeers: {},
     rtcPeers: {},
     rtcPendingCandidates: {},
+    callPanelToggleBusy: false,
     mediaCaps: null,
     blobUrls: [],
     unreadByChat: {},
@@ -1814,10 +1819,17 @@
     }
     state.callMode = "mesh";
     try {
-      await ensureCallStream();
+      await ensureCallAudio();
       await loadRtcPeerIds();
+      if (state.callCamOn) {
+        await addCallVideoTrack();
+      }
       startThumbCapture();
       attachLocalVideo();
+      if (window.KorusUiCallMesh) {
+        KorusUiCallMesh.ensureSpeakerMonitor(state);
+        KorusUiCallMesh.syncAllSlots(state);
+      }
       setTimeout(function () {
         beginRtcMesh();
       }, 120);
@@ -2985,6 +2997,9 @@
       delete state.rtcPeers[peerId];
     }
     delete state.rtcPendingCandidates[peerId];
+    if (window.KorusUiCallMesh) {
+      KorusUiCallMesh.unregisterPeerStream(state, peerId);
+    }
     var wrap = document.getElementById("rtc-remote-" + peerId);
     if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
   }
@@ -3027,7 +3042,7 @@
       state.callPanelOpen = true;
       state.callMode = "mesh";
       await loadChatConferences();
-      await ensureCallStream();
+      await ensureCallAudio();
       await loadRtcPeerIds();
       startThumbCapture();
       var from = inc.fromUserId;
@@ -3039,6 +3054,10 @@
       await flushPendingIceCandidates(from);
       sendRtcSignal({ kind: "answer", targetUserId: from, sdp: ans.sdp }, inc.chatId);
       attachLocalVideo();
+      if (window.KorusUiCallMesh) {
+        KorusUiCallMesh.ensureSpeakerMonitor(state);
+        KorusUiCallMesh.syncAllSlots(state);
+      }
       state.statusMessage = L("rtc.callAccepted");
     } catch (e) {
       state.error = e.message || L("rtc.acceptFailed");
@@ -3280,36 +3299,90 @@
       });
       state.callScreenStream = null;
     }
-    state.callCamOn = true;
+    state.callMediaMode = "audio";
+    state.callCamOn = false;
     state.callMicOn = true;
+    if (window.KorusUiCallMesh) {
+      KorusUiCallMesh.resetCallMeshUi(state);
+    }
   }
 
-  async function ensureCallStream() {
-    if (state.callStream) return;
+  async function ensureCallAudio() {
+    if (state.callStream && state.callStream.getAudioTracks().length) return;
     try {
-      state.callStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
+      var audioOnly = await navigator.mediaDevices.getUserMedia({
         audio: true,
+        video: false,
       });
+      if (!state.callStream) {
+        state.callStream = audioOnly;
+      } else {
+        audioOnly.getAudioTracks().forEach(function (t) {
+          state.callStream.addTrack(t);
+        });
+      }
+      state.callMediaMode = "audio";
+      state.callCamOn = false;
     } catch (e) {
       state.error = localMediaErr(e.message);
       throw e;
     }
   }
 
+  async function addCallVideoTrack() {
+    if (!state.callStream) await ensureCallAudio();
+    var existing = state.callStream.getVideoTracks();
+    if (existing.length) {
+      existing.forEach(function (t) {
+        t.enabled = true;
+      });
+      state.callCamOn = true;
+      state.callMediaMode = "video";
+      return;
+    }
+    var videoOnly = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: false,
+    });
+    var vt = videoOnly.getVideoTracks()[0];
+    if (!vt) return;
+    state.callStream.addTrack(vt);
+    state.callCamOn = true;
+    state.callMediaMode = "video";
+    Object.keys(state.rtcPeers).forEach(function (pid) {
+      var pc = state.rtcPeers[pid];
+      if (!pc) return;
+      try {
+        pc.addTrack(vt, state.callStream);
+      } catch (e) {}
+    });
+    await rtcRenegotiateMesh();
+  }
+
+  /** @deprecated use ensureCallAudio or addCallVideoTrack */
+  async function ensureCallStream() {
+    if (state.callMediaMode === "video" || state.callCamOn) {
+      await ensureCallAudio();
+      await addCallVideoTrack();
+      return;
+    }
+    await ensureCallAudio();
+  }
+
   async function loadRtcPeerIds() {
     state.rtcPeerIds = [];
+    state.rtcPeerMeta = {};
     if (!state.selectedId || !state.tokens) return;
     try {
       var rows = await apiJson("/chats/" + state.selectedId + "/members", { method: "GET" });
       var me = jwtSub(state.tokens.access_token);
-      state.rtcPeerIds = rows
-        .filter(function (r) {
-          return r.user_id !== me;
-        })
-        .map(function (r) {
-          return r.user_id;
-        });
+      rows.forEach(function (r) {
+        if (r.user_id === me) return;
+        state.rtcPeerIds.push(r.user_id);
+        state.rtcPeerMeta[r.user_id] = {
+          displayName: r.display_name || r.user_id,
+        };
+      });
     } catch (e) {
       state.error = (e && e.message) || L("chat.loadCallMembersFailed");
     }
@@ -3358,11 +3431,17 @@
           vs.srcObject = new MediaStream([ev.track]);
           vs.style.display = "block";
         }
+        if (window.KorusUiCallMesh) {
+          KorusUiCallMesh.handleRemoteTrack(state, peerId, ev.track, ev.streams[0]);
+        }
         return;
       }
       var v = wrap.querySelector("video.rtc-remote-cam");
       if (v && ev.streams[0]) {
         v.srcObject = ev.streams[0];
+      }
+      if (window.KorusUiCallMesh) {
+        KorusUiCallMesh.handleRemoteTrack(state, peerId, ev.track, ev.streams[0]);
       }
     };
     pc.onconnectionstatechange = function () {
@@ -3441,6 +3520,9 @@
     await rtcRenegotiateMesh();
     render();
     attachLocalVideo();
+    if (window.KorusUiCallMesh) {
+      KorusUiCallMesh.syncLocalStage(state);
+    }
   }
 
   function beginRtcMesh() {
@@ -3526,26 +3608,34 @@
   }
 
   async function toggleCallPanel() {
+    if (state.callPanelToggleBusy) return;
     state.callPanelOpen = !state.callPanelOpen;
     if (!state.callPanelOpen) {
-      if (state.activeConference && conferenceIsTracked(state.activeConference)) {
-        await leaveActiveConference();
-      } else if (state.activeConference) {
-        state.activeConference = null;
-        clearJitsiIframe();
+      state.callPanelToggleBusy = true;
+      try {
+        if (state.activeConference && conferenceIsTracked(state.activeConference)) {
+          await leaveActiveConference();
+        } else if (state.activeConference) {
+          state.activeConference = null;
+          clearJitsiIframe();
+        }
+        stopMeshCallMedia();
+        if (window.KorusUiLiveSession) {
+          KorusUiLiveSession.disconnectLiveKitRoom(state);
+          state.activeLiveSession = null;
+        }
+        render();
+      } finally {
+        state.callPanelToggleBusy = false;
       }
-      stopMeshCallMedia();
-      if (global.KorusUiLiveSession) {
-        KorusUiLiveSession.disconnectLiveKitRoom(state);
-        state.activeLiveSession = null;
-      }
-      render();
       return;
     }
+    render();
+    state.callPanelToggleBusy = true;
     try {
       await loadActiveConferences();
       await loadChatConferences();
-      if (global.KorusUiLiveSession) {
+      if (window.KorusUiLiveSession) {
         await KorusUiLiveSession.loadChatLiveSessions(state, apiJson);
       }
       if (!meshCallChatReady() && state.callMode === "mesh") {
@@ -3560,17 +3650,26 @@
         render();
         return;
       }
-      await ensureCallStream();
+      await ensureCallAudio();
       await loadRtcPeerIds();
       startThumbCapture();
       render();
       attachLocalVideo();
+      if (window.KorusUiCallMesh) {
+        KorusUiCallMesh.ensureSpeakerMonitor(state);
+        KorusUiCallMesh.syncAllSlots(state);
+      }
       setTimeout(function () {
         beginRtcMesh();
       }, 120);
     } catch (e) {
-      state.callPanelOpen = false;
+      state.error = (e && e.message) || L("conference.meshUnavailable");
+      if (state.callMode === "mesh") {
+        state.callMode = "jitsi";
+      }
       render();
+    } finally {
+      state.callPanelToggleBusy = false;
     }
   }
 
@@ -3579,10 +3678,15 @@
     if (v && state.callStream) {
       v.srcObject = state.callStream;
     }
+    if (window.KorusUiCallMesh) {
+      KorusUiCallMesh.ensureSpeakerMonitor(state);
+      KorusUiCallMesh.syncLocalStage(state);
+    }
   }
 
   function startThumbCapture() {
     if (state.callThumbTimer) clearInterval(state.callThumbTimer);
+    if (!state.callCamOn || state.callMediaMode !== "video") return;
     state.callThumbTimer = setInterval(function () {
       var v = document.getElementById("callLocalVideo");
       var canvases = document.querySelectorAll(".call-thumb-canvas");
@@ -3609,11 +3713,29 @@
   }
 
   async function toggleCallCam() {
-    if (!state.callStream) return;
+    if (!state.callStream) await ensureCallAudio();
+    if (!state.callStream.getVideoTracks().length) {
+      try {
+        await addCallVideoTrack();
+        startThumbCapture();
+      } catch (e) {
+        state.error = localMediaErr(e.message);
+      }
+      render();
+      attachLocalVideo();
+      return;
+    }
     state.callCamOn = !state.callCamOn;
     state.callStream.getVideoTracks().forEach(function (t) {
       t.enabled = state.callCamOn;
     });
+    state.callMediaMode = state.callCamOn ? "video" : "audio";
+    if (!state.callCamOn && state.callThumbTimer) {
+      clearInterval(state.callThumbTimer);
+      state.callThumbTimer = null;
+    } else if (state.callCamOn) {
+      startThumbCapture();
+    }
     render();
     attachLocalVideo();
   }
@@ -3636,6 +3758,9 @@
       }
       addScreenTracksToMesh();
       await rtcRenegotiateMesh();
+      if (window.KorusUiCallMesh) {
+        KorusUiCallMesh.syncLocalStage(state);
+      }
     } catch (e) {
       state.callScreenStream = null;
       state.error = L("rtc.screenShareFailed", {
@@ -5243,7 +5368,7 @@
           scheduleRender();
           return;
         }
-        if (global.KorusUiLiveSession && KorusUiLiveSession.isLiveSessionChangeEvent(data)) {
+        if (window.KorusUiLiveSession && KorusUiLiveSession.isLiveSessionChangeEvent(data)) {
           sendHeartbeatThrottled();
           KorusUiLiveSession.applyLiveSessionChangeEvent(state, data, {
             onCreated: function (evt) {
@@ -5652,7 +5777,7 @@
     state.membersModalOpen = false;
     state.chatMembers = null;
     state.chatBans = null;
-    state.callMode = "mesh";
+    state.callMode = "jitsi";
     state.activeConference = null;
     state.activeConferenceByChat = {};
     state.chatConferences = null;
@@ -5820,12 +5945,45 @@
     }
   }
 
-  function renderCallPanel(shell) {
+  function safeConferenceDisplayTitle(c) {
+    if (!c) return "";
+    var t = c.title;
+    if (typeof t === "string" && t.trim()) return t.trim();
+    if (c.room_slug) return String(c.room_slug);
+    if (c.conference_id) return String(c.conference_id).slice(0, 8);
+    return "";
+  }
+
+  function appendMinimalCallPanel(shell) {
     if (!state.callPanelOpen) return;
     var panel = el("aside", "call-panel");
     var ph = el("div", "call-panel-head");
     var titleSpan = el("span", "call-panel-title", L("ui.call.title"));
     titleSpan.setAttribute("data-testid", "call-panel-title");
+    ph.appendChild(titleSpan);
+    panel.appendChild(ph);
+    shell.appendChild(panel);
+  }
+
+  function renderCallPanel(shell) {
+    if (!state.callPanelOpen) return;
+    state._callMeshLabels = {
+      speaking: L("ui.call.badgeSpeaking"),
+      sharing: L("ui.call.badgeSharing"),
+    };
+    var panel = el("aside", "call-panel");
+    var ph = el("div", "call-panel-head");
+    var callTitleKey =
+      state.callMode === "mesh" && state.callMediaMode === "audio" && !state.callCamOn
+        ? "ui.call.titleAudio"
+        : "ui.call.title";
+    var titleSpan = el("span", "call-panel-title", L(callTitleKey));
+    titleSpan.setAttribute(
+      "data-testid",
+      state.callMode === "mesh" && state.callMediaMode === "audio" && !state.callCamOn
+        ? "call-panel-title-audio"
+        : "call-panel-title"
+    );
     ph.appendChild(titleSpan);
     var cl = iconBtn("✕", L("ui.call.collapse"), {
       onClick: function () {
@@ -5909,7 +6067,7 @@
           var row = el("div", "call-conf-row");
           var chatLabel = c.chat_id ? chatTitleById(c.chat_id) : "";
           var baseTitle =
-            (c.title && c.title.trim() ? c.title : c.room_slug || (c.conference_id || "").slice(0, 8)) +
+            safeConferenceDisplayTitle(c) +
             (chatLabel ? " · " + chatLabel : "") +
             conferenceParticipantsLabel(c.participant_count) +
             (state.activeConference &&
@@ -5931,7 +6089,7 @@
         confSec.appendChild(el("p", "call-conf-empty", L("conference.noneActive")));
       }
       panel.appendChild(confSec);
-      if (global.KorusUiLiveSession) {
+      if (window.KorusUiLiveSession) {
         KorusUiLiveSession.renderLiveSection(panel, state, {
           el: el,
           iconBtn: iconBtn,
@@ -6075,6 +6233,13 @@
     );
     var stage = el("div", "call-stage");
     var mainVid = el("div", "call-main-wrap");
+    mainVid.id = "callLocalStage";
+    var localName = state.myDisplayName || jwtSub(state.tokens && state.tokens.access_token) || "?";
+    if (window.KorusUiCallMesh && typeof KorusUiCallMesh.createAvatarNode === "function") {
+      var localAv = KorusUiCallMesh.createAvatarNode(localName, localName, "call-local-avatar");
+      localAv.setAttribute("data-testid", "call-local-avatar");
+      mainVid.appendChild(localAv);
+    }
     var lv = document.createElement("video");
     lv.id = "callLocalVideo";
     lv.className = "call-video";
@@ -6082,6 +6247,8 @@
     lv.playsInline = true;
     lv.muted = true;
     mainVid.appendChild(lv);
+    var localBadge = el("div", "rtc-remote-badge rtc-local-badge is-hidden", "");
+    mainVid.appendChild(localBadge);
     stage.appendChild(mainVid);
     if (state.callScreenStream) {
       var sw = el("div", "call-screen-wrap");
@@ -6109,7 +6276,17 @@
     state.rtcPeerIds.forEach(function (pid) {
       var slot = el("div", "rtc-remote-slot");
       slot.id = "rtc-remote-" + pid;
-      slot.appendChild(el("div", "rtc-remote-label", pid.slice(0, 8) + "…"));
+      var labelName =
+        window.KorusUiCallMesh ? KorusUiCallMesh.peerDisplayName(state, pid) : pid.slice(0, 8) + "…";
+      slot.appendChild(el("div", "rtc-remote-label", labelName));
+      if (window.KorusUiCallMesh) {
+        slot.appendChild(
+          KorusUiCallMesh.createAvatarNode(
+            (state.rtcPeerMeta[pid] && state.rtcPeerMeta[pid].displayName) || pid,
+            pid
+          )
+        );
+      }
       var rv = document.createElement("video");
       rv.className = "call-video rtc-remote-video rtc-remote-cam";
       rv.autoplay = true;
@@ -6123,6 +6300,8 @@
       rs.setAttribute("playsinline", "");
       rs.style.display = "none";
       slot.appendChild(rs);
+      var badge = el("div", "rtc-remote-badge is-hidden", "");
+      slot.appendChild(badge);
       remotes.appendChild(slot);
     });
     if (!state.rtcPeerIds.length) {
@@ -6142,6 +6321,7 @@
     var bCam = iconBtn(state.callCamOn ? "📷" : "📷", state.callCamOn ? L("ui.call.camOn") : L("ui.call.camOff"), {
       primary: state.callCamOn,
       size: "md",
+      testId: "call-cam-toggle",
       onClick: function () {
         toggleCallCam();
       },
@@ -6157,7 +6337,12 @@
     bar.appendChild(bScr);
     panel.appendChild(bar);
     shell.appendChild(panel);
-    setTimeout(attachLocalVideo, 0);
+    setTimeout(function () {
+      attachLocalVideo();
+      if (window.KorusUiCallMesh) {
+        KorusUiCallMesh.syncAllSlots(state);
+      }
+    }, 0);
   }
 
   function normalizeSettingsTab(tab) {
@@ -7737,7 +7922,13 @@
     }
     main.appendChild(thread);
     shell.appendChild(main);
-    renderCallPanel(shell);
+    try {
+      renderCallPanel(shell);
+    } catch (err) {
+      console.error("renderCallPanel failed", err);
+      state.error = (err && err.message) || L("conference.meshUnavailable");
+      appendMinimalCallPanel(shell);
+    }
     if (state.settingsOpen) {
       renderSettingsModal(shell);
     }

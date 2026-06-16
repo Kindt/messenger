@@ -237,6 +237,13 @@
       });
   }
 
+  function liveDisplayTitle(live) {
+    if (!live) return "";
+    var t = live.title;
+    if (typeof t === "string" && t.trim()) return t.trim();
+    return live.room_name ? String(live.room_name) : "";
+  }
+
   function renderLiveSection(panel, state, deps) {
     var el = deps.el;
     var iconBtn = deps.iconBtn;
@@ -286,7 +293,7 @@
     if (live) {
       var row = el("div", "call-conf-row");
       var label =
-        (live.title && live.title.trim() ? live.title : live.room_name) +
+        liveDisplayTitle(live) +
         " · " +
         (live.viewer_count != null ? live.viewer_count : 0) +
         "/" +

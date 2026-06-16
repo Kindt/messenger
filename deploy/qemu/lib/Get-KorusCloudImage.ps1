@@ -32,8 +32,13 @@ function New-KorusVmOverlayDisk {
     if (-not $qemuImg) { throw "qemu-img not found" }
     $out = Join-Path $KorusQemuImagesDir "$Name.qcow2"
     if (-not (Test-Path $out)) {
-        $role = if ($Name -match '^(server|web)') { $Matches[1] } else { $Name }
-        $diskGb = if ($role -eq "server") { $KorusQemuVmDiskGb } else { $KorusQemuWebDiskGb }
+        $role = if ($Name -match '^(server|web|integrations)') { $Matches[1] } else { $Name }
+        $diskGb = switch ($role) {
+            "server" { $KorusQemuVmDiskGb }
+            "web" { $KorusQemuWebDiskGb }
+            "integrations" { $KorusQemuIntegrationsDiskGb }
+            default { $KorusQemuWebDiskGb }
+        }
         Write-Host "Creating $Name overlay disk ($diskGb GiB)..." -ForegroundColor Cyan
         & $qemuImg create -f qcow2 -F qcow2 -b $BaseImage $out | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "qemu-img create failed for $Name" }

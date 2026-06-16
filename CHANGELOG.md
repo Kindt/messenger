@@ -6,6 +6,20 @@
 
 ---
 
+### 2026-06-16 — Spec 014 S3: all-inner green + SnapshotPartCodec zstd fix
+
+- **Playwright:** `all-inner` 34/34 green на QEMU (`127.0.0.1:18080` / `:19088`); mesh tests с mocked WebRTC.
+- **Web UI:** панель звонков — `window.KorusUiCallMesh` вместо `global`, fallback `appendMinimalCallPanel` при ошибке render.
+- **`SnapshotPartCodec`:** `Zstd.compress(plain, level)` + `getFrameContentSize` / `decompress(dst, src)` — без deprecated API; исправлен порядок аргументов compress.
+
+### 2026-06-16 — Spec 010: audio-first mesh calls (§29 L1)
+
+- **Web UI:** mesh по умолчанию audio-only (`ensureCallAudio`); камера и screen share — отдельные video track + renegotiate.
+- **`ui-call-mesh.js`:** initials-аватар при выкл. камере, подсветка говорящего и демонстрации экрана (client-side AnalyserNode).
+- **i18n:** `ui.call.titleAudio`, `badgeSpeaking`, `badgeSharing` (6 локалей).
+- **Design:** `docs/plans/2026-06-16-audio-call-mesh-design.md`; FR-CALL-008/009 в spec 010.
+- **E2E:** `conference-rtc.spec.ts` — audio-first avatar + mocked `getUserMedia`.
+
 ### 2026-06-15 — Spec 010 Phase D / Spec 013 L2: Live-streaming WebRTC POC
 
 - **LiveKit SFU POC (≤200 viewers):** REST `/v1/chats/{id}/live-sessions`, `/v1/live-sessions/{id}/join|leave|end`; Flyway `V034__live_sessions`.
@@ -37,6 +51,27 @@
 ### 2026-06-16 — План: security CI gate + презентация (без ФСТЭК)
 
 - **`docs/plans/2026-06-16-code-security-presentation-plan.md`**: S1–S3 (zero-warning buildIntegrity, security smokes, PRES sync); ФСТЭК/реестр out of scope.
+
+### 2026-06-15 — Spec 014 Phase P1: connectors, outbound, QEMU integrations VM
+
+- **Outbound:** V036 columns, `POST /v1/integrations/outbound/{id}` (token auth), admin configure endpoint.
+- **connector-runtime:** Jira/Confluence/Naumen profiles via mock-apis; `preset_id` in config snapshot.
+- **integrations/:** mock-apis nginx, Bitrix24 PHP demo, PowerShell echo, profiles YAML, vitrine compose overlays.
+- **QEMU:** `-WithIntegrations` in `qemu-up.ps1`, Ansible `qemu-integrations-local.yml`, full cloud-init bootstrap.
+- **Smokes:** `smoke-plugin-outbound.ps1`; 1C bridge design spike (`integrations/bridges/1c/`).
+
+### 2026-06-15 — Spec 014 Phase P0: bot-plugin platform scaffold
+
+- **core-api:** V035 plugin tables, `IntegrationRouterClient`, `PluginPlatformService`, L0 menu handler, `/v1/admin/plugins`.
+- **worker:** `connector-runtime` (Plugin Runtime API v1, echo handler, health).
+- **integrations/:** compose for `korus-integrations`, echo-php82 + echo-go, L0 schema, SDK stubs.
+- **QEMU:** cloud-init `korus-integrations` @ 192.168.76.30; `INTEGRATIONS_BASE_URL` on server.
+- **Smokes:** `smoke-plugin-echo-php.ps1`, `validate-l0-plugin-menu.py`.
+
+### 2026-06-15 — Spec 014: dedicated QEMU VM for plugins (D12)
+
+- **`korus-integrations`** @ **192.168.76.30** — bridges, sidecars, vitrine compose; server = router only.
+- Design: `specs/014-bot-plugin-platform/design/qemu-integrations-vm.md`; `deploy/qemu/config.ps1` constants.
 
 ### 2026-06-15 — Spec 014: Bot-Plugin Platform (brainstorming → draft)
 

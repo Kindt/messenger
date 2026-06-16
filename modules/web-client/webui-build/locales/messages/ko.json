@@ -432,6 +432,7 @@
     },
     "call": {
       "title": "비디오 / 회의",
+      "titleAudio": "음성 통화 / 회의",
       "collapse": "접기",
       "thumbs": "썸네일(2초마다 갱신)",
       "remotes": "원격 스트림(채팅 참가자)",
@@ -440,6 +441,9 @@
       "micOff": "마이크: 꺼짐",
       "camOn": "카메라: 켜짐",
       "camOff": "카메라: 꺼짐",
+      "enableVideo": "비디오 켜기",
+      "badgeSpeaking": "발언 중",
+      "badgeSharing": "화면 공유",
       "screen": "화면",
       "stopScreen": "화면 공유 중지"
     },

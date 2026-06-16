@@ -1,0 +1,42 @@
+# Integrations (Spec 014)
+
+Bot/plugin runtime artifacts for **`korus-integrations`** VM (`192.168.76.30`).
+
+## Quick start (integrations guest)
+
+```bash
+cd /mnt/korus
+docker compose -f integrations/docker-compose.integrations.yml up -d --build
+curl -fsS http://127.0.0.1:8091/v1/plugin/handle \
+  -H 'Content-Type: application/json' \
+  -d '{"event_id":"1","type":"mention","text":"ping"}'
+```
+
+## Layout
+
+| Path | Purpose |
+|------|---------|
+| `docker-compose.integrations.yml` | connector-runtime + mocks + echo + Bitrix + gateway :8090 |
+| `docker-compose.vitrine.yml` | overlay for presales light profile |
+| `profiles/` | Jira, Confluence, Naumen YAML connector profiles |
+| `_mock-servers/` | Static JSON mocks (Jira, Confluence, Naumen, Bitrix) |
+| `demos/bitrix24-crm-bot/` | PHP CRM sidecar (`/deal <id>`) |
+| `schemas/l0-menu.schema.json` | L0 FAQ config validation |
+| `sdk/php`, `sdk/python` | Thin HTTP client stubs |
+
+## Server VM
+
+Set on **korus-server** core-api:
+
+`INTEGRATIONS_BASE_URL=http://192.168.76.30:8091`
+
+Admin API: `GET /api/v1/admin/plugins/presets`
+
+## Smokes
+
+```powershell
+# PHP sidecar on host port 8088 (when compose published)
+.\scripts\smoke-plugin-echo-php.ps1
+.\scripts\smoke-plugin-outbound.ps1 -InstanceId <uuid> -Token <token>
+python scripts\validate-l0-plugin-menu.py integrations\examples\hr-faq-menu.json
+```

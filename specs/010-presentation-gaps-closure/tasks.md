@@ -9,6 +9,7 @@
 - [x] T101 CALL-1 coturn `--external-ip` / `--relay-ip` in prod compose
 - [x] T102 CALL-2 prod inventory `korus_turn_host`, `korus_web_turn_prod`
 - [x] T103 CALL-UX i18n ICE failed modal in webui
+- [x] T105 CALL-UX audio-first mesh, avatars, active speaker badges (`ui-call-mesh.js`)
 - [x] T104 CALL-6 optional relay smoke script
 - [x] T105 PUSH-2 push-worker prod/pilot compose profile audit
 - [x] T106 PUSH-UX notifications onboarding tooltip + i18n

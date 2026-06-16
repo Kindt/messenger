@@ -1,1 +1,2 @@
 com.avandocmsg.messenger.api.admin.ui.CoreAdminUiContributor
+com.avandocmsg.messenger.api.plugins.PluginAdminUiContributor

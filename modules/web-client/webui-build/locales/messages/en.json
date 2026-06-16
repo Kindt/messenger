@@ -432,6 +432,7 @@
     },
     "call": {
       "title": "Video / conference",
+      "titleAudio": "Audio call / conference",
       "collapse": "Collapse",
       "thumbs": "Thumbnails (refresh every 2 s)",
       "remotes": "Remote streams (chat participants)",
@@ -440,6 +441,9 @@
       "micOff": "Mic: off",
       "camOn": "Cam: on",
       "camOff": "Cam: off",
+      "enableVideo": "Enable video",
+      "badgeSpeaking": "Speaking",
+      "badgeSharing": "Screen sharing",
       "screen": "Screen",
       "stopScreen": "Stop screen"
     },

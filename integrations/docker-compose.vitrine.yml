@@ -1,0 +1,10 @@
+# Spec 014 vitrine (light): merge with base integrations compose
+# docker compose -f integrations/docker-compose.integrations.yml -f integrations/docker-compose.vitrine.yml up -d
+
+services:
+  vitrine-banner:
+    image: busybox:1.36
+    command: ["sh", "-c", "echo vitrine-light profile; sleep infinity"]
+    depends_on:
+      integrations-gateway:
+        condition: service_started

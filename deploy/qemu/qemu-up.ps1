@@ -3,6 +3,7 @@ param(
     [switch]$SkipQemuInstall,
     [switch]$KeepDisks,
     [switch]$Graphical,
+    [switch]$WithIntegrations,
     [ValidateSet("", "none", "gtk", "sdl", "default")]
     [string]$Display = "",
     [ValidateSet("", "dev", "full")]
@@ -20,7 +21,7 @@ Write-KorusDebugLog -Location "qemu-up.ps1:start" -Message "qemu-up begin" -Hypo
     KeepDisks = [bool]$KeepDisks; SkipQemuInstall = [bool]$SkipQemuInstall
 }
 if ($Help) {
-    Write-Host "Usage: .\deploy\qemu\qemu-up.ps1 [-InstallQemuOnly] [-SkipQemuInstall] [-KeepDisks] [-Graphical] [-Display none|gtk|sdl|default] [-StackProfile dev|full]"
+    Write-Host "Usage: .\deploy\qemu\qemu-up.ps1 [-InstallQemuOnly] [-SkipQemuInstall] [-KeepDisks] [-Graphical] [-WithIntegrations] [-Display none|gtk|sdl|default] [-StackProfile dev|full]"
     Write-Host "  Disks: server-{dev|full}.qcow2, web-{dev|full}.qcow2 (legacy server.qcow2 -> server-dev on first boot)"
     exit 0
 }
@@ -52,7 +53,7 @@ Start-KorusDockerImageCacheBackground | Out-Null
 if (-not $KeepDisks) {
     . (Join-Path $lib "Reset-KorusVmDisks.ps1")
     Write-KorusDebugLog -Location "qemu-up.ps1:disks" -Message "resetting VM disks" -HypothesisId "A" -Data @{ profile = $activeProfile }
-    Reset-KorusVmDisks -StackProfile $activeProfile
+    Reset-KorusVmDisks -StackProfile $activeProfile -IncludeIntegrations:$WithIntegrations
     Remove-Item (Join-Path $runDir "ssh-hostkeys.ps1") -Force -ErrorAction SilentlyContinue
     Write-KorusDebugLog -Location "qemu-up.ps1:disks" -Message "disks reset, ssh cache cleared" -HypothesisId "C"
 }
@@ -85,18 +86,27 @@ if (-not $sshReady) {
 Write-KorusDebugLog -Location "qemu-up.ps1:vm" -Message "starting web VM" -HypothesisId "D"
 Start-KorusQemuVm -Role web | Out-Null
 
-Write-KorusDebugLog -Location "qemu-up.ps1:end" -Message "both VMs started, bootstrap async on guests" -HypothesisId "ALL" -Data @{
+if ($WithIntegrations) {
+    Write-KorusDebugLog -Location "qemu-up.ps1:vm" -Message "starting integrations VM" -HypothesisId "E"
+    Start-KorusQemuVm -Role integrations | Out-Null
+}
+
+Write-KorusDebugLog -Location "qemu-up.ps1:end" -Message "VMs started, bootstrap async on guests" -HypothesisId "ALL" -Data @{
     note = "cloud-init runs KORUS_BUILD=1 ansible in background; monitor /var/log/korus-bootstrap.log"
 }
 
 Write-Host ""
-Write-Host "[OK] QEMU VMs started (server first, then web)" -ForegroundColor Green
+Write-Host "[OK] QEMU VMs started (server, web$(if ($WithIntegrations) { ', integrations' }))" -ForegroundColor Green
 Write-Host "  API:  http://127.0.0.1:18080/api/v1/health"
 Write-Host "  UI:   http://127.0.0.1:19088/"
+if ($WithIntegrations) {
+    Write-Host "  Integrations gateway: http://127.0.0.1:18190/health"
+    Write-Host "  Connector runtime:    http://127.0.0.1:18091 (via host forward)"
+}
 Write-Host "  LAN ($lanIp):"
 Write-Host "    API  http://${lanIp}:18080/api/v1/health"
 Write-Host "    UI   http://${lanIp}:19088/"
-Write-Host "  SSH:  ssh korus@127.0.0.1 -p 12221 / -p 12222  (pass: korus)"
+Write-Host "  SSH:  ssh korus@127.0.0.1 -p 12221 / -p 12222$(if ($WithIntegrations) { ' / -p 12223' })  (pass: korus)"
 Write-Host "  Ports bind 0.0.0.0 on host; allow 18080,18082,19088 in Windows Firewall for LAN clients."
 Write-Host "  Logs: deploy\qemu\run\*-serial.log  (guest: /var/log/korus-bootstrap.log)"
 $disp = Get-KorusQemuDisplayMode

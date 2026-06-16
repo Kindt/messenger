@@ -1,0 +1,188 @@
+package com.avandocmsg.messenger.api.plugins;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.sql.DataSource;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+public class PluginRepository {
+    private static final Logger log = LoggerFactory.getLogger(PluginRepository.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    private final DataSource dataSource;
+
+    public PluginRepository(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    public record PresetRow(
+        String id,
+        String pluginClass,
+        String runtimeKind,
+        int configSchemaVersion,
+        String capabilitiesJson
+    ) {}
+
+    public record InstanceRow(
+        UUID id,
+        UUID orgId,
+        String presetId,
+        String botName,
+        String displayName,
+        boolean enabled,
+        String pluginClass,
+        String runtimeEndpoint,
+        JsonNode configJson,
+        Instant createdAt,
+        Instant updatedAt,
+        UUID outboundTargetChatId,
+        UUID outboundActorUserId,
+        String outboundTokenHash
+    ) {}
+
+    public List<PresetRow> listPresets() {
+        var sql = """
+            SELECT id, plugin_class, runtime_kind, config_schema_version, capabilities::text
+            FROM plugin_presets
+            ORDER BY id
+            """;
+        var out = new ArrayList<PresetRow>();
+        try (var conn = dataSource.getConnection();
+             var ps = conn.prepareStatement(sql);
+             var rs = ps.executeQuery()) {
+            while (rs.next()) {
+                out.add(new PresetRow(
+                    rs.getString(1),
+                    rs.getString(2),
+                    rs.getString(3),
+                    rs.getInt(4),
+                    rs.getString(5)
+                ));
+            }
+        } catch (Exception e) {
+            log.warn("listPresets failed: {}", e.getMessage());
+        }
+        return out;
+    }
+
+    public List<InstanceRow> listInstances(UUID orgId) {
+        var sql = """
+            SELECT id, org_id, preset_id, bot_name, display_name, enabled, plugin_class,
+                   runtime_endpoint, config_json::text, created_at, updated_at,
+                   outbound_target_chat_id, outbound_actor_user_id, outbound_token_hash
+            FROM plugin_instances
+            WHERE org_id = ?
+            ORDER BY bot_name
+            """;
+        var out = new ArrayList<InstanceRow>();
+        try (var conn = dataSource.getConnection();
+             var ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, orgId);
+            try (var rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(mapInstance(rs));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("listInstances failed: {}", e.getMessage());
+        }
+        return out;
+    }
+
+    public Optional<InstanceRow> findInstance(UUID id) {
+        var sql = """
+            SELECT id, org_id, preset_id, bot_name, display_name, enabled, plugin_class,
+                   runtime_endpoint, config_json::text, created_at, updated_at,
+                   outbound_target_chat_id, outbound_actor_user_id, outbound_token_hash
+            FROM plugin_instances
+            WHERE id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, id);
+            try (var rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapInstance(rs));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("findInstance failed: {}", e.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    public boolean insertInstance(InstanceRow row) {
+        var sql = """
+            INSERT INTO plugin_instances
+            (id, org_id, preset_id, bot_name, display_name, enabled, plugin_class, runtime_endpoint, config_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb)
+            """;
+        try (var conn = dataSource.getConnection();
+             var ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, row.id());
+            ps.setObject(2, row.orgId());
+            ps.setString(3, row.presetId());
+            ps.setString(4, row.botName());
+            ps.setString(5, row.displayName());
+            ps.setBoolean(6, row.enabled());
+            ps.setString(7, row.pluginClass());
+            ps.setString(8, row.runtimeEndpoint());
+            ps.setString(9, row.configJson() != null ? row.configJson().toString() : "{}");
+            return ps.executeUpdate() == 1;
+        } catch (Exception e) {
+            log.warn("insertInstance failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean configureOutbound(UUID id, UUID targetChatId, UUID actorUserId, String tokenHash) {
+        var sql = """
+            UPDATE plugin_instances
+            SET outbound_target_chat_id = ?, outbound_actor_user_id = ?, outbound_token_hash = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, targetChatId);
+            ps.setObject(2, actorUserId);
+            ps.setString(3, tokenHash);
+            ps.setObject(4, id);
+            return ps.executeUpdate() == 1;
+        } catch (Exception e) {
+            log.warn("configureOutbound failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private static InstanceRow mapInstance(java.sql.ResultSet rs) throws Exception {
+        var configText = rs.getString(9);
+        JsonNode config = configText != null && !configText.isBlank()
+            ? MAPPER.readTree(configText)
+            : MAPPER.createObjectNode();
+        return new InstanceRow(
+            (UUID) rs.getObject(1),
+            (UUID) rs.getObject(2),
+            rs.getString(3),
+            rs.getString(4),
+            rs.getString(5),
+            rs.getBoolean(6),
+            rs.getString(7),
+            rs.getString(8),
+            config,
+            rs.getTimestamp(10).toInstant(),
+            rs.getTimestamp(11).toInstant(),
+            (UUID) rs.getObject(12),
+            (UUID) rs.getObject(13),
+            rs.getString(14)
+        );
+    }
+}

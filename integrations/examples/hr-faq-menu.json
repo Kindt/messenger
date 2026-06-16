@@ -1,0 +1,20 @@
+{
+  "welcome_text": "HR FAQ (example)",
+  "menu": {
+    "root": ["vacation", "it"],
+    "buttons": [
+      {
+        "id": "vacation",
+        "label": "Отпуск",
+        "response_text": "Заявление через корпоративный портал.",
+        "url": "https://hr.example/leave"
+      },
+      {
+        "id": "it",
+        "label": "ИТ поддержка",
+        "response_text": "Создайте заявку в Service Desk или напишите @sd-bot",
+        "url": "https://sd.example/new"
+      }
+    ]
+  }
+}

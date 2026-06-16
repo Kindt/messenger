@@ -432,6 +432,7 @@
     },
     "call": {
       "title": "视频 / 会议",
+      "titleAudio": "音频通话 / 会议",
       "collapse": "收起",
       "thumbs": "缩略图（每 2 秒刷新）",
       "remotes": "远程流（聊天参与者）",
@@ -440,6 +441,9 @@
       "micOff": "麦克风：关",
       "camOn": "摄像头：开",
       "camOff": "摄像头：关",
+      "enableVideo": "开启视频",
+      "badgeSpeaking": "正在说话",
+      "badgeSharing": "屏幕共享",
       "screen": "屏幕",
       "stopScreen": "停止共享"
     },

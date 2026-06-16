@@ -1,0 +1,10 @@
+id: naumen-sd
+plugin_class: L2
+runtime_kind: bridge
+mock_base: http://mock-apis:8080
+commands:
+  - match: { slash: "/naumen" }
+    http:
+      method: GET
+      path: "/naumen/api/tickets/{ticket_id}.json"
+    response: "Ticket {ticket_id}: {subject} ({status})"

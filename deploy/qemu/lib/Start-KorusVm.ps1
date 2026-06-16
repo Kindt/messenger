@@ -1,6 +1,6 @@
 function Start-KorusQemuVm {
     param(
-        [Parameter(Mandatory)][ValidateSet("server", "web")]
+        [Parameter(Mandatory)][ValidateSet("server", "web", "integrations")]
         [string]$Role
     )
     . (Join-Path $PSScriptRoot "..\config.ps1")
@@ -30,21 +30,39 @@ function Start-KorusQemuVm {
     $serialLog = Join-Path $KorusQemuRunDir $serialName
     $pidFile = Join-Path $KorusQemuRunDir "$Role.pid"
 
-    $mac = if ($Role -eq "server") { "52:54:00:12:34:10" } else { "52:54:00:12:34:20" }
+    $mac = switch ($Role) {
+        "server" { "52:54:00:12:34:10" }
+        "web" { "52:54:00:12:34:20" }
+        "integrations" { "52:54:00:12:34:30" }
+    }
     $name = "korus-$Role"
 
-    $hostFwd = if ($Role -eq "server") {
-        @(
-            "hostfwd=tcp:0.0.0.0:18080-:8080",
-            "hostfwd=tcp:0.0.0.0:18082-:8082",
-            "hostfwd=tcp:0.0.0.0:18081-:8081",
-            "hostfwd=tcp:0.0.0.0:17880-:7880",
-            "hostfwd=tcp:0.0.0.0:17881-:7881",
-            "hostfwd=udp:0.0.0.0:17882-:7882",
-            "hostfwd=tcp:0.0.0.0:12221-:22"
-        ) -join ","
-    } else {
-        "hostfwd=tcp:0.0.0.0:19088-:9088,hostfwd=tcp:0.0.0.0:3478-:3478,hostfwd=udp:0.0.0.0:3478-:3478,hostfwd=tcp:0.0.0.0:12222-:22"
+    $hostFwd = switch ($Role) {
+        "server" {
+            @(
+                "hostfwd=tcp:0.0.0.0:18080-:8080",
+                "hostfwd=tcp:0.0.0.0:18082-:8082",
+                "hostfwd=tcp:0.0.0.0:18081-:8081",
+                "hostfwd=tcp:0.0.0.0:17880-:7880",
+                "hostfwd=tcp:0.0.0.0:17881-:7881",
+                "hostfwd=udp:0.0.0.0:17882-:7882",
+                "hostfwd=tcp:0.0.0.0:12221-:22"
+            ) -join ","
+        }
+        "web" {
+            "hostfwd=tcp:0.0.0.0:19088-:9088,hostfwd=tcp:0.0.0.0:3478-:3478,hostfwd=udp:0.0.0.0:3478-:3478,hostfwd=tcp:0.0.0.0:12222-:22"
+        }
+        "integrations" {
+            @(
+                "hostfwd=tcp:0.0.0.0:18190-:8090",
+                "hostfwd=tcp:0.0.0.0:18091-:8091",
+                "hostfwd=tcp:0.0.0.0:18088-:8088",
+                "hostfwd=tcp:0.0.0.0:18089-:8089",
+                "hostfwd=tcp:0.0.0.0:18092-:8092",
+                "hostfwd=tcp:0.0.0.0:18087-:8080",
+                "hostfwd=tcp:0.0.0.0:12223-:22"
+            ) -join ","
+        }
     }
 
     $whpx = Test-KorusWhpxAvailable
@@ -66,8 +84,16 @@ function Start-KorusQemuVm {
     $seedDrive = @(
         "-drive", "file=$seedPath,format=raw,if=ide,media=cdrom,readonly=on"
     )
-    $memMb = if ($Role -eq "server") { $KorusQemuServerMemoryMb } else { $KorusQemuWebMemoryMb }
-    $smp = if ($Role -eq "server") { $KorusQemuServerSmp } else { $KorusQemuWebSmp }
+    $memMb = switch ($Role) {
+        "server" { $KorusQemuServerMemoryMb }
+        "web" { $KorusQemuWebMemoryMb }
+        "integrations" { $KorusQemuIntegrationsMemoryMb }
+    }
+    $smp = switch ($Role) {
+        "server" { $KorusQemuServerSmp }
+        "web" { $KorusQemuWebSmp }
+        "integrations" { $KorusQemuIntegrationsSmp }
+    }
     $errLog = Join-Path $KorusQemuRunDir "$Role-qemu.err"
     if (Test-Path $errLog) { Remove-Item -Force $errLog -ErrorAction SilentlyContinue }
 

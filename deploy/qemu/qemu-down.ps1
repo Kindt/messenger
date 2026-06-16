@@ -1,7 +1,7 @@
 ﻿. (Join-Path $PSScriptRoot "config.ps1")
 . (Join-Path $PSScriptRoot "lib\Test-KorusQemuProcess.ps1")
 
-foreach ($role in @("server", "web")) {
+foreach ($role in @("server", "web", "integrations")) {
     $pidFile = Join-Path $KorusQemuRunDir "$role.pid"
     if (Test-Path $pidFile) {
         $procId = (Get-Content $pidFile -Raw).Trim()
@@ -18,6 +18,7 @@ Get-Process qemu-system-x86_64 -ErrorAction SilentlyContinue | ForEach-Object {
     $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine
     if ($cmd -match "korus-server") { Write-Host "Stopped orphan korus-server (PID $($_.Id))" }
     elseif ($cmd -match "korus-web") { Write-Host "Stopped orphan korus-web (PID $($_.Id))" }
+    elseif ($cmd -match "korus-integrations") { Write-Host "Stopped orphan korus-integrations (PID $($_.Id))" }
     elseif ($cmd -match "korus-whpx-probe") { Write-Host "Stopped korus WHPX probe (PID $($_.Id))" }
     else { Write-Host "Stopped orphan Korus QEMU (PID $($_.Id))" }
 }

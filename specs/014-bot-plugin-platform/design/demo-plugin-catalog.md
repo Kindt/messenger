@@ -158,7 +158,25 @@ optional:
 
 ---
 
-## 7. Mock vs live (decision **C** — hybrid)
+## 7. Deployment topology (QEMU decision **D12**)
+
+**Все** bridges, sidecars, mocks, vitrine compose — на отдельной ВМ **`korus-integrations`** (`192.168.76.30`).
+
+| VM | IP | Плагины / боты |
+|----|-----|----------------|
+| `korus-server` | .10 | Router в core-api, `plugin_instances` в PG, bot-delivery; **не** bridge-контейнеры |
+| `korus-web` | .20 | — |
+| **`korus-integrations`** | **.30** | connector-runtime, *-bridge, echo-*, bitrix-php, mocks, vitrine-heavy |
+
+**Исключение L0:** FAQ-only (B01, B02) может обрабатываться **inline в router** на server (JSON без HTTP на .30) — integrations VM для L0 не обязательна.
+
+**Одновременно на .30 (vitrine-full):** ~8–12 контейнеров; RAM гостя **8–12 ГБ**.
+
+Детали: [`qemu-integrations-vm.md`](qemu-integrations-vm.md).
+
+---
+
+## 8. Mock vs live (decision **C** — hybrid)
 
 | Режим | Назначение | Когда |
 |-------|------------|-------|
@@ -209,9 +227,13 @@ profiles:
       - jira-dev
 ```
 
+### vitrine-light / vitrine-heavy
+
+Compose запускается **на `korus-integrations` guest**, не на server.
+
 ---
 
-## 8. Smokes (минимальный набор)
+## 9. Smokes (минимальный набор)
 
 | Smoke | Covers |
 |-------|--------|
@@ -226,7 +248,7 @@ profiles:
 
 ---
 
-## 9. Phasing (реализация каталога)
+## 10. Phasing (реализация каталога)
 
 | Phase | Demos | Count |
 |-------|-------|-------|
@@ -239,7 +261,7 @@ profiles:
 
 ---
 
-## 10. Документация для заказчика
+## 11. Документация для заказчика
 
 | Doc | Содержание |
 |-----|------------|

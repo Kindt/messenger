@@ -1,13 +1,16 @@
-# QEMU: две ВМ (dev-сервер + веб-клиент)
+# QEMU: две ВМ (dev-сервер + веб-клиент) + integrations (spec 014)
 
 > **Профили стендов:** QEMU **dev/full**, deploy **pilot/standard**, compose **full-server / pilot / dev-min** — см. канонический справочник [`docs/DEV_STACK_PROFILES.md`](../../docs/DEV_STACK_PROFILES.md).
 
-Две виртуальные машины Ubuntu 24.04 (cloud image) в одной виртуальной LAN **192.168.76.0/24**:
+Две обязательные виртуальные машины Ubuntu 24.04 (cloud image) в одной виртуальной LAN **192.168.76.0/24**; **третья ВМ** для ботов/плагинов (spec 014):
 
 | ВМ | IP | Роль | Порты на хосте Windows |
 |----|-----|------|------------------------|
 | `korus-server` | 192.168.76.10 | Docker + **Ansible** `qemu-server-local` | 18080→8080, 18082→8082, 18081→8081, **17880→7880** (LiveKit L2) |
 | `korus-web` | 192.168.76.20 | Docker + **Ansible** `qemu-web-local` | 19088→9088 |
+| **`korus-integrations`** | **192.168.76.30** | Docker: plugin bridges, demo sidecars, vitrine mocks (**spec 014**) | **18190**→8090 (gateway, optional) |
+
+> **Статус 3-й ВМ:** `.\scripts\qemu-up.ps1 -WithIntegrations` поднимает `korus-integrations` (Ansible `qemu-integrations-local.yml`). Design: [`specs/014-bot-plugin-platform/design/qemu-integrations-vm.md`](../../specs/014-bot-plugin-platform/design/qemu-integrations-vm.md).
 
 Репозиторий попадает в гости через **HTTP snapshot** с хоста: `http://10.0.2.2:18890/repo.tgz` → `/mnt/korus`.
 

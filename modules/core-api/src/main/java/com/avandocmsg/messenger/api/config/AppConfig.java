@@ -74,6 +74,7 @@ public class AppConfig {
         override("LIVEKIT_API_SECRET", "livekit.api.secret");
         override("LIVESTREAM_ROOM_PREFIX", "livestream.room.prefix");
         override("LIVESTREAM_MAX_WEBRTC_VIEWERS", "livestream.max.webrtc.viewers");
+        override("INTEGRATIONS_BASE_URL", "integrations.base.url");
         override("WEBRTC_STUN_URIS", "webrtc.stun.uris");
         override("SOLR_ZK", "solr.zk.hosts");
         override("SOLR_URL", "solr.http.url");
@@ -695,6 +696,11 @@ public class AppConfig {
         return mlsWireEnabled()
             ? List.of("legacy", "mls")
             : List.of("legacy", "mls-stub");
+    }
+
+    /** Spec 014: default connector-runtime on korus-integrations VM. */
+    public String integrationsBaseUrl() {
+        return props.getProperty("integrations.base.url", "http://192.168.76.30:8091").trim();
     }
 
     /** Minimum handler duration for timing normalization (GET chat etc.). 0 = disabled. Env: SECURITY_TIMING_NORMALIZATION_MIN_MS. */

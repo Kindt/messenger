@@ -1928,6 +1928,64 @@ button {
   background: #000;
   aspect-ratio: 16 / 10;
   max-height: 38vh;
+  position: relative;
+}
+
+.call-main-wrap.rtc-slot-speaking,
+.rtc-remote-slot.rtc-slot-speaking {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.call-main-wrap.rtc-slot-sharing,
+.rtc-remote-slot.rtc-slot-sharing {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #3b82f6 45%, transparent);
+}
+
+.call-participant-avatar {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.75rem;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, var(--accent), var(--accent-secondary, #7c5cff));
+  color: #fff;
+  z-index: 1;
+}
+
+.call-participant-avatar.is-hidden,
+.call-video.is-hidden {
+  display: none !important;
+}
+
+.rtc-remote-slot {
+  position: relative;
+}
+
+.rtc-remote-badge {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  z-index: 3;
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  pointer-events: none;
+}
+
+.rtc-remote-badge.is-hidden {
+  display: none;
+}
+
+.rtc-remote-slot.rtc-slot-sharing .rtc-remote-screen {
+  display: block !important;
 }
 
 .call-video {

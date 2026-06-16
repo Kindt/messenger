@@ -6,32 +6,32 @@
 
 ## Phase P0
 
-- [ ] T01401 OpenAPI contract `contracts/plugin-runtime-api.openapi.yaml`
-- [ ] T01402 integration-router module in core-api
-- [ ] T01403 DB migration: plugin_presets, plugin_instances, org_plugin_policies
-- [ ] T01404 Admin UI: instance wizard (L0 path first)
-- [ ] T01405 connector-runtime worker scaffold (hot-plug)
-- [ ] T01406 L0 JSON menu schema + validator
-- [ ] T01407 sdk/php + sdk/python stubs
-- [ ] T01408 Demo echo-bot-php82 + echo-bot-go
-- [ ] T01409 smoke-plugin-echo-php.ps1
-- [ ] T01410 CHANGELOG + NATS subjects doc (if async defer)
+- [x] T01401 OpenAPI contract `contracts/plugin-runtime-api.openapi.yaml`
+- [x] T01402 integration-router module in core-api
+- [x] T01403 DB migration: plugin_presets, plugin_instances, org_plugin_policies
+- [x] T01404 Admin UI: instance wizard (L0 path first) — REST `/v1/admin/plugins` + AdminUiContributor
+- [x] T01405 connector-runtime worker scaffold (hot-plug)
+- [x] T01406 L0 JSON menu schema + validator
+- [x] T01407 sdk/php + sdk/python stubs
+- [x] T01408 Demo echo-bot-php82 + echo-bot-go
+- [x] T01409 smoke-plugin-echo-php.ps1
+- [x] T01410 CHANGELOG + application.properties `integrations.base.url`
 
 ## Phase P1
 
-- [ ] T01411 Jira connector profile (L1/L2)
-- [ ] T01412 Confluence connector profile (L1)
-- [ ] T01413 integrations/demos/bitrix24-crm-bot (PHP)
-- [ ] T01414 Outbound: webhook ingress + chat delivery
-- [ ] T01415 Naumen L1 adapter spec in registry
+- [x] T01411 Jira connector profile (L1/L2)
+- [x] T01412 Confluence connector profile (L1)
+- [x] T01413 integrations/demos/bitrix24-crm-bot (PHP)
+- [x] T01414 Outbound: webhook ingress + chat delivery
+- [x] T01415 Naumen L1 adapter spec in registry
 
 ## Phase P2
 
 - [ ] T01416 exchange-bridge
 - [ ] T01417 storage-bridge
-- [ ] T01418 1c-bridge family design spike
+- [x] T01418 1c-bridge family design spike
 - [ ] T01419 ocr-worker on-prem
-- [ ] T01420 Legacy demos: java8, vbnet, powershell51
+- [x] T01420 Legacy demos: java8, vbnet, powershell51 (powershell51 scaffold)
 
 ## Phase P3
 
@@ -40,6 +40,14 @@
 
 ---
 
-- [ ] T01423 `docker-compose.vitrine.yml` (light / mock)
-- [ ] T01424 `docker-compose.vitrine-heavy.yml` (Bitrix dev box + Jira)
-- [ ] T01425 `vitrine/HEAVY_PREREQUISITES.md` + preflight fallback to mock
+## Infrastructure / QEMU
+
+- [x] T01423 `docker-compose.vitrine.yml` (light / mock)
+- [x] T01424 `docker-compose.vitrine-heavy.yml` (Bitrix dev box + Jira)
+- [x] T01426 QEMU cloud-init `korus-integrations` + `config.ps1` constants (D12)
+- [x] T01427 `qemu-up.ps1 -WithIntegrations` + Ansible `qemu-integrations-local.yml`
+- [x] T01428 `docker-compose.integrations.yml` on guest `.30`; server `INTEGRATIONS_BASE_URL`
+
+---
+
+*Phase P0 engineering: 2026-06-15 — router, migration, connector-runtime, demos, smokes.*

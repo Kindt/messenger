@@ -1,0 +1,7 @@
+{
+  "key": "OPS-1",
+  "fields": {
+    "summary": "Deploy monitoring stack",
+    "status": { "name": "In Progress" }
+  }
+}

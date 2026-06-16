@@ -1,0 +1,35 @@
+---
+# Run on QEMU integrations guest (spec 014)
+- name: Korus QEMU integrations guest deploy
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars:
+    korus_repo_root: "{{ korus_repo_root | default('/mnt/korus') }}"
+    korus_build_images: "{{ korus_build_images | default(false) | bool }}"
+    korus_integrations_compose: "{{ korus_repo_root }}/integrations/docker-compose.integrations.yml"
+  tasks:
+    - name: Ensure docker is running
+      ansible.builtin.command: systemctl is-active docker
+      changed_when: false
+
+    - name: Compose up integrations stack
+      ansible.builtin.shell: |
+        set -euo pipefail
+        cd "{{ korus_repo_root }}/integrations"
+        if [ "{{ korus_build_images | bool }}" = "true" ]; then
+          docker compose -f docker-compose.integrations.yml up -d --build
+        else
+          docker compose -f docker-compose.integrations.yml up -d --build
+        fi
+      args:
+        executable: /bin/bash
+
+    - name: Wait for integrations gateway health
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8090/health"
+        status_code: 200
+      register: gw
+      until: gw.status == 200
+      retries: 36
+      delay: 10
