@@ -36,4 +36,4 @@ korus_server_env_path: "{{ korus_repo_root }}/docker/.env.korus-server"
 # L2 live streaming: browser on Windows host uses forwarded port 17880 (see deploy/qemu/README.md)
 korus_livekit_url: "ws://127.0.0.1:17880"
 korus_livekit_api_key: devkey
-korus_livekit_api_secret: secret
+korus_livekit_api_secret: korus-dev-livekit-secret-32bytes!

@@ -21,7 +21,9 @@ Bootstrap и redeploy внутри ВМ — **`deploy/qemu/vm-bootstrap/run-ansi
 | web | `playbooks/qemu-web-local.yml` | `inventory/qemu/localhost.yml` + `korus_qemu_host_lan_ip` (LAN IP Windows для WS в браузере) |
 
 Между ВМ: API **`http://192.168.76.10:8080`**, ws-gateway **`192.168.76.10:8082`**.  
-Браузер на Windows: API **`http://127.0.0.1:18080`**, UI **`http://127.0.0.1:19088`**, WS **`ws://<host-lan-ip>:19088/ws`**, LiveKit **`ws://127.0.0.1:17880`** (spec 013 L2, после redeploy с `livekit` в full-server).
+Браузер на Windows: API **`http://127.0.0.1:18080`**, UI **`http://127.0.0.1:19088`**, WS **`ws://<host-lan-ip>:19088/ws`**, LiveKit **`ws://127.0.0.1:17880`** (spec 013 L2).
+
+**Параллельные агенты / без `qemu-down`:** если server VM поднята до проброса `:17880`, запустите **`.\scripts\livekit-host-tunnel.ps1`** (SSH `:17880` → guest `:7880`). UI L2: **`qemu-dev-mode.ps1 -Mode enable-hotswap`** + **`sync-ui`** (~1–3 мин, не полный `rebuild-web`).
 
 Ручной redeploy без сброса дисков:
 

@@ -50,9 +50,9 @@ $liveEnabled = $false
 Step "Media capabilities" {
     $caps = Invoke-RestMethod -Uri "$BaseUrl/api/v1/media/capabilities" -Method Get
     if ($null -ne $caps.live_streaming_enabled) {
-        $liveEnabled = [bool]$caps.live_streaming_enabled
+        $script:liveEnabled = [bool]$caps.live_streaming_enabled
     }
-    Write-Host "live_streaming_enabled=$liveEnabled max=$($caps.live_max_webrtc_viewers)"
+    Write-Host "live_streaming_enabled=$script:liveEnabled max=$($caps.live_max_webrtc_viewers)"
 }
 
 Step "Create group chat" {
@@ -62,20 +62,20 @@ Step "Create group chat" {
         member_ids = @()
     } | ConvertTo-Json
     $chat = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats" -Method Post -Headers $hdr -Body $body -ContentType "application/json; charset=utf-8"
-    $chatId = $chat.chat_id
-    if (-not $chatId) { $chatId = $chat.chatId }
-    if (-not $chatId) { $chatId = $chat.id }
-    if (-not $chatId) { Fail "No chat_id" }
-    Write-Host "chat_id=$chatId"
+    $script:chatId = $chat.chat_id
+    if (-not $script:chatId) { $script:chatId = $chat.chatId }
+    if (-not $script:chatId) { $script:chatId = $chat.id }
+    if (-not $script:chatId) { Fail "No chat_id" }
+    Write-Host "chat_id=$script:chatId"
 }
 
 Step "Create live session" {
     $body = @{ title = "Smoke live $suffix" } | ConvertTo-Json
     try {
-        $created = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/${chatId}/live-sessions" -Method Post -Headers $hdr -Body $body -ContentType "application/json; charset=utf-8"
-        $sessionId = $created.live_session_id
-        if (-not $sessionId) { Fail "No live_session_id in response" }
-        Write-Host "live_session_id=$sessionId"
+        $created = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$($script:chatId)/live-sessions" -Method Post -Headers $hdr -Body $body -ContentType "application/json; charset=utf-8"
+        $script:sessionId = $created.live_session_id
+        if (-not $script:sessionId) { Fail "No live_session_id in response" }
+        Write-Host "live_session_id=$script:sessionId"
     } catch {
         $code = $null
         if ($_.Exception.Response) {
@@ -94,25 +94,25 @@ Step "Create live session" {
 }
 
 Step "List live sessions" {
-    $list = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/${chatId}/live-sessions?active_only=true" -Method Get -Headers $hdr
+    $list = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$($script:chatId)/live-sessions?active_only=true" -Method Get -Headers $hdr
     if (-not ($list -is [System.Array]) -or $list.Count -lt 1) {
         Fail "Expected at least one active session"
     }
 }
 
-if ($liveEnabled) {
+if ($script:liveEnabled) {
     Step "Join live session" {
-        $join = Invoke-RestMethod -Uri "$BaseUrl/api/v1/live-sessions/${sessionId}/join" -Method Post -Headers $hdr
+        $join = Invoke-RestMethod -Uri "$BaseUrl/api/v1/live-sessions/$($script:sessionId)/join" -Method Post -Headers $hdr -ContentType "application/json; charset=utf-8"
         if (-not $join.access_token) { Fail "join missing access_token" }
         Write-Host "role=$($join.role) viewers=$($join.viewer_count)"
     }
 
     Step "Leave live session" {
-        Invoke-WebRequest -Uri "$BaseUrl/api/v1/live-sessions/${sessionId}/leave" -Method Post -Headers $hdr -UseBasicParsing | Out-Null
+        Invoke-WebRequest -Uri "$BaseUrl/api/v1/live-sessions/$($script:sessionId)/leave" -Method Post -Headers $hdr -UseBasicParsing | Out-Null
     }
 
     Step "End live session" {
-        Invoke-WebRequest -Uri "$BaseUrl/api/v1/live-sessions/${sessionId}/end" -Method Post -Headers $hdr -UseBasicParsing | Out-Null
+        Invoke-WebRequest -Uri "$BaseUrl/api/v1/live-sessions/$($script:sessionId)/end" -Method Post -Headers $hdr -UseBasicParsing | Out-Null
     }
 } else {
     Write-Host "[SKIP] join/leave/end - live_streaming_enabled=false" -ForegroundColor Yellow

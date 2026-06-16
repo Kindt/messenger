@@ -141,7 +141,7 @@ services:
       WEBRTC_STUN_URIS: stun:stun.l.google.com:19302
       LIVEKIT_URL: ${LIVEKIT_URL:-ws://127.0.0.1:7880}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
-      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-korus-dev-livekit-secret-32bytes!}
     depends_on:
       postgres-hot:
         condition: service_healthy
@@ -161,6 +161,8 @@ services:
   livekit:
     image: livekit/livekit-server:v1.8.4
     command: --dev --bind 0.0.0.0
+    environment:
+      LIVEKIT_KEYS: "devkey: korus-dev-livekit-secret-32bytes!"
     ports:
       - "7880:7880"
       - "7881:7881"
@@ -367,6 +369,7 @@ services:
       DB_USER: avandocmsg
       DB_PASSWORD: avandocmsg
       BOT_WEBHOOK_URL: ${BOT_WEBHOOK_URL:-}
+      BOT_WEBHOOK_HMAC_SECRET: ${BOT_WEBHOOK_HMAC_SECRET:-}
       BOT_SUBSCRIPTIONS_ENABLED: ${BOT_SUBSCRIPTIONS_ENABLED:-false}
     depends_on:
       postgres-hot:

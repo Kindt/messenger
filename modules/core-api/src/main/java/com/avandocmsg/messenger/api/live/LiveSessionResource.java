@@ -7,7 +7,6 @@ import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -20,7 +19,6 @@ import jakarta.ws.rs.core.SecurityContext;
 
 @Path("/v1/live-sessions")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 @Tag(name = "Live streaming", description = "Прямые эфиры — join/end по id сессии")
 public class LiveSessionResource {
 

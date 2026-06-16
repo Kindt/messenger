@@ -23,7 +23,6 @@ import jakarta.ws.rs.core.SecurityContext;
 
 @Path("/v1/chats/{chatId}/live-sessions")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 @Tag(name = "Live streaming", description = "Прямые эфиры в чате (WebRTC SFU, spec 013 L2)")
 public class ChatLiveSessionResource {
 
@@ -37,6 +36,7 @@ public class ChatLiveSessionResource {
     }
 
     @POST
+    @Consumes(MediaType.APPLICATION_JSON)
     @Operation(summary = "Начать эфир в чате")
     public Response create(@PathParam("chatId") String chatId,
                            CreateLiveSessionRequest request,

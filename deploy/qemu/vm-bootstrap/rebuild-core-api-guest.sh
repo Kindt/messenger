@@ -5,6 +5,7 @@ set -eu
 REPO="${KORUS_REPO_ROOT:-/mnt/korus}"
 COMPOSE="$REPO/docker/docker-compose.full-server.yml"
 ENV_FILE="$REPO/docker/.env.korus-server"
+LIVEKIT_ENV="$REPO/docker/.env.livekit"
 LOG="${KORUS_BOOTSTRAP_LOG:-/var/log/korus-bootstrap.log}"
 
 exec >>"$LOG" 2>&1
@@ -31,11 +32,28 @@ if [ -f "$ENV_FILE" ]; then
   set +a
 fi
 
+if [ ! -f "$LIVEKIT_ENV" ] || ! grep -q "korus-dev-livekit-secret-32bytes" "$LIVEKIT_ENV" 2>/dev/null; then
+  sudo tee "$LIVEKIT_ENV" >/dev/null <<'EOF'
+LIVEKIT_URL=ws://127.0.0.1:17880
+LIVEKIT_API_KEY=devkey
+LIVEKIT_API_SECRET=korus-dev-livekit-secret-32bytes!
+EOF
+  sudo chmod 644 "$LIVEKIT_ENV"
+  echo ">>> wrote $LIVEKIT_ENV (QEMU host browser via :17880)"
+fi
+if [ -f "$LIVEKIT_ENV" ]; then
+  set -a
+  # shellcheck source=/dev/null
+  . "$LIVEKIT_ENV"
+  set +a
+  export LIVEKIT_URL LIVEKIT_API_KEY LIVEKIT_API_SECRET
+fi
+
 echo ">>> docker compose build core-api (incremental Gradle in image)"
 sudo docker compose -f "$COMPOSE" build core-api
 
-echo ">>> docker compose up -d core-api"
-sudo docker compose -f "$COMPOSE" up -d core-api
+echo ">>> docker compose up -d --force-recreate livekit core-api"
+sudo -E docker compose -f "$COMPOSE" up -d --force-recreate livekit core-api
 
 echo ">>> docker compose up -d (ensure workers/infra not left Exited after partial restart)"
 sudo docker compose -f "$COMPOSE" up -d

@@ -32,6 +32,7 @@
 | **QEMU wsUrl probe (host)** | `scripts/test-korus-wsurl.ps1` | manual; outer gate preflight | expects `host-lan-ip.txt` + `:19088/web-client-env.js` |
 | **Read replica env probe** | `scripts/smoke-read-replica-env.sh` | manual (guest) | after `replica-stack-up.sh` or `replica-lab-up.sh` |
 | **k6 pilot baseline** | `scripts/load/pilot-health.js` | manual (host :18080) | see `scripts/load/README.md` |
+| **k6 QEMU baseline (T604 substitute)** | `scripts/run-k6-qemu-baseline.ps1` | manual | writes `deploy/qemu/run/k6-pilot-baseline.json`; fallback if k6 absent |
 | **Pilot stack (spec 006 FR-OPT-01)** | `scripts/smoke-pilot-stack.sh` | manual (QEMU server guest) | `scripts/pilot-stack-up.sh`; no Solr/ZK; SQL search |
 | **Scale stack (spec 006 FR-OPT-04)** | `scripts/smoke-messaging-e2e.sh --load-rounds N` | manual (guest) | `scripts/scale-stack-up.sh`; `scripts/verify-nats-queue-group.sh`; `scripts/profiling/load-message-pipeline.sh` |
 | **Enterprise stack (spec 006 FR-OPT-04/05)** | `scripts/smoke-messaging-e2e.sh --load-rounds N` | manual (guest) | `scripts/enterprise-stack-up.sh`; optional `KORUS_ENABLE_READ_REPLICA=1` + `replica-stack-up.sh` |
@@ -45,7 +46,8 @@
 | **Push-worker (QEMU guest)** | `scripts/smoke-push-worker-qemu.ps1` | manual | server guest `:9194/health` via SSH `:12221` |
 | **Preview-worker (QEMU guest)** | `scripts/smoke-preview-worker-qemu.ps1` | manual | server guest `:9195/health` via SSH `:12221` |
 | **Bot API REST (spec 009/010)** | `scripts/smoke-bot-api.sh` | manual | `.ps1`; host `:18080`; register/subscribe/sendMessage; Playwright `bot-api.spec.ts` |
-| **Live streaming L2 (spec 013)** | `scripts/smoke-live-session.ps1` | manual | host `:18080`; needs `V034` + LiveKit env; skip join if 503 |
+| **Live streaming L2 (spec 013)** | `scripts/smoke-live-session.ps1` | manual | host `:18080`; needs `V034` + LiveKit env |
+| **LiveKit tunnel (QEMU, no VM restart)** | `scripts/livekit-host-tunnel.ps1` | manual | host `:17880` -> guest `:7880`; parallel-agent friendly |
 | Read receipts (API + WS) | `scripts/smoke-read-receipts.ps1` | manual | UI ✓✓ check optional |
 | Retention hot-row purge status | `scripts/smoke-retention-purge.ps1` | manual | requires admin token + stack |
 | Retention file cleanup metrics | `scripts/smoke-retention-file-cleanup.ps1` | manual | metrics on retention worker port |
@@ -57,7 +59,7 @@
 | **k6 stage baseline** | `scripts/run-k6-stage-baseline.ps1` | manual | delegates to `run-k6-qemu-baseline.ps1` |
 | **TURN reachability** | `scripts/smoke-turn.ps1` | manual | TCP 3478 + optional `web-client-env.js` ICE |
 | **TURN relay ICE config** | `scripts/smoke-turn-relay.ps1` | manual | Extends smoke-turn; credential in env.js |
-| **TURN (QEMU)** | `scripts/smoke-turn-qemu.ps1` | manual | guest coturn + host `:3478` after web VM hostfwd; `-GuestOnly` |
+| **TURN (QEMU)** | `scripts/smoke-turn-qemu.ps1` | manual | inner gate: `-GuestOnly`; full probe needs web VM hostfwd `:3478` |
 | **Cell multi-org (spec 011)** | `scripts/smoke-cell-multi-org-qemu.ps1` | manual | host `:18080`; creates 2 orgs via admin API |
 | **GDPR export completeness (P1-6)** | `scripts/smoke-export-gdpr-fulfillment.ps1` | manual | admin export-compliance-guide + parity API |
 | **File image resize (P1-4)** | `scripts/smoke-file-resize.ps1` | manual | host `:18080`; upload PNG → `/resize?w=32&h=32` |
