@@ -19,7 +19,7 @@ dependencies {
     implementation("io.minio:minio:8.5.17")
     implementation("com.zaxxer:HikariCP:5.1.0")
     implementation("org.postgresql:postgresql:42.7.1")
-    implementation("ch.qos.logback:logback-classic:1.5.3")
+    implementation("ch.qos.logback:logback-classic:1.5.34")
     implementation("org.slf4j:slf4j-api:2.0.12")
 
     // Prometheus (same stack as modules/core-api metrics baseline)
