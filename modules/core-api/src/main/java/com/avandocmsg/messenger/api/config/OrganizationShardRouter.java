@@ -18,15 +18,20 @@ public final class OrganizationShardRouter {
 
     public static void logShardConfig(DatabaseConfig databaseConfig) {
         databaseConfig.shardDataSource().ifPresentOrElse(
-            ds -> log.info("FR-OPT-09 shard pool configured (routing still primary-only scaffold)"),
+            ds -> log.info("FR-OPT-09 shard pool configured (org hash routing: even=primary odd=shard)"),
             () -> log.debug("FR-OPT-09 shard pool not configured"));
     }
 
-    /** Placeholder: org-based shard selection (always primary until Citus/2-shard ADR). */
+    /** Org-based shard selection: even hash → primary, odd → shard when configured. */
     public static DataSource routeForOrg(DataSource primary, DataSource shard, UUID orgId) {
         if (shard == null || orgId == null) {
             return primary;
         }
-        return primary;
+        return selectShard(primary, shard, orgId);
+    }
+
+    static DataSource selectShard(DataSource primary, DataSource shard, UUID orgId) {
+        int bucket = Math.floorMod(orgId.hashCode(), 2);
+        return bucket == 0 ? primary : shard;
     }
 }

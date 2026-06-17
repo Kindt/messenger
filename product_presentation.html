@@ -27,6 +27,7 @@
     .tag-partial { background: #fef9c3; color: #854d0e; }
     .tag-planned { background: #e0e7ff; color: #3730a3; }
     .tag-out { background: #f3f4f6; color: #4b5563; }
+    td.status-qual { font-size: 13px; color: #4b5563; max-width: 280px; }
     .case { margin: 10px 0; padding: 12px 14px; background: #fafafa; border-left: 4px solid #6366f1; border-radius: 0 8px 8px 0; }
     .case h4 { margin: 0 0 6px; color: #111; }
     .meta { color: #6b7280; font-size: 13px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; }
@@ -51,6 +52,10 @@
     .arrow-admin { stroke: #db2777; stroke-width: 1.5; fill: none; stroke-dasharray: 4 3; }
     .formula { background: #f3f4f6; padding: 12px 16px; border-radius: 8px; font-family: ui-monospace, monospace; font-size: 13px; margin: 10px 0; }
     .money { font-weight: 600; color: #047857; }
+    sup.fn-ref { font-size: 10px; line-height: 0; }
+    sup.fn-ref a { color: #4338ca; text-decoration: none; font-weight: 700; }
+    sup.fn-ref a:hover { text-decoration: underline; }
+    ol.fn-list li { margin: 12px 0; }
     @media print { body { margin: 12px; max-width: none; } .note, .warn, .cost-box, .fig { break-inside: avoid; } }
 </style>
 </head>
@@ -58,7 +63,7 @@
 
 <h1>Продуктовая презентация<br/>Korus Messenger (AvandocMsg)</h1>
 <div class="meta">
-  <b>Версия:</b> 2.5.4 &nbsp;|&nbsp; <b>Дата:</b> 16 июня 2026 &nbsp;|&nbsp;
+  <b>Версия:</b> 2.6.2 &nbsp;|&nbsp; <b>Дата:</b> 16 июня 2026 &nbsp;|&nbsp;
   <b>Аудитория:</b> руководители, юристы, продажи, бухгалтерия, операторы, служба безопасности<br/>
   <b>Формат:</b> презентация продукта для заказчика; приложение I — каталог <b>страниц</b> клиента и админки
 </div>
@@ -73,7 +78,7 @@
   <div class="req" style="margin-top:12px;">Обозначения статусов</div>
   <div class="comment">
     <span class="tag tag-done">Реализовано</span> — доступно сейчас &nbsp;
-    <span class="tag tag-partial">Частично</span> — есть, но с ограничениями &nbsp;
+    <span class="tag tag-partial">Частично</span> — функция в продукте; для prod нужны работы IT/sign-off (колонка «Оговорка», расшифровка — <a href="#s3-2">§3.2</a>) &nbsp;
     <span class="tag tag-planned">Запланировано</span> — в планах развития &nbsp;
     <span class="tag tag-out">Вне текущей поставки</span> — отдельный продукт / вне репозитория
   </div>
@@ -87,21 +92,37 @@
     PR gate <b>buildIntegrity</b> (spotless ratchet, npm audit, benchmark, unit-тесты).<br/>
     <b>Инженерная безопасность (§24):</b> security headers, rate limit, timing normalization, WebSocket origin — <b>реализовано</b>;
     автоматическая проверка <code>security-gate</code> на тестовом стенде.<br/>
-    <b>До промышленного запуска (ops):</b> TLS на stage/prod (стенд с <b>сентября 2026</b>), formal sign-off E2EE, Web Push VAPID prod,
-    TURN за NAT на prod, нагрузочный soak на stage, GDPR export strict policy.<br/>
+    <b>До промышленного запуска (эксплуатация, ops):</b> защищённый HTTPS на prod/stage, приёмка E2EE (sign-off),
+    push-ключи VAPID, сервер ретрансляции видео (TURN) для звонков из сетей с NAT/firewall, нагрузочный soak на stage,
+    политика export для GDPR — см. расшифровку в <b>§3.2</b> и сноски <a href="#fn-legend">†…⊕</a>.<br/>
     <b>ФСТЭК / реестр ПО:</b> отдельный организационный трек, <b>без обещания срока</b> в материалах для заказчика.<br/>
-    <b>Не в текущей поставке:</b> мобильные приложения, Live §28 (код), sharding PG на Enterprise.
+    <b>Не в текущей поставке:</b> мобильные приложения, Live §28 (код), sharding PG на Enterprise.<br/>
+    <b>Платформа ботов-плагинов (L0–L3):</b> админка preset/policy/instance, bridges (Exchange, 1С, storage, OCR/AI demo),
+    polyglot sidecars (PHP/Go/Java8/VB.NET/PowerShell); узел интеграций отдельно от сервера чатов — <b>реализовано</b>, smokes на тестовом стенде.
   </div>
 </div>
 
+
+
+<div class="note" id="fn-legend">
+  <div class="req">Сноски: данные до ops sign-off</div>
+  <div class="comment">
+    В презентации помечены блоки, где цифры или статусы <b>синтетические / расчётные</b> —
+    они нужны для планирования и переговоров, но <b>могут измениться</b> после этапа
+    <b>ops sign-off</b> (развёртывание stage/prod, TLS, нагрузочные прогоны, backup drill,
+    формальная приёмка E2EE и push). Легенда:
+    <ul class="small"><li><b>†</b> — Модель нагрузки и sizing</li><li><b>‡</b> — Лабораторные замеры НТ</li><li><b>§</b> — RPO / RTO и SLA</li><li><b>¶</b> — Стоимость инфраструктуры</li><li><b>#</b> — Статусы «Частично» (TLS, E2EE, Push, TURN)</li><li><b>⊕</b> — Sizing узла интеграций</li></ul>
+    Подробные пояснения — в блоке <a href="#fn-list">«Сноски (расшифровка)»</a> в конце документа.
+  </div>
+</div>
 
 <h2 id="toc">Содержание</h2>
 <ol class="toc">
   <li><a href="#s1">1. Резюме для руководства</a></li>
   <li><a href="#s2">2. Для кого этот продукт</a></li>
-  <li><a href="#s3">3. Словарь простыми словами</a></li>
+  <li><a href="#s3">3. Словарь</a> (<a href="#s3-2">для закупки и финансов</a>, <a href="#s3-3">оговорки §4</a>)</li>
   <li><a href="#s4">4. Возможности системы</a></li>
-  <li><a href="#s5">5. Кейсы использования (24 + 3 planned)</a></li>
+  <li><a href="#s5">5. Кейсы использования (25 + 2 planned)</a></li>
   <li><a href="#s6">6. Роли и права</a></li>
   <li><a href="#s7">7. Безопасность и соответствие</a></li>
   <li><a href="#s8">8. Сравнение с исходным техническим ТЗ</a></li>
@@ -114,6 +135,7 @@
   <li><a href="#s15">15. Профили и ограничения для пользователя</a></li>
   <li><a href="#s16">16. Приложения</a> (<a href="#app-i">I — страницы и URL</a>)</li>
   <li><a href="#s17">17. Стоимость владения — примеры расчётов</a> (<a href="#s17-7">диаграмма за год</a>)</li>
+  <li><a href="#fn-list">Сноски — синтетические данные до ops sign-off</a></li>
 </ol>
 
 <hr/>
@@ -315,19 +337,20 @@
   <li>Автотесты UI: <b>34/34</b> Playwright на тестовом стенде (2026-06-16)</li>
 </ul>
 
-<h3>Частично готово (код есть, нужен ops / sign-off)</h3>
+<h3>Частично готово (код есть, нужны работы IT / приёмка)</h3>
 <ul>
-  <li><b>Видеозвонки</b> — mesh WebRTC из чата; за NAT может потребоваться TURN-сервер</li>
-  <li><b>E2EE (hybrid MLS)</b> — в браузере и на сервере; массовое prod после Product/Security sign-off</li>
-  <li><b>Web Push / PWA</b> — service worker и push-worker; конфигурация VAPID в поставке ✓; проверка доставки на stage — ops</li>
-  <li><b>HTTPS</b> — автоматизация TLS для stage/prod в поставке; выпуск сертификатов на контуре заказчика</li>
+  <li><b>Видеозвонки</b> — из чата работают; для филиалов и домашних сетей IT настраивает сервер ретрансляции (TURN), см. <a href="#s3-2">§3.2</a> (NAT, firewall)</li>
+  <li><b>E2EE (сквозное шифрование)</b> — реализовано; массовое включение после sign-off ИБ и руководства</li>
+  <li><b>Web Push / PWA</b> — уведомления в браузере; боевые ключи VAPID выдаёт IT на стенде заказчика</li>
+  <li><b>HTTPS</b> — инструкции в поставке; сертификаты и домен оформляет IT на вашем контуре</li>
 </ul>
 
 <h3>До промышленного запуска</h3>
 <ul>
   <li>Formal load test soak на stage (k6; стенд — с сентября 2026)</li>
   <li>Согласованная с юристами политика полноты export (GDPR)</li>
-  <li>SSO federation, Live-streaming, мобильные клиенты — <b>не в текущей поставке</b> (§9); Bot API MVP — <b>частично</b> (§12)</li>
+  <li>SSO federation, Live-streaming, мобильные клиенты — <b>не в текущей поставке</b> (§9); SLA webhook ботов на prod — работа эксплуатации (§12)</li>
+  <li><b>Платформа ботов-плагинов (L0–L3):</b> admin, bridges, polyglot sidecars; отдельный узел интеграций — <b>реализовано</b></li>
 </ul>
 
 <hr/>
@@ -355,50 +378,101 @@
   <tr><td>Сервер и фоновые службы</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Мобильные приложения iOS/Android</td><td><span class="tag tag-out">Вне текущей поставки</span></td></tr>
   <tr><td>Desktop-клиент</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>Bot API (боты и интеграции)</td><td><span class="tag tag-partial">Частично</span> — MVP: register, webhook, sendMessage</td></tr>
+  <tr><td>Bot API + платформа плагинов</td><td><span class="tag tag-done">Реализовано</span> — REST L2 + L0–L3, admin, bridges, sidecars</td></tr>
   <tr><td>Прямые эфиры (all-hands на сотни зрителей)</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
 </table>
 
-<hr/>
-<h2 id="s3">3. Словарь простыми словами</h2>
-<table>
-  <tr><th>Термин</th><th>Объяснение</th></tr>
-  <tr><td>Чат / Группа</td><td>Переписка один на один или с несколькими участниками</td></tr>
-  <tr><td>«Хранилище»</td><td>Личный «склад» важных сообщений и файлов</td></tr>
-  <tr><td>Read receipt</td><td>Отметка «кто прочитал» (если разрешено настройками)</td></tr>
-  <tr><td>Ретенция</td><td>Правила: как долго хранить переписку и когда удалять</td></tr>
-  <tr><td>Legal hold</td><td>Заморозка удаления по требованию юристов</td></tr>
-  <tr><td>Экспорт (export)</td><td>Выгрузка переписки в файл для расследования или архива</td></tr>
-  <tr><td>E2EE (сквозное шифрование)</td><td>Hybrid MLS: шифрование в браузере; сервер не хранит plaintext при активном MLS</td></tr>
-  <tr><td>Организация (tenant)</td><td>Логическое подразделение — одна компания или ведомство</td></tr>
-  <tr><td>TTL сообщения</td><td>Автоудаление сообщения через заданное время</td></tr>
-  <tr><td>SLA</td><td>Договорённость о доступности сервиса и времени восстановления</td></tr>
-  <tr><td>RPO / RTO</td><td>Допустимая потеря данных / время восстановления после сбоя</td></tr>
-  <tr><td>Pilot / Standard / Enterprise</td><td>Три профиля масштаба — от пилота до крупного контура</td></tr>
-</table>
 
 <hr/>
-<h2 id="s4">4. Возможности системы</h2>
+<h2 id="s3">3. Словарь простыми словами</h2>
+<p class="comment">Если в документе встречаются непонятные слова — ищите их здесь. Раздел <b>3.2</b> особенно полезен бухгалтерии, закупке и руководству без IT-бэкграунда.</p>
+
+<h3 id="s3-1">3.1 Основные понятия продукта</h3>
 <table>
-  <tr><th>Область</th><th>Примеры</th><th>Статус</th></tr>
-  <tr><td>Вход и сессия</td><td>Регистрация, вход, выход, продление сессии</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Чаты и сообщения</td><td>1:1, группы, edit/delete/forward/pin/reactions/TTL</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Мгновенная доставка</td><td>Без обновления страницы, «печатает…»</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Контакты и поиск</td><td>Список, импорт; Solr (Standard) или SQL (Pilot)</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Файлы</td><td>Загрузка, превью, публичные ссылки</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Экспорт чата</td><td>JSON/ZIP архив</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Звонки</td><td>WebRTC mesh из чата, screen share; TURN — ops</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>E2EE</td><td>Hybrid MLS в браузере; prod после sign-off</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>Push / PWA</td><td>SW, push-worker, UI; VAPID в конфигурации ✓</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>Админка</td><td><code>/admin/</code> — org, ретенция, legal hold, audit</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Ретенция и архив</td><td>Многоуровневое хранение, автоочистка</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Локализация</td><td>ru, en, be, kk, zh, ko</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Bot API</td><td>Боты для Service Desk и автоматизации</td><td><span class="tag tag-partial">Частично</span> — MVP: register, webhook, sendMessage</td></tr>
-  <tr><td>Live-streaming</td><td>All-hands, HLS-трансляции</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>Prod HTTPS</td><td>Развёртывание TLS в поставке ✓; deploy на stage — ops</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><th>Термин</th><th>Объяснение</th></tr>
+  <tr><td>Чат / группа</td><td>Переписка один на один или с несколькими участниками</td></tr>
+  <tr><td>«Хранилище»</td><td>Личный «склад» важных сообщений и файлов</td></tr>
+  <tr><td>Отметка «прочитано»</td><td>Видно, кто ознакомился с сообщением (если это разрешено настройками)</td></tr>
+  <tr><td>Ретенция</td><td>Правила: как долго хранить переписку и когда удалять</td></tr>
+  <tr><td>Legal hold</td><td>Заморозка удаления по требованию юристов (расследование, суд)</td></tr>
+  <tr><td>Экспорт</td><td>Выгрузка переписки в файл (JSON/ZIP) для архива или проверки</td></tr>
+  <tr><td>Организация</td><td>Логическое подразделение — одна компания или ведомство в системе</td></tr>
+  <tr><td>Автоудаление (TTL)</td><td>Сообщение исчезает через заданное время</td></tr>
+  <tr><td>Pilot / Standard / Enterprise</td><td>Три профиля масштаба — от пилота до крупного контура</td></tr>
+  <tr><td>SLA</td><td>Договорённость о доступности сервиса и сроках восстановления после сбоя</td></tr>
+  <tr><td>RPO / RTO</td><td>Допустимая потеря данных / время восстановления после аварии</td></tr>
+</table>
+
+<h3 id="s3-2">3.2 Для закупки, финансов и руководства</h3>
+<div class="note">
+  <div class="req">Главное различие</div>
+  <div class="comment">
+    <b>Продукт (разработка)</b> — функции мессенджера в поставке: чаты, админка, боты и т.д.<br/>
+    <b>Эксплуатация (ops)</b> — работы <b>IT заказчика или подрядчика</b> при запуске «в бой»: сертификаты, домены, ключи, согласования.
+    Статус «Частично» почти всегда означает: <b>в программе уже есть</b>, но <b>ввод в промышленную эксплуатацию</b> ждёт действий на стороне заказчика — это отдельная строка бюджета/плана работ, не «недоделка разработчика».
+  </div>
+</div>
+<table>
+  <tr><th>Термин / сокращение</th><th>Простыми словами</th><th>Кто обычно делает</th></tr>
+  <tr><td><b>Ops</b> (эксплуатация)</td><td>Настройка серверов, мониторинг, резервные копии, сертификаты, ключи — всё, что нужно, чтобы система <b>работала у вас</b> каждый день</td><td>IT заказчика, DevOps-подрядчик</td></tr>
+  <tr><td><b>Prod</b> (промышленный контур)</td><td>«Боевая» среда, где работают все сотрудники; от неё зависят SLA и отчётность</td><td>IT заказчика</td></tr>
+  <tr><td><b>Stage</b> (предпром / стенд)</td><td>Копия prod для проверок: нагрузка, безопасность, обучение админов — без риска для пользователей</td><td>IT заказчика</td></tr>
+  <tr><td><b>Sign-off</b> (приёмка)</td><td>Письменное согласование «можно включать для всех»: безопасность, юристы, руководство</td><td>ИБ, юристы, CIO</td></tr>
+  <tr><td><b>HTTPS / TLS</b></td><td>Защищённое соединение — «замочек» в браузере; данные по сети не идут «открытым текстом»</td><td>IT + выпуск сертификата</td></tr>
+  <tr><td><b>DNS</b></td><td>«Адресная книга» интернета: имя сайта (messenger.company.ru) → IP сервера</td><td>IT / регистратор домена</td></tr>
+  <tr><td><b>Vault</b> (хранилище секретов)</td><td>Отдельное место для паролей и ключей серверов — <b>не</b> в файлах и не в переписке</td><td>IT / ИБ</td></tr>
+  <tr><td><b>NAT</b></td><td>Когда компьютер в офисе или дома выходит в интернет через «общий выход» и снаружи его <b>не видно напрямую</b>. Из‑за этого видеозвонки «из дома» или из филиала иногда не устанавливаются с первого раза</td><td>— (особенность сети)</td></tr>
+  <tr><td><b>Firewall</b> (межсетевой экран)</td><td>Фильтр на границе сети: часть трафика (в т.ч. видео) может быть запрещена политикой ИБ</td><td>ИБ / сетевики</td></tr>
+  <tr><td><b>TURN</b> (сервер ретрансляции)</td><td>«Помощник» для видеозвонков: пропускает звонок через разрешённый сервер в вашем контуре, если NAT/firewall мешают напрямую</td><td>IT (отдельная VM или сервис)</td></tr>
+  <tr><td><b>E2EE</b> (сквозное шифрование)</td><td>Текст шифруется на компьютере отправителя; сервер хранит «закрытый конверт», прочитать может только участник чата</td><td>Продукт + sign-off на включение</td></tr>
+  <tr><td><b>Push / PWA</b></td><td>Уведомления в браузере и установка мессенджера «как приложение» без магазина App Store</td><td>Продукт + ключи VAPID (ops)</td></tr>
+  <tr><td><b>VAPID</b></td><td>Пара служебных ключей для push-уведомлений в браузере (как «подпись» вашего сервера для Google/Mozilla)</td><td>IT при go-live</td></tr>
+  <tr><td><b>SSO</b> (единый вход)</td><td>«Войти через корпоративный портал» без отдельного пароля в мессенджере</td><td>IT + ваш IdP / Active Directory</td></tr>
+  <tr><td><b>IdP / LDAP / AD</b></td><td>Корпоративный каталог пользователей (часто Active Directory) и система единого входа</td><td>IT заказчика</td></tr>
+  <tr><td><b>Roadmap</b></td><td>План развития продукта на будущие релизы — не обязательство с фиксированной датой в договоре без отдельного согласования</td><td>Поставщик</td></tr>
+  <tr><td><b>рег. пользов.</b></td><td>Зарегистрированные пользователи — учётные записи в системе (не путать с «активными в день»)</td><td>—</td></tr>
+  <tr><td><b>DAU</b></td><td>Active users per day — сколько человек реально заходило за день (обычно меньше, чем рег.)</td><td>—</td></tr>
+  <tr><td><b>сообщ./с</b></td><td>Сообщений в секунду — пиковая нагрузка на сервер (для sizing и стоимости железа)</td><td>—</td></tr>
+  <tr><td><b>ГБ / ТБ</b></td><td>Гигабайт / терабайт — объём оперативной памяти (ОЗУ) или диска</td><td>—</td></tr>
+  <tr><td><b>Мбит/с, Гбит/с</b></td><td>Скорость канала интернета (мегабит / гигабит в секунду)</td><td>—</td></tr>
+</table>
+
+<h3 id="s3-3">3.3 Расшифровка колонки «Оговорка» (§4)</h3>
+<p class="small comment">Тексты ниже совпадают с таблицей возможностей — здесь те же формулировки с отсылкой к терминам из §3.2.</p>
+<table>
+  <tr><th>Область</th><th>Что означает «Частично» / «Запланировано»</th></tr>
+  <tr><td>Звонки</td><td>Программа для звонков из чата <b>готова</b>. Чтобы звонки стабильно работали из дома, филиалов и офисов с жёсткой сетевой защитой, IT заказчика устанавливает отдельный сервер ретрансляции видео (TURN). Без него часть пользователей «за NAT» или за межсетевым экраном (firewall) не сможет соединиться — это не ошибка мессенджера, а требование корпоративной сети.</td></tr>
+  <tr><td>E2EE</td><td>Усиленное шифрование переписки (E2EE) <b>реализовано и проверено инженерами</b>. Массовое включение для всех сотрудников — после <b>sign-off</b> (письменной приёмки службы безопасности и руководства): типичный корпоративный шаг, не связанный с оплатой лицензии.</td></tr>
+  <tr><td>Push / PWA</td><td>Уведомления в браузере и установка «как приложение» (PWA) <b>есть в продукте</b>. Для промышленного контура IT выпускает служебные ключи (VAPID) и проверяет, что push доходит до сотрудников — работа эксплуатации (ops), обычно 1–2 дня на стенде.</td></tr>
+  <tr><td>Prod HTTPS</td><td>Инструкции по защищённому доступу (HTTPS) <b>входят в поставку</b>. Сами SSL-сертификаты, привязка доменного имени (DNS) и хранение паролей (vault) оформляет IT или подрядчик на инфраструктуре заказчика — как для любого корпоративного сайта.</td></tr>
+  <tr><td>SSO (§8)</td><td>Вход по логину/паролю работает. «Войти через корпоративный портал» (SSO) и учётки из Active Directory (LDAP) — подключает IT заказчика по готовым шаблонам; срок зависит от вашего IdP, не от разработки чатов.</td></tr>
+  <tr><td>Live-streaming</td><td>Онлайн-трансляции на сотни и тысячи зрителей (all-hands, обучение) <b>не входят</b> в текущую версию; запланированы отдельным этапом roadmap (media stack). Базовый мессенджер и видеозвонки в чате — без этого.</td></tr>
+</table>
+
+
+<hr/>
+<h2 id="s4">4. Возможности системы<sup class="fn-ref"><a href="#fn-num" title="Статусы «Частично» (TLS, E2EE, Push, TURN)">#</a></sup></h2>
+<p class="small comment">Единицы: <a href="#s3-2">§3.2</a> (ГБ, сообщ./с, рег. пользов.). Непонятные слова в колонке «Оговорка» — <a href="#s3-3">§3.3</a>.</p>
+<table>
+  <tr><th>Область</th><th>Примеры</th><th>Статус</th><th>Оговорка</th></tr>
+  <tr><td>Вход и сессия</td><td>Регистрация, вход, выход, продление сессии</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Чаты и сообщения</td><td>1:1, группы, edit/delete/forward/pin/reactions/TTL</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Мгновенная доставка</td><td>Без обновления страницы, «печатает…»</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Контакты и поиск</td><td>Список, импорт; Solr (Standard) или SQL (Pilot)</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Файлы</td><td>Загрузка, превью, публичные ссылки</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Экспорт чата</td><td>JSON/ZIP архив</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Звонки</td><td>WebRTC mesh из чата, демонстрация экрана</td><td><span class="tag tag-partial">Частично</span></td><td class="status-qual">Нужен сервер ретрансляции видео (TURN) в контуре заказчика — см. §3.2 (NAT, firewall). Настраивает IT при вводе в эксплуатацию.</td></tr>
+  <tr><td>E2EE</td><td>Hybrid MLS в браузере</td><td><span class="tag tag-partial">Частично</span></td><td class="status-qual">Нужна письменная приёмка (sign-off) ИБ и руководства перед массовым включением — см. §3.2.</td></tr>
+  <tr><td>Push / PWA</td><td>Service worker, push-worker, установка как приложение</td><td><span class="tag tag-partial">Частично</span></td><td class="status-qual">Нужны боевые ключи VAPID и проверка уведомлений на стенде заказчика — см. §3.2 (ops).</td></tr>
+  <tr><td>Админка</td><td><code>/admin/</code> — org, ретенция, legal hold, audit</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Ретенция и архив</td><td>Многоуровневое хранение, автоочистка</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Локализация</td><td>ru, en, be, kk, zh, ko</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Bot API + платформа плагинов</td><td>Service Desk, FAQ, bridges к ITSM/ERP</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Live-streaming</td><td>All-hands, HLS-трансляции</td><td><span class="tag tag-planned">Запланировано</span></td><td class="status-qual">Массовые трансляции (all-hands) — отдельный этап roadmap, не входят в текущую поставку.</td></tr>
+  <tr><td>Prod HTTPS</td><td>Автоматизация TLS в поставке</td><td><span class="tag tag-partial">Частично</span></td><td class="status-qual">Нужны сертификаты HTTPS, DNS и хранилище секретов на контуре заказчика — см. §3.2 (ops).</td></tr>
 </table>
 <hr/><h2 id="s5">5. Кейсы использования</h2>
-<p>Формат: <b>ситуация → действия → результат</b>. 27 сценариев: <b>24 реализовано</b> (или частично) + <b>1 частично</b> (КУ-25) + <b>2 запланировано</b> (КУ-26…27).</p>
+<p>Формат: <b>ситуация → действия → результат</b>. 27 сценариев: <b>25 реализовано</b> (или частично) + <b>2 запланировано</b> (КУ-26…27).</p>
 <h3>5.1 Сотрудник</h3>
 <div class="case"><h4>КУ-01: Переписка с коллегой <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Нужно обсудить задачу с коллегой из другого отдела.<br/><b>Действия:</b> Найти коллегу → открыть чат → написать.<br/><b>Результат:</b> Сообщение доставлено мгновенно.</p></div>
 <div class="case"><h4>КУ-02: Проектная группа <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Запуск проекта на 8 человек.<br/><b>Действия:</b> Создать группу → пригласить участников.<br/><b>Результат:</b> Общая лента и обмен файлами.</p></div>
@@ -407,7 +481,7 @@
 <div class="case"><h4>КУ-05: Сообщение с автоудалением <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Передать одноразовый код.<br/><b>Действия:</b> Отправить с таймером (TTL).<br/><b>Результат:</b> После времени сообщение исчезает.</p></div>
 <div class="case"><h4>КУ-06: Read receipts <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Проверить, кто прочитал объявление.<br/><b>Действия:</b> Открыть сообщение → список прочитавших.<br/><b>Результат:</b> Видно, кто ознакомился.</p></div>
 <div class="case"><h4>КУ-07: Обрыв Wi‑Fi <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Связь пропала в метро и восстановилась.<br/><b>Действия:</b> Открыть мессенджер.<br/><b>Результат:</b> Сессия и сообщения восстанавливаются.</p></div>
-<div class="case"><h4>КУ-08: Видеозвонок <span class="tag tag-partial">Частично</span></h4><p><b>Ситуация:</b> Обсудить голосом и показать экран.<br/><b>Действия:</b> «Звонок» в группе → камера/экран.<br/><b>Результат:</b> Конференция; за firewall может нужен TURN.</p></div>
+<div class="case"><h4>КУ-08: Видеозвонок <span class="tag tag-partial">Частично</span></h4><p><b>Ситуация:</b> Обсудить голосом и показать экран.<br/><b>Действия:</b> «Звонок» в группе → камера/экран.<br/><b>Результат:</b> Работает; из некоторых сетей нужен TURN (§3.2).</p></div>
 <div class="case"><h4>КУ-09: Смена языка <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Предпочитаемый язык интерфейса.<br/><b>Действия:</b> Настройки → язык.<br/><b>Результат:</b> Интерфейс переключается.</p></div>
 <div class="case"><h4>КУ-10: Блокировка пользователя <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Нежелательные сообщения.<br/><b>Действия:</b> Настройки → заблокировать.<br/><b>Результат:</b> Заблокированный не может писать.</p></div>
 <h3>5.2 Руководитель команды</h3>
@@ -421,15 +495,14 @@
 <div class="case"><h4>КУ-17: Legal hold <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Расследование — нельзя удалять чат.<br/><b>Действия:</b> Включить legal hold.<br/><b>Результат:</b> Автоудаление заморожено.</p></div>
 <div class="case"><h4>КУ-18: Журнал аудита <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Кто менял политики?<br/><b>Действия:</b> Админка → аудит → фильтры.<br/><b>Результат:</b> Хронология действий.</p></div>
 <div class="case"><h4>КУ-19: Мониторинг очистки <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Purge выполняется штатно?<br/><b>Действия:</b> Панель ретенции → статус.<br/><b>Результат:</b> Видны этапы и ошибки.</p></div>
-<div class="case"><h4>КУ-20: Миграция на E2EE <span class="tag tag-partial">Частично</span></h4><p><b>Ситуация:</b> Переход на усиленное шифрование.<br/><b>Действия:</b> E2EE dashboard → batch migrate.<br/><b>Результат:</b> Prod — после sign-off.</p></div>
+<div class="case"><h4>КУ-20: Миграция на E2EE <span class="tag tag-partial">Частично</span></h4><p><b>Ситуация:</b> Переход на усиленное шифрование.<br/><b>Действия:</b> E2EE dashboard → batch migrate.<br/><b>Результат:</b> Prod — после sign-off (§3.2).</p></div>
+<div class="case"><h4>КУ-25: Bot Service Desk <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Заявка через чат-бота.<br/><b>Действия:</b> Admin: preset → сотрудник пишет боту → bridge создаёт тикет.<br/><b>Результат:</b> Bot API L2 + платформа L0–L3; ITSM — preset заказчика.</p></div>
 <h3>5.4 Служба безопасности / комплаенс</h3>
 <div class="case"><h4>КУ-21: Export для расследования <span class="tag tag-partial">Частично</span></h4><p><b>Ситуация:</b> Запрос переписки по инциденту.<br/><b>Действия:</b> Заказать export → скачать ZIP.<br/><b>Результат:</b> Архив с сообщениями; полнота GDPR — в согласовании.</p></div>
 <div class="case"><h4>КУ-22: Проверка удаления <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Данные по TTL удалены?<br/><b>Действия:</b> Проверить чат и purge status.<br/><b>Результат:</b> В UI не отображаются.</p></div>
 <div class="case"><h4>КУ-23: Аудит админов <span class="tag tag-done">Реализовано</span></h4><p><b>Ситуация:</b> Несанкционированный доступ.<br/><b>Действия:</b> Журнал аудита.<br/><b>Результат:</b> Кто, когда, что изменил.</p></div>
 <div class="case"><h4>КУ-24: Prod HTTPS <span class="tag tag-partial">Частично</span></h4><p><b>Ситуация:</b> Перед выводом в интернет.<br/><b>Действия:</b> Checklist DNS, сертификаты.<br/><b>Результат:</b> Пользователи по HTTPS.</p></div>
-<h3>5.5 Интеграции (частично)</h3>
-<div class="case"><h4>КУ-25: Bot Service Desk <span class="tag tag-partial">Частично</span></h4><p><b>Ситуация:</b> Заявка через чат-бота.<br/><b>Действия:</b> Создать бота → подписать на чат → webhook/sendMessage.<br/><b>Результат:</b> MVP ✓; полный Service Desk — интеграция заказчика.</p></div>
-<h3>5.6 Запланированные сценарии</h3>
+<h3>5.5 Запланированные сценарии</h3>
 <div class="case"><h4>КУ-26: All-hands 500+ <span class="tag tag-planned">Запланировано</span></h4><p><b>Ситуация:</b> Выступление гендиректора онлайн.<br/><b>Действия:</b> Live-стрим → HLS.<br/><b>Результат:</b> Массовая трансляция.</p></div>
 <div class="case"><h4>КУ-27: SSO Google/LDAP <span class="tag tag-planned">Запланировано</span></h4><p><b>Ситуация:</b> Единый вход без отдельного пароля.<br/><b>Действия:</b> «Войти через корпоративный портал».<br/><b>Результат:</b> Единый вход через IdP.</p></div>
 
@@ -473,7 +546,7 @@
   <tr><td>Без E2EE</td><td>Текст сообщений (хранится на сервере организации)</td></tr>
   <tr><td>С E2EE (MLS active)</td><td>Шифротекст; plaintext-preview отключён; расшифровка на клиенте</td></tr>
 </table>
-<p><span class="tag tag-partial">Частично</span> — инженерная приёмка пройдена; массовое включение E2EE в prod после formal sign-off Product/Security/Ops.</p>
+<p><span class="tag tag-partial">Частично</span> — инженерная приёмка пройдена; массовое включение E2EE в prod после sign-off (§3.2).</p>
 
 <hr/>
 <h2 id="s8">8. Сравнение с исходным техническим ТЗ</h2>
@@ -484,26 +557,26 @@
   <tr><td>Язык</td><td>Технический</td><td>Бизнес + статусы</td></tr>
   <tr><td>Клиенты</td><td>Web + mobile + desktop</td><td>Web ✓; mobile/desktop — вне репо / planned</td></tr>
   <tr><td>Автотесты UI</td><td>—</td><td>34/34 Playwright (2026-06-16)</td></tr>
-  <tr><td>Кейсы</td><td>Требования списком</td><td>24 реализовано + 3 planned (§5)</td></tr>
+  <tr><td>Кейсы</td><td>Требования списком</td><td>25 реализовано + 2 planned (§5)</td></tr>
   <tr><td>Sizing и стоимость</td><td>Формулы</td><td>Таблицы + примеры ₽ (§10, §17)</td></tr>
   <tr><td>Комплаенс</td><td>Разрозненно</td><td>§13 + чеклист</td></tr>
   <tr><td>SLA</td><td>Кратко</td><td>§14 по профилям</td></tr>
   <tr><td>Статус фич</td><td>Все как требования</td><td>Реализовано / Частично / Planned</td></tr>
 </table>
 <table>
-  <tr><th>Тема исходного ТЗ</th><th>Статус в продукте</th></tr>
-  <tr><td>Вход, чаты, сообщения, TTL</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Hot/Archive/Deep, файлы, export</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Поиск Solr / SQL (Pilot)</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>TLS prod deploy</td><td><span class="tag tag-partial">Частично</span> (развёртывание в поставке ✓)</td></tr>
-  <tr><td>Bot API</td><td><span class="tag tag-partial">Частично</span> — REST L2: long-poll, pin/ban</td></tr>
-  <tr><td>SSO OIDC/LDAP</td><td><span class="tag tag-partial">Частично</span> — Keycloak template + runbook</td></tr>
-  <tr><td>Batch export-replay</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Push-уведомления</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>Live-streaming</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
-  <tr><td>Звонки</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>Профили Pilot / Standard</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>Sizing 1M пользователей</td><td>§10 — ориентиры</td></tr>
+  <tr><th>Тема исходного ТЗ</th><th>Статус</th><th>Оговорка</th></tr>
+  <tr><td>Вход, чаты, сообщения, TTL</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Hot/Archive/Deep, файлы, export</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Поиск Solr / SQL (Pilot)</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>TLS prod deploy</td><td><span class="tag tag-partial">Частично</span></td><td class="status-qual">Нужны сертификаты HTTPS, DNS и хранилище секретов на контуре заказчика — см. §3.2 (ops).</td></tr>
+  <tr><td>Bot API + платформа плагинов</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>SSO OIDC/LDAP</td><td><span class="tag tag-partial">Частично</span></td><td class="status-qual">Шаблоны есть; подключение корпоративного входа (SSO/LDAP) — работа IT заказчика — см. §3.2.</td></tr>
+  <tr><td>Batch export-replay</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Push-уведомления</td><td><span class="tag tag-partial">Частично</span></td><td class="status-qual">Нужны боевые ключи VAPID и проверка уведомлений на стенде заказчика — см. §3.2 (ops).</td></tr>
+  <tr><td>Live-streaming</td><td><span class="tag tag-planned">Запланировано</span></td><td class="status-qual">Массовые трансляции (all-hands) — отдельный этап roadmap, не входят в текущую поставку.</td></tr>
+  <tr><td>Звонки</td><td><span class="tag tag-partial">Частично</span></td><td class="status-qual">Нужен сервер ретрансляции видео (TURN) в контуре заказчика — см. §3.2 (NAT, firewall). Настраивает IT при вводе в эксплуатацию.</td></tr>
+  <tr><td>Профили Pilot / Standard</td><td><span class="tag tag-done">Реализовано</span></td><td class="status-qual">—</td></tr>
+  <tr><td>Sizing 1 000 000 рег. пользов.</td><td>§10 — ориентиры</td><td class="status-qual">—</td></tr>
 </table>
 
 <hr/>
@@ -518,7 +591,7 @@
 </table>
 <h3>6–12 месяцев</h3>
 <table><tr><th>Направление</th><th>Ценность</th></tr>
-<tr><td>Bot API (long-poll, pin/ban)</td><td>Расширение контракта Bot API</td></tr>
+<tr><td>Расширение каталога preset bridges</td><td>Новые ITSM/ERP без доработки ядра</td></tr>
 <tr><td>SSO Google/LDAP</td><td>Enterprise-вход</td></tr>
 <tr><td>Dedup файлов (content-hash)</td><td><span class="tag tag-done">Реализовано</span></td></tr>
 <tr><td>Sharding PG (Enterprise)</td><td>Масштаб до 1M — scaffold, full router в roadmap</td></tr>
@@ -527,7 +600,7 @@
 <ul><li>Live-streaming (all-hands)</li><li>Мобильные клиенты</li><li>SFU для звонков &gt;20 участников</li></ul>
 
 <hr/>
-<h2 id="s10">10. Ресурсы серверов и нагрузка</h2>
+<h2 id="s10">10. Ресурсы серверов и нагрузка<sup class="fn-ref"><a href="#fn-dagger" title="Модель нагрузки и sizing">†</a></sup></h2>
 <figure class="fig"><svg viewBox="0 0 620 180" width="620" height="180" xmlns="http://www.w3.org/2000/svg">
   <rect x="30" y="60" width="160" height="100" rx="8" fill="#dcfce7" stroke="#22c55e"/>
   <text x="110" y="95" text-anchor="middle" font-size="14" font-weight="bold">Pilot</text>
@@ -551,35 +624,35 @@
   <rect x="100" y="192" width="56" height="8" fill="#6366f1" rx="3"/><rect x="190" y="157" width="56" height="43" fill="#6366f1" rx="3"/><text x="218" y="151" text-anchor="middle" font-size="9">140 ГБ</text><rect x="280" y="63" width="56" height="137" fill="#6366f1" rx="3"/><text x="308" y="57" text-anchor="middle" font-size="9">450 ГБ</text>
   <text x="128" y="218" text-anchor="middle" font-size="11">10k</text><text x="128" y="232" text-anchor="middle" font-size="9" fill="#6b7280">Pilot</text><text x="218" y="218" text-anchor="middle" font-size="11">100k</text><text x="218" y="232" text-anchor="middle" font-size="9" fill="#6b7280">Standard</text><text x="308" y="218" text-anchor="middle" font-size="11">500k</text><text x="308" y="232" text-anchor="middle" font-size="9" fill="#6b7280">Enterprise</text>
 </svg><figcaption class="fig-cap">Рис. 4. Ориентиры для планирования (не замер production). 1M: ~900 ГБ–1,2 ТБ RAM — см. таблицу §10.3.</figcaption></figure>
-<div class="warn"><div class="req">Важно</div><div class="comment">Все цифры — <b>ориентиры для планирования</b>. Перед промышленным запуском рекомендуется нагрузочное тестирование на 10–20% целевой нагрузки. Активные видеозвонки и прямые эфиры могут удвоить требования к сети и процессору.</div></div>
+<div class="warn"><div class="req">Важно</div><div class="comment">Все цифры — <b>ориентиры для планирования</b><sup class="fn-ref"><a href="#fn-dagger" title="Модель нагрузки и sizing">†</a></sup>. Перед промышленным запуском рекомендуется нагрузочное тестирование на 10–20% целевой нагрузки<sup class="fn-ref"><a href="#fn-ddagger" title="Лабораторные замеры НТ">‡</a></sup>. Активные видеозвонки и прямые эфиры могут удвоить требования к сети и процессору.</div></div>
 
-<h3>10.1 Как считается нагрузка (простыми словами)</h3>
+<h3>10.1 Как считается нагрузка (простыми словами)<sup class="fn-ref"><a href="#fn-dagger" title="Модель нагрузки и sizing">†</a></sup></h3>
 <p>Для оценки берём число <b>зарегистрированных пользователей</b> и типичные коэффициенты активности корпоративного мессенджера:</p>
 <div class="formula">
 DAU (активных в день) = Пользователи × доля активных<br/>
 Пик онлайн = DAU × доля одновременно в сети<br/>
 Сообщений в день = DAU × сообщений на человека<br/>
-Пик сообщений/сек ≈ (сообщений в день ÷ 86400) × 3,5
+Пик сообщ./с ≈ (сообщений в день ÷ 86400) × 3,5
 </div>
 <table>
-  <tr><th>Метрика</th><th>10 000</th><th>100 000</th><th>500 000</th><th>1 000 000</th></tr>
+  <tr><th>Метрика</th><th>10 000 рег.</th><th>100 000 рег.</th><th>500 000 рег.</th><th>1 000 000 рег.</th></tr>
   <tr><td>Активных в день (DAU)</td><td>5 000</td><td>40 000</td><td>150 000</td><td>250 000</td></tr>
   <tr><td>Пик онлайн</td><td>750</td><td>4 800</td><td>15 000</td><td>20 000</td></tr>
   <tr><td>Сообщений / день</td><td>200 000</td><td>1 400 000</td><td>4 500 000</td><td>6 250 000</td></tr>
-  <tr><td>Пик сообщений / сек</td><td>~8</td><td>~57</td><td>~182</td><td>~253</td></tr>
+  <tr><td>Пик сообщ./с</td><td>~8</td><td>~57</td><td>~182</td><td>~253</td></tr>
 </table>
 
 <h3>10.2 Профили Pilot / Standard / Enterprise</h3>
 <table>
-  <tr><th>Профиль</th><th>Масштаб</th><th>RAM</th><th>Для кого</th></tr>
+  <tr><th>Профиль</th><th>Масштаб (рег. пользов.)</th><th>ОЗУ</th><th>Для кого</th></tr>
   <tr><td><b>Pilot</b></td><td>до 10 000</td><td>12–16 ГБ</td><td>Пилот, филиал, MVP</td></tr>
-  <tr><td><b>Standard</b></td><td>10k–100k</td><td>120–160 ГБ</td><td>Типовая корпорация</td></tr>
-  <tr><td><b>Enterprise</b></td><td>100k–1M</td><td>450 ГБ–1,2 ТБ</td><td>Крупный / федеральный контур</td></tr>
+  <tr><td><b>Standard</b></td><td>10 000–100 000</td><td>120–160 ГБ</td><td>Типовая корпорация</td></tr>
+  <tr><td><b>Enterprise</b></td><td>100 000–1 000 000</td><td>450 ГБ–1,2 ТБ</td><td>Крупный / федеральный контур</td></tr>
 </table>
 
-<h3>10.3 Рекомендуемые конфигурации</h3>
+<h3>10.3 Рекомендуемые конфигурации<sup class="fn-ref"><a href="#fn-dagger" title="Модель нагрузки и sizing">†</a></sup><sup class="fn-ref"><a href="#fn-section" title="RPO / RTO и SLA">§</a></sup></h3>
 <table>
-  <tr><th>Параметр</th><th>10k Pilot</th><th>100k Standard</th><th>500k Enterprise</th><th>1M Enterprise</th></tr>
+  <tr><th>Параметр</th><th>Pilot (10 000)</th><th>Standard (100 000)</th><th>Enterprise (500 000)</th><th>Enterprise (1 000 000)</th></tr>
   <tr><td>Архитектура</td><td>Lean stack</td><td>Кластер</td><td>Расширенный кластер</td><td>Распределённый</td></tr>
   <tr><td>Суммарно RAM</td><td><b>~14 ГБ</b></td><td><b>~140 ГБ</b></td><td><b>~450 ГБ</b></td><td><b>~900 ГБ–1,2 ТБ</b></td></tr>
   <tr><td>Диск (1 год с файлами)</td><td><b>~5 ТБ</b></td><td><b>~30 ТБ</b></td><td><b>~110 ТБ</b></td><td><b>~200 ТБ</b></td></tr>
@@ -590,9 +663,50 @@ DAU (активных в день) = Пользователи × доля акт
 <p class="small"><b>Устойчивость:</b> доставка сообщений (P0) не зависит от поиска, push и архива — при сбое второстепенных служб чаты продолжают работать.</p>
 
 <h3>10.4 Примеры сценариев</h3>
-<p><b>A — «Тихий офис» (10k):</b> небольшая компания, backup раз в сутки, профиль Pilot.</p>
-<p><b>B — «Распределённая компания» (100k):</b> утренний пик рассылок, replica БД, полнотекстовый поиск.</p>
-<p><b>C — «Федеральный масштаб» (1M):</b> dedicated ops 24/7, обязателен load test.</p>
+<p><b>A — «Тихий офис» (10 000 рег.):</b> небольшая компания, backup раз в сутки, профиль Pilot.</p>
+<p><b>B — «Распределённая компания» (100 000 рег.):</b> утренний пик рассылок, replica БД, полнотекстовый поиск.</p>
+<p><b>C — «Федеральный масштаб» (1 000 000 рег.):</b> dedicated ops 24/7, обязателен load test<sup class="fn-ref"><a href="#fn-ddagger" title="Лабораторные замеры НТ">‡</a></sup>.</p>
+
+<h3>10.5 Замеры на тестовом стенде (лабораторный baseline)<sup class="fn-ref"><a href="#fn-ddagger" title="Лабораторные замеры НТ">‡</a></sup></h3>
+
+<p class="small comment">
+  Стенд: тестовая VM разработки (ограниченный RAM), не конфигурация Enterprise.
+  Сравнение с целью Pilot (~15 сообщ./с пик): замер E2E burst часто ниже — ожидаемо для лабораторного железа.
+  <sup class="fn-ref"><a href="#fn-ddagger" title="Лабораторные замеры НТ">‡</a></sup>
+</p>
+<table>
+  <tr><th>Сценарий</th><th>Результат (2026-06-15)</th></tr>
+  <tr><td>Устойчивая проверка /health</td><td>p50 3 мс · p95 11 мс · ~114.8 запр/с</td></tr><tr><td>REST: чтение (auth + ready)</td><td>—</td></tr><tr><td>rest-chat-list-burst</td><td>—</td></tr><tr><td>Конвейер сообщений E2E</td><td>пик ~6 сообщ/с · 50 сообщ. за 8 с</td></tr><tr><td>E2E мессенджинг + нагрузка</td><td>ПРОЙДЕН · раундов=30</td></tr>
+</table>
+<p class="small"><b>После ops sign-off:</b> эта таблица заменяется измерениями stage (formal load test).</p>
+
+
+<h3 id="s10-7">10.7 Узел ботов и плагинов (1 экземпляр = 1 бот)<sup class="fn-ref"><a href="#fn-oplus" title="Sizing узла интеграций">⊕</a></sup></h3>
+<div class="note">
+  <div class="req">Модель ресурсов</div>
+  <div class="comment">
+    Исполнение ботов и плагинов вынесено на <b>отдельный узел интеграций</b> (не на сервер чатов).
+    Код плагинов <b>не</b> загружается в JVM core-api — только HTTP-маршрутизация и политики org.
+    Каждый зарегистрированный бот = <b>один экземпляр</b> (L0…L3). L0 (FAQ-кнопки) не требует отдельного контейнера.
+  </div>
+</div>
+<table>
+  <tr><th>Класс</th><th>Примеры</th><th>RAM / экз.</th><th>vCPU / экз.</th></tr>
+  <tr><td><b>L0</b></td><td>FAQ, телефонный справочник, ссылки</td><td>0 (конфиг)</td><td>0</td></tr>
+  <tr><td><b>L1</b> sidecar</td><td>PHP/Go/Python echo, Bitrix sidecar</td><td>~192 МБ</td><td>0,1</td></tr>
+  <tr><td><b>L1</b> connector</td><td>Jira/Confluence read-only mapping</td><td>shared runtime</td><td>0,05</td></tr>
+  <tr><td><b>L2</b> bridge</td><td>Exchange, 1С, Naumen, storage, outbound</td><td>~384 МБ</td><td>0,25</td></tr>
+  <tr><td><b>L3</b> + OCR</td><td>AI triage + on-prem OCR</td><td>~768 МБ</td><td>0,5</td></tr>
+</table>
+<p class="small">База узла: gateway + connector-runtime + ОС ≈ <b>1 ГБ</b> RAM.
+Рекомендуемая RAM VM = расчёт + 25% запас (минимум 4 ГБ для профиля Pilot).</p>
+<table>
+  <tr><th>Профиль заказчика</th><th>Состав (экз.)</th><th>Ботов</th><th>RAM расч.</th><th>RAM VM</th><th>vCPU</th></tr>
+  <tr><td>Pilot — FAQ + 2 интеграции</td><td>L0 FAQ, sidecar PHP, bridge 1С</td><td>3</td><td>1 776 МБ</td><td><b>4 ГБ</b></td><td>1.4</td></tr><tr><td>Standard — Service Desk</td><td>Naumen L2, Jira L1, storage L2, echo sidecar</td><td>4</td><td>2 160 МБ</td><td><b>4 ГБ</b></td><td>1.6</td></tr><tr><td>Standard — документооборот</td><td>OCR+AI L3, exchange L2, 2× FAQ L0</td><td>4</td><td>2 352 МБ</td><td><b>4 ГБ</b></td><td>1.8</td></tr><tr><td>Расширенный витрина</td><td>6× L2 bridge + 2 sidecar + 1 L3</td><td>9</td><td>4 656 МБ</td><td><b>6 ГБ</b></td><td>3.2</td></tr>
+</table>
+<p class="small"><b>Сравнение с eXpress @1k рег.:</b> кластер Bot ~6 vCPU / 12 ГБ RAM (shared).
+У Korus при 6 L2-bridge: ~5 ГБ на узле интеграций — линейно по числу экземпляров, без per-user лицензии на бота.</p>
+
 
 <hr/>
 <h2 id="s11">11. Критерии приёмки продукта</h2>
@@ -603,16 +717,24 @@ DAU (активных в день) = Пользователи × доля акт
   <li><b>Production:</b> HTTPS, секреты не в открытом виде, sign-off E2EE перед массовым включением.</li>
   <li><b>Экспорт и ретенция:</b> окончательное удаление только после прохождения export gate.</li>
   <li><b>Локализация:</b> интерфейс минимум на русском и английском.</li>
-  <li><b>Развёртывание:</b> профиль Pilot или Standard разворачивается по документации; load test на stage при go-live.</li>
+  <li><b>Развёртывание:</b> профиль Pilot или Standard разворачивается по документации; load test на stage при go-live<sup class="fn-ref"><a href="#fn-ddagger" title="Лабораторные замеры НТ">‡</a></sup>.</li>
   <li><b>Комплаенс (§13):</b> export с индикатором полноты; legal hold блокирует purge; audit admin-действий.</li>
-  <li><b>SLA (§14):</b> согласованные RPO/RTO по профилю; сообщения не теряются при деградации P1.</li>
+  <li><b>SLA (§14):</b> согласованные RPO/RTO по профилю<sup class="fn-ref"><a href="#fn-section" title="RPO / RTO и SLA">§</a></sup>; сообщения не теряются при деградации P1.</li>
   <li><b>Профиль (§15):</b> ограничения Pilot доведены до заказчика до запуска.</li>
-  <li><b>Интеграции (§12):</b> REST API, WebSocket, Bot API L2 и batch export-replay реализованы; SSO — template + runbook (IdP — ops).</li>
+  <li><b>Интеграции (§12):</b> REST API, WebSocket, Bot API L2, <b>платформа плагинов L0–L3</b> и batch export-replay реализованы; SSO — template + runbook (IdP — ops).</li>
 </ol>
 
 <hr/>
 <h2 id="s12">12. Интеграции и экосистема</h2>
-<p><span class="tag tag-partial">Частично</span></p>
+<p><span class="tag tag-done">Реализовано</span> — REST, WebSocket, Bot API L2, <b>платформа плагинов L0–L3</b>; SSO federation — <span class="tag tag-partial">Частично</span></p>
+<div class="note">
+  <div class="req">Платформа ботов и плагинов — ключевое отличие</div>
+  <div class="comment">
+    Код интеграций <b>не</b> загружается в JVM core-api. Каждый бот = <b>один экземпляр</b> на отдельном узле интеграций (§10.7).
+    Уровни L0 (FAQ-кнопки) … L3 (AI+OCR). Admin: preset → org policy → instance. Polyglot sidecars: PHP, Go, Python, Java 8, VB.NET, PowerShell.
+    Preset bridges: Exchange, 1С, Naumen, storage, outbound. Сбой узла интеграций не блокирует переписку людей.
+  </div>
+</div>
 <h3>12.1 Уже доступно</h3>
 <table>
   <tr><th>Канал</th><th>Для кого</th><th>Что даёт</th><th>Статус</th></tr>
@@ -621,15 +743,25 @@ DAU (активных в день) = Пользователи × доля акт
   <tr><td>Система входа (Keycloak)</td><td>IT</td><td>JWT, локальные пользователи</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Export / replay</td><td>Compliance</td><td>JSON/ZIP выгрузка</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Web Push</td><td>Пользователи</td><td>SW + push-worker; VAPID в конфигурации ✓</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>Bot API (REST L2)</td><td>IT, интеграторы</td><td>register, webhook, sendMessage, long-poll, pin/ban</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Bot API (REST L2)</td><td>IT, интеграторы</td><td>register, webhook, long-poll, pin/ban, rotate</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td><b>Платформа плагинов L0–L3</b></td><td>IT, интеграторы</td><td>Admin 3-level; bridges; sidecars</td><td><span class="tag tag-done">Реализовано</span></td></tr>
 </table>
-<h3>12.2 SSO и каталог (template + ops)</h3>
+<h3>12.2 Уровни плагинов</h3>
+<table>
+  <tr><th>Уровень</th><th>Примеры</th><th>RAM / экз.</th></tr>
+  <tr><td><b>L0</b></td><td>FAQ, телефонный справочник</td><td>0 (конфиг)</td></tr>
+  <tr><td><b>L1</b> sidecar</td><td>PHP/Go/Python echo</td><td>~192 МБ</td></tr>
+  <tr><td><b>L2</b> bridge</td><td>Exchange, 1С, Naumen, storage</td><td>~384 МБ</td></tr>
+  <tr><td><b>L3</b></td><td>AI triage + on-prem OCR</td><td>~768 МБ</td></tr>
+</table>
+<p class="small">Sizing: §10.7 — линейно по числу экземпляров; база узла ~1,2 ГБ.</p>
+<h3>12.3 SSO и каталог (template + ops)</h3>
 <table>
   <tr><th>Сценарий</th><th>Ожидание</th><th>Статус</th></tr>
   <tr><td>SSO Google / корпоративный portal (OIDC)</td><td>Единый вход без отдельного пароля</td><td><span class="tag tag-partial">Частично</span> — Keycloak broker template</td></tr>
   <tr><td>LDAP / Active Directory</td><td>Учётки из AD</td><td><span class="tag tag-partial">Частично</span> — federation example</td></tr>
 </table>
-<h3>12.3 Запланировано</h3>
+<h3>12.4 Запланировано</h3>
 <table>
   <tr><th>Сценарий</th><th>Ожидание</th><th>Статус</th></tr>
   <tr><td>Email fallback уведомлений</td><td>Оповещение без push</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
@@ -682,7 +814,7 @@ DAU (активных в день) = Пользователи × доля акт
 <p>Export-файлы на сервере хранятся ~30 дней (настраивается), затем удаляются по политике.</p>
 
 <hr/>
-<h2 id="s14">14. Доступность и SLA</h2>
+<h2 id="s14">14. Доступность и SLA<sup class="fn-ref"><a href="#fn-section" title="RPO / RTO и SLA">§</a></sup></h2>
 <figure class="fig"><svg viewBox="0 0 520 140" width="520" height="140" xmlns="http://www.w3.org/2000/svg">
   <rect x="20" y="50" width="140" height="60" rx="6" fill="#fef9c3" stroke="#eab308"/><text x="90" y="75" text-anchor="middle" font-size="12" font-weight="bold">Pilot 99,0%</text><text x="90" y="95" text-anchor="middle" font-size="10">RPO 24ч / RTO 4ч</text>
   <rect x="190" y="35" width="140" height="75" rx="6" fill="#dbeafe" stroke="#3b82f6"/><text x="260" y="65" text-anchor="middle" font-size="12" font-weight="bold">Standard 99,5%</text><text x="260" y="85" text-anchor="middle" font-size="10">RPO 8ч / RTO 2ч</text>
@@ -707,7 +839,7 @@ DAU (активных в день) = Пользователи × доля акт
   <tr><td>RTO</td><td>Максимальное время восстановления сервиса</td></tr>
   <tr><td>Деградация</td><td>Частичная работа (например, без push или без полнотекстового поиска)</td></tr>
 </table>
-<h3>14.2 Доступность по профилю</h3>
+<h3>14.2 Доступность по профилю<sup class="fn-ref"><a href="#fn-section" title="RPO / RTO и SLA">§</a></sup></h3>
 <table>
   <tr><th>Профиль</th><th>Доступность*</th><th>RPO</th><th>RTO</th></tr>
   <tr><td>Pilot</td><td>99,0% / месяц</td><td>24 ч</td><td>4 ч</td></tr>
@@ -740,7 +872,7 @@ DAU (активных в день) = Пользователи × доля акт
 <h3>Что сообщить сотрудникам при Pilot</h3>
 <ol>
   <li>Поиск по очень старым сообщениям может быть медленнее.</li>
-  <li>Массовые рассылки всем сразу — в пределах ~8–15 msg/s.</li>
+  <li>Массовые рассылки всем сразу — в пределах ~8–15 сообщ./с.</li>
   <li>E2EE в prod — после formal sign-off.</li>
 </ol>
 
@@ -758,7 +890,7 @@ DAU (активных в день) = Пользователи × доля акт
   <tr><td>A23–A24</td><td>E2EE legacy / MLS</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>A25–A26</td><td>Web Push, PWA</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>A27–A31</td><td>Admin, ретенция, legal hold, audit, deep archive</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>A32</td><td>Bot API</td><td><span class="tag tag-partial">Частично</span> — MVP</td></tr>
+  <tr><td>A32</td><td>Bot API + платформа L0–L3</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>A33–A34</td><td>Live HLS, Mobile apps</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
 </table>
 
@@ -816,7 +948,7 @@ DAU (активных в день) = Пользователи × доля акт
 
 
 <hr/>
-<h2 id="s17">17. Стоимость владения — примеры расчётов</h2>
+<h2 id="s17">17. Стоимость владения — примеры расчётов<sup class="fn-ref"><a href="#fn-pilcrow" title="Стоимость инфраструктуры">¶</a></sup></h2>
 <figure class="fig"><svg viewBox="0 0 560 260" width="560" height="260" xmlns="http://www.w3.org/2000/svg">
   <text x="280" y="24" text-anchor="middle" font-size="13" font-weight="bold">Сравнение: инфраструктура в месяц (10 000 пользователей, Pilot)</text>
   <line x1="64" y1="200" x2="500" y2="200" stroke="#9ca3af"/>
@@ -989,11 +1121,18 @@ DAU (активных в день) = Пользователи × доля акт
 
 
 <hr/>
+<h2 id="fn-list">Сноски (расшифровка)</h2>
+<p class="small comment">
+  Обновление презентации после ops sign-off: замена ориентиров на <b>измеренные</b> метрики stage,
+  согласованные SLA/RPO/RTO и актуальные статусы §4 — без обязательного изменения функционала продукта.
+</p>
+<ol class="fn-list"><li id="fn-dagger"><b>† Модель нагрузки и sizing.</b> Таблицы DAU, пик сообщ./с, RAM, диск и сеть в <b>§10</b> — <b>аналитическая модель</b> (коэффициенты активности корпоративного мессенджера), а не замеры на железе заказчика. До промышленного запуска нет stage/prod контура с полным sizing — цифры нужны для планирования КП и профиля Pilot/Standard. <b>После этапа ops sign-off</b> (развёртывание stage, formal load test на 10–20% целевой нагрузки): таблицы §10 и диаграммы RAM/TCO могут быть <b>уточнены</b> по фактическим p95 и пропускной способности.</li><li id="fn-ddagger"><b>‡ Лабораторные замеры НТ.</b> Строки «лабораторный baseline» и графики пропускной способности — <b>замеры на тестовом стенде разработки</b> (ограниченный объём RAM, не конфигурация Enterprise). Они подтверждают работоспособность кода, но <b>не заменяют</b> нагрузочную приёмку на stage. <b>После ops sign-off:</b> повторные прогоны k6/Locust на stage iron; в презентации публикуются измеренные p50/p95, RPS и msg/s вместо ориентиров.</li><li id="fn-section"><b>§ RPO / RTO и SLA.</b> Recovery Point/Time Objective в <b>§10.3</b> и <b>§14</b> — <b>целевые ориентиры</b> для договора и профиля (Pilot / Standard / Enterprise), не результат учений восстановления из backup. <b>После ops sign-off:</b> проверка backup/restore на контуре заказчика, HTTPS на prod, фиксация согласованных RPO/RTO в договоре и матрице приёмки эксплуатации.</li><li id="fn-pilcrow"><b>¶ Стоимость инфраструктуры.</b> Суммы в <b>§17</b> и в матрице сравнения с конкурентами — <b>ориентиры рынка VDS/dedicated</b> на дату презентации; <b>не являются офертой</b> и не включают лицензию, внедрение и L2-поддержку. <b>После ops sign-off:</b> уточнение по итогам sizing на stage (число VM, реплики API, Solr, узел интеграций).</li><li id="fn-num"><b># Статусы «Частично» (TLS, E2EE, Push, TURN).</b> Строки §4 с пометкой <b>Частично</b>: функция <b>реализована и проверена инженерами</b> на тестовом стенде (автотесты UI, security-gate). Prod-включение — работы IT заказчика: сертификаты HTTPS, ключи VAPID, сервер ретрансляции видео (TURN), формальная приёмка E2EE (Security / Product). <b>После ops sign-off:</b> статус в §4 может быть повышен до «Реализовано» без изменения кода продукта.</li><li id="fn-oplus"><b>⊕ Sizing узла интеграций.</b> RAM и vCPU на экземпляр бота (§10.7, §12) — <b>расчёт по классам L0–L3</b>; проверено на тестовом стенде с mock/auto backends. Реальные API (1С, Exchange, OCR) на контуре заказчика могут потребовать больший запас. <b>После ops sign-off:</b> уточнение RAM VM интеграций по мониторингу prod.</li></ol>
+<hr/>
 <p class="small" style="margin-top:40px;padding-top:20px;border-top:2px solid #e5e7eb;">
-  <b>Korus Messenger (AvandocMsg)</b> — Продуктовая презентация v2.5.4, 16 июня 2026.<br/>
+  <b>Korus Messenger (AvandocMsg)</b> — Продуктовая презентация v2.6.2, 16 июня 2026.<br/>
   Единый автономный документ для заказчика. Все цифры — ориентиры для планирования, не оферта.<br/>
   Статус на дату: веб-клиент и сервер реализованы; Playwright 34/34 (2026-06-16);
-  E2EE/звонки/push/TLS — частично (ops/sign-off; stage с сентября 2026); Bot API MVP — частично; mobile, Live HLS — planned/out.
+  E2EE/звонки/push/TLS — частично (ops/sign-off; stage с сентября 2026); Bot API + платформа L0–L3 — реализовано; mobile, Live HLS — planned/out.
 </p>
 </body>
 </html>

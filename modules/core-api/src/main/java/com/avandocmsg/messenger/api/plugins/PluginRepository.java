@@ -81,6 +81,13 @@ public class PluginRepository {
     }
 
     public List<InstanceRow> listInstances(UUID orgId) {
+        return listInstances(orgId, 500, 0).rows();
+    }
+
+    public record InstancePage(List<InstanceRow> rows, int total) {}
+
+    public InstancePage listInstances(UUID orgId, int limit, int offset) {
+        var total = countInstances(orgId);
         var sql = """
             SELECT id, org_id, preset_id, bot_name, display_name, enabled, plugin_class,
                    runtime_endpoint, config_json::text, created_at, updated_at,
@@ -88,11 +95,14 @@ public class PluginRepository {
             FROM plugin_instances
             WHERE org_id = ?
             ORDER BY bot_name
+            LIMIT ? OFFSET ?
             """;
         var out = new ArrayList<InstanceRow>();
         try (var conn = dataSource.getConnection();
              var ps = conn.prepareStatement(sql)) {
             ps.setObject(1, orgId);
+            ps.setInt(2, Math.max(1, Math.min(limit, 500)));
+            ps.setInt(3, Math.max(0, offset));
             try (var rs = ps.executeQuery()) {
                 while (rs.next()) {
                     out.add(mapInstance(rs));
@@ -101,7 +111,64 @@ public class PluginRepository {
         } catch (Exception e) {
             log.warn("listInstances failed: {}", e.getMessage());
         }
-        return out;
+        return new InstancePage(List.copyOf(out), total);
+    }
+
+    public int countInstances(UUID orgId) {
+        var sql = "SELECT COUNT(*) FROM plugin_instances WHERE org_id = ?";
+        try (var conn = dataSource.getConnection();
+             var ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, orgId);
+            try (var rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("countInstances failed: {}", e.getMessage());
+        }
+        return 0;
+    }
+
+    public Optional<InstanceRow> findInstanceByOrgAndBotName(UUID orgId, String botName) {
+        if (orgId == null || botName == null || botName.isBlank()) {
+            return Optional.empty();
+        }
+        var sql = """
+            SELECT id, org_id, preset_id, bot_name, display_name, enabled, plugin_class,
+                   runtime_endpoint, config_json::text, created_at, updated_at,
+                   outbound_target_chat_id, outbound_actor_user_id, outbound_token_hash
+            FROM plugin_instances
+            WHERE org_id = ? AND bot_name = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, orgId);
+            ps.setString(2, botName.trim());
+            try (var rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapInstance(rs));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("findInstanceByOrgAndBotName failed: {}", e.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    public boolean setInstanceEnabled(UUID id, boolean enabled) {
+        var sql = """
+            UPDATE plugin_instances SET enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var ps = conn.prepareStatement(sql)) {
+            ps.setBoolean(1, enabled);
+            ps.setObject(2, id);
+            return ps.executeUpdate() == 1;
+        } catch (Exception e) {
+            log.warn("setInstanceEnabled failed: {}", e.getMessage());
+            return false;
+        }
     }
 
     public Optional<InstanceRow> findInstance(UUID id) {

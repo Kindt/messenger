@@ -2,6 +2,7 @@
 param(
     [switch]$Help,
     [switch]$Force,
+    [switch]$ForceTcg,
     [int]$SshWaitSec = 600
 )
 
@@ -23,8 +24,29 @@ Does not run qemu-down.
 
 $root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $root "deploy\qemu\config.ps1")
+. (Join-Path $root "deploy\qemu\lib\Get-KorusQemuVmMemory.ps1")
 . (Join-Path $root "deploy\qemu\lib\Start-KorusRepoHttp.ps1")
 . (Join-Path $root "deploy\qemu\lib\Start-KorusVm.ps1")
+
+if (-not $ForceTcg) {
+    Remove-Item Env:KORUS_QEMU_FORCE_TCG -ErrorAction SilentlyContinue
+} elseif ($env:KORUS_QEMU_FORCE_TCG -ne "1") {
+    $env:KORUS_QEMU_FORCE_TCG = "1"
+    Write-Host "[WARN] -ForceTcg: using TCG (slow). Prefer WHPX on this host." -ForegroundColor Yellow
+}
+if ($env:KORUS_QEMU_FORCE_TCG -eq "1") {
+    Write-Host "[WARN] KORUS_QEMU_FORCE_TCG=1 - integrations build will be very slow. Remove env var for WHPX." -ForegroundColor Yellow
+}
+
+$plannedMem = Get-KorusQemuVmMemoryMb -Role integrations
+if (-not (Test-KorusQemuIntegrationsMemoryFeasible -MemoryMb $plannedMem)) {
+    Write-Host "[FAIL] Host RAM insufficient for integrations ${plannedMem}MB with current server/web sizing." -ForegroundColor Red
+    Write-Host "  Option A (recommended): restart full 3-VM stack with lighter RAM:" -ForegroundColor Yellow
+    Write-Host "    .\scripts\qemu-down.ps1" -ForegroundColor DarkGray
+    Write-Host "    `$env:KORUS_QEMU_THREE_VM='1'; .\scripts\qemu-up.ps1 -KeepDisks -WithIntegrations" -ForegroundColor DarkGray
+    Write-Host "  Option B: stop server or web temporarily, then re-run this script." -ForegroundColor Yellow
+    exit 1
+}
 
 $existing = Get-CimInstance Win32_Process -Filter "name='qemu-system-x86_64.exe'" -ErrorAction SilentlyContinue |
     Where-Object { $_.CommandLine -match "korus-integrations" }

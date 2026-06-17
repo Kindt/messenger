@@ -11,6 +11,7 @@ function Start-KorusQemuVm {
     . (Join-Path $PSScriptRoot "Get-KorusQemuDisplayMode.ps1")
     . (Join-Path $PSScriptRoot "Write-KorusDebugLog.ps1")
     . (Join-Path $PSScriptRoot "Get-KorusQemuStackProfile.ps1")
+    . (Join-Path $PSScriptRoot "Get-KorusQemuVmMemory.ps1")
 
     $stackProfile = Get-KorusQemuStackProfile
     Write-KorusDebugLog -Location "Start-KorusVm.ps1:entry" -Message "vm start" -HypothesisId "H1" -Data @{
@@ -91,10 +92,10 @@ function Start-KorusQemuVm {
     $seedDrive = @(
         "-drive", "file=$seedPath,format=raw,if=ide,media=cdrom,readonly=on"
     )
-    $memMb = switch ($Role) {
-        "server" { $KorusQemuServerMemoryMb }
-        "web" { $KorusQemuWebMemoryMb }
-        "integrations" { $KorusQemuIntegrationsMemoryMb }
+    $memMb = Get-KorusQemuVmMemoryMb -Role $Role
+    $memAttempts = @($memMb)
+    if ($Role -eq "integrations" -and $memMb -gt $KorusQemuIntegrationsMemoryMbMin) {
+        $memAttempts += $KorusQemuIntegrationsMemoryMbMin
     }
     $smp = switch ($Role) {
         "server" { $KorusQemuServerSmp }
@@ -110,50 +111,64 @@ function Start-KorusQemuVm {
 
     $proc = $null
     $display = $null
-    foreach ($tryMode in ($displayModes | Select-Object -Unique)) {
-        if (Test-Path $errLog) { Remove-Item -Force $errLog -ErrorAction SilentlyContinue }
-        $display = Get-KorusQemuDisplayArgs -Role $Role -ModeOverride $tryMode
-        $args = @(
-            "-name", $name,
-            "-machine", "pc",
-            "-m", "$memMb",
-            "-smp", "$smp"
-        ) + $accelArgs + @(
-            "-drive", "file=$($disk -replace '\\','/'),if=virtio,format=qcow2"
-        ) + $seedDrive + @(
-            "-device", "virtio-rng-pci",
-            "-netdev", "user,id=net0,$hostFwd",
-            "-device", "virtio-net-pci,netdev=net0,mac=$mac",
-            "-serial", "file:$serialName"
-        ) + $display.Args
+    $launchedMemMb = $memMb
+    foreach ($tryMemMb in ($memAttempts | Select-Object -Unique)) {
+        foreach ($tryMode in ($displayModes | Select-Object -Unique)) {
+            if (Test-Path $errLog) { Remove-Item -Force $errLog -ErrorAction SilentlyContinue }
+            $display = Get-KorusQemuDisplayArgs -Role $Role -ModeOverride $tryMode
+            $args = @(
+                "-name", $name,
+                "-machine", "pc",
+                "-m", "$tryMemMb",
+                "-smp", "$smp"
+            ) + $accelArgs + @(
+                "-drive", "file=$($disk -replace '\\','/'),if=virtio,format=qcow2"
+            ) + $seedDrive + @(
+                "-device", "virtio-rng-pci",
+                "-netdev", "user,id=net0,$hostFwd",
+                "-device", "virtio-net-pci,netdev=net0,mac=$mac",
+                "-serial", "file:$serialName"
+            ) + $display.Args
 
-        $modeHint = if ($display.Graphical) { "display=$($display.Mode)" } else { "headless" }
-        if ($tryMode -ne $primary) {
-            Write-Warning "Retrying $name with display=$($display.Mode) (previous mode failed)"
-        } else {
-            Write-Host "Starting $name ($($whpx.Mode), $modeHint, seed $($seed.Type)) ..." -ForegroundColor Cyan
+            $modeHint = if ($display.Graphical) { "display=$($display.Mode)" } else { "headless" }
+            if ($tryMemMb -ne $memMb) {
+                Write-Warning "Retrying $name with -m ${tryMemMb}MB (initial ${memMb}MB failed WHPX/RAM budget)"
+            } elseif ($tryMode -ne $primary) {
+                Write-Warning "Retrying $name with display=$($display.Mode) (previous mode failed)"
+            } else {
+                Write-Host "Starting $name ($($whpx.Mode), ${tryMemMb}MB, $modeHint, seed $($seed.Type)) ..." -ForegroundColor Cyan
+            }
+            $proc = Start-Process -FilePath $qemu -ArgumentList $args -WorkingDirectory $KorusQemuRunDir `
+                -PassThru -WindowStyle $display.WindowStyle -RedirectStandardError $errLog
+            Start-Sleep -Seconds 6
+            $exited = $proc.HasExited
+            $errTail = if (Test-Path $errLog) { (Get-Content $errLog -Tail 5 -ErrorAction SilentlyContinue) -join " | " } else { "" }
+            Write-KorusDebugLog -Location "Start-KorusVm.ps1:display-try" -Message "display attempt" -HypothesisId "H1" -Data @{
+                Role = $Role; tryMode = $tryMode; tryMemMb = $tryMemMb; pid = $proc.Id; exited = $exited; errTail = $errTail
+            }
+            if (-not $exited) {
+                $launchedMemMb = $tryMemMb
+                break
+            }
+            $proc = $null
         }
-        $proc = Start-Process -FilePath $qemu -ArgumentList $args -WorkingDirectory $KorusQemuRunDir `
-            -PassThru -WindowStyle $display.WindowStyle -RedirectStandardError $errLog
-        Start-Sleep -Seconds 4
-        $exited = $proc.HasExited
-        $errTail = if (Test-Path $errLog) { (Get-Content $errLog -Tail 3 -ErrorAction SilentlyContinue) -join " | " } else { "" }
-        Write-KorusDebugLog -Location "Start-KorusVm.ps1:display-try" -Message "display attempt" -HypothesisId "H1" -Data @{
-            Role = $Role; tryMode = $tryMode; pid = $proc.Id; exited = $exited; errTail = $errTail
-        }
-        if (-not $exited) { break }
-        $proc = $null
+        if ($proc -and -not $proc.HasExited) { break }
     }
     if (-not $proc -or $proc.HasExited) {
         $err = if (Test-Path $errLog) { Get-Content -Raw $errLog } else { "" }
         Write-KorusDebugLog -Location "Start-KorusVm.ps1:fail" -Message "vm exit" -HypothesisId "H1" -Data @{ Role = $Role; err = $err.Substring(0, [Math]::Min(500, $err.Length)) }
-        throw "QEMU $name exited immediately. $err"
+        $hint = ""
+        if ($Role -eq "integrations") {
+            $hostMb = Get-KorusQemuHostMemoryMb
+            $hint = " Hint: 3-VM needs ~22GB host RAM at full sizing; with server+web use auto 4096MB integrations or set KORUS_QEMU_INTEGRATIONS_MEMORY_MB. Do not set KORUS_QEMU_FORCE_TCG unless WHPX is broken (host ~${hostMb}MB)."
+        }
+        throw "QEMU $name exited immediately.$hint $err"
     }
     Write-KorusDebugLog -Location "Start-KorusVm.ps1:ok" -Message "vm running" -HypothesisId "H1" -Data @{
-        Role = $Role; pid = $proc.Id; display = $display.Mode; accel = $whpx.Mode
+        Role = $Role; pid = $proc.Id; display = $display.Mode; accel = $whpx.Mode; memMb = $launchedMemMb
     }
     $proc.Id | Set-Content -Path $pidFile -Encoding ascii
-    Write-Host "  PID $($proc.Id)  accel=$($whpx.Mode)  display=$($display.Mode)  serial: $serialLog" -ForegroundColor DarkGray
+    Write-Host "  PID $($proc.Id)  accel=$($whpx.Mode)  mem=${launchedMemMb}MB  display=$($display.Mode)  serial: $serialLog" -ForegroundColor DarkGray
     if ($display.Graphical) {
         Write-Host "  GTK window: bootstrap/Docker log on tty1 (not login); Ctrl+Alt+G grab" -ForegroundColor DarkGray
     }

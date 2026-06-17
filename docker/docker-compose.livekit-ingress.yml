@@ -1,0 +1,20 @@
+# Spec 013 L3 scaffold: RTMP/WHIP ingress via LiveKit (ingress service).
+# Apply with livekit-dev overlay on server guest.
+# Full L3-L6 (HLS egress, DVR, moderation) — backlog in specs/013-live-streaming/tasks.md
+
+services:
+  livekit-ingress:
+    image: livekit/ingress:v1.4.0
+    depends_on:
+      - livekit
+    environment:
+      INGRESS_CONFIG_BODY: |
+        api_key: devkey
+        api_secret: secret
+        ws_url: ws://livekit:7880
+        redis:
+          address: redis:6379
+    ports:
+      - "1935:1935"
+      - "8085:8080"
+    restart: unless-stopped

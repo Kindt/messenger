@@ -1,0 +1,23 @@
+# Spec 013 L4 scaffold: HLS egress via LiveKit egress service.
+# Pair with docker-compose.livekit-dev.yml + livekit-ingress overlay on server guest.
+
+services:
+  livekit-egress:
+    image: livekit/egress:v1.8.3
+    depends_on:
+      - livekit
+      - redis
+    environment:
+      EGRESS_CONFIG_BODY: |
+        api_key: devkey
+        api_secret: secret
+        ws_url: ws://livekit:7880
+        redis:
+          address: redis:6379
+        s3:
+          endpoint: http://minio:9000
+          bucket: live-dvr
+          access_key: minioadmin
+          secret: minioadmin
+          force_path_style: true
+    restart: unless-stopped

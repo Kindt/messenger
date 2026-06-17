@@ -39,6 +39,16 @@ public class PluginPlatformService {
 
     public InvokeResult invoke(UUID instanceId, PluginEvent event) {
         var instance = repository.findInstance(instanceId);
+        return invokeRow(instance, event);
+    }
+
+    /** Resolve @bot mention in org without scanning all instances (uses uq org+bot_name). */
+    public InvokeResult invokeByOrgBot(UUID orgId, String botName, PluginEvent event) {
+        var instance = repository.findInstanceByOrgAndBotName(orgId, botName);
+        return invokeRow(instance, event);
+    }
+
+    private InvokeResult invokeRow(Optional<PluginRepository.InstanceRow> instance, PluginEvent event) {
         if (instance.isEmpty()) {
             return new InvokeResult(InvokeOutcome.NOT_FOUND, null, "error.plugin.instance_not_found");
         }

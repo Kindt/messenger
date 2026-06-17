@@ -6,6 +6,7 @@ import com.avandocmsg.messenger.core.domain.Message;
 import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
+import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -85,6 +86,38 @@ class MessageApplicationServiceTest {
             serviceWithBan.sendBlockedReason(chatId, memberId));
     }
 
+    @Test
+    void editMessage_updatesWhenSender() {
+        chatRepo.put(chatId, memberId, "member");
+        messagePort.message = sampleMessage();
+        var editCoordinator = new MessageEditCoordinator(messagePort, NatsOutboundPort.noop());
+        var editService = new MessageApplicationService(messagePort, chatRepo, null, null, editCoordinator);
+        var edited = editService.editMessage(chatId, messageId, memberId, "updated");
+        assertNotNull(edited);
+        assertEquals("updated", edited.content());
+        assertTrue(messagePort.updated);
+    }
+
+    @Test
+    void deleteMessage_softDeletesWhenSender() {
+        chatRepo.put(chatId, memberId, "member");
+        messagePort.message = sampleMessage();
+        var deleteCoordinator = new MessageDeleteCoordinator(messagePort, NatsOutboundPort.noop());
+        var svc = new MessageApplicationService(messagePort, chatRepo, null, null, null, deleteCoordinator, null);
+        assertTrue(svc.deleteMessage(chatId, messageId, memberId));
+        assertTrue(messagePort.deleted);
+    }
+
+    @Test
+    void addReaction_publishesWhenMember() {
+        chatRepo.put(chatId, memberId, "member");
+        messagePort.message = sampleMessage();
+        var reactionCoordinator = new MessageReactionCoordinator(messagePort, NatsOutboundPort.noop());
+        var svc = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, reactionCoordinator);
+        assertTrue(svc.addReaction(chatId, messageId, memberId, "👍"));
+        assertTrue(messagePort.reactionAdded);
+    }
+
     private Message sampleMessage() {
         return new Message(
             MessageId.of(messageId),
@@ -135,6 +168,41 @@ class MessageApplicationServiceTest {
         @Override
         public Optional<Message> insert(com.avandocmsg.messenger.core.port.MessageInsert command) {
             return Optional.empty();
+        }
+
+        boolean updated;
+
+        @Override
+        public boolean updateContent(MessageId id, UserId senderId, String content) {
+            updated = true;
+            if (message != null) {
+                message = new Message(
+                    message.id(), message.chatId(), message.senderId(), message.type(), content,
+                    message.replyToMessageId(), message.deleted(), message.createdAt(),
+                    Instant.parse("2026-01-02T00:00:00Z"), message.visibilityTtlSeconds(), message.attachmentFileId());
+            }
+            return true;
+        }
+
+        boolean deleted;
+
+        @Override
+        public boolean softDelete(MessageId id) {
+            deleted = true;
+            return true;
+        }
+
+        boolean reactionAdded;
+
+        @Override
+        public boolean addReaction(MessageId messageId, UserId userId, String reaction) {
+            reactionAdded = true;
+            return true;
+        }
+
+        @Override
+        public boolean removeReaction(MessageId messageId, UserId userId, String reaction) {
+            return true;
         }
     }
 }

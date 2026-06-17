@@ -6,6 +6,32 @@
 
 ---
 
+### 2026-06-17 — Backlog wave 2: hex 2b, cloud scaffold, live L4–L5
+
+- **Hex 2b:** `MessageDeleteCoordinator`, `MessageReactionCoordinator`; delete/reactions via `MessageApplicationService` + `MessageResource`.
+- **FR-OPT-09:** `OrgRoutingContext`, `OrganizationRoutingDataSource` (routing DS scaffold).
+- **011 Phase 4:** cross-tenant `PluginRepositoryH2Test`; tasks T01130–T01133 eng. closed.
+- **013 L4–L5:** `docker-compose.livekit-egress.yml`, `V040__live_session_dvr_moderation.sql`.
+- **Bridge i18n:** onec, storage, connector-runtime ru/en bundles.
+- **Export/retention:** `scripts/smoke-export-retention-gate.ps1`.
+
+### 2026-06-17 — Spec 014: plugin lifecycle ops, guest task lock, L0 scale
+
+- **Guest task lock:** `Korus-QemuGuestTaskLock.ps1` — one plink task per VM; sync scripts; `-ForceLock`.
+- **Ops:** `qemu-guest-compose.ps1`; `qemu-sync-integrations.ps1` `-Services`, `-OneAtATime`; background guest builds via `Invoke-KorusGuestRemoteJob` (logs in `/tmp`).
+- **API:** paginated plugin instances; `PATCH instances/{id}` enable/disable; `invokeByOrgBot`.
+- **Doc:** `specs/014-bot-plugin-platform/ops/plugin-lifecycle.md`.
+- **Keycloak:** example IdP/LDAP JSON → `keycloak/examples/*.json.example` (fixes `--import-realm` crash on dev stack).
+- **Презентации:** сноски †‡§¶#⊕ для синтетических данных до ops sign-off (`presentation_ops_footnotes.py`, `product_presentation.html`, матрица конкурентов).
+
+### 2026-06-16 — QEMU: WHPX for korus-integrations (3rd VM RAM budget)
+
+- **`Get-KorusQemuVmMemory.ps1`:** host RAM budget; integrations **4096 MB** when server/web already running; min **3584 MB** retry; `KORUS_QEMU_THREE_VM=1` profile (8192+2560+4096) for 16–20 GB hosts.
+- **`Start-KorusVm.ps1`:** dynamic `-m` + memory retry on immediate exit; clearer WHPX/RAM hints.
+- **`qemu-up.ps1 -WithIntegrations`:** auto `KORUS_QEMU_THREE_VM=1`.
+- **`qemu-integrations-up.ps1`:** clears `KORUS_QEMU_FORCE_TCG` by default (WHPX); RAM preflight; `-ForceTcg` escape hatch.
+- **`deploy/qemu/RESOURCES.md`:** 3-VM WHPX sizing table.
+
 ### 2026-06-16 — ws-gateway: fix /ws 404 on embedded Tomcat (PS-4.1 gate)
 
 - **ws-gateway:** `addWebapp` + `WsSci` + `StandardJarScanner` — `/ws` handshake на embedded Tomcat (ранее 404 с `addContext`).

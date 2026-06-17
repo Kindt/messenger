@@ -1,6 +1,19 @@
 # Минимальные ресурсы QEMU-ВМ
 
-Оценка по `docker/docker-compose.full-server.yml` (14 сервисов) и `korus-web/docker-compose.yml` (web-a, web-b, lb). В репозитории **нет** `deploy.resources.limits` — цифры по типичным idle/dev-минимумам и наблюдениям на стенде.
+Оценка по `docker/docker-compose.full-server.yml` (14 сервисов) и `korus-web/docker-compose.yml` (web-a, web-b, lb). Рекомендуемые **mem_limit** — overlay [`docker/docker-compose.resource-limits.yml`](../../docker/docker-compose.resource-limits.yml) (PS-0.1); pilot-stack подключает его автоматически.
+
+## Docker resource limits (PS-0.1)
+
+| Сервис | mem_limit | cpus | JVM |
+|--------|-----------|------|-----|
+| postgres-hot | 512m | 1.0 | — |
+| solr | 896m | 1.0 | — |
+| core-api | 768m | 2.0 | `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport` |
+| ws-gateway | 384m | 1.0 | same |
+| message-pipeline | 384m | 1.0 | same |
+| keycloak (prod) | 512m | — | `-Xmx256m` in keycloak-prod overlay |
+
+Проверка на guest: `docker stats --no-stream`. OOM одного Java-сервиса не должен убивать postgres.
 
 ## korus-server (full-server)
 
@@ -111,23 +124,41 @@ Optional compose profiles: `push`, `retention`, `compliance` (archiver/deep/inde
 
 > IP: **192.168.76.30**; host debug port **18190**. См. [`specs/014-bot-plugin-platform/design/qemu-integrations-vm.md`](../../specs/014-bot-plugin-platform/design/qemu-integrations-vm.md).
 
-## Хост Windows (три ВМ + QEMU)
+## Хост Windows (три ВМ + QEMU + WHPX)
 
-| | Минимум | Рекомендуется |
-|---|---------|---------------|
-| RAM гостей (server+web) | 6 + 2 ≈ **8 ГБ** | 10 + 3 = **13 ГБ** |
-| + integrations (spec 014) | +4 ГБ | +8 ГБ |
-| RAM хоста (3 VM + ~10 % QEMU) | **13 ГБ** | **22–24 ГБ** |
-| vCPU хоста | 6 | 8–10 |
-| Диск (образы qcow2 + repo.tgz) | 60 ГБ | 100 ГБ |
+| | 2 VM (server+web) | 3 VM full sizing | 3 VM `KORUS_QEMU_THREE_VM=1` |
+|---|-------------------|------------------|-------------------------------|
+| RAM гостей | 10 + 3 = **13 ГБ** | 10 + 3 + 8 = **21 ГБ** | 8 + 2.5 + 4 = **14.5 ГБ** |
+| RAM хоста (guest + ~2 ГБ reserve) | **16 ГБ** OK | **24 ГБ+** | **16–20 ГБ** OK |
+| vCPU хоста | 6 | 8–10 | 8 |
+
+**WHPX и 3-я ВМ:** если `korus-integrations` падает сразу после старта (stderr `WHPX: Failed to get performance monitoring features` — часто **не** fatal), чаще виновата **нехватка RAM хоста**, а не сломанный WHPX. QEMU не может выделить `-m 8192` при уже запущенных server (10240) + web (3072).
+
+**Решение (16–20 ГБ хост):**
+
+```powershell
+.\scripts\qemu-down.ps1
+$env:KORUS_QEMU_THREE_VM = "1"
+.\scripts\qemu-up.ps1 -KeepDisks -WithIntegrations
+```
+
+Профиль: server **8192** + web **2560** + integrations **4096** MB. Автоматически включается при `qemu-up -WithIntegrations`.
+
+**Только integrations** (server/web уже up): `.\scripts\qemu-integrations-up.ps1` — preflight RAM; при fail — перезапуск стека с `KORUS_QEMU_THREE_VM=1`.
+
+**Не использовать** `$env:KORUS_QEMU_FORCE_TCG=1` для integrations (сборка Docker ~×10 медленнее). Только если WHPX реально недоступен на хосте.
+
+Override: `$env:KORUS_QEMU_INTEGRATIONS_MEMORY_MB=4096`, `$env:KORUS_QEMU_SERVER_MEMORY_MB=8192`.
 
 ## Текущие значения в `config.ps1`
 
-| ВМ | RAM | vCPU | Диск |
-|----|-----|------|------|
-| server | 10240 МБ | 4 | 40 ГБ |
-| web | 3072 МБ | 1 | 24 ГБ |
-| integrations | 8192 МБ (12288 heavy) | 2 | 32 ГБ |
+| ВМ | RAM (solo / 2-VM) | RAM (3-VM profile) | vCPU | Диск |
+|----|-------------------|--------------------|------|------|
+| server | 10240 МБ | **8192** (`KORUS_QEMU_THREE_VM=1`) | 4 | 40 ГБ |
+| web | 3072 МБ | **2560** | 1 | 24 ГБ |
+| integrations | 8192 МБ solo; **4096** с peers | **4096** | 2 | 32 ГБ |
+| integrations heavy | 12288 МБ (`KORUS_QEMU_INTEGRATIONS_HEAVY=1`) | — | 2 | 32 ГБ |
+| integrations min | 3584 МБ (retry floor) | — | 2 | 32 ГБ |
 
 Ранее **2048 МБ на ВМ** недостаточно для server (14 контейнеров + сборка): отсюда `no space left on device`, зависший `docker ps`, connection reset на API.
 

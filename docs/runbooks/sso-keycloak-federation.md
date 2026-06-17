@@ -14,8 +14,8 @@
 | Файл | Назначение |
 |------|------------|
 | `keycloak/avandocmsg-realm.json` | Realm + **отключённые** IdP Google/Yandex + роли user/admin |
-| `keycloak/identity-provider-corporate-oidc.example.json` | Generic OIDC (Azure AD, Okta, corporate portal) |
-| `keycloak/user-federation-ldap.example.json` | LDAP/AD user federation |
+| `keycloak/examples/identity-provider-corporate-oidc.json.example` | Generic OIDC (Azure AD, Okta, corporate portal) |
+| `keycloak/examples/user-federation-ldap.json.example` | LDAP/AD user federation |
 | `scripts/keycloak-enable-identity-provider.sh` | Включение OIDC IdP через Admin REST (curl) |
 | `scripts/keycloak-enable-ldap-federation.sh` | Включение LDAP/AD user federation через Admin REST |
 
@@ -47,7 +47,7 @@ Keycloak → **Authentication** → **Required actions** / **Realm settings** �
 
 ## LDAP / Active Directory
 
-1. Параметры см. `keycloak/user-federation-ldap.example.json` (URL, `usersDn`, `bindDn`, `bindCredential` из vault).
+1. Параметры см. `keycloak/examples/user-federation-ldap.json.example` (URL, `usersDn`, `bindDn`, `bindCredential` из vault).
 2. На хосте с Keycloak:
 
 ```bash

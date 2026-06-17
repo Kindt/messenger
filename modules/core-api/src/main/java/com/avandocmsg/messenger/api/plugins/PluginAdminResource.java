@@ -5,6 +5,7 @@ import com.avandocmsg.messenger.api.plugins.PluginAdminDtos.CreateL0InstanceRequ
 import com.avandocmsg.messenger.api.plugins.PluginAdminDtos.InstanceJson;
 import com.avandocmsg.messenger.api.plugins.PluginAdminDtos.InstanceListResponse;
 import com.avandocmsg.messenger.api.plugins.PluginAdminDtos.InvokePluginRequest;
+import com.avandocmsg.messenger.api.plugins.PluginAdminDtos.UpdateInstanceRequest;
 import com.avandocmsg.messenger.api.plugins.PluginAdminDtos.PresetJson;
 import com.avandocmsg.messenger.api.plugins.PluginAdminDtos.PresetListResponse;
 import com.avandocmsg.messenger.common.plugin.PluginEvent;
@@ -15,6 +16,7 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -68,13 +70,35 @@ public class PluginAdminResource {
 
     @GET
     @Path("instances")
-    @Operation(summary = "List plugin instances for organization")
-    public InstanceListResponse instances(@QueryParam("org_id") UUID orgId) {
+    @Operation(summary = "List plugin instances for organization (paginated)")
+    public InstanceListResponse instances(
+        @QueryParam("org_id") UUID orgId,
+        @QueryParam("limit") Integer limit,
+        @QueryParam("offset") Integer offset
+    ) {
         if (orgId == null) {
-            return new InstanceListResponse(List.of());
+            return new InstanceListResponse(List.of(), 0, 0, 0);
         }
-        var rows = repository.listInstances(orgId).stream().map(PluginAdminResource::toJson).toList();
-        return new InstanceListResponse(rows);
+        int lim = limit != null ? limit : 100;
+        int off = offset != null ? offset : 0;
+        var page = repository.listInstances(orgId, lim, off);
+        var rows = page.rows().stream().map(PluginAdminResource::toJson).toList();
+        return new InstanceListResponse(rows, page.total(), lim, off);
+    }
+
+    @PATCH
+    @Path("instances/{instanceId}")
+    @Operation(summary = "Update plugin instance (enable/disable without stopping container)")
+    public Response patchInstance(@PathParam("instanceId") UUID instanceId, UpdateInstanceRequest request) {
+        if (request == null || request.enabled() == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        if (!repository.setInstanceEnabled(instanceId, request.enabled())) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        return repository.findInstance(instanceId)
+            .map(row -> Response.ok(toJson(row)).build())
+            .orElse(Response.status(Response.Status.NOT_FOUND).build());
     }
 
     @GET

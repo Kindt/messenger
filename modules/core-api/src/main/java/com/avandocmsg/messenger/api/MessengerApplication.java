@@ -349,12 +349,16 @@ public class MessengerApplication {
         var messageSendCoordinator = CoreModule.messageSendCoordinator(
             dataSource, chatRepository, mlsService, mlsMigrationService, natsOutbound,
             this.uuidGenerator, readCachePort);
+        var messageEditCoordinator = CoreModule.messageEditCoordinator(dataSource, natsOutbound);
+        var messageDeleteCoordinator = CoreModule.messageDeleteCoordinator(dataSource, natsOutbound);
+        var messageReactionCoordinator = CoreModule.messageReactionCoordinator(dataSource, natsOutbound);
         var messageService = new MessageService(messageRepository, chatRepository, blockRepository,
             mlsService, mlsMigrationService, natsOutbound, this.uuidGenerator, readCachePort,
             messageSendCoordinator,
             () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent());
         var messageApplicationService = CoreModule.messageApplicationService(
-            dataSource, chatRepository, blockRepository, messageSendCoordinator);
+            dataSource, chatRepository, blockRepository, messageSendCoordinator, messageEditCoordinator,
+            messageDeleteCoordinator, messageReactionCoordinator);
         var fileService = new FileService(fileApplicationService, messageRepository);
         var exportComplianceSeed = new AdminExportComplianceSeed(
             chatService, messageApplicationService, fileService, chatRepository, chatRetentionPolicyRepository);

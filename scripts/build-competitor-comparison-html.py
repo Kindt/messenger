@@ -10,6 +10,8 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
+from tz_product_plugin_sizing import render_plugin_sizing_table_html  # noqa: E402
+
 from competitor_comparison_data import (  # noqa: E402
     PRICE_AS_OF,
     _section_lead,
@@ -333,6 +335,10 @@ def build_full_html() -> str:
 {_section_lead(f"Оценка железа по ставкам {PRICE_AS_OF}; не оферта облачного провайдера.")}
 {render_fig_infra_by_anchor_svg()}
 {render_korus_anchor_table_html()}
+
+<h2 id="bot-sizing">Sizing узла ботов и плагинов</h2>
+{_section_lead("Модель «1 экземпляр = 1 бот»; узел интеграций отдельно от сервера чатов. Сравнение с eXpress Bot cluster @1k.")}
+{render_plugin_sizing_table_html()}
 
 <h3 id="s2nt">Нагрузочные испытания (QEMU, июнь 2026)</h3>
 {_section_lead("Замеры на стенде QEMU; целевые KPI якоря S-10k — для аргументации архитектору.")}

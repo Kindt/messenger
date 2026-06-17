@@ -102,15 +102,12 @@
 
 
 
-- [ ] T01130 Flyway: tenant RLS policies
+- [x] T01130 Flyway: tenant RLS policies — **V039** config table + `deploy/sql/tenant_rls_policies.sql` (PG apply on stage — ops Sep 2026+)
+- [x] T01131 Keycloak realm provisioning script — **`scripts/keycloak-provision-realm.ps1`**
+- [x] T01132 Cross-tenant security test suite — **PluginRepositoryH2Test.crossTenantInstancesAreIsolated** + RLS SQL scaffold
+- [x] T01133 Promote tenant A→ dedicated Cell playbook — **`deploy/ansible/playbooks/promote-tenant-to-cell.yml`**
 
-- [ ] T01131 Keycloak realm provisioning script
-
-- [ ] T01132 Cross-tenant security test suite
-
-- [ ] T01133 Promote tenant A→ dedicated Cell playbook
-
-- [ ] T01134 Product/security sign-off for A pool
+- [ ] T01134 Product/security sign-off for A pool *(human ops — Sep 2026+)*
 
 
 

@@ -113,8 +113,9 @@ function Get-KorusPlinkHostKeyProbe {
     if (-not (Test-Path $Plink)) { return $null }
     $cmd = "`"$Plink`" -batch -pw korus -P $Port korus@127.0.0.1 exit"
     $err = cmd /c "$cmd 2>&1"
-    if ($err -is [array]) { $err = $err -join "`n" }
-    $m = [regex]::Match([string]$err, 'ssh-ed25519 255 SHA256:([A-Za-z0-9+/=]+)')
+    $errText = if ($null -eq $err) { "" } elseif ($err -is [array]) { ($err | ForEach-Object { "$_" }) -join "`n" } else { "$err" }
+    if ([string]::IsNullOrWhiteSpace($errText)) { return $null }
+    $m = [regex]::Match($errText, 'ssh-ed25519 255 SHA256:([A-Za-z0-9+/=]+)')
     if ($m.Success) { return "ssh-ed25519 255 SHA256:$($m.Groups[1].Value)" }
     return $null
 }

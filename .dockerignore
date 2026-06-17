@@ -1,17 +1,22 @@
 # Контекст сборки для docker/Dockerfile.* (compose: context: ..)
+# Все modules/* из settings.gradle.kts должны попадать в context.
 .git
 .gradle
 **/build
 .idea
 .vscode
 .cursor
-deploy/qemu/backups
-deploy/qemu/images
-deploy/qemu/run
-*.iml
-
-# Не нужны для Gradle-сборки Java-модулей внутри образа
+deploy/
+korus-web/
+specs/
+tests/
+integrations/
+docs/
+scripts/
 keycloak
-docs
-scripts
 tz_full.html
+*.md
+*.html
+competitor_comparison*
+product_presentation*
+**/*.iml

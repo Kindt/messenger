@@ -48,6 +48,26 @@ public final class JdbcMessageRepositoryAdapter implements MessageRepositoryPort
         return Optional.of(fromResponse(response));
     }
 
+    @Override
+    public boolean updateContent(MessageId id, UserId senderId, String content) {
+        return messageRepository.updateContent(id.value(), senderId.value(), content);
+    }
+
+    @Override
+    public boolean softDelete(MessageId id) {
+        return messageRepository.delete(id.value());
+    }
+
+    @Override
+    public boolean addReaction(MessageId messageId, UserId userId, String reaction) {
+        return messageRepository.addReaction(messageId.value(), userId.value(), reaction);
+    }
+
+    @Override
+    public boolean removeReaction(MessageId messageId, UserId userId, String reaction) {
+        return messageRepository.removeReaction(messageId.value(), userId.value(), reaction);
+    }
+
     private Message fromResponse(com.avandocmsg.messenger.api.messages.dto.MessageResponse response) {
         return new Message(
             MessageId.of(UUID.fromString(response.id())),

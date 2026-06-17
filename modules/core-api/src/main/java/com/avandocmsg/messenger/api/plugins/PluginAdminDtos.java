@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.plugins;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.Instant;
@@ -51,7 +52,20 @@ public final class PluginAdminDtos {
         JsonNode payload
     ) {}
 
+    public record UpdateInstanceRequest(
+        @JsonProperty("enabled") Boolean enabled
+    ) {}
+
     public record PresetListResponse(List<PresetJson> presets) {}
 
-    public record InstanceListResponse(List<InstanceJson> instances) {}
+    public record InstanceListResponse(
+        List<InstanceJson> instances,
+        @JsonProperty("total_count") int totalCount,
+        int limit,
+        int offset
+    ) {
+        public InstanceListResponse(List<InstanceJson> instances) {
+            this(instances, instances.size(), instances.size(), 0);
+        }
+    }
 }

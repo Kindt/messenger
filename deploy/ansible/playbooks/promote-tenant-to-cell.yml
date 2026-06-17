@@ -1,0 +1,31 @@
+---
+# Spec 011 T01133: promote SaaS tenant from shared pool to dedicated Cell (scaffold).
+- name: Promote tenant to dedicated Cell
+  hosts: localhost
+  gather_facts: false
+  vars:
+    tenant_org_id: "{{ tenant_org_id | mandatory }}"
+    target_cell_inventory: "{{ target_cell_inventory | mandatory }}"
+    export_archive_path: "/var/backups/korus/tenant-{{ tenant_org_id }}.sql.gz"
+  tasks:
+    - name: Validate tenant org id
+      ansible.builtin.assert:
+        that:
+          - tenant_org_id | length > 0
+
+    - name: Export tenant-scoped data (placeholder)
+      ansible.builtin.debug:
+        msg: "Run pg_dump with org filter or cell export tool before cutover"
+
+    - name: Provision target Cell
+      ansible.builtin.import_playbook: cell-provision.yml
+      vars:
+        cell_inventory: "{{ target_cell_inventory }}"
+
+    - name: Restore tenant data on dedicated Cell (placeholder)
+      ansible.builtin.debug:
+        msg: "Restore {{ export_archive_path }} on target Cell; update DNS/runtime_endpoint"
+
+    - name: Cutover plugin runtime_endpoint
+      ansible.builtin.debug:
+        msg: "Point org plugin instances to new integrations node URL"

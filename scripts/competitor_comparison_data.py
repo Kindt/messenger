@@ -7,6 +7,11 @@ from dataclasses import dataclass
 from html import escape
 from pathlib import Path
 
+from tz_product_plugin_sizing import (
+    BotFleet,
+    recommend_integrations_ram_gb,
+    render_plugin_sizing_table_html,
+)
 from tz_product_pricing import (
     PRICE_AS_OF,
     _RATES,
@@ -227,12 +232,19 @@ def render_glossary_html() -> str:
 
 
 def render_full_disclaimers_html() -> str:
-    return """
+    from presentation_ops_footnotes import render_ops_synthetic_warn_compact_html
+
+    return (
+        render_ops_synthetic_warn_compact_html()
+        + """
 <div class="warn">
   <div class="req">Ограничения методики (обязательно к слайду «источники»)</div>
   <ul class="comment">
-    <li>Цифры инфраструктуры — ориентиры; перед prod рекомендуется формальное нагрузочное тестирование на стенде заказчика.</li>
-    <li>TCO уровня B — модельные оценки; уровень C — публичные прайсы могут отличаться от коммерческого предложения.</li>
+    <li><b>†</b> Sizing и TCO Korus — аналитическая модель; уточняется после load test на stage (ops sign-off).</li>
+    <li><b>‡</b> Замеры НТ в матрице — лабораторный baseline на тестовом стенде, не prod iron.</li>
+    <li><b>§</b> RPO/RTO в сравнении — ориентиры профиля, не результат backup drill.</li>
+    <li><b>¶</b> Цифры infra — ориентиры рынка; перед prod — формальное НТ на стенде заказчика.</li>
+    <li>TCO уровня B — модельные оценки; уровень C — публичные прайсы могут отличаться от КП.</li>
     <li>eXpress при 10/100 тыс. рег. — модельная оценка infra, не оферта вендора.</li>
     <li>Mattermost/Rocket.Chat: «одновременные пользователи» ≠ зарегистрированные.</li>
     <li>Compass/Loop: акции и цены реселлера — сверять с офертой на дату КП.</li>
@@ -241,6 +253,7 @@ def render_full_disclaimers_html() -> str:
     <li>Устаревший XMPP — модель HA-кластера; реальные контуры часто на одном узле.</li>
   </ul>
 </div>"""
+    )
 
 
 @dataclass(frozen=True)
@@ -544,7 +557,8 @@ FEATURE_ROWS: tuple[tuple[str, str, str, str, str, str], ...] = (
     ("E2EE", "MLS (приёмка)", "✓ E2EE", "—", "—", "опционально"),
     ("ВКС", "WebRTC mesh", "до 500 уч.", "до 10 уч.", "✓", "интеграции"),
     ("Мобильные клиенты", "дорожная карта", "iOS/Android/Аврора", "✓", "✓", "✓"),
-    ("SmartApps / суперапп", "дорожная карта", "✓", "боты/API", "рабочее пространство", "приложения"),
+    ("SmartApps / суперапп", "◐ integrations", "✓", "боты/API", "рабочее пространство", "приложения"),
+    ("Боты / интеграции", "✓ L0–L3 platform", "✓ Bot cluster", "боты/API", "—", "плагины"),
     ("ФСТЭК / реестр РФ", "в процессе", "✓", "✓", "✓", "✓ (Loop)"),
     ("Публичный sizing", "✓ якоря", "частично", "—", "on-prem КП", "✓ до 2k"),
     ("Публичный прайс лицензии", "КП", "✓", "✓", "✓ SaaS", "КП EE"),
@@ -1253,7 +1267,9 @@ def render_elevator_pitch_html() -> str:
   <div class="req">Краткий pitch (30 секунд)</div>
   <p class="elevator-text comment">
     <b>Korus Messenger</b> — корпоративный мессенджер в контуре заказчика, где
-    <b>комплаенс (экспорт, legal hold, audit)</b> заложен в продукт, а экономика масштабируется
+    <b>комплаенс (экспорт, legal hold, audit)</b> заложен в продукт, а
+    <b>платформа ботов-плагинов L0–L3</b> подключает ITSM/ERP без доработки ядра.
+    Экономика масштабируется
     через <b>инфраструктуру</b>, а не через лицензию на каждого пользователя.
     Сравниваемся с eXpress, облаком и рынком РФ по <b>единой методике</b> — без «красивых» цифр в вакууме.
   </p>
@@ -1272,6 +1288,10 @@ def render_value_pillars_html() -> str:
     <p class="comment">Export gate, legal hold, dual-TTL, audit — не проект интегратора на год. Аргумент для ИБ и внутреннего аудита.</p>
   </div>
   <div class="pillar pillar-korus">
+    <div class="pillar-title">Платформа ботов L0–L3</div>
+    <p class="comment">Admin preset/policy/instance; bridges (1С, Exchange, Naumen); polyglot sidecars. Код не в JVM ядра — отдельный узел; sizing линейно по экземплярам.</p>
+  </div>
+  <div class="pillar pillar-korus">
     <div class="pillar-title">Предсказуемый TCO</div>
     <p class="comment">OPEX инфра по sizing-якорям. Без сюрприза «30 млн ₽/год только лицензия» при 10 тыс. рег. — типичный профиль eXpress.</p>
   </div>
@@ -1285,6 +1305,7 @@ def render_battle_card_html() -> str:
     pachka_y = pachka_yearly(10_000)
     korus_tco = s10.infra_yearly  # license KORUS = КП, show infra as baseline
     ex_tco = ex_lic + ex_infra
+    korus_bot6_gb = recommend_integrations_ram_gb(BotFleet(l2_bridge=6))
     return f"""
 <div class="battle-card" id="battle">
   <div class="req">Сравнительная карта @10&nbsp;000 рег. пользов.</div>
@@ -1313,6 +1334,12 @@ def render_battle_card_html() -> str:
       <td class="col-korus"><b>Ядро продукта</b></td>
       <td>DLP / политики</td>
       <td>API, не gate</td>
+    </tr>
+    <tr>
+      <td>Боты / интеграции</td>
+      <td class="col-korus"><b>L0–L3 platform</b><br/><span class="small">узел ~{korus_bot6_gb} ГБ при 6 bridge</span></td>
+      <td>Bot cluster ~12 ГБ @1k<br/><span class="small">shared, vendor sizing</span></td>
+      <td>Боты/API в облаке</td>
     </tr>
     <tr>
       <td>ФСТЭК / реестр</td>
@@ -1513,6 +1540,7 @@ def render_korus_positioning_html() -> str:
       <ul class="comment">
         <li>Нужен <b>изолированный контур</b> и предсказуемый OPEX без «налога» per-user лицензии.</li>
         <li>Критичны <b>экспорт, legal hold, dual-TTL, audit</b> — не плагины «на доработку».</li>
+        <li>Нужны <b>боты и интеграции</b> (Service Desk, 1С, Exchange) — платформа L0–L3 без per-user лицензии на бота.</li>
         <li>Масштаб от <b>10&nbsp;000 рег. пользов.</b> (Стандарт) до федерального контура (Корпоративный).</li>
         <li>Важна <b>мультитenant org-shard</b> и путь от пилота к промышленному контуру без смешения матриц.</li>
       </ul>
@@ -2332,6 +2360,12 @@ def render_nt_baseline_html() -> str:
 </table>"""
 
     return f"""
+<div class="warn">
+  <div class="req">‡ Лабораторный baseline (до ops sign-off)</div>
+  <div class="comment">Замеры ниже — <b>тестовый стенд разработки</b> (ограниченный RAM), не prod/stage iron.
+  После развёртывания stage и formal load test таблица и графики заменяются измеренными p50/p95 и пропускной способностью.
+  Полная расшифровка сносок — блок «Сноски» в продуктовой презентации.</div>
+</div>
 <div class="note">
   <div class="req">Инженерный эталон НТ · {when}</div>
   <div class="comment">{env}</div>
@@ -2402,6 +2436,7 @@ def render_brief_disclaimers_html() -> str:
     return """
 <div class="warn">
   <ul class="comment">
+    <li><b>† ‡ § ¶</b> Infra, TCO, sizing и НТ — синтетические/расчётные ориентиры до ops sign-off (stage deploy + load test); см. «Сноски» в product_presentation.html.</li>
     <li>Цифры infra и TCO — ориентиры для переговоров; финальное КП — по sizing заказчика.</li>
     <li>eXpress @10/100 тыс. рег. — модельная оценка infra; лицензия — публичный прайс express.ms.</li>
     <li>Enterprise E-500k/E-1M: облачный SaaS (Пачка, VK) не сравнивается с on-prem якорями.</li>

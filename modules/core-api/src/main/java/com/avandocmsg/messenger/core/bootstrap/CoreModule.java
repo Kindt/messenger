@@ -4,6 +4,9 @@ import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.files.FileProxy;
 import com.avandocmsg.messenger.api.mls.MlsMigrationService;
 import com.avandocmsg.messenger.api.mls.MlsService;
+import com.avandocmsg.messenger.core.application.MessageEditCoordinator;
+import com.avandocmsg.messenger.core.application.MessageDeleteCoordinator;
+import com.avandocmsg.messenger.core.application.MessageReactionCoordinator;
 import com.avandocmsg.messenger.core.application.MessageSendCoordinator;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
@@ -82,11 +85,40 @@ public final class CoreModule {
         return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepository);
     }
 
+    public static MessageEditCoordinator messageEditCoordinator(DataSource dataSource, NatsOutboundPort natsOutbound) {
+        return new MessageEditCoordinator(messageRepositoryPort(dataSource), natsOutbound);
+    }
+
+    public static MessageDeleteCoordinator messageDeleteCoordinator(DataSource dataSource, NatsOutboundPort natsOutbound) {
+        return new MessageDeleteCoordinator(messageRepositoryPort(dataSource), natsOutbound);
+    }
+
+    public static MessageReactionCoordinator messageReactionCoordinator(DataSource dataSource, NatsOutboundPort natsOutbound) {
+        return new MessageReactionCoordinator(messageRepositoryPort(dataSource), natsOutbound);
+    }
+
+    public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
+                                                                      BlockRepository blockRepository,
+                                                                      MessageSendCoordinator sendCoordinator,
+                                                                      MessageEditCoordinator editCoordinator) {
+        return messageApplicationService(dataSource, chatRepository, blockRepository, sendCoordinator,
+            editCoordinator, null, null);
+    }
+
+    public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
+                                                                      BlockRepository blockRepository,
+                                                                      MessageSendCoordinator sendCoordinator,
+                                                                      MessageEditCoordinator editCoordinator,
+                                                                      MessageDeleteCoordinator deleteCoordinator,
+                                                                      MessageReactionCoordinator reactionCoordinator) {
+        return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepository, blockRepository,
+            sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator);
+    }
+
     public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
                                                                       BlockRepository blockRepository,
                                                                       MessageSendCoordinator sendCoordinator) {
-        return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepository, blockRepository,
-            sendCoordinator);
+        return messageApplicationService(dataSource, chatRepository, blockRepository, sendCoordinator, null);
     }
 
     public static UserRepositoryPort userRepositoryPort(DataSource dataSource) {

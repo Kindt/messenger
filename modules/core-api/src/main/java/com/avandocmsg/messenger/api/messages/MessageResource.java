@@ -217,7 +217,7 @@ public class MessageResource {
                 .entity(new ApiError(404, messages.get("error.message.not_found")))
                 .build();
         }
-        var msg = messageService.editMessage(chatId, msgId, userId, request.content());
+        var msg = messageApplicationService.editMessage(chatId, msgId, userId, request.content());
         if (msg == null) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.message.cannot_edit")))
@@ -238,7 +238,7 @@ public class MessageResource {
         var userId = CurrentUserId.uuid(securityContext);
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var msgId = UuidParams.required(msgIdStr, "message_id");
-        var ok = messageService.deleteMessage(chatId, msgId, userId);
+        var ok = messageApplicationService.deleteMessage(chatId, msgId, userId);
         if (!ok) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.message.cannot_delete")))
@@ -285,12 +285,15 @@ public class MessageResource {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var msgId = UuidParams.required(msgIdStr, "message_id");
         var userId = CurrentUserId.uuid(securityContext);
-        if (!messageService.canAccessChat(chatId, userId)) {
+        if (messageApplicationService.getMessageForMember(
+            com.avandocmsg.messenger.core.domain.ChatId.of(chatId),
+            com.avandocmsg.messenger.core.domain.MessageId.of(msgId),
+            com.avandocmsg.messenger.core.domain.UserId.of(userId)).isEmpty()) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.message.not_member")))
                 .build();
         }
-        var ok = messageService.addReaction(chatId, msgId, userId, request.reaction());
+        var ok = messageApplicationService.addReaction(chatId, msgId, userId, request.reaction());
         if (!ok) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.message.not_found")))
@@ -317,12 +320,15 @@ public class MessageResource {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var msgId = UuidParams.required(msgIdStr, "message_id");
         var userId = CurrentUserId.uuid(securityContext);
-        if (!messageService.canAccessChat(chatId, userId)) {
+        if (messageApplicationService.getMessageForMember(
+            com.avandocmsg.messenger.core.domain.ChatId.of(chatId),
+            com.avandocmsg.messenger.core.domain.MessageId.of(msgId),
+            com.avandocmsg.messenger.core.domain.UserId.of(userId)).isEmpty()) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.message.not_member")))
                 .build();
         }
-        var ok = messageService.removeReaction(chatId, msgId, userId, request.reaction());
+        var ok = messageApplicationService.removeReaction(chatId, msgId, userId, request.reaction());
         if (!ok) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.message.reaction_not_found")))

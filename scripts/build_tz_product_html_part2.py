@@ -3,6 +3,7 @@
 from html import escape
 
 from product_status import PLAYWRIGHT_DATE, PLAYWRIGHT_PASSED, PRODUCT_DATE, PRODUCT_VERSION  # noqa: E402
+from presentation_ops_footnotes import fn, render_ops_synthetic_footnotes_html  # noqa: E402
 from tz_product_resources import render_appendix_i_html
 from tz_product_pricing import (
     PILOT_PROFILE,
@@ -213,16 +214,24 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
   <li><b>Production:</b> HTTPS, секреты не в открытом виде, sign-off E2EE перед массовым включением.</li>
   <li><b>Экспорт и ретенция:</b> окончательное удаление только после прохождения export gate.</li>
   <li><b>Локализация:</b> интерфейс минимум на русском и английском.</li>
-  <li><b>Развёртывание:</b> профиль Pilot или Standard разворачивается по документации; load test на stage при go-live.</li>
+  <li><b>Развёртывание:</b> профиль Pilot или Standard разворачивается по документации; load test на stage при go-live{fn("ddagger")}.</li>
   <li><b>Комплаенс (§13):</b> export с индикатором полноты; legal hold блокирует purge; audit admin-действий.</li>
-  <li><b>SLA (§14):</b> согласованные RPO/RTO по профилю; сообщения не теряются при деградации P1.</li>
+  <li><b>SLA (§14):</b> согласованные RPO/RTO по профилю{fn("section")}; сообщения не теряются при деградации P1.</li>
   <li><b>Профиль (§15):</b> ограничения Pilot доведены до заказчика до запуска.</li>
-  <li><b>Интеграции (§12):</b> REST API, WebSocket, Bot API L2 и batch export-replay реализованы; SSO — template + runbook (IdP — ops).</li>
+  <li><b>Интеграции (§12):</b> REST API, WebSocket, Bot API L2, <b>платформа плагинов L0–L3</b> и batch export-replay реализованы; SSO — template + runbook (IdP — ops).</li>
 </ol>
 
 <hr/>
 <h2 id="s12">12. Интеграции и экосистема</h2>
-<p><span class="tag tag-partial">Частично</span></p>
+<p><span class="tag tag-done">Реализовано</span> — REST, WebSocket, Bot API L2, <b>платформа плагинов L0–L3</b>; SSO federation — <span class="tag tag-partial">Частично</span></p>
+<div class="note">
+  <div class="req">Платформа ботов и плагинов — ключевое отличие</div>
+  <div class="comment">
+    Код интеграций <b>не</b> загружается в JVM core-api. Каждый бот = <b>один экземпляр</b> на отдельном узле интеграций (§10.7).
+    Уровни L0 (FAQ-кнопки) … L3 (AI+OCR). Admin: preset → org policy → instance. Polyglot sidecars: PHP, Go, Python, Java 8, VB.NET, PowerShell.
+    Preset bridges: Exchange, 1С, Naumen, storage, outbound. Сбой узла интеграций не блокирует переписку людей.
+  </div>
+</div>
 <h3>12.1 Уже доступно</h3>
 <table>
   <tr><th>Канал</th><th>Для кого</th><th>Что даёт</th><th>Статус</th></tr>
@@ -231,15 +240,25 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
   <tr><td>Система входа (Keycloak)</td><td>IT</td><td>JWT, локальные пользователи</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Export / replay</td><td>Compliance</td><td>JSON/ZIP выгрузка</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>Web Push</td><td>Пользователи</td><td>SW + push-worker; VAPID в конфигурации ✓</td><td><span class="tag tag-partial">Частично</span></td></tr>
-  <tr><td>Bot API (REST L2)</td><td>IT, интеграторы</td><td>register, webhook, sendMessage, long-poll, pin/ban</td><td><span class="tag tag-partial">Частично</span></td></tr>
+  <tr><td>Bot API (REST L2)</td><td>IT, интеграторы</td><td>register, webhook, long-poll, pin/ban, rotate</td><td><span class="tag tag-done">Реализовано</span></td></tr>
+  <tr><td><b>Платформа плагинов L0–L3</b></td><td>IT, интеграторы</td><td>Admin 3-level; bridges; sidecars</td><td><span class="tag tag-done">Реализовано</span></td></tr>
 </table>
-<h3>12.2 SSO и каталог (template + ops)</h3>
+<h3>12.2 Уровни плагинов</h3>
+<table>
+  <tr><th>Уровень</th><th>Примеры</th><th>RAM / экз.</th></tr>
+  <tr><td><b>L0</b></td><td>FAQ, телефонный справочник</td><td>0 (конфиг)</td></tr>
+  <tr><td><b>L1</b> sidecar</td><td>PHP/Go/Python echo</td><td>~192 МБ</td></tr>
+  <tr><td><b>L2</b> bridge</td><td>Exchange, 1С, Naumen, storage</td><td>~384 МБ</td></tr>
+  <tr><td><b>L3</b></td><td>AI triage + on-prem OCR</td><td>~768 МБ</td></tr>
+</table>
+<p class="small">Sizing: §10.7 — линейно по числу экземпляров; база узла ~1,2 ГБ.</p>
+<h3>12.3 SSO и каталог (template + ops)</h3>
 <table>
   <tr><th>Сценарий</th><th>Ожидание</th><th>Статус</th></tr>
   <tr><td>SSO Google / корпоративный portal (OIDC)</td><td>Единый вход без отдельного пароля</td><td><span class="tag tag-partial">Частично</span> — Keycloak broker template</td></tr>
   <tr><td>LDAP / Active Directory</td><td>Учётки из AD</td><td><span class="tag tag-partial">Частично</span> — federation example</td></tr>
 </table>
-<h3>12.3 Запланировано</h3>
+<h3>12.4 Запланировано</h3>
 <table>
   <tr><th>Сценарий</th><th>Ожидание</th><th>Статус</th></tr>
   <tr><td>Email fallback уведомлений</td><td>Оповещение без push</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
@@ -292,7 +311,7 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
 <p>Export-файлы на сервере хранятся ~30 дней (настраивается), затем удаляются по политике.</p>
 
 <hr/>
-<h2 id="s14">14. Доступность и SLA</h2>
+<h2 id="s14">14. Доступность и SLA{fn("section")}</h2>
 {FIG_SLA}
 {FIG_MSG}
 <h3>14.1 Определения</h3>
@@ -303,7 +322,7 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
   <tr><td>RTO</td><td>Максимальное время восстановления сервиса</td></tr>
   <tr><td>Деградация</td><td>Частичная работа (например, без push или без полнотекстового поиска)</td></tr>
 </table>
-<h3>14.2 Доступность по профилю</h3>
+<h3>14.2 Доступность по профилю{fn("section")}</h3>
 <table>
   <tr><th>Профиль</th><th>Доступность*</th><th>RPO</th><th>RTO</th></tr>
   <tr><td>Pilot</td><td>99,0% / месяц</td><td>24 ч</td><td>4 ч</td></tr>
@@ -336,7 +355,7 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
 <h3>Что сообщить сотрудникам при Pilot</h3>
 <ol>
   <li>Поиск по очень старым сообщениям может быть медленнее.</li>
-  <li>Массовые рассылки всем сразу — в пределах ~8–15 msg/s.</li>
+  <li>Массовые рассылки всем сразу — в пределах ~8–15 сообщ./с.</li>
   <li>E2EE в prod — после formal sign-off.</li>
 </ol>
 """)
@@ -357,7 +376,7 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
   <tr><td>A23–A24</td><td>E2EE legacy / MLS</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>A25–A26</td><td>Web Push, PWA</td><td><span class="tag tag-partial">Частично</span></td></tr>
   <tr><td>A27–A31</td><td>Admin, ретенция, legal hold, audit, deep archive</td><td><span class="tag tag-done">Реализовано</span></td></tr>
-  <tr><td>A32</td><td>Bot API</td><td><span class="tag tag-partial">Частично</span> — MVP</td></tr>
+  <tr><td>A32</td><td>Bot API + платформа L0–L3</td><td><span class="tag tag-done">Реализовано</span></td></tr>
   <tr><td>A33–A34</td><td>Live HLS, Mobile apps</td><td><span class="tag tag-planned">Запланировано</span></td></tr>
 </table>
 
@@ -402,7 +421,7 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
     # §17 Cost
     parts.append(f"""
 <hr/>
-<h2 id="s17">17. Стоимость владения — примеры расчётов</h2>
+<h2 id="s17">17. Стоимость владения — примеры расчётов{fn("pilcrow")}</h2>
 {FIG_COST}
 <p class="small"><b>Рис. 7 — как считаются столбцы:</b> «Pilot» = Σ строк §17.2 ({fmt_rub(pilot_profile_monthly())}/мес);
   «Monolith (справ.)» = full-stack на одном хосте ({fmt_rub(pilot_fullstack_monolith_monthly())}/мес);
@@ -414,13 +433,15 @@ def append_sections_11_18(parts, FIG_MSG, FIG_SLA, FIG_COST):
 {render_section_17_7()}
 """)
 
+    parts.append(render_ops_synthetic_footnotes_html())
+
     parts.append(f"""
 <hr/>
 <p class="small" style="margin-top:40px;padding-top:20px;border-top:2px solid #e5e7eb;">
   <b>Korus Messenger (AvandocMsg)</b> — Продуктовая презентация v{PRODUCT_VERSION}, {PRODUCT_DATE}.<br/>
   Единый автономный документ для заказчика. Все цифры — ориентиры для планирования, не оферта.<br/>
   Статус на дату: веб-клиент и сервер реализованы; Playwright {PLAYWRIGHT_PASSED}/{PLAYWRIGHT_PASSED} ({PLAYWRIGHT_DATE});
-  E2EE/звонки/push/TLS — частично (ops/sign-off; stage с сентября 2026); Bot API MVP — частично; mobile, Live HLS — planned/out.
+  E2EE/звонки/push/TLS — частично (ops/sign-off; stage с сентября 2026); Bot API + платформа L0–L3 — реализовано; mobile, Live HLS — planned/out.
 </p>
 </body>
 </html>

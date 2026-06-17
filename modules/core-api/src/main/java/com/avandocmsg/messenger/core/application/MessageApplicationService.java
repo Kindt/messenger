@@ -19,22 +19,41 @@ public final class MessageApplicationService {
     private final ChatRepository chatRepository;
     private final BlockRepository blockRepository;
     private final MessageSendCoordinator sendCoordinator;
+    private final MessageEditCoordinator editCoordinator;
+    private final MessageDeleteCoordinator deleteCoordinator;
+    private final MessageReactionCoordinator reactionCoordinator;
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository) {
-        this(messageRepositoryPort, chatRepository, null, null);
+        this(messageRepositoryPort, chatRepository, null, null, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
                                      BlockRepository blockRepository) {
-        this(messageRepositoryPort, chatRepository, blockRepository, null);
+        this(messageRepositoryPort, chatRepository, blockRepository, null, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
                                      BlockRepository blockRepository, MessageSendCoordinator sendCoordinator) {
+        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, null, null, null);
+    }
+
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
+                                     BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
+                                     MessageEditCoordinator editCoordinator) {
+        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, editCoordinator, null, null);
+    }
+
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
+                                     BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
+                                     MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
+                                     MessageReactionCoordinator reactionCoordinator) {
         this.messageRepositoryPort = messageRepositoryPort;
         this.chatRepository = chatRepository;
         this.blockRepository = blockRepository;
         this.sendCoordinator = sendCoordinator;
+        this.editCoordinator = editCoordinator;
+        this.deleteCoordinator = deleteCoordinator;
+        this.reactionCoordinator = reactionCoordinator;
     }
 
     public Optional<Message> getMessageForMember(ChatId chatId, MessageId messageId, UserId viewerId) {
@@ -84,6 +103,62 @@ public final class MessageApplicationService {
             return null;
         }
         return sendCoordinator.forward(sourceChatId, msgId, userId, targetChatId);
+    }
+
+    public MessageResponse editMessage(UUID chatId, UUID msgId, UUID userId, String newContent) {
+        if (editCoordinator == null || newContent == null || newContent.isBlank()) {
+            return null;
+        }
+        if (chatRepository.getMemberRole(chatId, userId) == null) {
+            return null;
+        }
+        if (chatRepository.getChatType(chatId).filter("saved"::equals).isPresent()) {
+            return null;
+        }
+        var messageId = MessageId.of(msgId);
+        var message = messageRepositoryPort.findById(messageId).orElse(null);
+        if (message == null || !message.chatId().value().equals(chatId)) {
+            return null;
+        }
+        if (!message.senderId().value().equals(userId) || message.deleted()) {
+            return null;
+        }
+        return editCoordinator.edit(messageId, UserId.of(userId), newContent);
+    }
+
+    public boolean deleteMessage(UUID chatId, UUID msgId, UUID userId) {
+        if (deleteCoordinator == null) {
+            return false;
+        }
+        if (chatRepository.getMemberRole(chatId, userId) == null) {
+            return false;
+        }
+        var messageId = MessageId.of(msgId);
+        var message = messageRepositoryPort.findById(messageId).orElse(null);
+        if (message == null || !message.chatId().value().equals(chatId)) {
+            return false;
+        }
+        return deleteCoordinator.delete(messageId, UserId.of(userId));
+    }
+
+    public boolean addReaction(UUID chatId, UUID msgId, UUID userId, String reaction) {
+        if (reactionCoordinator == null || reaction == null || reaction.isBlank()) {
+            return false;
+        }
+        if (getMessageForMember(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId)).isEmpty()) {
+            return false;
+        }
+        return reactionCoordinator.addReaction(chatId, MessageId.of(msgId), UserId.of(userId), reaction);
+    }
+
+    public boolean removeReaction(UUID chatId, UUID msgId, UUID userId, String reaction) {
+        if (reactionCoordinator == null) {
+            return false;
+        }
+        if (getMessageForMember(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId)).isEmpty()) {
+            return false;
+        }
+        return reactionCoordinator.removeReaction(chatId, MessageId.of(msgId), UserId.of(userId), reaction);
     }
 
     private boolean isP2PMessagingBlocked(UUID chatId, UUID senderId) {
