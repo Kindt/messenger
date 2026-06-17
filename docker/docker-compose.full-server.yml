@@ -275,7 +275,7 @@ services:
       INDEXER_BATCH_FLUSH_MS: ${INDEXER_BATCH_FLUSH_MS:-500}
       INDEXER_METRICS_PORT: "9191"
     ports:
-      - "9197:9191"
+      - "9199:9191"
     entrypoint:
       - /bin/sh
       - -lc

@@ -6,7 +6,7 @@
 
 | ВМ | IP | Роль | Порты на хосте Windows |
 |----|-----|------|------------------------|
-| `korus-server` | 192.168.76.10 | Docker + **Ansible** `qemu-server-local` | 18080→8080, 18082→8082, 18081→8081, **17880→7880** (LiveKit L2) |
+| `korus-server` | 192.168.76.10 | Docker + **Ansible** `qemu-server-local` | 18080→8080, 18082→8082, 18081→8081, **9198→9198** (ws metrics), **9197→9197** (pipeline metrics), **17880→7880** (LiveKit L2) |
 | `korus-web` | 192.168.76.20 | Docker + **Ansible** `qemu-web-local` | 19088→9088 |
 | **`korus-integrations`** | **192.168.76.30** | Docker: plugin bridges, demo sidecars, vitrine mocks (**spec 014**) | **18190**→8090 (gateway, optional) |
 

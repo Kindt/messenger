@@ -9,6 +9,7 @@ dependencies {
 
     implementation("org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion")
     implementation("org.apache.tomcat.embed:tomcat-embed-websocket:$tomcatVersion")
+    runtimeOnly("org.apache.tomcat.embed:tomcat-embed-jasper:$tomcatVersion")
 
     implementation("jakarta.servlet:jakarta.servlet-api:6.0.0")
     implementation("jakarta.websocket:jakarta.websocket-api:2.2.0")
