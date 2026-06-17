@@ -27,6 +27,25 @@ public class MessageRepository {
     /** List reads: omit E2EE ciphertext (web client uses preview/decrypt paths). */
     private static final String SQL_LIST_CONTENT_PROJECTION =
         "CASE WHEN m.type LIKE 'e2ee-%' THEN NULL ELSE m.content END AS content";
+    private static final String SQL_LIST_REPLY_PREVIEW_CONTENT =
+        "CASE WHEN p.type LIKE 'e2ee-%' THEN NULL ELSE p.content END AS reply_preview_content";
+    private static final String SQL_MESSAGE_COLUMNS =
+        "m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at, "
+            + "m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id";
+    private static final String SQL_LIST_MESSAGE_COLUMNS =
+        "m.id, m.chat_id, m.sender_id, m.type, "
+            + SQL_LIST_CONTENT_PROJECTION
+            + ", m.reply_to_msg_id, m.deleted, m.created_at, "
+            + "m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id";
+    private static final String SQL_REPLY_PREVIEW_COLUMNS =
+        ", p.id AS reply_preview_id, p.sender_id AS reply_preview_sender_id, "
+            + "p.type AS reply_preview_type, p.content AS reply_preview_content, p.deleted AS reply_preview_deleted";
+    private static final String SQL_LIST_REPLY_PREVIEW_COLUMNS =
+        ", p.id AS reply_preview_id, p.sender_id AS reply_preview_sender_id, "
+            + "p.type AS reply_preview_type, "
+            + SQL_LIST_REPLY_PREVIEW_CONTENT
+            + ", p.deleted AS reply_preview_deleted";
+    private static final String SQL_REPLY_PREVIEW_JOIN = " LEFT JOIN messages p ON p.id = m.reply_to_msg_id";
     private final DataSource dataSource;
     private final DataSource readDataSource;
     private final Clock clock;
@@ -112,11 +131,9 @@ public class MessageRepository {
     }
 
     public Optional<MessageResponse> findById(UUID id) {
-        var sql = """
-            SELECT id, chat_id, sender_id, type, content, reply_to_msg_id, deleted, created_at, edited_at, visibility_ttl_seconds,
-                attachment_file_id
-            FROM messages m WHERE m.id = ? AND (m.visibility_ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - m.created_at)) < m.visibility_ttl_seconds)
-            """;
+        var sql = "SELECT " + SQL_MESSAGE_COLUMNS + SQL_REPLY_PREVIEW_COLUMNS
+            + " FROM messages m" + SQL_REPLY_PREVIEW_JOIN
+            + " WHERE m.id = ? AND " + SQL_MSG_VISIBILITY_TTL_VISIBLE;
         try (var conn = read().getConnection();
              var stmt = conn.prepareStatement(sql)) {
             applyQueryTimeout(stmt);
@@ -138,11 +155,8 @@ public class MessageRepository {
 
     public List<MessageResponse> findByChatId(UUID chatId, int limit, UUID before, UUID filterUserId) {
         var sql = new StringBuilder(
-            "SELECT m.id, m.chat_id, m.sender_id, m.type, "
-                + SQL_LIST_CONTENT_PROJECTION
-                + ", m.reply_to_msg_id, m.deleted, m.created_at, "
-                + "m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id "
-                + "FROM messages m WHERE m.chat_id = ? AND "
+            "SELECT " + SQL_LIST_MESSAGE_COLUMNS + SQL_LIST_REPLY_PREVIEW_COLUMNS
+                + " FROM messages m" + SQL_REPLY_PREVIEW_JOIN + " WHERE m.chat_id = ? AND "
                 + SQL_MSG_VISIBILITY_TTL_VISIBLE);
         if (before != null) {
             sql.append(" AND m.created_at < (SELECT m2.created_at FROM messages m2 WHERE m2.id = ?)");
@@ -571,7 +585,47 @@ public class MessageRepository {
             ts != null ? ts.toInstant() : null,
             editedTs != null ? editedTs.toInstant() : null,
             ttl,
-            attachmentFileId != null ? attachmentFileId.toString() : null
+            attachmentFileId != null ? attachmentFileId.toString() : null,
+            mapReplyPreview(rs)
         );
+    }
+
+    private static com.avandocmsg.messenger.api.messages.dto.MessageReplyPreview mapReplyPreview(
+        java.sql.ResultSet rs
+    ) throws Exception {
+        if (!hasColumn(rs, "reply_preview_id")) {
+            return null;
+        }
+        var previewId = rs.getObject("reply_preview_id", UUID.class);
+        if (previewId == null) {
+            return null;
+        }
+        var deleted = rs.getBoolean("reply_preview_deleted");
+        var previewType = hasColumn(rs, "reply_preview_type") ? rs.getString("reply_preview_type") : null;
+        String snippet = null;
+        if (!deleted) {
+            var content = hasColumn(rs, "reply_preview_content") ? rs.getString("reply_preview_content") : null;
+            if (content != null && !content.isBlank()) {
+                snippet = content.length() > 120 ? content.substring(0, 120) : content;
+            } else if (previewType != null && previewType.startsWith("e2ee-")) {
+                snippet = null;
+            }
+        }
+        return new com.avandocmsg.messenger.api.messages.dto.MessageReplyPreview(
+            previewId.toString(),
+            rs.getObject("reply_preview_sender_id", UUID.class).toString(),
+            snippet,
+            deleted
+        );
+    }
+
+    private static boolean hasColumn(java.sql.ResultSet rs, String column) throws java.sql.SQLException {
+        var meta = rs.getMetaData();
+        for (int i = 1; i <= meta.getColumnCount(); i++) {
+            if (column.equalsIgnoreCase(meta.getColumnLabel(i))) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -1,4 +1,5 @@
-import { Page, expect } from "@playwright/test";
+import { APIRequestContext, Page, expect } from "@playwright/test";
+import { apiBase } from "./auth";
 
 /** Locale-agnostic UI login (uses stable ids, not button label text). */
 export async function uiLogin(page: Page, username: string, password: string): Promise<void> {
@@ -41,6 +42,49 @@ export async function uiSendMessage(page: Page, text: string): Promise<void> {
     return;
   }
   await expect(articles.last().locator(".msg-body, .msg-e2ee-body")).toBeVisible({ timeout: 10_000 });
+}
+
+/** True when server reports MLS active (encrypted bubbles; plaintext may be deferred). */
+export async function apiMlsActive(request: APIRequestContext): Promise<boolean> {
+  const capsRes = await request.get(`${apiBase()}/api/v1/media/capabilities`);
+  const caps = await capsRes.json();
+  return (caps.mls_status || caps.mlsStatus) === "active";
+}
+
+/** Assert at least one message bubble is visible (MLS-safe). */
+export async function uiExpectThreadHasMessage(page: Page): Promise<void> {
+  const article = page.locator("article").first();
+  await expect(article).toBeVisible({ timeout: 30_000 });
+  await expect(article.locator(".msg-body, .msg-e2ee-body")).toBeVisible({ timeout: 15_000 });
+}
+
+/** Plaintext when available; otherwise accept encrypted bubble under MLS. */
+export async function uiExpectMessageTextOrBubble(
+  page: Page,
+  request: APIRequestContext,
+  text: string
+): Promise<void> {
+  if (await apiMlsActive(request)) {
+    await uiExpectThreadHasMessage(page);
+    return;
+  }
+  await uiExpectMessageText(page, text);
+}
+
+/** Hover message row so action buttons become visible. */
+export async function uiHoverMessage(page: Page, articleIndex = 0): Promise<void> {
+  await page.locator("article").nth(articleIndex).hover();
+}
+
+/** Click a message action button (reply, forward, delete, …) by data-testid. */
+export async function uiClickMessageAction(
+  page: Page,
+  testId: string,
+  articleIndex = 0
+): Promise<void> {
+  const article = page.locator("article").nth(articleIndex);
+  await article.hover();
+  await article.locator(`[data-testid=${testId}]`).click();
 }
 
 export const composer = (page: Page) => page.locator("[data-testid=message-composer]");

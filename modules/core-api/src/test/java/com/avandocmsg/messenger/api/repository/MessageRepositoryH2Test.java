@@ -109,6 +109,25 @@ class MessageRepositoryH2Test {
     }
 
     @Test
+    void replyPreview_onListAndFindById() {
+        var parentId = UUID.randomUUID();
+        var replyId = UUID.randomUUID();
+        assertNotNull(repo.insert(parentId, chatId, senderId, "text", "parent body text", null, "p1", null));
+        assertNotNull(repo.insert(replyId, chatId, senderId, "text", "reply body", parentId, "r1", null));
+
+        var listed = repo.findByChatId(chatId, 10, null);
+        var reply = listed.stream().filter(m -> replyId.toString().equals(m.id())).findFirst().orElseThrow();
+        assertNotNull(reply.replyPreview());
+        assertEquals(parentId.toString(), reply.replyPreview().messageId());
+        assertEquals(senderId.toString(), reply.replyPreview().senderId());
+        assertEquals("parent body text", reply.replyPreview().snippet());
+        assertFalse(reply.replyPreview().deleted());
+
+        var byId = repo.findById(replyId).orElseThrow();
+        assertEquals("parent body text", byId.replyPreview().snippet());
+    }
+
+    @Test
     void findByChatId_omitsE2eeCiphertext_butFindByIdKeepsContent() {
         var e2eeId = UUID.randomUUID();
         assertNotNull(repo.insert(e2eeId, chatId, senderId, "e2ee-text", "secret-ciphertext", null, null, null));

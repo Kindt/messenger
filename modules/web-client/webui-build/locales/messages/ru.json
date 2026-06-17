@@ -415,6 +415,7 @@
       "pin": "Закрепить",
       "unpin": "Открепить",
       "messageLinkTitle": "Ссылка на сообщение",
+      "replyQuoteTitle": "Перейти к цитируемому сообщению",
       "reactionTitle": "Реакция {emoji}",
       "pubLinkTitle": "Создать публичную ссылку на файл (A/B/C)",
       "linksTitle": "Список и отзыв публичных ссылок"

@@ -45,16 +45,27 @@ curl -fsS http://127.0.0.1:8091/v1/plugin/handle \
 | POST | `/api/v1/admin/plugins/instances/l0` |
 | POST | `/api/v1/admin/plugins/instances/{id}/invoke` |
 
-Example L0 body:
+Example L0 body (v2 L0+ — see `integrations/examples/hr-faq-menu.json`):
 
 ```json
 {
   "org_id": "00000000-0000-0000-0000-000000000001",
   "bot_name": "hr_faq",
   "display_name": "HR FAQ",
-  "config_json": { "welcome_text": "HR", "menu": { "root": ["vacation"], "buttons": [{"id":"vacation","label":"Отпуск","response_text":"Портал"}] } }
+  "config_json": {
+    "config_schema_version": 2,
+    "welcome_text": "Напишите /phone",
+    "vars": { "it_phone": "1234" },
+    "slash_commands": [{ "command": "/phone", "response_text": "ИТ: {{config.it_phone}}" }],
+    "menu": {
+      "root": ["vacation"],
+      "buttons": [{ "id": "vacation", "label": "Отпуск", "response_text": "Портал" }]
+    }
+  }
 }
 ```
+
+Invalid `config_json` returns **400** with `error.plugin.l0_config_invalid`.
 
 ---
 

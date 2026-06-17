@@ -415,6 +415,7 @@
       "pin": "고정",
       "unpin": "고정 해제",
       "messageLinkTitle": "메시지 링크",
+      "replyQuoteTitle": "인용 메시지로 이동",
       "reactionTitle": "반응 {emoji}",
       "pubLinkTitle": "파일 공개 링크 만들기(A/B/C)",
       "linksTitle": "공개 링크 목록 및 취소"

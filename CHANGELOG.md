@@ -6,6 +6,18 @@
 
 ---
 
+### 2026-06-17 — Презентации: техпис правки (сноски, SSO, TCO)
+
+- **Сноски:** маркер RPO/RTO **§ → ※** (не путается с номером раздела); легенда **† ‡ ※ ¶ # ⊕** в MD и HTML.
+- **PRODUCT_PRESENTATION.md** v1.12: блок «Сноски (расшифровка)», согласованный статус SSO в §12, дата footer.
+- **product_presentation.html** v2.6.3; исправлен баг TCO-таблиц (запятые в qty и unit rates).
+- **competitor_comparison*.html:** пометка «внутренний»; НТ без QEMU/127.0.0.1 в customer-facing текстах; полная легенда сносок в brief.
+
+### 2026-06-17 — L0+ menu v2 (spec 014) + spec 016 chat message actions
+
+- **L0+:** `L0TemplateSupport`, `L0WhenSupport`, `slash_commands`, button `when`, `vars`; schema v2; `L0MenuConfigValidator` on admin L0 create.
+- **Spec 016:** chat message actions — `reply_preview` API, rich quote UI, Playwright `ui-messaging` tier (13/13 on QEMU).
+
 ### 2026-06-17 — CI: Keycloak import gate + spec 015 live-server registry
 
 - **Keycloak:** compose mounts only `avandocmsg-realm.json`; `keycloak-verify-realm.sh`; stricter `keycloak-ensure-dev-users.sh`.

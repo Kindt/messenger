@@ -415,6 +415,7 @@
       "pin": "Pin",
       "unpin": "Unpin",
       "messageLinkTitle": "Link to message",
+      "replyQuoteTitle": "Jump to quoted message",
       "reactionTitle": "Reaction {emoji}",
       "pubLinkTitle": "Create public file link (A/B/C)",
       "linksTitle": "List and revoke public links"

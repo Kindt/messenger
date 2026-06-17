@@ -21,5 +21,25 @@ public record MessageResponse(
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonProperty("visibility_ttl_seconds") Integer visibilityTtlSeconds,
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    @JsonProperty("attachment_file_id") String attachmentFileId
-) {}
+    @JsonProperty("attachment_file_id") String attachmentFileId,
+    @Schema(description = "Preview of parent message when replying")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("reply_preview") MessageReplyPreview replyPreview
+) {
+    public MessageResponse(
+        String id,
+        String chatId,
+        String senderId,
+        String type,
+        String content,
+        String replyToMsgId,
+        boolean deleted,
+        Instant createdAt,
+        Instant editedAt,
+        Integer visibilityTtlSeconds,
+        String attachmentFileId
+    ) {
+        this(id, chatId, senderId, type, content, replyToMsgId, deleted, createdAt, editedAt,
+            visibilityTtlSeconds, attachmentFileId, null);
+    }
+}

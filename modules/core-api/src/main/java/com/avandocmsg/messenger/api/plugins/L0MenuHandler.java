@@ -7,12 +7,11 @@ import com.avandocmsg.messenger.common.plugin.PluginResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 /**
- * L0 config-only menu: buttons, static text, optional links (inline on server).
+ * L0 config-only menu: buttons, static text, optional links, templates, slash commands (spec 014 L0+).
  */
 public final class L0MenuHandler {
 
@@ -26,10 +25,14 @@ public final class L0MenuHandler {
         if (menu.isMissingNode()) {
             return PluginResponse.text("Меню не настроено.");
         }
+        var slash = trySlashCommand(event, config);
+        if (slash != null) {
+            return slash;
+        }
         var type = event.type() != null ? event.type() : "";
         if ("button".equals(type)) {
             var buttonId = stringPayload(event, "button_id");
-            return buttonResponse(menu, buttonId);
+            return buttonResponse(event, menu, config, buttonId);
         }
         if ("slash".equals(type) && event.text() != null && event.text().startsWith("/echo ")) {
             return PluginResponse.text(event.text().substring(6).trim());
@@ -40,12 +43,30 @@ public final class L0MenuHandler {
                 return PluginResponse.text("pong (L0)");
             }
         }
-        return rootCard(menu, config);
+        return rootCard(event, menu, config);
     }
 
-    private static PluginResponse rootCard(JsonNode menu, JsonNode config) {
-        var welcome = config.path("welcome_text").asText("Выберите раздел:");
-        var buttons = buttonsForKeys(menu, menu.path("root"));
+    private static PluginResponse trySlashCommand(PluginEvent event, JsonNode config) {
+        if (!"slash".equals(event.type()) || event.text() == null) {
+            return null;
+        }
+        var commands = config.path("slash_commands");
+        if (!commands.isArray()) {
+            return null;
+        }
+        var text = event.text().trim();
+        for (var cmd : commands) {
+            if (text.equals(cmd.path("command").asText())) {
+                var responseText = L0TemplateSupport.render(cmd.path("response_text").asText(""), event, config);
+                return PluginResponse.text(responseText.isBlank() ? cmd.path("command").asText() : responseText);
+            }
+        }
+        return null;
+    }
+
+    private static PluginResponse rootCard(PluginEvent event, JsonNode menu, JsonNode config) {
+        var welcome = L0TemplateSupport.render(config.path("welcome_text").asText("Выберите раздел:"), event, config);
+        var buttons = buttonsForKeys(event, menu, config, menu.path("root"));
         return new PluginResponse(
             List.of(com.avandocmsg.messenger.common.plugin.PluginMessage.markdown(welcome)),
             List.of(new PluginCard("Меню", null, buttons)),
@@ -53,7 +74,7 @@ public final class L0MenuHandler {
         );
     }
 
-    private static PluginResponse buttonResponse(JsonNode menu, String buttonId) {
+    private static PluginResponse buttonResponse(PluginEvent event, JsonNode menu, JsonNode config, String buttonId) {
         if (buttonId == null || buttonId.isBlank()) {
             return PluginResponse.text("Неизвестная кнопка.");
         }
@@ -63,8 +84,11 @@ public final class L0MenuHandler {
         }
         for (var item : items) {
             if (buttonId.equals(item.path("id").asText())) {
-                var text = item.path("response_text").asText("");
-                var url = item.path("url").asText("");
+                if (!L0WhenSupport.matches(item.path("when"), event)) {
+                    return PluginResponse.text("Кнопка недоступна.");
+                }
+                var text = L0TemplateSupport.render(item.path("response_text").asText(""), event, config);
+                var url = L0TemplateSupport.render(item.path("url").asText(""), event, config);
                 var sb = new StringBuilder(text);
                 if (!url.isBlank()) {
                     if (!sb.isEmpty()) {
@@ -74,7 +98,7 @@ public final class L0MenuHandler {
                 }
                 var childKeys = item.path("children");
                 if (childKeys.isArray() && !childKeys.isEmpty()) {
-                    var childButtons = buttonsForKeys(menu, childKeys);
+                    var childButtons = buttonsForKeys(event, menu, config, childKeys);
                     return new PluginResponse(
                         List.of(com.avandocmsg.messenger.common.plugin.PluginMessage.markdown(sb.toString())),
                         List.of(new PluginCard(item.path("label").asText("Далее"), null, childButtons)),
@@ -87,7 +111,12 @@ public final class L0MenuHandler {
         return PluginResponse.text("Кнопка не найдена: " + buttonId);
     }
 
-    private static List<PluginButton> buttonsForKeys(JsonNode menu, JsonNode keys) {
+    private static List<PluginButton> buttonsForKeys(
+        PluginEvent event,
+        JsonNode menu,
+        JsonNode config,
+        JsonNode keys
+    ) {
         var out = new ArrayList<PluginButton>();
         if (!keys.isArray()) {
             return out;
@@ -99,7 +128,7 @@ public final class L0MenuHandler {
         for (var keyNode : keys) {
             var key = keyNode.asText();
             for (var item : items) {
-                if (key.equals(item.path("id").asText())) {
+                if (key.equals(item.path("id").asText()) && L0WhenSupport.matches(item.path("when"), event)) {
                     out.add(new PluginButton(key, item.path("label").asText(key)));
                     break;
                 }

@@ -68,6 +68,12 @@ class WebUiParityAssetsTest {
         assertTrue(app.contains("KorusUiE2eeMls"), "e2ee mls utils delegation");
         assertTrue(app.contains("KorusUiE2eeUtils"), "e2ee utils delegation");
         assertTrue(app.contains("message-reply-button"), "reply button testid");
+        assertTrue(app.contains("message-forward-button"), "forward button testid");
+        assertTrue(app.contains("message-delete-button"), "delete button testid");
+        assertTrue(app.contains("message-edit-button"), "edit button testid");
+        assertTrue(app.contains("message-link-button"), "link button testid");
+        assertTrue(app.contains("message-reply-quote"), "reply quote testid");
+        assertTrue(app.contains("reply_preview"), "reply_preview from API");
         assertTrue(app.contains("mesh-webrtc-button"), "mesh webrtc testid");
         assertTrue(app.contains("KorusMlsWasmFactory"), "mls wasm factory");
         assertTrue(app.contains("chat-export-button"), "export button testid");

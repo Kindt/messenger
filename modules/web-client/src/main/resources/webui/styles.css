@@ -1169,7 +1169,9 @@ button {
 }
 
 .msg-reply-quote {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   width: 100%;
   text-align: left;
   margin: 0 0 6px;
@@ -1181,6 +1183,24 @@ button {
   color: var(--muted);
   font-size: 0.78rem;
   cursor: pointer;
+}
+
+.msg-reply-quote-sender {
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 0.72rem;
+  margin-bottom: 2px;
+}
+
+.msg-reply-quote-snippet {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.msg-reply-quote-deleted {
+  font-style: italic;
 }
 
 .msg-reply-quote:hover {
@@ -1244,6 +1264,21 @@ button {
   background: var(--accent-dim);
   border: 1px solid rgba(77, 139, 255, 0.35);
   font-size: 0.82rem;
+}
+
+.composer-reply-inner {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.composer-reply-sender {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--accent);
 }
 
 .composer-reply-text {

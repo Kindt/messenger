@@ -4675,7 +4675,8 @@
   function messageFromSendEvent(data) {
     var aid = data.attachment_file_id || data.attachmentFileId || null;
     var replyTo = data.reply_to_msg_id || data.replyToMsgId || null;
-    return {
+    var rpRaw = data.reply_preview || data.replyPreview;
+    var out = {
       id: data.messageId,
       chat_id: data.chatId,
       sender_id: data.senderId,
@@ -4695,6 +4696,15 @@
             : null,
       attachment_file_id: aid,
     };
+    if (rpRaw) {
+      out.reply_preview = {
+        message_id: rpRaw.message_id || rpRaw.messageId || replyTo,
+        sender_id: rpRaw.sender_id || rpRaw.senderId || null,
+        snippet: rpRaw.snippet,
+        deleted: !!rpRaw.deleted,
+      };
+    }
+    return out;
   }
 
   function appendMessageFromSendEvent(data) {
@@ -4787,6 +4797,71 @@
     return formatPreviewForMessage(p);
   }
 
+  function senderLabelForUserId(userId) {
+    if (!userId) return "";
+    var myId = state.tokens ? jwtSub(state.tokens.access_token) : null;
+    return myId && userId === myId ? L("ui.thread.you") : userId.slice(0, 8);
+  }
+
+  function replyPreviewData(m) {
+    if (!m) return null;
+    var preview = m.reply_preview || m.replyPreview;
+    if (preview) {
+      var mid = preview.message_id || preview.messageId || m.reply_to_msg_id;
+      var senderId = preview.sender_id || preview.senderId || null;
+      var deleted = !!preview.deleted;
+      var snippet = deleted ? null : preview.snippet;
+      var encrypted =
+        !deleted && (snippet == null || snippet === "") && !!m.reply_to_msg_id;
+      return {
+        messageId: mid,
+        senderId: senderId,
+        snippet: snippet,
+        deleted: deleted,
+        encrypted: encrypted,
+      };
+    }
+    if (!m.reply_to_msg_id) return null;
+    var parent = findMessageInThread(m.reply_to_msg_id);
+    return {
+      messageId: m.reply_to_msg_id,
+      senderId: parent ? parent.sender_id : null,
+      snippet: replySnippetForId(m.reply_to_msg_id),
+      deleted: !!(parent && parent.deleted),
+      encrypted: !!(parent && isE2eeType(parent.type)),
+    };
+  }
+
+  function appendReplyQuoteBlock(art, m) {
+    var rp = replyPreviewData(m);
+    if (!rp || !rp.messageId) return;
+    var rq = el("button", "msg-reply-quote");
+    rq.type = "button";
+    rq.setAttribute("data-testid", "message-reply-quote");
+    var quoteTitle = L("ui.message.replyQuoteTitle");
+    rq.setAttribute("aria-label", quoteTitle);
+    rq.title = quoteTitle;
+    if (rp.senderId) {
+      rq.appendChild(
+        el("span", "msg-reply-quote-sender", senderLabelForUserId(rp.senderId))
+      );
+    }
+    var sn = el("span", "msg-reply-quote-snippet");
+    if (rp.deleted) {
+      sn.textContent = L("ui.message.deleted");
+      sn.classList.add("msg-reply-quote-deleted");
+    } else if (rp.encrypted) {
+      sn.textContent = L("chat.encryptedE2eePreview");
+    } else {
+      sn.textContent = rp.snippet || L("ui.message.default");
+    }
+    rq.appendChild(sn);
+    rq.onclick = function () {
+      scrollToMessageId(rp.messageId).catch(function () {});
+    };
+    art.appendChild(rq);
+  }
+
   function highlightMessageElement(msgId) {
     if (!msgId) return;
     requestAnimationFrame(function () {
@@ -4848,6 +4923,7 @@
     state.replyTo = {
       id: m.id,
       snippet: formatPreviewForMessage(m),
+      senderLabel: senderLabelForUserId(m.sender_id),
     };
     render();
     var ta = document.getElementById("msgdraft");
@@ -7620,13 +7696,7 @@
         }
         art.appendChild(meta);
         if (m.reply_to_msg_id) {
-          var rq = el("button", "msg-reply-quote");
-          rq.type = "button";
-          rq.textContent = "↩ " + replySnippetForId(m.reply_to_msg_id);
-          rq.onclick = function () {
-            scrollToMessageId(m.reply_to_msg_id).catch(function () {});
-          };
-          art.appendChild(rq);
+          appendReplyQuoteBlock(art, m);
         }
         if (!m.deleted && (m.type !== "text" || isE2eeType(m.type))) {
           var typeLbl = isE2eeType(m.type)
@@ -7684,6 +7754,7 @@
           }
           actions.appendChild(
             iconBtn("🔗", L("ui.message.messageLinkTitle"), {
+              testId: "message-link-button",
               onClick: function () {
                 copyMessageDeepLink(m);
               },
@@ -7718,6 +7789,7 @@
           );
           actions.appendChild(
             iconBtn("↪", L("ui.actions.forward"), {
+              testId: "message-forward-button",
               onClick: function () {
                 openForwardPicker(m);
               },
@@ -7762,6 +7834,7 @@
           if (myId && m.sender_id === myId && m.type === "text") {
             actions.appendChild(
               iconBtn("✎", L("ui.actions.edit"), {
+                testId: "message-edit-button",
                 onClick: function () {
                   editMessagePrompt(m).catch(function (err) {
                     state.error = err.message || L("messages.editFailed");
@@ -7772,6 +7845,7 @@
             );
             actions.appendChild(
               iconBtn("🗑", L("ui.actions.delete"), {
+                testId: "message-delete-button",
                 onClick: function () {
                   deleteMessageConfirm(m).catch(function (err) {
                     state.error = err.message || L("messages.deleteFailed");
@@ -7858,9 +7932,17 @@
       };
       if (state.replyTo) {
         var rbar = el("div", "composer-reply-bar");
-        rbar.appendChild(
-          el("span", "composer-reply-text", L("ui.thread.replyPrefix", { text: state.replyTo.snippet }))
+        rbar.setAttribute("data-testid", "composer-reply-bar");
+        var rInner = el("div", "composer-reply-inner");
+        if (state.replyTo.senderLabel) {
+          rInner.appendChild(
+            el("span", "composer-reply-sender", state.replyTo.senderLabel + ":")
+          );
+        }
+        rInner.appendChild(
+          el("span", "composer-reply-text", state.replyTo.snippet || L("ui.message.default"))
         );
+        rbar.appendChild(rInner);
         var rCancel = el("button", "btn btn-ghost btn-sm", "✕");
         rCancel.type = "button";
         rCancel.title = L("ui.thread.cancelReply");

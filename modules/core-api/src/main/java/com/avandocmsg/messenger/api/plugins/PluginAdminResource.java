@@ -135,6 +135,10 @@ public class PluginAdminResource {
         var config = request.configJson() != null
             ? (com.fasterxml.jackson.databind.node.ObjectNode) request.configJson()
             : MAPPER.createObjectNode();
+        var configError = L0MenuConfigValidator.validate(config);
+        if (configError.isPresent()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(error(configError.get())).build();
+        }
         var created = platformService.createL0Instance(
             request.orgId(),
             request.botName().trim(),

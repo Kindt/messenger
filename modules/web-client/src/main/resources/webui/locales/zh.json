@@ -415,6 +415,7 @@
       "pin": "置顶",
       "unpin": "取消置顶",
       "messageLinkTitle": "消息链接",
+      "replyQuoteTitle": "跳转到引用消息",
       "reactionTitle": "反应 {emoji}",
       "pubLinkTitle": "创建文件公开链接（A/B/C）",
       "linksTitle": "公开链接列表与撤销"

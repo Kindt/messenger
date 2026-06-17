@@ -12,7 +12,7 @@ Baseline inventory of non-admin server resources against current `modules/web-cl
 |---|---|---|---|---|
 | auth | `AuthResource` | `/v1/auth/login|register|refresh|logout` | covered | Full auth + refresh session flow present in web-client. |
 | chats | `ChatResource` | `/v1/chats/*` | covered | Read receipts REST hydrate + `up_to_message_id` on `/read`; member/ban flows wired. |
-| messages | `MessageResource` | `/v1/chats/{chatId}/messages/*` | covered | All REST paths wired; static asserts for `/versions`, `/plaintext-preview`. |
+| messages | `MessageResource` | `/v1/chats/{chatId}/messages/*` | covered | Reply preview (`reply_preview`), forward/delete/edit UI + `ui-messaging` Playwright tier (spec 016). |
 | files | `FileResource` | `/v1/files/*` | covered | Metadata GET, kind-B auth-link URL, upload/download/public links. |
 | export | `ExportResource` | `/v1/chats/{chatId}/export/*` | covered | Request/status/cancel/download + `/attachments` preview. |
 | contacts | `ContactResource` | `/v1/contacts/*` | covered | Contact list/import/delete flows present. |
