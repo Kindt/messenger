@@ -39,6 +39,8 @@
 
 ## Phase 6 — W3/W4 T-P1 (ops — deploy-only when host available)
 
+> **Deferred registry:** [`specs/015-live-server-ops-backlog/tasks.md`](../../015-live-server-ops-backlog/tasks.md) (LSO-001…007). Агентам не включать в списки доработок до Sep 2026+.
+
 Engineering deliverables **READY** 2026-06-16 — [`docs/review/stage-prod-deploy-runbook.md`](../../docs/review/stage-prod-deploy-runbook.md), [`docs/review/ops-signoff-log.md`](../../docs/review/ops-signoff-log.md).
 
 - [ ] T601 Stage DNS + vault encrypt + `site.yml` (US1 rows 1–3) — **eng. ✅** preflight/validate; **ops ⏳** real FQDN

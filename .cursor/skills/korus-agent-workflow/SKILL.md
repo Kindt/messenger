@@ -34,7 +34,7 @@ For **tracked features** in `specs/<NNN-feature>/`:
 3. **speckit-tasks** - `tasks.md`
 4. **speckit-implement** - execute tasks, update `tasks.md` checkboxes
 
-Current active plan: `specs/011-korus-cloud-platform/plan.md` (Phase 0–1 closed; ops tail spec 007/010 → Sep 2026+). Specs 008/009/010 eng. closed.
+Current active plan: `specs/011-korus-cloud-platform/plan.md` (Phase 0–1 closed). **Live-server ops:** `specs/015-live-server-ops-backlog/` (deferred registry, not agent work lists). Specs 008/009/010 eng. closed.
 
 Do **not** replace speckit with superpowers `writing-plans` for formal spec-kit features. Superpowers planning complements speckit for ad-hoc tasks, spikes, or debugging branches.
 
@@ -62,7 +62,7 @@ These **always** apply in Korus Messenger:
 | **PR gate** | `./gradlew buildIntegrity` |
 | **E2E acceptance** | Inner: `playwright-dev-loop.ps1 -Tier …`; outer: full orchestrator before sign-off |
 | **QEMU lifecycle** | Do not run `qemu-down` unless user asks |
-| **Stage/prod** | **No stage until September 2026.** Do not propose stage/prod deploy or smokes on real FQDN; use QEMU VM for acceptance (see `AGENTS.md` User Preferences) |
+| **Stage/prod** | **No stage until September 2026.** Deferred ops → [`specs/015-live-server-ops-backlog/`](../../specs/015-live-server-ops-backlog/). **Do not list** LSO/T601+ in work backlogs; **do remind** registry exists in status summaries. Exception: user explicitly orders ops work. QEMU acceptance unchanged. |
 
 When a superpowers skill suggests `docker compose`, `npm install` for full stack, host Ansible, or **stage/prod smoke/deploy** - **adapt** to QEMU guests or Gradle-only host builds.
 

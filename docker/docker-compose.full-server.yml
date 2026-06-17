@@ -107,7 +107,7 @@ services:
       KC_DB_USERNAME: avandocmsg
       KC_DB_PASSWORD: avandocmsg
     volumes:
-      - ../keycloak:/opt/keycloak/data/import:ro
+      - ../keycloak/avandocmsg-realm.json:/opt/keycloak/data/import/avandocmsg-realm.json:ro
     depends_on:
       postgres-hot:
         condition: service_healthy

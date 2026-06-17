@@ -1,0 +1,32 @@
+---
+description: Live-server ops tasks deferred to spec 015 — do not surface in agent work lists until Sep 2026+ or explicit user order
+alwaysApply: true
+---
+
+# Live-server ops deferred (spec 015)
+
+**Registry:** [`specs/015-live-server-ops-backlog/`](../../specs/015-live-server-ops-backlog/)
+
+## Until September 2026 or explicit user order
+
+Tasks requiring a **live server** (real stage/prod FQDN, prod vault, live external creds, multi-cell topology, human sign-off ceremonies) are **not** listed in agent «backlog / next steps / waves / recommended PR» outputs.
+
+**Do instead:**
+
+- Focus engineering lists on QEMU-acceptable work (`buildIntegrity`, unit/H2, `:18080`/`:19088`, guest smokes).
+- Add a **brief reminder** (1–2 sentences) that deferred ops items exist in **spec 015** when summarizing overall project status or when user asks «what's left».
+
+**Exceptions (include in work lists):**
+
+- User explicitly asks about stage/prod/ops backlog or orders a specific ops task (e.g. «делаем T601»).
+- User states stage host is available or «after September 2026» timeline no longer applies.
+
+## What counts as live-server (not QEMU)
+
+See [`specs/015-live-server-ops-backlog/spec.md`](../../specs/015-live-server-ops-backlog/spec.md) § «Что считается live-server задачей».
+
+**QEMU** (`127.0.0.1:18080`, `:19088`, integrations `:18190`) is **not** live-server for this rule.
+
+## Adding new deferred items
+
+New ops-only live-server work → row in [`specs/015-live-server-ops-backlog/tasks.md`](../../specs/015-live-server-ops-backlog/tasks.md) (`LSO-NNN`); pointer in source spec, not duplicate «open engineering» checkbox.

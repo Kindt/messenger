@@ -52,7 +52,7 @@ jobs:
       - name: Wait for health
         run: ./scripts/wait-stack-ready.sh
         env:
-          TIMEOUT_SEC: 420
+          TIMEOUT_SEC: 600
 
       - name: Ensure Keycloak dev users (csadmin password grant)
         run: bash scripts/keycloak-ensure-dev-users.sh

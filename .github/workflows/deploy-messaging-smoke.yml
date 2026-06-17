@@ -42,7 +42,7 @@ jobs:
           cache: gradle
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -52,11 +52,10 @@ jobs:
           ansible --version
 
       - name: Build images (Gradle assemble)
-        run: chmod +x gradlew && ./gradlew :modules:core-api:assemble :modules:workers:export-replay:assemble :modules:workers:retention:assemble --no-daemon -q
+        run: chmod +x gradlew scripts/*.sh scripts/lib/*.sh && ./gradlew :modules:core-api:assemble :modules:workers:export-replay:assemble :modules:workers:retention:assemble --no-daemon -q
 
       - name: Ansible deploy + acceptance smoke
         run: |
-          chmod +x scripts/*.sh scripts/lib/*.sh
           cd deploy/ansible
           ansible-playbook -i inventory/local/hosts.yml playbooks/ci-local.yml -e run_smoke=true
 
@@ -100,7 +99,7 @@ jobs:
         working-directory: modules/web-client/webui-build
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -108,14 +107,14 @@ jobs:
         run: pip install websocket-client
 
       - name: Build images (Gradle assemble)
-        run: chmod +x gradlew && ./gradlew :modules:core-api:assemble :modules:web-client:assemble --no-daemon -q
+        run: chmod +x gradlew scripts/*.sh scripts/lib/*.sh && ./gradlew :modules:core-api:assemble :modules:web-client:assemble --no-daemon -q
 
       - name: Full stack + korus-web up
         run: |
-          chmod +x scripts/*.sh scripts/lib/*.sh
           ./scripts/full-stack-up.sh --skip-ensure --build --no-wait-ready
-          ./scripts/wait-stack-ready.sh
-          bash scripts/keycloak-ensure-smoke-users.sh
+          TIMEOUT_SEC=600 ./scripts/wait-stack-ready.sh
+          bash scripts/keycloak-ensure-dev-users.sh
+          bash scripts/keycloak-verify-realm.sh
           ./scripts/korus-web-up.sh --attach --skip-ensure --build
 
       - name: Install Playwright
@@ -127,6 +126,7 @@ jobs:
       - name: Playwright E2E
         working-directory: tests/e2e-web
         env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:9088
           KORUS_WEB_URL: http://127.0.0.1:9088
           KORUS_API_URL: http://127.0.0.1:8080
         run: npx playwright test

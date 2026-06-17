@@ -55,4 +55,4 @@
 
 - [x] T01429 `smoke-integrations-gate.ps1` on host forwards (mock/auto) — 2026-06-16 QEMU green (stack restart on guest)
 - [x] T01430 Playwright `plugin-integrations.spec.ts` — **3/3** with `KORUS_INTEGRATIONS_GATE_URL` (2026-06-16)
-- [x] T01431 Optional live-backend verification — **`scripts/smoke-integrations-live-gate.ps1`** (live creds on guest `.env` — ops)
+- [x] T01431 Optional live-backend verification — **`scripts/smoke-integrations-live-gate.ps1`**; live creds → **LSO-030** in [`specs/015-live-server-ops-backlog/`](../015-live-server-ops-backlog/)

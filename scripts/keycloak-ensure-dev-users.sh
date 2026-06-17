@@ -32,8 +32,8 @@ fix_user() {
   id=$(curl -fsS "$KC_BASE/admin/realms/$REALM/users?username=$user" \
     -H "Authorization: Bearer $tok" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -1)
   if [ -z "$id" ]; then
-    echo "keycloak-ensure: user $user not found, skip"
-    return 0
+    echo "keycloak-ensure: user $user not found in realm $REALM" >&2
+    return 1
   fi
   code=$(curl -sS -o /dev/null -w "%{http_code}" -X PUT "$KC_BASE/admin/realms/$REALM/users/$id" \
     -H "Authorization: Bearer $tok" -H "Content-Type: application/json" \
@@ -57,3 +57,4 @@ TOK=$(token) || { echo "keycloak-ensure: cannot get master token"; exit 1; }
 fix_user admin admin@korus.local System Admin admin "$TOK"
 fix_user csadmin csadmin@korus.local Console Superuser csadmin "$TOK"
 echo "=== done ==="
+bash "$(dirname "$0")/keycloak-verify-realm.sh"

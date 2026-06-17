@@ -43,6 +43,8 @@ Docs: [`deploy/qemu/README.md`](deploy/qemu/README.md), [`deploy/ansible/README.
 
 **No real stage/prod host until September 2026.** Do not propose or run stage/prod deploy, TLS smokes, k6 baseline, or Playwright staging gate against a real FQDN. For live-stack acceptance use **QEMU VMs** only (`127.0.0.1:18080` / `:19088`, guest smokes). Spec 007 ops tasks T601–T607 are backlog until the host exists.
 
+**Agent backlog presentation:** ops tasks requiring a live server are in [`specs/015-live-server-ops-backlog/`](../../specs/015-live-server-ops-backlog/). Do **not** include them in «work to do» lists until Sep 2026+ or explicit user order; **do** give a brief reminder the registry exists. See [`.cursor/rules/ops-live-server-deferred.mdc`](ops-live-server-deferred.mdc).
+
 ## Exceptions
 
 - CI / GitHub Actions (Linux runners) — not the Windows dev host.

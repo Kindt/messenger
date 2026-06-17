@@ -60,7 +60,7 @@ Spec-kit: **`deploy/ansible/DEPLOY_QUICKSTART.md`**, archive **`specs/archive/00
 |--------|-----------|
 | **Триггеры** | **`workflow_dispatch`**, cron **04:00 UTC** |
 | **Стек** | **`full-stack-up.sh --export-smoke --export-auto-queue --build`** + overlay **`docker-compose.export-smoke.yml`** (в т.ч. **`EXPORT_REPLAY_INCLUDE_FILE_BODIES=true`**) |
-| **Keycloak** | **`keycloak-ensure-dev-users.sh`** перед admin smokes (**csadmin** password grant) |
+| **Keycloak** | **`keycloak-ensure-dev-users.sh`** + **`keycloak-verify-realm.sh`** before admin smokes |
 | **Acceptance** | OpenAPI → observability → **`smoke-export-compliance-flow.sh --include-file`** → pack |
 | **При падении** | **`scripts/ci-stack-diagnostics.sh export-smoke`** |
 | **Timeout** | 90 min; **`poll_seconds`** input (default 300) |

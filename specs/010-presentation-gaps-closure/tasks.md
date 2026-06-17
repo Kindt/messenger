@@ -20,6 +20,8 @@
 
 ## Phase B — Ops (Sep 2026+, spec 007 overlap)
 
+> **Deferred registry:** [`specs/015-live-server-ops-backlog/tasks.md`](../015-live-server-ops-backlog/tasks.md) (LSO-010…016). Агентам не включать в списки доработок до Sep 2026+.
+
 - [ ] T201 T601 stage DNS + vault + site.yml *(blocked: no host until Sep 2026)*
 - [ ] T202 T602 stage-tls-smoke.ps1 green
 - [ ] T203 T607 prod tls_smoke tag

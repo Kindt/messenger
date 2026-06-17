@@ -269,8 +269,9 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 
 | Spec | Назначение |
 |------|------------|
-| [`specs/011-korus-cloud-platform/`](specs/011-korus-cloud-platform/) | Korus Cloud Cells — Phase 0–1 closed; Phase 2+ ops Sep 2026+ |
-| [`specs/007-platform-stage-readiness/`](specs/007-platform-stage-readiness/) | Ops/stage gates T601–T607 (eng. ✅; ops ⏳ Sep 2026+) |
+| [`specs/015-live-server-ops-backlog/`](specs/015-live-server-ops-backlog/) | **Deferred ops registry** — live-server задачи (Sep 2026+); не в списках доработок агента |
+| [`specs/011-korus-cloud-platform/`](specs/011-korus-cloud-platform/) | Korus Cloud Cells — Phase 0–1 closed; Phase 2+ ops → spec 015 |
+| [`specs/007-platform-stage-readiness/`](specs/007-platform-stage-readiness/) | Ops/stage gates T601–T607 (eng. ✅; ops → spec 015) |
 
 **Закрыты (engineering):**
 
@@ -390,7 +391,8 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 | **Тесты** | Полезные тесты только при реальном coverage; не trivial asserts |
 | **Plan files** | Не редактировать `.cursor/plans/*.plan.md` без явного указания |
 | **GitHub** | **Не ставить GitHub CLI (`gh`)**; push — `.\scripts\git-push.ps1`; PR — вручную через compare на github.com |
-| **Stage/prod стенд** | **До сентября 2026 стенда не будет.** Не предлагать stage/prod deploy, `T601–T607`, `stage-tls-smoke`, `run-k6-stage-baseline`, `playwright-staging-gate` на реальном FQDN. Acceptance и smokes — **только QEMU** (`127.0.0.1:18080` / `:19088`, guest SSH smokes). Ops-задачи spec 007 — backlog до появления хоста; не блокировать инженерию. |
+| **Stage/prod стенд** | **До сентября 2026 стенда не будет.** Не предлагать stage/prod deploy и smokes на real FQDN. Acceptance — **QEMU only**. Ops-задачи — реестр [`specs/015-live-server-ops-backlog/`](specs/015-live-server-ops-backlog/) (см. «Live-server backlog» ниже). |
+| **Live-server backlog** | **До Sep 2026 или явного распоряжения** — задачи из spec **015** **не выводить** в списки «доработать / next steps / waves». При обзоре статуса — **краткое напоминание**, что deferred ops-реестр есть (ссылка на 015). Исключение: пользователь явно просит ops/stage или конкретный T601/LSO-* |
 
 ---
 
@@ -432,17 +434,16 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 
 ### Stage / prod timeline
 
-- **Stage/prod хост недоступен до сентября 2026** (решение команды, 2026-06-15). Агентам: не планировать и не предлагать прогон на stage/prod; вместо этого — **QEMU VM** (см. User Preferences «Stage/prod стенд»).
-- Spec **007** Phase 6 (`T601–T607`): engineering closed; ops-acceptance отложен до появления стенда.
-- Замена stage-smokes на QEMU: `playwright-dev-loop`, `qemu-plan-orchestrator`, `scripts/smoke-*.ps1` / `.sh` на server guest, health `:18080` / UI `:19088`.
+- **Stage/prod хост недоступен до сентября 2026** (решение команды, 2026-06-15). Acceptance — **QEMU VM** (`127.0.0.1:18080` / `:19088`).
+- **Deferred ops registry:** [`specs/015-live-server-ops-backlog/`](specs/015-live-server-ops-backlog/) — T601–T607, human sign-offs, live creds, multi-cell; агент **не включает** в списки доработок до Sep 2026+ или явного распоряжения ([`ops-live-server-deferred.mdc`](.cursor/rules/ops-live-server-deferred.mdc)).
+- Spec **007** Phase 6: engineering closed; ops-строки зеркалятся в spec **015** (LSO-001…007).
 
-### Открытые ops-гештальты (не automation, после сентября 2026)
+### Открытые ops-гештальты
 
-- Stage/prod **TLS + vault** (US1) — нужен real host.
-- **E2EE formal sign-off** (Product/Security/Ops) перед `MLS_STATUS=active` в prod.
-- **Hotplug governance** — именованные подписи (`apply-hotplug-signoff.ps1`).
-- Spec **003 T080–T084** — prod inventory scaffold.
+**См. реестр:** [`specs/015-live-server-ops-backlog/tasks.md`](specs/015-live-server-ops-backlog/tasks.md) — не дублировать в agent backlog lists.
+
+Кратко: TLS/vault (US1), E2EE 8/8, hotplug sign-off, cloud A-pool, live integrations creds, formal load @ stage.
 
 ---
 
-*Последнее существенное обновление AGENTS.md: 2026-06-15 (stage недоступен до сентября 2026; QEMU-only acceptance).*
+*Последнее существенное обновление AGENTS.md: 2026-06-17 (spec 015 live-server ops registry; agent backlog presentation rule).*

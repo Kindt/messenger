@@ -6,6 +6,18 @@
 
 ---
 
+### 2026-06-17 — CI: Keycloak import gate + spec 015 live-server registry
+
+- **Keycloak:** compose mounts only `avandocmsg-realm.json`; `keycloak-verify-realm.sh`; stricter `keycloak-ensure-dev-users.sh`.
+- **Nightly workflows:** setup-python@v6; longer stack wait (600s); verify before export/admin smokes.
+- **Spec 015:** deferred live-server ops registry; agent rule `ops-live-server-deferred.mdc`.
+
+### 2026-06-17 — Spec 015: live-server ops deferred registry
+
+- **Новый spec:** `specs/015-live-server-ops-backlog/` — реестр ops-задач (stage/prod, human sign-off, live creds).
+- **Agent rule:** `.cursor/rules/ops-live-server-deferred.mdc` — не включать LSO-* в списки доработок до Sep 2026+; краткое напоминание о реестре.
+- **AGENTS.md**, `korus-agent-workflow`, pointers в specs 007/010/011/014.
+
 ### 2026-06-17 — Backlog wave 2: hex 2b, cloud scaffold, live L4–L5
 
 - **Hex 2b:** `MessageDeleteCoordinator`, `MessageReactionCoordinator`; delete/reactions via `MessageApplicationService` + `MessageResource`.

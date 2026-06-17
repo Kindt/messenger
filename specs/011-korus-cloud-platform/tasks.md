@@ -88,7 +88,7 @@
 
 
 
-- [ ] T01124 `cell-upgrade.yml` idempotency test (2 Cells) *(needs 2 live Cells)*
+- [ ] T01124 `cell-upgrade.yml` idempotency test (2 Cells) → **LSO-020** in [`specs/015-live-server-ops-backlog/`](../015-live-server-ops-backlog/)
 
 - [x] T01125 Pre-commit hook manifest validate (`scripts/precommit-validate-cell-manifests.py`)
 
@@ -107,7 +107,7 @@
 - [x] T01132 Cross-tenant security test suite — **PluginRepositoryH2Test.crossTenantInstancesAreIsolated** + RLS SQL scaffold
 - [x] T01133 Promote tenant A→ dedicated Cell playbook — **`deploy/ansible/playbooks/promote-tenant-to-cell.yml`**
 
-- [ ] T01134 Product/security sign-off for A pool *(human ops — Sep 2026+)*
+- [ ] T01134 Product/security sign-off for A pool → **LSO-022** in [`specs/015-live-server-ops-backlog/`](../015-live-server-ops-backlog/)
 
 
 

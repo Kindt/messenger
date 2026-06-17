@@ -81,7 +81,7 @@
 
 - name: Wait for Keycloak realm
   ansible.builtin.uri:
-    url: "http://127.0.0.1:8080/realms/avandocmsg"
+    url: "{{ korus_keycloak_url }}/realms/avandocmsg"
     status_code: 200
   register: korus_kc_realm
   until: korus_kc_realm.status == 200
