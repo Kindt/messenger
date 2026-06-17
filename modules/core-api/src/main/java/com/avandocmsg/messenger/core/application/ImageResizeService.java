@@ -1,7 +1,6 @@
 package com.avandocmsg.messenger.core.application;
 
 import javax.imageio.ImageIO;
-import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -18,6 +17,7 @@ public final class ImageResizeService {
 
     private static final Set<String> RESIZABLE_MIME = Set.of(
         "image/jpeg", "image/jpg", "image/png", "image/gif", "image/bmp", "image/webp");
+    private static final long DEFAULT_MAX_SOURCE_BYTES = 15L * 1024 * 1024;
 
     private ImageResizeService() {
     }
@@ -32,10 +32,15 @@ public final class ImageResizeService {
 
     public static Optional<byte[]> resizeToJpeg(InputStream source, int targetWidth, int targetHeight,
                                                 long maxSourcePixels) throws IOException {
+        return resizeToJpeg(source, targetWidth, targetHeight, maxSourcePixels, DEFAULT_MAX_SOURCE_BYTES);
+    }
+
+    public static Optional<byte[]> resizeToJpeg(InputStream source, int targetWidth, int targetHeight,
+                                                long maxSourcePixels, long maxSourceBytes) throws IOException {
         if (targetWidth <= 0 || targetHeight <= 0) {
             return Optional.empty();
         }
-        var bytes = source.readAllBytes();
+        var bytes = readBounded(source, maxSourceBytes);
         if (bytes.length == 0) {
             return Optional.empty();
         }
@@ -84,5 +89,20 @@ public final class ImageResizeService {
         g.drawImage(source, 0, 0, null);
         g.dispose();
         return rgb;
+    }
+
+    private static byte[] readBounded(InputStream source, long maxBytes) throws IOException {
+        var buf = new byte[65536];
+        var out = new ByteArrayOutputStream(Math.min(4096, (int) Math.min(maxBytes, Integer.MAX_VALUE)));
+        long total = 0;
+        int n;
+        while ((n = source.read(buf)) >= 0) {
+            total += n;
+            if (total > maxBytes) {
+                return new byte[0];
+            }
+            out.write(buf, 0, n);
+        }
+        return out.toByteArray();
     }
 }

@@ -95,8 +95,12 @@ public class AuthRateLimiter {
             }
             return true;
         } catch (Exception e) {
-            log.warn("Redis rate limit check failed, allowing request (fail-open)", e);
-            return true;
+            if (config != null && config.rateLimitAuthFailOpen()) {
+                log.warn("Redis rate limit check failed, allowing request (fail-open)", e);
+                return true;
+            }
+            log.warn("Redis rate limit check failed, denying request (fail-closed)", e);
+            return false;
         }
     }
 

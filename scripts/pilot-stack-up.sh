@@ -43,6 +43,7 @@ fi
 COMPOSE_PILOT="$KORUS_COMPOSE_FULL_SERVER"
 COMPOSE_PILOT_OVERRIDES="$KORUS_DOCKER_DIR/docker-compose.pilot-overrides.yml"
 COMPOSE_KC_PROD="$KORUS_COMPOSE_KEYCLOAK_PROD"
+COMPOSE_RESOURCE_LIMITS="$KORUS_DOCKER_DIR/docker-compose.resource-limits.yml"
 if [[ ! -f "$COMPOSE_PILOT" ]]; then
   echo "Not found: $COMPOSE_PILOT" >&2
   exit 1
@@ -68,7 +69,7 @@ if $DOWN_FULL_FIRST && [[ -f "$KORUS_COMPOSE_FULL_SERVER" ]]; then
   docker compose -f "$KORUS_COMPOSE_FULL_SERVER" down --remove-orphans 2>/dev/null || true
 fi
 
-compose_args=(-f "$COMPOSE_PILOT" -f "$COMPOSE_PILOT_OVERRIDES" -f "$COMPOSE_KC_PROD")
+compose_args=(-f "$COMPOSE_PILOT" -f "$COMPOSE_PILOT_OVERRIDES" -f "$COMPOSE_KC_PROD" -f "$COMPOSE_RESOURCE_LIMITS")
 for profile in "${PROFILES[@]}"; do
   compose_args+=(--profile "$profile")
 done

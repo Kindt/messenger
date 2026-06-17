@@ -30,6 +30,7 @@ class WebUiParityAssetsTest {
             "ui-transport-utils.js",
             "ui-format-utils.js",
             "ui-messages-utils.js",
+            "ui-message-list.js",
             "ui-rtc-utils.js",
             "ui-live-session.js",
             "ui-pwa-settings-utils.js",
@@ -78,6 +79,8 @@ class WebUiParityAssetsTest {
         assertTrue(app.contains("scheduleWsReconnect"), "ws reconnect scheduler");
         assertTrue(app.contains("KorusUiRtcUtils"), "rtc utils delegation");
         assertTrue(app.contains("KorusUiTransportUtils"), "transport utils delegation");
+        assertTrue(app.contains("KorusUiMessageList"), "virtual message list delegation");
+        assertTrue(app.contains("buildMessageArticle"), "message article builder");
         assertTrue(app.contains("KorusI18n") || app.contains("localErr"), "i18n error localization");
         assertTrue(app.contains("/conferences") && app.contains("createConference"), "standalone conference flow");
     }

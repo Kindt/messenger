@@ -1,0 +1,76 @@
+# Optional overlay: cgroup memory/cpu caps for full-server and pilot stacks (PS-0.1).
+# Merge after base compose, e.g. pilot-stack-up.sh adds this file automatically.
+#
+#   docker compose -f docker/docker-compose.full-server.yml \
+#     -f docker/docker-compose.resource-limits.yml up -d
+
+version: "3.8"
+
+services:
+  postgres-hot:
+    mem_limit: 512m
+    cpus: "1.0"
+
+  postgres-archive:
+    mem_limit: 512m
+    cpus: "1.0"
+
+  redis:
+    mem_limit: 128m
+    cpus: "0.5"
+
+  nats:
+    mem_limit: 256m
+    cpus: "0.5"
+
+  minio:
+    mem_limit: 512m
+    cpus: "0.5"
+
+  zoo:
+    mem_limit: 384m
+    cpus: "0.5"
+
+  solr:
+    mem_limit: 896m
+    cpus: "1.0"
+
+  core-api:
+    mem_limit: 768m
+    cpus: "2.0"
+
+  ws-gateway:
+    mem_limit: 384m
+    cpus: "1.0"
+
+  message-pipeline:
+    mem_limit: 384m
+    cpus: "1.0"
+
+  push-worker:
+    mem_limit: 384m
+    cpus: "0.5"
+
+  export-replay-worker:
+    mem_limit: 384m
+    cpus: "0.5"
+
+  retention-worker:
+    mem_limit: 384m
+    cpus: "0.5"
+
+  archiver-worker:
+    mem_limit: 384m
+    cpus: "0.5"
+
+  deep-archiver-worker:
+    mem_limit: 384m
+    cpus: "0.5"
+
+  indexer-worker:
+    mem_limit: 384m
+    cpus: "0.5"
+
+  livekit:
+    mem_limit: 512m
+    cpus: "1.0"

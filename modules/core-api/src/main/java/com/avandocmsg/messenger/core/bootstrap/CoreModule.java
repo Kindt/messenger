@@ -131,7 +131,8 @@ public final class CoreModule {
             objectStoragePort,
             uuidGenerator,
             appConfig.mediaMaxUploadBytes(),
-            appConfig.fileDedupEnabled());
+            appConfig.fileDedupEnabled(),
+            appConfig.fileUploadMaxConcurrent());
     }
 
     public static OrganizationRepositoryPort organizationRepositoryPort(DataSource dataSource,

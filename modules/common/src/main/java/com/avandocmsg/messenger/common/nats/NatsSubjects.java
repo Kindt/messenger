@@ -7,6 +7,16 @@ package com.avandocmsg.messenger.common.nats;
 public final class NatsSubjects {
     public static final String MSG_SEND = "msg.send";
     public static final String MSG_DELIVER_PREFIX = "msg.deliver.";
+    /** Large-chat broadcast: one publish per event (PS-1.3). */
+    public static final String MSG_DELIVER_CHAT_PREFIX = "msg.deliver.chat.";
+
+    public static String deliverUserSubject(String userId) {
+        return MSG_DELIVER_PREFIX + userId;
+    }
+
+    public static String deliverChatSubject(String chatId) {
+        return MSG_DELIVER_CHAT_PREFIX + chatId;
+    }
 
     /**
      * WebRTC signaling ingress: JSON {@link com.avandocmsg.messenger.common.dto.RtcSignalEvent} (поле {@code payload} — SDP / ICE и т.д.).

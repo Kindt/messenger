@@ -120,7 +120,7 @@ public class FileResource {
         content = @Content(schema = @Schema(implementation = FileUploadResponse.class)))
     @ApiResponse(responseCode = "400", description = "Upload failed",
         content = @Content(schema = @Schema(implementation = ApiError.class)))
-    public Response upload(byte[] data,
+    public Response upload(InputStream data,
                            @Context jakarta.ws.rs.core.HttpHeaders headers,
                            @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
@@ -129,19 +129,48 @@ public class FileResource {
         if (mimeType == null || mimeType.equals(MediaType.APPLICATION_OCTET_STREAM)) {
             mimeType = "application/octet-stream";
         }
-        if (data == null || data.length == 0) {
+        if (data == null) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(new ApiError(400, messages.get("error.file.empty_file")))
                 .build();
         }
-        var result = fileService.upload(new java.io.ByteArrayInputStream(data),
-            filename, mimeType, data.length, userId);
-        if (result == null) {
+        long contentLength = -1;
+        var clHeader = headers.getHeaderString("Content-Length");
+        if (clHeader != null && !clHeader.isBlank()) {
+            try {
+                contentLength = Long.parseLong(clHeader.trim());
+            } catch (NumberFormatException ignored) {
+                contentLength = -1;
+            }
+        }
+        if (contentLength == 0) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.file.empty_file")))
+                .build();
+        }
+        if (contentLength > fileService.maxUploadBytes()) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(new ApiError(400, uploadTooLargeMessage(fileService.maxUploadBytes())))
                 .build();
         }
-        return Response.status(Response.Status.CREATED).entity(result).build();
+        try {
+            FileUploadResponse result;
+            if (contentLength >= 0) {
+                result = fileService.upload(data, filename, mimeType, contentLength, userId);
+            } else {
+                result = fileService.uploadStream(data, filename, mimeType, userId);
+            }
+            if (result == null) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ApiError(400, uploadTooLargeMessage(fileService.maxUploadBytes())))
+                    .build();
+            }
+            return Response.status(Response.Status.CREATED).entity(result).build();
+        } catch (IOException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.format("error.file.upload_failed", e.getMessage())))
+                .build();
+        }
     }
 
     @POST

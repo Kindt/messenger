@@ -9,4 +9,5 @@ COPY --from=builder /app/modules/ws-gateway/build/distributions/ws-gateway.tar .
 RUN tar xf ws-gateway.tar && rm ws-gateway.tar
 EXPOSE 8081
 ENV APP_HOME=/app/ws-gateway
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport"
 ENTRYPOINT ["/app/ws-gateway/bin/ws-gateway"]

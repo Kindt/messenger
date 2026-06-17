@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.api.repository;
 
+import com.avandocmsg.messenger.api.metrics.JdbcQueryMetrics;
+import com.avandocmsg.messenger.api.config.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
 import com.avandocmsg.messenger.api.chats.dto.ChatResponse;
 import org.slf4j.Logger;
@@ -8,10 +10,10 @@ import org.slf4j.LoggerFactory;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 
 import javax.sql.DataSource;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Timestamp;
+import java.sql.SQLException;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -23,16 +25,42 @@ public class ChatRepository {
     private final DataSource readDataSource;
     private final Clock clock;
     private final UuidGenerator uuidGenerator;
+    private final int queryTimeoutSeconds;
 
     public ChatRepository(DataSource dataSource, Clock clock, UuidGenerator uuidGenerator) {
-        this(dataSource, null, clock, uuidGenerator);
+        this(dataSource, null, clock, uuidGenerator, 0);
     }
 
     public ChatRepository(DataSource dataSource, DataSource readDataSource, Clock clock, UuidGenerator uuidGenerator) {
+        this(dataSource, readDataSource, clock, uuidGenerator, 0);
+    }
+
+    public ChatRepository(DataSource dataSource, DataSource readDataSource, Clock clock, UuidGenerator uuidGenerator,
+                          int queryTimeoutSeconds) {
         this.dataSource = dataSource;
         this.readDataSource = readDataSource != null ? readDataSource : dataSource;
         this.clock = clock;
         this.uuidGenerator = uuidGenerator;
+        this.queryTimeoutSeconds = Math.max(0, queryTimeoutSeconds);
+    }
+
+    private void applyQueryTimeout(PreparedStatement stmt) throws SQLException {
+        JdbcQuerySupport.applyTimeout(stmt, queryTimeoutSeconds);
+    }
+
+    private static boolean isQueryTimeout(SQLException e) {
+        if (e instanceof java.sql.SQLTimeoutException) {
+            return true;
+        }
+        var sqlState = e.getSQLState();
+        return sqlState != null && sqlState.startsWith("570");
+    }
+
+    private void logReadFailure(String operation, Object id, Exception e) {
+        if (e instanceof SQLException sqlEx && isQueryTimeout(sqlEx)) {
+            JdbcQueryMetrics.queryTimeout();
+        }
+        log.error("{} failed id={}", operation, id, e);
     }
 
     private DataSource read() {
@@ -192,6 +220,7 @@ public class ChatRepository {
         var result = new ArrayList<ChatResponse>();
         try (var conn = read().getConnection();
              var stmt = conn.prepareStatement(sql)) {
+            applyQueryTimeout(stmt);
             stmt.setObject(1, userId);
             stmt.setObject(2, userId);
             stmt.setObject(3, userId);
@@ -202,7 +231,7 @@ public class ChatRepository {
                 }
             }
         } catch (Exception e) {
-            log.error("Failed to list chats for {}", userId, e);
+            logReadFailure("listByUser", userId, e);
         }
         return result;
     }
@@ -253,6 +282,7 @@ public class ChatRepository {
             """;
         try (var conn = read().getConnection();
              var stmt = conn.prepareStatement(sql)) {
+            applyQueryTimeout(stmt);
             stmt.setObject(1, userId);
             stmt.setObject(2, chatId);
             stmt.setObject(3, userId);
@@ -264,7 +294,7 @@ public class ChatRepository {
                 }
             }
         } catch (Exception e) {
-            log.error("Failed to find chat {}", chatId, e);
+            logReadFailure("findById", chatId, e);
         }
         return Optional.empty();
     }

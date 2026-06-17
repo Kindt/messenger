@@ -6,7 +6,8 @@
 |--------|------------|--------------------------|---------------|----------------|
 | **`msg.send`** | Исходящее сообщение в pipeline (JetStream при включённом JS) | см. **`MessageService`** / pipeline | **core-api** | **message-pipeline** worker |
 | **`rtc.signal`** | WebRTC signaling (mesh); fan-out в **`msg.deliver.{peer}`** после проверки членства в чате | JSON **`RtcSignalEvent`** (`type`, `chatId`, `fromUserId`, `payload`: offer / answer / candidate / hangup) | **ws-gateway** (из **WebSocket**) | **message-pipeline** worker |
-| **`msg.deliver.{userId}`** | Доставка клиенту (per-user) | payload сообщения/события | воркеры / pipeline | **ws-gateway** (`MessagingWebSocket` подписывается на префикс + `sub`) |
+| **`msg.deliver.{userId}`** | Доставка клиенту (per-user) | payload сообщения/события | воркеры / pipeline | **ws-gateway** (`WsNatsDeliveryHub`, subject `msg.deliver.>`) |
+| **`msg.deliver.chat.{chatId}`** | Broadcast в чат (large-group fan-out, PS-1.3) | тот же payload | **message-pipeline** (если `members > PIPELINE_FANOUT_DIRECT_MAX`) | **ws-gateway** (`WsNatsDeliveryHub` → online-участники чата) |
 | **`msg.typing`** | Набор текста | **`TypingEvent`** | клиент / gateway (по ТЗ) | подписчики |
 | **`msg.event.index`** | Событие для индексации (Solr и т.д.) | **`MessageWorkerEvent`** (поле **`index_op`**: upsert при отсутствии, **`update`** после правки, **`delete`** при мягком удалении) | **message-pipeline** (новые сообщения), **core-api** **`MessageService`** (edit/delete), **`RetentionWorker`** (очистка тела по политике, **`index_op=update`**) | indexer worker |
 | **`msg.event.retention`** | Факт применения ретенции к сообщению в Hot | JSON **`RetentionAppliedEvent`** (`modules/common`): **`message_id`**, **`chat_id`**, **`action`** (сейчас **`hot_body_cleared`**), **`applied_at_epoch_ms`**, **`cleared_content_utf8_bytes`**, **`snapshot_version`** (**`int`**, как в MinIO JSON, сейчас **`1`** — **`ArchiveSnapshotFormat.SNAPSHOT_VERSION`**; в старых payload без поля при десериализации подставляется **`1`**), опционально **`storage_object_key`** (ключ фактического снимка в MinIO, в т.ч. при пропуске **`putObject`**), опционально **`pass_id`** (**`string`**, UUID одного прохода **`RetentionHotBodyJanitor.runOnce`**; в старых payload без поля → **`null`**), опционально **`snapshot_sha256`** (**`string`**, 64 hex-символа в нижнем регистре — SHA-256 UTF-8 JSON **конверта снимка до добавления этого поля**, тот же алгоритм, что корень MinIO JSON; при отсутствии в старых payload → **`null`**; при отключённом MinIO в воркере или без материализации снимка → **`null`**; в **`RETENTION_DRY_RUN=true`** событие не публикуется) | **`RetentionWorker`** | подписчики аудита / метрик (отдельного consumer в репозитории нет) |
@@ -51,7 +52,7 @@
 
 ## ws-gateway
 
-Модуль **`modules/ws-gateway`** импортирует **`NatsSubjects`** и подписывается на **`msg.deliver.`** + **`userId`** из JWT **`sub`** — см. **`MessagingWebSocket`**. Клиент может отправлять в сокет JSON **`rtc_signal`** (см. **`RtcSignalEvent`**); шлюз публикует в **`rtc.signal`**.
+Модуль **`modules/ws-gateway`** импортирует **`NatsSubjects`**: один **`WsNatsDeliveryHub`** подписан на **`msg.deliver.>`** (per-user **`msg.deliver.{userId}`** и chat-broadcast **`msg.deliver.chat.{chatId}`**). При connect загружаются chat memberships из БД (**`WsChatMembershipLoader`**, env **`DB_JDBC_URL`**). См. **`MessagingWebSocket`**. Клиент может отправлять в сокет JSON **`rtc_signal`** (см. **`RtcSignalEvent`**); шлюз публикует в **`rtc.signal`**.
 
 ## Переменные окружения
 

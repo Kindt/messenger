@@ -5,3 +5,13 @@ services:
     environment:
       SEARCH_MODE: sql
       MLS_WIRE_ENABLED: "false"
+      KORUS_DEPLOY_PROFILE: pilot
+      REDIS_READ_CACHE_ENABLED: "true"
+      REDIS_READ_CACHE_TTL_CHAT_LIST_SECONDS: "60"
+      REDIS_READ_CACHE_TTL_CHAT_UNREAD_SECONDS: "30"
+      RATE_LIMIT_AUTH_ENABLED: "true"
+      RATE_LIMIT_AUTH_FAIL_OPEN: "false"
+      API_JDBC_QUERY_TIMEOUT_SECONDS: "30"
+  message-pipeline:
+    environment:
+      PIPELINE_FANOUT_DEDUP_TTL_SECONDS: "60"

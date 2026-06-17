@@ -41,13 +41,24 @@ class AuthRateLimiterTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    void redisFailure_failOpen() {
-        var cfg = mockConfig(1, 1);
+    void redisFailure_failOpenWhenConfigured() {
+        var cfg = mockConfig(1, 1, true);
         RedisCommands<String, String> redis = evalOnlyRedis(() -> {
             throw new RuntimeException("redis down");
         });
         var lim = AuthRateLimiter.redis(redis, cfg);
         assertTrue(lim.allowLogin("10.0.0.3"));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void redisFailure_failClosedByDefault() {
+        var cfg = mockConfig(1, 1, false);
+        RedisCommands<String, String> redis = evalOnlyRedis(() -> {
+            throw new RuntimeException("redis down");
+        });
+        var lim = AuthRateLimiter.redis(redis, cfg);
+        assertFalse(lim.allowLogin("10.0.0.4"));
     }
 
     @Test
@@ -68,6 +79,10 @@ class AuthRateLimiterTest {
     }
 
     private static AppConfig mockConfig(int loginPerMin, int regPerHour) {
+        return mockConfig(loginPerMin, regPerHour, false);
+    }
+
+    private static AppConfig mockConfig(int loginPerMin, int regPerHour, boolean failOpen) {
         return new AppConfig() {
             @Override
             public int rateLimitLoginMaxPerMinute() {
@@ -77,6 +92,11 @@ class AuthRateLimiterTest {
             @Override
             public int rateLimitRegisterMaxPerHour() {
                 return regPerHour;
+            }
+
+            @Override
+            public boolean rateLimitAuthFailOpen() {
+                return failOpen;
             }
         };
     }

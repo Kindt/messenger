@@ -7,7 +7,6 @@ import com.avandocmsg.messenger.ws.auth.WsTokenValidator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.nats.client.Connection;
-import io.nats.client.Dispatcher;
 import jakarta.websocket.CloseReason;
 import jakarta.websocket.OnClose;
 import jakarta.websocket.OnError;
@@ -23,9 +22,7 @@ import org.slf4j.LoggerFactory;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @ServerEndpoint(value = "/ws", configurator = MessagingWebSocket.OriginHandshakeConfigurator.class)
 public class MessagingWebSocket {
@@ -34,6 +31,8 @@ public class MessagingWebSocket {
     static final String ORIGIN_PROP = "ws.origin";
 
     static Connection natsConnection;
+    static WsNatsDeliveryHub deliveryHub;
+    static WsChatMembershipLoader chatMembershipLoader;
     static WsTokenValidator tokenValidator;
     /** Set in {@link WsGatewayApplication#main} before accepting connections. */
     static UserMessageSource messages;
@@ -48,9 +47,6 @@ public class MessagingWebSocket {
             }
         }
     }
-
-    private final Map<Session, String> sessionUsers = new ConcurrentHashMap<>();
-    private final Map<Session, Dispatcher> sessionDispatchers = new ConcurrentHashMap<>();
 
     @OnOpen
     public void onOpen(Session session) {
@@ -79,27 +75,36 @@ public class MessagingWebSocket {
             closeWithError(session, messages.get("error.ws.missing_sub"));
             return;
         }
-        sessionUsers.put(session, userId);
-
-        var dispatcher = natsConnection.createDispatcher(msg -> {
+        if (deliveryHub == null) {
+            closeWithError(session, messages.get("error.ws.unavailable"));
+            return;
+        }
+        List<String> chatIds = List.of();
+        if (chatMembershipLoader != null) {
             try {
-                if (session.isOpen()) {
-                    session.getBasicRemote().sendText(new String(msg.getData(), StandardCharsets.UTF_8));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to send WS message to user {}", userId, e);
+                chatIds = chatMembershipLoader.loadChatIds(UUID.fromString(userId));
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid user id in token sub: {}", userId);
             }
-        });
-        dispatcher.subscribe(NatsSubjects.MSG_DELIVER_PREFIX + userId);
-        sessionDispatchers.put(session, dispatcher);
-        log.info("WS opened for user {} (session {})", userId, session.getId());
+        }
+        var registerResult = deliveryHub.tryRegister(session, userId, chatIds);
+        if (registerResult == WsSessionRegistry.RegisterResult.MAX_PER_USER) {
+            closeWithError(session, messages.get("error.ws.max_connections_per_user"));
+            return;
+        }
+        if (registerResult == WsSessionRegistry.RegisterResult.MAX_TOTAL) {
+            closeWithError(session, messages.get("error.ws.max_connections_total"));
+            return;
+        }
+        session.getUserProperties().put("ws.userId", userId);
+        log.info("WS opened for user {} (session {}, chats={})", userId, session.getId(), chatIds.size());
     }
 
     private static final int MAX_WS_TEXT_BYTES = 48_000;
 
     @OnMessage(maxMessageSize = 65_536)
     public void onMessage(String text, Session session) {
-        var userId = sessionUsers.get(session);
+        var userId = (String) session.getUserProperties().get("ws.userId");
         if (userId == null || natsConnection == null) {
             return;
         }
@@ -135,14 +140,19 @@ public class MessagingWebSocket {
     }
 
     private void cleanup(Session session) {
-        var dispatcher = sessionDispatchers.remove(session);
-        if (dispatcher != null) natsConnection.closeDispatcher(dispatcher);
-        var userId = sessionUsers.remove(session);
-        if (userId != null) log.info("WS closed for user {} (session {})", userId, session.getId());
+        if (deliveryHub != null) {
+            deliveryHub.unregister(session);
+        }
+        var userId = session.getUserProperties().remove("ws.userId");
+        if (userId != null) {
+            log.info("WS closed for user {} (session {})", userId, session.getId());
+        }
     }
 
     private String parseToken(String query) {
-        if (query == null) return null;
+        if (query == null) {
+            return null;
+        }
         for (var param : query.split("&")) {
             var parts = param.split("=", 2);
             if (parts.length == 2 && "token".equals(parts[0])) {

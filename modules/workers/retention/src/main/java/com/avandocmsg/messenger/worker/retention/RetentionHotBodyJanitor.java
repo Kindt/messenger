@@ -5,7 +5,7 @@ import com.avandocmsg.messenger.common.dto.RetentionAppliedEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.common.retention.ArchiveSnapshotEnvelopeDigest;
 import com.avandocmsg.messenger.common.retention.ArchiveSnapshotFormat;
-import com.avandocmsg.messenger.common.retention.ChunkedSnapshotWriter;
+import com.avandocmsg.messenger.common.retention.ChunkManifestWriter;
 import com.avandocmsg.messenger.common.retention.ContentAnalyzer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -651,7 +651,7 @@ final class RetentionHotBodyJanitor {
     }
 
     static boolean shouldWriteChunkedSnapshot(long chunkThreshold, long payloadBytes) {
-        return chunkThreshold > 0 && payloadBytes > chunkThreshold;
+        return ChunkManifestWriter.shouldWriteChunked(chunkThreshold, payloadBytes);
     }
 
     private record SnapshotStoreResult(String storageKey, String snapshotSha256) {
@@ -754,7 +754,7 @@ final class RetentionHotBodyJanitor {
 
             byte[] bytes = MAPPER.writeValueAsBytes(payload);
             if (shouldWriteChunkedSnapshot(chunkThreshold, bytes.length)) {
-                RetentionChunkWriter.writeRetentionChunks(minioClient, retentionWriteBucket, retentionObjectPrefix, messageId, bytes);
+                writeRetentionChunks(minioClient, retentionWriteBucket, retentionObjectPrefix, messageId, bytes);
             } else {
                 minioClient.putObject(
                     PutObjectArgs.builder()
@@ -784,7 +784,7 @@ final class RetentionHotBodyJanitor {
                 MAPPER.writeValue(tmp.toFile(), payload);
                 long fileSize = Files.size(tmp);
                 if (shouldWriteChunkedSnapshot(chunkThreshold, fileSize)) {
-                    RetentionChunkWriter.writeRetentionChunksFromFile(
+                    writeRetentionChunksFromFile(
                         minioClient, retentionWriteBucket, retentionObjectPrefix, messageId, tmp, chunkThreshold);
                 } else if (fileSize >= minioMultipartThresholdBytes) {
                     minioClient.uploadObject(
@@ -823,55 +823,45 @@ final class RetentionHotBodyJanitor {
         }
     }
 
-    private static final class RetentionChunkWriter {
-        private RetentionChunkWriter() {
-        }
+    private static void writeRetentionChunks(
+        MinioClient client,
+        String bucket,
+        String prefix,
+        UUID messageId,
+        byte[] bytes
+    ) throws Exception {
+        var dir = ChunkManifestWriter.objectPrefixDir(prefix, messageId.toString());
+        ChunkManifestWriter.writeChunkedSnapshot(
+            client,
+            bucket,
+            dir,
+            messageId.toString(),
+            bytes,
+            ChunkManifestWriter.resolveChunkSizeBytes(RetentionPlatformDefaults.chunkThresholdBytesFromEnv()),
+            MAPPER
+        );
+        RetentionMetrics.chunkWrite();
+    }
 
-        private static void writeRetentionChunks(
-            MinioClient client,
-            String bucket,
-            String prefix,
-            UUID messageId,
-            byte[] bytes
-        ) throws Exception {
-            var dir = prefix + messageId + "/";
-            long chunkThreshold = RetentionPlatformDefaults.chunkThresholdBytesFromEnv();
-            int actualChunkSize = chunkThreshold > 0 ? (int) Math.min(chunkThreshold, Integer.MAX_VALUE)
-                : ArchiveSnapshotFormat.DEFAULT_CHUNK_SIZE_BYTES;
-            ChunkedSnapshotWriter.writeChunkedSnapshot(
-                client,
-                bucket,
-                dir,
-                messageId.toString(),
-                bytes,
-                actualChunkSize,
-                MAPPER
-            );
-            RetentionMetrics.chunkWrite();
-        }
-
-        private static void writeRetentionChunksFromFile(
-            MinioClient client,
-            String bucket,
-            String prefix,
-            UUID messageId,
-            Path file,
-            long chunkThreshold
-        ) throws Exception {
-            var dir = prefix + messageId + "/";
-            int actualChunkSize = chunkThreshold > 0 ? (int) Math.min(chunkThreshold, Integer.MAX_VALUE)
-                : ArchiveSnapshotFormat.DEFAULT_CHUNK_SIZE_BYTES;
-            ChunkedSnapshotWriter.writeChunkedSnapshotFromFile(
-                client,
-                bucket,
-                dir,
-                messageId.toString(),
-                file,
-                actualChunkSize,
-                MAPPER
-            );
-            RetentionMetrics.chunkWrite();
-        }
+    private static void writeRetentionChunksFromFile(
+        MinioClient client,
+        String bucket,
+        String prefix,
+        UUID messageId,
+        Path file,
+        long chunkThreshold
+    ) throws Exception {
+        var dir = ChunkManifestWriter.objectPrefixDir(prefix, messageId.toString());
+        ChunkManifestWriter.writeChunkedSnapshotFromFile(
+            client,
+            bucket,
+            dir,
+            messageId.toString(),
+            file,
+            ChunkManifestWriter.resolveChunkSizeBytes(chunkThreshold),
+            MAPPER
+        );
+        RetentionMetrics.chunkWrite();
     }
 
     private record Candidate(

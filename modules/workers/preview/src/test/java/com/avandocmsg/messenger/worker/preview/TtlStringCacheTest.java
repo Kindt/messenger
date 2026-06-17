@@ -20,4 +20,13 @@ class TtlStringCacheTest {
         var cache = new TtlStringCache(Duration.ofHours(1));
         assertTrue(cache.get("nope").isEmpty());
     }
+
+    @Test
+    void put_evictsOldestWhenOverMaxEntries() {
+        var cache = new TtlStringCache(Duration.ofHours(1));
+        for (int i = 0; i < 10_001; i++) {
+            cache.put("k" + i, "v" + i);
+        }
+        assertTrue(cache.size() <= 10_000);
+    }
 }

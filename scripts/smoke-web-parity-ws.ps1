@@ -45,7 +45,7 @@ function Resolve-WsBaseUrl([string]$Token) {
     } catch {
         Write-Host "[WARN] could not read web-client-env.js from $WebBaseUrl : $_" -ForegroundColor Yellow
     }
-    return "ws://127.0.0.1:8081/ws"
+    return "ws://127.0.0.1:18082/ws"
 }
 
 function Connect-Ws([string]$Url, [int]$TimeoutSec = 10) {

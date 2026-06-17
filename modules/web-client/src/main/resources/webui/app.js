@@ -242,6 +242,7 @@
     pinnedMessages: [],
     threadHasMore: false,
     threadLoadingMore: false,
+    virtualFocusMessageId: null,
     threadSearch: "",
     threadSearchHits: null,
     threadSearchBusy: false,
@@ -499,6 +500,7 @@
     throw new Error("KorusUiMessagesUtils required — load ui-messages-utils.js before app.js");
   }
   var uiMessagesUtils = window.KorusUiMessagesUtils;
+  var uiMessageList = window.KorusUiMessageList || null;
   var uiRtcUtils = window.KorusUiRtcUtils || {
     sendRtcSignal: function (ws, chatId, payload) {
       if (!ws || ws.readyState !== WebSocket.OPEN || !chatId || !payload) return false;
@@ -4816,6 +4818,7 @@
   async function scrollToMessageId(msgId) {
     if (!msgId || !state.selectedId) return;
     if (findMessageInThread(msgId)) {
+      state.virtualFocusMessageId = msgId;
       render();
       highlightMessageElement(msgId);
       return;
@@ -4825,12 +4828,14 @@
       pages++;
       await loadOlderMessages();
       if (findMessageInThread(msgId)) {
+        state.virtualFocusMessageId = msgId;
         render();
         highlightMessageElement(msgId);
         return;
       }
     }
     if (await ensureMessageInThread(msgId)) {
+      state.virtualFocusMessageId = msgId;
       render();
       highlightMessageElement(msgId);
       return;
@@ -7547,23 +7552,18 @@
         thread.appendChild(pinsBar);
       }
       var msgs = el("div", "messages");
+      var loadOlder = null;
       if (state.threadHasMore) {
-        var loadOlder = iconBtn("↑", state.threadLoadingMore ? "…" : L("ui.thread.loadOlder"), {
+        loadOlder = iconBtn("↑", state.threadLoadingMore ? "…" : L("ui.thread.loadOlder"), {
           cls: "messages-load-more",
           disabled: state.threadLoadingMore,
           onClick: function () {
             loadOlderMessages();
           },
         });
-        msgs.appendChild(loadOlder);
       }
-      msgs.onscroll = function () {
-        if (msgs.scrollTop < 64 && state.threadHasMore && !state.threadLoadingMore) {
-          loadOlderMessages();
-        }
-      };
       var myId = jwtSub(state.tokens.access_token);
-      state.messages.forEach(function (m) {
+      function buildMessageArticle(m) {
         var art = el(
           "article",
           "msg" +
@@ -7795,8 +7795,61 @@
           });
           art.appendChild(actions);
         }
-        msgs.appendChild(art);
-      });
+        return art;
+      }
+      var focusIdx = null;
+      if (state.virtualFocusMessageId) {
+        for (var fi = 0; fi < state.messages.length; fi++) {
+          if (state.messages[fi].id === state.virtualFocusMessageId) {
+            focusIdx = fi;
+            break;
+          }
+        }
+      }
+      var virtualMounted = false;
+      if (uiMessageList && uiMessageList.shouldVirtualize(state.messages.length)) {
+        var virtualScrollRaf = null;
+        var renderVirtualMessages = function () {
+          var scrollTop = msgs.scrollTop;
+          uiMessageList.renderVirtualMessages(msgs, {
+            messages: state.messages,
+            renderMessage: function (m) {
+              return buildMessageArticle(m);
+            },
+            focusIndex: focusIdx,
+            scrollTop: scrollTop,
+            loadMoreEl: loadOlder,
+            onScrollNearTop: function () {
+              if (state.threadHasMore && !state.threadLoadingMore) {
+                loadOlderMessages();
+              }
+            },
+            onScroll: function () {
+              if (virtualScrollRaf) return;
+              virtualScrollRaf = requestAnimationFrame(function () {
+                virtualScrollRaf = null;
+                renderVirtualMessages();
+              });
+            },
+          });
+        };
+        renderVirtualMessages();
+        virtualMounted = true;
+        state.virtualFocusMessageId = null;
+      }
+      if (!virtualMounted) {
+        if (loadOlder) {
+          msgs.appendChild(loadOlder);
+        }
+        state.messages.forEach(function (m) {
+          msgs.appendChild(buildMessageArticle(m));
+        });
+        msgs.onscroll = function () {
+          if (msgs.scrollTop < 64 && state.threadHasMore && !state.threadLoadingMore) {
+            loadOlderMessages();
+          }
+        };
+      }
       thread.appendChild(msgs);
       var comp = el("form", "composer");
       comp.onsubmit = function (e) {

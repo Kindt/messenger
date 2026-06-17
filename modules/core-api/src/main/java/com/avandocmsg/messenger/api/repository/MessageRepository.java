@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.api.repository;
 
+import com.avandocmsg.messenger.api.config.JdbcQuerySupport;
+import com.avandocmsg.messenger.api.metrics.JdbcQueryMetrics;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.MessageVersionResponse;
 import com.avandocmsg.messenger.api.messages.dto.PinnedMessageResponse;
@@ -8,9 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
-import java.sql.Timestamp;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,15 +30,25 @@ public class MessageRepository {
     private final DataSource dataSource;
     private final DataSource readDataSource;
     private final Clock clock;
+    private final int queryTimeoutSeconds;
 
     public MessageRepository(DataSource dataSource, Clock clock) {
-        this(dataSource, null, clock);
+        this(dataSource, null, clock, 0);
     }
 
     public MessageRepository(DataSource dataSource, DataSource readDataSource, Clock clock) {
+        this(dataSource, readDataSource, clock, 0);
+    }
+
+    public MessageRepository(DataSource dataSource, DataSource readDataSource, Clock clock, int queryTimeoutSeconds) {
         this.dataSource = dataSource;
         this.readDataSource = readDataSource != null ? readDataSource : dataSource;
         this.clock = clock;
+        this.queryTimeoutSeconds = Math.max(0, queryTimeoutSeconds);
+    }
+
+    private void applyQueryTimeout(PreparedStatement stmt) throws SQLException {
+        JdbcQuerySupport.applyTimeout(stmt, queryTimeoutSeconds);
     }
 
     private DataSource read() {
@@ -84,8 +96,9 @@ public class MessageRepository {
             WHERE m.chat_id = ? AND m.deleted = false AND """ + SQL_MSG_VISIBILITY_TTL_VISIBLE + """
              ORDER BY m.created_at DESC LIMIT 1
             """;
-        try (var conn = dataSource.getConnection();
+        try (var conn = read().getConnection();
              var stmt = conn.prepareStatement(sql)) {
+            applyQueryTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -106,6 +119,7 @@ public class MessageRepository {
             """;
         try (var conn = read().getConnection();
              var stmt = conn.prepareStatement(sql)) {
+            applyQueryTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -143,6 +157,7 @@ public class MessageRepository {
         var result = new ArrayList<MessageResponse>(Math.max(limit, 16));
         try (var conn = read().getConnection();
              var stmt = conn.prepareStatement(sql.toString())) {
+            applyQueryTimeout(stmt);
             int idx = 1;
             stmt.setObject(idx++, chatId);
             if (before != null) {
@@ -159,9 +174,20 @@ public class MessageRepository {
                 }
             }
         } catch (Exception e) {
+            if (e instanceof SQLException sqlEx && isQueryTimeout(sqlEx)) {
+                JdbcQueryMetrics.queryTimeout();
+            }
             log.error("Failed to find messages for chat {}", chatId, e);
         }
         return result;
+    }
+
+    private static boolean isQueryTimeout(SQLException e) {
+        if (e instanceof java.sql.SQLTimeoutException) {
+            return true;
+        }
+        var sqlState = e.getSQLState();
+        return sqlState != null && sqlState.startsWith("570");
     }
 
     public boolean updateContent(UUID msgId, UUID editedBy, String newContent) {
@@ -449,8 +475,9 @@ public class MessageRepository {
             LIMIT ?
             """;
         var result = new ArrayList<MessageResponse>();
-        try (var conn = dataSource.getConnection();
+        try (var conn = read().getConnection();
              var stmt = conn.prepareStatement(sql)) {
+            applyQueryTimeout(stmt);
             var arr = conn.createArrayOf("uuid", chatIds.toArray(new UUID[0]));
             stmt.setArray(1, arr);
             stmt.setString(2, queryText);
@@ -494,8 +521,9 @@ public class MessageRepository {
               AND m.sender_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)
             """;
         var byId = new HashMap<UUID, MessageResponse>();
-        try (var conn = dataSource.getConnection();
+        try (var conn = read().getConnection();
              var stmt = conn.prepareStatement(sql)) {
+            applyQueryTimeout(stmt);
             stmt.setArray(1, conn.createArrayOf("uuid", uuids.toArray(new UUID[0])));
             stmt.setObject(2, userId);
             stmt.setObject(3, userId);

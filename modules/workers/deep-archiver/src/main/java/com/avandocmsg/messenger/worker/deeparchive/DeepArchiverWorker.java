@@ -6,7 +6,7 @@ import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.common.retention.ArchiveSnapshotEnvelopeDigest;
 import com.avandocmsg.messenger.common.retention.ArchiveSnapshotFormat;
-import com.avandocmsg.messenger.common.retention.ChunkedSnapshotWriter;
+import com.avandocmsg.messenger.common.retention.ChunkManifestWriter;
 import com.avandocmsg.messenger.common.retention.SnapshotCompression;
 import com.avandocmsg.messenger.common.retention.SnapshotPartCodec;
 import com.avandocmsg.messenger.common.retention.ContentAnalyzer;
@@ -28,7 +28,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.List;
 
 /**
  * Consumes {@link NatsSubjects#MSG_EVENT_DEEP_ARCHIVE} after {@link com.avandocmsg.messenger.worker.archiver.ArchiverWorker}
@@ -126,7 +125,7 @@ public class DeepArchiverWorker {
                     writeChunked(event.messageId(), bytes);
                 } else {
                     var key = "messages/" + event.messageId() + ".json";
-                    var stored = ChunkedSnapshotWriter.compressFlatSnapshot(bytes, compression, zstdLevel);
+                    var stored = ChunkManifestWriter.compressFlatSnapshot(bytes, compression, zstdLevel);
                     DeepArchiverMetrics.bytesSaved(SnapshotPartCodec.bytesSaved(bytes.length, stored.length));
                     minioClient.putObject(
                         PutObjectArgs.builder()
@@ -145,8 +144,8 @@ public class DeepArchiverWorker {
     }
 
     private void writeChunked(String messageId, byte[] jsonBytes) throws Exception {
-        var dir = "messages/" + messageId + "/";
-        int chunkCount = ChunkedSnapshotWriter.writeChunkedSnapshot(
+        var dir = ChunkManifestWriter.objectPrefixDir("messages/", messageId);
+        int chunkCount = ChunkManifestWriter.writeChunkedSnapshot(
             minioClient,
             minioBucket,
             dir,
@@ -203,7 +202,7 @@ public class DeepArchiverWorker {
     }
 
     static boolean shouldWriteChunked(int chunkSizeBytes, int payloadBytes) {
-        return chunkSizeBytes > 0 && payloadBytes > chunkSizeBytes;
+        return ChunkManifestWriter.shouldWriteChunked(chunkSizeBytes, payloadBytes);
     }
 
     static int parseChunkSize(String chunkSizeEnv) {

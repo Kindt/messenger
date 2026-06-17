@@ -6,6 +6,46 @@
 
 ---
 
+### 2026-06-16 — ws-gateway: fix /ws 404 on embedded Tomcat (PS-4.1 gate)
+
+- **ws-gateway:** `addWebapp` + `WsSci` + `StandardJarScanner` — `/ws` handshake на embedded Tomcat (ранее 404 с `addContext`).
+- **scripts:** load-soak fallback `8082` (не `8081` core-api); metrics defaults `9198`/`9197` на guest host; `load-ws-soak-qemu.ps1` sync-api с `-Force`.
+
+- **common:** `ChunkManifestWriter` facade over `ChunkedSnapshotWriter` (threshold/prefix helpers); retention + deep-archiver wired.
+- **webui:** `ui-message-list.js` — virtual render window when thread &gt; 200 messages; `buildMessageArticle` in `app.js`.
+- **core-api:** `ChatRepository` hot read paths — structured `logReadFailure` + JDBC timeout metric.
+- **scripts:** `load-ws-soak.ps1/.sh`, `load-api-upload.ps1`, `load-fanout-synthetic.sh`; indexed in `SMOKE_INDEX.md`.
+
+### 2026-06-16 — Performance plan Wave 2: resilience & observability (PS-2.1–2.4)
+
+- **Limiters:** `BotRateLimiter.evictIdleEntries()` (10 min); `TtlStringCache` max 10k + LRU eviction.
+- **Fan-out dedup:** `FanoutDedup` + `PIPELINE_FANOUT_DEDUP_TTL_SECONDS` (default 60) wired in pipeline for JetStream redelivery.
+- **Auth rate limit:** `RATE_LIMIT_AUTH_FAIL_OPEN` (default false) — fail-closed on Redis errors; pilot compose override.
+- **Prometheus:** `ws_open_sessions`, `ws_deliver_bytes_total` (ws-gateway `:9198`); `pipeline_fanout_recipients`, pipeline `/metrics` `:9197`; `jdbc_query_timeout_total`, `file_upload_bytes_total`.
+
+### 2026-06-16 — Performance plan Wave 0: guardrails (PS-0.1–0.6)
+
+- **Docker:** `docker-compose.resource-limits.yml` + `JAVA_TOOL_OPTIONS` in Java Dockerfiles; pilot-stack merges limits overlay.
+- **JDBC:** `JdbcQuerySupport` + `API_JDBC_QUERY_TIMEOUT_SECONDS` on hot Message/Chat read paths.
+- **Pilot compose:** Redis read cache + auth rate limit + `KORUS_DEPLOY_PROFILE=pilot`.
+- **LiveSession:** list/find JOIN active viewer counts (N+1 fix).
+- **Secrets:** `validateProductionSecrets()` — warn on pilot, fail on standard/enterprise with dev defaults.
+
+### 2026-06-16 — Performance plan Wave 1: streaming file upload (PS-1.2)
+
+- **`UploadSpool`:** temp-file spool + SHA-256 in one pass; **`FileApplicationService`** streams to MinIO without `readAllBytes()`.
+- **Concurrency:** `FILE_UPLOAD_MAX_CONCURRENT` (default 20) — семафор в сервисе.
+- **`FileResource`:** raw upload через `InputStream` + `Content-Length` (без materialize `byte[]` в Jersey).
+- **`ImageResizeService`:** bounded read (15 MB cap) перед decode.
+
+### 2026-06-16 — Performance plan Wave 1: WS hub + chat fan-out (PS-1.1, PS-1.3)
+
+- **ws-gateway:** один **`WsNatsDeliveryHub`** на **`msg.deliver.>`** вместо per-session dispatcher; **`WsSessionRegistry`** (лимиты **`WS_MAX_CONNECTIONS_*`**), **`WsChatMembershipLoader`** (env **`DB_JDBC_URL`**).
+- **message-pipeline:** **`DeliverFanout`** — при `members > PIPELINE_FANOUT_DIRECT_MAX` (default 256) один publish на **`msg.deliver.chat.{chatId}`**, иначе per-user.
+- **common:** **`DeliverSubject`**, **`NatsSubjects.deliverChatSubject()`**; unit-тесты.
+- **compose:** `DB_*` для ws-gateway; fan-out env для message-pipeline.
+- **docs:** `NATS_SUBJECTS_INTEROP.md`.
+
 ### 2026-06-16 — Docs sync: Playwright 34/34, plugin P2/P3, parity reports
 
 - **Презентация:** `product_status.py` / `product_presentation.html` v2.5.4 — **34/34** Playwright; `docs/PRODUCT_PRESENTATION.md` актуализирован.

@@ -1,16 +1,21 @@
 package com.avandocmsg.messenger.ws;
 
+import com.avandocmsg.messenger.common.http.WorkerHealthHttpServer;
 import com.avandocmsg.messenger.common.i18n.CompositeMessageSource;
+import com.avandocmsg.messenger.common.jdbc.HikariDataSources;
 import com.avandocmsg.messenger.ws.auth.WsTokenValidator;
 import io.nats.client.Connection;
 import io.nats.client.Nats;
 import io.nats.client.Options;
+import org.apache.catalina.core.StandardContext;
 import org.apache.catalina.startup.Tomcat;
-import org.apache.tomcat.websocket.server.WsContextListener;
+import org.apache.tomcat.util.scan.StandardJarScanner;
 import org.apache.tomcat.websocket.server.WsSci;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
@@ -44,8 +49,51 @@ public class WsGatewayApplication {
             .reconnectWait(Duration.ofSeconds(2))
             .maxReconnects(-1)
             .build();
-        MessagingWebSocket.natsConnection = Nats.connect(natsOptions);
+        Connection natsConnection = Nats.connect(natsOptions);
+        MessagingWebSocket.natsConnection = natsConnection;
         log.info("NATS connected: {}", natsUrl);
+
+        var dbUrl = System.getenv("DB_JDBC_URL");
+        var dbUser = System.getenv().getOrDefault("DB_USER", "avandocmsg");
+        var dbPassword = System.getenv().getOrDefault("DB_PASSWORD", "avandocmsg");
+        var dataSource = HikariDataSources.createOptionalPool(dbUrl, dbUser, dbPassword, 3, "ws-gateway");
+        if (dataSource != null) {
+            MessagingWebSocket.chatMembershipLoader = new WsChatMembershipLoader(dataSource);
+            log.info("WS chat membership loader enabled (JDBC)");
+        } else {
+            MessagingWebSocket.chatMembershipLoader = null;
+            log.info("WS chat membership loader disabled (DB_JDBC_URL unset; large-chat broadcast needs JDBC)");
+        }
+
+        var limits = WsConnectionLimits.fromEnv();
+        var sessionRegistry = new WsSessionRegistry(limits.maxPerUser(), limits.maxTotal());
+        MessagingWebSocket.deliveryHub = new WsNatsDeliveryHub(natsConnection, sessionRegistry);
+        WsGatewayMetrics.setOpenSessions(0);
+        log.info("WS delivery hub ready (maxPerUser={}, maxTotal={})", limits.maxPerUser(), limits.maxTotal());
+
+        WorkerHealthHttpServer metricsServer = null;
+        var metricsPort = parsePort(System.getenv("WS_METRICS_PORT"), 9191);
+        if (metricsPort > 0) {
+            metricsServer = WorkerHealthHttpServer.startWithMetrics(
+                metricsPort, "ws-gateway-metrics", () -> true, null, null);
+            log.info("WS metrics on port {} (/metrics, /health)", metricsServer.getPort());
+        }
+        final WorkerHealthHttpServer metricsRef = metricsServer;
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if (metricsRef != null) {
+                metricsRef.close();
+            }
+            if (MessagingWebSocket.deliveryHub != null) {
+                MessagingWebSocket.deliveryHub.close();
+            }
+            try {
+                natsConnection.close();
+            } catch (Exception e) {
+                log.debug("NATS close on shutdown: {}", e.getMessage());
+            }
+            HikariDataSources.closeQuietly(dataSource);
+        }, "ws-gateway-shutdown"));
 
         MessagingWebSocket.allowedOrigins = WsOriginPolicy.parseAllowedOrigins(
             System.getenv("WS_ALLOWED_ORIGINS"));
@@ -55,15 +103,31 @@ public class WsGatewayApplication {
         var connector = tomcat.getConnector();
         connector.setProperty("bindOnInit", "false");
 
-        // addContext(null) does not enable WebSocket; WsSci registers @ServerEndpoint classes.
-        var ctx = tomcat.addContext("", System.getProperty("java.io.tmpdir"));
+        File docBase = Files.createTempDirectory("ws-gateway-docbase").toFile();
+        docBase.deleteOnExit();
+        var ctx = tomcat.addWebapp("", docBase.getAbsolutePath());
         ctx.setParentClassLoader(WsGatewayApplication.class.getClassLoader());
-        ctx.addApplicationListener(WsContextListener.class.getName());
+        if (ctx instanceof StandardContext standardContext) {
+            var jarScanner = new StandardJarScanner();
+            jarScanner.setScanClassPath(true);
+            standardContext.setJarScanner(jarScanner);
+        }
         ctx.addServletContainerInitializer(new WsSci(), Set.of(MessagingWebSocket.class));
 
         tomcat.start();
 
-        log.info("ws-gateway started on port {} (/ws via WsSci)", port);
+        log.info("ws-gateway started on port {} (/ws)", port);
         tomcat.getServer().await();
+    }
+
+    private static int parsePort(String raw, int defaultPort) {
+        if (raw == null || raw.isBlank()) {
+            return defaultPort;
+        }
+        try {
+            return Math.max(0, Integer.parseInt(raw.trim()));
+        } catch (NumberFormatException e) {
+            return defaultPort;
+        }
     }
 }

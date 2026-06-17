@@ -33,6 +33,10 @@
 | **Read replica env probe** | `scripts/smoke-read-replica-env.sh` | manual (guest) | after `replica-stack-up.sh` or `replica-lab-up.sh` |
 | **k6 pilot baseline** | `scripts/load/pilot-health.js` | manual (host :18080) | see `scripts/load/README.md` |
 | **k6 QEMU baseline (T604 substitute)** | `scripts/run-k6-qemu-baseline.ps1` | manual | writes `deploy/qemu/run/k6-pilot-baseline.json`; fallback if k6 absent |
+| **WS soak load (PS-4.1)** | `scripts/load-ws-soak.ps1` / `.sh` | manual (host / guest) | N connections, 5 min; metrics `:9198` host / `:9191` guest |
+| **QEMU load gate wrapper** | `scripts/load-ws-soak-qemu.ps1` | manual | sync-api + upload + fanout + WS soak on guests |
+| **API upload load (PS-4.1)** | `scripts/load-api-upload.ps1` | manual (host `:18080`) | parallel streaming uploads |
+| **Fan-out synthetic (PS-4.1)** | `scripts/load-fanout-synthetic.sh` | manual (server guest) | burst DM + pipeline metrics |
 | **Pilot stack (spec 006 FR-OPT-01)** | `scripts/smoke-pilot-stack.sh` | manual (QEMU server guest) | `scripts/pilot-stack-up.sh`; no Solr/ZK; SQL search |
 | **Scale stack (spec 006 FR-OPT-04)** | `scripts/smoke-messaging-e2e.sh --load-rounds N` | manual (guest) | `scripts/scale-stack-up.sh`; `scripts/verify-nats-queue-group.sh`; `scripts/profiling/load-message-pipeline.sh` |
 | **Enterprise stack (spec 006 FR-OPT-04/05)** | `scripts/smoke-messaging-e2e.sh --load-rounds N` | manual (guest) | `scripts/enterprise-stack-up.sh`; optional `KORUS_ENABLE_READ_REPLICA=1` + `replica-stack-up.sh` |

@@ -7,7 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +17,19 @@ import java.util.UUID;
 
 public class LiveSessionRepository {
     private static final Logger log = LoggerFactory.getLogger(LiveSessionRepository.class);
+
+    private static final String SESSION_SELECT = """
+        SELECT ls.id, ls.chat_id, ls.title, ls.status, ls.mode, ls.room_name, ls.max_viewers,
+               COALESCE(v.cnt, ls.viewer_count, 0) AS viewer_count,
+               ls.created_at, ls.ended_at
+        FROM live_sessions ls
+        LEFT JOIN (
+            SELECT session_id, COUNT(*) AS cnt
+            FROM live_session_viewers
+            WHERE left_at IS NULL
+            GROUP BY session_id
+        ) v ON v.session_id = ls.id
+        """;
 
     private final DataSource dataSource;
     private final AppConfig appConfig;
@@ -55,16 +70,13 @@ public class LiveSessionRepository {
     }
 
     public Optional<LiveSessionResponse> findById(UUID sessionId) {
-        var sql = """
-            SELECT id, chat_id, title, status, mode, room_name, max_viewers, viewer_count, created_at, ended_at
-            FROM live_sessions WHERE id = ?
-            """;
+        var sql = SESSION_SELECT + " WHERE ls.id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
             stmt.setObject(1, sessionId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return Optional.of(enrich(mapRow(rs)));
+                    return Optional.of(mapRow(rs));
                 }
             }
         } catch (Exception e) {
@@ -74,17 +86,16 @@ public class LiveSessionRepository {
     }
 
     public List<LiveSessionResponse> listForChat(UUID chatId, boolean activeOnly) {
-        var sql = """
-            SELECT id, chat_id, title, status, mode, room_name, max_viewers, viewer_count, created_at, ended_at
-            FROM live_sessions WHERE chat_id = ?
-            """ + (activeOnly ? " AND status = 'active' " : "") + " ORDER BY created_at DESC";
+        var sql = SESSION_SELECT + " WHERE ls.chat_id = ?"
+            + (activeOnly ? " AND ls.status = 'active' " : "")
+            + " ORDER BY ls.created_at DESC";
         var list = new ArrayList<LiveSessionResponse>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    list.add(enrich(mapRow(rs)));
+                    list.add(mapRow(rs));
                 }
             }
         } catch (Exception e) {
@@ -94,18 +105,8 @@ public class LiveSessionRepository {
     }
 
     public int countActiveViewers(UUID sessionId) {
-        var sql = """
-            SELECT COUNT(*) FROM live_session_viewers
-            WHERE session_id = ? AND left_at IS NULL
-            """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, sessionId);
-            try (var rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
-            }
+        try (var conn = dataSource.getConnection()) {
+            return countActiveViewersOnConnection(conn, sessionId);
         } catch (Exception e) {
             log.error("count viewers {}", sessionId, e);
         }
@@ -205,13 +206,29 @@ public class LiveSessionRepository {
         }
     }
 
-    private void syncViewerCount(java.sql.Connection conn, UUID sessionId) throws Exception {
-        var count = countActiveViewers(sessionId);
+    private void syncViewerCount(Connection conn, UUID sessionId) throws SQLException {
+        var count = countActiveViewersOnConnection(conn, sessionId);
         try (var stmt = conn.prepareStatement("UPDATE live_sessions SET viewer_count = ? WHERE id = ?")) {
             stmt.setInt(1, count);
             stmt.setObject(2, sessionId);
             stmt.executeUpdate();
         }
+    }
+
+    private int countActiveViewersOnConnection(Connection conn, UUID sessionId) throws SQLException {
+        var sql = """
+            SELECT COUNT(*) FROM live_session_viewers
+            WHERE session_id = ? AND left_at IS NULL
+            """;
+        try (var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, sessionId);
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
     }
 
     private LiveSessionResponse mapRow(ResultSet rs) throws Exception {
@@ -229,27 +246,6 @@ public class LiveSessionRepository {
             rs.getInt("max_viewers"),
             rs.getTimestamp("created_at").toInstant(),
             ended != null ? ended.toInstant() : null
-        );
-    }
-
-    private LiveSessionResponse enrich(LiveSessionResponse base) {
-        var count = countActiveViewers(UUID.fromString(base.liveSessionId()));
-        if (count == base.viewerCount()) {
-            return base;
-        }
-        return new LiveSessionResponse(
-            base.liveSessionId(),
-            base.chatId(),
-            base.title(),
-            base.status(),
-            base.mode(),
-            base.roomName(),
-            base.provider(),
-            base.livekitUrl(),
-            count,
-            base.maxViewers(),
-            base.createdAt(),
-            base.endedAt()
         );
     }
 }

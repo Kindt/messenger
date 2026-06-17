@@ -14,7 +14,10 @@ import com.avandocmsg.messenger.common.dto.TypingEvent;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.JetStreamMessagingSetup;
+import com.avandocmsg.messenger.common.nats.DeliverFanout;
+import com.avandocmsg.messenger.common.nats.FanoutDedup;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.common.http.WorkerHealthHttpServer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -52,12 +55,30 @@ public class MessagePipelineWorker {
     private final Connection natsConnection;
     private final boolean jetStreamEnabled;
     private final UserMessageSource workerMessages;
+    private final com.avandocmsg.messenger.common.nats.DeliverFanout.Config deliverConfig;
+    private final FanoutDedup fanoutDedup;
+    private WorkerHealthHttpServer metricsServer;
 
     public MessagePipelineWorker(String natsUrl, DataSource dataSource, boolean jetStreamEnabled,
                                  UserMessageSource workerMessages) throws Exception {
+        this(natsUrl, dataSource, jetStreamEnabled, workerMessages, DeliverFanout.Config.fromEnv());
+    }
+
+    MessagePipelineWorker(String natsUrl, DataSource dataSource, boolean jetStreamEnabled,
+                          UserMessageSource workerMessages,
+                          com.avandocmsg.messenger.common.nats.DeliverFanout.Config deliverConfig) throws Exception {
+        this(natsUrl, dataSource, jetStreamEnabled, workerMessages, deliverConfig, FanoutDedup.fromEnv());
+    }
+
+    MessagePipelineWorker(String natsUrl, DataSource dataSource, boolean jetStreamEnabled,
+                          UserMessageSource workerMessages,
+                          com.avandocmsg.messenger.common.nats.DeliverFanout.Config deliverConfig,
+                          FanoutDedup fanoutDedup) throws Exception {
         this.dataSource = dataSource;
         this.jetStreamEnabled = jetStreamEnabled;
         this.workerMessages = workerMessages;
+        this.deliverConfig = deliverConfig;
+        this.fanoutDedup = fanoutDedup;
         var options = Options.builder()
             .server(natsUrl)
             .connectionName("message-pipeline-worker")
@@ -69,6 +90,7 @@ public class MessagePipelineWorker {
     }
 
     public void start() throws Exception {
+        startMetricsServer();
         if (jetStreamEnabled) {
             JetStreamMessagingSetup.ensureSendStream(natsConnection);
             JetStream js = natsConnection.jetStream();
@@ -123,9 +145,8 @@ public class MessagePipelineWorker {
             return;
         }
         var members = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, reader, workerMessages);
-        for (var memberId : members) {
-            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
-        }
+        DeliverFanout.publish(natsConnection, members, chatId.toString(), raw, deliverConfig, fanoutDedup,
+            evt.messageId());
         log.debug(workerMessages.format("worker.pipeline.read_receipt_debug", reader, chatId, members.size()));
     }
 
@@ -163,9 +184,8 @@ public class MessagePipelineWorker {
         if (!members.contains(authorId)) {
             members.add(authorId);
         }
-        for (var memberId : members) {
-            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
-        }
+        DeliverFanout.publish(natsConnection, members, chatId.toString(), raw, deliverConfig, fanoutDedup,
+            evt.messageId());
         log.debug(workerMessages.format("worker.pipeline.change_debug", evt.change(), chatId, members.size()));
     }
 
@@ -197,9 +217,8 @@ public class MessagePipelineWorker {
         if (!members.contains(actorId)) {
             members.add(actorId);
         }
-        for (var memberId : members) {
-            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
-        }
+        DeliverFanout.publish(natsConnection, members, chatId.toString(), raw, deliverConfig, fanoutDedup,
+            evt.messageId());
         log.debug(workerMessages.format("worker.pipeline.reaction_debug",
             evt.change(), evt.messageId(), chatId, members.size()));
     }
@@ -227,9 +246,8 @@ public class MessagePipelineWorker {
             return;
         }
         var members = PipelineFanoutLogic.loadAllChatMemberUserIds(dataSource, chatId, workerMessages);
-        for (var memberId : members) {
-            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
-        }
+        DeliverFanout.publish(natsConnection, members, chatId.toString(), raw, deliverConfig, fanoutDedup,
+            evt.messageId());
         log.debug(workerMessages.format("worker.pipeline.pin_debug",
             evt.change(), evt.messageId(), chatId, members.size()));
     }
@@ -257,9 +275,8 @@ public class MessagePipelineWorker {
             return;
         }
         var members = PipelineFanoutLogic.loadAllChatMemberUserIds(dataSource, chatId, workerMessages);
-        for (var memberId : members) {
-            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
-        }
+        DeliverFanout.publish(natsConnection, members, chatId.toString(), raw, deliverConfig, fanoutDedup,
+            fanoutDedupId("conf", evt.conferenceId(), evt.change(), evt.actorId()));
         log.debug(workerMessages.format("worker.pipeline.conference_debug",
             evt.change(), evt.conferenceId(), chatId, members.size()));
     }
@@ -287,9 +304,8 @@ public class MessagePipelineWorker {
             return;
         }
         var members = PipelineFanoutLogic.loadAllChatMemberUserIds(dataSource, chatId, workerMessages);
-        for (var memberId : members) {
-            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
-        }
+        DeliverFanout.publish(natsConnection, members, chatId.toString(), raw, deliverConfig, fanoutDedup,
+            fanoutDedupId("live", evt.liveSessionId(), evt.change(), evt.actorId()));
         log.debug(workerMessages.format("worker.pipeline.live_session_debug",
             evt.change(), evt.liveSessionId(), chatId, members.size()));
     }
@@ -311,10 +327,8 @@ public class MessagePipelineWorker {
             return;
         }
         var members = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, sender, workerMessages);
-        for (var memberId : members) {
-            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, raw);
-        }
-        log.debug(workerMessages.format("worker.pipeline.typing_debug", sender, chatId, members.size()));
+        DeliverFanout.publish(natsConnection, members, chatId.toString(), raw, deliverConfig, fanoutDedup,
+            fanoutDedupId("typing", evt.chatId(), evt.userId(), Long.toString(evt.ts())));
     }
 
     private void subscribeRtcFanout() {
@@ -344,9 +358,8 @@ public class MessagePipelineWorker {
         }
         var out = MAPPER.writeValueAsBytes(evt);
         var members = PipelineFanoutLogic.loadRecipientUserIds(dataSource, chatId, sender, workerMessages);
-        for (var memberId : members) {
-            natsConnection.publish(NatsSubjects.MSG_DELIVER_PREFIX + memberId, out);
-        }
+        DeliverFanout.publish(natsConnection, members, chatId.toString(), out, deliverConfig, fanoutDedup,
+            fanoutDedupId("rtc", evt.chatId(), evt.fromUserId(), Integer.toHexString(java.util.Arrays.hashCode(raw))));
         log.debug(workerMessages.format("worker.pipeline.rtc_debug", sender, chatId, members.size()));
     }
 
@@ -383,11 +396,8 @@ public class MessagePipelineWorker {
 
             var memberIds = PipelineFanoutLogic.loadRecipientUserIds(dataSource,
                 UUID.fromString(event.chatId()), UUID.fromString(event.senderId()), workerMessages);
-            for (var memberId : memberIds) {
-                var deliverSubject = NatsSubjects.MSG_DELIVER_PREFIX + memberId;
-                natsConnection.publish(deliverSubject, raw);
-                log.debug(workerMessages.format("worker.pipeline.fanned_out", deliverSubject));
-            }
+            DeliverFanout.publish(natsConnection, memberIds, event.chatId(), raw, deliverConfig, fanoutDedup,
+                event.messageId());
             publishReadCacheInvalidation(memberIds, UUID.fromString(event.senderId()));
 
             log.info(workerMessages.format("worker.pipeline.processed", event.messageId(), memberIds.size()));
@@ -429,7 +439,39 @@ public class MessagePipelineWorker {
         }
     }
 
+    private static String fanoutDedupId(String... parts) {
+        return String.join("|", parts);
+    }
+
+    private void startMetricsServer() {
+        var port = parsePort(System.getenv("PIPELINE_METRICS_PORT"), 9191);
+        if (port <= 0) {
+            return;
+        }
+        try {
+            metricsServer = WorkerHealthHttpServer.startWithMetrics(
+                port, "pipeline-metrics", () -> true, null, null);
+            log.info("Pipeline metrics on port {} (/metrics, /health)", metricsServer.getPort());
+        } catch (Exception e) {
+            log.warn("Pipeline metrics server failed: {}", e.getMessage());
+        }
+    }
+
+    private static int parsePort(String raw, int defaultPort) {
+        if (raw == null || raw.isBlank()) {
+            return defaultPort;
+        }
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException e) {
+            return defaultPort;
+        }
+    }
+
     public void shutdown() {
+        if (metricsServer != null) {
+            metricsServer.close();
+        }
         try {
             natsConnection.close();
         } catch (Exception e) {

@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -63,10 +64,12 @@ public class AppConfig {
         override("FILE_RESIZE_MAX_HEIGHT", "file.resize.max.height");
         override("FILE_RESIZE_MAX_SOURCE_PIXELS", "file.resize.max.source.pixels");
         override("RATE_LIMIT_AUTH_ENABLED", "rate.limit.auth.enabled");
+        override("RATE_LIMIT_AUTH_FAIL_OPEN", "rate.limit.auth.fail.open");
         override("RATE_LIMIT_LOGIN_PER_MINUTE", "rate.limit.auth.login.per.minute");
         override("RATE_LIMIT_REGISTER_PER_HOUR", "rate.limit.auth.register.per.hour");
         override("MEDIA_MAX_UPLOAD_BYTES", "media.max.upload.bytes");
         override("FILE_DEDUP_ENABLED", "file.dedup.enabled");
+        override("FILE_UPLOAD_MAX_CONCURRENT", "file.upload.max.concurrent");
         override("JITSI_MEET_BASE_URL", "jitsi.meet.base.url");
         override("CONFERENCE_ROOM_PREFIX", "conference.room.prefix");
         override("LIVEKIT_URL", "livekit.url");
@@ -111,6 +114,8 @@ public class AppConfig {
         override("REDIS_READ_CACHE_TTL_CHAT_UNREAD_SECONDS", "redis.read.cache.ttl.chat_unread.seconds");
         override("REDIS_READ_CACHE_TTL_USER_PROFILE_SECONDS", "redis.read.cache.ttl.user_profile.seconds");
         override("REDIS_READ_CACHE_TTL_USER_PRESENCE_SECONDS", "redis.read.cache.ttl.user_presence.seconds");
+        override("API_JDBC_QUERY_TIMEOUT_SECONDS", "api.jdbc.query.timeout.seconds");
+        override("KORUS_DEPLOY_PROFILE", "korus.deploy.profile");
     }
 
     private void override(String envKey, String propKey) {
@@ -327,6 +332,11 @@ public class AppConfig {
         return Boolean.parseBoolean(props.getProperty("rate.limit.auth.enabled", "false"));
     }
 
+    /** When false, Redis errors deny auth (fail-closed). Env: RATE_LIMIT_AUTH_FAIL_OPEN. */
+    public boolean rateLimitAuthFailOpen() {
+        return Boolean.parseBoolean(props.getProperty("rate.limit.auth.fail.open", "false"));
+    }
+
     public int rateLimitLoginMaxPerMinute() {
         return Integer.parseInt(props.getProperty("rate.limit.auth.login.per.minute", "60"));
     }
@@ -343,6 +353,60 @@ public class AppConfig {
     /** FR-OPT-08: content-hash deduplication on upload (default on). */
     public boolean fileDedupEnabled() {
         return Boolean.parseBoolean(props.getProperty("file.dedup.enabled", "true"));
+    }
+
+    /** Max concurrent uploads spooling to disk (PS-1.2). */
+    public int fileUploadMaxConcurrent() {
+        return Integer.parseInt(props.getProperty("file.upload.max.concurrent", "20"));
+    }
+
+    /** JDBC statement timeout for hot read paths (PS-0.2). {@code 0} = disabled. */
+    public int apiJdbcQueryTimeoutSeconds() {
+        var raw = props.getProperty("api.jdbc.query.timeout.seconds", "30").trim();
+        try {
+            return Math.max(0, Integer.parseInt(raw));
+        } catch (NumberFormatException e) {
+            return 30;
+        }
+    }
+
+    /** Deploy profile: dev (default), pilot, standard, enterprise. Env: {@code KORUS_DEPLOY_PROFILE}. */
+    public String deployProfile() {
+        return props.getProperty("korus.deploy.profile", "dev").trim().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Fail-fast (standard/enterprise) or warn (pilot) when dev-default secrets are used (PS-0.6).
+     */
+    public void validateProductionSecrets() {
+        var profile = deployProfile();
+        if ("dev".equals(profile) || profile.isBlank()) {
+            return;
+        }
+        var issues = new ArrayList<String>();
+        if (isDevDefaultSecret(dbPassword(), "avandocmsg")) {
+            issues.add("DB_PASSWORD");
+        }
+        if (isDevDefaultSecret(keycloakMasterPassword(), "admin")) {
+            issues.add("KEYCLOAK_MASTER_PASSWORD");
+        }
+        if (isDevDefaultSecret(minioSecretKey(), "avandocmsg123")) {
+            issues.add("MINIO_SECRET_KEY");
+        }
+        if (issues.isEmpty()) {
+            return;
+        }
+        var message = "Insecure default secrets for deploy profile '" + profile + "': "
+            + String.join(", ", issues);
+        if ("pilot".equals(profile)) {
+            log.warn("{} (QEMU/dev pilot may use compose defaults)", message);
+            return;
+        }
+        throw new IllegalStateException(message);
+    }
+
+    private boolean isDevDefaultSecret(String actual, String devDefault) {
+        return actual != null && devDefault.equals(actual.trim());
     }
 
     /** Базовый URL Jitsi Meet (без завершающего слэша); комната = {@code base + "/" + room_slug}. */

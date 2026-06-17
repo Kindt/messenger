@@ -13,6 +13,7 @@ class NatsSubjectsTest {
     void subjects_areStableForInterop() {
         assertEquals("msg.send", NatsSubjects.MSG_SEND);
         assertEquals("msg.deliver.", NatsSubjects.MSG_DELIVER_PREFIX);
+        assertEquals("msg.deliver.chat.", NatsSubjects.MSG_DELIVER_CHAT_PREFIX);
         assertEquals("msg.event.index", NatsSubjects.MSG_EVENT_INDEX);
         assertEquals("msg.event.push", NatsSubjects.MSG_EVENT_PUSH);
         assertEquals("msg.event.bot", NatsSubjects.MSG_EVENT_BOT);

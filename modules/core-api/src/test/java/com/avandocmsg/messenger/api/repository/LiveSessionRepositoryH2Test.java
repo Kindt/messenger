@@ -164,4 +164,36 @@ class LiveSessionRepositoryH2Test {
         assertTrue(repo.listForChat(chatId, true).isEmpty());
         assertEquals(1, repo.listForChat(chatId, false).size());
     }
+
+    @Test
+    void listForChat_returnsLiveViewerCountWhenColumnStale() throws Exception {
+        try (var c = ds.getConnection();
+             var ps = c.prepareStatement("UPDATE live_sessions SET viewer_count = 0 WHERE id = ?")) {
+            ps.setObject(1, sessionId);
+            ps.executeUpdate();
+        }
+        var viewer = UUID.randomUUID();
+        try (var c = ds.getConnection();
+             var ps = c.prepareStatement(
+                 "INSERT INTO users (id, username, display_name) VALUES (?, ?, ?)")) {
+            ps.setObject(1, viewer);
+            ps.setString(2, "viewer");
+            ps.setString(3, "Viewer");
+            ps.executeUpdate();
+        }
+        try (var c = ds.getConnection();
+             var ps = c.prepareStatement(
+                 "INSERT INTO live_session_viewers (session_id, user_id, role) VALUES (?, ?, ?)")) {
+            ps.setObject(1, sessionId);
+            ps.setObject(2, userId);
+            ps.setString(3, "host");
+            ps.executeUpdate();
+            ps.setObject(2, viewer);
+            ps.setString(3, "viewer");
+            ps.executeUpdate();
+        }
+        var listed = repo.listForChat(chatId, true);
+        assertEquals(1, listed.size());
+        assertEquals(2, listed.getFirst().viewerCount());
+    }
 }

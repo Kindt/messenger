@@ -10,7 +10,7 @@
 
 **Связанные документы:** [`deploy/qemu/RESOURCES.md`](../../deploy/qemu/RESOURCES.md), [`docs/plans/2026-06-15-infra-optimization-design.md`](2026-06-15-infra-optimization-design.md) (Wave 1–3 closed), [`docs/review/code-review-2026-05-23.md`](../review/code-review-2026-05-23.md).
 
-**Статус:** `not_started`  
+**Статус:** Wave 0–4 implemented 2026-06-16 (live soak gates — manual on QEMU guest)  
 **Теги:** `[performance]` `[memory]` `[ws-gateway]` `[core-api]` `[docker]` `[pipeline]` `[web-client]` `[ops]`
 
 ---
@@ -418,19 +418,20 @@ PR-11 PS-3.*  code health (optional parallel)
 
 ## Task checklist (для specs/tasks или GitHub)
 
-- [ ] PS-0.1 Docker limits
-- [ ] PS-0.2 JDBC timeout
-- [ ] PS-0.3 Redis cache pilot
-- [ ] PS-0.4 LiveSession N+1
-- [ ] PS-0.5 Auth rate limit
-- [ ] PS-0.6 Secrets fail-fast
-- [ ] PS-1.1 WS shared dispatcher
-- [ ] PS-1.2 Streaming upload
-- [ ] PS-1.3 Chat fan-out
-- [ ] PS-2.1 Limiter eviction
-- [ ] PS-2.2 Fan-out dedup
-- [ ] PS-2.3 Fail-closed rate limit
-- [ ] PS-2.4 Metrics
-- [ ] PS-3.1 Chunk writer common
-- [ ] PS-3.2 app.js virtual list
-- [ ] PS-4.1 Soak scripts
+- [x] PS-0.1 Docker limits
+- [x] PS-0.2 JDBC timeout
+- [x] PS-0.3 Redis cache pilot
+- [x] PS-0.4 LiveSession N+1
+- [x] PS-0.5 Auth rate limit
+- [x] PS-0.6 Secrets fail-fast
+- [x] PS-1.1 WS shared dispatcher
+- [x] PS-1.2 Streaming upload
+- [x] PS-1.3 Chat fan-out
+- [x] PS-2.1 Limiter eviction
+- [x] PS-2.2 Fan-out dedup
+- [x] PS-2.3 Fail-closed rate limit
+- [x] PS-2.4 Metrics
+- [x] PS-3.1 Chunk writer common
+- [x] PS-3.2 app.js virtual list
+- [x] PS-3.3 ChatRepository read-path logging
+- [x] PS-4.1 Soak scripts

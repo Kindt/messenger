@@ -136,6 +136,7 @@ public class MessengerApplication {
 
     public MessengerApplication() {
         this.appConfig = new AppConfig();
+        appConfig.validateProductionSecrets();
         log.info("Starting AvandocMsg.Messenger core-api v{}", appConfig.version());
         CryptoProvider.ensureLoaded();
         var databaseConfig = new DatabaseConfig(appConfig);
@@ -159,8 +160,10 @@ public class MessengerApplication {
         this.userRepository = new UserRepository(dataSource);
         this.contactRepository = new ContactRepository(dataSource);
         this.blockRepository = new BlockRepository(dataSource);
-        this.chatRepository = new ChatRepository(dataSource, readDs, clock, uuidGenerator);
-        this.messageRepository = new MessageRepository(dataSource, readDs, clock);
+        this.chatRepository = new ChatRepository(dataSource, readDs, clock, uuidGenerator,
+            appConfig.apiJdbcQueryTimeoutSeconds());
+        this.messageRepository = new MessageRepository(dataSource, readDs, clock,
+            appConfig.apiJdbcQueryTimeoutSeconds());
         this.fileRepository = new FileRepository(dataSource);
         this.chatBanRepository = new ChatBanRepository(dataSource, clock, uuidGenerator);
         this.e2eeService = new E2EEService();

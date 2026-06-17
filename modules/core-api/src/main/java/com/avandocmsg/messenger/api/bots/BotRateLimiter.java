@@ -12,6 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class BotRateLimiter {
 
+    private static final long IDLE_EVICT_MS = 600_000L;
+
     private final int limitPerMinute;
     private final Map<UUID, Deque<Long>> windows = new ConcurrentHashMap<>();
 
@@ -33,6 +35,7 @@ public class BotRateLimiter {
     }
 
     public boolean tryAcquire(UUID botId) {
+        evictIdleEntries();
         var now = Instant.now().toEpochMilli();
         var windowMs = 60_000L;
         var q = windows.computeIfAbsent(botId, id -> new ArrayDeque<>());
@@ -46,5 +49,29 @@ public class BotRateLimiter {
             q.addLast(now);
             return true;
         }
+    }
+
+    /** Drop bot windows idle longer than 10 minutes (PS-2.1). */
+    void evictIdleEntries() {
+        var cutoff = Instant.now().toEpochMilli() - IDLE_EVICT_MS;
+        windows.entrySet().removeIf(entry -> {
+            var q = entry.getValue();
+            synchronized (q) {
+                while (!q.isEmpty() && q.peekFirst() < cutoff) {
+                    q.pollFirst();
+                }
+                return q.isEmpty();
+            }
+        });
+    }
+
+    int trackedBotCount() {
+        return windows.size();
+    }
+
+    void seedTimestampForTest(UUID botId, long epochMs) {
+        var q = new ArrayDeque<Long>();
+        q.addLast(epochMs);
+        windows.put(botId, q);
     }
 }
