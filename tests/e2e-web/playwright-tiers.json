@@ -50,13 +50,17 @@
       "description": "Bot API REST MVP + v2",
       "args": ["specs/bot-api.spec.ts"]
     },
+    "ui-push": {
+      "description": "Web Push device register + VAPID settings API",
+      "args": ["specs/web-push.spec.ts"]
+    },
     "full": {
       "description": "All specs (outer gate only)",
       "args": []
     },
     "all-inner": {
       "description": "Run all inner tiers sequentially",
-      "sequential": ["api", "ui-auth", "ui-messaging", "ui-files", "ui-conference", "ui-e2ee", "ui-bot"]
+      "sequential": ["api", "ui-auth", "ui-messaging", "ui-files", "ui-conference", "ui-e2ee", "ui-bot", "ui-push"]
     }
   }
 }

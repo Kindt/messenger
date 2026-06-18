@@ -59,6 +59,7 @@ final class ExportFileBundleBuilder {
             exportRoot.set("fileBodies", stats.toJsonNode());
             exportRoot.put("attachmentManifestPath", ExportOutputRef.ZIP_ATTACHMENTS_MANIFEST);
             patchFileBinaryGdpr(exportRoot, included > 0);
+            writePackageManifest(zos, exportRoot, stats);
             var jsonBytes = MAPPER.writerWithDefaultPrettyPrinter()
                 .writeValueAsString(exportRoot)
                 .getBytes(StandardCharsets.UTF_8);
@@ -69,6 +70,29 @@ final class ExportFileBundleBuilder {
                 zipPath.getFileName(), included, skipped, includedBytes));
             return stats;
         }
+    }
+
+    private static void writePackageManifest(
+        ZipOutputStream zos,
+        ObjectNode exportRoot,
+        FileBundleStats stats
+    ) throws IOException {
+        var manifest = MAPPER.createObjectNode();
+        manifest.put("formatVersion", 1);
+        manifest.put("exportJsonEntry", ExportOutputRef.ZIP_JSON_ENTRY);
+        manifest.put("attachmentsManifestPath", ExportOutputRef.ZIP_ATTACHMENTS_MANIFEST);
+        manifest.put("includedAttachmentCount", stats.includedCount());
+        manifest.put("skippedAttachmentCount", stats.skippedCount());
+        manifest.put("includedAttachmentBytes", stats.includedBytes());
+        var completeness = exportRoot.get("exportCompleteness");
+        if (completeness != null && !completeness.isNull()) {
+            manifest.set("exportCompleteness", completeness.deepCopy());
+        }
+        var bytes = MAPPER.writerWithDefaultPrettyPrinter().writeValueAsBytes(manifest);
+        zos.putNextEntry(new ZipEntry(ExportOutputRef.ZIP_PACKAGE_MANIFEST));
+        zos.write(bytes);
+        zos.closeEntry();
+        exportRoot.put("packageManifestPath", ExportOutputRef.ZIP_PACKAGE_MANIFEST);
     }
 
     private static void writeManifestEntry(

@@ -57,8 +57,21 @@ class LiveSessionRepositoryH2Test {
                   room_name VARCHAR(160) NOT NULL UNIQUE,
                   max_viewers INT NOT NULL DEFAULT 200,
                   viewer_count INT NOT NULL DEFAULT 0,
+                  dvr_playlist_url VARCHAR(2048),
+                  dvr_started_at TIMESTAMP,
+                  moderation_state VARCHAR(32) NOT NULL DEFAULT 'open',
                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                   ended_at TIMESTAMP
+                )
+                """);
+            st.execute("""
+                CREATE TABLE live_session_moderation_events (
+                  id UUID PRIMARY KEY,
+                  session_id UUID NOT NULL REFERENCES live_sessions(id) ON DELETE CASCADE,
+                  actor_user_id UUID NOT NULL REFERENCES users(id),
+                  action VARCHAR(64) NOT NULL,
+                  reason VARCHAR(512),
+                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """);
             st.execute("""
@@ -195,5 +208,32 @@ class LiveSessionRepositoryH2Test {
         var listed = repo.listForChat(chatId, true);
         assertEquals(1, listed.size());
         assertEquals(2, listed.getFirst().viewerCount());
+    }
+
+    @Test
+    void recordModerationEvent_insertsRowAndUpdatesState() throws Exception {
+        assertTrue(repo.recordModerationEvent(sessionId, userId, "slow_mode", "test reason"));
+        assertTrue(repo.setModerationState(sessionId, "slow_mode"));
+        var found = repo.findById(sessionId);
+        assertTrue(found.isPresent());
+        assertEquals("slow_mode", found.get().moderationState());
+        try (var c = ds.getConnection();
+             var ps = c.prepareStatement(
+                 "SELECT action, reason FROM live_session_moderation_events WHERE session_id = ?")) {
+            ps.setObject(1, sessionId);
+            try (var rs = ps.executeQuery()) {
+                assertTrue(rs.next());
+                assertEquals("slow_mode", rs.getString("action"));
+                assertEquals("test reason", rs.getString("reason"));
+            }
+        }
+    }
+
+    @Test
+    void updateDvrPlaylist_setsUrl() {
+        assertTrue(repo.updateDvrPlaylist(sessionId, "https://cdn.example/live/index.m3u8"));
+        var found = repo.findById(sessionId);
+        assertTrue(found.isPresent());
+        assertEquals("https://cdn.example/live/index.m3u8", found.get().dvrPlaylistUrl());
     }
 }

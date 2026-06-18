@@ -16,5 +16,6 @@ public record MediaCapabilitiesResponse(
     @JsonProperty("mls_status") String mlsStatus,
     @JsonProperty("live_streaming_enabled") boolean liveStreamingEnabled,
     @JsonProperty("livekit_url") String livekitUrl,
-    @JsonProperty("live_max_webrtc_viewers") int liveMaxWebrtcViewers
+    @JsonProperty("live_max_webrtc_viewers") int liveMaxWebrtcViewers,
+    @JsonProperty("group_call_sfu_enabled") boolean groupCallSfuEnabled
 ) {}

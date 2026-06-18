@@ -370,12 +370,12 @@ public class MessageResource {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var msgId = UuidParams.required(msgIdStr, "message_id");
         var userId = CurrentUserId.uuid(securityContext);
-        if (!messageService.canAccessChat(chatId, userId)) {
+        if (!messageApplicationService.isChatMember(ChatId.of(chatId), UserId.of(userId))) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.message.not_member")))
                 .build();
         }
-        var ok = messageService.pinMessage(chatId, msgId, userId);
+        var ok = messageApplicationService.pinMessage(chatId, msgId, userId);
         if (!ok) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.message.not_found")))
@@ -395,12 +395,12 @@ public class MessageResource {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var msgId = UuidParams.required(msgIdStr, "message_id");
         var userId = CurrentUserId.uuid(securityContext);
-        if (!messageService.canAccessChat(chatId, userId)) {
+        if (!messageApplicationService.isChatMember(ChatId.of(chatId), UserId.of(userId))) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.message.not_member")))
                 .build();
         }
-        var ok = messageService.unpinMessage(chatId, msgId, userId);
+        var ok = messageApplicationService.unpinMessage(chatId, msgId, userId);
         if (!ok) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.message.pinned_not_found")))

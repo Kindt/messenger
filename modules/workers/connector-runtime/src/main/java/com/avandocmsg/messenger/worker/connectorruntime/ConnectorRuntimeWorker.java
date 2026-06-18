@@ -36,13 +36,13 @@ public final class ConnectorRuntimeWorker {
         int port = parsePort(System.getenv("CONNECTOR_RUNTIME_PORT"), 8091);
         int healthPort = parsePort(System.getenv("CONNECTOR_RUNTIME_METRICS_PORT"), 9198);
 
-        var pluginServer = startPluginServer(port);
+        var pluginServer = startPluginServer(port, messages);
         try (var health = WorkerHealthHttpServer.startHealthOnly(
             healthPort,
             "connector-runtime-health",
             () -> true,
             messages)) {
-            log.info("connector-runtime plugin HTTP on :{} health on :{}", port, health.getPort());
+            log.info(messages.format("connector.http_started", port, health.getPort()));
             Thread.currentThread().join();
         } finally {
             pluginServer.stop(0);
@@ -50,6 +50,10 @@ public final class ConnectorRuntimeWorker {
     }
 
     static HttpServer startPluginServer(int port) throws IOException {
+        return startPluginServer(port, null);
+    }
+
+    static HttpServer startPluginServer(int port, UserMessageSource messages) throws IOException {
         var server = HttpServer.create(new InetSocketAddress(port), 8);
         server.createContext("/v1/plugin/handle", exchange -> {
             try {
@@ -65,7 +69,11 @@ public final class ConnectorRuntimeWorker {
                 exchange.sendResponseHeaders(200, json.length);
                 exchange.getResponseBody().write(json);
             } catch (Exception e) {
-                log.warn("plugin handle failed: {}", e.getMessage());
+                if (messages != null) {
+                    log.warn(messages.format("connector.handle_failed", e.getMessage()));
+                } else {
+                    log.warn("plugin handle failed: {}", e.getMessage());
+                }
                 var err = "{\"error\":\"handle_failed\"}".getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
                 exchange.sendResponseHeaders(500, err.length);

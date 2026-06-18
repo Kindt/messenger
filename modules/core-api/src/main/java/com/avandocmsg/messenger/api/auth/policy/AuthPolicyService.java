@@ -8,10 +8,16 @@ import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.naming.Context;
+import javax.naming.directory.InitialDirContext;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -75,6 +81,88 @@ public class AuthPolicyService {
         var saved = authPolicyRepository.upsert(new OrgAuthPolicyRow(
             orgId, allowLocal, allowReg, applied, applyStatus, applyError, current.updatedAt(), actorId));
         return Optional.of(toResponse(orgId, saved, true));
+    }
+
+    public record PolicyTestResult(boolean ok, String message) {}
+
+    public Optional<PolicyTestResult> testPolicy(UUID orgId, String providerId) {
+        if (!organizationRepository.exists(orgId)) {
+            return Optional.empty();
+        }
+        var row = authPolicyRepository.findByOrgId(orgId).orElseGet(() -> authPolicyRepository.defaultPolicy(orgId));
+        var provider = selectProviderForTest(row.providers(), providerId);
+        if (provider.isEmpty()) {
+            return Optional.of(new PolicyTestResult(false, "provider_not_found"));
+        }
+        var p = provider.get();
+        if (!"ldap".equalsIgnoreCase(p.type())) {
+            return Optional.of(new PolicyTestResult(false, "test_supported_for_ldap_only"));
+        }
+        return Optional.of(testLdapConnectivity(resolvedSettings(p)));
+    }
+
+    private Optional<AuthProviderEntry> selectProviderForTest(List<AuthProviderEntry> providers, String providerId) {
+        if (providers == null || providers.isEmpty()) {
+            return Optional.empty();
+        }
+        if (providerId != null && !providerId.isBlank()) {
+            return providers.stream().filter(p -> providerId.equals(p.id())).findFirst();
+        }
+        return providers.stream()
+            .filter(p -> p.enabled() && "ldap".equalsIgnoreCase(p.type()))
+            .findFirst();
+    }
+
+    private PolicyTestResult testLdapConnectivity(Map<String, String> settings) {
+        var url = settings.get("connection_url");
+        if (url == null || url.isBlank()) {
+            return new PolicyTestResult(false, "connection_url_required");
+        }
+        var tcp = tcpReachable(url.trim());
+        if (!tcp.ok()) {
+            return tcp;
+        }
+        var bindDn = settings.get("bind_dn");
+        var bindPassword = settings.get("bind_password");
+        if (bindDn == null || bindDn.isBlank() || bindPassword == null || bindPassword.isBlank()) {
+            return new PolicyTestResult(true, "tcp_connect_ok");
+        }
+        try {
+            var env = new Hashtable<String, String>();
+            env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
+            env.put(Context.PROVIDER_URL, url.trim());
+            env.put(Context.SECURITY_AUTHENTICATION, "simple");
+            env.put(Context.SECURITY_PRINCIPAL, bindDn);
+            env.put(Context.SECURITY_CREDENTIALS, bindPassword);
+            env.put("com.sun.jndi.ldap.connect.timeout", "5000");
+            env.put("com.sun.jndi.ldap.read.timeout", "5000");
+            var ctx = new InitialDirContext(env);
+            ctx.close();
+            return new PolicyTestResult(true, "ldap_bind_ok");
+        } catch (Exception e) {
+            log.debug("ldap bind test failed: {}", e.getMessage());
+            return new PolicyTestResult(false, "ldap_bind_failed: " + e.getMessage());
+        }
+    }
+
+    private PolicyTestResult tcpReachable(String connectionUrl) {
+        try {
+            var uri = URI.create(connectionUrl);
+            var host = uri.getHost();
+            if (host == null || host.isBlank()) {
+                return new PolicyTestResult(false, "invalid_connection_url");
+            }
+            var port = uri.getPort();
+            if (port <= 0) {
+                port = "ldaps".equalsIgnoreCase(uri.getScheme()) ? 636 : 389;
+            }
+            try (var socket = new Socket()) {
+                socket.connect(new InetSocketAddress(host, port), 5000);
+            }
+            return new PolicyTestResult(true, "tcp_connect_ok");
+        } catch (Exception e) {
+            return new PolicyTestResult(false, "tcp_connect_failed: " + e.getMessage());
+        }
     }
 
     private LoginOptionsResponse buildLoginOptions(OrganizationRepository.OrgRow org, String redirectBase) {

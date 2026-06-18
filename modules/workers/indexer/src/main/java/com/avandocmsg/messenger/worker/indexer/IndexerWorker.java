@@ -91,7 +91,7 @@ public class IndexerWorker {
         this.workerMessages = workerMessages;
         this.hotPlugHeartbeat = new HotPlugHeartbeat(this.connection, this.serviceId, heartbeatIntervalMs);
         this.batchBuffer = solrEnabled && batchSize > 1
-            ? new IndexerBatchBuffer(solrClient, cloudMode, solrCollection, batchSize, batchFlushMs)
+            ? new IndexerBatchBuffer(solrClient, cloudMode, solrCollection, batchSize, batchFlushMs, workerMessages)
             : null;
         log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }

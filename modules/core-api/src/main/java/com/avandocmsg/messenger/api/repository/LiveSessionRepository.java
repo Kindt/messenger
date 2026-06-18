@@ -20,6 +20,7 @@ public class LiveSessionRepository {
 
     private static final String SESSION_SELECT = """
         SELECT ls.id, ls.chat_id, ls.title, ls.status, ls.mode, ls.room_name, ls.max_viewers,
+               ls.dvr_playlist_url, ls.moderation_state,
                COALESCE(v.cnt, ls.viewer_count, 0) AS viewer_count,
                ls.created_at, ls.ended_at
         FROM live_sessions ls
@@ -49,7 +50,8 @@ public class LiveSessionRepository {
         var sql = """
             INSERT INTO live_sessions (chat_id, created_by, title, room_name, max_viewers)
             VALUES (?, ?, ?, ?, ?)
-            RETURNING id, chat_id, title, status, mode, room_name, max_viewers, viewer_count, created_at, ended_at
+            RETURNING id, chat_id, title, status, mode, room_name, max_viewers, viewer_count,
+                      dvr_playlist_url, moderation_state, created_at, ended_at
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
@@ -206,6 +208,55 @@ public class LiveSessionRepository {
         }
     }
 
+    public boolean updateDvrPlaylist(UUID sessionId, String url) {
+        var sql = """
+            UPDATE live_sessions
+            SET dvr_playlist_url = ?, dvr_started_at = COALESCE(dvr_started_at, now())
+            WHERE id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, url);
+            stmt.setObject(2, sessionId);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            log.error("updateDvrPlaylist {}", sessionId, e);
+            return false;
+        }
+    }
+
+    public boolean recordModerationEvent(UUID sessionId, UUID actorUserId, String action, String reason) {
+        var sql = """
+            INSERT INTO live_session_moderation_events (id, session_id, actor_user_id, action, reason)
+            VALUES (?, ?, ?, ?, ?)
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, uuidGenerator.randomUuid());
+            stmt.setObject(2, sessionId);
+            stmt.setObject(3, actorUserId);
+            stmt.setString(4, action);
+            stmt.setString(5, reason);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            log.error("recordModerationEvent {}", sessionId, e);
+            return false;
+        }
+    }
+
+    public boolean setModerationState(UUID sessionId, String state) {
+        var sql = "UPDATE live_sessions SET moderation_state = ? WHERE id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, state);
+            stmt.setObject(2, sessionId);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            log.error("setModerationState {}", sessionId, e);
+            return false;
+        }
+    }
+
     private void syncViewerCount(Connection conn, UUID sessionId) throws SQLException {
         var count = countActiveViewersOnConnection(conn, sessionId);
         try (var stmt = conn.prepareStatement("UPDATE live_sessions SET viewer_count = ? WHERE id = ?")) {
@@ -244,6 +295,8 @@ public class LiveSessionRepository {
             appConfig.livekitUrl(),
             rs.getInt("viewer_count"),
             rs.getInt("max_viewers"),
+            rs.getString("dvr_playlist_url"),
+            rs.getString("moderation_state"),
             rs.getTimestamp("created_at").toInstant(),
             ended != null ? ended.toInstant() : null
         );

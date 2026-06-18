@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.core.application;
 
 import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.Message;
 import com.avandocmsg.messenger.core.domain.MessageId;
@@ -9,6 +10,7 @@ import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -118,6 +120,17 @@ class MessageApplicationServiceTest {
         assertTrue(messagePort.reactionAdded);
     }
 
+    @Test
+    void pinMessage_delegatesToCoordinatorWhenMember() {
+        chatRepo.put(chatId, memberId, "member");
+        messagePort.message = sampleMessage();
+        var pinRepo = new PinStubMessageRepository();
+        var pinCoordinator = new MessagePinCoordinator(pinRepo, NatsOutboundPort.noop());
+        var svc = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, null, pinCoordinator);
+        assertTrue(svc.pinMessage(chatId, messageId, memberId));
+        assertTrue(pinRepo.pinned);
+    }
+
     private Message sampleMessage() {
         return new Message(
             MessageId.of(messageId),
@@ -202,6 +215,20 @@ class MessageApplicationServiceTest {
 
         @Override
         public boolean removeReaction(MessageId messageId, UserId userId, String reaction) {
+            return true;
+        }
+    }
+
+    static final class PinStubMessageRepository extends MessageRepository {
+        boolean pinned;
+
+        PinStubMessageRepository() {
+            super(null, Clock.systemUTC());
+        }
+
+        @Override
+        public boolean pinMessage(UUID chatId, UUID messageId, UUID pinnedBy) {
+            pinned = true;
             return true;
         }
     }

@@ -26,6 +26,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Bot webhook MVP: optional per-chat URLs from {@code bot_webhook_subscriptions} when migrated; otherwise
@@ -44,12 +47,22 @@ public class BotDeliveryWorker {
     private final String webhookHmacSecret;
     private final boolean subscriptionsEnabled;
     private final UserMessageSource workerMessages;
+    private final BotWebhookOutbox outbox;
+    private final boolean outboxEnabled;
+    private final ScheduledExecutorService retryScheduler;
 
     private final ConcurrentHashMap<String, Boolean> delivered = new ConcurrentHashMap<>();
 
     public BotDeliveryWorker(String natsUrl, DataSource dataSource, String fallbackWebhookUrl,
                              String webhookHmacSecret, boolean subscriptionsEnabled,
                              UserMessageSource workerMessages) throws Exception {
+        this(natsUrl, dataSource, fallbackWebhookUrl, webhookHmacSecret, subscriptionsEnabled,
+            workerMessages, java.time.Clock.systemUTC());
+    }
+
+    BotDeliveryWorker(String natsUrl, DataSource dataSource, String fallbackWebhookUrl,
+                      String webhookHmacSecret, boolean subscriptionsEnabled,
+                      UserMessageSource workerMessages, java.time.Clock clock) throws Exception {
         this.dataSource = dataSource;
         this.fallbackWebhookUrl =
             fallbackWebhookUrl != null && !fallbackWebhookUrl.isBlank() ? fallbackWebhookUrl.trim() : null;
@@ -58,6 +71,15 @@ public class BotDeliveryWorker {
         this.subscriptionsEnabled = subscriptionsEnabled;
         this.workerMessages = workerMessages;
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+        this.outboxEnabled = BotWebhookOutbox.tablePresent(dataSource);
+        this.outbox = outboxEnabled ? new BotWebhookOutbox(dataSource, clock) : null;
+        this.retryScheduler = outboxEnabled
+            ? Executors.newSingleThreadScheduledExecutor(r -> {
+                var t = new Thread(r, "bot-webhook-retry");
+                t.setDaemon(true);
+                return t;
+            })
+            : null;
         var options = Options.builder()
             .server(natsUrl)
             .connectionName("bot-delivery-worker")
@@ -76,6 +98,10 @@ public class BotDeliveryWorker {
             : "(fallback BOT_WEBHOOK_URL only)";
         log.info(workerMessages.format("worker.common.subscribed_extra",
             NatsSubjects.MSG_EVENT_BOT, QUEUE_GROUP, modeHint));
+        if (retryScheduler != null) {
+            retryScheduler.scheduleAtFixedRate(this::processOutboxRetries, 15, 30, TimeUnit.SECONDS);
+            log.info(workerMessages.format("worker.bot_delivery.outbox_retry_enabled"));
+        }
     }
 
     private void handle(io.nats.client.Message msg) {
@@ -92,7 +118,7 @@ public class BotDeliveryWorker {
                 if (target.botId() != null) {
                     enqueueUpdate(target.botId(), json);
                 }
-                deliver(target.webhookUrl(), event, json);
+                deliver(target.botId(), target.webhookUrl(), event, json);
             }
         } catch (Exception e) {
             log.error(workerMessages.get("worker.bot_delivery.handle_failed"), e);
@@ -177,19 +203,76 @@ public class BotDeliveryWorker {
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {
-            log.warn("bot_updates enqueue failed: {}", e.getMessage());
+            log.warn(workerMessages.format("worker.bot_delivery.updates_enqueue_failed", e.getMessage()));
         }
     }
 
-    private void deliver(String webhookUrl, MessageWorkerEvent event, String json) throws Exception {
+    private void deliver(UUID botId, String webhookUrl, MessageWorkerEvent event, String json) {
         var dedupKey = event.messageId() + "|" + webhookUrl;
         var first = delivered.putIfAbsent(dedupKey, Boolean.TRUE) == null;
         if (!first) {
             log.warn(workerMessages.format("worker.bot_delivery.duplicate_delivery", event.messageId(), webhookUrl));
         }
-        var status = postWebhook(httpClient, webhookUrl, json, webhookHmacSecret);
-        log.info(workerMessages.format("worker.bot_delivery.webhook_status",
-            status, event.messageId(), webhookUrl));
+        try {
+            var status = postWebhook(httpClient, webhookUrl, json, webhookHmacSecret);
+            log.info(workerMessages.format("worker.bot_delivery.webhook_status",
+                status, event.messageId(), webhookUrl));
+            if (status < 200 || status >= 300) {
+                persistFailedDelivery(botId, event, webhookUrl, json);
+            }
+        } catch (Exception e) {
+            log.warn(workerMessages.format("worker.bot_delivery.webhook_failed", event.messageId(), webhookUrl, e.getMessage()));
+            persistFailedDelivery(botId, event, webhookUrl, json);
+        }
+    }
+
+    private void persistFailedDelivery(UUID botId, MessageWorkerEvent event, String webhookUrl, String json) {
+        if (outbox == null) {
+            return;
+        }
+        try {
+            var chatId = UUID.fromString(event.chatId());
+            outbox.enqueue(botId, chatId, event.messageId(), webhookUrl, json);
+            log.info(workerMessages.format("worker.bot_delivery.outbox_enqueued", event.messageId(), webhookUrl));
+        } catch (Exception e) {
+            log.warn(workerMessages.format("worker.bot_delivery.outbox_enqueue_failed", e.getMessage()));
+        }
+    }
+
+    void processOutboxRetries() {
+        if (outbox == null) {
+            return;
+        }
+        try {
+            for (var pending : outbox.fetchDue(20)) {
+                retryOutboxRow(pending);
+            }
+        } catch (Exception e) {
+            log.warn(workerMessages.format("worker.bot_delivery.outbox_retry_scan_failed", e.getMessage()));
+        }
+    }
+
+    private void retryOutboxRow(BotWebhookOutbox.PendingDelivery pending) {
+        try {
+            var status = postWebhook(httpClient, pending.webhookUrl(), pending.payloadJson(), webhookHmacSecret);
+            if (status >= 200 && status < 300) {
+                outbox.markDelivered(pending.id());
+                log.info(workerMessages.format("worker.bot_delivery.outbox_delivered",
+                    pending.eventId(), pending.webhookUrl(), pending.attempts() + 1));
+                return;
+            }
+            outbox.scheduleRetry(pending.id(), pending.attempts());
+            log.warn(workerMessages.format("worker.bot_delivery.outbox_retry_status",
+                status, pending.eventId(), pending.webhookUrl()));
+        } catch (Exception e) {
+            try {
+                outbox.scheduleRetry(pending.id(), pending.attempts());
+            } catch (Exception retryEx) {
+                log.warn(workerMessages.format("worker.bot_delivery.outbox_retry_failed", pending.eventId(), retryEx.getMessage()));
+            }
+            log.warn(workerMessages.format("worker.bot_delivery.outbox_retry_error",
+                pending.eventId(), e.getMessage()));
+        }
     }
 
     /** Package-visible for unit tests (BOT-6 mock HTTP server). */
@@ -233,6 +316,9 @@ public class BotDeliveryWorker {
     }
 
     public void shutdown() {
+        if (retryScheduler != null) {
+            retryScheduler.shutdownNow();
+        }
         try {
             connection.close();
         } catch (Exception e) {

@@ -29,6 +29,8 @@ class UserRepositoryH2Test {
                   username VARCHAR(32) NOT NULL UNIQUE,
                   display_name VARCHAR(128) NOT NULL,
                   phone VARCHAR(20),
+                  email VARCHAR(256),
+                  external_id VARCHAR(256),
                   hidden BOOLEAN NOT NULL DEFAULT false,
                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

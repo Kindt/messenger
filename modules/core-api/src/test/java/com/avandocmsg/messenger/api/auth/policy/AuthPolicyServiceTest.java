@@ -75,6 +75,53 @@ class AuthPolicyServiceTest {
         assertTrue(broker.authorizationUrl().contains("kc_idp_hint=corp-sso"));
     }
 
+    @Test
+    void testPolicy_orgNotFound() {
+        var missing = UUID.randomUUID();
+        assertTrue(service.testPolicy(missing, null).isEmpty());
+    }
+
+    @Test
+    void testPolicy_providerNotFoundWhenEmpty() {
+        policyRepo.store = new OrgAuthPolicyRow(orgId, true, false, List.of(), null, null, Instant.EPOCH, null);
+        var result = service.testPolicy(orgId, null).orElseThrow();
+        assertFalse(result.ok());
+        assertEquals("provider_not_found", result.message());
+    }
+
+    @Test
+    void testPolicy_nonLdapProviderRejected() {
+        var oidc = new AuthProviderEntry(
+            "oidc1", "oidc", "corp-sso", "Corp SSO", 1, true, null, "applied", null,
+            java.util.Map.of("client_id", "x"));
+        policyRepo.store = new OrgAuthPolicyRow(orgId, true, false, List.of(oidc), "ok", null, Instant.EPOCH, null);
+        var result = service.testPolicy(orgId, "oidc1").orElseThrow();
+        assertFalse(result.ok());
+        assertEquals("test_supported_for_ldap_only", result.message());
+    }
+
+    @Test
+    void testPolicy_ldapMissingConnectionUrl() {
+        var ldap = new AuthProviderEntry(
+            "ldap1", "ldap", "corp-ldap", "Corp LDAP", 0, true, null, "draft", null,
+            java.util.Map.of("bind_dn", "cn=admin"));
+        policyRepo.store = new OrgAuthPolicyRow(orgId, true, false, List.of(ldap), "ok", null, Instant.EPOCH, null);
+        var result = service.testPolicy(orgId, "ldap1").orElseThrow();
+        assertFalse(result.ok());
+        assertEquals("connection_url_required", result.message());
+    }
+
+    @Test
+    void testPolicy_ldapTcpUnreachable() {
+        var ldap = new AuthProviderEntry(
+            "ldap1", "ldap", "corp-ldap", "Corp LDAP", 0, true, null, "draft", null,
+            java.util.Map.of("connection_url", "ldap://127.0.0.1:1"));
+        policyRepo.store = new OrgAuthPolicyRow(orgId, true, false, List.of(ldap), "ok", null, Instant.EPOCH, null);
+        var result = service.testPolicy(orgId, null).orElseThrow();
+        assertFalse(result.ok());
+        assertTrue(result.message().startsWith("tcp_connect_failed"));
+    }
+
     static final class InMemoryAuthPolicyRepository extends AuthPolicyRepository {
         OrgAuthPolicyRow store;
 

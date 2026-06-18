@@ -6,6 +6,29 @@
 
 ---
 
+---
+
+## [Unreleased]
+
+### 2026-06-18 — Spec 019 engineering gap closure (full)
+
+- **Auth admin wizard:** `/admin/` раздел «Вход / Identity» — форма policy, LDAP test (`POST .../auth-policy/test`).
+- **Live L3–L5:** moderation API, DVR patch, RTMP ingress, HLS player (`ui-live-session.js`).
+- **Directory sync:** `V043`, `DirectorySyncService`, admin run/status, scheduler.
+- **SCIM 2.0:** `ScimUsersResource`, bearer `SCIM_BEARER_TOKEN`.
+- **Group call SFU:** `POST .../calls/livekit/join`, `ui-call-livekit.js`, `group_call_sfu_enabled`.
+- **Kerberos scaffold:** `scripts/keycloak-enable-kerberos.sh`, runbook.
+
+### 2026-06-18 — Spec 019 engineering gap closure (tail)
+
+- **PG sharding wire:** `OrganizationRoutingDataSource` in `MessengerApplication`; `OrgRoutingFilter` + `OrgRoutingClearFilter` (org from JWT user).
+- **Bot webhook retry:** Flyway `V044__bot_webhook_outbox.sql`; `BotWebhookOutbox` + retry scheduler in `BotDeliveryWorker` (max 5 attempts, exponential backoff); `BotWebhookOutboxTest`.
+- **Hex 2b pin:** `MessagePinCoordinator`; `MessageApplicationService.pinMessage/unpinMessage`; `MessageResource` routes pin/unpin via application service.
+- **Worker i18n:** hardcoded log strings replaced in bridge workers, `MessagePipelineWorker`, `IndexerBatchBuffer`, `BotDeliveryWorker`.
+- **Web Push E2E:** `GET /api/v1/me/settings` (VAPID public key); Playwright `web-push.spec.ts`; tier `ui-push` in `playwright-tiers.json`.
+- **Export manifest:** `package-manifest.json` at ZIP root in `ExportFileBundleBuilder` (`ExportOutputRef.ZIP_PACKAGE_MANIFEST`).
+- **ADR:** `docs/adr/ADR-platform-lb-cells.md` (T01127), `docs/adr/ADR-pg-sharding-pilot.md`.
+
 ### 2026-06-18 — Spec 018: 4-tab product deck (GitHub Pages)
 
 - **Новый pipeline:** `scripts/presentation/` — data, compare_engine, calculators, content/marketing/visuals, honesty gate.

@@ -5,6 +5,8 @@
 
   /** Последняя сущность для PATCH ретенции: org или chat + UUID. */
   let retentionPatchTarget = null;
+  /** UUID org для PATCH auth-policy. */
+  let authPolicyTargetOrgId = null;
 
   const el = (id) => document.getElementById(id);
 
@@ -896,6 +898,279 @@
     summary.appendChild(wrap);
   }
 
+  function fillAuthPolicyForm(data) {
+    const setChk = (id, val) => {
+      const inp = document.getElementById(id);
+      if (inp) {
+        inp.checked = !!val;
+      }
+    };
+    const ta = document.getElementById("authPolicyProvidersJson");
+    if (!data || typeof data !== "object") {
+      return;
+    }
+    setChk("authPolicyAllowLocal", data.allow_local_password);
+    setChk("authPolicyAllowReg", data.allow_self_registration);
+    setChk("authPolicyApplyKc", data.apply_to_keycloak !== false);
+    if (ta) {
+      ta.value = JSON.stringify(data.providers || [], null, 2);
+    }
+    const pid = document.getElementById("authPolicyTestProviderId");
+    if (pid) {
+      pid.value = "";
+    }
+  }
+
+  function readAuthPolicyPatchBody() {
+    const allowLocal = document.getElementById("authPolicyAllowLocal");
+    const allowReg = document.getElementById("authPolicyAllowReg");
+    const applyKc = document.getElementById("authPolicyApplyKc");
+    const ta = document.getElementById("authPolicyProvidersJson");
+    if (!allowLocal || !allowReg || !applyKc || !ta) {
+      return null;
+    }
+    let providers;
+    const raw = ta.value.trim();
+    if (raw === "") {
+      providers = [];
+    } else {
+      try {
+        providers = JSON.parse(raw);
+        if (!Array.isArray(providers)) {
+          throw new Error("providers должен быть JSON-массивом");
+        }
+      } catch (e) {
+        throw new Error("Некорректный JSON providers: " + (e.message || String(e)));
+      }
+    }
+    return {
+      allow_local_password: allowLocal.checked,
+      allow_self_registration: allowReg.checked,
+      apply_to_keycloak: applyKc.checked,
+      providers: providers,
+    };
+  }
+
+  function appendAuthPolicyForm(summary) {
+    if (document.getElementById("authPolicyPatchSubmit")) {
+      return;
+    }
+    const wrap = document.createElement("div");
+    wrap.className = "auth-policy-block";
+    const hint = document.createElement("p");
+    hint.className = "muted small";
+    hint.textContent =
+      "PATCH /admin/orgs/{orgId}/auth-policy — флаги и providers (JSON). apply_to_keycloak синхронизирует Keycloak.";
+    wrap.appendChild(hint);
+    const flags = document.createElement("div");
+    flags.className = "admin-toolbar auth-policy-fields";
+    const mkChk = (id, label, checked) => {
+      const l = document.createElement("label");
+      l.className = "small";
+      const inp = document.createElement("input");
+      inp.type = "checkbox";
+      inp.id = id;
+      if (checked) {
+        inp.checked = true;
+      }
+      l.appendChild(inp);
+      l.appendChild(document.createTextNode(" " + label));
+      return l;
+    };
+    flags.appendChild(mkChk("authPolicyAllowLocal", "allow_local_password", true));
+    flags.appendChild(mkChk("authPolicyAllowReg", "allow_self_registration", false));
+    flags.appendChild(mkChk("authPolicyApplyKc", "apply_to_keycloak", true));
+    wrap.appendChild(flags);
+    const provHint = document.createElement("p");
+    provHint.className = "muted small";
+    provHint.textContent = "providers — JSON-массив или добавьте строку ниже:";
+    wrap.appendChild(provHint);
+    const ta = document.createElement("textarea");
+    ta.id = "authPolicyProvidersJson";
+    ta.rows = 8;
+    ta.className = "auth-policy-providers-json";
+    ta.placeholder = "[]";
+    ta.spellcheck = false;
+    wrap.appendChild(ta);
+    const addRow = document.createElement("div");
+    addRow.className = "admin-toolbar";
+    const lType = document.createElement("label");
+    lType.className = "small";
+    lType.textContent = "type";
+    const selType = document.createElement("select");
+    selType.id = "authPolicyAddType";
+    ["ldap", "oidc", "saml"].forEach((t) => {
+      const o = document.createElement("option");
+      o.value = t;
+      o.textContent = t;
+      selType.appendChild(o);
+    });
+    lType.appendChild(selType);
+    const lAlias = document.createElement("label");
+    lAlias.className = "small";
+    lAlias.textContent = "alias";
+    const inAlias = document.createElement("input");
+    inAlias.type = "text";
+    inAlias.id = "authPolicyAddAlias";
+    inAlias.placeholder = "corp-ldap";
+    lAlias.appendChild(inAlias);
+    const lName = document.createElement("label");
+    lName.className = "small";
+    lName.textContent = "display_name";
+    const inName = document.createElement("input");
+    inName.type = "text";
+    inName.id = "authPolicyAddDisplayName";
+    inName.placeholder = "Корпоративный вход";
+    lName.appendChild(inName);
+    const lEn = document.createElement("label");
+    lEn.className = "small";
+    const inEn = document.createElement("input");
+    inEn.type = "checkbox";
+    inEn.id = "authPolicyAddEnabled";
+    inEn.checked = true;
+    lEn.appendChild(inEn);
+    lEn.appendChild(document.createTextNode(" enabled"));
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.textContent = "Добавить провайдер";
+    const addMsg = document.createElement("span");
+    addMsg.className = "muted small";
+    addBtn.addEventListener("click", () => {
+      addMsg.textContent = "";
+      const alias = inAlias.value.trim();
+      if (!alias) {
+        addMsg.textContent = "Укажите alias";
+        return;
+      }
+      let list = [];
+      const raw = ta.value.trim();
+      if (raw) {
+        try {
+          list = JSON.parse(raw);
+          if (!Array.isArray(list)) {
+            throw new Error("не массив");
+          }
+        } catch (e) {
+          addMsg.textContent = "Исправьте JSON в textarea";
+          return;
+        }
+      }
+      const displayName = inName.value.trim() || alias;
+      list.push({
+        id: alias,
+        type: selType.value,
+        alias: alias,
+        display_name: displayName,
+        priority: 0,
+        enabled: inEn.checked,
+        settings: {},
+      });
+      ta.value = JSON.stringify(list, null, 2);
+      addMsg.textContent = "Добавлено.";
+    });
+    addRow.appendChild(lType);
+    addRow.appendChild(lAlias);
+    addRow.appendChild(lName);
+    addRow.appendChild(lEn);
+    addRow.appendChild(addBtn);
+    addRow.appendChild(addMsg);
+    wrap.appendChild(addRow);
+    const actions = document.createElement("div");
+    actions.className = "admin-toolbar";
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.id = "authPolicyPatchSubmit";
+    saveBtn.textContent = "Сохранить PATCH";
+    const saveMsg = document.createElement("span");
+    saveMsg.id = "authPolicyPatchMsg";
+    saveMsg.className = "muted small";
+    saveBtn.addEventListener("click", async () => {
+      saveMsg.textContent = "";
+      if (!authPolicyTargetOrgId) {
+        saveMsg.textContent = "Сначала загрузите политику организации.";
+        return;
+      }
+      let bodyJson;
+      try {
+        bodyJson = readAuthPolicyPatchBody();
+      } catch (e) {
+        saveMsg.textContent = e.message || String(e);
+        return;
+      }
+      if (!bodyJson) {
+        saveMsg.textContent = "Форма не найдена.";
+        return;
+      }
+      const path = "/admin/orgs/" + encodeURIComponent(authPolicyTargetOrgId) + "/auth-policy";
+      try {
+        const data = await apiFetch(path, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(bodyJson),
+        });
+        const pre = el("panelContent");
+        if (pre) {
+          pre.textContent = JSON.stringify(data, null, 2);
+        }
+        const sc = document.getElementById("authPolicyLastFetch");
+        if (sc) {
+          sc.textContent = "Последний запрос: PATCH " + API + path;
+        }
+        const sum = el("panelSummary");
+        if (sum) {
+          sum.querySelector(".json-table-wrap")?.remove();
+          sum.querySelectorAll(".json-panel-note").forEach((n) => n.remove());
+          renderFlatObjectTable(data, sum);
+        }
+        fillAuthPolicyForm(data);
+        saveMsg.textContent = "Сохранено.";
+      } catch (e) {
+        saveMsg.textContent = e.message || String(e);
+      }
+    });
+    const lTestProv = document.createElement("label");
+    lTestProv.className = "small";
+    lTestProv.textContent = "provider_id (опц.)";
+    const inTestProv = document.createElement("input");
+    inTestProv.type = "text";
+    inTestProv.id = "authPolicyTestProviderId";
+    inTestProv.placeholder = "пусто = первый enabled ldap";
+    lTestProv.appendChild(inTestProv);
+    const testBtn = document.createElement("button");
+    testBtn.type = "button";
+    testBtn.textContent = "Тест LDAP";
+    const testMsg = document.createElement("span");
+    testMsg.id = "authPolicyTestMsg";
+    testMsg.className = "muted small";
+    testBtn.addEventListener("click", async () => {
+      testMsg.textContent = "";
+      if (!authPolicyTargetOrgId) {
+        testMsg.textContent = "Сначала загрузите политику организации.";
+        return;
+      }
+      const path = "/admin/orgs/" + encodeURIComponent(authPolicyTargetOrgId) + "/auth-policy/test";
+      const providerId = inTestProv.value.trim();
+      const body = providerId ? { provider_id: providerId } : {};
+      try {
+        const data = await apiFetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        testMsg.textContent = data && data.ok ? "OK: " + data.message : "Fail: " + (data && data.message ? data.message : "?");
+      } catch (e) {
+        testMsg.textContent = e.message || String(e);
+      }
+    });
+    actions.appendChild(saveBtn);
+    actions.appendChild(saveMsg);
+    actions.appendChild(lTestProv);
+    actions.appendChild(testBtn);
+    actions.appendChild(testMsg);
+    wrap.appendChild(actions);
+    summary.appendChild(wrap);
+  }
+
   function renderFlatObjectTable(obj, container) {
     if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
       const p = document.createElement("p");
@@ -1080,7 +1355,7 @@
         await reloadStats();
       } else if (
         section.kind === "json_panel" &&
-        (section.data_path || section.id === "core-retention" || section.id === "core-user-organization")
+        (section.data_path || section.id === "core-retention" || section.id === "core-user-organization" || section.id === "core-auth-policy")
       ) {
         summary.hidden = false;
         summary.innerHTML = "";
@@ -1963,6 +2238,88 @@
           row.appendChild(msg);
           summary.appendChild(row);
           pre.textContent = "UUID пользователя и организации (список — раздел «Организации»).";
+        } else if (section.id === "core-auth-policy") {
+          authPolicyTargetOrgId = null;
+          cap.textContent =
+            "GET " + API + "/admin/orgs/{orgId}/auth-policy — введите UUID организации и нажмите «Загрузить».";
+          const subcap = document.createElement("p");
+          subcap.className = "muted small";
+          subcap.id = "authPolicyLastFetch";
+          subcap.textContent = "";
+          summary.appendChild(subcap);
+          const clearAuthPolicySummary = () => {
+            summary.querySelector(".json-table-wrap")?.remove();
+            summary.querySelectorAll(".json-panel-note").forEach((n) => n.remove());
+          };
+          const showAuthPolicy = (data, path, orgId) => {
+            clearAuthPolicySummary();
+            const sc = document.getElementById("authPolicyLastFetch");
+            if (sc) {
+              sc.textContent = "Последний запрос: GET " + API + path;
+            }
+            pre.textContent = JSON.stringify(data, null, 2);
+            renderFlatObjectTable(data, summary);
+            authPolicyTargetOrgId = orgId;
+            fillAuthPolicyForm(data);
+            const pm = document.getElementById("authPolicyPatchMsg");
+            if (pm) {
+              pm.textContent = "";
+            }
+            const tm = document.getElementById("authPolicyTestMsg");
+            if (tm) {
+              tm.textContent = "";
+            }
+          };
+          const row = document.createElement("div");
+          row.className = "admin-toolbar";
+          const lbl = document.createElement("label");
+          lbl.className = "small";
+          lbl.textContent = "Организация";
+          const inp = document.createElement("input");
+          inp.type = "text";
+          inp.id = "authPolicyOrgId";
+          inp.placeholder = "UUID";
+          lbl.appendChild(inp);
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = "Загрузить";
+          const msg = document.createElement("span");
+          msg.className = "muted small";
+          btn.addEventListener("click", async () => {
+            msg.textContent = "";
+            const uuid = inp.value.trim();
+            if (!uuid) {
+              msg.textContent = "Введите UUID";
+              return;
+            }
+            try {
+              const path = "/admin/orgs/" + encodeURIComponent(uuid) + "/auth-policy";
+              const data = await apiFetch(path);
+              showAuthPolicy(data, path, uuid);
+            } catch (e) {
+              msg.textContent = e.message || String(e);
+            }
+          });
+          row.appendChild(lbl);
+          row.appendChild(btn);
+          row.appendChild(msg);
+          summary.appendChild(row);
+          appendAuthPolicyForm(summary);
+          const reloadAuthPolicy = async () => {
+            try {
+              if (!authPolicyTargetOrgId) {
+                pre.textContent = "Сначала нажмите «Загрузить» для организации.";
+                return;
+              }
+              const path = "/admin/orgs/" + encodeURIComponent(authPolicyTargetOrgId) + "/auth-policy";
+              const data = await apiFetch(path);
+              showAuthPolicy(data, path, authPolicyTargetOrgId);
+            } catch (e) {
+              pre.textContent = "Ошибка: " + e.message;
+            }
+          };
+          appendJsonPanelReload(summary, reloadAuthPolicy);
+          pre.textContent = "Введите UUID организации и нажмите «Загрузить».";
         } else if (section.id === "core-retention") {
           retentionPatchTarget = null;
           cap.textContent =

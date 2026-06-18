@@ -6,6 +6,7 @@ import com.avandocmsg.messenger.api.mls.MlsMigrationService;
 import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.core.application.MessageEditCoordinator;
 import com.avandocmsg.messenger.core.application.MessageDeleteCoordinator;
+import com.avandocmsg.messenger.core.application.MessagePinCoordinator;
 import com.avandocmsg.messenger.core.application.MessageReactionCoordinator;
 import com.avandocmsg.messenger.core.application.MessageSendCoordinator;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
@@ -43,6 +44,8 @@ import com.avandocmsg.messenger.core.port.UuidGenerator;
 import io.lettuce.core.api.sync.RedisCommands;
 
 import io.minio.MinioClient;
+
+import java.time.Clock;
 
 import javax.sql.DataSource;
 
@@ -97,12 +100,16 @@ public final class CoreModule {
         return new MessageReactionCoordinator(messageRepositoryPort(dataSource), natsOutbound);
     }
 
+    public static MessagePinCoordinator messagePinCoordinator(DataSource dataSource, NatsOutboundPort natsOutbound) {
+        return new MessagePinCoordinator(new MessageRepository(dataSource, Clock.systemUTC()), natsOutbound);
+    }
+
     public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
                                                                       BlockRepository blockRepository,
                                                                       MessageSendCoordinator sendCoordinator,
                                                                       MessageEditCoordinator editCoordinator) {
         return messageApplicationService(dataSource, chatRepository, blockRepository, sendCoordinator,
-            editCoordinator, null, null);
+            editCoordinator, null, null, null);
     }
 
     public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
@@ -111,8 +118,19 @@ public final class CoreModule {
                                                                       MessageEditCoordinator editCoordinator,
                                                                       MessageDeleteCoordinator deleteCoordinator,
                                                                       MessageReactionCoordinator reactionCoordinator) {
+        return messageApplicationService(dataSource, chatRepository, blockRepository, sendCoordinator,
+            editCoordinator, deleteCoordinator, reactionCoordinator, null);
+    }
+
+    public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
+                                                                      BlockRepository blockRepository,
+                                                                      MessageSendCoordinator sendCoordinator,
+                                                                      MessageEditCoordinator editCoordinator,
+                                                                      MessageDeleteCoordinator deleteCoordinator,
+                                                                      MessageReactionCoordinator reactionCoordinator,
+                                                                      MessagePinCoordinator pinCoordinator) {
         return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepository, blockRepository,
-            sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator);
+            sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator);
     }
 
     public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,

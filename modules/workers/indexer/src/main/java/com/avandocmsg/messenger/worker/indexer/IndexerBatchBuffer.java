@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.indexer;
 
+import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
@@ -26,17 +27,20 @@ final class IndexerBatchBuffer implements AutoCloseable {
     private final String solrCollection;
     private final int batchSize;
     private final long flushMs;
+    private final UserMessageSource workerMessages;
     private final ReentrantLock lock = new ReentrantLock();
     private final Map<String, SolrInputDocument> pendingAdds = new LinkedHashMap<>();
     private final List<String> pendingDeletes = new ArrayList<>();
     private final ScheduledExecutorService scheduler;
 
-    IndexerBatchBuffer(SolrClient solrClient, boolean cloudMode, String solrCollection, int batchSize, long flushMs) {
+    IndexerBatchBuffer(SolrClient solrClient, boolean cloudMode, String solrCollection, int batchSize, long flushMs,
+                       UserMessageSource workerMessages) {
         this.solrClient = solrClient;
         this.cloudMode = cloudMode;
         this.solrCollection = solrCollection;
         this.batchSize = Math.max(1, batchSize);
         this.flushMs = Math.max(50L, flushMs);
+        this.workerMessages = workerMessages;
         this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             var t = new Thread(r, "indexer-batch-flush");
             t.setDaemon(true);
@@ -89,7 +93,7 @@ final class IndexerBatchBuffer implements AutoCloseable {
         try {
             flush();
         } catch (Exception e) {
-            log.warn("indexer batch flush failed: {}", e.getMessage());
+            log.warn(workerMessages.format("worker.indexer.batch_flush_failed", e.getMessage()));
             IndexerSolrMetrics.error();
         }
     }
@@ -99,7 +103,7 @@ final class IndexerBatchBuffer implements AutoCloseable {
             try {
                 flushLocked();
             } catch (Exception e) {
-                log.warn("indexer batch flush failed: {}", e.getMessage());
+                log.warn(workerMessages.format("worker.indexer.batch_flush_failed", e.getMessage()));
                 IndexerSolrMetrics.error();
             }
         }

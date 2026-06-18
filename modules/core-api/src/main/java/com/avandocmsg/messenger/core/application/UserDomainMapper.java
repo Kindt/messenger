@@ -12,6 +12,8 @@ public final class UserDomainMapper {
             profile.username(),
             profile.displayName(),
             profile.phone(),
+            null,
+            null,
             profile.hidden(),
             profile.createdAt(),
             profile.presenceStatus(),

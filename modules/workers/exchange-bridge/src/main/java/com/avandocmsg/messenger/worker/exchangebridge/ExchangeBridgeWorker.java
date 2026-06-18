@@ -29,10 +29,10 @@ public final class ExchangeBridgeWorker {
         int port = parsePort(System.getenv("EXCHANGE_BRIDGE_PORT"), 8093);
         int healthPort = parsePort(System.getenv("EXCHANGE_BRIDGE_METRICS_PORT"), 9193);
 
-        var pluginServer = startPluginServer(port);
+        var pluginServer = startPluginServer(port, messages);
         try (var health = WorkerHealthHttpServer.startHealthOnly(
             healthPort, "exchange-bridge-health", () -> true, messages)) {
-            log.info("exchange-bridge plugin HTTP on :{} health on :{}", port, health.getPort());
+            log.info(messages.format("bridge.http_started", port, health.getPort()));
             Thread.currentThread().join();
         } finally {
             pluginServer.stop(0);
@@ -40,6 +40,10 @@ public final class ExchangeBridgeWorker {
     }
 
     static HttpServer startPluginServer(int port) throws IOException {
+        return startPluginServer(port, null);
+    }
+
+    static HttpServer startPluginServer(int port, UserMessageSource messages) throws IOException {
         var server = HttpServer.create(new InetSocketAddress(port), 8);
         server.createContext("/v1/plugin/handle", exchange -> {
             try {
@@ -55,7 +59,11 @@ public final class ExchangeBridgeWorker {
                 exchange.sendResponseHeaders(200, json.length);
                 exchange.getResponseBody().write(json);
             } catch (Exception e) {
-                log.warn("exchange handle failed: {}", e.getMessage());
+                if (messages != null) {
+                    log.warn(messages.format("bridge.handle_failed", e.getMessage()));
+                } else {
+                    log.warn("exchange handle failed: {}", e.getMessage());
+                }
                 var err = "{\"error\":\"handle_failed\"}".getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
                 exchange.sendResponseHeaders(500, err.length);

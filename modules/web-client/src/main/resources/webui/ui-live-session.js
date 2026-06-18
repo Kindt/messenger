@@ -2,6 +2,7 @@
   "use strict";
 
   var liveKitScriptPromise = null;
+  var hlsScriptPromise = null;
 
   function isLiveSessionChangeEvent(o) {
     return (
@@ -24,6 +25,8 @@
       provider: data.provider,
       viewer_count: data.viewer_count,
       max_viewers: data.max_viewers,
+      dvr_playlist_url: data.dvr_playlist_url,
+      moderation_state: data.moderation_state,
     };
   }
 
@@ -66,6 +69,66 @@
       document.head.appendChild(s);
     });
     return liveKitScriptPromise;
+  }
+
+  function ensureHlsJs() {
+    if (global.Hls) return Promise.resolve(global.Hls);
+    if (hlsScriptPromise) return hlsScriptPromise;
+    hlsScriptPromise = new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js";
+      s.async = true;
+      s.onload = function () {
+        if (global.Hls) resolve(global.Hls);
+        else reject(new Error("hls.js missing"));
+      };
+      s.onerror = function () {
+        reject(new Error("hls.js load failed"));
+      };
+      document.head.appendChild(s);
+    });
+    return hlsScriptPromise;
+  }
+
+  function attachHlsPlayer(container, playlistUrl) {
+    if (!container || !playlistUrl) return;
+    container.innerHTML = "";
+    var video = document.createElement("video");
+    video.className = "call-video call-live-hls";
+    video.controls = true;
+    video.playsInline = true;
+    video.setAttribute("data-testid", "live-hls-player");
+    container.appendChild(video);
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = playlistUrl;
+      return;
+    }
+    ensureHlsJs()
+      .then(function (Hls) {
+        if (Hls.isSupported()) {
+          var hls = new Hls();
+          hls.loadSource(playlistUrl);
+          hls.attachMedia(video);
+        } else {
+          video.src = playlistUrl;
+        }
+      })
+      .catch(function () {
+        video.src = playlistUrl;
+      });
+  }
+
+  function dvrPlaylistForSession(state, live) {
+    if (live && live.dvr_playlist_url) return live.dvr_playlist_url;
+    if (
+      state.activeLiveSession &&
+      live &&
+      state.activeLiveSession.live_session_id === live.live_session_id &&
+      state.activeLiveSession.dvr_playlist_url
+    ) {
+      return state.activeLiveSession.dvr_playlist_url;
+    }
+    return null;
   }
 
   function disconnectLiveKitRoom(state) {
@@ -320,6 +383,19 @@
       sec.appendChild(row);
     } else {
       sec.appendChild(el("p", "call-conf-empty", L("live.noneActive")));
+    }
+
+    var dvrUrl = dvrPlaylistForSession(state, live);
+    if (dvrUrl) {
+      var hlsStage = el("div", "call-live-stage call-live-hls-stage");
+      hlsStage.setAttribute("data-testid", "live-hls-stage");
+      hlsStage.appendChild(el("p", "call-hint", L("live.hlsReplay")));
+      var hlsVideos = el("div", "call-live-videos");
+      hlsStage.appendChild(hlsVideos);
+      sec.appendChild(hlsStage);
+      setTimeout(function () {
+        attachHlsPlayer(hlsVideos, dvrUrl);
+      }, 0);
     }
 
     if (state.activeLiveSession && state.liveKitRoom) {

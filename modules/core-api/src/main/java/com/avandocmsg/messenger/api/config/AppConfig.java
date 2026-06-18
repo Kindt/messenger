@@ -54,6 +54,7 @@ public class AppConfig {
         override("KEYCLOAK_MASTER_PASSWORD", "keycloak.master.password");
         override("KORUS_DEFAULT_ORG_ID", "korus.default.org.id");
         override("WEB_PUBLIC_BASE_URL", "web.public.base.url");
+        override("WEB_CLIENT_VAPID_PUBLIC_KEY", "web.client.vapid.public.key");
         override("MINIO_ENDPOINT", "minio.endpoint");
         override("MINIO_ACCESS_KEY", "minio.access.key");
         override("MINIO_SECRET_KEY", "minio.secret.key");
@@ -78,6 +79,7 @@ public class AppConfig {
         override("LIVEKIT_URL", "livekit.url");
         override("LIVEKIT_API_KEY", "livekit.api.key");
         override("LIVEKIT_API_SECRET", "livekit.api.secret");
+        override("LIVEKIT_INGRESS_URL", "livekit.ingress.url");
         override("LIVESTREAM_ROOM_PREFIX", "livestream.room.prefix");
         override("LIVESTREAM_MAX_WEBRTC_VIEWERS", "livestream.max.webrtc.viewers");
         override("INTEGRATIONS_BASE_URL", "integrations.base.url");
@@ -119,6 +121,8 @@ public class AppConfig {
         override("REDIS_READ_CACHE_TTL_USER_PRESENCE_SECONDS", "redis.read.cache.ttl.user_presence.seconds");
         override("API_JDBC_QUERY_TIMEOUT_SECONDS", "api.jdbc.query.timeout.seconds");
         override("KORUS_DEPLOY_PROFILE", "korus.deploy.profile");
+        override("DIRECTORY_SYNC_INTERVAL_MINUTES", "directory.sync.interval.minutes");
+        override("SCIM_BEARER_TOKEN", "scim.bearer.token");
     }
 
     private void override(String envKey, String propKey) {
@@ -459,6 +463,29 @@ public class AppConfig {
         return !livekitUrl().isEmpty() && !livekitApiKey().isEmpty() && !livekitApiSecret().isEmpty();
     }
 
+    /** RTMP ingress base URL (e.g. rtmp://host:1935/live); derived from LiveKit URL when unset. */
+    public String livekitIngressUrl() {
+        var explicit = props.getProperty("livekit.ingress.url", "").trim();
+        if (!explicit.isEmpty()) {
+            return explicit;
+        }
+        var lk = livekitUrl();
+        if (lk.isEmpty()) {
+            return "";
+        }
+        try {
+            var normalized = lk.replace("wss://", "https://").replace("ws://", "http://");
+            var uri = java.net.URI.create(normalized);
+            var host = uri.getHost();
+            if (host == null || host.isBlank()) {
+                return "";
+            }
+            return "rtmp://" + host + ":1935/live";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
     public String livestreamRoomPrefix() {
         return props.getProperty("livestream.room.prefix", "korus-live-");
     }
@@ -790,6 +817,12 @@ public class AppConfig {
         return props.getProperty("integrations.base.url", "http://192.168.76.30:8091").trim();
     }
 
+    /** Web Push VAPID public key for browser subscription (optional until ops configures). */
+    public Optional<String> webClientVapidPublicKey() {
+        var raw = props.getProperty("web.client.vapid.public.key", "").trim();
+        return raw.isBlank() ? Optional.empty() : Optional.of(raw);
+    }
+
     /** Minimum handler duration for timing normalization (GET chat etc.). 0 = disabled. Env: SECURITY_TIMING_NORMALIZATION_MIN_MS. */
     public long timingNormalizationMinNanos() {
         var raw = props.getProperty("security.timing.normalization.min.ms", "").trim();
@@ -819,5 +852,21 @@ public class AppConfig {
         } catch (NumberFormatException e) {
             return 35L * 1_000_000L;
         }
+    }
+
+    /** LDAP directory sync interval in minutes; 0 disables scheduler. Default 60. */
+    public long directorySyncIntervalMinutes() {
+        var raw = props.getProperty("directory.sync.interval.minutes", "60").trim();
+        try {
+            return Math.max(0, Long.parseLong(raw));
+        } catch (NumberFormatException e) {
+            return 60L;
+        }
+    }
+
+    /** Optional bearer token for SCIM provisioning without admin JWT. */
+    public Optional<String> scimBearerToken() {
+        var raw = props.getProperty("scim.bearer.token", "").trim();
+        return raw.isEmpty() ? Optional.empty() : Optional.of(raw);
     }
 }

@@ -13,7 +13,7 @@
 
 ## Backlog (L3–L6)
 
-- [x] L3 RTMP/SRT ingest — **scaffold:** `docker/docker-compose.livekit-ingress.yml`
-- [x] L4 HLS egress + player — **scaffold:** `docker/docker-compose.livekit-egress.yml` (player UI backlog)
-- [x] L5 DVR + moderation §28.5 — **scaffold:** `V040__live_session_dvr_moderation.sql`
+- [x] L3 RTMP/SRT ingest — **implemented:** `POST …/live-sessions/{id}/ingress`, `docker/docker-compose.livekit-ingress.yml`
+- [x] L4 HLS egress + player — **implemented:** `PATCH …/live-sessions/{id}/dvr`, HLS player in `ui-live-session.js`, `docker/docker-compose.livekit-egress.yml`
+- [x] L5 DVR + moderation §28.5 — **implemented:** `V040__…`, `POST …/moderation`, repository + H2 test
 - [x] L6 10k load soak — **`scripts/run-load-test-matrix-qemu.ps1`** (formal soak ops Sep 2026+)

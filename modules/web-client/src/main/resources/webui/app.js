@@ -1807,11 +1807,43 @@
   async function switchCallMode(mode) {
     if (mode === state.callMode) return;
     if (mode === "jitsi") {
+      if (window.KorusUiCallLivekit) KorusUiCallLivekit.disconnectRoom(state);
       stopMeshCallMedia();
       state.callMode = "jitsi";
       render();
       return;
     }
+    if (mode === "livekit") {
+      if (!window.KorusUiCallLivekit || !KorusUiCallLivekit.groupCallSfuEnabled(state)) {
+        state.error = L("conference.livekitUnavailable");
+        render();
+        return;
+      }
+      if (!meshCallChatReady()) {
+        state.error = L("conference.meshNeedsChat");
+        render();
+        return;
+      }
+      if (state.activeConference) {
+        await leaveActiveConference();
+      }
+      stopMeshCallMedia();
+      state.callMode = "livekit";
+      state.callPanelToggleBusy = true;
+      render();
+      try {
+        await KorusUiCallLivekit.joinGroupCall(state, apiJson);
+      } catch (e) {
+        state.error = localErr(e.message) || L("conference.livekitJoinFailed");
+        state.callMode = "jitsi";
+        KorusUiCallLivekit.disconnectRoom(state);
+      } finally {
+        state.callPanelToggleBusy = false;
+      }
+      render();
+      return;
+    }
+    if (window.KorusUiCallLivekit) KorusUiCallLivekit.disconnectRoom(state);
     if (!meshCallChatReady()) {
       state.error = L("conference.meshNeedsChat");
       render();
@@ -6156,6 +6188,18 @@
     });
     modeBar.appendChild(bMesh);
     modeBar.appendChild(bJitsi);
+    if (window.KorusUiCallLivekit && KorusUiCallLivekit.groupCallSfuEnabled(state)) {
+      modeBar.appendChild(
+        iconBtn("☁", "LiveKit SFU", {
+          primary: state.callMode === "livekit",
+          testId: "livekit-sfu-button",
+          disabled: state.conferenceBusy || state.callPanelToggleBusy,
+          onClick: function () {
+            switchCallMode("livekit");
+          },
+        })
+      );
+    }
     panel.appendChild(modeBar);
     if (state.tokens) {
       var confSec = el("div", "call-conferences");
@@ -6241,6 +6285,15 @@
           iconBtn: iconBtn,
           L: L,
           apiJson: apiJson,
+          render: render,
+        });
+      }
+      if (window.KorusUiCallLivekit && state.callMode === "livekit") {
+        KorusUiCallLivekit.renderLiveKitSection(panel, state, {
+          el: el,
+          iconBtn: iconBtn,
+          L: L,
+          switchCallMode: switchCallMode,
           render: render,
         });
       }

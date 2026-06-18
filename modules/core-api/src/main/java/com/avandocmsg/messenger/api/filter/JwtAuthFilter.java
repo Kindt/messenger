@@ -56,6 +56,11 @@ public class JwtAuthFilter implements ContainerRequestFilter {
             return;
         }
 
+        var existing = request.getSecurityContext();
+        if (existing != null && existing.getUserPrincipal() != null) {
+            return;
+        }
+
         var authHeader = request.getHeaderString("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             request.abortWith(Response.status(Response.Status.UNAUTHORIZED)

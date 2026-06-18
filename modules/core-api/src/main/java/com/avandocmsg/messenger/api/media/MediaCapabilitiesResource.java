@@ -47,7 +47,8 @@ public class MediaCapabilitiesResource {
             appConfig.mlsStatus(),
             appConfig.liveStreamingEnabled(),
             appConfig.livekitUrl(),
-            appConfig.livestreamMaxWebrtcViewers()
+            appConfig.livestreamMaxWebrtcViewers(),
+            appConfig.liveStreamingEnabled()
         );
     }
 }

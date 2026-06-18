@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.api.live;
 
 import com.avandocmsg.messenger.api.live.dto.CreateLiveSessionRequest;
 import com.avandocmsg.messenger.api.live.dto.JoinLiveSessionResponse;
+import com.avandocmsg.messenger.api.live.dto.LiveIngressResponse;
 import com.avandocmsg.messenger.api.live.dto.LiveSessionResponse;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.LiveSessionRepository;
@@ -156,6 +157,104 @@ public class LiveSessionService {
         }
         liveSessionRepository.findById(sessionId).ifPresent(s -> publishChange("ended", s, userId));
         return true;
+    }
+
+    public Optional<LiveSessionResponse> updateDvrPlaylist(UUID chatId, UUID sessionId, UUID userId, String playlistUrl) {
+        var sessionOpt = requireActiveSessionInChat(chatId, sessionId, userId);
+        if (sessionOpt.isEmpty() || !isHost(sessionId, userId)) {
+            return Optional.empty();
+        }
+        if (playlistUrl == null || playlistUrl.isBlank()) {
+            return Optional.empty();
+        }
+        if (!liveSessionRepository.updateDvrPlaylist(sessionId, playlistUrl.trim())) {
+            return Optional.empty();
+        }
+        return liveSessionRepository.findById(sessionId).map(s -> {
+            publishChange("updated", s, userId);
+            return s;
+        });
+    }
+
+    public Optional<LiveSessionResponse> recordModeration(UUID chatId, UUID sessionId, UUID userId,
+                                                          String action, String reason) {
+        if (action == null || action.isBlank()) {
+            return Optional.empty();
+        }
+        var sessionOpt = requireActiveSessionInChat(chatId, sessionId, userId);
+        if (sessionOpt.isEmpty() || !canModerate(chatId, sessionId, userId)) {
+            return Optional.empty();
+        }
+        var normalized = action.trim().toLowerCase();
+        var trimmedReason = reason != null ? reason.trim() : null;
+        if (!liveSessionRepository.recordModerationEvent(sessionId, userId, normalized, trimmedReason)) {
+            return Optional.empty();
+        }
+        resolveModerationState(normalized).ifPresent(state -> liveSessionRepository.setModerationState(sessionId, state));
+        if ("stop".equals(normalized) || "stopped".equals(normalized)) {
+            liveSessionRepository.endSession(sessionId);
+        }
+        return liveSessionRepository.findById(sessionId).map(s -> {
+            publishChange("stop".equals(normalized) || "stopped".equals(normalized) ? "ended" : "updated", s, userId);
+            return s;
+        });
+    }
+
+    public Optional<LiveIngressResponse> ingressCredentials(UUID chatId, UUID sessionId, UUID userId) {
+        if (!liveKitTokenService.enabled()) {
+            return Optional.empty();
+        }
+        var sessionOpt = requireActiveSessionInChat(chatId, sessionId, userId);
+        if (sessionOpt.isEmpty() || !isHost(sessionId, userId)) {
+            return Optional.empty();
+        }
+        var rtmpUrl = liveKitTokenService.livekitIngressUrl();
+        if (rtmpUrl.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new LiveIngressResponse(rtmpUrl, sessionOpt.get().roomName()));
+    }
+
+    private Optional<LiveSessionResponse> requireActiveSessionInChat(UUID chatId, UUID sessionId, UUID userId) {
+        var session = liveSessionRepository.findById(sessionId);
+        if (session.isEmpty() || !chatId.toString().equals(session.get().chatId())) {
+            return Optional.empty();
+        }
+        if (chatRepository.getMemberRole(chatId, userId) == null) {
+            return Optional.empty();
+        }
+        if (!"active".equals(session.get().status())) {
+            return Optional.empty();
+        }
+        return session;
+    }
+
+    private boolean isHost(UUID sessionId, UUID userId) {
+        var creator = liveSessionRepository.findCreatorId(sessionId);
+        if (creator.map(userId::equals).orElse(false)) {
+            return true;
+        }
+        return liveSessionRepository.viewerRole(sessionId, userId)
+            .map(role -> "host".equals(role) || "cohost".equals(role))
+            .orElse(false);
+    }
+
+    private boolean canModerate(UUID chatId, UUID sessionId, UUID userId) {
+        if (isHost(sessionId, userId)) {
+            return true;
+        }
+        var role = chatRepository.getMemberRole(chatId, userId);
+        return "owner".equals(role) || "admin".equals(role);
+    }
+
+    private Optional<String> resolveModerationState(String action) {
+        return switch (action) {
+            case "stop", "stopped" -> Optional.of("stopped");
+            case "slow_mode" -> Optional.of("slow_mode");
+            case "open", "reopen" -> Optional.of("open");
+            case "ban" -> Optional.of("restricted");
+            default -> Optional.empty();
+        };
     }
 
     private String defaultTitle() {

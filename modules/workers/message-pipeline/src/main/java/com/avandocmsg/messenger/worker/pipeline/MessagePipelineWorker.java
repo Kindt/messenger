@@ -435,7 +435,7 @@ public class MessagePipelineWorker {
             var event = new ReadCacheInvalidateEvent(userIds, true, true);
             natsConnection.publish(NatsSubjects.MSG_CACHE_INVALIDATE, MAPPER.writeValueAsBytes(event));
         } catch (Exception e) {
-            log.debug("read-cache invalidate publish failed: {}", e.getMessage());
+            log.debug(workerMessages.format("worker.pipeline.read_cache_invalidate_failed", e.getMessage()));
         }
     }
 
@@ -451,9 +451,9 @@ public class MessagePipelineWorker {
         try {
             metricsServer = WorkerHealthHttpServer.startWithMetrics(
                 port, "pipeline-metrics", () -> true, null, null);
-            log.info("Pipeline metrics on port {} (/metrics, /health)", metricsServer.getPort());
+            log.info(workerMessages.format("worker.pipeline.metrics_started", metricsServer.getPort()));
         } catch (Exception e) {
-            log.warn("Pipeline metrics server failed: {}", e.getMessage());
+            log.warn(workerMessages.format("worker.pipeline.metrics_failed", e.getMessage()));
         }
     }
 

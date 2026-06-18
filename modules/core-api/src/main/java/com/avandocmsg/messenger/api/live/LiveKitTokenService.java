@@ -32,6 +32,10 @@ public class LiveKitTokenService {
         return appConfig.livekitUrl();
     }
 
+    public String livekitIngressUrl() {
+        return appConfig.livekitIngressUrl();
+    }
+
     public String createAccessToken(String roomName, String identity, boolean canPublish, int ttlSeconds) {
         if (!enabled()) {
             throw new IllegalStateException("LiveKit not configured");

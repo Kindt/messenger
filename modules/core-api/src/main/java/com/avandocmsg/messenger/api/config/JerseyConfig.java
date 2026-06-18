@@ -5,6 +5,7 @@ import com.avandocmsg.messenger.api.auth.AuthRateLimiter;
 import com.avandocmsg.messenger.api.auth.AuthResource;
 import com.avandocmsg.messenger.api.auth.AuthService;
 import com.avandocmsg.messenger.api.auth.policy.AuthPolicyService;
+import com.avandocmsg.messenger.api.directory.DirectorySyncService;
 import com.avandocmsg.messenger.api.auth.TokenValidator;
 import com.avandocmsg.messenger.api.chats.ChatResource;
 import com.avandocmsg.messenger.api.chats.ChatService;
@@ -27,6 +28,7 @@ import com.avandocmsg.messenger.api.blocks.BlocksResource;
 import com.avandocmsg.messenger.api.conference.ChatConferenceResource;
 import com.avandocmsg.messenger.api.conference.ConferenceResource;
 import com.avandocmsg.messenger.api.conference.ConferenceService;
+import com.avandocmsg.messenger.api.live.ChatCallLiveKitService;
 import com.avandocmsg.messenger.api.live.ChatLiveSessionResource;
 import com.avandocmsg.messenger.api.live.LiveSessionResource;
 import com.avandocmsg.messenger.api.live.LiveSessionService;
@@ -54,7 +56,10 @@ import com.avandocmsg.messenger.api.bots.BotRateLimiter;
 import com.avandocmsg.messenger.api.bots.BotService;
 import com.avandocmsg.messenger.api.filter.BotRateLimitFilter;
 import com.avandocmsg.messenger.api.filter.BotTokenAuthFilter;
+import com.avandocmsg.messenger.api.filter.ScimBearerAuthFilter;
 import com.avandocmsg.messenger.api.filter.JwtAuthFilter;
+import com.avandocmsg.messenger.api.filter.OrgRoutingClearFilter;
+import com.avandocmsg.messenger.api.filter.OrgRoutingFilter;
 import com.avandocmsg.messenger.api.health.HealthResource;
 import com.avandocmsg.messenger.api.messages.MessageResource;
 import com.avandocmsg.messenger.api.messages.MessageService;
@@ -78,6 +83,7 @@ import com.avandocmsg.messenger.api.repository.ContactRepository;
 import com.avandocmsg.messenger.api.repository.FileRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.api.users.MeSettingsResource;
 import com.avandocmsg.messenger.api.users.UserResource;
 import com.avandocmsg.messenger.core.adapter.messaging.NatsConnectionOutbound;
 import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
@@ -123,6 +129,7 @@ public class JerseyConfig extends ResourceConfig {
                         MlsMigrationService mlsMigrationService, MlsWirePublisher mlsWirePublisher,
                         FileProxy fileProxy, ConferenceService conferenceService,
                         LiveSessionService liveSessionService,
+                        ChatCallLiveKitService chatCallLiveKitService,
                         AuditRepository auditRepository,
                         ExportJobRepository exportJobRepository,
                         ExportJobEnqueuer exportJobEnqueuer,
@@ -146,7 +153,8 @@ public class JerseyConfig extends ResourceConfig {
                         com.avandocmsg.messenger.api.plugins.PluginPlatformService pluginPlatformService,
                         com.avandocmsg.messenger.api.plugins.PluginPolicyService pluginPolicyService,
                         com.avandocmsg.messenger.api.plugins.PluginOutboundService pluginOutboundService,
-                        AuthPolicyService authPolicyService) {
+                        AuthPolicyService authPolicyService,
+                        DirectorySyncService directorySyncService) {
         register(new AbstractBinder() {
             @Override
             protected void configure() {
@@ -193,6 +201,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(mlsWirePublisher).to(MlsWirePublisher.class);
                 bind(conferenceService).to(ConferenceService.class);
                 bind(liveSessionService).to(LiveSessionService.class);
+                bind(chatCallLiveKitService).to(ChatCallLiveKitService.class);
                 bind(auditRepository).to(AuditRepository.class);
                 bind(exportJobRepository).to(ExportJobRepository.class);
                 bind(exportJobEnqueuer).to(ExportJobEnqueuer.class);
@@ -216,6 +225,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(pluginPolicyService).to(com.avandocmsg.messenger.api.plugins.PluginPolicyService.class);
                 bind(pluginOutboundService).to(com.avandocmsg.messenger.api.plugins.PluginOutboundService.class);
                 bind(authPolicyService).to(AuthPolicyService.class);
+                bind(directorySyncService).to(DirectorySyncService.class);
                 bind(BotRateLimiter.fromEnv()).to(BotRateLimiter.class);
             }
         });
@@ -225,6 +235,8 @@ public class JerseyConfig extends ResourceConfig {
         register(HealthResource.class);
         register(AuthResource.class);
         register(AuthPolicyAdminResource.class);
+        register(com.avandocmsg.messenger.api.directory.DirectorySyncAdminResource.class);
+        register(com.avandocmsg.messenger.api.scim.ScimUsersResource.class);
         register(AdminResource.class);
         register(AdminConsoleRedirectResource.class);
         register(AdminUiResource.class);
@@ -238,11 +250,13 @@ public class JerseyConfig extends ResourceConfig {
         register(ChatBanResource.class);
         register(CryptoResource.class);
         register(DeviceResource.class);
+        register(MeSettingsResource.class);
         register(ExportResource.class);
         register(ConferenceResource.class);
         register(ChatConferenceResource.class);
         register(LiveSessionResource.class);
         register(ChatLiveSessionResource.class);
+        register(com.avandocmsg.messenger.api.live.ChatCallLiveKitResource.class);
         register(MediaCapabilitiesResource.class);
         register(BotResource.class);
         register(com.avandocmsg.messenger.api.plugins.PluginAdminResource.class);
@@ -252,8 +266,11 @@ public class JerseyConfig extends ResourceConfig {
         register(OpenApiConfig.create(appConfig.version()).getClass());
 
         register(BotTokenAuthFilter.class);
+        register(ScimBearerAuthFilter.class);
         register(BotRateLimitFilter.class);
         register(JwtAuthFilter.class);
+        register(OrgRoutingFilter.class);
+        register(OrgRoutingClearFilter.class);
         register(JacksonFeature.class);
         register(MultiPartFeature.class);
         register(RequestContextMdcFilter.class);

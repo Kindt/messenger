@@ -22,31 +22,41 @@ public final class MessageApplicationService {
     private final MessageEditCoordinator editCoordinator;
     private final MessageDeleteCoordinator deleteCoordinator;
     private final MessageReactionCoordinator reactionCoordinator;
+    private final MessagePinCoordinator pinCoordinator;
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository) {
-        this(messageRepositoryPort, chatRepository, null, null, null, null, null);
+        this(messageRepositoryPort, chatRepository, null, null, null, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
                                      BlockRepository blockRepository) {
-        this(messageRepositoryPort, chatRepository, blockRepository, null, null, null, null);
+        this(messageRepositoryPort, chatRepository, blockRepository, null, null, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
                                      BlockRepository blockRepository, MessageSendCoordinator sendCoordinator) {
-        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, null, null, null);
+        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, null, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
                                      BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator) {
-        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, editCoordinator, null, null);
+        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, editCoordinator, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
                                      BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
                                      MessageReactionCoordinator reactionCoordinator) {
+        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, editCoordinator,
+            deleteCoordinator, reactionCoordinator, null);
+    }
+
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
+                                     BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
+                                     MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
+                                     MessageReactionCoordinator reactionCoordinator,
+                                     MessagePinCoordinator pinCoordinator) {
         this.messageRepositoryPort = messageRepositoryPort;
         this.chatRepository = chatRepository;
         this.blockRepository = blockRepository;
@@ -54,6 +64,7 @@ public final class MessageApplicationService {
         this.editCoordinator = editCoordinator;
         this.deleteCoordinator = deleteCoordinator;
         this.reactionCoordinator = reactionCoordinator;
+        this.pinCoordinator = pinCoordinator;
     }
 
     public Optional<Message> getMessageForMember(ChatId chatId, MessageId messageId, UserId viewerId) {
@@ -159,6 +170,26 @@ public final class MessageApplicationService {
             return false;
         }
         return reactionCoordinator.removeReaction(chatId, MessageId.of(msgId), UserId.of(userId), reaction);
+    }
+
+    public boolean pinMessage(UUID chatId, UUID msgId, UUID userId) {
+        if (pinCoordinator == null) {
+            return false;
+        }
+        if (getMessageForMember(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId)).isEmpty()) {
+            return false;
+        }
+        return pinCoordinator.pin(chatId, msgId, userId);
+    }
+
+    public boolean unpinMessage(UUID chatId, UUID msgId, UUID userId) {
+        if (pinCoordinator == null) {
+            return false;
+        }
+        if (!isChatMember(ChatId.of(chatId), UserId.of(userId))) {
+            return false;
+        }
+        return pinCoordinator.unpin(chatId, msgId, userId);
     }
 
     private boolean isP2PMessagingBlocked(UUID chatId, UUID senderId) {

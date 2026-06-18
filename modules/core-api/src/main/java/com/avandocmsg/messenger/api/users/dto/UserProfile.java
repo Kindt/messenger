@@ -9,6 +9,8 @@ public record UserProfile(
     String username,
     @JsonProperty("display_name") String displayName,
     String phone,
+    String email,
+    @JsonProperty("external_id") String externalId,
     boolean hidden,
     @JsonProperty("created_at") Instant createdAt,
     /** {@code online}, {@code away}, {@code dnd}, {@code offline} */

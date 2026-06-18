@@ -49,6 +49,7 @@ class ExportFileBundleBuilderTest {
             }
             assertTrue(names.contains(ExportOutputRef.ZIP_JSON_ENTRY));
             assertTrue(names.contains(ExportOutputRef.ZIP_ATTACHMENTS_MANIFEST));
+            assertTrue(names.contains(ExportOutputRef.ZIP_PACKAGE_MANIFEST));
             assertTrue(names.stream().anyMatch(n -> n.startsWith(ExportFileBundleBuilder.ATTACHMENTS_PREFIX)));
         }
     }

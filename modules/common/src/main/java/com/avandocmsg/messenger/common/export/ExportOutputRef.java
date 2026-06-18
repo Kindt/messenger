@@ -15,6 +15,9 @@ public final class ExportOutputRef {
     /** Attachment index inside zip bundles ({@code EXPORT_REPLAY_INCLUDE_FILE_BODIES}). */
     public static final String ZIP_ATTACHMENTS_MANIFEST = "attachments/manifest.json";
 
+    /** Root-level export completeness summary inside {@code .export.zip}. */
+    public static final String ZIP_PACKAGE_MANIFEST = "package-manifest.json";
+
     private ExportOutputRef() {
     }
 

@@ -9,6 +9,7 @@ import com.avandocmsg.messenger.api.chats.ChatService;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanService;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.config.DatabaseConfig;
+import com.avandocmsg.messenger.api.config.OrganizationRoutingDataSource;
 import com.avandocmsg.messenger.api.config.OrganizationShardRouter;
 import com.avandocmsg.messenger.api.config.HotReloadWatcher;
 import com.avandocmsg.messenger.api.config.JerseyConfig;
@@ -132,6 +133,8 @@ public class MessengerApplication {
     private MlsWireSubscriber mlsWireSubscriber;
     private ReadCacheInvalidationSubscriber readCacheInvalidationSubscriber;
     private IndexerHotPlugMonitor indexerHotPlugMonitor;
+    private com.avandocmsg.messenger.api.directory.DirectorySyncScheduler directorySyncScheduler;
+    private com.avandocmsg.messenger.api.directory.DirectorySyncService directorySyncService;
     private final ExportSuggestedHandler exportSuggestedHandler;
 
     public MessengerApplication() {
@@ -140,7 +143,10 @@ public class MessengerApplication {
         log.info("Starting AvandocMsg.Messenger core-api v{}", appConfig.version());
         CryptoProvider.ensureLoaded();
         var databaseConfig = new DatabaseConfig(appConfig);
-        this.dataSource = databaseConfig.dataSource();
+        var primaryDs = databaseConfig.dataSource();
+        this.dataSource = databaseConfig.shardDataSource()
+            .<DataSource>map(shard -> new OrganizationRoutingDataSource(primaryDs, shard))
+            .orElse(primaryDs);
         var readDs = databaseConfig.readDataSource().orElse(null);
         databaseConfig.warnIfPoolOversubscribed();
         OrganizationShardRouter.logShardConfig(databaseConfig);
@@ -286,6 +292,9 @@ public class MessengerApplication {
             log.info("Indexer hot-plug presence check disabled (HOTPLUG_INDEXER_PRESENCE_REQUIRED=false)");
         }
 
+        directorySyncScheduler = new com.avandocmsg.messenger.api.directory.DirectorySyncScheduler(
+            appConfig, directorySyncService);
+
         if (appConfig.hotReloadEnabled()) {
             var libDir = Paths.get(System.getProperty("app.home", "."), "lib");
             if (Files.exists(libDir)) {
@@ -352,13 +361,14 @@ public class MessengerApplication {
         var messageEditCoordinator = CoreModule.messageEditCoordinator(dataSource, natsOutbound);
         var messageDeleteCoordinator = CoreModule.messageDeleteCoordinator(dataSource, natsOutbound);
         var messageReactionCoordinator = CoreModule.messageReactionCoordinator(dataSource, natsOutbound);
+        var messagePinCoordinator = CoreModule.messagePinCoordinator(dataSource, natsOutbound);
         var messageService = new MessageService(messageRepository, chatRepository, blockRepository,
             mlsService, mlsMigrationService, natsOutbound, this.uuidGenerator, readCachePort,
             messageSendCoordinator,
             () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent());
         var messageApplicationService = CoreModule.messageApplicationService(
             dataSource, chatRepository, blockRepository, messageSendCoordinator, messageEditCoordinator,
-            messageDeleteCoordinator, messageReactionCoordinator);
+            messageDeleteCoordinator, messageReactionCoordinator, messagePinCoordinator);
         var fileService = new FileService(fileApplicationService, messageRepository);
         var exportComplianceSeed = new AdminExportComplianceSeed(
             chatService, messageApplicationService, fileService, chatRepository, chatRetentionPolicyRepository);
@@ -380,6 +390,8 @@ public class MessengerApplication {
             dataSource, appConfig, this.uuidGenerator);
         var liveSessionService = new com.avandocmsg.messenger.api.live.LiveSessionService(
             liveSessionRepository, chatRepository, liveKitTokenService, natsOutbound, userMessages);
+        var chatCallLiveKitService = new com.avandocmsg.messenger.api.live.ChatCallLiveKitService(
+            chatRepository, liveKitTokenService);
 
         var botRepository = new BotRepository(dataSource);
         var botService = new BotService(botRepository, chatRepository, messageApplicationService,
@@ -399,6 +411,12 @@ public class MessengerApplication {
         var authPolicyService = new com.avandocmsg.messenger.api.auth.policy.AuthPolicyService(
             appConfig, authPolicyRepository, organizationRepository, keycloakAuthSyncClient);
 
+        var directorySyncRunRepository = new com.avandocmsg.messenger.api.directory.DirectorySyncRunRepository(dataSource);
+        var ldapDirectoryClient = new com.avandocmsg.messenger.api.directory.JndiLdapDirectoryClient();
+        this.directorySyncService = new com.avandocmsg.messenger.api.directory.DirectorySyncService(
+            authPolicyRepository, organizationRepository, directorySyncRunRepository,
+            userRepository, ldapDirectoryClient, this.uuidGenerator);
+
         var jerseyServlet = new ServletContainer(
             new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
                 userRepository, contactRepository, contactService,
@@ -411,13 +429,14 @@ public class MessengerApplication {
                 chatBanRepository, chatBanService,
                 e2eeService, keyPackageRepository, sessionRepository, mlsService, mlsGroupManager,
                 mlsMigrationService, mlsWirePublisher, fileProxy, conferenceService, liveSessionService,
+                chatCallLiveKitService,
                 auditRepository, exportJobRepository, exportJobEnqueuer, exportFileAccess, this.exportSuggestedHandler,
                 exportComplianceSeed,
                 organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,
                 publicLinkPort, messageSearchService, adminManifest, adminServerStatsService, redisProbe,
                 readCachePort, legalHoldRepository, purgeStatusService, botRepository, botService,
                 pluginRepository, pluginPlatformService, pluginPolicyService, pluginOutboundService,
-                authPolicyService));
+                authPolicyService, directorySyncService));
         Tomcat.addServlet(ctx, SERVLET_NAME, jerseyServlet);
         ctx.addServletMappingDecoded("/api/*", SERVLET_NAME);
 
@@ -459,6 +478,10 @@ public class MessengerApplication {
         if (indexerHotPlugMonitor != null) {
             indexerHotPlugMonitor.close();
             indexerHotPlugMonitor = null;
+        }
+        if (directorySyncScheduler != null) {
+            directorySyncScheduler.close();
+            directorySyncScheduler = null;
         }
         if (watcher != null) watcher.stop();
         if (tomcat != null) tomcat.stop();
