@@ -72,7 +72,7 @@ public class AuthPolicyService {
         String applyStatus = current.lastApplyStatus();
         String applyError = current.lastApplyError();
         if (apply) {
-            var applyOutcome = applyProviders(normalized);
+            var applyOutcome = applyProviders(orgId, normalized);
             applied = applyOutcome.providers();
             applyStatus = applyOutcome.status();
             applyError = applyOutcome.error();
@@ -252,7 +252,7 @@ public class AuthPolicyService {
         return Optional.of(sub);
     }
 
-    private ApplyOutcome applyProviders(List<AuthProviderEntry> providers) {
+    private ApplyOutcome applyProviders(UUID orgId, List<AuthProviderEntry> providers) {
         var updated = new ArrayList<AuthProviderEntry>();
         String lastStatus = "ok";
         String lastError = null;
@@ -263,6 +263,9 @@ public class AuthPolicyService {
             }
             try {
                 var settings = resolvedSettings(p);
+                if ("ldap".equalsIgnoreCase(p.type())) {
+                    settings.put("org_id", orgId.toString());
+                }
                 KeycloakAuthSyncClient.ApplyResult result;
                 if ("ldap".equalsIgnoreCase(p.type())) {
                     result = keycloakAuthSyncClient.upsertLdap(p.alias(), settings);

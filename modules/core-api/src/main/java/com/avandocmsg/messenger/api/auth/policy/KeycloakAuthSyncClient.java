@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 /** Sync LDAP user federation and OIDC/SAML identity brokers into Keycloak Admin API. */
 public class KeycloakAuthSyncClient {
@@ -51,10 +52,18 @@ public class KeycloakAuthSyncClient {
                     return new ApplyResult(false, null, "ldap_provider_conflict");
                 }
                 code = put(base + "/" + existingId.get(), token, body);
+                var mapperError = maybeApplyAdminGroupMapper(token, existingId.get(), settings);
+                if (mapperError != null) {
+                    return new ApplyResult(false, existingId.get(), mapperError);
+                }
                 return resultFromCode(code, existingId.get(), "ldap_upsert_failed");
             }
             if (code == 201 || code == 200 || code == 204) {
                 var id = findUserStorageId(token, name).orElse(null);
+                var mapperError = maybeApplyAdminGroupMapper(token, id, settings);
+                if (mapperError != null) {
+                    return new ApplyResult(false, id, mapperError);
+                }
                 return new ApplyResult(true, id, null);
             }
             return new ApplyResult(false, null, "ldap_upsert_http_" + code);
@@ -62,6 +71,57 @@ public class KeycloakAuthSyncClient {
             log.warn("upsertLdap failed: {}", e.getMessage());
             return new ApplyResult(false, null, e.getMessage());
         }
+    }
+
+    /** Maps an LDAP admin group DN to a Keycloak realm role via role-ldap-mapper. */
+    public ApplyResult ldapAdminGroupMapper(UUID orgId, String ldapComponentId, String groupDn, String role) {
+        if (orgId == null || ldapComponentId == null || ldapComponentId.isBlank()) {
+            return new ApplyResult(false, null, "ldap_admin_mapper_missing_context");
+        }
+        if (groupDn == null || groupDn.isBlank()) {
+            return new ApplyResult(false, null, "admin_group_dn_required");
+        }
+        var realmRole = role != null && !role.isBlank() ? role : "admin";
+        var token = adminToken();
+        if (token == null) {
+            return new ApplyResult(false, null, "keycloak_admin_token_unavailable");
+        }
+        try {
+            var mapperName = "admin-group-mapper-" + orgId;
+            var body = adminGroupMapperBody(mapperName, ldapComponentId, groupDn, realmRole);
+            var base = appConfig.keycloakAdminRealmBase() + "/components";
+            var existingId = findComponentId(token, ldapComponentId, mapperName);
+            int code;
+            if (existingId.isPresent()) {
+                code = put(base + "/" + existingId.get(), token, body);
+            } else {
+                code = post(base, token, body);
+            }
+            return resultFromCode(code, existingId.orElse(mapperName), "ldap_admin_group_mapper_failed");
+        } catch (Exception e) {
+            log.warn("ldapAdminGroupMapper failed orgId={}: {}", orgId, e.getMessage());
+            return new ApplyResult(false, null, e.getMessage());
+        }
+    }
+
+    private String maybeApplyAdminGroupMapper(String token, String ldapComponentId, Map<String, String> settings) {
+        var groupDn = settings.get("admin_group_dn");
+        if (groupDn == null || groupDn.isBlank()) {
+            return null;
+        }
+        var orgIdRaw = settings.get("org_id");
+        if (orgIdRaw == null || orgIdRaw.isBlank()) {
+            return "admin_group_dn_requires_org_id";
+        }
+        UUID orgId;
+        try {
+            orgId = UUID.fromString(orgIdRaw);
+        } catch (Exception e) {
+            return "admin_group_dn_invalid_org_id";
+        }
+        var role = settings.getOrDefault("admin_group_role", "admin");
+        var result = ldapAdminGroupMapper(orgId, ldapComponentId, groupDn, role);
+        return result.ok() ? null : result.error();
     }
 
     public ApplyResult upsertIdentityProvider(String alias, String providerId, Map<String, String> settings) {
@@ -124,6 +184,28 @@ public class KeycloakAuthSyncClient {
         root.put("name", name);
         root.put("providerId", "ldap");
         root.put("providerType", "org.keycloak.storage.UserStorageProvider");
+        root.set("config", config);
+        return root;
+    }
+
+    private ObjectNode adminGroupMapperBody(String name, String ldapComponentId, String groupDn, String role) {
+        var config = MAPPER.createObjectNode();
+        putConfig(config, "mode", "LDAP_ONLY");
+        putConfig(config, "user.roles.retrieve.strategy", "LOAD_ROLES_BY_MEMBER_ATTRIBUTE");
+        putConfig(config, "memberof.ldap.attribute", "memberOf");
+        putConfig(config, "roles.dn", groupDn);
+        putConfig(config, "role.name", role);
+        putConfig(config, "role.object.classes", "group");
+        putConfig(config, "membership.ldap.attribute", "member");
+        putConfig(config, "membership.attribute.type", "DN");
+        putConfig(config, "role.name.ldap.attribute", "cn");
+        putConfig(config, "use.realm.roles.mapping", "true");
+
+        var root = MAPPER.createObjectNode();
+        root.put("name", name);
+        root.put("providerId", "role-ldap-mapper");
+        root.put("providerType", "org.keycloak.storage.ldap.mappers.LDAPStorageMapper");
+        root.put("parentId", ldapComponentId);
         root.set("config", config);
         return root;
     }
@@ -204,6 +286,30 @@ public class KeycloakAuthSyncClient {
 
     private Optional<String> findUserStorageId(String token, String name) throws Exception {
         var url = appConfig.keycloakAdminRealmBase() + "/user-storage";
+        var req = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Authorization", "Bearer " + token)
+            .timeout(Duration.ofSeconds(10))
+            .GET()
+            .build();
+        var response = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            return Optional.empty();
+        }
+        JsonNode arr = MAPPER.readTree(response.body());
+        if (!arr.isArray()) {
+            return Optional.empty();
+        }
+        for (JsonNode node : arr) {
+            if (name.equals(node.path("name").asText())) {
+                return Optional.ofNullable(node.path("id").asText(null));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<String> findComponentId(String token, String parentId, String name) throws Exception {
+        var url = appConfig.keycloakAdminRealmBase() + "/components?parent=" + urlEncode(parentId);
         var req = HttpRequest.newBuilder()
             .uri(URI.create(url))
             .header("Authorization", "Bearer " + token)

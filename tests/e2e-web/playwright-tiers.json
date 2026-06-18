@@ -5,6 +5,7 @@
     "ui-messaging",
     "ui-files",
     "ui-conference",
+    "ui-live",
     "ui-e2ee",
     "ui-bot"
   ],
@@ -16,9 +17,12 @@
         "specs/e2ee-capabilities.spec.ts",
         "specs/contacts-search.spec.ts",
         "specs/conference-rtc.spec.ts",
-        "specs/plugin-integrations.spec.ts"
+        "specs/plugin-integrations.spec.ts",
+        "specs/livekit-sfu.spec.ts",
+        "specs/admin-auth-policy.spec.ts",
+        "specs/live-session-moderation.spec.ts"
       ],
-      "grep": "global search API|blocks list API|device register API|capabilities advertise|legacy e2ee|mls active exposes|plaintext-preview|authenticated user can upload|send with e2ee_scheme|media capabilities include|register subscribe sendMessage|long-poll updates|token rotate|admin lists plugin|admin org plugin"
+      "grep": "global search API|blocks list API|device register API|capabilities advertise|legacy e2ee|mls active exposes|plaintext-preview|authenticated user can upload|send with e2ee_scheme|media capabilities include|register subscribe sendMessage|long-poll updates|token rotate|admin lists plugin|admin org plugin|group_call_sfu_enabled|livekit join|admin GET auth-policy|create live session|POST moderation"
     },
     "ui-auth": {
       "description": "Auth session UI",
@@ -40,7 +44,15 @@
     },
     "ui-conference": {
       "description": "Conference RTC UI",
-      "args": ["specs/conference-rtc.spec.ts"]
+      "args": ["specs/conference-rtc.spec.ts", "specs/livekit-sfu.spec.ts"]
+    },
+    "ui-live": {
+      "description": "LiveKit SFU and live streaming",
+      "args": [
+        "specs/livekit-sfu.spec.ts",
+        "specs/live-session-moderation.spec.ts",
+        "specs/admin-auth-policy.spec.ts"
+      ]
     },
     "ui-e2ee": {
       "description": "Browser MLS roundtrip",
@@ -60,7 +72,7 @@
     },
     "all-inner": {
       "description": "Run all inner tiers sequentially",
-      "sequential": ["api", "ui-auth", "ui-messaging", "ui-files", "ui-conference", "ui-e2ee", "ui-bot", "ui-push"]
+      "sequential": ["api", "ui-auth", "ui-messaging", "ui-files", "ui-conference", "ui-live", "ui-e2ee", "ui-bot", "ui-push"]
     }
   }
 }

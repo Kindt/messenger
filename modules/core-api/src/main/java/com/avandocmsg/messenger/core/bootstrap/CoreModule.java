@@ -128,9 +128,23 @@ public final class CoreModule {
                                                                       MessageEditCoordinator editCoordinator,
                                                                       MessageDeleteCoordinator deleteCoordinator,
                                                                       MessageReactionCoordinator reactionCoordinator,
-                                                                      MessagePinCoordinator pinCoordinator) {
+                                                                      MessagePinCoordinator pinCoordinator,
+                                                                      MessageRepository legacyMessageRepository,
+                                                                      com.avandocmsg.messenger.api.mls.MlsService mlsService) {
         return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepository, blockRepository,
-            sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator);
+            sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator,
+            legacyMessageRepository, mlsService);
+    }
+
+    public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
+                                                                      BlockRepository blockRepository,
+                                                                      MessageSendCoordinator sendCoordinator,
+                                                                      MessageEditCoordinator editCoordinator,
+                                                                      MessageDeleteCoordinator deleteCoordinator,
+                                                                      MessageReactionCoordinator reactionCoordinator,
+                                                                      MessagePinCoordinator pinCoordinator) {
+        return messageApplicationService(dataSource, chatRepository, blockRepository, sendCoordinator,
+            editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator, null, null);
     }
 
     public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,

@@ -1,6 +1,10 @@
 package com.avandocmsg.messenger.api.bots;
 
+import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import org.junit.jupiter.api.Test;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,5 +34,163 @@ class BotServiceTest {
         assertTrue(BotService.isHttpsUrl("https://hooks.example.com/bot"));
         assertFalse(BotService.isHttpsUrl("http://hooks.example.com/bot"));
         assertFalse(BotService.isHttpsUrl("not-a-url"));
+    }
+
+    @Test
+    void deleteMessage_delegatesToMessageApplicationService() {
+        var chatId = UUID.randomUUID();
+        var msgId = UUID.randomUUID();
+        var botId = UUID.randomUUID();
+        var messagePort = new DeleteStubMessagePort(chatId, msgId, botId);
+        var chatRepo = new ChatRepository(null, java.time.Clock.systemUTC(),
+            com.avandocmsg.messenger.core.port.UuidGenerator.standard()) {
+            @Override
+            public String getMemberRole(UUID c, UUID u) {
+                return "member";
+            }
+        };
+        var deleteCoordinator = new com.avandocmsg.messenger.core.application.MessageDeleteCoordinator(
+            messagePort, com.avandocmsg.messenger.core.port.NatsOutboundPort.noop());
+        var messageApp = new MessageApplicationService(messagePort, chatRepo, null, null, null, deleteCoordinator, null);
+        var service = new BotService(null, chatRepo, messageApp, null, null, null);
+        assertTrue(service.deleteMessage(botId, chatId, msgId));
+        assertTrue(messagePort.deleted);
+    }
+
+    @Test
+    void pinMessage_requiresAdminRoleBeforeApplicationService() {
+        var chatId = UUID.randomUUID();
+        var msgId = UUID.randomUUID();
+        var botId = UUID.randomUUID();
+        var pinRepo = new PinAttemptMessageRepository();
+        var messagePort = new VisibleMessagePort(chatId, msgId, botId);
+        var chatRepo = new ChatRepository(null, java.time.Clock.systemUTC(),
+            com.avandocmsg.messenger.core.port.UuidGenerator.standard()) {
+            @Override
+            public String getMemberRole(UUID c, UUID u) {
+                return "member";
+            }
+        };
+        var pinCoordinator = new com.avandocmsg.messenger.core.application.MessagePinCoordinator(
+            pinRepo, com.avandocmsg.messenger.core.port.NatsOutboundPort.noop());
+        var messageApp = new MessageApplicationService(
+            messagePort, chatRepo, null, null, null, null, null, pinCoordinator);
+        var service = new BotService(null, chatRepo, messageApp, null, null, null);
+        assertFalse(service.pinMessage(botId, chatId, msgId));
+        assertFalse(pinRepo.pinned);
+    }
+
+    private static final class VisibleMessagePort implements com.avandocmsg.messenger.core.port.MessageRepositoryPort {
+        private final com.avandocmsg.messenger.core.domain.Message message;
+
+        VisibleMessagePort(UUID chatId, UUID msgId, UUID senderId) {
+            message = new com.avandocmsg.messenger.core.domain.Message(
+                com.avandocmsg.messenger.core.domain.MessageId.of(msgId),
+                com.avandocmsg.messenger.core.domain.ChatId.of(chatId),
+                com.avandocmsg.messenger.core.domain.UserId.of(senderId),
+                "text", "hi", null, false,
+                java.time.Instant.parse("2026-01-01T00:00:00Z"), null, null, null);
+        }
+
+        @Override
+        public java.util.Optional<com.avandocmsg.messenger.core.domain.Message> findById(
+            com.avandocmsg.messenger.core.domain.MessageId id) {
+            return java.util.Optional.of(message);
+        }
+
+        @Override
+        public java.util.Optional<com.avandocmsg.messenger.core.domain.Message> insert(
+            com.avandocmsg.messenger.core.port.MessageInsert command) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public boolean updateContent(com.avandocmsg.messenger.core.domain.MessageId id,
+                                     com.avandocmsg.messenger.core.domain.UserId senderId, String content) {
+            return false;
+        }
+
+        @Override
+        public boolean softDelete(com.avandocmsg.messenger.core.domain.MessageId id) {
+            return false;
+        }
+
+        @Override
+        public boolean addReaction(com.avandocmsg.messenger.core.domain.MessageId messageId,
+                                   com.avandocmsg.messenger.core.domain.UserId userId, String reaction) {
+            return false;
+        }
+
+        @Override
+        public boolean removeReaction(com.avandocmsg.messenger.core.domain.MessageId messageId,
+                                      com.avandocmsg.messenger.core.domain.UserId userId, String reaction) {
+            return false;
+        }
+    }
+
+    private static final class DeleteStubMessagePort
+        implements com.avandocmsg.messenger.core.port.MessageRepositoryPort {
+        private final com.avandocmsg.messenger.core.domain.Message message;
+        boolean deleted;
+
+        DeleteStubMessagePort(UUID chatId, UUID msgId, UUID senderId) {
+            message = new com.avandocmsg.messenger.core.domain.Message(
+                com.avandocmsg.messenger.core.domain.MessageId.of(msgId),
+                com.avandocmsg.messenger.core.domain.ChatId.of(chatId),
+                com.avandocmsg.messenger.core.domain.UserId.of(senderId),
+                "text", "hi", null, false,
+                java.time.Instant.parse("2026-01-01T00:00:00Z"), null, null, null);
+        }
+
+        @Override
+        public java.util.Optional<com.avandocmsg.messenger.core.domain.Message> findById(
+            com.avandocmsg.messenger.core.domain.MessageId id) {
+            return java.util.Optional.of(message);
+        }
+
+        @Override
+        public java.util.Optional<com.avandocmsg.messenger.core.domain.Message> insert(
+            com.avandocmsg.messenger.core.port.MessageInsert command) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public boolean updateContent(com.avandocmsg.messenger.core.domain.MessageId id,
+                                     com.avandocmsg.messenger.core.domain.UserId senderId, String content) {
+            return false;
+        }
+
+        @Override
+        public boolean softDelete(com.avandocmsg.messenger.core.domain.MessageId id) {
+            deleted = true;
+            return true;
+        }
+
+        @Override
+        public boolean addReaction(com.avandocmsg.messenger.core.domain.MessageId messageId,
+                                   com.avandocmsg.messenger.core.domain.UserId userId, String reaction) {
+            return false;
+        }
+
+        @Override
+        public boolean removeReaction(com.avandocmsg.messenger.core.domain.MessageId messageId,
+                                      com.avandocmsg.messenger.core.domain.UserId userId, String reaction) {
+            return false;
+        }
+    }
+
+    private static final class PinAttemptMessageRepository
+        extends com.avandocmsg.messenger.api.repository.MessageRepository {
+        boolean pinned;
+
+        PinAttemptMessageRepository() {
+            super(null, java.time.Clock.systemUTC());
+        }
+
+        @Override
+        public boolean pinMessage(UUID chatId, UUID messageId, UUID pinnedBy) {
+            pinned = true;
+            return true;
+        }
     }
 }

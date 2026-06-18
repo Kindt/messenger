@@ -49,10 +49,10 @@
 - [x] T401 L0 ADR Janus vs LiveKit (OD-4)
 - [x] T402 L1 create spec 013-live-streaming + contracts (was 012; renumbered 2026-06-15)
 - [x] T403 L2 WebRTC live ≤200 POC
-- [ ] T404 L3 RTMP/SRT ingest + stream key API
-- [ ] T405 L4 HLS egress + webui player
-- [ ] T406 L5 DVR + moderation §28.5
-- [ ] T407 L6 10k viewer load test + ui-live Playwright
+- [x] T404 L3 RTMP/SRT ingest + stream key API — **superseded:** spec 013/019 (`POST .../ingress`)
+- [x] T405 L4 HLS egress + webui player — **superseded:** spec 013/019 (`ui-live-session.js` hls.js)
+- [x] T406 L5 DVR + moderation §28.5 — **superseded:** spec 013/019 (V040 + moderation API)
+- [x] T407 L6 10k viewer load test + ui-live Playwright — **partial:** `run-load-test-matrix-qemu.ps1` scaffold + tier `ui-live`; formal soak → LSO-040
 
 ---
 

@@ -226,6 +226,8 @@ public class JerseyConfig extends ResourceConfig {
                 bind(pluginOutboundService).to(com.avandocmsg.messenger.api.plugins.PluginOutboundService.class);
                 bind(authPolicyService).to(AuthPolicyService.class);
                 bind(directorySyncService).to(DirectorySyncService.class);
+                bind(new com.avandocmsg.messenger.api.scim.ScimGroupRepository(dataSource))
+                    .to(com.avandocmsg.messenger.api.scim.ScimGroupRepository.class);
                 bind(BotRateLimiter.fromEnv()).to(BotRateLimiter.class);
             }
         });
@@ -237,6 +239,7 @@ public class JerseyConfig extends ResourceConfig {
         register(AuthPolicyAdminResource.class);
         register(com.avandocmsg.messenger.api.directory.DirectorySyncAdminResource.class);
         register(com.avandocmsg.messenger.api.scim.ScimUsersResource.class);
+        register(com.avandocmsg.messenger.api.scim.ScimGroupsResource.class);
         register(AdminResource.class);
         register(AdminConsoleRedirectResource.class);
         register(AdminUiResource.class);

@@ -1,15 +1,21 @@
 package com.avandocmsg.messenger.core.application;
 
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
+import com.avandocmsg.messenger.api.messages.dto.MessageVersionResponse;
+import com.avandocmsg.messenger.api.messages.dto.PinnedMessageResponse;
+import com.avandocmsg.messenger.api.messages.dto.ReactionResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
+import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.Message;
 import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,25 +29,27 @@ public final class MessageApplicationService {
     private final MessageDeleteCoordinator deleteCoordinator;
     private final MessageReactionCoordinator reactionCoordinator;
     private final MessagePinCoordinator pinCoordinator;
+    private final MessageRepository legacyMessageRepository;
+    private final MlsService mlsService;
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository) {
-        this(messageRepositoryPort, chatRepository, null, null, null, null, null, null);
+        this(messageRepositoryPort, chatRepository, null, null, null, null, null, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
                                      BlockRepository blockRepository) {
-        this(messageRepositoryPort, chatRepository, blockRepository, null, null, null, null, null);
+        this(messageRepositoryPort, chatRepository, blockRepository, null, null, null, null, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
                                      BlockRepository blockRepository, MessageSendCoordinator sendCoordinator) {
-        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, null, null, null, null);
+        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, null, null, null, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
                                      BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator) {
-        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, editCoordinator, null, null, null);
+        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, editCoordinator, null, null, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
@@ -49,7 +57,7 @@ public final class MessageApplicationService {
                                      MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
                                      MessageReactionCoordinator reactionCoordinator) {
         this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, editCoordinator,
-            deleteCoordinator, reactionCoordinator, null);
+            deleteCoordinator, reactionCoordinator, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
@@ -57,6 +65,17 @@ public final class MessageApplicationService {
                                      MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
                                      MessageReactionCoordinator reactionCoordinator,
                                      MessagePinCoordinator pinCoordinator) {
+        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, editCoordinator,
+            deleteCoordinator, reactionCoordinator, pinCoordinator, null, null);
+    }
+
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
+                                     BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
+                                     MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
+                                     MessageReactionCoordinator reactionCoordinator,
+                                     MessagePinCoordinator pinCoordinator,
+                                     MessageRepository legacyMessageRepository,
+                                     MlsService mlsService) {
         this.messageRepositoryPort = messageRepositoryPort;
         this.chatRepository = chatRepository;
         this.blockRepository = blockRepository;
@@ -65,6 +84,8 @@ public final class MessageApplicationService {
         this.deleteCoordinator = deleteCoordinator;
         this.reactionCoordinator = reactionCoordinator;
         this.pinCoordinator = pinCoordinator;
+        this.legacyMessageRepository = legacyMessageRepository;
+        this.mlsService = mlsService;
     }
 
     public Optional<Message> getMessageForMember(ChatId chatId, MessageId messageId, UserId viewerId) {
@@ -77,6 +98,67 @@ public final class MessageApplicationService {
 
     public boolean isChatMember(ChatId chatId, UserId userId) {
         return chatRepository.getMemberRole(chatId.value(), userId.value()) != null;
+    }
+
+    /** Reader is a chat member and not banned. */
+    public boolean canAccessChat(UUID chatId, UUID readerId) {
+        if (chatRepository.getMemberRole(chatId, readerId) == null) {
+            return false;
+        }
+        return !chatRepository.isMemberBanned(chatId, readerId);
+    }
+
+    public List<MessageResponse> listMessages(UUID chatId, UUID userId, int limit, UUID before) {
+        if (legacyMessageRepository == null || !canAccessChat(chatId, userId)) {
+            return List.of();
+        }
+        if (limit <= 0 || limit > 100) {
+            limit = 50;
+        }
+        return legacyMessageRepository.findByChatId(chatId, limit, before, userId);
+    }
+
+    public List<MessageVersionResponse> getMessageVersions(UUID chatId, UUID msgId, UUID userId) {
+        if (legacyMessageRepository == null) {
+            return List.of();
+        }
+        if (messageVisibleToMember(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId)).isEmpty()) {
+            return List.of();
+        }
+        return legacyMessageRepository.findVersions(msgId);
+    }
+
+    public List<ReactionResponse> getReactions(UUID chatId, UUID msgId, UUID userId) {
+        if (legacyMessageRepository == null) {
+            return List.of();
+        }
+        if (messageVisibleToMember(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId)).isEmpty()) {
+            return List.of();
+        }
+        return legacyMessageRepository.getReactions(msgId);
+    }
+
+    public List<PinnedMessageResponse> getPinnedMessages(UUID chatId, UUID userId) {
+        if (legacyMessageRepository == null || !canAccessChat(chatId, userId)) {
+            return List.of();
+        }
+        return legacyMessageRepository.getPinnedMessages(chatId);
+    }
+
+    /** Server-side decrypt for e2ee-* messages (MLS stub on server). */
+    public String plaintextPreview(UUID chatId, UUID msgId, UUID userId) {
+        if (mlsService == null) {
+            return null;
+        }
+        var visible = messageVisibleToMember(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId));
+        if (visible.isEmpty()) {
+            return null;
+        }
+        var message = visible.get();
+        if (!MessageSendSupport.isE2eeType(message.type())) {
+            return null;
+        }
+        return mlsService.decryptContentBase64(chatId, message.content());
     }
 
     /**
@@ -190,6 +272,27 @@ public final class MessageApplicationService {
             return false;
         }
         return pinCoordinator.unpin(chatId, msgId, userId);
+    }
+
+    private Optional<Message> messageVisibleToMember(ChatId chatId, MessageId messageId, UserId viewerId) {
+        if (!canAccessChat(chatId.value(), viewerId.value())) {
+            return Optional.empty();
+        }
+        var message = messageRepositoryPort.findById(messageId).orElse(null);
+        if (message == null || !message.chatId().equals(chatId)) {
+            return Optional.empty();
+        }
+        if (isMutuallyBlocked(viewerId.value(), message.senderId().value())) {
+            return Optional.empty();
+        }
+        return Optional.of(message);
+    }
+
+    private boolean isMutuallyBlocked(UUID a, UUID b) {
+        if (blockRepository == null) {
+            return false;
+        }
+        return blockRepository.exists(a, b) || blockRepository.exists(b, a);
     }
 
     private boolean isP2PMessagingBlocked(UUID chatId, UUID senderId) {

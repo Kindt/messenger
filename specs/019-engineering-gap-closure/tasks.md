@@ -1,6 +1,6 @@
 # Spec 019 — Engineering gap closure — Tasks
 
-**Status:** engineering closed + QEMU inner acceptance (2026-06-18)
+**Status:** engineering closed + outer gate 50/50 QEMU (2026-06-18)
 
 ## US1 — Auth admin wizard
 
@@ -55,9 +55,32 @@
 - [x] T01991 `scripts/keycloak-enable-kerberos.sh`
 - [x] T01992 `docs/runbooks/kerberos-keycloak-handoff.md`
 
+## US10 — SCIM Groups
+
+- [x] T019101 `V045__scim_groups.sql` + `ScimGroupRepository`
+- [x] T019102 `ScimGroupsResource` GET/POST/PATCH/DELETE `/scim/v2/Groups`
+- [x] T019103 `ScimGroupsResourceTest` H2 round-trip
+- [x] T019104 `KeycloakAuthSyncClient.ldapAdminGroupMapper` on `admin_group_dn`
+- [x] T019105 `AuthPolicyService` passes `org_id` + provider `admin_group_dn` on LDAP apply
+- [x] T019106 `ScimGroupsResource` registered in `JerseyConfig`
+
+## US10 — SCIM Groups + AD admin group mapper
+
+- [x] T019101 Flyway `V045__scim_groups.sql`
+- [x] T019102 `ScimGroupsResource` CRUD `/scim/v2/Groups`
+- [x] T019103 `ScimGroupsResourceTest`
+- [x] T019104 LDAP `admin_group_dn` → Keycloak role-ldap-mapper
+- [x] T019105 Playwright `ui-live` tier (livekit-sfu, admin-auth-policy, live-session-moderation)
+
+## US11 — Hex 2b read-path + Chat 2a
+
+- [x] T019111 Message read-path via `MessageApplicationService`
+- [x] T019112 `BotService` delete/pin via application layer
+- [x] T019113 `ChatResource.getById` via `ChatApplicationService`
+
 ## Deferred (explicit)
 
 - [ ] OpenMLS full external interop — Phase 3 (`docs/E2EE_ARCHITECTURE.md`)
-- [ ] Hex 2c User/Org/File ports — low risk tail
-- [ ] T01124 cell-upgrade idempotency test — Ansible guest (ops Sep 2026+)
+- [ ] Hex 2c User/Org/File ports — low risk tail (SCIM/DirectorySync still on repos)
+- [ ] T01124 cell-upgrade 2-Cell idempotency — **partial:** `scripts/smoke-cell-upgrade-idempotency.ps1`; LSO-020 Sep 2026+
 - [ ] GDPR strict prod — legal + `EXPORT_COMPLETENESS_STRICT` on stage (ops)

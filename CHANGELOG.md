@@ -10,6 +10,13 @@
 
 ## [Unreleased]
 
+### 2026-06-18 — Spec 019 phase 2 (hex tail, SCIM Groups, Playwright ui-live)
+
+- **Hex 2b read-path:** list/reactions/pinned/versions/preview via `MessageApplicationService`; `BotService` → application layer; `ChatResource` → `ChatApplicationService`.
+- **SCIM Groups:** `V045__scim_groups.sql`, `ScimGroupsResource`, LDAP `admin_group_dn` role mapper in Keycloak sync.
+- **Playwright:** `livekit-sfu`, `admin-auth-policy`, `live-session-moderation` specs; tier `ui-live`.
+- **Docs:** spec 010 T404–T407 superseded; spec 011 T01127 closed; `product_status.py` 50/50; `smoke-cell-upgrade-idempotency.ps1`.
+
 ### 2026-06-18 — Spec 019 engineering gap closure (full)
 
 - **Auth admin wizard:** `/admin/` раздел «Вход / Identity» — форма policy, LDAP test (`POST .../auth-policy/test`).

@@ -8,7 +8,6 @@ import com.avandocmsg.messenger.api.chats.dto.BatchReadRequest;
 import com.avandocmsg.messenger.api.chats.dto.MarkReadRequest;
 import com.avandocmsg.messenger.api.chats.dto.MuteRequest;
 import com.avandocmsg.messenger.api.chats.dto.PersonalFilterRequest;
-import com.avandocmsg.messenger.api.chats.dto.ReadReceiptResponse;
 import com.avandocmsg.messenger.api.chats.dto.UnreadCountResponse;
 import com.avandocmsg.messenger.api.chats.dto.UpdateChatRequest;
 import com.avandocmsg.messenger.api.chats.dto.UpdateRoleRequest;
@@ -138,6 +137,12 @@ public class ChatResource {
     }
 
     private Response resolveGetById(UUID chatId, UUID userId) {
+        if (chatApplicationService.getChatForMember(ChatId.of(chatId), UserId.of(userId)).isEmpty()) {
+            TimingNormalization.padNotFoundExtra(appConfig.timingNotFoundExtraNanos());
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.chat.not_found")))
+                .build();
+        }
         var chat = chatService.getById(chatId, userId);
         if (chat == null) {
             TimingNormalization.padNotFoundExtra(appConfig.timingNotFoundExtraNanos());

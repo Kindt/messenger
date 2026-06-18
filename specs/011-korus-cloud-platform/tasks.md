@@ -94,7 +94,7 @@
 
 - [x] T01126 Terraform provider submodule stub (proxmox OR openstack — TBD)
 
-- [ ] T01127 Platform LB (E2) decision doc / ADR if &gt;15 Cells
+- [x] T01127 Platform LB (E2) decision doc / ADR if &gt;15 Cells — **`docs/adr/ADR-platform-lb-cells.md`**
 
 
 

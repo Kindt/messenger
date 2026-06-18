@@ -126,7 +126,7 @@ public class MessageResource {
                          @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
         var chatId = UuidParams.required(chatIdStr, "chat_id");
-        if (!messageService.canAccessChat(chatId, userId)) {
+        if (!messageApplicationService.canAccessChat(chatId, userId)) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.message.not_member")))
                 .build();
@@ -135,7 +135,7 @@ public class MessageResource {
         if (beforeStr != null && !beforeStr.isBlank()) {
             before = UuidParams.required(beforeStr, "before");
         }
-        var messages = messageService.listMessages(chatId, userId, limit, before);
+        var messages = messageApplicationService.listMessages(chatId, userId, limit, before);
         return Response.ok(messages).build();
     }
 
@@ -157,7 +157,7 @@ public class MessageResource {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var msgId = UuidParams.required(msgIdStr, "message_id");
         var userId = CurrentUserId.uuid(securityContext);
-        var plain = messageService.plaintextPreview(chatId, msgId, userId);
+        var plain = messageApplicationService.plaintextPreview(chatId, msgId, userId);
         if (plain == null) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.message.not_found")))
@@ -258,12 +258,12 @@ public class MessageResource {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var msgId = UuidParams.required(msgIdStr, "message_id");
         var userId = CurrentUserId.uuid(securityContext);
-        if (!messageService.canAccessChat(chatId, userId)) {
+        if (!messageApplicationService.canAccessChat(chatId, userId)) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.message.not_member")))
                 .build();
         }
-        var versions = messageService.getMessageVersions(chatId, msgId, userId);
+        var versions = messageApplicationService.getMessageVersions(chatId, msgId, userId);
         return Response.ok(versions).build();
     }
 
@@ -348,12 +348,12 @@ public class MessageResource {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var msgId = UuidParams.required(msgIdStr, "message_id");
         var userId = CurrentUserId.uuid(securityContext);
-        if (!messageService.canAccessChat(chatId, userId)) {
+        if (!messageApplicationService.canAccessChat(chatId, userId)) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.message.not_member")))
                 .build();
         }
-        var reactions = messageService.getReactions(chatId, msgId, userId);
+        var reactions = messageApplicationService.getReactions(chatId, msgId, userId);
         return Response.ok(reactions).build();
     }
 
@@ -418,12 +418,12 @@ public class MessageResource {
                                @Context SecurityContext securityContext) {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var userId = CurrentUserId.uuid(securityContext);
-        if (!messageService.canAccessChat(chatId, userId)) {
+        if (!messageApplicationService.canAccessChat(chatId, userId)) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.message.not_member")))
                 .build();
         }
-        var pinned = messageService.getPinnedMessages(chatId, userId);
+        var pinned = messageApplicationService.getPinnedMessages(chatId, userId);
         return Response.ok(pinned).build();
     }
 

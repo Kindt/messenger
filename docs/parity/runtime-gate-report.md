@@ -1,6 +1,6 @@
 # Runtime Gate Report - Automated snapshot
 
-**Date**: 2026-06-16 (QEMU outer gate, Windows dev host)
+**Date**: 2026-06-18 (QEMU outer gate, Windows dev host)
 
 ## Health
 
@@ -11,8 +11,8 @@
 
 ## Playwright
 
-- Inner tiers: **all pass** (`playwright-dev-loop.ps1 -Tier all-inner`, 2026-06-16)
-- **Outer gate**: **34 passed** — `npx playwright test` in `tests/e2e-web` (2026-06-16, orchestrator)
+- Inner tiers: **all pass** (`playwright-dev-loop.ps1 -Tier all-inner`, 2026-06-18)
+- **Outer gate**: **50 passed**, 1 skipped — `playwright-dev-loop.ps1 -Tier full` (2026-06-18)
 - Env: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:19088`, `KORUS_API_URL=http://127.0.0.1:18080`
 
 ## QEMU smokes (spec 010 Phase A)
@@ -23,10 +23,9 @@
 | `smoke-push-worker-qemu.ps1` | OK |
 | `smoke-bot-api.ps1` | OK |
 | `smoke-export-gdpr-fulfillment.ps1` | OK |
-| `audit-timing.ps1` (TTFB) | PASS ~0.16% delta |
 
 ## Operator sign-off
 
-- **Engineering gate**: green on QEMU (2026-06-16)
+- **Engineering gate**: green on QEMU (2026-06-18)
 - **Stage/prod sign-off**: blocked until Sep 2026+ (no host)
 - **RTC waiver**: mesh controls tested with mocked RTCPeerConnection (no live TURN relay in Playwright)

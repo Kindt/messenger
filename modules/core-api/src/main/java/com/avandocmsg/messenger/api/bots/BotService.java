@@ -7,7 +7,6 @@ import com.avandocmsg.messenger.api.bots.dto.CreateBotRequest;
 import com.avandocmsg.messenger.api.bots.dto.CreateBotResponse;
 import com.avandocmsg.messenger.api.bots.dto.RotateBotTokenResponse;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanService;
-import com.avandocmsg.messenger.api.messages.MessageService;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
@@ -31,20 +30,17 @@ public class BotService {
     private final BotRepository botRepository;
     private final ChatRepository chatRepository;
     private final MessageApplicationService messageApplicationService;
-    private final MessageService messageService;
     private final ChatBanService chatBanService;
     private final AuditRepository auditRepository;
     private final UuidGenerator uuidGenerator;
 
     public BotService(BotRepository botRepository, ChatRepository chatRepository,
                       MessageApplicationService messageApplicationService,
-                      MessageService messageService,
                       ChatBanService chatBanService,
                       AuditRepository auditRepository, UuidGenerator uuidGenerator) {
         this.botRepository = botRepository;
         this.chatRepository = chatRepository;
         this.messageApplicationService = messageApplicationService;
-        this.messageService = messageService;
         this.chatBanService = chatBanService;
         this.auditRepository = auditRepository;
         this.uuidGenerator = uuidGenerator;
@@ -195,7 +191,7 @@ public class BotService {
     }
 
     public boolean deleteMessage(UUID botUserId, UUID chatId, UUID msgId) {
-        return messageService.deleteMessage(chatId, msgId, botUserId);
+        return messageApplicationService.deleteMessage(chatId, msgId, botUserId);
     }
 
     public boolean pinMessage(UUID botUserId, UUID chatId, UUID msgId) {
@@ -203,7 +199,7 @@ public class BotService {
         if (role == null || (!role.equals("owner") && !role.equals("admin"))) {
             return false;
         }
-        return messageService.pinMessage(chatId, msgId, botUserId);
+        return messageApplicationService.pinMessage(chatId, msgId, botUserId);
     }
 
     public boolean banUser(UUID botUserId, UUID chatId, UUID targetUserId, String reason) {

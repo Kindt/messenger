@@ -29,6 +29,62 @@ class MessageApplicationServiceTest {
     private final MessageApplicationService service = new MessageApplicationService(messagePort, chatRepo);
 
     @Test
+    void canAccessChat_deniesNonMemberAndBanned() {
+        chatRepo.put(chatId, memberId, "member");
+        assertFalse(service.canAccessChat(chatId, outsiderId));
+        assertTrue(service.canAccessChat(chatId, memberId));
+        chatRepo.banned.add(chatId + ":" + memberId);
+        assertFalse(service.canAccessChat(chatId, memberId));
+    }
+
+    @Test
+    void listMessages_returnsEmptyWhenNotMember() {
+        var legacyRepo = new ReadStubMessageRepository();
+        var readService = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, null, null, legacyRepo, null);
+        assertTrue(readService.listMessages(chatId, outsiderId, 50, null).isEmpty());
+        assertFalse(legacyRepo.listCalled);
+    }
+
+    @Test
+    void listMessages_delegatesWhenMember() {
+        chatRepo.put(chatId, memberId, "member");
+        var legacyRepo = new ReadStubMessageRepository();
+        var readService = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, null, null, legacyRepo, null);
+        readService.listMessages(chatId, memberId, 25, null);
+        assertTrue(legacyRepo.listCalled);
+        assertEquals(25, legacyRepo.lastLimit);
+    }
+
+    @Test
+    void getPinnedMessages_delegatesWhenMember() {
+        chatRepo.put(chatId, memberId, "member");
+        var legacyRepo = new ReadStubMessageRepository();
+        var readService = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, null, null, legacyRepo, null);
+        readService.getPinnedMessages(chatId, memberId);
+        assertTrue(legacyRepo.pinnedCalled);
+    }
+
+    @Test
+    void getReactions_requiresVisibleMessage() {
+        chatRepo.put(chatId, memberId, "member");
+        messagePort.message = sampleMessage();
+        var legacyRepo = new ReadStubMessageRepository();
+        var readService = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, null, null, legacyRepo, null);
+        readService.getReactions(chatId, messageId, memberId);
+        assertTrue(legacyRepo.reactionsCalled);
+    }
+
+    @Test
+    void getMessageVersions_requiresVisibleMessage() {
+        chatRepo.put(chatId, memberId, "member");
+        messagePort.message = sampleMessage();
+        var legacyRepo = new ReadStubMessageRepository();
+        var readService = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, null, null, legacyRepo, null);
+        readService.getMessageVersions(chatId, messageId, memberId);
+        assertTrue(legacyRepo.versionsCalled);
+    }
+
+    @Test
     void getMessageForMember_returnsMessageForMember() {
         chatRepo.put(chatId, memberId, "member");
         messagePort.message = sampleMessage();
@@ -216,6 +272,44 @@ class MessageApplicationServiceTest {
         @Override
         public boolean removeReaction(MessageId messageId, UserId userId, String reaction) {
             return true;
+        }
+    }
+
+    static final class ReadStubMessageRepository extends MessageRepository {
+        boolean listCalled;
+        int lastLimit;
+        boolean pinnedCalled;
+        boolean reactionsCalled;
+        boolean versionsCalled;
+
+        ReadStubMessageRepository() {
+            super(null, Clock.systemUTC());
+        }
+
+        @Override
+        public java.util.List<com.avandocmsg.messenger.api.messages.dto.MessageResponse> findByChatId(
+            UUID chatId, int limit, UUID before, UUID filterUserId) {
+            listCalled = true;
+            lastLimit = limit;
+            return java.util.List.of();
+        }
+
+        @Override
+        public java.util.List<com.avandocmsg.messenger.api.messages.dto.PinnedMessageResponse> getPinnedMessages(UUID chatId) {
+            pinnedCalled = true;
+            return java.util.List.of();
+        }
+
+        @Override
+        public java.util.List<com.avandocmsg.messenger.api.messages.dto.ReactionResponse> getReactions(UUID messageId) {
+            reactionsCalled = true;
+            return java.util.List.of();
+        }
+
+        @Override
+        public java.util.List<com.avandocmsg.messenger.api.messages.dto.MessageVersionResponse> findVersions(UUID msgId) {
+            versionsCalled = true;
+            return java.util.List.of();
         }
     }
 

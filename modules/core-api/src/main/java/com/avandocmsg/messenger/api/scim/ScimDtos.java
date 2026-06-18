@@ -37,3 +37,32 @@ record ScimListResponse(
     @JsonProperty("itemsPerPage") int itemsPerPage,
     @JsonProperty("Resources") List<ScimUserResource> resources
 ) {}
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+record ScimMember(
+    @JsonProperty("value") String value,
+    @JsonProperty("type") String type
+) {
+    ScimMember(String value) {
+        this(value, "User");
+    }
+}
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+record ScimGroupResource(
+    @JsonProperty("schemas") List<String> schemas,
+    @JsonProperty("id") String id,
+    @JsonProperty("externalId") String externalId,
+    @JsonProperty("displayName") String displayName,
+    @JsonProperty("members") List<ScimMember> members,
+    @JsonProperty("meta") ScimMeta meta
+) {}
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+record ScimGroupListResponse(
+    @JsonProperty("schemas") List<String> schemas,
+    @JsonProperty("totalResults") int totalResults,
+    @JsonProperty("startIndex") int startIndex,
+    @JsonProperty("itemsPerPage") int itemsPerPage,
+    @JsonProperty("Resources") List<ScimGroupResource> resources
+) {}

@@ -368,7 +368,8 @@ public class MessengerApplication {
             () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent());
         var messageApplicationService = CoreModule.messageApplicationService(
             dataSource, chatRepository, blockRepository, messageSendCoordinator, messageEditCoordinator,
-            messageDeleteCoordinator, messageReactionCoordinator, messagePinCoordinator);
+            messageDeleteCoordinator, messageReactionCoordinator, messagePinCoordinator,
+            messageRepository, mlsService);
         var fileService = new FileService(fileApplicationService, messageRepository);
         var exportComplianceSeed = new AdminExportComplianceSeed(
             chatService, messageApplicationService, fileService, chatRepository, chatRetentionPolicyRepository);
@@ -395,7 +396,7 @@ public class MessengerApplication {
 
         var botRepository = new BotRepository(dataSource);
         var botService = new BotService(botRepository, chatRepository, messageApplicationService,
-            messageService, chatBanService, auditRepository, this.uuidGenerator);
+            chatBanService, auditRepository, this.uuidGenerator);
 
         var pluginRepository = new com.avandocmsg.messenger.api.plugins.PluginRepository(dataSource);
         var integrationRouterClient = new com.avandocmsg.messenger.api.plugins.IntegrationRouterClient(
