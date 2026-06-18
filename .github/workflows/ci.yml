@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v5
@@ -38,6 +40,14 @@ jobs:
       - name: Install webui Tailwind deps
         run: npm ci
         working-directory: modules/web-client/webui-build
+
+      - name: Set up Python (presentation verification gate)
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Python verification deps
+        run: pip install pytest
 
       - name: "buildIntegrity (compile, test, spotless ratchet, npm audit, benchmark)"
         run: chmod +x gradlew && ./gradlew buildIntegrity --no-daemon
