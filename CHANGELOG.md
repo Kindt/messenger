@@ -17,6 +17,12 @@
 - **`Start-KorusVm`:** server RAM retry 10240→8192 on immediate exit; WHPX perf-monitor hint in error.
 - **Agent rules:** `qemu-redeploy-monitor.mdc` + `AGENTS.md` — no agent-initiated TCG on warm/backup.
 
+### 2026-06-18 — Документация: README, индекс docs/, deck vs legacy
+
+- **`README.md`:** краткий обзор проекта вместо справочной таблицы скриптов.
+- **`docs/README.md`:** индекс документации; канон презентации — `docs/index.html`; legacy HTML в корне — архив.
+- **`PRODUCT_PRESENTATION.md`**, **`ROADMAP_EPICS.md`**, **`CHANGELOG`:** исправлено ложное «legacy удалён»; `tz_product.html` → redirect на deck.
+
 ### 2026-06-18 — Spec 019 phase 3 (hex tail: indexer queue, SCIM port, MessageService retired from HTTP)
 
 - **`IndexerEventPublisher`:** hot-plug queue for `MSG_EVENT_INDEX`; wired into `MessageEditCoordinator` / `MessageDeleteCoordinator` (production path regains indexer replay).
@@ -63,7 +69,7 @@
 - **Данные:** `competitor_offerings.json` (22 rows, open `source_url`), `METRIC_POLICY.md`, schema validation.
 - **CI:** `run_python_verification.py` → presentation pytest + smoke_deck; workflow `.github/workflows/pages-deck.yml`.
 - **Spec:** `specs/018-product-deck/` + `contracts/deck-acceptance.json`.
-- **Удалены legacy:** `product_presentation.html`, `competitor_comparison*.html`, `tz_product.html` (сохранён `tz_full.html`).
+- **Уточнение:** каноническая презентация — `docs/index.html`; legacy HTML в корне (`product_presentation.html`, `competitor_comparison*.html`) сохранены как архив, не удалены.
 
 ### 2026-06-17 — Презентации: техпис правки (сноски, SSO, TCO)
 

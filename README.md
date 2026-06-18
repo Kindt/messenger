@@ -57,6 +57,7 @@ Self-contained deck для заказчика и команды:
 | | |
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | Обзор для разработчиков и AI-агентов |
+| [`docs/README.md`](docs/README.md) | Индекс документации (deck, deploy, specs) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Журнал изменений |
 | [`docs/ROADMAP_EPICS.md`](docs/ROADMAP_EPICS.md) | Дорожная карта |
 | [`docs/ARCHITECTURE_CORE_PACKAGES.md`](docs/ARCHITECTURE_CORE_PACKAGES.md) | Hexagonal-слои core-api |

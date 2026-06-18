@@ -708,11 +708,14 @@ DAU (активных в день) = Пользователи × доля акт
     validate_customer_html(content)
     OUT.write_text(content, encoding="utf-8")
     LEGACY_OUT.write_text(
-        """<!doctype html>
-<html lang="ru"><head><meta charset="utf-8"/>
-<meta http-equiv="refresh" content="0; url=product_presentation.html"/>
-<title>Перенаправление</title></head>
-<body><p>Документ переименован: <a href="product_presentation.html">Продуктовая презентация</a>.</p></body></html>
+        """<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta http-equiv="refresh" content="0; url=docs/index.html"/>
+<title>Korus Messenger — продуктовая презентация</title>
+</head>
+<body><p>Документ переехал: <a href="docs/index.html">Product deck (docs/index.html)</a>.</p></body></html>
 """,
         encoding="utf-8",
     )

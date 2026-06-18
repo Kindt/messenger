@@ -1,4 +1,4 @@
-"""Product implementation status — single source for product_presentation.html."""
+"""Product implementation status — legacy HTML (`product_presentation.html`). Deck: scripts/presentation/product_status.py."""
 
 from html import escape
 

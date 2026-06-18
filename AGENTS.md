@@ -261,7 +261,8 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 | **contracts в `specs/*/contracts/`** | изменение acceptance criteria |
 | **`runtime-gate-report.md`** | после green Playwright на QEMU |
 | **`ops-signoff-log.md`** | ops/security gates |
-| **`docs/index.html`** | product deck (GitHub Pages); rebuild: `python scripts/presentation/build.py` |
+| [`docs/index.html`](docs/index.html) | product deck (GitHub Pages); rebuild: `python scripts/presentation/build.py` |
+| [`docs/README.md`](docs/README.md) | индекс документации; deck vs legacy |
 
 ### Spec-kit артефакты по фичам
 
@@ -300,7 +301,8 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 | Документ | Назначение |
 |----------|------------|
 | [`docs/ROADMAP_EPICS.md`](docs/ROADMAP_EPICS.md) | эпики после базового ТЗ |
-| [`docs/plans/README.md`](docs/plans/README.md) | индекс детальных планов (retention, e2ee, read receipts, …) |
+| [`docs/README.md`](docs/README.md) | индекс документации, deck vs legacy |
+| [`docs/plans/README.md`](docs/plans/README.md) | индекс детальных планов |
 | [`docs/RETENTION_AND_DEEP_ARCHIVE.md`](docs/RETENTION_AND_DEEP_ARCHIVE.md) | ретенция, purge, Solr |
 
 ### Review & sign-off
@@ -402,6 +404,11 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 ## Project Learnings
 
 Накопленные знания (обновлять при новых находках):
+
+### Presentation / docs (2026-06-18)
+
+- **Канон для заказчика:** `docs/index.html` (deck); legacy HTML в корне — архив.
+- **Индекс документации:** `docs/README.md`; корневой `README.md` — краткий обзор проекта.
 
 ### Presentation / sizing (2026-06-18)
 

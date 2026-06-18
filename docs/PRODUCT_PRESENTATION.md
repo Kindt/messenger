@@ -1,8 +1,11 @@
 # Продуктовая презентация: Korus Messenger (AvandocMsg)
 
-**Версия документа:** 1.11 (исходник для сборки HTML) 
-**Публикация для заказчика:** [`product_presentation.html`](../product_presentation.html) **`0.0.1-SNAPSHOT`** — рабочая болванка для доработок (не релиз); презентация продукта (не техническое ТЗ). 
-**Дата:** 2026-06-16 
+> **Каноническая публикация для заказчика:** [`index.html`](index.html) (product deck, GitHub Pages).  
+> Этот файл — **legacy long-form** исходник (§1–16 в Markdown); HTML §17–18 собирается отдельно.
+
+**Версия продукта:** `0.0.1-SNAPSHOT` — рабочая болванка для доработок (не релиз).  
+**Legacy HTML:** [`product_presentation.html`](../product_presentation.html) — `python scripts/build-tz-product-html.py`  
+**Дата снимка:** 2026-06-18
 
 ---
 
@@ -17,7 +20,7 @@
 
 ### Сноски: синтетические данные до ops sign-off
 
-В HTML-презентации (`product_presentation.html`) блоки с цифрами и статусами «Частично» помечены ссылками **† ‡ § ¶ # ⊕**. Расшифровка — раздел «Сноски» в конце документа.
+В product deck ([`index.html`](index.html)) и legacy HTML (`product_presentation.html`) блоки с цифрами и статусами «Частично» помечены ссылками **† ‡ § ¶ # ⊕**. Расшифровка — раздел «Сноски» в deck или в конце legacy HTML.
 
 | Маркер | Где | Почему синтетично | Что изменится после ops sign-off |
 |--------|-----|-------------------|----------------------------------|
@@ -1122,4 +1125,4 @@ DiskFilesGB/year ≈ RegisteredUsers × GB_per_user_per_year
 
 ---
 
-*Документ подготовлен на основе состояния репозитория на 2026-06-15. При изменении продукта обновляйте этот файл и `product_presentation.html`.*
+*Документ — legacy long-form исходник. Канон для заказчика: [`docs/index.html`](index.html). При изменении продукта обновляйте deck pipeline и при необходимости этот файл + `product_presentation.html`.*
