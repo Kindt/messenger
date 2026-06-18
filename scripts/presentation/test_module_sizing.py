@@ -25,11 +25,77 @@ def test_ha_increases_app_nodes():
     assert ha.total_ram_gb >= plain.total_ram_gb
 
 
-def test_capacity_from_modules():
-    cap = ms.estimate_capacity(
+def test_replicas_increase_ram_not_always_online():
+    base = ms.estimate_capacity(
         tuple(m.id for m in ms.PRODUCTION_MODULES if m.required),
-        hdd_tb=10.0,
+        backup="none",
+        module_replicas={"core-api": 1},
     )
-    assert cap.max_registered_users >= 1_000
-    assert cap.max_peak_online > 0
-    assert cap.storage_years_at_10k_ru > 0
+    scaled = ms.estimate_capacity(
+        tuple(m.id for m in ms.PRODUCTION_MODULES if m.required),
+        backup="none",
+        module_replicas={"core-api": 3, "ws-gateway": 2},
+    )
+    assert scaled.total_ram_gb > base.total_ram_gb
+    assert scaled.max_peak_online > base.max_peak_online
+
+
+def test_vcpu_scales_with_load():
+    low = ms.estimate_from_load(ms.LoadInputs(registered_users=1_000))
+    high = ms.estimate_from_load(ms.LoadInputs(registered_users=100_000, peak_msg_s=120.0))
+    assert high.total_vcpu > low.total_vcpu
+
+
+def test_capacity_considers_vcpu():
+    cap = ms.estimate_capacity(
+        ("core-api", "ws-gateway", "workers", "postgres-hot"),
+        module_replicas={"core-api": 1},
+    )
+    assert cap.total_vcpu >= 4
+    assert cap.bottleneck
+
+
+def test_required_modules_cannot_be_excluded():
+    cap = ms.estimate_capacity(
+        ("core-api", "ws-gateway"),
+        backup="none",
+    )
+    assert "postgres-hot" in cap.enabled_module_ids
+    assert "redis" in cap.enabled_module_ids
+    assert "nats" in cap.enabled_module_ids
+
+
+def test_optional_archive_and_solr_can_be_excluded():
+    cap = ms.estimate_capacity(
+        ("core-api", "ws-gateway", "workers", "web-lb", "minio", "keycloak"),
+        backup="none",
+    )
+    assert "postgres-archive" not in cap.enabled_module_ids
+    assert "solr" not in cap.enabled_module_ids
+    assert "zookeeper" not in cap.enabled_module_ids
+
+
+def test_zookeeper_requires_solr():
+    cap = ms.estimate_capacity(
+        ("core-api", "zookeeper", "solr"),
+        backup="none",
+    )
+    assert "zookeeper" in cap.enabled_module_ids
+    cap_no = ms.estimate_capacity(
+        ("core-api", "zookeeper"),
+        backup="none",
+    )
+    assert "zookeeper" not in cap_no.enabled_module_ids
+
+
+def test_prod_full_default_includes_solr_and_archive():
+    cap = ms.estimate_capacity(tuple(), backup="none")
+    assert "solr" in cap.enabled_module_ids
+    assert "postgres-archive" in cap.enabled_module_ids
+
+
+def test_backup_increases_disk_and_ram():
+    plain = ms.estimate_from_load(ms.LoadInputs(registered_users=10_000, backup="none"))
+    dr = ms.estimate_from_load(ms.LoadInputs(registered_users=10_000, backup="dr"))
+    assert dr.total_ram_gb > plain.total_ram_gb
+    assert dr.hdd_tb > plain.hdd_tb

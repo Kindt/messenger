@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from html import escape
 
+from scripts.presentation import anchors as anc
+
 CAPABILITY_GROUPS: tuple[tuple[str, str, str], ...] = (
     (
         "Переписка и совместная работа",
@@ -61,7 +63,9 @@ FOCUS_CRITERIA: tuple[tuple[str, str], ...] = (
     ("vks", "Звонки / ВКС"),
 )
 
-MATRIX_LEGEND = """
+def matrix_legend() -> str:
+    tco = anc.link(anc.SALES_TCO, "TCO на вкладке «Продажная»")
+    return f"""
 <div class="matrix-legend callout callout-info">
   <p><strong>Как читать таблицу</strong> (для архитектора / ИБ / закупки):</p>
   <ul class="bullet-clean">
@@ -69,7 +73,7 @@ MATRIX_LEGEND = """
     <li><strong>◐</strong> — частично, зависит от тарифа или доработки интеграции.</li>
     <li><strong>—</strong> — в публичной поставке не заявлено или только облако.</li>
   </ul>
-  <p class="small">Сравнение по <em>зрелости функции</em>, не по цене. Источники — публичные сайты и документация конкурентов (см. вкладку «Продажная», <a href="#sales-s3">§ TCO</a>).</p>
+  <p class="small">Сравнение по <em>зрелости функции</em>, не по цене. Источники — публичные сайты и документация конкурентов (см. {tco}).</p>
 </div>
 """
 
@@ -230,7 +234,7 @@ def render_focus_matrix(products: list[dict]) -> str:
         rows.append(f"<tr><th scope='row'>{escape(short)}</th>{cells}</tr>")
     return (
         render_comparison_deltas(products)
-        + MATRIX_LEGEND
+        + matrix_legend()
         + f"<p class='small'>Матрица функций: все <strong>{len(ranked)}</strong> продуктов из реестра (A — пром., B — альтернативы on-prem, C — рынок РФ).</p>"
         + "<div class='table-wrap matrix-focus matrix-focus-wide'>"
         "<table class='matrix-table matrix-compact'>"

@@ -17,6 +17,9 @@ BANNED_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
 
 USER_JARGON = ("JWT", "Keycloak", "NATS", "Solr", "mesh")
 
+# Legacy PRODUCT_PRESENTATION / TZ section refs — deck uses #anchors only.
+LEGACY_SECTION_REF = re.compile(r"§\s*\d|§\s*«")
+
 BLOCK0_ID = "block-0"
 
 ALLOWLIST_NEGATIONS = (
@@ -80,6 +83,11 @@ def check_html(html: str) -> list[HonestyViolation]:
     if "рабочий прототип" not in html.lower():
         violations.append(
             HonestyViolation("missing_prototype", "рабочий прототип", "document")
+        )
+
+    for m in LEGACY_SECTION_REF.finditer(html):
+        violations.append(
+            HonestyViolation("legacy_section_ref", m.group(0), "deck must use #anchors")
         )
 
     return violations

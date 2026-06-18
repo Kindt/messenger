@@ -14,11 +14,14 @@
 
 - Korus считается на **тех же RU**, что указаны у конкурента в строке.
 - Headroom badge: «до **N** рег. пользов. на тех же мощностях».
-- `N` = max RU в том же VM-тир RAM (prod full, `module_sizing` / §10.3).
+- `N` = max RU в том же VM-тир RAM (prod full, `module_sizing` / `#tech-s4`).
 
 ## Sizing в deck
 
-- **Prod full** — единственный контур для калькулятора и TCO (все модули `full-server.yml`).
+- **Prod full** — единственный контур для калькулятора и TCO (`full-server.yml`, `--profile full`).
+- **Ядро** (locked): postgres-hot, redis, nats, minio, keycloak, core-api, ws-gateway, workers, web-lb.
+- **Опции baseline** (галка, по умолчанию вкл.): postgres-archive, solr, zookeeper (только с solr).
+- **Опции по запросу** (галка, по умолчанию выкл.): integrations (L1–L3).
 - **Dev-min** — только QEMU/разработка; **не** использовать в product deck sizing.
 - **Pilot / Standard / Enterprise** — **не** использовать в deck; устаревшие product-tier labels.
 

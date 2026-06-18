@@ -6,6 +6,7 @@ from html import escape
 
 from scripts.presentation import product_status as ps
 from scripts.presentation.data_loader import load_competitors
+from scripts.presentation import anchors as anc
 
 PERSONA_VOICE = {
     "pm": "PM / business analyst",
@@ -47,14 +48,14 @@ def draft_pm_s2() -> str:
     n = len(data["products"])
     return f"""
 <p>Сравнение с <strong>{n} продуктами</strong> рынка РФ (tier A–C) по типовому ТЗ заказчика.</p>
-<p>Сначала — реестр конкурентов и различия; затем матрица по 8 критериям. TCO — <a href="#sales-s3">§ TCO (продажная)</a>.</p>
+<p>Сначала — реестр конкурентов и различия; затем матрица по 8 критериям. TCO — {anc.link(anc.SALES_TCO, "вкладка «Продажная», раздел TCO")}.</p>
 """
 
 
 def draft_pm_s3() -> str:
     blockers = "".join(f"<li>{escape(b)}</li>" for b in ps.PRODUCTION_BLOCKERS[:5])
     return f"""
-<p>TCO: лицензия конкурента vs infra Korus на том же числе рег. Полная таблица — <a href="#sales-s3">§ TCO (продажная)</a>.</p>
+<p>TCO: лицензия конкурента vs infra Korus на том же числе рег. Полная таблица — {anc.link(anc.SALES_TCO, "TCO на вкладке «Продажная»")}.</p>
 <div class="callout callout-warn">
 <h4>Что мешает промышленному запуску</h4>
 <ul class="bullet-clean">{blockers}</ul>
@@ -63,9 +64,9 @@ def draft_pm_s3() -> str:
 
 
 def draft_pm_s4() -> str:
-    return """
-<p><strong>Сопровождение</strong> — стоимость команды (FTE), не серверов. Расчёт infra — <a href="#tech-s4">§ Калькулятор infra (техническая)</a>.</p>
-<p class="small">Модель упрощённая: RU, режим поддержки, релизы, топология, интеграции и модель команды — в калькуляторе; остальное — в методике § «Сопровождение».</p>
+    return f"""
+<p><strong>Сопровождение</strong> — стоимость команды (FTE), не серверов. Расчёт infra — {anc.link(anc.TECH_SIZING, "калькулятор infra (техническая вкладка)")}.</p>
+<p class="small">Модель упрощённая: RU, режим поддержки, релизы, топология, интеграции и модель команды — в калькуляторе; остальное — в {anc.link(anc.PM_SUPPORT, "разделе «Сопровождение»")}.</p>
 """
 
 
@@ -87,15 +88,15 @@ def draft_tech_s2() -> str:
 
 
 def draft_tech_s3() -> str:
-    return """
-<p>RAM-бар — суммарная RAM <strong>prod full</strong> при RU строки сравнения (§10.3). Ниже — <a href="#tech-plugins">плагины L0–L3</a> и матрица критериев.</p>
+    return f"""
+<p>RAM-бар — суммарная RAM <strong>prod full</strong> при RU строки сравнения ({anc.link(anc.TECH_SIZING, "методика sizing")}). Ниже — {anc.link(anc.TECH_PLUGINS, "плагины L0–L3")} и матрица критериев.</p>
 """
 
 
 def draft_tech_s4() -> str:
     return """
-<p>Калькулятор: <strong>от нагрузки</strong> (RU, пик онлайн, msg/s, retention) → таблица модулей и смета; или <strong>от модулей</strong> → предел RU/онлайн/msg/s и срок HDD.</p>
-<p class="footnote">Dev-min (QEMU) — только разработка, не sizing. Prod — всегда full stack (<code>docker-compose.full-server.yml</code>).</p>
+<p>Два независимых калькулятора: <strong>слева</strong> — предел в пользователях (от модулей); <strong>справа</strong> — ресурсы под нагрузку и смета infra.</p>
+<p class="footnote">Prod full (<code>docker-compose.full-server.yml</code>). Dev-min — только QEMU.</p>
 """
 
 

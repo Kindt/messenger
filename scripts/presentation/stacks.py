@@ -5,6 +5,7 @@ from __future__ import annotations
 from html import escape
 
 from .data_loader import load_competitors
+from . import anchors as anc
 
 # Узлы production full (docker-compose.full-server.yml)
 NODE_STACK: tuple[tuple[str, str, str], ...] = (
@@ -94,7 +95,7 @@ COMPETENCIES: tuple[tuple[str, str, str], ...] = (
     (
         "DevOps / SRE",
         "Docker Compose, Ansible, VM sizing, Prometheus, backup/DR",
-        "развёртывание prod-full, мониторинг, §10 sizing",
+        "развёртывание prod-full, мониторинг, VM sizing",
     ),
     (
         "Интегратор L1–L2",
@@ -196,7 +197,7 @@ def render_competencies_table() -> str:
     return f"""
 <div class="stack-block" id="tech-competencies">
   <h4>Компетенции для развития и поддержки</h4>
-  <p class="footnote">Минимальный набор ролей для in-house команды или аутстаффа; объём FTE — в калькуляторе сопровождения (Sales §4).</p>
+  <p class="footnote">Минимальный набор ролей для in-house команды или аутстаффа; объём FTE — в {anc.link(anc.SALES_CALC, "калькуляторе сопровождения")}.</p>
   <div class="table-wrap"><table class="feature-table">
     <thead><tr><th>Роль</th><th>Навыки</th><th>Зона ответственности</th></tr></thead>
     <tbody>{rows}</tbody>
@@ -213,15 +214,14 @@ def render_plugin_platform() -> str:
     return f"""
 <div class="stack-block" id="tech-plugins">
   <h4>Гибкие плагины L0–L3 и границы применения</h4>
-  <p class="footnote">Источник: <code>docs/PRODUCT_PRESENTATION.md</code> §10.7, §12.5; контракты FR-INT-09/10.
-  Код плагина <strong>не</strong> загружается в JVM <code>core-api</code> — только узел integrations / sidecar.</p>
+  <p class="footnote">Контракты FR-INT-09/10; код плагина <strong>не</strong> загружается в JVM <code>core-api</code> — только узел integrations / sidecar.</p>
   <div class="table-wrap"><table class="feature-table">
     <thead><tr><th>Уровень</th><th>Тип</th><th>Описание</th><th>Граница</th></tr></thead>
     <tbody>{rows}</tbody>
   </table></div>
   <ul class="footnote stack-notes">
     <li>Hot-path (отправка сообщений, WS, retention) — только core + workers.</li>
-    <li>L1–L3 добавляют RAM/vCPU на узел integrations; учитывать в sizing §10.3.</li>
+    <li>L1–L3 добавляют RAM/vCPU на узел integrations; учитывать в {anc.link(anc.TECH_SIZING, "калькуляторе sizing")}.</li>
     <li>L3 и custom — отдельный cell/VM при риске noisy neighbor.</li>
   </ul>
 </div>"""

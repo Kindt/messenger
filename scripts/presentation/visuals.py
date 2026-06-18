@@ -105,7 +105,7 @@ def render_ram_bar_svg(ru: int) -> str:
   <rect x="0" y="24" width="{bar_w}" height="16" fill="#e5e7eb" stroke="#94a3b8" stroke-width="1"/>
   <rect x="0" y="24" width="{used_w}" height="16" fill="#22c55e"/>
   {head}
-  <text x="0" y="62" font-size="9" fill="#64748b">Sizing §10.3: RAM prod full; load test — QEMU/stage</text>
+  <text x="0" y="62" font-size="9" fill="#64748b">Sizing prod full; load test — QEMU/stage</text>
   <text x="0" y="74" font-size="9" fill="#64748b">Не схема стека — см. «Стек по узлам» ниже</text>
 </svg>"""
 

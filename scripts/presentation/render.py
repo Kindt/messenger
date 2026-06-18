@@ -18,6 +18,7 @@ from scripts.presentation import module_sizing as ms
 from scripts.presentation import sizing_pricing as sp
 from scripts.presentation import stacks as stk
 from scripts.presentation import visuals as viz
+from scripts.presentation import anchors as anc
 from scripts.presentation.compare_engine import build_all_rows, render_headroom_badge
 from scripts.presentation.calculators import sales_tco, support_cost, tech_capacity
 from scripts.presentation.data_loader import load_competitors, load_offerings
@@ -34,7 +35,7 @@ def _units_legend() -> str:
     <dt>₽/год · ₽/мес</dt><dd>рубли РФ, без НДС; infra — серверы и канал, не лицензия ПО конкурента</dd>
     <dt>Infra Korus</dt><dd>медиана смет по {escape(provs)} на дату {sp.PRICE_AS_OF}</dd>
     <dt>FTE</dt><dd>сопровождение (люди), не CPU; ставка {fte} ₽/мес за 1 FTE (8×5)</dd>
-    <dt>RAM</dt><dd>суммарная RAM по §10.3, ГБ; VM-тир — ближайший стандартный объём</dd>
+    <dt>RAM</dt><dd>суммарная RAM по {anc.link(anc.TECH_SIZING, "методике sizing")}, ГБ; VM-тир — ближайший стандартный объём</dd>
   </dl>
 </div>"""
 
@@ -96,7 +97,7 @@ def render_block0() -> str:
     </div>
     <details class="feature-details">
       <summary>Полная матрица модулей по статусу</summary>
-      <p class="small">Карточки «что умеет приложение» — в <a href="#pm-s1">§ Что умеет продукт</a>.</p>
+      <p class="small">Карточки «что умеет приложение» — в {anc.link(anc.PM_CAPABILITIES, "разделе «Что умеет продукт»")}.</p>
       <h3 class="detail-h">Реализовано ({done})</h3>
       {_feature_table("done")}
       <h3 class="detail-h">Частично ({partial})</h3>
@@ -267,7 +268,7 @@ def render_tab_tech() -> str:
         3,
         t[2],
         cnt.draft_tech_s3(),
-        mkt.wrap_figure(viz.render_ram_bar_svg(ru), "RAM prod full (§10.3)")
+        mkt.wrap_figure(viz.render_ram_bar_svg(ru), "RAM prod full")
         + stk.render_plugin_platform()
         + render_feature_matrix(),
     )
@@ -327,30 +328,63 @@ def _calc_sales_html() -> str:
     )
 
 
-def _calc_tech_module_checks() -> str:
-    boxes = []
+def _calc_tech_module_table() -> str:
+    rows = []
     for m in ms.PRODUCTION_MODULES:
-        checked = " checked" if m.required else ""
-        boxes.append(
-            f'<label class="calc-module-check"><input type="checkbox" class="calc-mod" '
-            f'data-mod="{escape(m.id)}"{checked}/> {escape(m.label)} ({m.ram_gb} ГБ)</label>'
+        req_attr = f' data-requires="{",".join(m.requires)}"' if m.requires else ""
+        if m.required:
+            check_cell = (
+                f"<input type='checkbox' class='calc-mod calc-mod-locked' data-mod='{escape(m.id)}'"
+                f" checked disabled title='Обязательное ядро prod full'/>"
+            )
+        else:
+            checked = " checked" if m.default_enabled else ""
+            check_cell = (
+                f"<input type='checkbox' class='calc-mod calc-mod-opt' data-mod='{escape(m.id)}'"
+                f"{checked}{req_attr}/>"
+            )
+        rep_opts = "".join(
+            f'<option value="{n}"{" selected" if n == 1 else ""}>{n}×</option>'
+            for n in range(1, m.max_replicas + 1)
         )
-    return '<div class="calc-module-grid">' + "".join(boxes) + "</div>"
+        mode_hint = {"active": "нагрузка+", "passive": "зеркало", "cluster": "кворум"}.get(m.replica_mode, "")
+        rep_cell = (
+            f'<select class="calc-mod-rep" data-mod="{escape(m.id)}" title="{mode_hint}">{rep_opts}</select>'
+            if m.max_replicas > 1 and not m.per_plugin
+            else ("—" if not m.per_plugin else "×плагины")
+        )
+        rows.append(
+            f"<tr><td>{check_cell}</td>"
+            f"<td>{escape(m.label)}</td><td>{m.ram_gb} ГБ</td><td>{m.vcpu} vCPU</td><td>{rep_cell}</td>"
+            f"<td class='muted'>{mode_hint}</td></tr>"
+        )
+    return (
+        '<p class="small calc-mod-hint"><strong>Ядро</strong> (серые галки) — без этого prod не стартует. '
+        "<strong>Опции</strong> — baseline prod full (<code>--profile full</code>), можно снять: "
+        "archive (deep-archive), Solr+ZooKeeper (иначе SQL-поиск до ~50k RU), integrations.</p>"
+        '<div class="table-wrap calc-mod-table-wrap"><table class="feature-table calc-mod-table">'
+        "<thead><tr><th></th><th>Модуль</th><th>RAM/экз.</th><th>vCPU/экз.</th><th>Экз.</th><th>Реплика</th></tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table></div>"
+    )
 
 
 def _calc_tech_html() -> str:
-    form = (
-        cui.field_select(
-            "calc-tech-mode",
-            "Режим расчёта",
-            [("load", "От нагрузки → состав серверов"), ("modules", "От модулей → предел нагрузки")],
-        )
-        + '<div id="calc-tech-load-panel">'
-        + '<div class="calc-section-label">Пользователи и нагрузка</div>'
+    backup_opts = [(k, v[3]) for k, v in ms.BACKUP_PROFILES.items()]
+    cap_form = (
+        '<div class="calc-section-label">Модули и реплики</div>'
+        + _calc_tech_module_table()
+        + '<div class="calc-section-label">Хранилище и бэкап</div>'
+        + cui.field_number("calc-tech-mod-ssd", "SSD, ТБ (без бэка)", 2, min_val=0, step="0.1")
+        + cui.field_number("calc-tech-mod-hdd", "HDD archive, ТБ", 5, min_val=0, step="0.1")
+        + cui.field_select("calc-tech-mod-backup", "Бэкап / DR", backup_opts, selected="none")
+        + cui.field_number("calc-tech-mod-plugins", "Плагины integrations", 0, min_val=0)
+    )
+    res_form = (
+        '<div class="calc-section-label">Пользователи и нагрузка</div>'
         + cui.field_number("calc-tech-ru", "Всего рег. пользователей (RU)", 10_000)
         + cui.field_number(
             "calc-tech-peak-online",
-            "Пик онлайн (0 = авто из §10.1)",
+            "Пик онлайн (0 = авто из модели нагрузки)",
             0,
             min_val=0,
             placeholder="авто",
@@ -373,31 +407,33 @@ def _calc_tech_html() -> str:
             step="0.1",
         )
         + cui.field_number("calc-tech-retention", "Retention, лет", 3, min_val=1)
-        + '<div class="calc-section-label">Контур</div>'
-        + cui.field_checkbox("calc-tech-ha", "HA (реплики PG/Redis/NATS, ≥2 app)", False)
+        + '<div class="calc-section-label">Реплики и отказоустойчивость</div>'
+        + cui.field_checkbox("calc-tech-ha", "HA: зеркала PG/Redis/NATS + ≥2 app", False)
+        + cui.field_select("calc-tech-backup", "Бэкап / DR", backup_opts, selected="none")
         + cui.field_number("calc-tech-plugins", "Плагины L1+ на integrations", 0, min_val=0)
-        + "</div>"
-        + '<div id="calc-tech-modules-panel" hidden>'
-        + '<div class="calc-section-label">Состав prod full (docker-compose.full-server)</div>'
-        + _calc_tech_module_checks()
-        + cui.field_number("calc-tech-mod-ssd", "SSD, ТБ", 2, min_val=0, step="0.1")
-        + cui.field_number("calc-tech-mod-hdd", "HDD archive, ТБ", 5, min_val=0, step="0.1")
-        + cui.field_checkbox("calc-tech-mod-ha", "HA для datastore", False)
-        + cui.field_number("calc-tech-mod-plugins", "Плагины integrations", 0, min_val=0)
-        + "</div>"
     )
     return (
-        '<p class="calc-intro">Production full stack — без Pilot/Standard/Enterprise. '
-        "Dev-min (QEMU) не sizing; только prod-full.</p>"
+        '<p class="calc-intro">Production full stack. Dev-min (QEMU) — только разработка, не sizing.</p>'
+        + '<div class="calc-dual">'
         + cui.calc_shell(
-            "calc-tech",
-            "Калькулятор мощностей",
-            "Два режима: нагрузка → серверы или модули → предел RU/онлайн/хранилища.",
-            form,
-            "calc-tech-out",
-            "calc-tech-run",
+            "calc-tech-cap",
+            "Сколько пользователей выдержит",
+            "Модули, число экземпляров, бэкап → предел RU/онлайн и RAM.",
+            cap_form,
+            "calc-tech-cap-out",
+            "calc-tech-cap-run",
+            accent="emerald",
+        )
+        + cui.calc_shell(
+            "calc-tech-res",
+            "Какие ресурсы нужны",
+            "Задайте нагрузку → таблица модулей; справа — смета infra.",
+            res_form,
+            "calc-tech-res-out",
+            "calc-tech-res-run",
             accent="sky",
         )
+        + "</div>"
     )
 
 
@@ -551,6 +587,10 @@ def deck_data_json() -> dict[str, Any]:
             "retention_years": ms.DEFAULT_RETENTION_YEARS,
             "peak_burst": ms.PEAK_MSG_BURST,
         },
+        "backup_profiles": {
+            k: {"disk_mult": v[0], "ram_gb": v[1], "ops_mult": v[2], "label": v[3]}
+            for k, v in ms.BACKUP_PROFILES.items()
+        },
         "scenarios": {
             "message": ["Откройте чат", "Выберите коллегу", "Напишите сообщение"],
             "search": ["Введите запрос", "Выберите результат", "Откройте файл"],
@@ -683,7 +723,13 @@ body {
 .calc-assumptions { margin: 12px 0 16px; padding: 12px 14px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; }
 .calc-assumptions p { margin: 0 0 6px; }
 .calc-assumptions p:last-child { margin-bottom: 0; }
-.calc-module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; margin: 8px 0 12px; }
+.calc-mod-table-wrap { margin: 8px 0 12px; max-height: 320px; overflow: auto; }
+.calc-mod-table { font-size: 12px; }
+.calc-mod-table select { padding: 4px 6px; font-size: 12px; border-radius: 6px; border: 1px solid #cbd5e1; }
+.calc-mod-table td.muted { font-size: 11px; color: var(--muted); }
+.calc-mod-table input.calc-mod-locked { cursor: not-allowed; opacity: 0.55; }
+.calc-mod-table tr.calc-mod-dep-off { opacity: 0.45; }
+.calc-mod-hint { margin: 0 0 8px; color: var(--muted); }
 .calc-module-check { font-size: 13px; display: flex; gap: 6px; align-items: flex-start; }
 .stack-block { margin-top: 24px; }
 .stack-block h4 { margin: 0 0 8px; font-size: 15px; }
@@ -694,7 +740,32 @@ body {
   background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius);
   padding: 16px; margin-top: 12px;
 }
-.calc-intro { font-size: 13px; color: #4b5563; margin: 0 0 12px; }
+.calc-dual {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 12px 0 20px;
+  align-items: start;
+}
+@media (max-width: 1024px) { .calc-dual { grid-template-columns: 1fr; } }
+.calc-dual .calc-shell { margin: 0; height: 100%; }
+.calc-res-split {
+  display: grid; grid-template-columns: 1fr minmax(200px, 260px); gap: 16px; align-items: start;
+  margin-top: 12px;
+}
+@media (max-width: 720px) { .calc-res-split { grid-template-columns: 1fr; } }
+.calc-cost-rail {
+  background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%);
+  border: 1px solid #86efac; border-radius: 12px; padding: 14px 16px;
+}
+.calc-cost-rail h5 { margin: 0 0 10px; font-size: 13px; color: #065f46; text-transform: uppercase; letter-spacing: .04em; }
+.calc-cost-median { font-size: 22px; font-weight: 800; color: #047857; line-height: 1.2; margin-bottom: 12px; }
+.calc-cost-median span { display: block; font-size: 11px; font-weight: 600; color: #6b7280; margin-top: 2px; }
+.calc-cost-list { list-style: none; margin: 0 0 10px; padding: 0; }
+.calc-cost-list li {
+  display: flex; justify-content: space-between; gap: 8px; font-size: 13px;
+  padding: 6px 0; border-bottom: 1px solid #d1fae5;
+}
+.calc-cost-list li.is-min strong { color: #047857; }
+.calc-cost-list li:last-child { border-bottom: none; }
+.calc-user-hero .calc-stat-val { color: #047857; }
 .calc-shell {
   border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
   margin: 12px 0; background: var(--surface);
@@ -942,6 +1013,15 @@ def _deck_js() -> str:
     const avg=(dau*mpd)/86400;
     return Math.max(0.5, avg*(data.load_defaults?.peak_burst||3.5));
   }
+  function scaleModVcpu(id, base, ru, po, pms){
+    if(id==='core-api') return Math.max(base, 2+pms/12+po/2500);
+    if(id==='workers') return Math.max(base, 2+pms/18);
+    if(id==='ws-gateway') return Math.max(base, 1+po/2000);
+    if(id==='nats') return Math.max(base, 1+pms/30);
+    if(id==='postgres-hot') return Math.max(base, 1+pms/25+ru/12000);
+    if(id==='solr') return Math.max(base, 1+ru/20000);
+    return base;
+  }
   function scaleModRam(id, base, ru, po, pms){
     if(id==='postgres-hot') return base+ru/8000+pms/8;
     if(id==='core-api') return base+po/400+pms/1.5;
@@ -952,68 +1032,148 @@ def _deck_js() -> str:
     if(id==='minio') return base+ru/20000;
     return base;
   }
-  function appNodeCount(pms, po){
+  function backupProfile(key){
+    return (data.backup_profiles||{})[key]||{disk_mult:1, ram_gb:0, ops_mult:1, label:''};
+  }
+  function collectModuleReplicas(scope){
+    const reps={};
+    (scope||document).querySelectorAll('.calc-mod-rep').forEach(el=>{
+      reps[el.dataset.mod]=+el.value||1;
+    });
+    return reps;
+  }
+  function resolveReplicaCount(spec, reps, ha, appN, webN, plugins){
+    if(spec.per_plugin) return Math.max(0, plugins);
+    if(reps[spec.id]) return Math.min(spec.max_replicas, Math.max(1, reps[spec.id]));
+    if(spec.id==='core-api') return Math.min(spec.max_replicas, appN);
+    if(spec.id==='web-lb') return Math.min(spec.max_replicas, webN);
+    if(spec.id==='workers') return Math.min(spec.max_replicas, reps.workers||appN);
+    if(ha && ['postgres-hot','postgres-archive','redis','nats','keycloak'].includes(spec.id))
+      return Math.min(spec.max_replicas, 2);
+    if(spec.id==='zookeeper' && (reps.solr||1)>=3) return 3;
+    if(spec.id==='solr' && (reps.solr||1)>=3) return 3;
+    return 1;
+  }
+  function appNodeCount(pms, po, ha){
     let n=1;
     if(pms>30||po>3000) n=2;
     if(pms>120||po>12000) n=3;
     if(pms>400) n=Math.max(n,6);
-    return n;
+    if(ha) n=Math.max(n,2);
+    return Math.min(n, 6);
   }
   function webNodeCount(po, ha){
     let n= po<=5000?1:2;
     if(po>20000) n=Math.max(n,3);
     if(ha) n=Math.max(n,2);
-    return n;
+    return Math.min(n, 4);
   }
-  function storageTb(ru, mpd, gbUser, retY){
+  function storageTb(ru, mpd, gbUser, retY, backup){
     const dau=Math.max(1, Math.round(ru*activityRate(ru)));
     const msgsDay=dau*mpd;
     const msgGbYr=msgsDay*365*2048/(1024**3);
     const filesGbYr=ru*gbUser;
     const totalGb=(msgGbYr+filesGbYr)*retY;
+    const diskMult=backupProfile(backup).disk_mult||1;
     return {
-      ssd: Math.round((0.5+totalGb*0.15/1024)*100)/100,
-      hdd: Math.round(Math.max(2, totalGb/1024)*100)/100
+      ssd: Math.round((0.5+totalGb*0.15/1024)*diskMult*100)/100,
+      hdd: Math.round(Math.max(2, totalGb/1024)*diskMult*100)/100,
+      diskMult
     };
+  }
+  function capacityFromRam(spec, count, ramUnit){
+    const ram=ramUnit!=null?ramUnit:spec.ram_gb;
+    const mult=(spec.replica_mode==='active')?count:1;
+    if(spec.id==='ws-gateway') return {po:Math.max(100, Math.floor((ram-4)*800))*mult, pms:0, ru:0};
+    if(spec.id==='core-api') return {po:Math.max(100, Math.floor((ram-8)*400))*mult, pms:Math.max(1,(ram-8)*1.5)*mult, ru:0};
+    if(spec.id==='workers') return {po:0, pms:Math.max(1,(ram-8)*2.5)*mult, ru:0};
+    if(spec.id==='web-lb') return {po:Math.max(100, Math.floor((ram-4)*500))*mult, pms:0, ru:0};
+    if(spec.id==='postgres-hot') return {po:0, pms:0, ru:Math.max(1000, Math.floor((ram-4)*8000))};
+    return {po:0, pms:0, ru:0};
+  }
+  function capacityFromVcpu(spec, count, vcpuUnit){
+    const v=vcpuUnit!=null?vcpuUnit:spec.vcpu;
+    const mult=(spec.replica_mode==='active')?count:1;
+    if(spec.id==='ws-gateway') return {po:Math.max(100, Math.floor((v-1)*400))*mult, pms:0, ru:0};
+    if(spec.id==='core-api') return {po:Math.max(100, Math.floor((v-1)*250))*mult, pms:Math.max(1,(v-1)*12)*mult, ru:0};
+    if(spec.id==='workers') return {po:0, pms:Math.max(1,(v-1)*15)*mult, ru:0};
+    if(spec.id==='web-lb') return {po:Math.max(100, Math.floor((v-1)*350))*mult, pms:0, ru:0};
+    if(spec.id==='postgres-hot') return {po:0, pms:0, ru:Math.max(1000, Math.floor((v-1)*10000))};
+    if(spec.id==='nats') return {po:0, pms:Math.max(1,(v-1)*20)*mult, ru:0};
+    return {po:0, pms:0, ru:0};
+  }
+  function mergeCapacity(r, c){
+    const pick=(a,b)=> (a&&b)?Math.min(a,b):(a||b||0);
+    return {po:pick(r.po,c.po), pms:pick(r.pms,c.pms), ru:pick(r.ru,c.ru),
+      vcpuBound: (c.po&&r.po&&c.po<r.po)||(c.pms&&r.pms&&c.pms<r.pms)||(c.ru&&r.ru&&c.ru<r.ru)};
+  }
+  function requiredModuleIds(){
+    return new Set((data.modules||[]).filter(m=>m.required).map(m=>m.id));
+  }
+  function defaultEnabledModuleIds(){
+    return new Set((data.modules||[]).filter(m=>m.required||m.default_enabled!==false).map(m=>m.id));
+  }
+  function normalizeEnabledIds(raw){
+    const out=new Set(raw);
+    requiredModuleIds().forEach(id=>out.add(id));
+    if(!out.has('solr')) out.delete('zookeeper');
+    (data.modules||[]).forEach(m=>{
+      if(!out.has(m.id)||!m.requires||!m.requires.length) return;
+      if(!m.requires.every(r=>out.has(r))) out.delete(m.id);
+    });
+    return out;
+  }
+  function enabledModulesFromScope(scope){
+    const enabled=new Set(requiredModuleIds());
+    scope.querySelectorAll('.calc-mod-opt:checked:not(:disabled)').forEach(el=>enabled.add(el.dataset.mod));
+    return normalizeEnabledIds(enabled);
+  }
+  function syncModuleDependencies(scope){
+    const solr=scope.querySelector('.calc-mod-opt[data-mod="solr"]');
+    const zoo=scope.querySelector('.calc-mod-opt[data-mod="zookeeper"]');
+    if(!solr||!zoo) return;
+    const on=solr.checked;
+    zoo.disabled=!on;
+    if(!on) zoo.checked=false;
+    zoo.closest('tr')?.classList.toggle('calc-mod-dep-off', !on);
   }
   function estimateFromLoad(inp){
     const ru=Math.max(1, inp.ru);
     const po=derivePeakOnline(ru, inp.peakOnline);
     const pms=derivePeakMsgS(ru, inp.peakMsgS, inp.msgsDay, po);
     const mods=data.modules||[];
-    const enabled= inp.enabled || new Set(mods.map(m=>m.id));
-    let appN=appNodeCount(pms, po);
+    const enabled= inp.enabled || defaultEnabledModuleIds();
+    const enabledNorm=normalizeEnabledIds(enabled);
+    const reps=inp.replicas||{};
+    let appN=appNodeCount(pms, po, inp.ha);
     let webN=webNodeCount(po, inp.ha);
-    if(inp.ha) appN=Math.max(appN,2);
+    const bp=backupProfile(inp.backup||'none');
     const instances=[];
     let totalRam=0, totalVcpu=0;
-    const haIds=new Set(['postgres-hot','redis','nats','keycloak']);
     for(const spec of mods){
-      if(!enabled.has(spec.id)) continue;
-      let count=1;
-      if(spec.per_plugin){
-        count=Math.max(0, inp.plugins||0);
-        if(count===0) continue;
-      } else if(spec.id==='core-api') count=appN;
-      else if(spec.id==='web-lb') count=webN;
-      else if(inp.ha && haIds.has(spec.id)) count=2;
+      if(!enabledNorm.has(spec.id)) continue;
+      const count=resolveReplicaCount(spec, reps, inp.ha, appN, webN, inp.plugins||0);
+      if(spec.per_plugin && count===0) continue;
       let ram=scaleModRam(spec.id, spec.ram_gb, ru, po, pms);
-      if(inp.ha && ['postgres-hot','nats','redis'].includes(spec.id)) ram*=1.1;
+      let vcpu=scaleModVcpu(spec.id, spec.vcpu, ru, po, pms);
+      if(spec.replica_mode==='cluster' && count>1) ram*=1.05;
       const ramTot=Math.round(ram*count*10)/10;
-      const vcpuTot=Math.round(spec.vcpu*count*10)/10;
-      instances.push({id:spec.id, label:spec.label, count, ramGb:ramTot, vcpu:vcpuTot});
+      const vcpuTot=Math.round(vcpu*count*10)/10;
+      instances.push({id:spec.id, label:spec.label, count, ramGb:ramTot, vcpu:vcpuTot, mode:spec.replica_mode});
       totalRam+=ramTot;
       totalVcpu+=vcpuTot;
     }
-    totalRam=Math.ceil(totalRam);
+    totalRam=Math.ceil(totalRam+bp.ram_gb);
     totalVcpu=Math.ceil(totalVcpu);
-    const stor=storageTb(ru, inp.msgsDay, inp.gbUser, inp.retention);
+    const stor=storageTb(ru, inp.msgsDay, inp.gbUser, inp.retention, inp.backup||'none');
+    let channel= po<8000?200:1000;
+    if(inp.backup==='dr') channel=Math.max(channel, 400);
     return {
       ru, peakOnline:po, peakMsgS:Math.round(pms*10)/10,
       dau:Math.max(1, Math.round(ru*activityRate(ru))),
       modules:instances, totalRam, totalVcpu,
-      ssdTb:stor.ssd, hddTb:stor.hdd,
-      channel: po<8000?200:1000, appNodes:appN, webNodes:webN
+      ssdTb:stor.ssd, hddTb:stor.hdd, backupRam:bp.ram_gb,
+      channel, appNodes:appN, webNodes:webN, backup:inp.backup||'none'
     };
   }
   function loadInpFromForm(){
@@ -1025,64 +1185,63 @@ def _deck_js() -> str:
       gbUser:+document.getElementById('calc-tech-gb-user').value||0.5,
       retention:+document.getElementById('calc-tech-retention').value||3,
       ha:document.getElementById('calc-tech-ha').checked,
-      plugins:+document.getElementById('calc-tech-plugins').value||0
+      plugins:+document.getElementById('calc-tech-plugins').value||0,
+      backup:document.getElementById('calc-tech-backup').value,
+      replicas: collectModuleReplicas(document.getElementById('calc-tech-res'))
     };
   }
   function quoteProviderLoad(inp, p){
     const le=estimateFromLoad(inp);
     const ramBilled=vmTier(le.totalRam);
-    const vmCompute=ramBilled*p.ram_rub_gb + le.totalVcpu*p.vcpu_rub;
+    const ramCost=ramBilled*p.ram_rub_gb;
+    const vcpuCost=le.totalVcpu*p.vcpu_rub;
+    const vmCompute=ramCost+vcpuCost;
     const disk=Math.round(le.ssdTb*p.ssd_tb_rub + le.hddTb*p.hdd_tb_rub);
     const channel= le.channel<=200?p.channel_200:p.channel_1g;
-    const ops=p.ops_base*(le.ru<50000?1:2);
+    const opsMult=backupProfile(le.backup).ops_mult||1;
+    const ops=Math.round(p.ops_base*(le.ru<50000?1:2)*opsMult);
     const lines=[
       ['Серверы (prod full)', vmCompute],
-      ['Диски', disk],
+      ['Диски (+ бэкап)', disk],
       ['Канал', channel],
-      ['Backup и мониторинг', ops]
+      ['Backup / мониторинг', ops]
     ];
     const monthly=lines.reduce((s,x)=>s+x[1],0);
-    return {provider:p, monthly, yearly:monthly*12, lines, load:le, ramBilled};
+    return {provider:p, monthly, yearly:monthly*12, lines, load:le, ramBilled, ramCost, vcpuCost};
   }
   function renderModuleTable(mods){
-    const rows=mods.map(m=>'<tr><td>'+m.label+'</td><td>'+m.count+'</td><td>'+m.ramGb+'</td><td>'+m.vcpu+'</td></tr>').join('');
-    return '<div class="table-wrap"><table class="feature-table"><thead><tr><th>Модуль</th><th>×</th><th>RAM ГБ</th><th>vCPU</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    const rows=mods.map(m=>'<tr><td>'+m.label+'</td><td>'+m.count+'</td><td>'+m.ramGb+'</td><td>'+m.vcpu+'</td><td>'+(m.mode||'')+'</td></tr>').join('');
+    return '<div class="table-wrap"><table class="feature-table"><thead><tr><th>Модуль</th><th>×</th><th>RAM ГБ</th><th>vCPU</th><th>Тип</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
   }
-  function estimateCapacityFromModules(enabled, plugins, ssdTb, hddTb, ha){
+  function estimateCapacityFromModules(enabled, plugins, ssdTb, hddTb, backup, replicas){
     const specs=data.modules||[];
     const specMap={}; specs.forEach(s=>specMap[s.id]=s);
-    const haIds=new Set(['postgres-hot','redis','nats','keycloak']);
+    const reps=replicas||{};
+    const bp=backupProfile(backup||'none');
     let totalRam=0, totalVcpu=0;
-    enabled.forEach(id=>{
-      const s=specMap[id]; if(!s) return;
-      let count= s.per_plugin?Math.max(0,plugins): (ha&&haIds.has(id)?2:1);
-      if(s.per_plugin && count===0) return;
-      totalRam+=s.ram_gb*count;
-      totalVcpu+=s.vcpu*count;
-    });
-    totalRam=Math.ceil(totalRam);
-    totalVcpu=Math.ceil(totalVcpu);
     let maxPo=100000, maxPms=10000, maxRu=1000000;
-    if(enabled.has('ws-gateway')){
-      const ws=specMap['ws-gateway'].ram_gb;
-      maxPo=Math.min(maxPo, Math.max(100, Math.floor((ws-4)*800)));
-    }
-    if(enabled.has('core-api')){
-      const c=specMap['core-api'].ram_gb;
-      maxPo=Math.min(maxPo, Math.max(100, Math.floor((c-8)*400)));
-      maxPms=Math.min(maxPms, Math.max(1, (c-8)*1.5));
-    }
-    if(enabled.has('workers')){
-      const w=specMap['workers'].ram_gb;
-      maxPms=Math.min(maxPms, Math.max(1, (w-8)*2.5));
-    }
-    if(enabled.has('postgres-hot')){
-      const pg=specMap['postgres-hot'].ram_gb;
-      maxRu=Math.min(maxRu, Math.max(1000, Math.floor((pg-4)*8000)));
-    }
-    const needHdd=storageTb(10000, 40, 0.5, 3).hdd;
-    const storY= needHdd>0? Math.round(hddTb/needHdd*3*10)/10 : 0;
-    return {totalRam, totalVcpu, ssdTb, hddTb, maxRu, maxPo, maxPms:Math.round(maxPms*10)/10, storY};
+    const bnVcpu=[];
+    normalizeEnabledIds(enabled).forEach(id=>{
+      const s=specMap[id]; if(!s) return;
+      const count=resolveReplicaCount(s, reps, false, 1, 1, plugins);
+      if(s.per_plugin && count===0) return;
+      let ram=s.ram_gb;
+      let vcpu=s.vcpu;
+      if(s.replica_mode==='cluster' && count>1) ram*=1.05;
+      totalRam+=ram*count;
+      totalVcpu+=vcpu*count;
+      const cap=mergeCapacity(capacityFromRam(s, count, ram), capacityFromVcpu(s, count, vcpu));
+      if(cap.po) maxPo=Math.min(maxPo, cap.po);
+      if(cap.pms) maxPms=Math.min(maxPms, cap.pms);
+      if(cap.ru) maxRu=Math.min(maxRu, cap.ru);
+      if(cap.vcpuBound) bnVcpu.push(s.label);
+    });
+    totalRam=Math.ceil(totalRam+bp.ram_gb);
+    totalVcpu=Math.ceil(totalVcpu);
+    const needHdd=storageTb(10000, 40, 0.5, 3, 'none').hdd;
+    const effHdd= bp.disk_mult>0? hddTb/bp.disk_mult : hddTb;
+    const storY= needHdd>0? Math.round(effHdd/needHdd*3*10)/10 : 0;
+    return {totalRam, totalVcpu, ssdTb:Math.round(ssdTb*bp.disk_mult*100)/100, hddTb, maxRu, maxPo, maxPms:Math.round(maxPms*10)/10, storY, backupRam:bp.ram_gb, backup, bottleneck: bnVcpu.length?('vCPU: '+bnVcpu.slice(0,3).join(', ')):'RAM'};
   }
   function median(vals){
     const s=[...vals].sort((a,b)=>a-b);
@@ -1140,7 +1299,20 @@ def _deck_js() -> str:
     return {lines, sub, modeMult, teamMult, fte, rate, overhead, monthly};
   }
 
-  function renderProviderTables(quotes){ return renderProviderCards(quotes); }
+  function renderCostRail(quotes){
+    const med=median(quotes.map(q=>q.monthly));
+    const minM=Math.min(...quotes.map(q=>q.monthly));
+    const q0=quotes[0];
+    const ramMed=Math.round(quotes.reduce((s,q)=>s+q.ramCost,0)/quotes.length);
+    const vcpuMed=Math.round(quotes.reduce((s,q)=>s+q.vcpuCost,0)/quotes.length);
+    let list=quotes.map(q=>'<li'+(q.monthly===minM?' class="is-min"':'')+'><span>'+q.provider.label+
+      '</span><strong>'+fmt(q.monthly)+'</strong></li>').join('');
+    return '<aside class="calc-cost-rail"><h5>Смета infra</h5>'+
+      '<div class="calc-cost-median">'+fmt(med)+'<span>медиана / мес · '+fmt(med*12)+'/год</span></div>'+
+      '<p class="small">Compute: RAM ~'+fmt(ramMed)+' + vCPU ~'+fmt(vcpuMed)+'</p>'+
+      '<ul class="calc-cost-list">'+list+'</ul>'+
+      '<p class="small">Без лицензии, TURN/VKS. <a href="#price-sources">Прайсы</a>.</p></aside>';
+  }
 
   function runSales(){
     const ru=+document.getElementById('calc-sales-ru').value||1;
@@ -1155,54 +1327,46 @@ def _deck_js() -> str:
         {val:fmt(med), label:'медиана / мес'},
         {val:fmt(med*12), label:'медиана / год'}
       ])+renderProviderCards(quotes)+
-      '<p class="small">Prod full, авто-нагрузка §10.1. На 1 рег.: ~'+(med/ru).toFixed(2)+' ₽/мес. Без лицензии, TURN/VKS. '
+      '<p class="small">Prod full, авто-нагрузка по модели. На 1 рег.: ~'+(med/ru).toFixed(2)+' ₽/мес. Без лицензии, TURN/VKS. '
       +'<a href="#price-sources">Источники цен</a>.</p>';
   }
   function runTechLoad(){
     const inp=loadInpFromForm();
     const quotes=data.providers.map(p=>quoteProviderLoad(inp,p));
     const le=quotes[0].load;
-    const med=median(quotes.map(q=>q.monthly));
-    document.getElementById('calc-tech-out').innerHTML=
+    document.getElementById('calc-tech-res-out').innerHTML=
       renderHero([
         {val:le.totalRam+' ГБ', label:'RAM суммарно'},
         {val:String(le.totalVcpu), label:'vCPU'},
         {val:le.appNodes+' app · '+le.webNodes+' web', label:'узлы'},
-        {val:fmt(med)+'/мес', label:'медиана infra'}
+        {val:le.ssdTb+' / '+le.hddTb+' ТБ', label:'SSD / HDD'}
       ])+
+      '<div class="calc-res-split"><div class="calc-res-main">'+
       '<div class="calc-assumptions"><p class="small"><strong>Нагрузка:</strong> RU '+le.ru.toLocaleString('ru-RU')+
       ' · DAU ~'+le.dau+' · пик онлайн '+le.peakOnline+' · пик msg/s '+le.peakMsgS+
-      ' · SSD '+le.ssdTb+' ТБ · HDD '+le.hddTb+' ТБ · канал '+le.channel+' Мбит/с</p></div>'+
-      renderModuleTable(le.modules)+renderProviderCards(quotes);
+      ' · канал '+le.channel+' Мбит/с · бэкап '+le.backup+(le.backupRam?(' +'+le.backupRam+' ГБ RAM'):'')+'</p></div>'+
+      renderModuleTable(le.modules)+'</div>'+renderCostRail(quotes)+'</div>';
   }
   function runTechModules(){
-    const enabled=new Set();
-    document.querySelectorAll('.calc-mod:checked').forEach(el=>enabled.add(el.dataset.mod));
+    const scope=document.getElementById('calc-tech-cap');
+    const enabled=enabledModulesFromScope(scope);
     const plugins=+document.getElementById('calc-tech-mod-plugins').value||0;
     const ssdTb=+document.getElementById('calc-tech-mod-ssd').value||0;
     const hddTb=+document.getElementById('calc-tech-mod-hdd').value||0;
-    const ha=document.getElementById('calc-tech-mod-ha').checked;
-    const cap=estimateCapacityFromModules(enabled, plugins, ssdTb, hddTb, ha);
-    document.getElementById('calc-tech-out').innerHTML=
-      renderHero([
-        {val:cap.totalRam+' ГБ', label:'RAM модулей'},
-        {val:String(cap.totalVcpu), label:'vCPU'},
-        {val:cap.maxRu.toLocaleString('ru-RU'), label:'макс. RU'},
+    const backup=document.getElementById('calc-tech-mod-backup').value;
+    const replicas=collectModuleReplicas(scope);
+    const cap=estimateCapacityFromModules(enabled, plugins, ssdTb, hddTb, backup, replicas);
+    document.getElementById('calc-tech-cap-out').innerHTML=
+      '<div class="calc-user-hero">'+renderHero([
+        {val:cap.maxRu.toLocaleString('ru-RU'), label:'макс. рег. пользователей'},
+        {val:cap.maxPo.toLocaleString('ru-RU'), label:'пик онлайн'},
+        {val:String(cap.maxPms), label:'пик msg/s'},
         {val:cap.storY+' лет', label:'HDD @10k RU'}
-      ])+
-      '<div class="calc-assumptions"><p class="small"><strong>Предел нагрузки</strong> (базовый экз. каждого модуля): пик онлайн до '+
-      cap.maxPo.toLocaleString('ru-RU')+' · пик msg/s до '+cap.maxPms+
-      ' · рег. пользователей до '+cap.maxRu.toLocaleString('ru-RU')+
-      '</p><p class="small">Хранилище '+hddTb+' ТБ HDD хватит ~'+cap.storY+' лет при 10k RU и retention 3 года (§10.1).</p></div>';
-  }
-  function runTech(){
-    const mode=document.getElementById('calc-tech-mode').value;
-    if(mode==='modules') runTechModules(); else runTechLoad();
-  }
-  function syncTechMode(){
-    const mode=document.getElementById('calc-tech-mode').value;
-    document.getElementById('calc-tech-load-panel').hidden=(mode!=='load');
-    document.getElementById('calc-tech-modules-panel').hidden=(mode!=='modules');
+      ])+'</div>'+
+      '<div class="calc-assumptions"><p class="small"><strong>Железо:</strong> RAM '+cap.totalRam+
+      ' ГБ (модули + бэкап) · vCPU '+cap.totalVcpu+' · SSD '+cap.ssdTb+' ТБ · HDD '+hddTb+' ТБ</p>'+
+      '<p class="small"><strong>Реплики:</strong> active умножают онлайн/msg/s; passive/cluster — RAM/vCPU×N.</p>'+
+      '<p class="small"><strong>Узкое место предела:</strong> '+cap.bottleneck+'</p></div>';
   }
   function runPm(){
     const inp={
@@ -1240,12 +1404,16 @@ def _deck_js() -> str:
       '<p class="small">Полная модель сопровождения; не заменяет детальное КП.</p>';
   }
 
-  document.getElementById('calc-tech-mode')?.addEventListener('change', syncTechMode);
   document.getElementById('calc-sales-run')?.addEventListener('click', runSales);
-  document.getElementById('calc-tech-run')?.addEventListener('click', runTech);
+  document.getElementById('calc-tech-res-run')?.addEventListener('click', runTechLoad);
+  document.getElementById('calc-tech-cap-run')?.addEventListener('click', runTechModules);
+  const capScope=document.getElementById('calc-tech-cap');
+  capScope?.querySelectorAll('.calc-mod-opt').forEach(el=>{
+    el.addEventListener('change', ()=>syncModuleDependencies(capScope));
+  });
+  syncModuleDependencies(capScope);
   document.getElementById('calc-pm-run')?.addEventListener('click', runPm);
-  syncTechMode();
-  runSales(); runTech(); runPm();
+  runSales(); runTechLoad(); runTechModules(); runPm();
 
   document.querySelector('a[href="#sales-s3"]')?.addEventListener('click', e=>{
     e.preventDefault(); activate('sales'); location.hash='sales-s3';

@@ -179,8 +179,9 @@ def estimate_resources(
     retention_years: int = ms.DEFAULT_RETENTION_YEARS,
     ha: bool = False,
     integration_plugins: int = 0,
+    module_replicas: dict[str, int] | None = None,
+    backup: str = "none",
 ) -> ResourceEstimate:
-    """Production full: нагрузка → ресурсы (состав модулей в module_sizing)."""
     inp = ms.LoadInputs(
         registered_users=ru,
         peak_online=peak_online,
@@ -190,6 +191,8 @@ def estimate_resources(
         retention_years=retention_years,
         ha=ha,
         integration_plugins=integration_plugins,
+        module_replicas=module_replicas or {},
+        backup=backup,
     )
     return _load_to_resource(ms.estimate_from_load(inp))
 
