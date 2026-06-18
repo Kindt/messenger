@@ -106,7 +106,6 @@ public class PushWorker {
         } catch (Exception e) {
             log.debug(workerMessages.format("worker.push.chat_title_failed", e.getMessage()));
         }
-        var preview = PushNotificationPreview.forEvent(event, chatTitle, workerMessages);
         var sent = 0;
         var failed = 0;
         var expired = 0;
@@ -114,6 +113,8 @@ public class PushWorker {
             if (!WebPushDelivery.isWebProvider(d.provider())) {
                 continue;
             }
+            var preview = PushNotificationPreview.forEvent(event, chatTitle, workerMessages,
+                isUserMentioned(event, d.userId()));
             var result = webPushDelivery.send(d.token(), preview);
             switch (result) {
                 case SENT -> sent++;
@@ -198,6 +199,28 @@ public class PushWorker {
         root.set("pushProviders", providers);
         root.put("issuedAtEpochMs", Instant.now().toEpochMilli());
         return root.toString();
+    }
+
+    private boolean isUserMentioned(MessageWorkerEvent event, String userId) {
+        if (event == null || event.messageId() == null || userId == null || userId.isBlank()) {
+            return false;
+        }
+        try {
+            var messageId = UUID.fromString(event.messageId());
+            var uid = UUID.fromString(userId);
+            var sql = "SELECT 1 FROM message_mentions WHERE message_id = ? AND user_id = ? LIMIT 1";
+            try (var conn = dataSource.getConnection();
+                 var stmt = conn.prepareStatement(sql)) {
+                stmt.setObject(1, messageId);
+                stmt.setObject(2, uid);
+                try (var rs = stmt.executeQuery()) {
+                    return rs.next();
+                }
+            }
+        } catch (Exception e) {
+            log.debug(workerMessages.format("worker.push.mention_check_failed", e.getMessage()));
+            return false;
+        }
     }
 
     private List<DeviceRow> loadTargetDevices(MessageWorkerEvent event) throws SQLException {

@@ -39,6 +39,7 @@ public final class JdbcMessageRepositoryAdapter implements MessageRepositoryPort
             command.type(),
             command.content(),
             command.replyToMsgId(),
+            command.threadId(),
             command.clientMsgId(),
             command.visibilityTtlSeconds(),
             command.attachmentFileId());
@@ -76,6 +77,7 @@ public final class JdbcMessageRepositoryAdapter implements MessageRepositoryPort
             response.type(),
             response.content(),
             response.replyToMsgId(),
+            response.threadId(),
             response.deleted(),
             response.createdAt(),
             response.editedAt(),

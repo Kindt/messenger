@@ -48,6 +48,7 @@ class MessageRepositoryH2Test {
                   type VARCHAR(16) NOT NULL DEFAULT 'text',
                   content TEXT,
                   reply_to_msg_id UUID,
+                  thread_id UUID,
                   deleted BOOLEAN NOT NULL DEFAULT false,
                   visibility_ttl_seconds INT,
                   attachment_file_id UUID,
@@ -211,6 +212,29 @@ class MessageRepositoryH2Test {
 
         var ref = repo.findLatestMessageRefForViewer(fileId, viewerId).orElseThrow();
         assertEquals(e2eeMsgId, ref.messageId());
+    }
+
+    @Test
+    void mainTimeline_excludesThreadReplies_andThreadViewIncludesRoot() {
+        var rootId = UUID.randomUUID();
+        var threadReplyId = UUID.randomUUID();
+        var topLevelId = UUID.randomUUID();
+        assertNotNull(repo.insert(rootId, chatId, senderId, "text", "root", null, null, "r0", null, null));
+        assertNotNull(repo.insert(threadReplyId, chatId, senderId, "text", "in thread", null, rootId, "t1", null, null));
+        assertNotNull(repo.insert(topLevelId, chatId, senderId, "text", "top", null, null, "t2", null, null));
+
+        var main = repo.findByChatId(chatId, 10, null);
+        assertEquals(2, main.size());
+        assertTrue(main.stream().anyMatch(m -> rootId.toString().equals(m.id())));
+        assertTrue(main.stream().anyMatch(m -> topLevelId.toString().equals(m.id())));
+        assertFalse(main.stream().anyMatch(m -> threadReplyId.toString().equals(m.id())));
+        var rootOnMain = main.stream().filter(m -> rootId.toString().equals(m.id())).findFirst().orElseThrow();
+        assertEquals(1, rootOnMain.threadReplyCount());
+
+        var thread = repo.findByChatId(chatId, 10, null, null, rootId);
+        assertEquals(2, thread.size());
+        assertTrue(thread.stream().anyMatch(m -> rootId.toString().equals(m.id())));
+        assertTrue(thread.stream().anyMatch(m -> threadReplyId.toString().equals(m.id())));
     }
 
     private void setMessageCreatedAt(UUID messageId, Instant createdAt) throws Exception {

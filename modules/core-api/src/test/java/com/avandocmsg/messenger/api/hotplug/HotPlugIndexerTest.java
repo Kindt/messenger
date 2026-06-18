@@ -90,6 +90,7 @@ class HotPlugIndexerTest {
             "text",
             content,
             null,
+            null,
             false,
             now,
             null,

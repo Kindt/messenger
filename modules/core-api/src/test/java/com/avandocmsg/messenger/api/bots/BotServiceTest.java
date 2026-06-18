@@ -88,7 +88,7 @@ class BotServiceTest {
                 com.avandocmsg.messenger.core.domain.MessageId.of(msgId),
                 com.avandocmsg.messenger.core.domain.ChatId.of(chatId),
                 com.avandocmsg.messenger.core.domain.UserId.of(senderId),
-                "text", "hi", null, false,
+                "text", "hi", null, null, false,
                 java.time.Instant.parse("2026-01-01T00:00:00Z"), null, null, null);
         }
 
@@ -138,7 +138,7 @@ class BotServiceTest {
                 com.avandocmsg.messenger.core.domain.MessageId.of(msgId),
                 com.avandocmsg.messenger.core.domain.ChatId.of(chatId),
                 com.avandocmsg.messenger.core.domain.UserId.of(senderId),
-                "text", "hi", null, false,
+                "text", "hi", null, null, false,
                 java.time.Instant.parse("2026-01-01T00:00:00Z"), null, null, null);
         }
 

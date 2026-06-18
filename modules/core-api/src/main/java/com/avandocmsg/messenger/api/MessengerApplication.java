@@ -74,6 +74,9 @@ import com.avandocmsg.messenger.api.repository.ContactRepository;
 import com.avandocmsg.messenger.api.repository.FileRepository;
 import com.avandocmsg.messenger.api.repository.MessageReadReceiptRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.api.repository.MessageMentionRepository;
+import com.avandocmsg.messenger.core.application.MessageMentionCoordinator;
+import com.avandocmsg.messenger.core.application.MessageSendCoordinator;
 import com.avandocmsg.messenger.api.chats.ReadReceiptService;
 import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.common.i18n.CompositeMessageSource;
@@ -172,6 +175,7 @@ public class MessengerApplication {
             appConfig.apiJdbcQueryTimeoutSeconds());
         this.messageRepository = new MessageRepository(dataSource, readDs, clock,
             appConfig.apiJdbcQueryTimeoutSeconds());
+        this.messageRepository.setMentionRepository(new MessageMentionRepository(dataSource));
         this.fileRepository = new FileRepository(dataSource);
         this.chatBanRepository = new ChatBanRepository(dataSource, clock, uuidGenerator);
         this.e2eeService = new E2EEService();
@@ -369,9 +373,11 @@ public class MessengerApplication {
         java.util.function.BooleanSupplier indexerAvailable =
             () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent();
         var indexerEventPublisher = CoreModule.indexerEventPublisher(natsOutbound, indexerAvailable);
-        var messageSendCoordinator = CoreModule.messageSendCoordinator(
-            dataSource, chatRepository, mlsService, mlsMigrationService, natsOutbound,
-            this.uuidGenerator, readCachePort);
+        var messageSendCoordinator = new MessageSendCoordinator(
+            CoreModule.messageRepositoryPort(dataSource),
+            chatRepository, mlsService, mlsMigrationService, natsOutbound,
+            this.uuidGenerator, readCachePort,
+            new MessageMentionCoordinator(chatRepository, new MessageMentionRepository(dataSource), natsOutbound));
         var messageEditCoordinator = CoreModule.messageEditCoordinator(dataSource, indexerEventPublisher);
         var messageDeleteCoordinator = CoreModule.messageDeleteCoordinator(
             dataSource, natsOutbound, indexerEventPublisher);

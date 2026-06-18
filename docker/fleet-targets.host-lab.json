@@ -7,9 +7,9 @@
   },
   {
     "id": "web-lb",
-    "role": "web-client",
+    "role": "nginx",
     "base_url": "http://127.0.0.1:19088",
-    "health_path": "/"
+    "health_path": "/health"
   },
   {
     "id": "ws-gateway-host",

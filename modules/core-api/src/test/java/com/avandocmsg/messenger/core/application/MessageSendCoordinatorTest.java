@@ -44,7 +44,7 @@ class MessageSendCoordinatorTest {
     @Test
     void send_persistsAndPublishesPipelineEvent() {
         var result = coordinator.send(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null, null, null), null);
 
         assertNotNull(result);
         assertEquals("hello", result.content());
@@ -55,7 +55,7 @@ class MessageSendCoordinatorTest {
     @Test
     void forward_persistsCopyAndPublishesPipelineEvent() {
         var sourceMsg = coordinator.send(chatId, userId,
-            new SendMessageRequest("text", "original", null, null, null, null, null), null);
+            new SendMessageRequest("text", "original", null, null, null, null, null, null), null);
         assertNotNull(sourceMsg);
         nats.pipelinePayloads.clear();
 
@@ -106,10 +106,20 @@ class MessageSendCoordinatorTest {
         public com.avandocmsg.messenger.api.messages.dto.MessageResponse insert(
             UUID id, UUID chatId, UUID senderId, String type, String content,
             UUID replyToMsgId, String clientMsgId, Integer visibilityTtlSeconds, UUID attachmentFileId) {
+            return insert(id, chatId, senderId, type, content, replyToMsgId, null, clientMsgId,
+                visibilityTtlSeconds, attachmentFileId);
+        }
+
+        @Override
+        public com.avandocmsg.messenger.api.messages.dto.MessageResponse insert(
+            UUID id, UUID chatId, UUID senderId, String type, String content,
+            UUID replyToMsgId, UUID threadId, String clientMsgId, Integer visibilityTtlSeconds,
+            UUID attachmentFileId) {
             var msg = new com.avandocmsg.messenger.api.messages.dto.MessageResponse(
                 id.toString(), chatId.toString(), senderId.toString(), type, content,
                 replyToMsgId != null ? replyToMsgId.toString() : null, false, Instant.now(), null,
-                visibilityTtlSeconds, attachmentFileId != null ? attachmentFileId.toString() : null);
+                visibilityTtlSeconds, attachmentFileId != null ? attachmentFileId.toString() : null,
+                threadId != null ? threadId.toString() : null, null, null, null, null);
             messages.add(msg);
             return msg;
         }

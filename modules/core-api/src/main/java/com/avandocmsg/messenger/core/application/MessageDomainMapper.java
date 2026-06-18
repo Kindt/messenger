@@ -19,6 +19,11 @@ public final class MessageDomainMapper {
             message.createdAt(),
             message.editedAt(),
             message.visibilityTtlSeconds(),
-            message.attachmentFileId());
+            message.attachmentFileId(),
+            message.threadId(),
+            null,
+            null,
+            null,
+            null);
     }
 }

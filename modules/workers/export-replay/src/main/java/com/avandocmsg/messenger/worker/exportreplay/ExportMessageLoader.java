@@ -76,7 +76,7 @@ final class ExportMessageLoader {
 
     static String buildMessagesSql(boolean applyTtlFilter) {
         return """
-            SELECT id, sender_id, client_msg_id, type, content, reply_to_msg_id, deleted, visibility_ttl_seconds, created_at, edited_at
+            SELECT id, sender_id, client_msg_id, type, content, reply_to_msg_id, thread_id, deleted, visibility_ttl_seconds, created_at, edited_at
             FROM messages
             WHERE %s
             ORDER BY created_at ASC

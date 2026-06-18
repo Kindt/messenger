@@ -111,6 +111,7 @@ class MessageApplicationServiceTest {
             "text",
             "hi",
             null,
+            null,
             false,
             Instant.parse("2026-01-01T00:00:00Z"),
             null,
@@ -195,6 +196,7 @@ class MessageApplicationServiceTest {
             "text",
             "hello",
             null,
+            null,
             false,
             Instant.parse("2026-01-01T00:00:00Z"),
             null,
@@ -247,7 +249,7 @@ class MessageApplicationServiceTest {
             if (message != null) {
                 message = new Message(
                     message.id(), message.chatId(), message.senderId(), message.type(), content,
-                    message.replyToMessageId(), message.deleted(), message.createdAt(),
+                    message.replyToMessageId(), message.threadId(), message.deleted(), message.createdAt(),
                     Instant.parse("2026-01-02T00:00:00Z"), message.visibilityTtlSeconds(), message.attachmentFileId());
             }
             return true;
@@ -289,6 +291,12 @@ class MessageApplicationServiceTest {
         @Override
         public java.util.List<com.avandocmsg.messenger.api.messages.dto.MessageResponse> findByChatId(
             UUID chatId, int limit, UUID before, UUID filterUserId) {
+            return findByChatId(chatId, limit, before, filterUserId, null);
+        }
+
+        @Override
+        public java.util.List<com.avandocmsg.messenger.api.messages.dto.MessageResponse> findByChatId(
+            UUID chatId, int limit, UUID before, UUID filterUserId, UUID threadId) {
             listCalled = true;
             lastLimit = limit;
             return java.util.List.of();

@@ -2,7 +2,6 @@ package com.avandocmsg.messenger.worker.push;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
-import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 
 /**
  * Visible push text derived from {@link MessageWorkerEvent} metadata (no extra DB body fetch).
@@ -11,9 +10,17 @@ public record PushNotificationPreview(String title, String body, String url) {
 
     public static PushNotificationPreview forEvent(MessageWorkerEvent event, String chatTitle,
                                                      UserMessageSource messages) {
+        return forEvent(event, chatTitle, messages, false);
+    }
+
+    public static PushNotificationPreview forEvent(MessageWorkerEvent event, String chatTitle,
+                                                     UserMessageSource messages, boolean mentioned) {
         var title = (chatTitle != null && !chatTitle.isBlank())
             ? chatTitle.trim()
             : messages.get("worker.push.preview.default_title");
+        if (mentioned) {
+            title = messages.format("worker.push.preview.mentioned_title", title);
+        }
         var body = bodyFor(event, messages);
         var url = "/";
         if (event.chatId() != null && !event.chatId().isBlank()) {

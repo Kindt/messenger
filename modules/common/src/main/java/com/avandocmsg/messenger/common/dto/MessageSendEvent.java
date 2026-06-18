@@ -16,5 +16,7 @@ public record MessageSendEvent(
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonProperty("attachment_file_id") String attachmentFileId,
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    @JsonProperty("visibility_ttl_seconds") Integer visibilityTtlSeconds
+    @JsonProperty("visibility_ttl_seconds") Integer visibilityTtlSeconds,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("thread_id") String threadId
 ) {}

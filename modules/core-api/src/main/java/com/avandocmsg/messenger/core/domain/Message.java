@@ -10,6 +10,7 @@ public record Message(
     String type,
     String content,
     String replyToMessageId,
+    String threadId,
     boolean deleted,
     Instant createdAt,
     Instant editedAt,

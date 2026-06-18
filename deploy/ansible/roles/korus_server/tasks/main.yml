@@ -38,6 +38,9 @@
     export DOCKER_BUILDKIT={{ korus_docker_buildkit | default('1') }}
     export COMPOSE_BAKE={{ korus_compose_bake | default('1') }}
     export KORUS_FLEET_LAB={{ 1 if (korus_fleet_lab | default(false) | bool) else 0 }}
+    {% if korus_fleet_lab | default(false) | bool and korus_fleet_targets_json is defined %}
+    export FLEET_TARGETS_JSON='{{ korus_fleet_targets_json }}'
+    {% endif %}
     if [[ -f "{{ korus_server_env_path }}" ]]; then
       set -a
       # shellcheck source=/dev/null

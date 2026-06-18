@@ -86,6 +86,7 @@ import com.avandocmsg.messenger.api.repository.ContactRepository;
 import com.avandocmsg.messenger.api.repository.FileRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.api.users.MeIntegrationsResource;
 import com.avandocmsg.messenger.api.users.MeSettingsResource;
 import com.avandocmsg.messenger.api.users.UserResource;
 import com.avandocmsg.messenger.core.adapter.messaging.NatsConnectionOutbound;
@@ -261,6 +262,7 @@ public class JerseyConfig extends ResourceConfig {
         register(CryptoResource.class);
         register(DeviceResource.class);
         register(MeSettingsResource.class);
+        register(MeIntegrationsResource.class);
         register(ExportResource.class);
         register(ConferenceResource.class);
         register(ChatConferenceResource.class);

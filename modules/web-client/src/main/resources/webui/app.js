@@ -273,6 +273,8 @@
     myPresence: "online",
     blockedUsers: null,
     sidebarMode: "chats",
+    discussionThreadRootId: null,
+    integrations: null,
     contacts: null,
     contactsBusy: false,
     myDisplayName: "",
@@ -849,6 +851,27 @@
     } catch (e) {}
   }
 
+  function maybeNotifyMention(data) {
+    if (!notificationsAllowed() || !isMentionEvent(data)) return;
+    var myId = jwtSub(state.tokens.access_token);
+    if (!myId || data.mentioned_user_id !== myId) return;
+    if (data.chat_id === state.selectedId && !document.hidden) return;
+    playNotifySound();
+    var title = L("ui.mention.notificationTitle", { chat: chatTitleById(data.chat_id) });
+    try {
+      var note = new Notification(title, {
+        body: L("ui.mention.notificationBody"),
+        tag: "korus-mention-" + data.message_id,
+        icon: "/webui/favicon.ico",
+      });
+      note.onclick = function () {
+        window.focus();
+        note.close();
+        openChatById(data.chat_id).catch(function () {});
+      };
+    } catch (e) {}
+  }
+
   function maybeNotifyMessage(data) {
     if (!notificationsAllowed() || !isMessageSendEvent(data)) return;
     var myId = jwtSub(state.tokens.access_token);
@@ -1001,6 +1024,16 @@
       if (!opts.silent) {
         state.error = e.message || L("profile.localeSaveFailed");
       }
+    }
+  }
+
+  async function loadIntegrations() {
+    if (!state.tokens) return;
+    try {
+      var res = await apiJson("/me/integrations", { method: "GET" });
+      state.integrations = res && res.items ? res.items : [];
+    } catch (e) {
+      state.integrations = [];
     }
   }
 
@@ -2270,6 +2303,7 @@
 
   function openChatById(chatId, options) {
     options = options || {};
+    state.discussionThreadRootId = null;
     if (!chatId) return Promise.resolve();
     persistCurrentComposerDraft();
     if (
@@ -3851,6 +3885,34 @@
     );
   }
 
+  function isMentionEvent(o) {
+    return o && typeof o === "object" && o.type === "mention" && typeof o.message_id === "string";
+  }
+
+  function messageMentionsMe(m) {
+    var myId = jwtSub(state.tokens && state.tokens.access_token);
+    if (!myId || !m) return false;
+    if (m.mention_all) return true;
+    var ids = m.mention_user_ids;
+    if (!ids || !ids.length) return false;
+    return ids.indexOf(myId) >= 0;
+  }
+
+  function openDiscussionThread(rootId) {
+    if (!rootId) return;
+    state.discussionThreadRootId = rootId;
+    if (state.selectedId) {
+      loadThread(state.selectedId).then(render).catch(function () {});
+    }
+  }
+
+  function closeDiscussionThread() {
+    state.discussionThreadRootId = null;
+    if (state.selectedId) {
+      loadThread(state.selectedId).then(render).catch(function () {});
+    }
+  }
+
   function isPinChangeEvent(o) {
     return (
       o &&
@@ -4530,6 +4592,9 @@
     if (!options.preserveBlobs) revokeBlobUrls();
     if (!options.preserveE2eeCache) state.e2eePlaintextCache = {};
     var q = new URLSearchParams({ limit: String(THREAD_PAGE) });
+    if (state.discussionThreadRootId) {
+      q.set("thread_id", state.discussionThreadRootId);
+    }
     var rows = await apiJson("/chats/" + chatId + "/messages?" + q, { method: "GET" });
     state.messages = sortMessagesAsc(rows);
     state.threadHasMore = rows.length >= THREAD_PAGE;
@@ -4645,6 +4710,9 @@
     render();
     try {
       var q = new URLSearchParams({ limit: String(THREAD_PAGE), before: oldest.id });
+      if (state.discussionThreadRootId) {
+        q.set("thread_id", state.discussionThreadRootId);
+      }
       var rows = await apiJson("/chats/" + state.selectedId + "/messages?" + q, {
         method: "GET",
       });
@@ -5489,6 +5557,20 @@
           applyPinChangeEvent(data);
           return;
         }
+        if (isMentionEvent(data)) {
+          sendHeartbeatThrottled();
+          var myId = jwtSub(state.tokens.access_token);
+          if (myId && data.mentioned_user_id === myId) {
+            maybeNotifyMention(data);
+            if (data.chat_id === state.selectedId) {
+              scheduleRender();
+            } else {
+              bumpUnread(data.chat_id);
+              scheduleRender();
+            }
+          }
+          return;
+        }
         if (isConferenceChangeEvent(data)) {
           sendHeartbeatThrottled();
           applyConferenceChangeEvent(data);
@@ -6073,6 +6155,9 @@
           client_msg_id: null,
           visibility_ttl_seconds: getComposerTtlSeconds(),
         };
+      if (state.discussionThreadRootId) {
+        body.thread_id = state.discussionThreadRootId;
+      }
       var scheme = preferredE2eeScheme();
       if (scheme) {
         body.e2ee_scheme = scheme;
@@ -6108,6 +6193,9 @@
           client_msg_id: null,
           visibility_ttl_seconds: getComposerTtlSeconds(),
         };
+      if (state.discussionThreadRootId) {
+        body.thread_id = state.discussionThreadRootId;
+      }
       var scheme = preferredE2eeScheme();
       if (scheme) {
         body.e2ee_scheme = scheme;
@@ -7379,8 +7467,23 @@
       state.sidebarMode = "contacts";
       loadContacts().then(render);
     };
+    var tabIntegrations = el(
+      "button",
+      "sidebar-tab sidebar-tab-icon" + (state.sidebarMode === "integrations" ? " active" : ""),
+      "🧩"
+    );
+    tabIntegrations.type = "button";
+    tabIntegrations.title = L("ui.sidebar.integrations");
+    tabIntegrations.setAttribute("aria-label", L("ui.sidebar.integrations"));
+    tabIntegrations.setAttribute("data-testid", "sidebar-tab-integrations");
+    tabIntegrations.onclick = function () {
+      if (state.sidebarMode === "integrations") return;
+      state.sidebarMode = "integrations";
+      loadIntegrations().then(render);
+    };
     tabs.appendChild(tabChats);
     tabs.appendChild(tabContacts);
+    tabs.appendChild(tabIntegrations);
     sideToolbar.appendChild(tabs);
     sh.appendChild(sideToolbar);
     side.appendChild(sh);
@@ -7495,6 +7598,29 @@
       });
       impBlock.appendChild(bImp);
       side.appendChild(impBlock);
+    } else if (state.sidebarMode === "integrations") {
+      var iList = el("div", "chat-list integrations-list");
+      var items = state.integrations || [];
+      if (!items.length) {
+        iList.appendChild(el("div", "chat-list-empty", L("ui.sidebar.noIntegrations")));
+      } else {
+        items.forEach(function (it) {
+          var btn = el("button", "chat-item integration-item");
+          btn.type = "button";
+          btn.textContent = it.label || it.bot_name || it.id;
+          btn.setAttribute("data-testid", "integration-open-" + (it.bot_name || it.id));
+          btn.onclick = function () {
+            if (!it.launch_url) return;
+            if (it.open_mode === "tab") {
+              window.open(it.launch_url, "_blank", "noopener,noreferrer");
+            } else {
+              window.open(it.launch_url, "korus-integration", "noopener,noreferrer");
+            }
+          };
+          iList.appendChild(btn);
+        });
+      }
+      side.appendChild(iList);
     } else {
     var list = el("div", "chat-list");
     list.addEventListener("scroll", function () {
@@ -7582,6 +7708,18 @@
       var th = el("div", "thread-header");
       var thMain = el("div", "thread-header-main");
       thMain.appendChild(el("div", "thread-title", (sel && sel.title) || state.selectedId));
+      if (state.discussionThreadRootId) {
+        var discBar = el("div", "thread-discussion-bar");
+        discBar.appendChild(
+          iconBtn("←", L("ui.thread.backToChat"), {
+            onClick: function () {
+              closeDiscussionThread();
+            },
+          })
+        );
+        discBar.appendChild(el("span", "thread-discussion-label", L("ui.thread.discussion")));
+        thMain.appendChild(discBar);
+      }
       var chatTtlSeconds = messageVisibilityTtlSeconds(sel);
       if (chatTtlSeconds) {
         thMain.appendChild(
@@ -7776,7 +7914,8 @@
           "msg" +
             (myId && m.sender_id === myId ? " own" : "") +
             (isMessagePinned(m.id) ? " pinned" : "") +
-            (m.deleted ? " deleted" : "")
+            (m.deleted ? " deleted" : "") +
+            (messageMentionsMe(m) ? " msg-mention-me" : "")
         );
         art.id = "msg-" + m.id;
         var meta = el("div", "msg-meta");
@@ -7785,6 +7924,16 @@
         ts.className = "msg-ts";
         ts.textContent = new Date(m.created_at).toLocaleString();
         meta.appendChild(ts);
+        if (m.thread_reply_count && m.thread_reply_count > 0 && !state.discussionThreadRootId) {
+          var tBadge = el("button", "msg-thread-badge", m.thread_reply_count + " ↩");
+          tBadge.type = "button";
+          tBadge.title = L("ui.thread.openDiscussion");
+          tBadge.onclick = function (ev) {
+            ev.stopPropagation();
+            openDiscussionThread(m.id);
+          };
+          meta.appendChild(tBadge);
+        }
         if (m.edited_at) {
           var ed = el("button", "msg-edited");
           ed.type = "button";

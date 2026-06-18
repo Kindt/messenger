@@ -8,7 +8,9 @@ param(
     # Требовать в ответе health/ready: redis_ok и nats_ok = true (полный стек, не только PostgreSQL).
     [switch]$StrictDependencies,
     # QEMU lab: fleet overlay probes ws-gateway + message-pipeline (>= 3 components).
-    [switch]$StrictFleet
+    [switch]$StrictFleet,
+    # With FLEET-06 web nginx LB probe on QEMU (>= 4 components).
+    [switch]$StrictFleetWeb
 )
 $ErrorActionPreference = "Stop"
 
@@ -64,7 +66,7 @@ try {
     Fail $_
 }
 try {
-    $fleetMin = if ($StrictFleet) { 3 } else { 0 }
+    $fleetMin = if ($StrictFleetWeb) { 4 } elseif ($StrictFleet) { 3 } else { 0 }
     $null = Test-SmokeAdminUiApi -BaseUrl $BaseUrl -AuthHeaders $hdr -MinFleetComponents $fleetMin
 } catch {
     Fail $_

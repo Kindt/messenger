@@ -92,6 +92,12 @@ public class MessageResource {
         if (request.replyToMsgId() != null && !request.replyToMsgId().isBlank()) {
             replyToMsgId = UuidParams.required(request.replyToMsgId(), "reply_to_msg_id");
         }
+        var threadErr = messageApplicationService.threadInvalidReason(chatId, request);
+        if (threadErr.isPresent()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get(threadErr.get())))
+                .build();
+        }
         if (!messageApplicationService.isChatMember(ChatId.of(chatId), UserId.of(userId))) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.message.send_denied.not_member")))
@@ -120,6 +126,7 @@ public class MessageResource {
     public Response list(@PathParam("chatId") String chatIdStr,
                          @QueryParam("limit") @DefaultValue("50") int limit,
                          @QueryParam("before") String beforeStr,
+                         @QueryParam("thread_id") String threadIdStr,
                          @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
         var chatId = UuidParams.required(chatIdStr, "chat_id");
@@ -132,7 +139,11 @@ public class MessageResource {
         if (beforeStr != null && !beforeStr.isBlank()) {
             before = UuidParams.required(beforeStr, "before");
         }
-        var messages = messageApplicationService.listMessages(chatId, userId, limit, before);
+        UUID threadId = null;
+        if (threadIdStr != null && !threadIdStr.isBlank()) {
+            threadId = UuidParams.required(threadIdStr, "thread_id");
+        }
+        var messages = messageApplicationService.listMessages(chatId, userId, limit, before, threadId);
         return Response.ok(messages).build();
     }
 

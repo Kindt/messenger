@@ -14,6 +14,7 @@ public record MessageInsert(
     String type,
     String content,
     UUID replyToMsgId,
+    UUID threadId,
     String clientMsgId,
     Integer visibilityTtlSeconds,
     UUID attachmentFileId

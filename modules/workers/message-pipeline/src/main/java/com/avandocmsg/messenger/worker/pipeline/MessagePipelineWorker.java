@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.worker.pipeline;
 
 import com.avandocmsg.messenger.common.dto.MessageChangeEvent;
+import com.avandocmsg.messenger.common.dto.MentionEvent;
 import com.avandocmsg.messenger.common.dto.ConferenceChangeEvent;
 import com.avandocmsg.messenger.common.dto.LiveSessionChangeEvent;
 import com.avandocmsg.messenger.common.dto.PinChangeEvent;
@@ -47,6 +48,7 @@ public class MessagePipelineWorker {
     private static final String CHANGE_QUEUE_GROUP = "change-pipeline-workers";
     private static final String REACTION_QUEUE_GROUP = "reaction-pipeline-workers";
     private static final String PIN_QUEUE_GROUP = "pin-pipeline-workers";
+    private static final String MENTION_QUEUE_GROUP = "mention-pipeline-workers";
     private static final String CONFERENCE_QUEUE_GROUP = "conference-pipeline-workers";
     private static final String LIVE_SESSION_QUEUE_GROUP = "live-session-pipeline-workers";
     private static final String READ_RECEIPT_QUEUE_GROUP = "read-receipt-pipeline-workers";
@@ -114,6 +116,7 @@ public class MessagePipelineWorker {
         subscribeChangeFanout();
         subscribeReactionFanout();
         subscribePinFanout();
+        subscribeMentionFanout();
         subscribeConferenceFanout();
         subscribeLiveSessionFanout();
         subscribeReadReceiptFanout();
@@ -250,6 +253,41 @@ public class MessagePipelineWorker {
             evt.messageId());
         log.debug(workerMessages.format("worker.pipeline.pin_debug",
             evt.change(), evt.messageId(), chatId, members.size()));
+    }
+
+    private void subscribeMentionFanout() {
+        var dispatcher = natsConnection.createDispatcher(this::handleMentionCoreMessage);
+        dispatcher.subscribe(NatsSubjects.MSG_MENTION, MENTION_QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed_for", NatsSubjects.MSG_MENTION, MENTION_QUEUE_GROUP, "mentions"));
+    }
+
+    private void handleMentionCoreMessage(Message msg) {
+        try {
+            handleMentionPayload(msg.getData());
+        } catch (Exception e) {
+            log.error("mention fan-out failed", e);
+        }
+    }
+
+    private void handleMentionPayload(byte[] raw) throws Exception {
+        var evt = MAPPER.readValue(raw, MentionEvent.class);
+        if (!MentionEvent.TYPE.equals(evt.type())) {
+            return;
+        }
+        var chatId = UUID.fromString(evt.chatId());
+        var sender = UUID.fromString(evt.senderId());
+        var target = UUID.fromString(evt.mentionedUserId());
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, sender, workerMessages)) {
+            log.warn(workerMessages.format("worker.pipeline.pin_dropped", sender, chatId));
+            return;
+        }
+        if (!PipelineFanoutLogic.isChatMember(dataSource, chatId, target, workerMessages)) {
+            log.warn(workerMessages.format("worker.pipeline.pin_dropped", target, chatId));
+            return;
+        }
+        DeliverFanout.publish(natsConnection, List.of(target.toString()), chatId.toString(), raw, deliverConfig, fanoutDedup,
+            fanoutDedupId("mention", evt.messageId(), evt.mentionedUserId()));
+        log.debug("mention fan-out messageId={} chatId={} target={}", evt.messageId(), chatId, target);
     }
 
     private void subscribeConferenceFanout() {

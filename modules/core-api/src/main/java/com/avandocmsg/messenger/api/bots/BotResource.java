@@ -5,7 +5,6 @@ import com.avandocmsg.messenger.api.bots.dto.BotSendMessageRequest;
 import com.avandocmsg.messenger.api.bots.dto.BotSubscribeRequest;
 import com.avandocmsg.messenger.api.bots.dto.BotWebhookRequest;
 import com.avandocmsg.messenger.api.bots.dto.CreateBotRequest;
-import com.avandocmsg.messenger.api.bots.dto.RotateBotTokenResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
@@ -241,6 +240,7 @@ public class BotResource {
         var sendRequest = new SendMessageRequest(
             request.type() != null && !request.type().isBlank() ? request.type() : "text",
             request.content(),
+            null,
             null,
             request.clientMsgId(),
             null,

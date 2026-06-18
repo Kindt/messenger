@@ -41,6 +41,10 @@ if [[ "$SKIP_KORUS_ENSURE" != "1" ]]; then
   korus_ensure_env "$ROOT" || exit 1
 fi
 
+if [[ "${KORUS_FLEET_LAB:-0}" == "1" && -z "${FLEET_TARGETS_JSON:-}" ]]; then
+  export FLEET_TARGETS_JSON='[{"id":"ws-gateway","role":"ws-gateway","base_url":"http://ws-gateway:9191","health_path":"/health"},{"id":"message-pipeline","role":"worker","base_url":"http://message-pipeline:9191","health_path":"/health"}]'
+fi
+
 COMPOSE="$KORUS_COMPOSE_FULL_SERVER"
 if [[ ! -f "$COMPOSE" ]]; then
   echo "Not found: $COMPOSE" >&2

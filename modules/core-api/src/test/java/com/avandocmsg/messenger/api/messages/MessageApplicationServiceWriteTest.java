@@ -83,7 +83,7 @@ class MessageApplicationServiceWriteTest {
         chatRepo.bannedUsers.add(bannedUserId);
 
         var result = messageService.sendMessage(chatId, bannedUserId,
-            new SendMessageRequest("text", "hello", null, null, null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null, null, null), null);
 
         assertNull(result);
     }
@@ -91,7 +91,7 @@ class MessageApplicationServiceWriteTest {
     @Test
     void sendMessage_allowsNonBannedUser() {
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null, null, null), null);
 
         assertNotNull(result);
         assertEquals("text", result.type());
@@ -105,7 +105,7 @@ class MessageApplicationServiceWriteTest {
         blockRepo.blockedPairs.add(userId.toString() + ":" + peer);
 
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null, null, null), null);
 
         assertNull(result);
         assertTrue(messageService.sendBlockedReason(chatId, userId).isPresent());
@@ -116,7 +116,7 @@ class MessageApplicationServiceWriteTest {
         mlsService.encryptResult = "encrypted_hello";
 
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null, null, null), null);
 
         assertNotNull(result);
         assertEquals("e2ee-text", result.type());
@@ -126,7 +126,7 @@ class MessageApplicationServiceWriteTest {
     void sendMessage_passesTtlToRepository() {
         msgRepo.lastInsertVisibilityTtl = null;
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, 120, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, 120, null, null), null);
 
         assertNotNull(result);
         assertEquals(120, msgRepo.lastInsertVisibilityTtl);
@@ -138,7 +138,7 @@ class MessageApplicationServiceWriteTest {
         var replyId = UUID.randomUUID();
         msgRepo.lastInsertReplyTo = null;
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", replyId.toString(), null, null, null, null), replyId);
+            new SendMessageRequest("text", "hello", replyId.toString(), null, null, null, null, null), replyId);
 
         assertNotNull(result);
         assertEquals(replyId, msgRepo.lastInsertReplyTo);
@@ -260,7 +260,7 @@ class MessageApplicationServiceWriteTest {
         var fileId = UUID.randomUUID();
         mlsService.encryptResult = "encrypted_blob";
         var sent = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("e2ee-file", fileId.toString(), null, null, null, null, null), null);
+            new SendMessageRequest("e2ee-file", fileId.toString(), null, null, null, null, null, null), null);
         assertNotNull(sent);
         assertEquals(fileId.toString(), sent.attachmentFileId());
         assertEquals(1, msgRepo.messages.size());
@@ -375,6 +375,7 @@ class MessageApplicationServiceWriteTest {
                 resp.type(),
                 resp.content(),
                 reply != null ? reply.toString() : null,
+                resp.threadId(),
                 resp.deleted(),
                 resp.createdAt(),
                 resp.editedAt(),
@@ -424,9 +425,18 @@ class MessageApplicationServiceWriteTest {
 
         @Override
         public List<MessageResponse> findByChatId(UUID chatId, int limit, UUID before, UUID filterUserId) {
+            return findByChatId(chatId, limit, before, filterUserId, null);
+        }
+
+        @Override
+        public List<MessageResponse> findByChatId(UUID chatId, int limit, UUID before, UUID filterUserId,
+                                                   UUID threadId) {
             lastFilterUserId = filterUserId;
             return messages.stream()
                 .filter(m -> m.chatId().equals(chatId.toString()))
+                .filter(m -> threadId == null || threadId.toString().equals(m.threadId())
+                    || threadId.toString().equals(m.id()))
+                .filter(m -> threadId != null || m.threadId() == null)
                 .limit(limit).toList();
         }
 

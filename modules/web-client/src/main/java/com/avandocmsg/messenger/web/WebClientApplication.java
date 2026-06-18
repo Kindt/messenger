@@ -36,6 +36,9 @@ public final class WebClientApplication {
         Tomcat.addServlet(ctx, "health", new HealthServlet());
         ctx.addServletMappingDecoded("/health", "health");
 
+        Tomcat.addServlet(ctx, "nginxLbHealth", new NginxLbHealthServlet());
+        ctx.addServletMappingDecoded("/nginx-health", "nginxLbHealth");
+
         Tomcat.addServlet(ctx, "webClientEnv", new WebClientEnvServlet());
         ctx.addServletMappingDecoded("/web-client-env.js", "webClientEnv");
 

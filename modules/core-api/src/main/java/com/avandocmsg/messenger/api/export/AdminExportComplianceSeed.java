@@ -163,7 +163,7 @@ public final class AdminExportComplianceSeed {
 
                 actorId,
 
-                new SendMessageRequest("text", content, null, null, null, null, COMPLIANCE_PLAINTEXT_SCHEME),
+                new SendMessageRequest("text", content, null, null, null, null, null, COMPLIANCE_PLAINTEXT_SCHEME),
 
                 null
 
@@ -225,7 +225,7 @@ public final class AdminExportComplianceSeed {
 
                 actorId,
 
-                new SendMessageRequest("file", fileId, null, null, null, null, COMPLIANCE_PLAINTEXT_SCHEME),
+                new SendMessageRequest("file", fileId, null, null, null, null, null, COMPLIANCE_PLAINTEXT_SCHEME),
 
                 null
 
@@ -292,5 +292,3 @@ public final class AdminExportComplianceSeed {
     }
 
 }
-
-

@@ -109,13 +109,43 @@ public final class MessageApplicationService {
     }
 
     public List<MessageResponse> listMessages(UUID chatId, UUID userId, int limit, UUID before) {
+        return listMessages(chatId, userId, limit, before, null);
+    }
+
+    public List<MessageResponse> listMessages(UUID chatId, UUID userId, int limit, UUID before, UUID threadId) {
         if (legacyMessageRepository == null || !canAccessChat(chatId, userId)) {
             return List.of();
         }
         if (limit <= 0 || limit > 100) {
             limit = 50;
         }
-        return legacyMessageRepository.findByChatId(chatId, limit, before, userId);
+        return legacyMessageRepository.findByChatId(chatId, limit, before, userId, threadId);
+    }
+
+    /**
+     * Bundle key {@code error.message.thread_invalid} for {@link com.avandocmsg.messenger.common.i18n.UserMessageSource}.
+     */
+    public Optional<String> threadInvalidReason(UUID chatId, SendMessageRequest request) {
+        if (request == null || request.threadId() == null || request.threadId().isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            var threadId = UUID.fromString(request.threadId().trim());
+            var root = messageRepositoryPort.findById(MessageId.of(threadId));
+            if (root.isEmpty()) {
+                return Optional.of("error.message.thread_invalid");
+            }
+            var message = root.get();
+            if (!message.chatId().value().equals(chatId) || message.deleted()) {
+                return Optional.of("error.message.thread_invalid");
+            }
+            if (message.threadId() != null) {
+                return Optional.of("error.message.thread_invalid");
+            }
+            return Optional.empty();
+        } catch (IllegalArgumentException e) {
+            return Optional.of("error.message.thread_invalid");
+        }
     }
 
     public List<MessageVersionResponse> getMessageVersions(UUID chatId, UUID msgId, UUID userId) {

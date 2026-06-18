@@ -39,7 +39,7 @@
     # shellcheck source=/dev/null
     . "{{ korus_repo_root }}/deploy/qemu/vm-bootstrap/korus-plain-build-env.sh"
     export DOCKER_BUILDKIT={{ korus_docker_buildkit | default('1') }}
-    docker compose --env-file .env -f docker-compose.yml build lb
+    docker compose --env-file .env -f docker-compose.yml build --no-cache lb
     docker compose --env-file .env -f docker-compose.yml up -d --force-recreate --remove-orphans lb
   args:
     executable: /bin/bash

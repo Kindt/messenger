@@ -361,13 +361,14 @@
   function mountLegalHold(summary, pre, ctx) {
     summary.innerHTML = "";
     summary.hidden = false;
-    pre.textContent = "Загрузите legal hold для org или chat.";
+    pre.textContent = "Выберите org или chat и загрузите флаги legal hold.";
 
     const box = document.createElement("div");
     box.className = "panel-form legal-hold-form";
     const hint = document.createElement("p");
     hint.className = "muted small";
-    hint.textContent = "GET/PATCH /admin/legal-hold/organizations/{id} и …/chats/{id} — флаги V025.";
+    hint.textContent =
+      "GET/PATCH /admin/legal-hold/organizations/{id} и …/chats/{id}. Org из панели «Организация» подхватывается автоматически.";
     box.appendChild(hint);
 
     let target = { kind: null, id: null };
@@ -394,51 +395,78 @@
     }
     box.appendChild(flagRow());
 
-    const mkLoadRow = (inputId, label, kind) => {
-      const row = document.createElement("div");
-      row.className = "admin-toolbar";
-      row.appendChild(mkField(inputId, label, "UUID"));
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "btn btn-secondary";
-      btn.textContent = "Загрузить";
-      const msg = document.createElement("span");
-      msg.className = "muted small";
-      btn.addEventListener("click", async () => {
-        msg.textContent = "";
-        const uuid = document.getElementById(inputId).value.trim();
-        if (!uuid) {
-          msg.textContent = "Введите UUID";
-          return;
-        }
-        const path =
-          kind === "org"
-            ? "/admin/legal-hold/organizations/" + encodeURIComponent(uuid)
-            : "/admin/legal-hold/chats/" + encodeURIComponent(uuid);
-        try {
-          const data = await ctx.apiFetch(path);
-          target = { kind: kind, id: uuid };
-          fillForm(data);
-          showResult(pre, data, null);
-          msg.textContent = "Загружено.";
-        } catch (e) {
-          msg.textContent = e.message || String(e);
-        }
-      });
-      row.appendChild(btn);
-      row.appendChild(msg);
-      return row;
-    };
+    const kindSel = document.createElement("select");
+    kindSel.id = "lhKind";
+    kindSel.className = "lh-kind-select";
+    [
+      { v: "org", t: "Организация" },
+      { v: "chat", t: "Чат" },
+    ].forEach((o) => {
+      const opt = document.createElement("option");
+      opt.value = o.v;
+      opt.textContent = o.t;
+      kindSel.appendChild(opt);
+    });
 
-    box.appendChild(mkLoadRow("lhOrgId", "Организация", "org"));
-    box.appendChild(mkLoadRow("lhChatId", "Чат", "chat"));
+    const loadRow = document.createElement("div");
+    loadRow.className = "admin-toolbar";
+    const kindLbl = document.createElement("label");
+    kindLbl.className = "field";
+    kindLbl.appendChild(document.createTextNode("Объект"));
+    kindLbl.appendChild(kindSel);
+    loadRow.appendChild(kindLbl);
+    loadRow.appendChild(mkField("lhTargetId", "target_id", "UUID org или chat"));
+    const loadBtn = document.createElement("button");
+    loadBtn.type = "button";
+    loadBtn.className = "btn btn-secondary";
+    loadBtn.textContent = "Загрузить";
+    const loadMsg = document.createElement("span");
+    loadMsg.className = "muted small";
+
+    async function loadTarget(kind, uuid, silent) {
+      loadMsg.textContent = "";
+      if (!uuid) {
+        if (!silent) {
+          loadMsg.textContent = "Введите UUID";
+        }
+        return false;
+      }
+      const path =
+        kind === "org"
+          ? "/admin/legal-hold/organizations/" + encodeURIComponent(uuid)
+          : "/admin/legal-hold/chats/" + encodeURIComponent(uuid);
+      try {
+        const data = await ctx.apiFetch(path);
+        target = { kind: kind, id: uuid };
+        fillForm(data);
+        showResult(pre, data, null);
+        if (!silent) {
+          loadMsg.textContent = "Загружено.";
+        }
+        return true;
+      } catch (e) {
+        loadMsg.textContent = e.message || String(e);
+        return false;
+      }
+    }
+
+    loadBtn.addEventListener("click", () => {
+      const kind = kindSel.value;
+      const uuid = document.getElementById("lhTargetId").value.trim();
+      loadTarget(kind, uuid, false);
+    });
+    loadRow.appendChild(loadBtn);
+    loadRow.appendChild(loadMsg);
+    box.appendChild(loadRow);
 
     const orgPrefill = getOrgId(ctx);
     if (orgPrefill) {
-      const o = document.getElementById("lhOrgId");
-      if (o) {
-        o.value = orgPrefill;
+      const inp = document.getElementById("lhTargetId");
+      if (inp) {
+        inp.value = orgPrefill;
       }
+      kindSel.value = "org";
+      loadTarget("org", orgPrefill, true);
     }
 
     const patchRow = document.createElement("div");

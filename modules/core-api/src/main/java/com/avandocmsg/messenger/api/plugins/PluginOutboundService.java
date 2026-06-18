@@ -8,7 +8,6 @@ import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
-import java.util.Optional;
 import java.util.UUID;
 
 public class PluginOutboundService {
@@ -55,6 +54,7 @@ public class PluginOutboundService {
             var send = new SendMessageRequest(
                 "text",
                 request.text(),
+                null,
                 null,
                 "plugin-outbound-" + UUID.randomUUID(),
                 null,

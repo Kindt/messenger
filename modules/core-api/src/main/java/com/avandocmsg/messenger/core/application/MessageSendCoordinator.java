@@ -35,6 +35,7 @@ public final class MessageSendCoordinator {
     private final NatsOutboundPort natsOutbound;
     private final UuidGenerator uuidGenerator;
     private final ReadCachePort readCachePort;
+    private final MessageMentionCoordinator mentionCoordinator;
 
     public MessageSendCoordinator(
         MessageRepositoryPort messageRepositoryPort,
@@ -45,6 +46,20 @@ public final class MessageSendCoordinator {
         UuidGenerator uuidGenerator,
         ReadCachePort readCachePort
     ) {
+        this(messageRepositoryPort, chatRepository, mlsService, mlsMigrationService,
+            natsOutbound, uuidGenerator, readCachePort, null);
+    }
+
+    public MessageSendCoordinator(
+        MessageRepositoryPort messageRepositoryPort,
+        ChatRepository chatRepository,
+        MlsService mlsService,
+        MlsMigrationService mlsMigrationService,
+        NatsOutboundPort natsOutbound,
+        UuidGenerator uuidGenerator,
+        ReadCachePort readCachePort,
+        MessageMentionCoordinator mentionCoordinator
+    ) {
         this.messageRepositoryPort = messageRepositoryPort;
         this.chatRepository = chatRepository;
         this.mlsService = mlsService;
@@ -52,10 +67,12 @@ public final class MessageSendCoordinator {
         this.natsOutbound = natsOutbound;
         this.uuidGenerator = uuidGenerator;
         this.readCachePort = readCachePort != null ? readCachePort : com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter.INSTANCE;
+        this.mentionCoordinator = mentionCoordinator;
     }
 
     public MessageResponse send(UUID chatId, UUID senderId, SendMessageRequest request, UUID replyToMsgId) {
         var attachmentFileId = MessageSendSupport.parseAttachmentFileId(request.type(), request.content());
+        var plainForMentions = request.content();
         var content = request.content();
         if (MessageSendSupport.usesMlsScheme(request) && mlsMigrationService != null) {
             mlsMigrationService.migrateToMls(chatId);
@@ -67,6 +84,14 @@ public final class MessageSendCoordinator {
             content = MessageSendSupport.combinedCiphertextBase64(encrypted);
         }
         var id = uuidGenerator.randomUuid();
+        UUID threadId = null;
+        if (request.threadId() != null && !request.threadId().isBlank()) {
+            try {
+                threadId = UUID.fromString(request.threadId().trim());
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
         var inserted = messageRepositoryPort.insert(new MessageInsert(
             MessageId.of(id),
             ChatId.of(chatId),
@@ -74,6 +99,7 @@ public final class MessageSendCoordinator {
             MessageSendSupport.typeForEncrypted(request.type(), encrypted),
             content,
             replyToMsgId,
+            threadId,
             request.clientMsgId(),
             request.visibilityTtlSeconds(),
             attachmentFileId));
@@ -82,6 +108,10 @@ public final class MessageSendCoordinator {
         }
         var msg = MessageDomainMapper.toResponse(inserted.get());
         publishSendEvent(msg, request.clientMsgId());
+        if (mentionCoordinator != null) {
+            var createdMs = msg.createdAt() != null ? msg.createdAt().toEpochMilli() : System.currentTimeMillis();
+            mentionCoordinator.afterMessageSent(chatId, id, senderId, plainForMentions, createdMs);
+        }
         invalidateUnreadForChatMembers(chatId, senderId);
         return msg;
     }
@@ -113,6 +143,7 @@ public final class MessageSendCoordinator {
             null,
             null,
             null,
+            null,
             attachmentFileId));
         if (inserted.isEmpty()) {
             return null;
@@ -131,7 +162,8 @@ public final class MessageSendCoordinator {
                 msg.createdAt() != null ? msg.createdAt().toEpochMilli() : null,
                 msg.replyToMsgId(),
                 msg.attachmentFileId(),
-                msg.visibilityTtlSeconds());
+                msg.visibilityTtlSeconds(),
+                msg.threadId());
             var data = MAPPER.writeValueAsBytes(event);
             natsOutbound.publishPipelineMessageSend(data);
         } catch (Exception e) {

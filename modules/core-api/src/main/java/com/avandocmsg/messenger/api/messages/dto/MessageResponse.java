@@ -22,6 +22,16 @@ public record MessageResponse(
     @JsonProperty("visibility_ttl_seconds") Integer visibilityTtlSeconds,
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonProperty("attachment_file_id") String attachmentFileId,
+    @Schema(description = "Thread root message id when message is a thread reply")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("thread_id") String threadId,
+    @Schema(description = "Reply count for root messages on main timeline")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("thread_reply_count") Integer threadReplyCount,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("mention_user_ids") java.util.List<String> mentionUserIds,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("mention_all") Boolean mentionAll,
     @Schema(description = "Preview of parent message when replying")
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonProperty("reply_preview") MessageReplyPreview replyPreview
@@ -40,6 +50,24 @@ public record MessageResponse(
         String attachmentFileId
     ) {
         this(id, chatId, senderId, type, content, replyToMsgId, deleted, createdAt, editedAt,
-            visibilityTtlSeconds, attachmentFileId, null);
+            visibilityTtlSeconds, attachmentFileId, null, null, null, null, null);
+    }
+
+    public MessageResponse(
+        String id,
+        String chatId,
+        String senderId,
+        String type,
+        String content,
+        String replyToMsgId,
+        boolean deleted,
+        Instant createdAt,
+        Instant editedAt,
+        Integer visibilityTtlSeconds,
+        String attachmentFileId,
+        MessageReplyPreview replyPreview
+    ) {
+        this(id, chatId, senderId, type, content, replyToMsgId, deleted, createdAt, editedAt,
+            visibilityTtlSeconds, attachmentFileId, null, null, null, null, replyPreview);
     }
 }

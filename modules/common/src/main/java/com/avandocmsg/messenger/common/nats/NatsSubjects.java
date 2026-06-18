@@ -36,6 +36,9 @@ public final class NatsSubjects {
     /** Закрепление сообщения (JSON {@link com.avandocmsg.messenger.common.dto.PinChangeEvent}). */
     public static final String MSG_PIN = "msg.pin";
 
+    /** @mention уведомление (JSON {@link com.avandocmsg.messenger.common.dto.MentionEvent}). */
+    public static final String MSG_MENTION = "msg.mention";
+
     /** Конференция в чате (JSON {@link com.avandocmsg.messenger.common.dto.ConferenceChangeEvent}). */
     public static final String MSG_CONFERENCE = "msg.conference";
 

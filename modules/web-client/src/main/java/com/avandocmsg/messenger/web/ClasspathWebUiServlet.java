@@ -55,7 +55,8 @@ public final class ClasspathWebUiServlet extends HttpServlet {
         if (uri.isEmpty() || "/".equals(uri)) {
             return "index.html";
         }
-        if (uri.startsWith("/api") || "/health".equals(uri) || "/web-client-env.js".equals(uri)) {
+        if (uri.startsWith("/api") || "/health".equals(uri) || "/nginx-health".equals(uri)
+            || "/web-client-env.js".equals(uri)) {
             return null;
         }
         if (uri.contains("..")) {

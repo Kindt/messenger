@@ -3,19 +3,13 @@ package com.avandocmsg.messenger.worker.exportreplay;
 import com.avandocmsg.messenger.common.dto.ExportReplayCancelEvent;
 import com.avandocmsg.messenger.common.dto.ExportReplayCompleteEvent;
 import com.avandocmsg.messenger.common.dto.ExportReplayJob;
-import com.avandocmsg.messenger.common.export.ExportCompleteness;
 import com.avandocmsg.messenger.common.export.ExportCompletenessConfig;
 import com.avandocmsg.messenger.common.export.ExportCompletenessValidator;
 import com.avandocmsg.messenger.common.export.ExportOutputRef;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
-import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.nats.client.Connection;
-import io.nats.client.Nats;
-import io.nats.client.Options;
-import io.prometheus.client.hotspot.DefaultExports;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,12 +22,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -1068,6 +1060,10 @@ public class ExportReplayJobRunner {
         var reply = rs.getString("reply_to_msg_id");
         if (!rs.wasNull() && reply != null) {
             n.put("replyToMessageId", reply);
+        }
+        var threadId = rs.getString("thread_id");
+        if (!rs.wasNull() && threadId != null) {
+            n.put("threadId", threadId);
         }
         n.put("deleted", rs.getBoolean("deleted"));
         var ttl = rs.getObject("visibility_ttl_seconds");

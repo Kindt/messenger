@@ -78,6 +78,7 @@ class AdminExportComplianceSeedH2Test {
                   type VARCHAR(16) NOT NULL DEFAULT 'text',
                   content TEXT,
                   reply_to_msg_id UUID,
+                  thread_id UUID,
                   deleted BOOLEAN NOT NULL DEFAULT false,
                   visibility_ttl_seconds INT,
                   attachment_file_id UUID,

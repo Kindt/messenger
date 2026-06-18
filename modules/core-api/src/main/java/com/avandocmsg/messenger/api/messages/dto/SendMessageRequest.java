@@ -8,6 +8,8 @@ public record SendMessageRequest(
     @Schema(description = "Message type", example = "text") String type,
     @Schema(description = "Message content") String content,
     @Schema(description = "ID of message being replied to") @JsonProperty("reply_to_msg_id") String replyToMsgId,
+    @Schema(description = "Thread root message id (replies hidden from main timeline)")
+    @JsonProperty("thread_id") String threadId,
     @Schema(description = "Client-side deduplication ID") @JsonProperty("client_msg_id") String clientMsgId,
     @Schema(description = "Срок видимости сообщения в секундах (скрытие из ленты после истечения); null = без TTL", example = "3600")
     @JsonProperty("visibility_ttl_seconds") Integer visibilityTtlSeconds,
