@@ -64,6 +64,7 @@ if ($WithIntegrations) {
     Write-Host "3-VM profile: KORUS_QEMU_THREE_VM=1 (server 8192 + web 2560 + integrations 4096 MB for WHPX on 16-20 GB hosts)" -ForegroundColor DarkGray
 }
 $lanIp = Write-KorusQemuLanHostInfo -RunDir $runDir
+. (Join-Path $lib "Start-KorusRepoHttp.ps1")
 $repoHttp = Start-KorusRepoHttp
 Write-KorusDebugLog -Location "qemu-up.ps1:repo-http" -Message "repo HTTP started" -HypothesisId "H3" -Data @{ lanIp = $lanIp; repoHttp = ($repoHttp | Out-String).Trim() }
 
