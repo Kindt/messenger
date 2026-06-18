@@ -37,9 +37,9 @@ def _status_link() -> str:
 
 
 def draft_pm_s1() -> str:
-    return _status_link() + """
+    return _status_link() + f"""
 <p><strong>Korus Messenger</strong> — корпоративный мессенджер для переписки, файлов, звонков и администрирования в контуре заказчика.</p>
-<p>Восемь блоков возможностей — в карточках ниже. Сводный статус и blockers — в <a href="#block-0">шапке презентации</a>.</p>
+<p>Девять блоков возможностей — в карточках ниже. Сводный статус ({ps.PLAYWRIGHT_PASSED}/{ps.PLAYWRIGHT_TOTAL} Playwright, {ps.PRODUCT_DATE}) и blockers — в <a href="#block-0">шапке презентации</a>.</p>
 """
 
 

@@ -29,7 +29,7 @@ class ModuleSpec:
 # required — без модуля prod не стартует (compose base, без profile).
 # optional + default_enabled — часть baseline prod full (--profile full), но можно снять в sizing.
 PRODUCTION_MODULES: tuple[ModuleSpec, ...] = (
-    ModuleSpec("postgres-hot", "PostgreSQL (hot)", 4.0, 2.0, max_replicas=2, replica_mode="passive"),
+    ModuleSpec("postgres-hot", "PostgreSQL (hot)", 4.0, 2.0, max_replicas=4, replica_mode="passive"),
     ModuleSpec(
         "postgres-archive",
         "PostgreSQL (archive)",
@@ -67,8 +67,108 @@ PRODUCTION_MODULES: tuple[ModuleSpec, ...] = (
     ModuleSpec("keycloak", "Keycloak", 8.0, 4.0, max_replicas=2, replica_mode="passive"),
     ModuleSpec("core-api", "core-api", 8.0, 4.0, max_replicas=6, replica_mode="active"),
     ModuleSpec("ws-gateway", "ws-gateway", 4.0, 2.0, max_replicas=4, replica_mode="active"),
-    ModuleSpec("workers", "Workers (pipeline, retention…)", 8.0, 4.0, max_replicas=4, replica_mode="active"),
     ModuleSpec("web-lb", "Web / nginx LB", 8.0, 2.0, max_replicas=4, replica_mode="active"),
+    # Workers — по docker-compose.full-server.yml (profile full / compliance / push / solr)
+    ModuleSpec(
+        "worker-message-pipeline",
+        "Worker: message-pipeline",
+        4.0,
+        2.0,
+        max_replicas=4,
+        replica_mode="active",
+    ),
+    ModuleSpec(
+        "worker-retention",
+        "Worker: retention",
+        2.0,
+        1.0,
+        required=False,
+        default_enabled=True,
+        max_replicas=2,
+        replica_mode="passive",
+    ),
+    ModuleSpec(
+        "worker-export-replay",
+        "Worker: export-replay",
+        4.0,
+        2.0,
+        required=False,
+        default_enabled=True,
+        max_replicas=2,
+        replica_mode="passive",
+    ),
+    ModuleSpec(
+        "worker-deep-archiver",
+        "Worker: deep-archiver",
+        2.0,
+        1.0,
+        required=False,
+        default_enabled=True,
+        max_replicas=2,
+        replica_mode="passive",
+    ),
+    ModuleSpec(
+        "worker-archiver",
+        "Worker: archiver → archive PG",
+        2.0,
+        1.0,
+        required=False,
+        default_enabled=True,
+        requires=("postgres-archive",),
+        max_replicas=2,
+        replica_mode="passive",
+    ),
+    ModuleSpec(
+        "worker-indexer",
+        "Worker: indexer → Solr",
+        2.0,
+        1.0,
+        required=False,
+        default_enabled=True,
+        requires=("solr",),
+        max_replicas=2,
+        replica_mode="passive",
+    ),
+    ModuleSpec(
+        "worker-push",
+        "Worker: Web Push",
+        2.0,
+        1.0,
+        required=False,
+        default_enabled=True,
+        max_replicas=2,
+        replica_mode="active",
+    ),
+    ModuleSpec(
+        "worker-preview",
+        "Worker: preview",
+        2.0,
+        1.0,
+        required=False,
+        default_enabled=True,
+        max_replicas=2,
+        replica_mode="passive",
+    ),
+    ModuleSpec(
+        "worker-bot-delivery",
+        "Worker: bot-delivery",
+        2.0,
+        1.0,
+        required=False,
+        default_enabled=False,
+        max_replicas=2,
+        replica_mode="passive",
+    ),
+    ModuleSpec(
+        "livekit",
+        "LiveKit SFU (WebRTC)",
+        4.0,
+        2.0,
+        required=False,
+        default_enabled=False,
+        max_replicas=2,
+        replica_mode="active",
+    ),
     ModuleSpec(
         "integrations",
         "Integrations node",
@@ -96,6 +196,91 @@ MSG_BYTES = 2048
 PEAK_MSG_BURST = 3.5
 
 SPEC_MAP = {m.id: m for m in PRODUCTION_MODULES}
+
+# Типичный потолок одного VM/pod в prod full — сверх него scale-out (×), не «монолит».
+INSTANCE_RAM_CAP_GB: dict[str, float] = {
+    "postgres-hot": 32.0,
+    "postgres-archive": 24.0,
+    "core-api": 24.0,
+    "worker-message-pipeline": 16.0,
+    "ws-gateway": 8.0,
+    "web-lb": 8.0,
+    "nats": 16.0,
+    "redis": 8.0,
+    "minio": 16.0,
+    "solr": 16.0,
+    "zookeeper": 4.0,
+    "keycloak": 16.0,
+    "livekit": 16.0,
+    "integrations": 16.0,
+}
+INSTANCE_VCPU_CAP: dict[str, float] = {
+    "postgres-hot": 16.0,
+    "postgres-archive": 8.0,
+    "core-api": 8.0,
+    "worker-message-pipeline": 8.0,
+    "ws-gateway": 4.0,
+    "web-lb": 4.0,
+    "nats": 8.0,
+    "redis": 4.0,
+    "minio": 8.0,
+    "solr": 8.0,
+    "zookeeper": 2.0,
+    "keycloak": 8.0,
+    "livekit": 8.0,
+    "integrations": 4.0,
+}
+
+
+def _instance_cap(spec: ModuleSpec, kind: str) -> float:
+    if kind == "ram":
+        return INSTANCE_RAM_CAP_GB.get(spec.id, max(spec.ram_gb * 4.0, 8.0))
+    return INSTANCE_VCPU_CAP.get(spec.id, max(spec.vcpu * 4.0, 4.0))
+
+
+def _split_instances(
+    spec: ModuleSpec,
+    ram_demand: float,
+    vcpu_demand: float,
+    base_count: int,
+    *,
+    ha: bool,
+) -> tuple[int, float, float]:
+    """(count, ram_per_node, vcpu_per_node); сумма по строке = × × per-node."""
+    ram_cap = _instance_cap(spec, "ram")
+    vcpu_cap = _instance_cap(spec, "vcpu")
+    split = max(
+        1,
+        math.ceil(ram_demand / ram_cap) if ram_demand > ram_cap else 1,
+        math.ceil(vcpu_demand / vcpu_cap) if vcpu_demand > vcpu_cap else 1,
+    )
+
+    if spec.replica_mode == "active":
+        count = min(spec.max_replicas, max(base_count, split))
+        return count, ram_demand / count, vcpu_demand / count
+
+    if spec.replica_mode == "cluster":
+        count = max(base_count, split)
+        if (ha or split > 1) and spec.max_replicas >= 3:
+            count = max(count, 3)
+        count = min(spec.max_replicas, max(1, count))
+        return count, ram_demand / count, vcpu_demand / count
+
+    # passive: HA-зеркало — полная копия на каждом узле; иначе делим нагрузку по узлам
+    count = base_count
+    if split > 1:
+        count = max(count, min(spec.max_replicas, split))
+    if ha and spec.max_replicas >= 2:
+        count = max(count, min(2, spec.max_replicas))
+    count = min(spec.max_replicas, max(1, count))
+    if ha and count >= 2 and split <= 1:
+        return count, ram_demand, vcpu_demand
+    return count, ram_demand / count, vcpu_demand / count
+
+
+def _ceil_per_node(ram_unit: float, vcpu_unit: float, count: int) -> tuple[int, int]:
+    """RAM/vCPU на узел и суммарно — всегда вверх (целые)."""
+    return math.ceil(ram_unit) * count, math.ceil(vcpu_unit) * count
 
 
 def prod_full_default_enabled() -> set[str]:
@@ -228,8 +413,10 @@ def _resolve_replicas(
         return max(1, min(spec.max_replicas, app_nodes))
     if spec.id == "web-lb":
         return max(1, min(spec.max_replicas, web_nodes))
-    if spec.id == "workers":
-        return max(1, min(spec.max_replicas, replicas.get("workers", app_nodes)))
+    if spec.id == "worker-message-pipeline":
+        return max(1, min(spec.max_replicas, replicas.get("worker-message-pipeline", app_nodes)))
+    if spec.id == "worker-push":
+        return max(1, min(spec.max_replicas, replicas.get("worker-push", max(1, app_nodes // 2))))
     if ha and spec.id in ("postgres-hot", "postgres-archive", "redis", "nats", "keycloak"):
         return min(spec.max_replicas, 2 if spec.max_replicas >= 2 else 1)
     if spec.id == "zookeeper" and replicas.get("solr", 1) >= 3:
@@ -239,13 +426,19 @@ def _resolve_replicas(
     return 1
 
 
-def _app_node_count(peak_msg_s: float, peak_online: int, ha: bool) -> int:
+def _app_node_count(peak_msg_s: float, peak_online: int, ha: bool, ru: int = 0) -> int:
     n = 1
     if peak_msg_s > 30 or peak_online > 3_000:
         n = 2
     if peak_msg_s > 120 or peak_online > 12_000:
         n = 3
     if peak_msg_s > 400:
+        n = max(n, 6)
+    if ru > 50_000:
+        n = max(n, 2)
+    if ru > 200_000:
+        n = max(n, 4)
+    if ru > 500_000:
         n = max(n, 6)
     if ha:
         n = max(n, 2)
@@ -266,8 +459,10 @@ def _scale_module_vcpu(spec: ModuleSpec, ru: int, peak_online: int, peak_msg_s: 
     base = spec.vcpu
     if spec.id == "core-api":
         return max(base, 2.0 + peak_msg_s / 12.0 + peak_online / 2_500.0)
-    if spec.id == "workers":
+    if spec.id == "worker-message-pipeline":
         return max(base, 2.0 + peak_msg_s / 18.0)
+    if spec.id == "livekit":
+        return max(base, 2.0 + peak_online / 5_000.0)
     if spec.id == "ws-gateway":
         return max(base, 1.0 + peak_online / 2_000.0)
     if spec.id == "nats":
@@ -287,8 +482,12 @@ def _scale_module_ram(spec: ModuleSpec, ru: int, peak_online: int, peak_msg_s: f
         return base + peak_online / 400 + peak_msg_s / 1.5
     if spec.id == "ws-gateway":
         return base + peak_online / 800
-    if spec.id == "workers":
+    if spec.id == "worker-message-pipeline":
         return base + peak_msg_s / 2.5
+    if spec.id == "worker-push":
+        return base + peak_online / 3_000
+    if spec.id == "livekit":
+        return base + peak_online / 4_000
     if spec.id == "nats":
         return base + peak_msg_s / 20
     if spec.id == "solr":
@@ -323,7 +522,7 @@ def _build_modules(
     inp: LoadInputs,
     enabled_ids: set[str] | None,
 ) -> tuple[ModuleInstance, ...]:
-    app_nodes = _app_node_count(peak_msg_s, peak_online, inp.ha)
+    app_nodes = _app_node_count(peak_msg_s, peak_online, inp.ha, ru)
     web_nodes = _web_node_count(peak_online, inp.ha)
     replicas = dict(inp.module_replicas)
 
@@ -331,20 +530,22 @@ def _build_modules(
     for spec in PRODUCTION_MODULES:
         if enabled_ids is not None and spec.id not in enabled_ids:
             continue
-        count = _resolve_replicas(
+        base_count = _resolve_replicas(
             spec, replicas, ha=inp.ha, app_nodes=app_nodes, web_nodes=web_nodes, plugins=inp.integration_plugins
         )
-        if spec.per_plugin and count == 0:
+        if spec.per_plugin and base_count == 0:
             continue
 
-        ram_unit = _scale_module_ram(spec, ru, peak_online, peak_msg_s)
-        vcpu_unit = _scale_module_vcpu(spec, ru, peak_online, peak_msg_s)
+        ram_demand = _scale_module_ram(spec, ru, peak_online, peak_msg_s)
+        vcpu_demand = _scale_module_vcpu(spec, ru, peak_online, peak_msg_s)
+        count, ram_unit, vcpu_unit = _split_instances(
+            spec, ram_demand, vcpu_demand, base_count, ha=inp.ha
+        )
         if spec.replica_mode == "cluster" and count > 1:
             ram_unit *= 1.05  # overhead кворума
-        ram_total = round(ram_unit * count, 1)
-        vcpu_total = round(vcpu_unit * count, 1)
+        ram_total, vcpu_total = _ceil_per_node(ram_unit, vcpu_unit, count)
         instances.append(
-            ModuleInstance(spec.id, spec.label, count, ram_total, vcpu_total, spec.replica_mode)
+            ModuleInstance(spec.id, spec.label, count, float(ram_total), float(vcpu_total), spec.replica_mode)
         )
     return tuple(instances)
 
@@ -397,8 +598,8 @@ def _capacity_from_ram(spec: ModuleSpec, count: int, ram_unit: float) -> tuple[i
         po = max(100, int((ram_unit - 8) * 400)) * mult
         pms = max(1.0, (ram_unit - 8) * 1.5) * mult
         return po, pms, 0
-    if spec.id == "workers":
-        return 0, max(1.0, (ram_unit - 8) * 2.5) * mult, 0
+    if spec.id == "worker-message-pipeline":
+        return 0, max(1.0, (ram_unit - 4) * 2.5) * mult, 0
     if spec.id == "web-lb":
         return max(100, int((ram_unit - 4) * 500)) * mult, 0.0, 0
     if spec.id == "postgres-hot":
@@ -414,8 +615,10 @@ def _capacity_from_vcpu(spec: ModuleSpec, count: int, vcpu_unit: float) -> tuple
         po = max(100, int((vcpu_unit - 1) * 250)) * mult
         pms = max(1.0, (vcpu_unit - 1) * 12.0) * mult
         return po, pms, 0
-    if spec.id == "workers":
+    if spec.id == "worker-message-pipeline":
         return 0, max(1.0, (vcpu_unit - 1) * 15.0) * mult, 0
+    if spec.id == "livekit":
+        return max(100, int((vcpu_unit - 1) * 500)) * mult, 0.0, 0
     if spec.id == "web-lb":
         return max(100, int((vcpu_unit - 1) * 350)) * mult, 0.0, 0
     if spec.id == "postgres-hot":
@@ -482,10 +685,9 @@ def estimate_capacity(
         vcpu_unit = spec.vcpu
         if spec.replica_mode == "cluster" and count > 1:
             ram_unit *= 1.05
-        ram_total = round(ram_unit * count, 1)
-        vcpu_total = round(vcpu_unit * count, 1)
+        ram_total, vcpu_total = _ceil_per_node(ram_unit, vcpu_unit, count)
         instances.append(
-            ModuleInstance(spec.id, spec.label, count, ram_total, vcpu_total, spec.replica_mode)
+            ModuleInstance(spec.id, spec.label, count, float(ram_total), float(vcpu_total), spec.replica_mode)
         )
         po, pms, ru_cap, bind = _capacity_from_module(spec, count, ram_unit, vcpu_unit)
         if po:
@@ -540,6 +742,8 @@ def modules_catalog_json() -> list[dict[str, object]]:
             "per_plugin": m.per_plugin,
             "max_replicas": m.max_replicas,
             "replica_mode": m.replica_mode,
+            "instance_ram_cap_gb": _instance_cap(m, "ram"),
+            "instance_vcpu_cap": _instance_cap(m, "vcpu"),
         }
         for m in PRODUCTION_MODULES
     ]

@@ -34,6 +34,11 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
 
+/**
+ * @deprecated Production paths use {@link com.avandocmsg.messenger.core.application.MessageApplicationService}.
+ * Retained for unit tests with in-memory stub repositories.
+ */
+@Deprecated
 public class MessageService {
     private static final Logger log = LoggerFactory.getLogger(MessageService.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();

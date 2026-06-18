@@ -1,34 +1,26 @@
-package com.avandocmsg.messenger.api.scim;
+package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.core.port.ScimGroupRepositoryPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public class ScimGroupRepository {
-    private static final Logger log = LoggerFactory.getLogger(ScimGroupRepository.class);
+/** JDBC adapter for {@link ScimGroupRepositoryPort}. */
+public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepositoryPort {
+    private static final Logger log = LoggerFactory.getLogger(JdbcScimGroupRepositoryAdapter.class);
 
     private final DataSource dataSource;
 
-    public ScimGroupRepository(DataSource dataSource) {
+    public JdbcScimGroupRepositoryAdapter(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
-    public record ScimGroupRow(
-        UUID id,
-        UUID orgId,
-        String displayName,
-        String externalId,
-        String membersJson,
-        Instant createdAt,
-        Instant updatedAt
-    ) {}
-
+    @Override
     public Optional<ScimGroupRow> findById(UUID id) {
         var sql = """
             SELECT id, org_id, display_name, external_id, members_json, created_at, updated_at
@@ -49,6 +41,7 @@ public class ScimGroupRepository {
         }
     }
 
+    @Override
     public List<ScimGroupRow> listByOrg(UUID orgId, int offset, int limit) {
         var sql = """
             SELECT id, org_id, display_name, external_id, members_json, created_at, updated_at
@@ -73,6 +66,7 @@ public class ScimGroupRepository {
         return out;
     }
 
+    @Override
     public int countByOrg(UUID orgId) {
         var sql = "SELECT COUNT(*) FROM scim_groups WHERE org_id = ?";
         try (var conn = dataSource.getConnection();
@@ -87,6 +81,7 @@ public class ScimGroupRepository {
         }
     }
 
+    @Override
     public boolean insert(UUID id, UUID orgId, String displayName, String externalId, String membersJson) {
         var sql = """
             INSERT INTO scim_groups (id, org_id, display_name, external_id, members_json)
@@ -106,6 +101,7 @@ public class ScimGroupRepository {
         }
     }
 
+    @Override
     public boolean update(UUID id, String displayName, String externalId, String membersJson) {
         var sql = """
             UPDATE scim_groups
@@ -125,6 +121,7 @@ public class ScimGroupRepository {
         }
     }
 
+    @Override
     public boolean delete(UUID id) {
         var sql = "DELETE FROM scim_groups WHERE id = ?";
         try (var conn = dataSource.getConnection();

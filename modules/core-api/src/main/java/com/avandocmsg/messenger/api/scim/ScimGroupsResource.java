@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.api.scim;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.core.port.ScimGroupRepositoryPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.security.RolesAllowed;
@@ -29,12 +30,12 @@ import java.util.UUID;
 public class ScimGroupsResource {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final ScimGroupRepository groupRepository;
+    private final ScimGroupRepositoryPort groupRepository;
     private final AppConfig appConfig;
     private final UuidGenerator uuidGenerator;
 
     @Inject
-    public ScimGroupsResource(ScimGroupRepository groupRepository, AppConfig appConfig, UuidGenerator uuidGenerator) {
+    public ScimGroupsResource(ScimGroupRepositoryPort groupRepository, AppConfig appConfig, UuidGenerator uuidGenerator) {
         this.groupRepository = groupRepository;
         this.appConfig = appConfig;
         this.uuidGenerator = uuidGenerator;

@@ -10,6 +10,19 @@
 
 ## [Unreleased]
 
+### 2026-06-18 — Spec 019 phase 3 (hex tail: indexer queue, SCIM port, MessageService retired from HTTP)
+
+- **`IndexerEventPublisher`:** hot-plug queue for `MSG_EVENT_INDEX`; wired into `MessageEditCoordinator` / `MessageDeleteCoordinator` (production path regains indexer replay).
+- **HTTP:** `MessageResource` uses only `MessageApplicationService`; legacy `MessageService` removed from `JerseyConfig` / `MessengerApplication` (kept `@Deprecated` for unit tests).
+- **Hex 2c:** `ScimGroupRepositoryPort` + `JdbcScimGroupRepositoryAdapter`; `ScimGroupsResource` on port.
+
+### 2026-06-18 — Product deck: статус 019 + sizing modules
+
+- **`product_status.py`:** Playwright 50/50; spec 017/019 — auth-policy admin, SCIM, directory sync, Live L2–L5, LiveKit SFU, webhook outbox, PG sharding pilot, export manifest.
+- **Deck capabilities:** live-трансляции, enterprise IdP/SCIM, развёрнутые workers и LiveKit в калькуляторе infra.
+- **`module_sizing`:** workers по compose-профилям; опция LiveKit; locked ядро vs optional baseline.
+- **Калькуляторы Tech §4:** scale-out по лимиту VM (× > 1 при высокой нагрузке); поля ввода вместо select; смета infra; автопересчёт.
+
 ### 2026-06-18 — Spec 019 phase 2 (hex tail, SCIM Groups, Playwright ui-live)
 
 - **Hex 2b read-path:** list/reactions/pinned/versions/preview via `MessageApplicationService`; `BotService` → application layer; `ChatResource` → `ChatApplicationService`.

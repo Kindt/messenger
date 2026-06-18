@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.api.scim;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.core.port.ScimGroupRepositoryPort;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,7 +20,7 @@ public class ScimGroupMapper {
 
     private ScimGroupMapper() {}
 
-    static ScimGroupResource toResource(ScimGroupRepository.ScimGroupRow row, String baseLocation) {
+    static ScimGroupResource toResource(ScimGroupRepositoryPort.ScimGroupRow row, String baseLocation) {
         return new ScimGroupResource(
             GROUP_SCHEMA,
             row.id().toString(),
@@ -30,7 +31,7 @@ public class ScimGroupMapper {
     }
 
     static ScimGroupListResponse toList(
-        List<ScimGroupRepository.ScimGroupRow> rows,
+        List<ScimGroupRepositoryPort.ScimGroupRow> rows,
         int total,
         int startIndex,
         String baseLocation

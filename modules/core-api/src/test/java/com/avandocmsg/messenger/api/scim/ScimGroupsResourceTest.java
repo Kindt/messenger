@@ -1,6 +1,8 @@
 package com.avandocmsg.messenger.api.scim;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcScimGroupRepositoryAdapter;
+import com.avandocmsg.messenger.core.port.ScimGroupRepositoryPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -20,7 +22,7 @@ import static org.mockito.Mockito.when;
 class ScimGroupsResourceTest {
 
     private HikariDataSource ds;
-    private ScimGroupRepository groupRepository;
+    private ScimGroupRepositoryPort groupRepository;
     private ScimGroupsResource resource;
     private UriInfo uriInfo;
     private UUID orgId;
@@ -45,7 +47,7 @@ class ScimGroupsResourceTest {
                 )
                 """);
         }
-        groupRepository = new ScimGroupRepository(ds);
+        groupRepository = new JdbcScimGroupRepositoryAdapter(ds);
         var appConfig = new AppConfig() {
             @Override
             public java.util.Optional<UUID> defaultOrgId() {

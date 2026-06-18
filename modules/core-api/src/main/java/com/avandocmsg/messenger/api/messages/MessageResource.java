@@ -50,17 +50,14 @@ import java.util.UUID;
 @Tag(name = "Messages", description = "Message send, receive, and management")
 public class MessageResource {
 
-    private final MessageService messageService;
     private final MessageApplicationService messageApplicationService;
     private final AppConfig appConfig;
     private final UserMessageSource messages;
 
     @Inject
-    public MessageResource(MessageService messageService,
-                             MessageApplicationService messageApplicationService,
+    public MessageResource(MessageApplicationService messageApplicationService,
                              AppConfig appConfig,
                              UserMessageSource messages) {
-        this.messageService = messageService;
         this.messageApplicationService = messageApplicationService;
         this.appConfig = appConfig;
         this.messages = messages;

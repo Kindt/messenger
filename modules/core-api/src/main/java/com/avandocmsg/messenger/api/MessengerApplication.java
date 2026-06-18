@@ -42,7 +42,6 @@ import com.avandocmsg.messenger.api.files.FileService;
 import com.avandocmsg.messenger.api.files.HttpFileProxy;
 import com.avandocmsg.messenger.api.files.MinioFileProxy;
 import com.avandocmsg.messenger.common.nats.JetStreamMessagingSetup;
-import com.avandocmsg.messenger.api.messages.MessageService;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ExportJobRepository;
 import com.avandocmsg.messenger.api.repository.FilePublicLinkRepository;
@@ -355,17 +354,17 @@ public class MessengerApplication {
         var publicLinkPort = CoreModule.publicLinkPort(filePublicLinkRepository);
         var legalHoldRepository = new LegalHoldRepository(dataSource);
         var purgeStatusService = new PurgeStatusService(dataSource, auditRepository);
+        java.util.function.BooleanSupplier indexerAvailable =
+            () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent();
+        var indexerEventPublisher = CoreModule.indexerEventPublisher(natsOutbound, indexerAvailable);
         var messageSendCoordinator = CoreModule.messageSendCoordinator(
             dataSource, chatRepository, mlsService, mlsMigrationService, natsOutbound,
             this.uuidGenerator, readCachePort);
-        var messageEditCoordinator = CoreModule.messageEditCoordinator(dataSource, natsOutbound);
-        var messageDeleteCoordinator = CoreModule.messageDeleteCoordinator(dataSource, natsOutbound);
+        var messageEditCoordinator = CoreModule.messageEditCoordinator(dataSource, indexerEventPublisher);
+        var messageDeleteCoordinator = CoreModule.messageDeleteCoordinator(
+            dataSource, natsOutbound, indexerEventPublisher);
         var messageReactionCoordinator = CoreModule.messageReactionCoordinator(dataSource, natsOutbound);
         var messagePinCoordinator = CoreModule.messagePinCoordinator(dataSource, natsOutbound);
-        var messageService = new MessageService(messageRepository, chatRepository, blockRepository,
-            mlsService, mlsMigrationService, natsOutbound, this.uuidGenerator, readCachePort,
-            messageSendCoordinator,
-            () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent());
         var messageApplicationService = CoreModule.messageApplicationService(
             dataSource, chatRepository, blockRepository, messageSendCoordinator, messageEditCoordinator,
             messageDeleteCoordinator, messageReactionCoordinator, messagePinCoordinator,
@@ -425,7 +424,7 @@ public class MessengerApplication {
                 messageApplicationService, userApplicationService, fileApplicationService,
                 organizationApplicationService,
                 blockRepository,
-                messageRepository, messageService, natsConnection, natsOutbound,
+                messageRepository, natsConnection, natsOutbound,
                 minioClient, fileRepository, fileService,
                 chatBanRepository, chatBanService,
                 e2eeService, keyPackageRepository, sessionRepository, mlsService, mlsGroupManager,

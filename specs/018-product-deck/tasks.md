@@ -17,3 +17,5 @@
 - [x] T01813 Review R1–R3 + deck-review logs
 - [x] T01814 buildIntegrity green + commit
 - [x] T01815 Push + merge to `main` (57aaa35); **Pages:** enable once in GitHub Settings → Pages → branch `main` → folder `/docs` → URL https://kindt.github.io/messenger/
+- [x] T01816 product_status sync spec 017/019 (50/50, SCIM, live, auth-policy)
+- [x] T01817 Sizing: workers по compose + LiveKit option; anchor links (no § refs)

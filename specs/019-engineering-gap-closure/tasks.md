@@ -78,9 +78,15 @@
 - [x] T019112 `BotService` delete/pin via application layer
 - [x] T019113 `ChatResource.getById` via `ChatApplicationService`
 
+## US12 — Hex 2c + MessageService HTTP retirement (phase 3)
+
+- [x] T019121 `IndexerEventPublisher` + coordinator wiring (hot-plug indexer queue on production path)
+- [x] T019122 `MessageResource` / `JerseyConfig` / `MessengerApplication` without `MessageService`
+- [x] T019123 `ScimGroupRepositoryPort` + `JdbcScimGroupRepositoryAdapter`
+
 ## Deferred (explicit)
 
 - [ ] OpenMLS full external interop — Phase 3 (`docs/E2EE_ARCHITECTURE.md`)
-- [ ] Hex 2c User/Org/File ports — low risk tail (SCIM/DirectorySync still on repos)
+- [ ] Hex 2c DirectorySync / SCIM Users on ports — low risk tail
 - [ ] T01124 cell-upgrade 2-Cell idempotency — **partial:** `scripts/smoke-cell-upgrade-idempotency.ps1`; LSO-020 Sep 2026+
 - [ ] GDPR strict prod — legal + `EXPORT_COMPLETENESS_STRICT` on stage (ops)

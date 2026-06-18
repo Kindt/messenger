@@ -62,13 +62,14 @@ import com.avandocmsg.messenger.api.filter.OrgRoutingClearFilter;
 import com.avandocmsg.messenger.api.filter.OrgRoutingFilter;
 import com.avandocmsg.messenger.api.health.HealthResource;
 import com.avandocmsg.messenger.api.messages.MessageResource;
-import com.avandocmsg.messenger.api.messages.MessageService;
 import com.avandocmsg.messenger.api.mls.MlsGroupManager;
 import com.avandocmsg.messenger.api.mls.MlsMigrationService;
 import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.api.mls.MlsWirePublisher;
 import com.avandocmsg.messenger.api.mls.SessionRepository;
 import com.avandocmsg.messenger.core.application.ChatApplicationService;
+import com.avandocmsg.messenger.core.bootstrap.CoreModule;
+import com.avandocmsg.messenger.core.port.ScimGroupRepositoryPort;
 import com.avandocmsg.messenger.core.application.FileApplicationService;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
@@ -120,7 +121,7 @@ public class JerseyConfig extends ResourceConfig {
                         FileApplicationService fileApplicationService,
                         OrganizationApplicationService organizationApplicationService,
                         BlockRepository blockRepository,
-                        MessageRepository messageRepository, MessageService messageService,
+                        MessageRepository messageRepository,
                         Connection natsConnection, NatsConnectionOutbound natsOutbound,
                         MinioClient minioClient, FileRepository fileRepository, FileService fileService,
                         ChatBanRepository chatBanRepository, ChatBanService chatBanService,
@@ -182,7 +183,6 @@ public class JerseyConfig extends ResourceConfig {
                 bind(chatReadRepository).to(ChatReadRepository.class);
                 bind(blockRepository).to(BlockRepository.class);
                 bind(messageRepository).to(MessageRepository.class);
-                bind(messageService).to(MessageService.class);
                 bind(natsConnection).to(Connection.class);
                 bind(natsOutbound).to(NatsOutboundPort.class);
                 bind(natsOutbound).to(NatsConnectionStatus.class);
@@ -226,8 +226,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(pluginOutboundService).to(com.avandocmsg.messenger.api.plugins.PluginOutboundService.class);
                 bind(authPolicyService).to(AuthPolicyService.class);
                 bind(directorySyncService).to(DirectorySyncService.class);
-                bind(new com.avandocmsg.messenger.api.scim.ScimGroupRepository(dataSource))
-                    .to(com.avandocmsg.messenger.api.scim.ScimGroupRepository.class);
+                bind(CoreModule.scimGroupRepositoryPort(dataSource)).to(ScimGroupRepositoryPort.class);
                 bind(BotRateLimiter.fromEnv()).to(BotRateLimiter.class);
             }
         });

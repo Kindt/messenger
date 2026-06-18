@@ -55,7 +55,7 @@ flowchart TB
 
 1. **Фаза 0 (сделано):** якорные пакеты `com.avandocmsg.messenger.core.*` с `package-info.java` и этот документ — без переноса классов.
 2. **Фаза 1 (расширено):** **`NatsOutboundPort`** + **`NatsConnectionOutbound`** + **`NatsConnectionStatus`**; **`Clock`** и **`UuidGenerator`** из **`MessengerApplication`** → HK2, **`TokenValidator`**, **`AuthService`**, сервисы (**`ChatService`**, **`MessageService`**, **`ExportResource`**, **`FileService`**, **`FileResource`**) и репозитории (**`ChatRepository`**, **`MessageRepository`**, **`OrganizationRepository`**, **`FilePublicLinkRepository`**, **`ChatBanRepository`**, **`KeyPackageRepository`**, **`SessionRepository`**, **`ConferenceRepository`**) вместо разрозненных **`Instant.now()` / `UUID.randomUUID()`** там, где это влияет на доменные ответы и id.
-3. **Фаза 2 (Phase 2a Chat — done):** `Chat`, `ChatId`, `ChatRepositoryPort`, `JdbcChatRepositoryAdapter`, `ChatApplicationService`, `CoreModule`; `ChatResource.getById` ACL via port. Phases 2b+ — Message, User, File aggregates.
+3. **Фаза 2 (Phase 2a Chat — done; 2b Message — done):** `ChatApplicationService`, `MessageApplicationService` (read + write coordinators), `MessageResource` без legacy `MessageService`. Phase 2c — `ScimGroupRepositoryPort` + JDBC adapter; DirectorySync/SCIM Users — tail.
 4. **Фаза 3 (опционально):** Gradle-подпроект `core-domain` / `core-application` с зависимостью `core-api` только на адаптеры — если понадобится переиспользование домена в воркерах без Jersey.
 
 ## Что не трогать в первую очередь

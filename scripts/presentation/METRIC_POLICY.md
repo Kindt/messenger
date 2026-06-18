@@ -19,9 +19,10 @@
 ## Sizing в deck
 
 - **Prod full** — единственный контур для калькулятора и TCO (`full-server.yml`, `--profile full`).
-- **Ядро** (locked): postgres-hot, redis, nats, minio, keycloak, core-api, ws-gateway, workers, web-lb.
-- **Опции baseline** (галка, по умолчанию вкл.): postgres-archive, solr, zookeeper (только с solr).
-- **Опции по запросу** (галка, по умолчанию выкл.): integrations (L1–L3).
+- **Ядро** (locked): postgres-hot, redis, nats, minio, keycloak, core-api, ws-gateway, web-lb, worker-message-pipeline.
+- **Опции baseline** (галка, по умолчанию вкл.): postgres-archive, solr, zookeeper, workers retention/export/deep-archiver/archiver/indexer/push/preview.
+- **Опции по запросу** (галка, по умолчанию выкл.): livekit, worker-bot-delivery, integrations (L1–L3).
+- **Зависимости**: zookeeper→solr; worker-indexer→solr; worker-archiver→postgres-archive.
 - **Dev-min** — только QEMU/разработка; **не** использовать в product deck sizing.
 - **Pilot / Standard / Enterprise** — **не** использовать в deck; устаревшие product-tier labels.
 

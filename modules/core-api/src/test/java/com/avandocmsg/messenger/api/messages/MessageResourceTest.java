@@ -23,7 +23,7 @@ class MessageResourceTest {
 
     @Test
     void send_invalidReplyToMsgId_throwsInvalidUuidParameterException() {
-        var resource = new MessageResource(null, null, new AppConfig(), I18nTestFixtures.messagesEn());
+        var resource = new MessageResource(null, new AppConfig(), I18nTestFixtures.messagesEn());
         var chatId = UUID.randomUUID().toString();
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.send(chatId,
@@ -33,7 +33,7 @@ class MessageResourceTest {
 
     @Test
     void send_invalidChatId_throwsInvalidUuidParameterException() {
-        var resource = new MessageResource(null, null, new AppConfig(), I18nTestFixtures.messagesEn());
+        var resource = new MessageResource(null, new AppConfig(), I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.send("not-a-uuid",
                 new SendMessageRequest("text", "hello", null, null, null, null, null),
@@ -43,7 +43,7 @@ class MessageResourceTest {
     @Test
     void list_invalidBeforeQuery_throwsInvalidUuidParameterException() {
         var appService = new MessageApplicationService(new NoopMessagePort(), memberChatRepository());
-        var resource = new MessageResource(null, appService, new AppConfig(), I18nTestFixtures.messagesEn());
+        var resource = new MessageResource(appService, new AppConfig(), I18nTestFixtures.messagesEn());
         var chatId = UUID.randomUUID().toString();
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.list(chatId, 50, "not-a-uuid", userSecurityContext()));
@@ -51,7 +51,7 @@ class MessageResourceTest {
 
     @Test
     void getById_invalidMsgId_throwsInvalidUuidParameterException() {
-        var resource = new MessageResource(null, null, new AppConfig(), I18nTestFixtures.messagesEn());
+        var resource = new MessageResource(null, new AppConfig(), I18nTestFixtures.messagesEn());
         var chatId = UUID.randomUUID().toString();
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.getById(chatId, "bad-msg-id", userSecurityContext()));
@@ -59,7 +59,7 @@ class MessageResourceTest {
 
     @Test
     void forward_invalidTargetChatId_throwsInvalidUuidParameterException() {
-        var resource = new MessageResource(null, null, new AppConfig(), I18nTestFixtures.messagesEn());
+        var resource = new MessageResource(null, new AppConfig(), I18nTestFixtures.messagesEn());
         var chatId = UUID.randomUUID().toString();
         var msgId = UUID.randomUUID().toString();
         assertThrows(InvalidUuidParameterException.class,

@@ -26,8 +26,8 @@ NODE_STACK: tuple[tuple[str, str, str], ...] = (
     ),
     (
         "Workers",
-        "message-pipeline, retention, export-replay, push, preview, deep-archiver",
-        "Java workers, NATS JetStream consumers",
+        "message-pipeline (ядро), retention, export-replay, deep-archiver, push/preview/bot-delivery, indexer",
+        "Java workers / NATS consumers; в калькуляторе — отдельные строки по compose profile",
     ),
     (
         "Indexer (hot-plug)",
@@ -76,8 +76,8 @@ NODE_STACK: tuple[tuple[str, str, str], ...] = (
     ),
     (
         "LiveKit (опц.)",
-        "WebRTC SFU для конференций",
-        "LiveKit server, отдельный профиль",
+        "WebRTC SFU для групповых звонков; отдельная строка в калькуляторе infra",
+        "LiveKit server; mesh работает без SFU",
     ),
 )
 

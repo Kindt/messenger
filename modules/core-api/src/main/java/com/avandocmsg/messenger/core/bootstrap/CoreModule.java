@@ -4,6 +4,7 @@ import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.files.FileProxy;
 import com.avandocmsg.messenger.api.mls.MlsMigrationService;
 import com.avandocmsg.messenger.api.mls.MlsService;
+import com.avandocmsg.messenger.core.application.IndexerEventPublisher;
 import com.avandocmsg.messenger.core.application.MessageEditCoordinator;
 import com.avandocmsg.messenger.core.application.MessageDeleteCoordinator;
 import com.avandocmsg.messenger.core.application.MessagePinCoordinator;
@@ -18,6 +19,7 @@ import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRepositoryAdapt
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcFileMetadataAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrganizationRepositoryAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcScimGroupRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcSavedChatAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcUserRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
@@ -37,6 +39,7 @@ import com.avandocmsg.messenger.core.port.ObjectStoragePort;
 import com.avandocmsg.messenger.core.port.OrganizationRepositoryPort;
 import com.avandocmsg.messenger.core.port.PublicLinkPort;
 import com.avandocmsg.messenger.core.port.ReadCachePort;
+import com.avandocmsg.messenger.core.port.ScimGroupRepositoryPort;
 import com.avandocmsg.messenger.core.port.SavedChatPort;
 import com.avandocmsg.messenger.core.port.UserRepositoryPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
@@ -46,6 +49,8 @@ import io.lettuce.core.api.sync.RedisCommands;
 import io.minio.MinioClient;
 
 import java.time.Clock;
+
+import java.util.function.BooleanSupplier;
 
 import javax.sql.DataSource;
 
@@ -92,8 +97,27 @@ public final class CoreModule {
         return new MessageEditCoordinator(messageRepositoryPort(dataSource), natsOutbound);
     }
 
+    public static MessageEditCoordinator messageEditCoordinator(DataSource dataSource, IndexerEventPublisher indexer) {
+        return new MessageEditCoordinator(messageRepositoryPort(dataSource), indexer);
+    }
+
     public static MessageDeleteCoordinator messageDeleteCoordinator(DataSource dataSource, NatsOutboundPort natsOutbound) {
         return new MessageDeleteCoordinator(messageRepositoryPort(dataSource), natsOutbound);
+    }
+
+    public static MessageDeleteCoordinator messageDeleteCoordinator(
+            DataSource dataSource,
+            NatsOutboundPort natsOutbound,
+            IndexerEventPublisher indexer) {
+        return new MessageDeleteCoordinator(messageRepositoryPort(dataSource), natsOutbound, indexer);
+    }
+
+    public static IndexerEventPublisher indexerEventPublisher(NatsOutboundPort natsOutbound, BooleanSupplier indexerAvailable) {
+        return new IndexerEventPublisher(natsOutbound, indexerAvailable);
+    }
+
+    public static ScimGroupRepositoryPort scimGroupRepositoryPort(DataSource dataSource) {
+        return new JdbcScimGroupRepositoryAdapter(dataSource);
     }
 
     public static MessageReactionCoordinator messageReactionCoordinator(DataSource dataSource, NatsOutboundPort natsOutbound) {

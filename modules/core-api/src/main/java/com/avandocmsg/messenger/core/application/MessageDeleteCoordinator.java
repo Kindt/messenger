@@ -19,10 +19,17 @@ public final class MessageDeleteCoordinator {
 
     private final MessageRepositoryPort messageRepositoryPort;
     private final NatsOutboundPort natsOutbound;
+    private final IndexerEventPublisher indexerEventPublisher;
 
     public MessageDeleteCoordinator(MessageRepositoryPort messageRepositoryPort, NatsOutboundPort natsOutbound) {
+        this(messageRepositoryPort, natsOutbound, new IndexerEventPublisher(natsOutbound));
+    }
+
+    public MessageDeleteCoordinator(MessageRepositoryPort messageRepositoryPort, NatsOutboundPort natsOutbound,
+                                    IndexerEventPublisher indexerEventPublisher) {
         this.messageRepositoryPort = messageRepositoryPort;
         this.natsOutbound = natsOutbound;
+        this.indexerEventPublisher = indexerEventPublisher;
     }
 
     public boolean delete(MessageId messageId, UserId deleterId) {
@@ -39,16 +46,10 @@ public final class MessageDeleteCoordinator {
     }
 
     private void publishIndexDelete(MessageId messageId) {
-        if (natsOutbound == null) {
+        if (indexerEventPublisher == null) {
             return;
         }
-        try {
-            natsOutbound.publish(
-                NatsSubjects.MSG_EVENT_INDEX,
-                MAPPER.writeValueAsBytes(MessageWorkerEvent.forIndexDelete(messageId.value().toString())));
-        } catch (Exception e) {
-            log.warn("Failed to publish index delete for {}", messageId, e);
-        }
+        indexerEventPublisher.publish(MessageWorkerEvent.forIndexDelete(messageId.value().toString()));
     }
 
     private void publishChange(Message msg) {
