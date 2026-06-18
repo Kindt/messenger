@@ -1,0 +1,19 @@
+groups:
+  - name: korus-fleet
+    rules:
+      - alert: FleetComponentNotReady
+        expr: fleet_component_ready == 0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Fleet component {{ $labels.component_id }} not ready"
+          description: "role={{ $labels.role }} source={{ $labels.source }}"
+      - alert: FleetReadyCountLow
+        expr: fleet_components_ready < 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Fleet ready count below threshold"
+          description: "Only {{ $value }} components ready (expect >= 3 in lab)"

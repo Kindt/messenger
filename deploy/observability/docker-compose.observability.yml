@@ -8,6 +8,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus-export-alerts.example.yml:/etc/prometheus/rules/export-alerts.yml:ro
+      - ./prometheus-fleet-alerts.example.yml:/etc/prometheus/rules/fleet-alerts.yml:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -35,5 +36,6 @@ services:
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana-export-dashboard.json:/var/lib/grafana/dashboards/export.json:ro
+      - ./grafana-fleet-dashboard.json:/var/lib/grafana/dashboards/fleet.json:ro
     depends_on:
       - prometheus

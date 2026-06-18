@@ -42,7 +42,16 @@ if [[ "$SKIP_KORUS_ENSURE" != "1" ]]; then
 fi
 
 if [[ "${KORUS_FLEET_LAB:-0}" == "1" && -z "${FLEET_TARGETS_JSON:-}" ]]; then
-  export FLEET_TARGETS_JSON='[{"id":"ws-gateway","role":"ws-gateway","base_url":"http://ws-gateway:9191","health_path":"/health"},{"id":"message-pipeline","role":"worker","base_url":"http://message-pipeline:9191","health_path":"/health"}]'
+  if [[ -f "$ROOT/docker/fleet-targets.qemu.json" ]]; then
+    export FLEET_TARGETS_JSON="$(tr -d '\n\r' < "$ROOT/docker/fleet-targets.qemu.json")"
+  elif [[ -f "$ROOT/docker/fleet-targets.lab.json" ]]; then
+    export FLEET_TARGETS_JSON="$(tr -d '\n\r' < "$ROOT/docker/fleet-targets.lab.json")"
+  else
+    export FLEET_TARGETS_JSON='[{"id":"ws-gateway","role":"ws-gateway","base_url":"http://ws-gateway:9191","health_path":"/health"},{"id":"message-pipeline","role":"worker","base_url":"http://message-pipeline:9191","health_path":"/health"},{"id":"keycloak","role":"keycloak","base_url":"http://keycloak:8080","health_path":"/realms/avandocmsg"},{"id":"minio","role":"minio","base_url":"http://minio:9000","health_path":"/minio/health/live"},{"id":"nats","role":"nats","base_url":"http://nats:8222","health_path":"/healthz"},{"id":"solr","role":"solr","base_url":"http://solr:8983","health_path":"/solr/admin/info/system?wt=json"}]'
+  fi
+fi
+if [[ "${KORUS_FLEET_LAB:-0}" == "1" ]]; then
+  export ORG_IP_ALLOWLIST_ENFORCE="${ORG_IP_ALLOWLIST_ENFORCE:-1}"
 fi
 
 COMPOSE="$KORUS_COMPOSE_FULL_SERVER"
@@ -84,6 +93,15 @@ else
 fi
 echo "docker compose ${compose_args[*]}"
 korus_compose_up_multi_retry "${compose_args[@]}" || exit 1
+if [[ "${KORUS_FLEET_LAB:-0}" == "1" ]]; then
+  echo "Fleet lab: force-recreate core-api (FLEET_TARGETS_JSON env)" >&2
+  recycle_args=(-f "$COMPOSE" --profile full --profile push)
+  while IFS= read -r arg; do
+    recycle_args+=("$arg")
+  done < <(korus_fleet_lab_compose_args "$ROOT")
+  recycle_args+=(up -d --no-deps --force-recreate core-api)
+  korus_compose_up_multi_retry "${recycle_args[@]}" || exit 1
+fi
 
 echo ""
 if $EXPORT_SMOKE && [[ "$WAIT_READY" == "1" ]]; then
