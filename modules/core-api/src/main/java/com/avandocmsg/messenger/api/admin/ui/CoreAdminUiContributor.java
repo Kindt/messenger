@@ -43,6 +43,13 @@ public final class CoreAdminUiContributor implements AdminUiContributor {
                 "/admin/organizations"
             ),
             new AdminUiSectionDescriptor(
+                "core-auth-policy",
+                "Вход / Identity",
+                21,
+                AdminUiSectionKind.JSON_PANEL,
+                null
+            ),
+            new AdminUiSectionDescriptor(
                 "core-user-organization",
                 "Пользователь → организация",
                 25,

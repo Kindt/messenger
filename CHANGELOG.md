@@ -13,6 +13,13 @@
 - **product_presentation.html** v2.6.3; исправлен баг TCO-таблиц (запятые в qty и unit rates).
 - **competitor_comparison*.html:** пометка «внутренний»; НТ без QEMU/127.0.0.1 в customer-facing текстах; полная легенда сносок в brief.
 
+### 2026-06-17 — Spec 017: enterprise auth (LDAP/SSO admin-configurable)
+
+- **API:** `GET /api/v1/auth/login-options` (public); `GET/PATCH /api/v1/admin/orgs/{orgId}/auth-policy`; Flyway `V041__org_auth_policy`, `organizations.slug`.
+- **Keycloak sync:** `KeycloakAuthSyncClient` — LDAP user federation + OIDC/SAML brokers from admin policy.
+- **Web UI:** dynamic login screen (SSO buttons, registration gate from policy).
+- **Dev:** `docker/docker-compose.openldap-dev.yml`, `scripts/smoke-ldap-auth.sh`, Playwright `auth-login-options.spec.ts`.
+
 ### 2026-06-17 — L0+ menu v2 (spec 014) + spec 016 chat message actions
 
 - **L0+:** `L0TemplateSupport`, `L0WhenSupport`, `slash_commands`, button `when`, `vars`; schema v2; `L0MenuConfigValidator` on admin L0 create.

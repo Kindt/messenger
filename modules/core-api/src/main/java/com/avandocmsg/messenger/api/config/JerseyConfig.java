@@ -1,8 +1,10 @@
 package com.avandocmsg.messenger.api.config;
 
+import com.avandocmsg.messenger.api.auth.AuthPolicyAdminResource;
 import com.avandocmsg.messenger.api.auth.AuthRateLimiter;
 import com.avandocmsg.messenger.api.auth.AuthResource;
 import com.avandocmsg.messenger.api.auth.AuthService;
+import com.avandocmsg.messenger.api.auth.policy.AuthPolicyService;
 import com.avandocmsg.messenger.api.auth.TokenValidator;
 import com.avandocmsg.messenger.api.chats.ChatResource;
 import com.avandocmsg.messenger.api.chats.ChatService;
@@ -143,7 +145,8 @@ public class JerseyConfig extends ResourceConfig {
                         com.avandocmsg.messenger.api.plugins.PluginRepository pluginRepository,
                         com.avandocmsg.messenger.api.plugins.PluginPlatformService pluginPlatformService,
                         com.avandocmsg.messenger.api.plugins.PluginPolicyService pluginPolicyService,
-                        com.avandocmsg.messenger.api.plugins.PluginOutboundService pluginOutboundService) {
+                        com.avandocmsg.messenger.api.plugins.PluginOutboundService pluginOutboundService,
+                        AuthPolicyService authPolicyService) {
         register(new AbstractBinder() {
             @Override
             protected void configure() {
@@ -212,6 +215,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(pluginPlatformService).to(com.avandocmsg.messenger.api.plugins.PluginPlatformService.class);
                 bind(pluginPolicyService).to(com.avandocmsg.messenger.api.plugins.PluginPolicyService.class);
                 bind(pluginOutboundService).to(com.avandocmsg.messenger.api.plugins.PluginOutboundService.class);
+                bind(authPolicyService).to(AuthPolicyService.class);
                 bind(BotRateLimiter.fromEnv()).to(BotRateLimiter.class);
             }
         });
@@ -220,6 +224,7 @@ public class JerseyConfig extends ResourceConfig {
 
         register(HealthResource.class);
         register(AuthResource.class);
+        register(AuthPolicyAdminResource.class);
         register(AdminResource.class);
         register(AdminConsoleRedirectResource.class);
         register(AdminUiResource.class);

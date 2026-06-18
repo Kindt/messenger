@@ -36,7 +36,7 @@ public class OrganizationRepository {
             stmt.setObject(1, id);
             stmt.setString(2, name.trim());
             stmt.executeUpdate();
-            return new OrgRow(id.toString(), name.trim(), clock.instant());
+            return new OrgRow(id.toString(), name.trim(), null, clock.instant());
         } catch (Exception e) {
             log.error("create org failed", e);
             return null;
@@ -58,7 +58,7 @@ public class OrganizationRepository {
     }
 
     public Optional<OrgRow> findById(UUID id) {
-        var sql = "SELECT id, name, created_at FROM organizations WHERE id = ?";
+        var sql = "SELECT id, name, slug, created_at FROM organizations WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
             stmt.setObject(1, id);
@@ -69,6 +69,7 @@ public class OrganizationRepository {
                 return Optional.of(new OrgRow(
                     rs.getObject("id", UUID.class).toString(),
                     rs.getString("name"),
+                    rs.getString("slug"),
                     rs.getTimestamp("created_at").toInstant()));
             }
         } catch (Exception e) {
@@ -97,7 +98,7 @@ public class OrganizationRepository {
     }
 
     public List<OrgRow> listAll() {
-        var sql = "SELECT id, name, created_at FROM organizations ORDER BY name";
+        var sql = "SELECT id, name, slug, created_at FROM organizations ORDER BY name";
         var out = new ArrayList<OrgRow>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql);
@@ -106,6 +107,7 @@ public class OrganizationRepository {
                 out.add(new OrgRow(
                     rs.getObject("id", UUID.class).toString(),
                     rs.getString("name"),
+                    rs.getString("slug"),
                     rs.getTimestamp("created_at").toInstant()));
             }
         } catch (Exception e) {
@@ -127,5 +129,57 @@ public class OrganizationRepository {
         }
     }
 
-    public record OrgRow(String id, String name, Instant createdAt) {}
+    public Optional<OrgRow> findBySlug(String slug) {
+        if (slug == null || slug.isBlank()) {
+            return Optional.empty();
+        }
+        var sql = "SELECT id, name, slug, created_at FROM organizations WHERE lower(slug) = lower(?)";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, slug.trim());
+            try (var rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(mapRow(rs));
+            }
+        } catch (Exception e) {
+            log.error("find org by slug failed", e);
+            return Optional.empty();
+        }
+    }
+
+    public Optional<OrgRow> findSingle() {
+        var all = listAll();
+        if (all.size() == 1) {
+            return Optional.of(all.get(0));
+        }
+        return Optional.empty();
+    }
+
+    public boolean setSlug(UUID orgId, String slug) {
+        if (slug == null || slug.isBlank()) {
+            return false;
+        }
+        var sql = "UPDATE organizations SET slug = ? WHERE id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, slug.trim().toLowerCase());
+            stmt.setObject(2, orgId);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            log.error("set org slug failed", e);
+            return false;
+        }
+    }
+
+    private static OrgRow mapRow(java.sql.ResultSet rs) throws Exception {
+        return new OrgRow(
+            rs.getObject("id", UUID.class).toString(),
+            rs.getString("name"),
+            rs.getString("slug"),
+            rs.getTimestamp("created_at").toInstant());
+    }
+
+    public record OrgRow(String id, String name, String slug, Instant createdAt) {}
 }

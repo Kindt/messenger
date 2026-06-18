@@ -22,8 +22,8 @@
     },
     "ui-auth": {
       "description": "Auth session UI",
-      "args": ["specs/auth-session.spec.ts", "specs/contacts-search.spec.ts"],
-      "grep": "login via UI|logout returns|locale switch|contacts list loads"
+      "args": ["specs/auth-session.spec.ts", "specs/auth-login-options.spec.ts", "specs/contacts-search.spec.ts"],
+      "grep": "login via UI|logout returns|locale switch|contacts list loads|login-options"
     },
     "ui-messaging": {
       "description": "Messaging critical, group, actions, multi-browser group users",

@@ -27,6 +27,7 @@ public class JwtAuthFilter implements ContainerRequestFilter {
     /** Paths relative to Jersey servlet mapping {@code /api/*} (see {@link #normalizeJerseyPath}). */
     private static final Set<String> PUBLIC_JERSEY_PREFIXES = Set.of(
         "v1/auth/login",
+        "v1/auth/login-options",
         "v1/auth/logout",
         "v1/auth/register",
         "v1/auth/refresh",

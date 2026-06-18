@@ -2,8 +2,10 @@ package com.avandocmsg.messenger.api.auth;
 
 import com.avandocmsg.messenger.api.auth.dto.LoginRequest;
 import com.avandocmsg.messenger.api.auth.dto.LoginResponse;
+import com.avandocmsg.messenger.api.auth.dto.LoginOptionsResponse;
 import com.avandocmsg.messenger.api.auth.dto.RegisterRequest;
 import com.avandocmsg.messenger.api.auth.dto.RegisterResponse;
+import com.avandocmsg.messenger.api.auth.policy.AuthPolicyService;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -15,9 +17,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -29,14 +33,45 @@ import jakarta.ws.rs.core.Response;
 public class AuthResource {
 
     private final AuthService authService;
+    private final AuthPolicyService authPolicyService;
     private final AuthRateLimiter rateLimiter;
     private final UserMessageSource messages;
 
     @Inject
-    public AuthResource(AuthService authService, AuthRateLimiter rateLimiter, UserMessageSource messages) {
+    public AuthResource(
+        AuthService authService,
+        AuthPolicyService authPolicyService,
+        AuthRateLimiter rateLimiter,
+        UserMessageSource messages
+    ) {
         this.authService = authService;
+        this.authPolicyService = authPolicyService;
         this.rateLimiter = rateLimiter;
         this.messages = messages;
+    }
+
+    @GET
+    @Path("/login-options")
+    @Operation(summary = "Login options", description = "Public list of allowed auth methods for resolved organization")
+    @ApiResponse(responseCode = "200", description = "Login methods",
+        content = @Content(schema = @Schema(implementation = LoginOptionsResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Organization not resolved",
+        content = @Content(schema = @Schema(implementation = ApiError.class)))
+    public Response loginOptions(
+        @QueryParam("org_slug") String orgSlug,
+        @Context HttpServletRequest httpRequest
+    ) {
+        var host = httpRequest.getHeader("Host");
+        var scheme = httpRequest.getHeader("X-Forwarded-Proto");
+        if (scheme == null || scheme.isBlank()) {
+            scheme = httpRequest.getScheme();
+        }
+        var redirectBase = scheme + "://" + host + "/";
+        return authPolicyService.loginOptions(host, orgSlug, redirectBase)
+            .map(body -> Response.ok(body).build())
+            .orElseGet(() -> Response.status(404)
+                .entity(new ApiError(404, messages.get("error.admin.org_not_found")))
+                .build());
     }
 
     @POST

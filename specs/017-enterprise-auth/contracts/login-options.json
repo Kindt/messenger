@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LoginOptionsResponse",
+  "type": "object",
+  "required": ["org_id", "methods", "registration_allowed"],
+  "properties": {
+    "org_id": { "type": "string", "format": "uuid" },
+    "org_slug": { "type": ["string", "null"] },
+    "registration_allowed": { "type": "boolean" },
+    "methods": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "label"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "enum": ["password", "oidc", "saml"] },
+          "label": { "type": "string" },
+          "authorization_url": { "type": "string" }
+        }
+      }
+    }
+  }
+}

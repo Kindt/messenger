@@ -31,6 +31,7 @@ class OrganizationRepositoryH2Test {
                 CREATE TABLE organizations (
                   id UUID PRIMARY KEY,
                   name VARCHAR(256) NOT NULL,
+                  slug VARCHAR(64),
                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """);

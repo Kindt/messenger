@@ -186,6 +186,7 @@
   const state = {
     tokens: null,
     authTab: "login",
+    loginOptions: null,
     error: null,
     statusMessage: null,
     busy: false,
@@ -5647,6 +5648,44 @@
     parent.appendChild(row);
   }
 
+  function orgSlugFromUrl() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      return params.get("org_slug");
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function authPasswordAllowed() {
+    if (!state.loginOptions || !state.loginOptions.methods) {
+      return true;
+    }
+    return state.loginOptions.methods.some(function (m) {
+      return m && m.type === "password";
+    });
+  }
+
+  function authRegistrationAllowed() {
+    if (!state.loginOptions) {
+      return true;
+    }
+    return !!state.loginOptions.registration_allowed;
+  }
+
+  async function fetchLoginOptions() {
+    try {
+      var slug = orgSlugFromUrl();
+      var q = slug ? "?org_slug=" + encodeURIComponent(slug) : "";
+      state.loginOptions = await apiJson("/auth/login-options" + q, {
+        noAuth: true,
+        noRefresh: true,
+      });
+    } catch (e) {
+      state.loginOptions = null;
+    }
+  }
+
   function renderAuth() {
     var root = document.getElementById("root");
     root.innerHTML = "";
@@ -5668,6 +5707,7 @@
     head.appendChild(brandRow);
     card.appendChild(head);
     var tabs = el("div", "auth-tabs");
+    var showRegister = authRegistrationAllowed();
     var tLogin = el("button", "auth-tab" + (state.authTab === "login" ? " active" : ""), L("auth.login"));
     tLogin.type = "button";
     tLogin.setAttribute("data-testid", "auth-tab-login");
@@ -5676,20 +5716,44 @@
       state.error = null;
       render();
     };
-    var tReg = el("button", "auth-tab" + (state.authTab === "register" ? " active" : ""), L("auth.register"));
-    tReg.type = "button";
-    tReg.setAttribute("data-testid", "auth-tab-register");
-    tReg.onclick = function () {
-      state.authTab = "register";
-      state.error = null;
-      render();
-    };
     tabs.appendChild(tLogin);
-    tabs.appendChild(tReg);
+    if (showRegister) {
+      var tReg = el("button", "auth-tab" + (state.authTab === "register" ? " active" : ""), L("auth.register"));
+      tReg.type = "button";
+      tReg.setAttribute("data-testid", "auth-tab-register");
+      tReg.onclick = function () {
+        state.authTab = "register";
+        state.error = null;
+        render();
+      };
+      tabs.appendChild(tReg);
+    } else if (state.authTab === "register") {
+      state.authTab = "login";
+    }
     card.appendChild(tabs);
+    if (state.loginOptions && state.loginOptions.methods) {
+      var ssoWrap = el("div", "auth-sso-list");
+      state.loginOptions.methods.forEach(function (m) {
+        if (!m || m.type === "password" || !m.authorization_url) return;
+        var btn = el("button", "btn btn-secondary auth-sso-btn", m.label || m.id);
+        btn.type = "button";
+        btn.setAttribute("data-testid", "auth-sso-" + m.id);
+        btn.onclick = function () {
+          window.location.href = m.authorization_url;
+        };
+        ssoWrap.appendChild(btn);
+      });
+      if (ssoWrap.childNodes.length) {
+        card.appendChild(ssoWrap);
+      }
+    }
     if (state.error) {
       card.appendChild(el("div", "error-banner auth-error", state.error));
     }
+    var showPasswordForm =
+      (state.authTab === "login" && authPasswordAllowed()) ||
+      (state.authTab === "register" && showRegister);
+    if (showPasswordForm) {
     var form = el("form", "auth-form");
     form.onsubmit = function (e) {
       e.preventDefault();
@@ -5715,6 +5779,7 @@
     submit.setAttribute("data-testid", "auth-submit");
     form.appendChild(submit);
     card.appendChild(form);
+    }
     card.appendChild(el("p", "auth-foot", L("auth.hint")));
     shell.appendChild(card);
     root.appendChild(shell);
@@ -8526,8 +8591,10 @@
         stashPendingDeepLink(pendingUrl.chatId, pendingUrl.msgId);
       }
       stashPendingMeetingDeepLink(pendingUrl);
-      updateDocumentTitle();
-      render();
+      fetchLoginOptions().finally(function () {
+        updateDocumentTitle();
+        render();
+      });
     }
   }
 

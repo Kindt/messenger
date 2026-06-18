@@ -394,6 +394,11 @@ public class MessengerApplication {
         var pluginOutboundService = new com.avandocmsg.messenger.api.plugins.PluginOutboundService(
             pluginRepository, messageApplicationService, userMessages);
 
+        var authPolicyRepository = new com.avandocmsg.messenger.api.auth.policy.AuthPolicyRepository(dataSource);
+        var keycloakAuthSyncClient = new com.avandocmsg.messenger.api.auth.policy.KeycloakAuthSyncClient(appConfig);
+        var authPolicyService = new com.avandocmsg.messenger.api.auth.policy.AuthPolicyService(
+            appConfig, authPolicyRepository, organizationRepository, keycloakAuthSyncClient);
+
         var jerseyServlet = new ServletContainer(
             new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
                 userRepository, contactRepository, contactService,
@@ -411,7 +416,8 @@ public class MessengerApplication {
                 organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,
                 publicLinkPort, messageSearchService, adminManifest, adminServerStatsService, redisProbe,
                 readCachePort, legalHoldRepository, purgeStatusService, botRepository, botService,
-                pluginRepository, pluginPlatformService, pluginPolicyService, pluginOutboundService));
+                pluginRepository, pluginPlatformService, pluginPolicyService, pluginOutboundService,
+                authPolicyService));
         Tomcat.addServlet(ctx, SERVLET_NAME, jerseyServlet);
         ctx.addServletMappingDecoded("/api/*", SERVLET_NAME);
 

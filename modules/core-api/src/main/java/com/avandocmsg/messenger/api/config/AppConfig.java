@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.UUID;
 
 public class AppConfig {
     private static final Logger log = LoggerFactory.getLogger(AppConfig.class);
@@ -51,6 +52,8 @@ public class AppConfig {
         override("KEYCLOAK_AUDIENCE", "keycloak.audience");
         override("KEYCLOAK_MASTER_USER", "keycloak.master.user");
         override("KEYCLOAK_MASTER_PASSWORD", "keycloak.master.password");
+        override("KORUS_DEFAULT_ORG_ID", "korus.default.org.id");
+        override("WEB_PUBLIC_BASE_URL", "web.public.base.url");
         override("MINIO_ENDPOINT", "minio.endpoint");
         override("MINIO_ACCESS_KEY", "minio.access.key");
         override("MINIO_SECRET_KEY", "minio.secret.key");
@@ -273,6 +276,26 @@ public class AppConfig {
         var realm = issuer.substring(idx + marker.length());
         var base = issuer.substring(0, idx);
         return base + "/admin/realms/" + realm;
+    }
+
+    /** Optional default org when host/subdomain cannot be resolved (single-tenant dev). */
+    public Optional<UUID> defaultOrgId() {
+        var raw = props.getProperty("korus.default.org.id");
+        if (raw == null || raw.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(UUID.fromString(raw.trim()));
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid korus.default.org.id: {}", raw);
+            return Optional.empty();
+        }
+    }
+
+    /** Public web origin for OIDC redirect_uri (e.g. http://127.0.0.1:19088/). */
+    public String webPublicBaseUrl() {
+        var v = props.getProperty("web.public.base.url", "http://127.0.0.1:19088/");
+        return v.endsWith("/") ? v : v + "/";
     }
 
     public String minioEndpoint() {
