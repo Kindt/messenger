@@ -26,6 +26,9 @@ class CompareRow:
     korus_at_competitor_ru: int
     korus_headroom_ru: int | None
     headroom_note: str
+    korus_ram_gb_raw: int
+    korus_ram_gb_billed: int
+    korus_vcpu: int
 
 
 HEADROOM_NOTE = "без изменения VM-тира (округлённая RAM)"
@@ -51,6 +54,7 @@ def _yearly_price(offering: dict[str, Any]) -> int | None:
 
 def build_compare_row(offering: dict[str, Any]) -> CompareRow:
     ru = offering["value"]
+    est = se.estimate_resources(ru)
     quotes = se.quote_all_providers(ru)
     providers = tuple(
         ProviderYearly(q.provider_id, q.provider_label, q.yearly_rub, q.pricing_url)
@@ -67,6 +71,9 @@ def build_compare_row(offering: dict[str, Any]) -> CompareRow:
         korus_at_competitor_ru=ru,
         korus_headroom_ru=headroom,
         headroom_note=HEADROOM_NOTE if headroom else "",
+        korus_ram_gb_raw=est.ram_gb_raw,
+        korus_ram_gb_billed=est.ram_gb_billed,
+        korus_vcpu=est.vcpu,
     )
 
 

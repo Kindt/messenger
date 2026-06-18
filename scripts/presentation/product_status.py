@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from html import escape
 
-PRODUCT_VERSION = "2.6.2"
+PRODUCT_VERSION = "0.0.1-SNAPSHOT"
 PRODUCT_DATE = "18 июня 2026"
-DECK_VERSION = "1.1.0"
+# Deck footer uses PRODUCT_VERSION (not a separate marketing semver).
+DECK_VERSION = PRODUCT_VERSION
 BUILD_DATE = "2026-06-18"
 
 PRODUCT_STAGE = "working_prototype"

@@ -395,6 +395,7 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 | **GitHub** | **Не ставить GitHub CLI (`gh`)**; push — `.\scripts\git-push.ps1`; PR — вручную через compare на github.com |
 | **Stage/prod стенд** | **До сентября 2026 стенда не будет.** Не предлагать stage/prod deploy и smokes на real FQDN. Acceptance — **QEMU only**. Ops-задачи — реестр [`specs/015-live-server-ops-backlog/`](specs/015-live-server-ops-backlog/) (см. «Live-server backlog» ниже). |
 | **Live-server backlog** | **До Sep 2026 или явного распоряжения** — задачи из spec **015** **не выводить** в списки «доработать / next steps / waves». При обзоре статуса — **краткое напоминание**, что deferred ops-реестр есть (ссылка на 015). Исключение: пользователь явно просит ops/stage или конкретный T601/LSO-* |
+| **Версия продукта** | Единая метка **`0.0.1-SNAPSHOT`** — рабочая болванка до первого релиза, **не** marketing semver (не `2.x`). Источник: `scripts/presentation/product_status.py`, Gradle `version`, `app.version`. В deck block-0 **без** pills «Автотесты / Реализовано / Версия»; Playwright N/N только в `product_status.py` для инженерии. |
 
 ---
 
@@ -406,6 +407,7 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 
 - **Product deck:** не Pilot/Standard/Enterprise — только **prod full** для sizing/TCO; **dev-min** — только QEMU/разработка.
 - Калькулятор deck: `scripts/presentation/module_sizing.py` — режим «нагрузка → модули» или «модули → предел RU/онлайн/хранилища».
+- **Версия в deck:** `0.0.1-SNAPSHOT` (болванка); убраны stat-pills в block-0 (автотесты/счётчики/«Версия 2.6.2»). Footer deck — `{PRODUCT_VERSION} | дата | PRICE_AS_OF`.
 
 ### QEMU / dev stack
 

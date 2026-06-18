@@ -21,7 +21,7 @@
 - **`product_status.py`:** Playwright 50/50; spec 017/019 — auth-policy admin, SCIM, directory sync, Live L2–L5, LiveKit SFU, webhook outbox, PG sharding pilot, export manifest.
 - **Deck capabilities:** live-трансляции, enterprise IdP/SCIM, развёрнутые workers и LiveKit в калькуляторе infra.
 - **`module_sizing`:** workers по compose-профилям; опция LiveKit; locked ядро vs optional baseline.
-- **Калькуляторы Tech §4:** scale-out по лимиту VM (× > 1 при высокой нагрузке); поля ввода вместо select; смета infra; автопересчёт.
+- **Product deck:** `0.0.1-SNAPSHOT`, stat-pills в block-0 убраны; footer без Playwright count.
 
 ### 2026-06-18 — Spec 019 phase 2 (hex tail, SCIM Groups, Playwright ui-live)
 

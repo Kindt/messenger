@@ -129,15 +129,30 @@ def render_architecture_svg() -> str:
 
 def render_user_timeline_svg() -> str:
     steps = ["Проверить чаты", "Отправить файл", "Созвон из чата", "Найти документ"]
+    width = 600
+    height = 86
+    pad_x = 78
+    n = len(steps)
+    step_w = (width - 2 * pad_x) / (n - 1) if n > 1 else 0.0
     parts = []
-    x = 20
-    for i, s in enumerate(steps):
-        parts.append(f'<circle cx="{x}" cy="40" r="8" fill="#6366f1"/>')
-        parts.append(f'<text x="{x}" y="70" text-anchor="middle" font-size="9">{escape(s[:20])}</text>')
-        if i < len(steps) - 1:
-            parts.append(f'<line x1="{x+8}" y1="40" x2="{x+72}" y2="40" stroke="#cbd5e1"/>')
-        x += 120
-    return f'<svg viewBox="0 0 500 90" width="100%" height="90" xmlns="http://www.w3.org/2000/svg">{"".join(parts)}</svg>'
+    for i, label in enumerate(steps):
+        cx = pad_x + i * step_w
+        parts.append(f'<circle cx="{cx:.0f}" cy="30" r="9" fill="#6366f1"/>')
+        parts.append(
+            f'<text x="{cx:.0f}" y="56" text-anchor="middle" font-size="10" fill="#374151">'
+            f"{escape(label)}</text>"
+        )
+        if i < n - 1:
+            nx = pad_x + (i + 1) * step_w
+            parts.append(
+                f'<line x1="{cx + 11:.0f}" y1="30" x2="{nx - 11:.0f}" y2="30" '
+                f'stroke="#cbd5e1" stroke-width="2"/>'
+            )
+    return (
+        f'<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" '
+        f'xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Типичный рабочий день" '
+        f'preserveAspectRatio="xMidYMid meet">{"".join(parts)}</svg>'
+    )
 
 
 def render_roadmap_svg() -> str:
