@@ -46,4 +46,4 @@ if [[ "$SKIP_KORUS_ENSURE" == "1" ]]; then kw_args+=(--skip-ensure); fi
 bash "$SCRIPT_DIR/korus-web-up.sh" "${kw_args[@]}"
 
 echo ""
-echo "Two-host: open http://<WEB_LAN_IP>:9088/ from other PCs. Hot-swap: ./scripts/dev-overlay-up.sh"
+echo "Two-host: open http://<WEB_LAN_IP>:9088/ from other PCs"

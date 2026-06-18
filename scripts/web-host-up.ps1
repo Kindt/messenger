@@ -29,4 +29,4 @@ if (-not $skipEnsure) {
 & (Join-Path $PSScriptRoot "korus-web-up.ps1") -Build:$Build -SkipEnsure:$skipEnsure
 
 Write-Host ""
-Write-Host "Two-host: open http://<WEB_LAN_IP>:9088/ from other PCs. Hot-swap: .\scripts\dev-overlay-up.ps1" -ForegroundColor Yellow
+Write-Host "Two-host: open http://<WEB_LAN_IP>:9088/ from other PCs" -ForegroundColor Yellow

@@ -39,4 +39,4 @@ scripts/       stack-up, smoke, cell manifest (не presentation/E2E)
 
 ## Локально (не в Git)
 
-Агенты Cursor (`.cursor/`), spec-kit (`specs/`, `.specify/`), документация (`docs/`), product deck, Playwright E2E, QEMU-стек — см. `.gitignore`. Файлы могут оставаться на диске разработчика.
+Агенты Cursor (`.cursor/`), spec-kit (`specs/`, `.specify/`), документация (`docs/`), product deck, Playwright E2E, QEMU, hot-swap `dev-overlay/` — см. `.gitignore`. В Git: исходники и сборка **сервера и web-client** (`modules/`, `docker/`, `korus-web/`, Ansible).

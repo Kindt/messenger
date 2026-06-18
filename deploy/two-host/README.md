@@ -62,8 +62,6 @@ Windows: по-прежнему `scripts/server-host-up.ps1` и `scripts/web-host
    .\scripts\web-host-up.ps1 -Build
    ```
 
-5. Hot-swap UI (опционально): `.\scripts\dev-overlay-init.ps1`, правки в `dev-overlay/webui/`, затем `.\scripts\dev-overlay-up.ps1`.
-
 Браузер: `http://<WEB_LAN_IP>:9088/`
 
 ## Порты для LAN
@@ -73,7 +71,7 @@ Windows: по-прежнему `scripts/server-host-up.ps1` и `scripts/web-host
 | 8080 | 1 | core-api, `/admin/` |
 | 8082 | 1 | ws-gateway (хост → контейнер 8081) |
 | 8081 | 1 | Keycloak (опционально) |
-| 9088 | 2 | nginx lb или web-dev (hot-swap) |
+| 9088 | 2 | nginx lb |
 
 Не открывайте в интернет без VPN: 5432, 6379, 4222, 9000, 8983.
 
@@ -109,8 +107,4 @@ sudo ufw allow 9088/tcp comment 'korus web'
 ./scripts/smoke-korus-web.sh --check-api --url "http://<WEB_IP>:9088"
 ```
 
-Подсказки URL: `.\scripts\dev-ui-hints.ps1 -LanIp <WEB_IP>` (на веб-машине укажите IP сервера для API/WS в `.env`).
-
-## Hot-swap
-
-Каталог [`dev-overlay/webui/`](../../dev-overlay/) — копии `app.js`, `styles.css`, `index.html` вне основного модуля. См. [`dev-overlay/README.md`](../../dev-overlay/README.md).
+На веб-машине в `korus-web/.env` укажите IP сервера для `WEB_CLIENT_API_UPSTREAM` и `WEB_CLIENT_WS_PUBLIC_URL` (см. `web.env.example`).
