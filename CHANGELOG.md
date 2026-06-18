@@ -10,6 +10,12 @@
 
 ## [Unreleased]
 
+### 2026-06-18 — QEMU вне Git (gitignore)
+
+- **Удалены из репозитория:** `deploy/qemu/`, `scripts/qemu-*.ps1`, `scripts/*qemu*`, ansible `qemu-*` playbooks/inventory, `.cursor/rules/qemu-*.mdc`, `korus-web/docker-compose.qemu*.yml`, `playwright-dev-loop.ps1`, `livekit-host-tunnel.ps1`.
+- **Локально:** файлы могут оставаться на диске; паттерны в `.gitignore`.
+- **Документация:** README, AGENTS.md, DEV_STACK_PROFILES — live stack через Docker/Ansible.
+
 ### 2026-06-18 — Cleanup: удаление legacy-презентаций
 
 - **Удалены:** `product_presentation.html`, `competitor_comparison*.html`, `tz_product.html`, `docs/PRODUCT_PRESENTATION.md`, `docs/COMPETITOR_COMPARISON_METHODOLOGY.md`.

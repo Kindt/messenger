@@ -13,7 +13,7 @@ Tasks requiring a **live server** (real stage/prod FQDN, prod vault, live extern
 
 **Do instead:**
 
-- Focus engineering lists on QEMU-acceptable work (`buildIntegrity`, unit/H2, `:18080`/`:19088`, guest smokes).
+- Focus engineering lists on repo-local work (`buildIntegrity`, unit/H2, presentation pytest, guest smokes on available stack).
 - Add a **brief reminder** (1–2 sentences) that deferred ops items exist in **spec 015** when summarizing overall project status or when user asks «what's left».
 
 **Exceptions (include in work lists):**
@@ -21,11 +21,11 @@ Tasks requiring a **live server** (real stage/prod FQDN, prod vault, live extern
 - User explicitly asks about stage/prod/ops backlog or orders a specific ops task (e.g. «делаем T601»).
 - User states stage host is available or «after September 2026» timeline no longer applies.
 
-## What counts as live-server (not QEMU)
+## What counts as live-server (not local lab)
 
 See [`specs/015-live-server-ops-backlog/spec.md`](../../specs/015-live-server-ops-backlog/spec.md) § «Что считается live-server задачей».
 
-**QEMU** (`127.0.0.1:18080`, `:19088`, integrations `:18190`) is **not** live-server for this rule.
+Local Docker/Ansible lab or optional QEMU (outside Git) is **not** live-server for this rule.
 
 ## Adding new deferred items
 

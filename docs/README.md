@@ -9,7 +9,7 @@
 | Новый разработчик | [`../README.md`](../README.md) → [`../AGENTS.md`](../AGENTS.md) |
 | Заказчик / presales / команда | **[`index.html`](index.html)** — product deck (GitHub Pages: https://kindt.github.io/messenger/) |
 | Архитектура backend | [`ARCHITECTURE_CORE_PACKAGES.md`](ARCHITECTURE_CORE_PACKAGES.md), [`../.specify/memory/constitution.md`](../.specify/memory/constitution.md) |
-| Deploy / стенды | [`DEV_STACK_PROFILES.md`](DEV_STACK_PROFILES.md), [`../deploy/qemu/README.md`](../deploy/qemu/README.md), [`../deploy/ansible/DEPLOY_QUICKSTART.md`](../deploy/ansible/DEPLOY_QUICKSTART.md) |
+| Deploy / стенды | [`DEV_STACK_PROFILES.md`](DEV_STACK_PROFILES.md), [`../deploy/ansible/DEPLOY_QUICKSTART.md`](../deploy/ansible/DEPLOY_QUICKSTART.md) |
 | Roadmap | [`ROADMAP_EPICS.md`](ROADMAP_EPICS.md), [`plans/README.md`](plans/README.md) |
 | QA / acceptance | [`../tests/e2e-web/README.md`](../tests/e2e-web/README.md), [`parity/`](parity/) |
 

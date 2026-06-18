@@ -23,7 +23,30 @@ korus-web/.env
 dev-overlay/webui/*
 !dev-overlay/webui/.gitkeep
 
-# QEMU local tools/images/runtime (OS images downloaded by scripts/ensure-qemu-images.ps1)
+# ---- QEMU local dev (not in repo; may exist on disk only) ----
+deploy/qemu/
+deploy/ansible/inventory/qemu/
+deploy/ansible/playbooks/qemu-*.yml
+.cursor/rules/qemu-*.mdc
+scripts/qemu-*.ps1
+scripts/*qemu*.ps1
+scripts/ensure-qemu-images.ps1
+scripts/start-qemu-status-loop.ps1
+scripts/stop-qemu-status-loop.ps1
+scripts/stop-qemu-plan-orchestrator.ps1
+scripts/preload-qemu-docker-images.ps1
+scripts/playwright-dev-loop.ps1
+scripts/livekit-host-tunnel.ps1
+scripts/profiling/profile-qemu-workers.ps1
+korus-web/docker-compose.qemu*.yml
+korus-web/docker-compose.hotswap-qemu.yml
+docs/benchmarks/qemu-*.json
+docs/plans/*qemu*
+docs/review/archive/**/smoke-qemu-*
+specs/**/qemu-*.md
+specs/**/contracts/qemu-*.md
+
+# Legacy QEMU runtime artifacts (if present locally)
 deploy/qemu/tools/
 deploy/qemu/images/*.img
 deploy/qemu/images/*.img.partial

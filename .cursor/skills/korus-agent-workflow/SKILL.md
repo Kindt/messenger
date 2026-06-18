@@ -1,6 +1,6 @@
 ---
 name: korus-agent-workflow
-description: "Korus Messenger agent workflow bridge - when to use speckit-* vs superpowers-* skills, project constraints (QEMU-only runtime, Russian comms, spec-first features)."
+description: "Korus Messenger agent workflow bridge - when to use speckit-* vs superpowers-* skills, project constraints (Russian comms, spec-first features)."
 ---
 
 # Korus Messenger Agent Workflow
@@ -15,7 +15,7 @@ This project uses **two complementary skill sets**. Read this skill when unsure 
 | Constitution / principle updates | **speckit-constitution** |
 | Spec quality / consistency check | **speckit-analyze**, **speckit-checklist**, **speckit-clarify** |
 | Rough idea before a formal spec | **superpowers-brainstorming** (then feed into speckit-specify) |
-| Web UI, i18n, Tailwind, `:19088` | **korus-webui** (then speckit **005** or superpowers debugging) |
+| Web UI, i18n, Tailwind | **korus-webui** |
 | Implementation plan from approved design (non-spec-kit) | **superpowers-writing-plans** |
 | Execute a written plan with checkpoints | **superpowers-executing-plans** or **superpowers-subagent-driven-development** |
 | Parallel isolated work | **superpowers-using-git-worktrees**, **superpowers-dispatching-parallel-agents** |
@@ -34,37 +34,23 @@ For **tracked features** in `specs/<NNN-feature>/`:
 3. **speckit-tasks** - `tasks.md`
 4. **speckit-implement** - execute tasks, update `tasks.md` checkboxes
 
-Current active plan: `specs/011-korus-cloud-platform/plan.md` (Phase 0–1 closed). **Live-server ops:** `specs/015-live-server-ops-backlog/` (deferred registry, not agent work lists). Specs 008/009/010 eng. closed.
+Current active plan: `specs/011-korus-cloud-platform/plan.md` (Phase 0–1 closed). **Live-server ops:** `specs/015-live-server-ops-backlog/` (deferred registry).
 
-Do **not** replace speckit with superpowers `writing-plans` for formal spec-kit features. Superpowers planning complements speckit for ad-hoc tasks, spikes, or debugging branches.
-
-## Superpowers complements speckit
-
-Use **superpowers-*** for engineering discipline outside (or before) the spec-kit pipeline:
-
-- **brainstorming** - explore alternatives before committing to a spec
-- **test-driven-development** - RED-GREEN-REFACTOR for Java/Gradle modules
-- **systematic-debugging** - structured root-cause analysis (QEMU stack, Playwright, Gradle)
-- **executing-plans** / **subagent-driven-development** - batch execution with review gates
-- **using-git-worktrees** - isolated branches (respect: no force-push to main)
-- **requesting-code-review** / **receiving-code-review** - structured review loops
+Do **not** replace speckit with superpowers `writing-plans` for formal spec-kit features.
 
 ## Project constraints (override generic superpowers defaults)
 
-These **always** apply in Korus Messenger:
-
 | Constraint | Rule |
 |------------|------|
-| **Windows dev runtime** | **QEMU only** - no Docker/Ansible on host. Use `.\scripts\qemu-up.ps1`, `qemu-redeploy.ps1`. API `127.0.0.1:18080`, UI `127.0.0.1:19088`. |
 | **User communication** | Russian for user-facing chat; code/logs/identifiers stay as in repo |
 | **Commits** | Only when user explicitly asks |
 | **Scope** | Minimal diff; do not refactor unrelated code |
 | **PR gate** | `./gradlew buildIntegrity` |
-| **E2E acceptance** | Inner: `playwright-dev-loop.ps1 -Tier …`; outer: full orchestrator before sign-off |
-| **QEMU lifecycle** | Do not run `qemu-down` unless user asks |
-| **Stage/prod** | **No stage until September 2026.** Deferred ops → [`specs/015-live-server-ops-backlog/`](../../specs/015-live-server-ops-backlog/). **Do not list** LSO/T601+ in work backlogs; **do remind** registry exists in status summaries. Exception: user explicitly orders ops work. QEMU acceptance unchanged. |
+| **Live stack** | Docker Compose + Ansible — [`deploy/ansible/DEPLOY_QUICKSTART.md`](../../deploy/ansible/DEPLOY_QUICKSTART.md). QEMU scripts — **not in Git** (`.gitignore`, local optional) |
+| **E2E** | Playwright — [`tests/e2e-web/README.md`](../../tests/e2e-web/README.md) against running API/UI |
+| **Stage/prod** | **No stage until September 2026.** Deferred ops → [`specs/015-live-server-ops-backlog/`](../../specs/015-live-server-ops-backlog/). Do not list LSO/T601+ in agent backlogs. |
 
-When a superpowers skill suggests `docker compose`, `npm install` for full stack, host Ansible, or **stage/prod smoke/deploy** - **adapt** to QEMU guests or Gradle-only host builds.
+When a superpowers skill suggests host Docker for full stack — use **deploy/ansible** or documented compose scripts on Linux/VM.
 
 ## Skill locations
 

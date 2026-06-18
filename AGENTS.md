@@ -39,7 +39,7 @@ shell commands, and other important information, read the current plan
 | Cache / search / storage | **Redis**, **Solr**, **MinIO** |
 | Auth | **Keycloak 24**, JWT (Nimbus) |
 | Web UI | Vanilla JS **`modules/web-client/src/main/resources/webui/`**, прокси `/api/*` |
-| Deploy | **Docker Compose**, **Ansible**, **QEMU** (Windows dev) |
+| Deploy | **Docker Compose**, **Ansible** |
 | E2E | **Playwright** (`tests/e2e-web/`), smoke-скрипты (`scripts/`) |
 | Метрики | Prometheus **simpleclient** |
 
@@ -74,15 +74,14 @@ korus_messenger/
 ├── services/indexer/     # выделенный hot-plug indexer (ADR)
 ├── docker/               # Dockerfile*, compose overlays
 ├── deploy/
-│   ├── ansible/          # roles, playbooks (Linux, CI, QEMU guests)
-│   ├── qemu/             # Windows dev: 2 Ubuntu VM, bootstrap, lib/
+│   ├── ansible/          # roles, playbooks (Linux, CI)
 │   └── two-host/         # LAN: server host + web host
 ├── .cursor/
 │   ├── skills/           # speckit-* (committed), superpowers-* (junctions), korus-agent-workflow
 │   ├── superpowers/      # vendor clone cursorpowers (gitignored)
 │   └── install-superpowers.ps1
 ├── korus-web/            # Docker: nginx + replicas web-client
-├── scripts/              # smoke, stack-up, qemu-*, profiling
+├── scripts/              # smoke, stack-up, presentation, profiling
 ├── tests/e2e-web/        # Playwright specs, playwright-tiers.json
 ├── specs/                # Spec-kit: spec/plan/tasks/contracts per feature
 ├── docs/                 # architecture, ADR, plans, review, roadmap
@@ -96,9 +95,8 @@ korus_messenger/
 | `modules/core-api/.../api/` | JAX-RS resources (переходный слой; новый код — в hex-пакеты) |
 | `modules/core-api/.../resources/db/migration/` | Flyway — **один владелец миграций на спринт** |
 | `modules/web-client/.../webui/` | UI: `app.js`, locales, E2EE WASM hooks |
-| `deploy/qemu/run/` | runtime-артефакты: логи, `inner-tier-status.json`, orchestrator state |
 | `specs/00N-*` | feature specs (001 review, 002 parity, 003 deploy, 004 closure) |
-| `.cursor/rules/` | правила агента (QEMU isolation, redeploy-monitor, speckit plan, chat-watch) |
+| `.cursor/rules/` | правила агента (speckit plan, ops-live-server-deferred, …) |
 
 ### Gradle-модули
 
@@ -117,33 +115,22 @@ korus_messenger/
 - **Комментарии** — только для неочевидной бизнес-логики; код преимущественно self-explanatory.
 - **CHANGELOG** — значимые изменения в `[Unreleased]` с датой UTC ([`CHANGELOG.md`](CHANGELOG.md)).
 
-### Windows dev host (QEMU isolation)
+### Локальная разработка
 
-**На Windows-хосте запрещено** (см. [`.cursor/rules/qemu-host-isolation.mdc`](.cursor/rules/qemu-host-isolation.mdc)):
+- **PR gate на хосте:** `./gradlew buildIntegrity`, unit/H2-тесты — без live stack.
+- **Live stack:** Docker Compose + Ansible — [`deploy/ansible/DEPLOY_QUICKSTART.md`](deploy/ansible/DEPLOY_QUICKSTART.md).
+- **QEMU (Windows):** `deploy/qemu/`, `scripts/qemu-*.ps1` — **не в Git** (`.gitignore`); могут оставаться локально у разработчика. Агент **не ссылается** на них как на часть репозитория.
 
-- `docker compose`, Ansible deploy на реальные targets, `full-stack-up.ps1`, host Docker stacks.
+### PowerShell-скрипты (`scripts/*.ps1`)
 
-**Разрешено на хосте:**
-
-- `.\scripts\qemu-up.ps1`, `qemu-redeploy.ps1`, `qemu-down.ps1`, `playwright-dev-loop.ps1`;
-- `./gradlew buildIntegrity`, unit-тесты без live stack;
-- браузер/Playwright на **`127.0.0.1:18080`** (API) и **`:19088`** (UI).
-
-Runtime (Docker, Ansible, compose) — **внутри QEMU guests** `korus-server` / `korus-web`.
-
-### PowerShell-скрипты (`deploy/qemu`, `scripts/*.ps1`)
-
-- **ASCII-only** в `.ps1` (совместимость PS 5.1); русский текст — в JSON i18n ([`deploy/qemu/lib/plan-failure-i18n.json`](deploy/qemu/lib/plan-failure-i18n.json), `minute-report-i18n.json`).
+- **ASCII-only** в `.ps1` (совместимость PS 5.1).
 - **`Write-Host`** для служебного вывода оркестратора; не `Write-Output` в функциях, возвращающих `$state` (иначе `Object[]`).
-- **Не вызывать `qemu-down`** без явной просьбы пользователя; не убивать чужие QEMU.
 
 ### Playwright / US9 acceptance
 
-- Inner loop: `.\scripts\playwright-dev-loop.ps1 -Tier <api|ui-*|all-inner>`.
-- Outer gate (редко): `.\scripts\qemu-plan-orchestrator.ps1 -SkipVmUp`.
 - Tier manifest: [`tests/e2e-web/playwright-tiers.json`](tests/e2e-web/playwright-tiers.json).
+- Запуск: см. [`tests/e2e-web/README.md`](tests/e2e-web/README.md) — env `PLAYWRIGHT_BASE_URL`, `KORUS_API_URL` на живой стек.
 - Селекторы: **`data-testid`**, `#u`/`#p` — не locale-specific labels.
-- Env: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:19088`, `KORUS_API_URL=http://127.0.0.1:18080`.
 
 ### Git
 
@@ -181,9 +168,9 @@ Set-Location ../..
 |-------|---------|-------------------|
 | **Spec-kit** | `speckit-*` | Фичи в `specs/`: specify → plan → tasks → implement; constitution, analyze, checklist |
 | **Superpowers** | `superpowers-*` | Brainstorming, TDD, systematic-debugging, writing/executing-plans, code-review, git-worktrees, subagent-driven-dev |
-| **Мост** | `korus-agent-workflow` | Выбор между наборами + ограничения проекта (QEMU, русский, minimal diff) |
+| **Мост** | `korus-agent-workflow` | Выбор между наборами + ограничения проекта (русский, minimal diff) |
 
-**Сосуществование:** spec-kit — обязательный pipeline для tracked features; superpowers — инженерная дисциплина (TDD, отладка, планы вне spec-kit). Ограничения QEMU/host Docker из [qemu-host-isolation](.cursor/rules/qemu-host-isolation.mdc) **перекрывают** generic-советы superpowers.
+**Сосуществование:** spec-kit — обязательный pipeline для tracked features; superpowers — инженерная дисциплина (TDD, отладка, планы вне spec-kit).
 
 Альтернатива (user-level, не для этого репо): `~/.cursor/superpowers/.cursor/install.sh` из upstream INSTALL.md.
 
@@ -229,7 +216,7 @@ Set-Location ../..
 | **Unit** | JUnit 5 для новой бизнес-логики |
 | **Repository** | H2 integration tests для SQL/предикатов |
 | **Workers** | тесты core logic (JSON, chunking, filters) |
-| **API parity** | Playwright tiers + full 26 на QEMU перед sign-off |
+| **API parity** | Playwright tiers на живом стеке (см. `tests/e2e-web/README.md`) |
 | **Smoke** | канонические сценарии — [`scripts/SMOKE_INDEX.md`](scripts/SMOKE_INDEX.md) |
 | **E2EE** | `:modules:core-api:test --tests "*Mls*"`; `e2ee-capabilities.spec.ts` |
 | **Deploy** | `scripts/smoke-deploy-acceptance.sh` (CI nightly) |
@@ -259,7 +246,7 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 | **`docs/PORTS_MATRIX.md`** | новые порты |
 | **`scripts/SMOKE_INDEX.md`** | новые smoke-скрипты |
 | **contracts в `specs/*/contracts/`** | изменение acceptance criteria |
-| **`runtime-gate-report.md`** | после green Playwright на QEMU |
+| **`runtime-gate-report.md`** | после green Playwright на live stack |
 | **`ops-signoff-log.md`** | ops/security gates |
 | [`docs/index.html`](docs/index.html) | product deck (GitHub Pages); rebuild: `python scripts/presentation/build.py` |
 | [`docs/README.md`](docs/README.md) | индекс документации; deck vs legacy |
@@ -318,11 +305,11 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 
 | Документ | Назначение |
 |----------|------------|
-| [`deploy/qemu/README.md`](deploy/qemu/README.md) | QEMU golden path, порты, troubleshooting |
-| [`docs/DEV_STACK_PROFILES.md`](docs/DEV_STACK_PROFILES.md) | QEMU dev/full, pilot/standard, full-server vs dev-min |
+| [`docs/DEV_STACK_PROFILES.md`](docs/DEV_STACK_PROFILES.md) | pilot/standard/enterprise, full-server vs dev-min |
 | [`deploy/ansible/README.md`](deploy/ansible/README.md) | Ansible inventories, playbooks |
+| [`deploy/ansible/DEPLOY_QUICKSTART.md`](deploy/ansible/DEPLOY_QUICKSTART.md) | быстрый старт deploy |
 | [`docs/CI_AND_REPO_HYGIENE.md`](docs/CI_AND_REPO_HYGIENE.md) | CI, Dependabot, smoke policy |
-| [`tests/e2e-web/README.md`](tests/e2e-web/README.md) | Playwright tiers, inner/outer loop |
+| [`tests/e2e-web/README.md`](tests/e2e-web/README.md) | Playwright tiers |
 
 ### Contracts (spec 004 examples)
 
@@ -337,32 +324,11 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 
 ---
 
-## Dev runtime (QEMU)
+## Dev runtime
 
-На **Windows host** runtime только через две QEMU VM. **Профили стендов** (dev/full vs pilot/standard vs compose): [`docs/DEV_STACK_PROFILES.md`](docs/DEV_STACK_PROFILES.md).
+**В репозитории:** сборка/тесты — `./gradlew buildIntegrity`; live stack — Docker Compose + Ansible ([`deploy/ansible/DEPLOY_QUICKSTART.md`](deploy/ansible/DEPLOY_QUICKSTART.md)). Профили: [`docs/DEV_STACK_PROFILES.md`](docs/DEV_STACK_PROFILES.md).
 
-| VM | Guest IP | Host ports |
-|----|----------|------------|
-| `korus-server` | 192.168.76.10 | 18080, 18081, 18082 |
-| `korus-web` | 192.168.76.20 | 19088 |
-
-```powershell
-# Headless (preferred facade)
-.\scripts\qemu-dev-mode.ps1 -Mode warm
-.\scripts\qemu-dev-mode.ps1 -Mode status
-.\scripts\qemu-dev-mode.ps1 -Mode sync-api-core # Java/API ~3 min
-.\scripts\qemu-dev-mode.ps1 -Mode sync-api    # Ansible server (no image build)
-.\scripts\qemu-dev-mode.ps1 -Mode sync-ui     # after enable-hotswap
-
-# Inner loop
-.\scripts\playwright-dev-loop.ps1 -Tier all-inner
-# Outer gate (all specs): -Tier full  (same as npx playwright test)
-
-# Outer gate (once)
-.\scripts\qemu-plan-orchestrator.ps1 -SkipVmUp
-```
-
-Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http://127.0.0.1:19088.
+**Локально (не в Git):** QEMU-стек Windows (`deploy/qemu/`, `scripts/qemu-*.ps1`) — см. `.gitignore`.
 
 ---
 
@@ -385,17 +351,16 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 | Область | Предпочтение |
 |---------|--------------|
 | **Язык** | Ответы пользователю — **русский**; идентификаторы/код/логи — как в репозитории |
-| **Коммиты** | По умолчанию — только по явной просьбе; **QEMU redeploy-цикл** — коммит после каждого fix+restart (см. `qemu-redeploy-monitor.mdc`) |
+| **Коммиты** | По умолчанию — только по явной просьбе |
 | **Scope** | Минимальный diff; не трогать unrelated code |
-| **Runtime Windows** | **QEMU only** — не Docker/Ansible на хосте ([qemu-host-isolation](.cursor/rules/qemu-host-isolation.mdc)) |
-| **Presentation deck / sizing** | **Не использовать Pilot/Standard/Enterprise** в deck и калькуляторах. Только **prod full** (все модули `full-server.yml`) для sizing/TCO. **Dev-min** — только QEMU/разработка. Расчёт: нагрузка (RU + онлайн + msg/s + хранение) → модули **или** модули → предел нагрузки. См. `scripts/presentation/module_sizing.py`, `METRIC_POLICY.md`. |
+| **Runtime / live stack** | Docker Compose + Ansible (см. deploy/ansible). QEMU — локально, **не в Git** |
+| **Presentation deck / sizing** | **Не использовать Pilot/Standard/Enterprise** в deck. Только **prod full** для sizing/TCO. **Dev-min** — lab compose. См. `scripts/presentation/module_sizing.py`, `METRIC_POLICY.md`. |
 | **Presentation deck** | `python scripts/presentation/build.py` → `docs/index.html`; см. [`scripts/presentation/README.md`](scripts/presentation/README.md) |
-| **QEMU lifecycle** | Не `qemu-down` без запроса; не kill non-Korus QEMU |
 | **Документация** | Не создавать markdown «просто так»; docs по запросу или в рамках spec-kit |
 | **Тесты** | Полезные тесты только при реальном coverage; не trivial asserts |
 | **Plan files** | Не редактировать `.cursor/plans/*.plan.md` без явного указания |
 | **GitHub** | **Не ставить GitHub CLI (`gh`)**; push — `.\scripts\git-push.ps1`; PR — вручную через compare на github.com |
-| **Stage/prod стенд** | **До сентября 2026 стенда не будет.** Не предлагать stage/prod deploy и smokes на real FQDN. Acceptance — **QEMU only**. Ops-задачи — реестр [`specs/015-live-server-ops-backlog/`](specs/015-live-server-ops-backlog/) (см. «Live-server backlog» ниже). |
+| **Stage/prod стенд** | **До сентября 2026 стенда не будет.** Ops-задачи — [`specs/015-live-server-ops-backlog/`](specs/015-live-server-ops-backlog/). E2E/smoke на live stack — compose/Ansible или локальный QEMU (вне Git). |
 | **Live-server backlog** | **До Sep 2026 или явного распоряжения** — задачи из spec **015** **не выводить** в списки «доработать / next steps / waves». При обзоре статуса — **краткое напоминание**, что deferred ops-реестр есть (ссылка на 015). Исключение: пользователь явно просит ops/stage или конкретный T601/LSO-* |
 | **Версия продукта** | Единая метка **`0.0.1-SNAPSHOT`** — рабочая болванка до первого релиза, **не** marketing semver (не `2.x`). Источник: `scripts/presentation/product_status.py`, Gradle `version`, `app.version`. Customer-facing — только **`docs/index.html`** (deck). |
 
@@ -409,39 +374,17 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 
 - **Канон для заказчика:** `docs/index.html` (deck pipeline `scripts/presentation/`).
 - **Индекс документации:** `docs/README.md`; корневой `README.md` — краткий обзор проекта.
-- Legacy HTML (`product_presentation.html`, `competitor_comparison*.html`) и build-скрипты **удалены** (2026-06-18).
+- Legacy HTML и QEMU tooling **удалены из Git** (2026-06-18); QEMU только `.gitignore`.
 
 ### Presentation / sizing (2026-06-18)
 
-- **Product deck:** не Pilot/Standard/Enterprise — только **prod full** для sizing/TCO; **dev-min** — только QEMU/разработка.
-- Калькулятор deck: `scripts/presentation/module_sizing.py` — режим «нагрузка → модули» или «модули → предел RU/онлайн/хранилища».
-- **Версия в deck:** `0.0.1-SNAPSHOT` (болванка); убраны stat-pills в block-0 (автотесты/счётчики/«Версия 2.6.2»). Footer deck — `{PRODUCT_VERSION} | дата | PRICE_AS_OF`.
-
-### QEMU / dev stack
-
-- **`qemu-up -KeepDisks`** часто поднимает UI, но **API containers на server guest не стартуют** — нужен `qemu-redeploy -ServerOnly` (~20–25 мин).
-- **Exited(255)** docker после KeepDisks — auto-remediate триггерит server redeploy (probe в `Invoke-KorusQemuAutoRemediate.ps1`).
-- **wsUrl mismatch**: web client embeds LAN IP; при смене IP хоста — `qemu-redeploy -WebOnly` или auto-remediate; smoke с `-ExpectWsHost` падает до fix.
-- **Repo HTTP** (`repo.tgz` на `:18890`) — обрыв во время redeploy рвёт bootstrap; не redeploy пока cloud-init не завершился.
-- Serial/bootstrap логи: guest **`/var/log/korus-bootstrap.log`**, host **`deploy/qemu/run/*-serial.log`**.
-- **Redeploy-цикл агента:** `qemu-dev-mode.ps1 -Mode status` → sync-api / sync-ui (default **без** build); `-Rebuild` только явно; monitor → fix → `qemu-redeploy-monitored.ps1` → **commit**; golden-path lock; guest bootstrap phase в wait-loop (правило `qemu-redeploy-monitor.mdc`, дизайн `docs/plans/2026-06-12-qemu-dev-modes-stabilization-design.md`).
-- **Hotswap WS:** `docker-compose.hotswap-qemu.yml` = `web-dev` + nginx **lb** (`/ws` → ws-gateway); Tomcat-only hotswap давал WS **404** на `:19088/ws`.
-- **sync-ui locales:** `New-KorusWebuiSnapshot` → `npm run build:assets` (tailwind + копия из `webui-build/locales/messages/`).
-- **Git push GitHub:** `.\scripts\git-push.ps1` или `git -c http.proxy= -c https.proxy= push`.
-- **L2 live (QEMU, parallel agents):** API smoke `.\scripts\smoke-live-session.ps1`; UI — `enable-hotswap` + `sync-ui` (не `rebuild-web`); LiveKit `:17880` без `qemu-down` — `.\scripts\livekit-host-tunnel.ps1` (отдельный терминал); secret ≥32 байт (`korus-dev-livekit-secret-32bytes!`).
-- **QEMU backup:** `qemu-backup.ps1` / `qemu-restore.ps1` (ВМ остановлены).
-- **VM падают ~10 мин в server redeploy** (WHPX/host load): цикл retry через monitored script; **не** ставить `KORUS_QEMU_FORCE_TCG=1` на warm/после backup — сначала WHPX (`qemu-up -KeepDisks`, `qemu-fast-up.ps1`), проверка RAM (~13 ГБ для 2-VM). TCG — только monitored после VM death <15m.
-- **WHPX warning `hr=80370300`** (perf monitoring) — **не ошибка**; если VM падает сразу — чаще RAM или отсутствие dot-source `Start-KorusRepoHttp` в `qemu-up.ps1`.
+- **Product deck:** prod full для sizing/TCO; dev-min — lab compose.
+- **Версия в deck:** `0.0.1-SNAPSHOT` (болванка).
 
 ### Playwright / US9
 
-- QEMU host ports: **19088** (UI), **18080** (API) — не 9088/8080.
-- **`playwright-dev-loop.ps1`**: stderr Node (`NO_COLOR`) фильтруется; `-Tier full` = outer gate (33 specs). Не путать с `exit 2` старой версии.
-- **Cursor background terminal**: файл `terminals/*.txt` может «зависнуть» без `exit_code` при долгом `sync-api-core` — истина: `qemu-dev-mode.ps1 -Mode status` и `[OK] core-api synced` в выводе; `qemu-sync-api-core` теперь стримит plink.
-- **Grep tier manifest**: паттерн `|media capabilities` (без `include`) ломает regex — использовать `media capabilities include` + `conference-rtc.spec.ts` в api tier.
-- **`Register-PlanFailure` / orchestrator**: `Write-Output` в `Emit-PlanChatTick` ломает `$state` (массив вместо hashtable) → только `Write-Host`.
-- **26/26** достижимо на живом QEMU (2026-06-12); MLS active required для e2ee-browser-roundtrip.
-- **34/34** outer gate на QEMU (2026-06-16): mesh tests + mocked WebRTC; отчёт `specs/002-web-client-server-parity/runtime-gate-report.md`.
+- Tier manifest: `tests/e2e-web/playwright-tiers.json`.
+- **34/34** outer gate (2026-06-16): `specs/002-web-client-server-parity/runtime-gate-report.md`.
 
 ### Architecture / code
 
@@ -452,7 +395,7 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 
 ### Stage / prod timeline
 
-- **Stage/prod хост недоступен до сентября 2026** (решение команды, 2026-06-15). Acceptance — **QEMU VM** (`127.0.0.1:18080` / `:19088`).
+- **Stage/prod хост недоступен до сентября 2026** (решение команды, 2026-06-15).
 - **Deferred ops registry:** [`specs/015-live-server-ops-backlog/`](specs/015-live-server-ops-backlog/) — T601–T607, human sign-offs, live creds, multi-cell; агент **не включает** в списки доработок до Sep 2026+ или явного распоряжения ([`ops-live-server-deferred.mdc`](.cursor/rules/ops-live-server-deferred.mdc)).
 - Spec **007** Phase 6: engineering closed; ops-строки зеркалятся в spec **015** (LSO-001…007).
 
@@ -464,4 +407,4 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 
 ---
 
-*Последнее существенное обновление AGENTS.md: 2026-06-17 (spec 015 live-server ops registry; agent backlog presentation rule).*
+*Последнее существенное обновление AGENTS.md: 2026-06-18 (QEMU вне Git; legacy presentations удалены).*
