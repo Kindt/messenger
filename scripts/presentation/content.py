@@ -5,7 +5,7 @@ from __future__ import annotations
 from html import escape
 
 from scripts.presentation import product_status as ps
-from scripts.presentation.data_loader import load_competitors, load_offerings
+from scripts.presentation.data_loader import load_competitors
 
 PERSONA_VOICE = {
     "pm": "PM / business analyst",
@@ -16,141 +16,146 @@ PERSONA_VOICE = {
 
 USER_JARGON_DENY = ("JWT", "Keycloak", "NATS", "Solr", "mesh")
 
+TAB_INTRO = {
+    "pm": "Для руководителя проекта и аналитика: возможности, риски, сравнение с рынком.",
+    "tech": "Для DevOps и разработки: архитектура, sizing по числу рег., калькулятор infra.",
+    "sales": "Для presales: ценность, TCO по публичным тарифам конкурентов и трём облакам.",
+    "user": "Для сотрудника офиса: простым языком, без технических терминов.",
+}
+
+SECTION_TITLES = {
+    "pm": ("Что умеет продукт", "Пересечение с конкурентами", "TCO (кратко)", "Сопровождение"),
+    "tech": ("Архитектура", "Конкуренты", "Матрица и мощности", "Калькулятор infra"),
+    "sales": ("Ценность", "Конкуренты", "TCO", "Калькулятор infra"),
+    "user": ("Зачем нужен", "Альтернативы", "Удобство", "Справка"),
+}
+
 
 def _status_link() -> str:
-    return '<p class="status-link"><a href="#block-0">↑ см. статус прототипа</a></p>'
+    return '<p class="status-link"><a href="#block-0">Статус продукта ↑</a></p>'
 
 
 def draft_pm_s1() -> str:
-    done = len(ps.features_by_status("done"))
-    partial = len(ps.features_by_status("partial"))
-    return _status_link() + f"""
-<p>Korus Messenger — {escape(ps.PRODUCT_STAGE_LABEL.lower())}: traceability к ТЗ, инженерная приёмка Playwright {ps.PLAYWRIGHT_PASSED}/{ps.PLAYWRIGHT_TOTAL}.</p>
-<p>В scope: {done} реализованных модулей, {partial} частичных (ops-dependent). Out of scope до Sep 2026: stage/prod soak, formal sign-off.</p>
-<ul>
-<li>Traceability: чаты, export, retention, bot platform — done</li>
-<li>Roadmap: sharding PG, Live §28 — planned</li>
-<li>Ops tail: TLS, E2EE sign-off, TURN — deferred (spec 015)</li>
-</ul>
+    return _status_link() + """
+<p><strong>Korus Messenger</strong> — корпоративный мессенджер для переписки, файлов, звонков и администрирования в контуре заказчика.</p>
+<p>Восемь блоков возможностей — в карточках ниже. Сводный статус и blockers — в <a href="#block-0">шапке презентации</a>.</p>
 """
 
 
 def draft_pm_s2() -> str:
     data = load_competitors()
-    tiers = {}
-    for p in data["products"]:
-        tiers.setdefault(p["tier"], []).append(p["label"])
-    rows = "".join(
-        f"<li><b>Уровень {escape(t)}:</b> {escape(', '.join(labels))}</li>"
-        for t, labels in sorted(tiers.items())
-    )
+    n = len(data["products"])
     return f"""
-<p>Матрица 11 продуктов по tier A/B/C — без якорных точек сравнения.</p>
-<ul>{rows}</ul>
-<p>Публичных тарифных строк в offerings: {len(load_offerings())}.</p>
+<p>Сравнение с <strong>{n} продуктами</strong> рынка РФ (tier A–C) по типовому ТЗ заказчика.</p>
+<p>Сначала — реестр конкурентов и различия; затем матрица по 8 критериям. TCO — <a href="#sales-s3">§ TCO (продажная)</a>.</p>
 """
 
 
 def draft_pm_s3() -> str:
     blockers = "".join(f"<li>{escape(b)}</li>" for b in ps.PRODUCTION_BLOCKERS[:5])
     return f"""
-<p>Сравнение по тарифам конкурентов @ их RU; headroom Korus — см. таблицу ниже.</p>
-<div class="blocker-list"><h4>Блокеры production (severity)</h4><ul>{blockers}</ul></div>
-<p class="small">Методология: METRIC_POLICY v1 — только registered_users для TCO.</p>
+<p>TCO: лицензия конкурента vs infra Korus на том же числе рег. Полная таблица — <a href="#sales-s3">§ TCO (продажная)</a>.</p>
+<div class="callout callout-warn">
+<h4>Что мешает промышленному запуску</h4>
+<ul class="bullet-clean">{blockers}</ul>
+</div>
 """
 
 
 def draft_pm_s4() -> str:
     return """
-<p>Калькулятор поддержки: введите число рег. пользователей, SLA и опции обновлений.</p>
-<p class="small">FTE = 0,15 + RU/80 000 (cap 4,0); SLA 24×7 ×2,5.</p>
+<p><strong>Сопровождение</strong> — стоимость команды (FTE), не серверов. Расчёт infra — <a href="#tech-s4">§ Калькулятор infra (техническая)</a>.</p>
+<p class="small">Модель упрощённая: RU, режим поддержки, релизы, топология, интеграции и модель команды — в калькуляторе; остальное — в методике § «Сопровождение».</p>
 """
 
 
 def draft_tech_s1() -> str:
     return _status_link() + """
-<p>Java 25 monolith + workers: PostgreSQL, NATS, Redis, Solr (Standard), MinIO, Keycloak, ws-gateway.</p>
-<p>Deploy profiles: Pilot (lean, SQL search), Standard (Solr HA, replica PG). Логическая схема — прототип на лабораторном dev-стенде<sup>†</sup>.</p>
-<p class="footnote"><sup>†</sup> QEMU — footnote для разработчиков, не customer-facing runtime.</p>
+<p>Модульный монолит Java 25: API, фоновые воркеры, WebSocket-шлюз. Ниже — <a href="#tech-stack-nodes">стек по узлам</a> и
+<a href="#tech-competencies">компетенции</a> команды.</p>
+<p class="footnote">Лабораторный стенд — для приёмки функций, не для нагрузочного soak-теста.</p>
 """
 
 
 def draft_tech_s2() -> str:
-    return """
-<p>Фокус: on-prem sizing, ops transparency, публичные прайсы где есть.</p>
-<p>Tier B/C: Loop, Rocket.Chat, Mattermost — concurrent vs registered — не смешиваем в TCO v1.</p>
+    data = load_competitors()
+    n = len(data["products"])
+    return f"""
+<p>Реестр <strong>{n}</strong> продуктов: tier, deploy, offerings. Ниже — <a href="#tech-competitor-stacks">сравнение ops-стеков</a> (Kafka vs NATS и т.д.).</p>
+<p class="small">Concurrent vs registered users не смешиваются в TCO v1.</p>
 """
 
 
 def draft_tech_s3() -> str:
     return """
-<p>18 критериев — qualitative matrix; sizing @ RU конкурента + headroom chip.</p>
-<p>RAM bar строится по профилю Korus, покрывающему RU строки конкурента.</p>
+<p>RAM-бар — суммарная RAM <strong>prod full</strong> при RU строки сравнения (§10.3). Ниже — <a href="#tech-plugins">плагины L0–L3</a> и матрица критериев.</p>
 """
 
 
 def draft_tech_s4() -> str:
     return """
-<p>Калькулятор мощностей: произвольный RU → RAM, узлы, headroom профиля.</p>
+<p>Калькулятор: <strong>от нагрузки</strong> (RU, пик онлайн, msg/s, retention) → таблица модулей и смета; или <strong>от модулей</strong> → предел RU/онлайн/msg/s и срок HDD.</p>
+<p class="footnote">Dev-min (QEMU) — только разработка, не sizing. Prod — всегда full stack (<code>docker-compose.full-server.yml</code>).</p>
 """
 
 
 def draft_sales_s1() -> str:
     return _status_link() + """
-<p>Value: on-prem контур, compliance-ядро (export, dual-TTL), bot platform L0–L3.</p>
-<p>Deployment: Pilot (10k рег.), Standard (100k), Enterprise roadmap — pilot ≠ production.</p>
-<p>Cells (spec 011): Phase 0–1 engineering closed; ops → Sep 2026+.</p>
+<div class="card-grid card-grid-3">
+<div class="card"><h4>On-prem</h4><p>Данные в контуре заказчика. Export, dual-TTL, legal hold.</p></div>
+<div class="card"><h4>Масштабирование</h4><p>Рост от тысяч до сотен тысяч рег. без смены продукта.</p></div>
+<div class="card"><h4>Платформа ботов</h4><p>L0–L3: меню, webhook, интеграции через sidecar-мосты.</p></div>
+</div>
+<p class="small">Цены infra — ориентиры по REG.RU, Yandex Cloud, Timeweb; не коммерческое предложение.</p>
 """
 
 
 def draft_sales_s2() -> str:
     data = load_competitors()
-    items = [p for p in data["products"] if p["id"] != "korus"]
-    lis = "".join(
-        f'<li>{escape(p["label"])} — tier {escape(p["tier"])}</li>' for p in items
-    )
-    return f"<ul>{lis}</ul>"
+    n = len([p for p in data["products"] if p["id"] != "korus"])
+    return f"""
+<p>Реестр <strong>{n + 1}</strong> продуктов (включая Korus): tier, модель развёртывания, число тарифных строк в TCO.</p>
+"""
 
 
 def draft_sales_s3() -> str:
     return """
-<p>TCO-таблица: одна строка = публичный тариф конкурента. Источник — кликабельный URL.</p>
-<p class="small">Строки без публичной цены — «цена по запросу», TCO compare пропущен.</p>
+<p>Каждая строка — публичный тариф конкурента. Infra Korus — три колонки (REG.RU, Yandex Cloud, Timeweb) + медиана для диаграммы.</p>
+<p class="small">Нет публичной цены — «по запросу». Мелкий on-prem может быть дороже облачного тарифа — это честное сравнение.</p>
 """
 
 
 def draft_sales_s4() -> str:
     return """
-<p>Калькулятор TCO: введите RU → ₽/мес и ₽/год infra Korus (не лицензия вендора).</p>
+<p>Калькулятор: число рег. → смета infra (REG.RU, Yandex Cloud, Timeweb) с разбивкой и ссылками на прайсы.</p>
 """
 
 
 def draft_user_s1() -> str:
-    return _status_link() + """
-<p>Корпоративный мессенджер — как чат в телефоне, но для работы: переписка, файлы, звонки.</p>
-<p>Данные остаются у вашей компании. Администратор видит, кто что отправил — для порядка и аудита.</p>
-<p>Сейчас это рабочий прототип: основные сценарии работают на тестовом стенде.</p>
+    return """
+<p>Корпоративный мессенджер — как привычный чат, но для работы: переписка с коллегами, файлы, звонок из чата.</p>
+<p>Данные хранятся у вашей компании. Администратор может посмотреть переписку по правилам компании — для порядка и проверок.</p>
+<p>Сейчас это рабочий прототип: основные сценарии уже можно попробовать на тестовом стенде.</p>
 """
 
 
 def draft_user_s2() -> str:
     return """
-<p>Есть облачные сервисы и решения «у себя в офисе». Korus — для организаций, где важны контроль данных и экспорт.</p>
-<p>Мобильные приложения из магазина — пока не в поставке; браузер и установка «как приложение» — да.</p>
+<p>Есть облачные сервисы и решения «сервер у себя». Korus — когда важны контроль данных и выгрузка для аудита.</p>
+<p>Отдельного приложения в App Store пока нет — достаточно браузера или «добавить на рабочий стол».</p>
 """
 
 
 def draft_user_s3() -> str:
     return """
-<p>Удобство: поиск по переписке, файлы в чате, звонок одной кнопкой.</p>
-<p>Частично: уведомления на телефон — нужна настройка IT; усиленное шифрование — после согласования с безопасностью.</p>
+<p>Удобно: поиск по переписке, файлы в чате, звонок одной кнопкой.</p>
+<p>Частично готово: уведомления на телефон настраивает IT; усиленное шифрование — после согласования с безопасностью.</p>
 """
 
 
 def draft_user_s4() -> str:
     return """
-<p>Мастер сценариев, FAQ и короткий тур — без технических терминов.</p>
-<p>FAQ: Telegram/WhatsApp — удобны, но корпоративный аудит и хранение по политике компании — в Korus.</p>
+<p>Выберите сценарий — пошаговая подсказка. Ниже — частые вопросы.</p>
 """
 
 

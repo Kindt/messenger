@@ -51,7 +51,7 @@ def main() -> int:
 
     data = deck_data_json()
     print(
-        f"Deck OK: profiles={len(data['profiles'])}, offerings={len(data['offerings'])}, "
+        f"Deck OK: providers={len(data['providers'])}, offerings={len(data['offerings'])}, "
         f"as_of={data['offerings_max_as_of']}"
     )
     return 0

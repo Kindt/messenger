@@ -13,13 +13,14 @@
 ## Headroom
 
 - Korus считается на **тех же RU**, что указаны у конкурента в строке.
-- Headroom badge: «до **N** рег. пользов. на тех же мощностях, без изменения цены/мощностей».
-- `N` = `max_registered_users` выбранного infra-профиля Korus.
+- Headroom badge: «до **N** рег. пользов. на тех же мощностях».
+- `N` = max RU в том же VM-тир RAM (prod full, `module_sizing` / §10.3).
 
-## Профили ≠ якоря
+## Sizing в deck
 
-`pilot` / `standard` / `enterprise` — **профили infra Korus**, не точки сравнения.
-Не использовать labels S-10k / E-1M / KORUS_ANCHORS.
+- **Prod full** — единственный контур для калькулятора и TCO (все модули `full-server.yml`).
+- **Dev-min** — только QEMU/разработка; **не** использовать в product deck sizing.
+- **Pilot / Standard / Enterprise** — **не** использовать в deck; устаревшие product-tier labels.
 
 ## Обновление данных
 

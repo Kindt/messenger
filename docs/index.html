@@ -8,74 +8,364 @@
 <meta property="og:title" content="Korus Messenger — рабочий прототип"/>
 <meta property="og:description" content="Корпоративный мессенджер, стадия рабочего прототипа. Не production."/>
 <style>
-:root { --accent: #22c55e; --warn: #f59e0b; --bg: #fafafa; --text: #1e293b; }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #0f172a; --text: #e2e8f0; }
+:root {
+  --brand: #1e3a5f; --accent: #6366f1; --accent-soft: #eef2ff;
+  --ok: #047857; --warn: #c2410c; --bg: #f8fafc; --surface: #fff;
+  --text: #111827; --muted: #6b7280; --border: #e5e7eb; --radius: 10px;
 }
 * { box-sizing: border-box; }
-body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); line-height: 1.5; }
-.block-0 { background: #fff7ed; border-bottom: 3px solid var(--warn); padding: 1rem 1.5rem; }
-@media (prefers-color-scheme: dark) { .block-0 { background: #451a03; } }
-.hero-warning h1 { margin-top: 0; }
-.tab-bar { display: flex; flex-wrap: wrap; gap: .5rem; padding: .75rem 1rem; position: sticky; top: 0; background: var(--bg); border-bottom: 1px solid #cbd5e1; z-index: 10; }
-.tab-bar button { min-height: 44px; padding: .5rem 1rem; border: 1px solid #94a3b8; background: #fff; cursor: pointer; border-radius: 6px; }
-.tab-bar button[aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
-.tab-panel { display: none; padding: 1rem 1.5rem; max-width: 1100px; margin: 0 auto; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  margin: 0; background: var(--bg); color: var(--text); line-height: 1.55;
+  font-size: 15px;
+}
+.hero-inner, .tab-panel, .deck-footer-inner { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+.block-0 {
+  background: linear-gradient(180deg, #fff7ed 0%, #fff 100%);
+  border-bottom: 3px solid #fdba74; padding: 28px 0 24px;
+}
+.deck-kicker { font-size: 13px; color: var(--muted); margin: 0 0 4px; letter-spacing: .02em; }
+.block-0 h1 { font-size: 28px; margin: 0 0 8px; color: var(--brand); font-weight: 700; }
+.stage-badge {
+  display: inline-block; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d;
+  padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; margin-bottom: 12px;
+}
+.disclaimer { max-width: 720px; margin: 0 0 16px; color: #374151; }
+.stat-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.stat-pill {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+  padding: 6px 14px; font-size: 13px; color: #374151;
+}
+.block0-grid { display: grid; grid-template-columns: minmax(280px, 420px) 1fr; gap: 20px; align-items: start; }
+.block0-h2 { font-size: 16px; margin: 0 0 8px; color: var(--brand); }
+.feature-details {
+  margin-top: 20px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px;
+}
+.feature-details summary { cursor: pointer; font-weight: 600; color: var(--brand); }
+.detail-h { font-size: 14px; color: #374151; margin: 16px 0 8px; }
+.tab-bar {
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px; position: sticky; top: 0;
+  background: rgba(248,250,252,.95); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border); z-index: 20; justify-content: center;
+}
+.tab-bar button {
+  min-height: 44px; padding: 8px 18px; border: 1px solid #c7d2fe; background: var(--surface);
+  cursor: pointer; border-radius: 999px; font-size: 14px; font-weight: 500; color: #4338ca;
+  transition: background .15s, color .15s;
+}
+.tab-bar button:hover { background: var(--accent-soft); }
+.tab-bar button[aria-selected="true"] {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(99,102,241,.35);
+}
+.tab-panel { display: none; padding: 24px 0 40px; }
 .tab-panel.active { display: block; }
-.sub-nav { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
-.sub-nav a { font-size: .9rem; }
-.compare-table, .feature-table, .matrix-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-.compare-table th, .compare-table td, .feature-table th, .feature-table td { border: 1px solid #cbd5e1; padding: .35rem .5rem; }
-.matrix-scroll { overflow-x: auto; }
-.tag { font-size: .75rem; padding: .1rem .4rem; border-radius: 4px; }
-.tag-done { background: #dcfce7; }
-.tag-partial { background: #fef3c7; border: 1px dashed #f59e0b; }
-.tag-planned { background: #e2e8f0; }
-.tag-out { background: #fecaca; }
-.chip-headroom { background: #dcfce7; color: #166534; font-size: .75rem; padding: .1rem .35rem; border-radius: 4px; margin-left: .25rem; }
-.callout-info { background: #eff6ff; padding: .75rem; border-left: 4px solid #3b82f6; }
-.deck-footer { text-align: center; font-size: .8rem; padding: 1.5rem; color: #64748b; border-top: 1px solid #e2e8f0; }
-.calc output { display: block; margin-top: .5rem; font-weight: 600; }
+.tab-intro {
+  background: var(--accent-soft); border-left: 4px solid var(--accent);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0;
+  margin: 0 20px 16px; max-width: 940px; color: #3730a3; font-size: 14px;
+}
+.sub-nav {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 0 20px 24px; max-width: 940px;
+}
+.sub-nav a {
+  font-size: 13px; text-decoration: none; color: #4338ca; background: var(--surface);
+  border: 1px solid #c7d2fe; padding: 6px 12px; border-radius: 999px;
+}
+.sub-nav a:hover { background: var(--accent-soft); }
+.subsection {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px 22px; margin: 0 20px 20px; max-width: 940px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+.section-headline {
+  font-size: 18px; margin: 0 0 12px; color: var(--brand);
+  border-bottom: 2px solid var(--accent); padding-bottom: 8px;
+}
+.section-body p { margin: 0 0 10px; }
+.bullet-clean { margin: 8px 0; padding-left: 20px; }
+.bullet-clean li { margin: 4px 0; }
+.status-link a { color: #4338ca; font-size: 13px; }
+.table-wrap { overflow-x: auto; margin: 12px 0; border-radius: 8px; border: 1px solid var(--border); }
+.compare-table, .feature-table, .matrix-table {
+  width: 100%; border-collapse: collapse; font-size: 13px; background: var(--surface);
+}
+.compare-table thead th, .feature-table th, .matrix-table th {
+  background: var(--accent-soft); text-align: left; font-weight: 600; color: var(--brand);
+  padding: 10px 12px; border-bottom: 2px solid #c7d2fe;
+}
+.compare-table td, .feature-table td, .matrix-table td {
+  padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top;
+}
+.compare-table tbody tr:nth-child(even), .feature-table tbody tr:nth-child(even) { background: #f9fafb; }
+.row-product { color: var(--muted); font-size: 11px; }
+.src-cell a { color: #4338ca; word-break: break-all; }
+.matrix-scroll { overflow-x: auto; margin: 12px 0; }
+.tag { display: inline-block; font-size: 11px; padding: 2px 10px; border-radius: 999px; font-weight: 600; }
+.tag-done { background: #dcfce7; color: #166534; }
+.tag-partial { background: #fef9c3; color: #854d0e; border: 1px dashed #fbbf24; }
+.tag-planned { background: #e0e7ff; color: #3730a3; }
+.tag-out { background: #f3f4f6; color: #4b5563; }
+.chip-headroom {
+  background: #dcfce7; color: #166534; font-size: 11px; padding: 2px 8px;
+  border-radius: 999px; margin-left: 4px; white-space: nowrap;
+}
+.callout { padding: 14px 16px; border-radius: var(--radius); margin: 12px 0; }
+.callout-warn { background: #fff7ed; border: 1px solid #fdba74; }
+.callout-info { background: #eff6ff; border-left: 4px solid #3b82f6; }
+.card-grid { display: grid; gap: 12px; margin: 12px 0; }
+.card-grid-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.card {
+  background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 14px;
+  border-left: 4px solid var(--accent);
+}
+.card h4 { margin: 0 0 6px; font-size: 14px; color: var(--brand); }
+.card p { margin: 0; font-size: 13px; color: #4b5563; }
+.fig { margin: 16px 0; text-align: center; }
+.fig svg { max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.fig-cap { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.footnote, .small { font-size: 12px; color: var(--muted); }
+.calc-assumptions { margin: 12px 0 16px; padding: 12px 14px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; }
+.calc-assumptions p { margin: 0 0 6px; }
+.calc-assumptions p:last-child { margin-bottom: 0; }
+.calc-module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; margin: 8px 0 12px; }
+.calc-module-check { font-size: 13px; display: flex; gap: 6px; align-items: flex-start; }
+.stack-block { margin-top: 24px; }
+.stack-block h4 { margin: 0 0 8px; font-size: 15px; }
+.stack-notes { margin: 8px 0 0 18px; padding: 0; }
+.table-more { font-size: 13px; margin-top: 8px; }
+.table-more a { color: #4338ca; }
+.calc-card {
+  background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius);
+  padding: 16px; margin-top: 12px;
+}
+.calc-intro { font-size: 13px; color: #4b5563; margin: 0 0 12px; }
+.calc-shell {
+  border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+  margin: 12px 0; background: var(--surface);
+  box-shadow: 0 4px 14px rgba(30,58,95,.08);
+}
+.calc-shell-head {
+  padding: 18px 22px; color: #fff;
+  background: linear-gradient(135deg, #1e3a5f 0%, #4338ca 100%);
+}
+.calc-shell-emerald .calc-shell-head { background: linear-gradient(135deg, #065f46, #059669); }
+.calc-shell-sky .calc-shell-head { background: linear-gradient(135deg, #0369a1, #0ea5e9); }
+.calc-shell-indigo .calc-shell-head { background: linear-gradient(135deg, #312e81, #6366f1); }
+.calc-shell-title { margin: 0; font-size: 17px; font-weight: 700; }
+.calc-shell-sub { margin: 6px 0 0; font-size: 13px; opacity: .92; }
+.calc-shell-body { padding: 18px 20px 22px; }
+.calc-form-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px 16px;
+}
+.calc-section-label {
+  grid-column: 1 / -1; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: #6366f1; margin-top: 4px; padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.calc-section-label:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+.calc-field { display: flex; flex-direction: column; gap: 6px; }
+.calc-field label { font-size: 12px; font-weight: 600; color: var(--brand); line-height: 1.35; }
+.calc-field input, .calc-field select {
+  padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px;
+  font-size: 14px; background: #fff; width: 100%;
+}
+.calc-field input:focus, .calc-field select:focus {
+  outline: 2px solid #a5b4fc; border-color: #6366f1;
+}
+.calc-field-check { justify-content: flex-end; }
+.calc-field-check label { font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.calc-actions { margin-top: 16px; }
+.btn-calc {
+  background: linear-gradient(135deg, #4338ca, #6366f1); color: #fff; border: none;
+  padding: 12px 28px; border-radius: 10px; cursor: pointer; font-weight: 700;
+  font-size: 14px; box-shadow: 0 2px 8px rgba(99,102,241,.35);
+}
+.btn-calc:hover { filter: brightness(1.05); }
+.calc-result-panel { margin-top: 18px; }
+.calc-hero {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px; margin-bottom: 16px;
+}
+.calc-stat {
+  background: linear-gradient(180deg, #f0fdf4, #fff); border: 1px solid #bbf7d0;
+  border-radius: 12px; padding: 14px 10px; text-align: center;
+}
+.calc-stat-val { font-size: 20px; font-weight: 800; color: #047857; line-height: 1.2; }
+.calc-stat-label { font-size: 10px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .04em; }
+.calc-provider-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
+}
+.calc-provider-card {
+  border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fafafa;
+}
+.calc-provider-card.is-min { border-color: #86efac; box-shadow: 0 0 0 2px rgba(34,197,94,.2); }
+.calc-provider-head {
+  padding: 10px 14px; background: var(--accent-soft); font-weight: 700; font-size: 13px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.calc-provider-head a { font-weight: 500; font-size: 11px; }
+.calc-provider-total {
+  padding: 12px 14px; font-size: 15px; font-weight: 700; color: var(--brand);
+  border-bottom: 1px solid var(--border); background: #fff;
+}
+.price-min { background: #ecfdf5 !important; font-weight: 600; color: #047857; }
+.med-col { font-size: 11px; color: var(--muted); }
+.prov-col { min-width: 88px; font-size: 11px !important; }
+.table-wrap-wide { max-width: 100%; }
+.compare-tco-wide { min-width: 720px; }
+.calc-label { display: block; margin: 8px 0; font-size: 14px; }
+.calc-label input, .calc-label select, .wizard-select {
+  margin-left: 8px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+}
+.calc-check input { margin-right: 6px; }
+.btn-primary {
+  margin-top: 8px; background: var(--accent); color: #fff; border: none;
+  padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;
+}
+.btn-primary:hover { background: #4f46e5; }
+.calc-result { display: block; margin-top: 12px; font-weight: 600; color: var(--ok); font-size: 15px; }
+.user-wizard .wizard-h { margin: 16px 0 8px; font-size: 15px; color: var(--brand); }
+.faq { margin: 8px 0; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; background: #fafafa; }
+.faq summary { cursor: pointer; font-weight: 500; }
+.tour-steps, .wizard-steps { padding-left: 20px; }
+.deck-footer {
+  text-align: center; font-size: 12px; padding: 24px 20px; color: var(--muted);
+  border-top: 1px solid var(--border); background: var(--surface);
+}
+.compare-table thead th { white-space: normal; line-height: 1.35; min-width: 72px; vertical-align: bottom; }
+.compare-tco th, .compare-tco td { font-size: 12px; }
+.matrix-compact th, .matrix-compact td { font-size: 12px; white-space: normal; line-height: 1.35; }
+.matrix-compact th[scope=row] { min-width: 140px; font-weight: 600; }
+.tier-tag { display: inline-block; font-size: 10px; font-weight: 700; color: #6366f1; background: #eef2ff; padding: 1px 6px; border-radius: 4px; margin-top: 2px; }
+.matrix-focus-wide { overflow-x: auto; }
+.matrix-focus-wide .matrix-compact th, .matrix-focus-wide .matrix-compact td { font-size: 11px; min-width: 72px; }
+.matrix-full th { max-width: 88px; white-space: normal; line-height: 1.25; font-size: 11px; }
+.cap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 16px 0; }
+.cap-card { background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.cap-card h4 { margin: 0 0 4px; font-size: 14px; color: var(--brand); }
+.cap-status { font-size: 11px; font-weight: 600; color: #4338ca; margin: 0 0 6px; }
+.cap-card p { margin: 0; font-size: 13px; color: #374151; }
+.overlap-list li { margin: 6px 0; }
+.units-box, .method-box {
+  background: #f8fafc; border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 14px; margin: 12px 0; font-size: 13px;
+}
+.units-box h4, .method-box h4 { margin: 0 0 8px; font-size: 14px; color: var(--brand); }
+.units-dl { margin: 0; display: grid; grid-template-columns: 100px 1fr; gap: 6px 12px; }
+.units-dl dt { font-weight: 600; color: #4338ca; }
+.units-dl dd { margin: 0; }
+.tco-chart { margin: 16px 0; padding: 12px; background: #fafafa; border-radius: 8px; border: 1px solid var(--border); }
+.tco-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 12px; font-size: 12px; color: #374151; }
+.swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+.swatch-comp { background: #6366f1; }
+.swatch-korus { background: #22c55e; }
+.tco-row { display: grid; grid-template-columns: minmax(120px, 180px) 1fr minmax(100px, 130px); gap: 10px; align-items: center; margin: 10px 0; }
+.tco-label { font-size: 12px; line-height: 1.3; }
+.tco-ru { display: block; color: var(--muted); font-size: 11px; }
+.tco-bars { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bar-comp, .bar-korus { height: 14px; border-radius: 4px; min-width: 4px; }
+.bar-comp { background: #6366f1; }
+.bar-korus { background: #22c55e; }
+.tco-vals { font-size: 11px; line-height: 1.4; text-align: right; }
+.calc-result { font-weight: 400; color: var(--text); font-size: 14px; }
+.calc-result strong { color: var(--brand); }
+.calc-breakdown { width: 100%; margin-top: 10px; font-size: 13px; border-collapse: collapse; }
+.calc-breakdown th, .calc-breakdown td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; }
+.calc-breakdown th { background: #eef2ff; }
+.donut-chart {
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 18px; max-width: 420px;
+}
+.donut-title { font-weight: 700; color: var(--brand); margin: 0 0 12px; font-size: 15px; }
+.donut-layout { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.donut-ring {
+  width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+  position: relative;
+}
+.donut-ring::after {
+  content: ""; position: absolute; inset: 22%; background: #fff; border-radius: 50%;
+}
+.donut-legend { list-style: none; margin: 0; padding: 0; font-size: 13px; flex: 1; min-width: 180px; }
+.donut-legend li { margin: 6px 0; display: flex; align-items: baseline; gap: 8px; }
+.donut-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; display: inline-block; }
+.factors-out { color: #4b5563; font-size: 13px; }
+.delta-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0;
+}
+.delta-col {
+  background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px;
+}
+.delta-korus { border-left: 4px solid #22c55e; }
+.delta-peer { border-left: 4px solid #6366f1; }
+.delta-col h4 { margin: 0 0 10px; font-size: 15px; color: var(--brand); }
+.delta-col li { font-size: 13px; margin: 6px 0; }
 @media (max-width: 640px) {
-  .tab-bar { flex-direction: column; }
+  .delta-grid { grid-template-columns: 1fr; }
+}
+.provider-block { margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.provider-block h5 { margin: 0 0 6px; font-size: 14px; color: var(--brand); }
+@media (max-width: 640px) {
+  .tab-bar { flex-direction: column; align-items: stretch; }
   .tab-bar button { width: 100%; }
-  .block0-grid { display: block; }
-  .compare-table { display: block; overflow-x: auto; white-space: nowrap; }
+  .block0-grid { grid-template-columns: 1fr; }
+  .subsection, .tab-intro, .sub-nav { margin-left: 12px; margin-right: 12px; }
+  .tco-row { grid-template-columns: 1fr; }
+  .tco-vals { text-align: left; }
+  .units-dl { grid-template-columns: 1fr; }
 }
 @media (max-width: 375px) {
-  .tab-bar button { font-size: .85rem; padding: .45rem .65rem; }
-  .tab-panel { padding: .75rem .65rem; }
-  .sub-nav a { font-size: .8rem; }
-  h2 { font-size: 1.05rem; }
+  .block-0 h1 { font-size: 22px; }
+  .tab-bar button { font-size: 13px; }
 }
-@media print { .tab-bar, .sub-nav, .calc button { display: none; } .tab-panel { display: block !important; page-break-before: always; } }
+@media print {
+  .tab-bar, .sub-nav, .btn-primary, .btn-calc { display: none; }
+  .tab-panel { display: block !important; page-break-before: always; }
+}
 </style>
 </head>
 <body>
 
 <section id="block-0" class="block-0 hero-warning" aria-label="Статус продукта">
-  <h1>Korus Messenger — <span class="stage-label">рабочий прототип</span></h1>
-  <p class="disclaimer"><strong>Продукт не готов</strong> к промышленной эксплуатации (production).
-  Демонстрирует архитектуру на <strong>лабораторном dev-стенде</strong>.</p>
-  <p class="metrics">Playwright 34/34 (2026-06-16);
-  deck 1.0.0; PRODUCTION_READY = false</p>
-  <div class="block0-grid">
-    <div><svg viewBox="0 0 280 160" width="280" height="160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Состояние функций">
-  <text x="80" y="12" text-anchor="middle" font-size="12" font-weight="bold">Функции продукта</text>
-  <path d="M80,80 L80.0,20.0 A60,60 0 1,1 52.1,133.1 Z" fill="#22c55e"/><path d="M80,80 L52.1,133.1 A60,60 0 0,1 30.6,45.9 Z" fill="#f59e0b"/><path d="M80,80 L30.6,45.9 A60,60 0 0,1 65.6,21.7 Z" fill="#94a3b8"/><path d="M80,80 L65.6,21.7 A60,60 0 0,1 80.0,20.0 Z" fill="#64748b"/>
-  <text x="170" y="20" font-size="11">Реализовано: 15</text><text x="170" y="38" font-size="11">Частично: 7</text><text x="170" y="56" font-size="11">Запланировано: 3</text><text x="170" y="74" font-size="11">Вне текущей поставки: 1</text>
-</svg></div>
-    <div>
-      <h2>§0.1 Блокеры production</h2>
-      <ul><li>Нет промышленного stage/prod стенда (планируется с сентября 2026) — formal load test и ops sign-off отложены</li><li>Prod HTTPS/TLS: поставка в Ansible есть, боевые сертификаты и vault — на контуре заказчика</li><li>E2EE: инженерная приёмка пройдена; требуется sign-off ИБ перед массовым включением</li><li>WebRTC: mesh из чата готов; TURN в prod-контуре — настройка IT заказчика</li><li>Web Push: UI/worker готовы; боевые VAPID и проверка на стенде — ops</li><li>SSO/LDAP: скрипты и runbook есть; подключение live IdP/AD — ops</li><li>Мобильные клиенты iOS/Android — вне текущей поставки</li><li>Live-streaming (§28) — в roadmap, не реализован</li></ul>
+  <div class="hero-inner">
+    <p class="deck-kicker">Korus Messenger · AvandocMsg</p>
+    <h1>Корпоративный мессенджер</h1>
+    <p class="stage-badge">Рабочий прототип</p>
+    <p class="disclaimer">Продукт <strong>не готов</strong> к промышленной эксплуатации. Демонстрация возможностей на <strong>лабораторном dev-стенде</strong>.</p>
+    <div class="stat-row">
+      <span class="stat-pill">Автотесты UI: 34/34</span>
+      <span class="stat-pill">Реализовано: 15</span>
+      <span class="stat-pill">Частично: 7</span>
+      <span class="stat-pill">Версия 2.6.2</span>
     </div>
+    <div class="block0-grid">
+      <div><figure class="fig"><div class="donut-chart" role="img" aria-label="Распределение функций по статусу">
+  <p class="donut-title">Функции продукта</p>
+  <div class="donut-layout">
+    <div class="donut-ring" style="background:conic-gradient(#22c55e 0.00% 57.69%, #f59e0b 57.69% 84.62%, #94a3b8 84.62% 96.15%, #64748b 96.15% 100.00%)"></div>
+    <ul class="donut-legend"><li><span class="donut-swatch" style="background:#22c55e"></span><strong>Реализовано</strong> — 15</li><li><span class="donut-swatch" style="background:#f59e0b"></span><strong>Частично</strong> — 7</li><li><span class="donut-swatch" style="background:#94a3b8"></span><strong>Запланировано</strong> — 3</li><li><span class="donut-swatch" style="background:#64748b"></span><strong>Вне текущей поставки</strong> — 1</li></ul>
   </div>
-  <h2>§0.2 Реализовано</h2>
-  <table class="feature-table"><tr><th>Модуль</th><th>Статус</th><th>Примечание</th></tr><tr><td>Веб-клиент (браузер, PWA)</td><td><span class="tag tag-done">Реализовано</span></td><td>основные пользовательские сценарии</td></tr><tr><td>Сервер и фоновые службы</td><td><span class="tag tag-done">Реализовано</span></td><td></td></tr><tr><td>Админ-консоль (/admin/)</td><td><span class="tag tag-done">Реализовано</span></td><td>отдельная веб-консоль администратора</td></tr><tr><td>Вход Keycloak (локальные пользователи)</td><td><span class="tag tag-done">Реализовано</span></td><td></td></tr><tr><td>Чаты, сообщения, файлы, export</td><td><span class="tag tag-done">Реализовано</span></td><td></td></tr><tr><td>Поиск Solr (Standard/full-server)</td><td><span class="tag tag-done">Реализовано</span></td><td></td></tr><tr><td>Поиск SQL (Pilot)</td><td><span class="tag tag-done">Реализовано</span></td><td>без Solr</td></tr><tr><td>Ретенция, deep-archive, legal hold</td><td><span class="tag tag-done">Реализовано</span></td><td>сжатие архива zstd</td></tr><tr><td>Безопасность (§24, инженерия)</td><td><span class="tag tag-done">Реализовано</span></td><td>headers, rate limit, timing, WS origin; CI security-gate</td></tr><tr><td>Миниатюры изображений (/resize)</td><td><span class="tag tag-done">Реализовано</span></td><td>embedded в core-api</td></tr><tr><td>Batch replay (export-replay)</td><td><span class="tag tag-done">Реализовано</span></td><td>JDBC + export_v1; stub отключён в prod compose</td></tr><tr><td>Профили Pilot / Standard</td><td><span class="tag tag-done">Реализовано</span></td><td>lean Pilot + масштабируемый Standard</td></tr><tr><td>Дедупликация файлов</td><td><span class="tag tag-done">Реализовано</span></td><td>одинаковые вложения хранятся один раз</td></tr><tr><td>Bot API (REST L2)</td><td><span class="tag tag-done">Реализовано</span></td><td>register, webhook, long-poll, pin/ban, rotate; prod webhook SLA — ops</td></tr><tr><td>Платформа ботов-плагинов (L0–L3)</td><td><span class="tag tag-done">Реализовано</span></td><td>admin 3-level, bridges, polyglot sidecars; узел интеграций; smokes QEMU 6/6</td></tr></table>
-  <h2>§0.3 Частично</h2>
-  <table class="feature-table"><tr><th>Модуль</th><th>Статус</th><th>Примечание</th></tr><tr><td>E2EE / hybrid MLS</td><td><span class="tag tag-partial">Частично</span></td><td>инженерная приёмка ✓; prod sign-off — ops</td></tr><tr><td>Видеозвонки WebRTC (mesh)</td><td><span class="tag tag-partial">Частично</span></td><td>mesh из чата ✓; TURN prod — ops</td></tr><tr><td>Web Push / PWA</td><td><span class="tag tag-partial">Частично</span></td><td>UI и worker ✓; prod VAPID — ops</td></tr><tr><td>Prod HTTPS / TLS</td><td><span class="tag tag-partial">Частично</span></td><td>Ansible/TLS в поставке ✓; stage host — с сентября 2026</td></tr><tr><td>Export GDPR completeness</td><td><span class="tag tag-partial">Частично</span></td><td>export JSON/ZIP + guide ✓; legal strict — ops</td></tr><tr><td>Formal load test на stage</td><td><span class="tag tag-partial">Частично</span></td><td>QEMU/k6 scaffold ✓; stage soak — с сентября 2026</td></tr><tr><td>SSO Google / LDAP / SAML</td><td><span class="tag tag-partial">Частично</span></td><td>OIDC + LDAP enable scripts + runbook; live IdP/AD — ops</td></tr></table>
-  <h2>§0.4 Не реализовано / вне scope</h2>
-  <table class="feature-table"><tr><th>Модуль</th><th>Статус</th><th>Примечание</th></tr><tr><td>Sharding PostgreSQL</td><td><span class="tag tag-planned">Запланировано</span></td><td>Enterprise roadmap</td></tr><tr><td>Live-streaming (§28)</td><td><span class="tag tag-planned">Запланировано</span></td><td>ADR + spec 013; реализация 12+ мес.</td></tr><tr><td>Desktop-клиент</td><td><span class="tag tag-planned">Запланировано</span></td><td></td></tr><tr><td>Мобильные iOS/Android</td><td><span class="tag tag-out">Вне текущей поставки</span></td><td>вне текущей поставки</td></tr></table>
+</div><figcaption class="fig-cap">Распределение функций по статусу</figcaption></figure></div>
+      <div class="callout callout-warn">
+        <h2 class="block0-h2">Что мешает production</h2>
+        <ul class="bullet-clean"><li>Нет промышленного stage/prod стенда (планируется с сентября 2026) — formal load test и ops sign-off отложены</li><li>Prod HTTPS/TLS: поставка в Ansible есть, боевые сертификаты и vault — на контуре заказчика</li><li>E2EE: инженерная приёмка пройдена; требуется sign-off ИБ перед массовым включением</li><li>WebRTC: mesh из чата готов; TURN в prod-контуре — настройка IT заказчика</li><li>Web Push: UI/worker готовы; боевые VAPID и проверка на стенде — ops</li><li>SSO/LDAP: скрипты и runbook есть; подключение live IdP/AD — ops</li><li>Мобильные клиенты iOS/Android — вне текущей поставки</li><li>Live-streaming (§28) — в roadmap, не реализован</li></ul>
+      </div>
+    </div>
+    <details class="feature-details">
+      <summary>Полная матрица модулей по статусу</summary>
+      <p class="small">Карточки «что умеет приложение» — в <a href="#pm-s1">§ Что умеет продукт</a>.</p>
+      <h3 class="detail-h">Реализовано (15)</h3>
+      <table class='feature-table'><tr><th>Модуль</th><th>Статус</th><th>Примечание</th></tr><tr><td>Веб-клиент (браузер, PWA)</td><td><span class="tag tag-done">Реализовано</span></td><td>основные пользовательские сценарии</td></tr><tr><td>Сервер и фоновые службы</td><td><span class="tag tag-done">Реализовано</span></td><td>—</td></tr><tr><td>Админ-консоль (/admin/)</td><td><span class="tag tag-done">Реализовано</span></td><td>отдельная веб-консоль администратора</td></tr><tr><td>Вход Keycloak (локальные пользователи)</td><td><span class="tag tag-done">Реализовано</span></td><td>—</td></tr><tr><td>Чаты, сообщения, файлы, export</td><td><span class="tag tag-done">Реализовано</span></td><td>—</td></tr><tr><td>Полнотекстовый поиск Solr</td><td><span class="tag tag-done">Реализовано</span></td><td>prod full</td></tr><tr><td>Поиск SQL (fallback)</td><td><span class="tag tag-done">Реализовано</span></td><td>dev-min / малый контур</td></tr><tr><td>Ретенция, deep-archive, legal hold</td><td><span class="tag tag-done">Реализовано</span></td><td>сжатие архива zstd</td></tr><tr><td>Безопасность (§24, инженерия)</td><td><span class="tag tag-done">Реализовано</span></td><td>headers, rate limit, timing, WS origin; CI security-gate</td></tr><tr><td>Миниатюры изображений (/resize)</td><td><span class="tag tag-done">Реализовано</span></td><td>embedded в core-api</td></tr><tr><td>Batch replay (export-replay)</td><td><span class="tag tag-done">Реализовано</span></td><td>JDBC + export_v1; stub отключён в prod compose</td></tr><tr><td>Dev-min vs prod-full compose</td><td><span class="tag tag-done">Реализовано</span></td><td>QEMU dev-min; prod docker-compose.full-server</td></tr><tr><td>Дедупликация файлов</td><td><span class="tag tag-done">Реализовано</span></td><td>одинаковые вложения хранятся один раз</td></tr><tr><td>Bot API (REST L2)</td><td><span class="tag tag-done">Реализовано</span></td><td>register, webhook, long-poll, pin/ban, rotate; prod webhook SLA — ops</td></tr><tr><td>Платформа ботов-плагинов (L0–L3)</td><td><span class="tag tag-done">Реализовано</span></td><td>admin 3-level, bridges, polyglot sidecars; узел интеграций; smokes QEMU 6/6</td></tr></table>
+      <h3 class="detail-h">Частично (7)</h3>
+      <table class='feature-table'><tr><th>Модуль</th><th>Статус</th><th>Примечание</th></tr><tr><td>E2EE / hybrid MLS</td><td><span class="tag tag-partial">Частично</span></td><td>инженерная приёмка ✓; prod sign-off — ops</td></tr><tr><td>Видеозвонки WebRTC (mesh)</td><td><span class="tag tag-partial">Частично</span></td><td>mesh из чата ✓; TURN prod — ops</td></tr><tr><td>Web Push / PWA</td><td><span class="tag tag-partial">Частично</span></td><td>UI и worker ✓; prod VAPID — ops</td></tr><tr><td>Prod HTTPS / TLS</td><td><span class="tag tag-partial">Частично</span></td><td>Ansible/TLS в поставке ✓; stage host — с сентября 2026</td></tr><tr><td>Export GDPR completeness</td><td><span class="tag tag-partial">Частично</span></td><td>export JSON/ZIP + guide ✓; legal strict — ops</td></tr><tr><td>Formal load test на stage</td><td><span class="tag tag-partial">Частично</span></td><td>QEMU/k6 scaffold ✓; stage soak — с сентября 2026</td></tr><tr><td>SSO Google / LDAP / SAML</td><td><span class="tag tag-partial">Частично</span></td><td>OIDC + LDAP enable scripts + runbook; live IdP/AD — ops</td></tr></table>
+      <h3 class="detail-h">Запланировано и вне scope</h3>
+      <table class='feature-table'><tr><th>Модуль</th><th>Статус</th><th>Примечание</th></tr><tr><td>Sharding PostgreSQL</td><td><span class="tag tag-planned">Запланировано</span></td><td>Enterprise roadmap</td></tr><tr><td>Live-streaming (§28)</td><td><span class="tag tag-planned">Запланировано</span></td><td>ADR + spec 013; реализация 12+ мес.</td></tr><tr><td>Desktop-клиент</td><td><span class="tag tag-planned">Запланировано</span></td><td>—</td></tr></table>
+      <table class='feature-table'><tr><th>Модуль</th><th>Статус</th><th>Примечание</th></tr><tr><td>Мобильные iOS/Android</td><td><span class="tag tag-out">Вне текущей поставки</span></td><td>вне текущей поставки</td></tr></table>
+    </details>
+  </div>
 </section>
 
 <nav class="tab-bar" role="tablist" aria-label="Вкладки презентации">
@@ -85,45 +375,130 @@ body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); col
   <button role="tab" data-testid="deck-tab-user" data-tab="user" aria-controls="tab-user">Пользовательская</button>
 </nav>
 <main>
-  <div id="tab-pm" class="tab-panel active" role="tabpanel" data-testid="deck-panel-pm"><article id="pm-s1" class="subsection"><section class="section-wrap section-pm-s1"><h3 class="section-headline">Ценность и roadmap</h3><div class="section-body"><p class="status-link"><a href="#block-0">↑ см. статус прототипа</a></p>
-<p>Korus Messenger — рабочий прототип: traceability к ТЗ, инженерная приёмка Playwright 34/34.</p>
-<p>В scope: 15 реализованных модулей, 7 частичных (ops-dependent). Out of scope до Sep 2026: stage/prod soak, formal sign-off.</p>
-<ul>
-<li>Traceability: чаты, export, retention, bot platform — done</li>
-<li>Roadmap: sharding PG, Live §28 — planned</li>
-<li>Ops tail: TLS, E2EE sign-off, TURN — deferred (spec 015)</li>
-</ul>
-</div></section><svg viewBox="0 0 280 160" width="280" height="160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Состояние функций">
-  <text x="80" y="12" text-anchor="middle" font-size="12" font-weight="bold">Функции продукта</text>
-  <path d="M80,80 L80.0,20.0 A60,60 0 1,1 52.1,133.1 Z" fill="#22c55e"/><path d="M80,80 L52.1,133.1 A60,60 0 0,1 30.6,45.9 Z" fill="#f59e0b"/><path d="M80,80 L30.6,45.9 A60,60 0 0,1 65.6,21.7 Z" fill="#94a3b8"/><path d="M80,80 L65.6,21.7 A60,60 0 0,1 80.0,20.0 Z" fill="#64748b"/>
-  <text x="170" y="20" font-size="11">Реализовано: 15</text><text x="170" y="38" font-size="11">Частично: 7</text><text x="170" y="56" font-size="11">Запланировано: 3</text><text x="170" y="74" font-size="11">Вне текущей поставки: 1</text>
-</svg></article><article id="pm-s2" class="subsection"><section class="section-wrap section-pm-s2"><h3 class="section-headline">11 конкурентов</h3><div class="section-body">
-<p>Матрица 11 продуктов по tier A/B/C — без якорных точек сравнения.</p>
-<ul><li><b>Уровень A:</b> Korus, eXpress, Пачка, VK SaaS</li><li><b>Уровень B:</b> Loop, Rocket.Chat, Mattermost, VK Superapp</li><li><b>Уровень C:</b> МТС Линк, Compass, TrueConf</li></ul>
-<p>Публичных тарифных строк в offerings: 22.</p>
-</div></section><table class='compare-table'><tr><th>Продукт</th><th>Tier</th><th>Deploy</th><th>Offerings</th></tr><tr><td>Korus</td><td>A</td><td>в контуре</td><td>2</td></tr><tr><td>eXpress</td><td>A</td><td>в контуре</td><td>3</td></tr><tr><td>Пачка</td><td>A</td><td>облако</td><td>3</td></tr><tr><td>VK SaaS</td><td>A</td><td>облако</td><td>3</td></tr><tr><td>Loop</td><td>B</td><td>в контуре / облако</td><td>3</td></tr><tr><td>Rocket.Chat</td><td>B</td><td>в контуре / облако</td><td>1</td></tr><tr><td>Mattermost</td><td>B</td><td>в контуре / облако</td><td>1</td></tr><tr><td>VK Superapp</td><td>B</td><td>в контуре</td><td>1</td></tr><tr><td>МТС Линк</td><td>C</td><td>облако / в контуре</td><td>1</td></tr><tr><td>Compass</td><td>C</td><td>облако / в контуре</td><td>3</td></tr><tr><td>TrueConf</td><td>C</td><td>в контуре / UC</td><td>1</td></tr></table></article><article id="pm-s3" class="subsection"><section class="section-wrap section-pm-s3"><h3 class="section-headline">Сравнение тарифов</h3><div class="section-body">
-<p>Сравнение по тарифам конкурентов @ их RU; headroom Korus — см. таблицу ниже.</p>
-<div class="blocker-list"><h4>Блокеры production (severity)</h4><ul><li>Нет промышленного stage/prod стенда (планируется с сентября 2026) — formal load test и ops sign-off отложены</li><li>Prod HTTPS/TLS: поставка в Ansible есть, боевые сертификаты и vault — на контуре заказчика</li><li>E2EE: инженерная приёмка пройдена; требуется sign-off ИБ перед массовым включением</li><li>WebRTC: mesh из чата готов; TURN в prod-контуре — настройка IT заказчика</li><li>Web Push: UI/worker готовы; боевые VAPID и проверка на стенде — ops</li></ul></div>
-<p class="small">Методология: METRIC_POLICY v1 — только registered_users для TCO.</p>
-</div></section><table class='compare-table'><tr><th>Тариф</th><th>RU</th><th>₽/год конкурент</th><th>Korus infra ₽/год</th><th>Источник</th></tr><tr><td>Enterprise on-prem (express)</td><td>10 000</td><td>30 000 000 ₽</td><td>736 200 ₽ </td><td><a href="https://express.ms/pricing" rel="noopener">https://express.ms/pricing…</a></td></tr><tr><td>Corporate on-prem (до 1 000) (express)</td><td>1 000</td><td>3 000 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://docs.express.ms/" rel="noopener">https://docs.express.ms/…</a></td></tr><tr><td>Корпоративный (годовая оплата) (pachka)</td><td>500</td><td>2 394 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://pachca.ru/pricing" rel="noopener">https://pachca.ru/pricing…</a></td></tr><tr><td>Корпоративный (помесячно) (pachka)</td><td>500</td><td>2 994 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://pachca.ru/pricing" rel="noopener">https://pachca.ru/pricing…</a></td></tr><tr><td>WorkSpace (годовая оплата) (vk_saas)</td><td>1 000</td><td>2 484 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://biz.mail.ru/docs/saas/workspace-price/index.html" rel="noopener">https://biz.mail.ru/docs/saas/workspace-…</a></td></tr><tr><td>WorkSpace (помесячно) (vk_saas)</td><td>1 000</td><td>3 108 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://biz.mail.ru/docs/saas/workspace-price/index.html" rel="noopener">https://biz.mail.ru/docs/saas/workspace-…</a></td></tr><tr><td>Pro (облако) (loop)</td><td>500</td><td>1 194 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://loop.ru/pricing" rel="noopener">https://loop.ru/pricing…</a></td></tr><tr><td>Start (облако) (loop)</td><td>100</td><td>142 800 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://loop.ru/pricing" rel="noopener">https://loop.ru/pricing…</a></td></tr><tr><td>Корпоративный on-prem (loop)</td><td>2 000</td><td>нет публичного прайса</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://loop.ru/pricing" rel="noopener">https://loop.ru/pricing…</a></td></tr><tr><td>Облако (compass)</td><td>100</td><td>468 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://getcompass.ru/pricing" rel="noopener">https://getcompass.ru/pricing…</a></td></tr><tr><td>On-prem (compass)</td><td>100</td><td>588 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://getcompass.ru/pricing" rel="noopener">https://getcompass.ru/pricing…</a></td></tr><tr><td>Server (entry) (trueconf)</td><td>50</td><td>23 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://trueconf.ru/price/server/" rel="noopener">https://trueconf.ru/price/server/…</a></td></tr><tr><td>Pilot on-prem (infra) (korus)</td><td>10 000</td><td>736 200 ₽</td><td>736 200 ₽ </td><td><a href="https://github.com/kumekay/korus_messenger/blob/main/docs/DEV_STACK_PROFILES.md" rel="noopener">https://github.com/kumekay/korus_messeng…</a></td></tr><tr><td>Standard on-prem (infra) (korus)</td><td>100 000</td><td>3 984 000 ₽</td><td>3 984 000 ₽ </td><td><a href="https://github.com/kumekay/korus_messenger/blob/main/docs/DEV_STACK_PROFILES.md" rel="noopener">https://github.com/kumekay/korus_messeng…</a></td></tr><tr><td>On-prem / enterprise (mts_link)</td><td>5 000</td><td>нет публичного прайса</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://mts-link.ru/chats/" rel="noopener">https://mts-link.ru/chats/…</a></td></tr><tr><td>Enterprise Edition (rocket)</td><td>1 000</td><td>нет публичного прайса</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://www.rocket.chat/pricing" rel="noopener">https://www.rocket.chat/pricing…</a></td></tr><tr><td>Enterprise (mattermost)</td><td>1 000</td><td>нет публичного прайса</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://mattermost.com/pricing/" rel="noopener">https://mattermost.com/pricing/…</a></td></tr><tr><td>Superapp on-prem (vk_onprem)</td><td>2 000</td><td>нет публичного прайса</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://workspace.vk.ru/" rel="noopener">https://workspace.vk.ru/…</a></td></tr><tr><td>Enterprise on-prem (100k) (express)</td><td>100 000</td><td>300 000 000 ₽</td><td>3 984 000 ₽ </td><td><a href="https://express.ms/pricing" rel="noopener">https://express.ms/pricing…</a></td></tr><tr><td>On-prem (1 000 рег.) (compass)</td><td>1 000</td><td>5 880 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://getcompass.ru/pricing" rel="noopener">https://getcompass.ru/pricing…</a></td></tr><tr><td>Корпоративный (5 000 активных) (pachka)</td><td>5 000</td><td>23 940 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://pachca.ru/pricing" rel="noopener">https://pachca.ru/pricing…</a></td></tr><tr><td>WorkSpace 10 000 (год) (vk_saas)</td><td>10 000</td><td>24 840 000 ₽</td><td>736 200 ₽ </td><td><a href="https://biz.mail.ru/docs/saas/workspace-price/index.html" rel="noopener">https://biz.mail.ru/docs/saas/workspace-…</a></td></tr></table><p class='footnote'>* headroom — без изменения цены/мощностей</p><svg viewBox="0 0 540 218" width="540" height="218" xmlns="http://www.w3.org/2000/svg">
-  <text x="120" y="16" font-size="11">■ конкурент  ■ Korus infra @ их RU</text>
-  <text x="0" y="30" font-size="10">Enterprise on-prem</text><rect x="120" y="20" width="400" height="8" fill="#6366f1"/><rect x="120" y="32" width="9" height="8" fill="#22c55e"/><text x="0" y="58" font-size="10">Corporate on-prem (д</text><rect x="120" y="48" width="40" height="8" fill="#6366f1"/><rect x="120" y="60" width="9" height="8" fill="#22c55e"/><text x="0" y="86" font-size="10">Корпоративный (годов</text><rect x="120" y="76" width="31" height="8" fill="#6366f1"/><rect x="120" y="88" width="9" height="8" fill="#22c55e"/><text x="0" y="114" font-size="10">Корпоративный (помес</text><rect x="120" y="104" width="39" height="8" fill="#6366f1"/><rect x="120" y="116" width="9" height="8" fill="#22c55e"/><text x="0" y="142" font-size="10">WorkSpace (годовая о</text><rect x="120" y="132" width="33" height="8" fill="#6366f1"/><rect x="120" y="144" width="9" height="8" fill="#22c55e"/><text x="0" y="170" font-size="10">WorkSpace (помесячно</text><rect x="120" y="160" width="41" height="8" fill="#6366f1"/><rect x="120" y="172" width="9" height="8" fill="#22c55e"/>
-</svg></article><article id="pm-s4" class="subsection"><section class="section-wrap section-pm-s4"><h3 class="section-headline">Калькулятор поддержки</h3><div class="section-body">
-<p>Калькулятор поддержки: введите число рег. пользователей, SLA и опции обновлений.</p>
-<p class="small">FTE = 0,15 + RU/80 000 (cap 4,0); SLA 24×7 ×2,5.</p>
-</div></section>
-<div class="calc" data-calc="pm">
-  <label>Рег. пользователей <input type="number" id="calc-pm-ru" value="12000" min="1"/></label>
-  <label>SLA <select id="calc-pm-sla"><option value="business">8×5</option><option value="24x7">24×7</option></select></label>
-  <label><input type="checkbox" id="calc-pm-upd" checked/> Обновления</label>
-  <button type="button" id="calc-pm-run">Рассчитать</button>
-  <output id="calc-pm-out"></output>
+  <div id="tab-pm" class="tab-panel active" role="tabpanel" data-testid="deck-panel-pm"><p class="tab-intro">Для руководителя проекта и аналитика: возможности, риски, сравнение с рынком.</p><nav class="sub-nav" aria-label="Подразделы"><a href="#pm-s1">Что умеет продукт</a><a href="#pm-s2">Пересечение с конкурентами</a><a href="#pm-s3">TCO (кратко)</a><a href="#pm-s4">Сопровождение</a></nav><article id="pm-s1" class="subsection"><section class="section-wrap section-pm-s1"><h3 class="section-headline">Что умеет продукт</h3><div class="section-body"><p class="status-link"><a href="#block-0">Статус продукта ↑</a></p>
+<p><strong>Korus Messenger</strong> — корпоративный мессенджер для переписки, файлов, звонков и администрирования в контуре заказчика.</p>
+<p>Восемь блоков возможностей — в карточках ниже. Сводный статус и blockers — в <a href="#block-0">шапке презентации</a>.</p>
+<div class="cap-grid"><article class="cap-card"><h4>Переписка и совместная работа</h4><p class="cap-status">Реализовано</p><p>Личные и групповые чаты, вложения, ответы на сообщения, история переписки. Работает в браузере, можно закрепить ярлык «как приложение».</p></article><article class="cap-card"><h4>Поиск и файлы</h4><p class="cap-status">Реализовано</p><p>Поиск по тексту сообщений и вложениям; превью изображений; скачивание файлов из чата. До ~50 тыс. рег. — SQL-поиск; выше — Solr.</p></article><article class="cap-card"><h4>Звонки из чата</h4><p class="cap-status">Частично</p><p>Аудио/видео звонок между участниками чата без отдельного клиента. Для работы через NAT в production нужен TURN — настраивает IT заказчика.</p></article><article class="cap-card"><h4>Администрирование</h4><p class="cap-status">Реализовано</p><p>Веб-консоль /admin/: организации, пользователи, аудит действий, политики ретенции.</p></article><article class="cap-card"><h4>Комплаенс и архив</h4><p class="cap-status">Реализовано</p><p>Экспорт переписки (JSON/ZIP), legal hold, dual-TTL ретенция, deep-archive.</p></article><article class="cap-card"><h4>Вход и безопасность</h4><p class="cap-status">Частично</p><p>Keycloak, LDAP/SSO из админки. E2EE (MLS) — после sign-off ИБ.</p></article><article class="cap-card"><h4>Боты и интеграции</h4><p class="cap-status">Реализовано</p><p>Bot API, платформа плагинов L0–L3, мосты к 1С, почте, хранилищам.</p></article><article class="cap-card"><h4>Мобильные клиенты</h4><p class="cap-status">Не в поставке</p><p>Нативные iOS/Android — вне текущей поставки; сценарии через браузер/PWA.</p></article></div></div></section><figure class="fig"><svg viewBox="0 0 520 90" width="100%" max-width="520" height="90" xmlns="http://www.w3.org/2000/svg"><text x="260" y="16" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e3a5f">Дорожная карта (факты репозитория)</text><rect x="30" y="28" width="110" height="52" rx="8" fill="#22c55e" opacity="0.15" stroke="#22c55e"/><text x="85" y="48" text-anchor="middle" font-size="10" font-weight="600" fill="#1e3a5f">Сейчас</text><text x="85" y="66" text-anchor="middle" font-size="9" fill="#4b5563">ядро чатов</text><text x="148" y="55" font-size="14" fill="#9ca3af">→</text><rect x="155" y="28" width="110" height="52" rx="8" fill="#f59e0b" opacity="0.15" stroke="#f59e0b"/><text x="210" y="48" text-anchor="middle" font-size="10" font-weight="600" fill="#1e3a5f">Частично</text><text x="210" y="66" text-anchor="middle" font-size="9" fill="#4b5563">звонки, SSO</text><text x="273" y="55" font-size="14" fill="#9ca3af">→</text><rect x="280" y="28" width="110" height="52" rx="8" fill="#94a3b8" opacity="0.15" stroke="#94a3b8"/><text x="335" y="48" text-anchor="middle" font-size="10" font-weight="600" fill="#1e3a5f">2026+</text><text x="335" y="66" text-anchor="middle" font-size="9" fill="#4b5563">stage/prod</text><text x="398" y="55" font-size="14" fill="#9ca3af">→</text><rect x="405" y="28" width="110" height="52" rx="8" fill="#64748b" opacity="0.15" stroke="#64748b"/><text x="460" y="48" text-anchor="middle" font-size="10" font-weight="600" fill="#1e3a5f">Roadmap</text><text x="460" y="66" text-anchor="middle" font-size="9" fill="#4b5563">PG, live</text></svg><figcaption class="fig-cap">Дорожная карта</figcaption></figure></article><article id="pm-s2" class="subsection"><section class="section-wrap section-pm-s2"><h3 class="section-headline">Пересечение с конкурентами</h3><div class="section-body">
+<p>Сравнение с <strong>11 продуктами</strong> рынка РФ (tier A–C) по типовому ТЗ заказчика.</p>
+<p>Сначала — реестр конкурентов и различия; затем матрица по 8 критериям. TCO — <a href="#sales-s3">§ TCO (продажная)</a>.</p>
+<div class='table-wrap'><table class='compare-table'><thead><tr><th>Продукт</th><th>Tier</th><th>Deploy</th><th>Offerings</th></tr></thead><tbody><tr><td>Korus</td><td>A</td><td>в контуре</td><td>2</td></tr><tr><td>eXpress</td><td>A</td><td>в контуре</td><td>3</td></tr><tr><td>Пачка</td><td>A</td><td>облако</td><td>3</td></tr><tr><td>VK SaaS</td><td>A</td><td>облако</td><td>3</td></tr><tr><td>Loop</td><td>B</td><td>в контуре / облако</td><td>3</td></tr><tr><td>Rocket.Chat</td><td>B</td><td>в контуре / облако</td><td>1</td></tr><tr><td>Mattermost</td><td>B</td><td>в контуре / облако</td><td>1</td></tr><tr><td>VK Superapp</td><td>B</td><td>в контуре</td><td>1</td></tr><tr><td>МТС Линк</td><td>C</td><td>облако / в контуре</td><td>1</td></tr><tr><td>Compass</td><td>C</td><td>облако / в контуре</td><td>3</td></tr><tr><td>TrueConf</td><td>C</td><td>в контуре / UC</td><td>1</td></tr></tbody></table></div></div></section>
+<div class="delta-grid" id="compare-deltas">
+  <div class="delta-col delta-korus">
+    <h4>Где Korus сильнее</h4>
+    <ul class="bullet-clean"><li><strong>Развёртывание в контуре:</strong> Korus (✓) — шире, чем VK SaaS (—).</li><li><strong>Развёртывание в контуре:</strong> Korus (✓) — шире, чем Пачка (—).</li><li><strong>Экспорт / legal hold:</strong> Korus (✓ ядро) vs VK SaaS (зависит).</li><li><strong>Экспорт / legal hold:</strong> Korus (✓ ядро) vs eXpress (DLP / политики).</li><li><strong>Экспорт / legal hold:</strong> Korus (✓ ядро) — шире, чем Пачка (API экспорта).</li><li><strong>Экспорт / legal hold:</strong> Korus (✓ ядро) vs Loop (плагины).</li><li><strong>Экспорт / legal hold:</strong> Korus (✓ ядро) vs Mattermost (плагины).</li><li><strong>Экспорт / legal hold:</strong> Korus (✓ ядро) vs Rocket.Chat (плагины).</li><li><strong>Экспорт / legal hold:</strong> Korus (✓ ядро) vs VK Superapp (◐).</li><li><strong>Экспорт / legal hold:</strong> Korus (✓ ядро) vs Compass (◐).</li><li><strong>Экспорт / legal hold:</strong> Korus (✓ ядро) vs TrueConf (◐).</li><li><strong>Экспорт / legal hold:</strong> Korus (✓ ядро) vs МТС Линк (◐).</li><li><strong>Ретенция / архив:</strong> Korus (dual-TTL) — шире, чем VK SaaS (облако).</li><li><strong>Ретенция / архив:</strong> Korus (dual-TTL) — шире, чем Пачка (облако).</li><li><strong>Сквозное шифрование:</strong> Korus (MLS (приёмка)) — шире, чем VK SaaS (—).</li><li><strong>Сквозное шифрование:</strong> Korus (MLS (приёмка)) — шире, чем Пачка (—).</li><li><strong>Сквозное шифрование:</strong> Korus (MLS (приёмка)) — шире, чем VK Superapp (—).</li><li><strong>Сквозное шифрование:</strong> Korus (MLS (приёмка)) — шире, чем Compass (—).</li><li><strong>Сквозное шифрование:</strong> Korus (MLS (приёмка)) — шире, чем TrueConf (—).</li><li><strong>Сквозное шифрование:</strong> Korus (MLS (приёмка)) — шире, чем МТС Линк (—).</li><li><strong>Боты / API:</strong> Korus (✓ L0–L3 platform) vs VK SaaS (◐).</li><li><strong>Боты / API:</strong> Korus (✓ L0–L3 platform) vs VK Superapp (◐).</li><li><strong>Боты / API:</strong> Korus (✓ L0–L3 platform) vs TrueConf (◐).</li><li><strong>Боты / API:</strong> Korus (✓ L0–L3 platform) vs МТС Линк (◐).</li><li><strong>Звонки / ВКС:</strong> Korus (WebRTC) — шире, чем Пачка (до 10).</li><li>Развёртывание в контуре заказчика — против облачных Пачки и VK SaaS.</li><li>Комплаенс-ядро: export, legal hold и dual-TTL ретенция в продукте, не только DLP/облачные политики.</li><li>Платформа ботов L0–L3 и прозрачный стек (Java, PostgreSQL, NATS) — проще кастомизация под ИБ.</li></ul>
+  </div>
+  <div class="delta-col delta-peer">
+    <h4>Где сильнее конкуренты</h4>
+    <ul class="bullet-clean"><li><strong>Поиск:</strong> VK SaaS (✓) vs Korus (Solr / SQL).</li><li><strong>Поиск:</strong> eXpress (✓) vs Korus (Solr / SQL).</li><li><strong>Поиск:</strong> Пачка (✓) vs Korus (Solr / SQL).</li><li><strong>Поиск:</strong> Loop (✓) vs Korus (Solr / SQL).</li><li><strong>Поиск:</strong> Rocket.Chat (✓) vs Korus (Solr / SQL).</li><li><strong>Поиск:</strong> VK Superapp (✓) vs Korus (Solr / SQL).</li><li><strong>Поиск:</strong> Compass (✓) vs Korus (Solr / SQL).</li><li><strong>Поиск:</strong> МТС Линк (✓) vs Korus (Solr / SQL).</li><li><strong>Сквозное шифрование:</strong> eXpress (✓ E2EE) — сильнее Korus (MLS (приёмка)).</li><li><strong>Сквозное шифрование:</strong> Rocket.Chat (E2EE opt) — сильнее Korus (MLS (приёмка)).</li><li><strong>SSO / LDAP:</strong> VK SaaS (✓) vs Korus (Keycloak).</li><li><strong>SSO / LDAP:</strong> eXpress (✓) vs Korus (Keycloak).</li><li><strong>SSO / LDAP:</strong> Mattermost (✓) vs Korus (Keycloak).</li><li><strong>SSO / LDAP:</strong> Rocket.Chat (✓) vs Korus (Keycloak).</li><li><strong>SSO / LDAP:</strong> VK Superapp (✓) vs Korus (Keycloak).</li><li><strong>Звонки / ВКС:</strong> VK SaaS (✓) — сильнее Korus (WebRTC).</li><li><strong>Звонки / ВКС:</strong> eXpress (до 500) — сильнее Korus (WebRTC).</li><li><strong>Звонки / ВКС:</strong> VK Superapp (✓) — сильнее Korus (WebRTC).</li><li><strong>Звонки / ВКС:</strong> Compass (✓) — сильнее Korus (WebRTC).</li><li><strong>Звонки / ВКС:</strong> TrueConf (✓ ядро UC) vs Korus (WebRTC).</li><li><strong>Звонки / ВКС:</strong> МТС Линк (✓ из чата) vs Korus (WebRTC).</li><li>eXpress: E2EE в поставке, мобильные клиенты (iOS/Android/Аврора), ВКС до 500 участников, SmartApps, запись в реестре ФСТЭК.</li><li>Пачка: быстрый старт в облаке, публичный прайс, SLA 99,9%, готовые мобильные приложения.</li><li>VK SaaS: зрелая ВКС и экосистема VK Workspace, мобильные клиенты, типовой SaaS для офиса без своего железа.</li><li>Korus сейчас слабее по мобильным приложениям (roadmap) и промышленной приёмке E2EE (MLS — после sign-off ИБ).</li></ul>
+  </div>
+</div>
+<p class="small">Выводы — по таблице ниже (tier A–C, 11 продуктов); не рейтинг «кто выигрывает» по всем критериям сразу.</p>
+
+<div class="matrix-legend callout callout-info">
+  <p><strong>Как читать таблицу</strong> (для архитектора / ИБ / закупки):</p>
+  <ul class="bullet-clean">
+    <li><strong>✓</strong> — функция заявлена и закрывает типовое требование ТЗ.</li>
+    <li><strong>◐</strong> — частично, зависит от тарифа или доработки интеграции.</li>
+    <li><strong>—</strong> — в публичной поставке не заявлено или только облако.</li>
+  </ul>
+  <p class="small">Сравнение по <em>зрелости функции</em>, не по цене. Источники — публичные сайты и документация конкурентов (см. вкладку «Продажная», <a href="#sales-s3">§ TCO</a>).</p>
+</div>
+<p class='small'>Матрица функций: все <strong>11</strong> продуктов из реестра (A — пром., B — альтернативы on-prem, C — рынок РФ).</p><div class='table-wrap matrix-focus matrix-focus-wide'><table class='matrix-table matrix-compact'><thead><tr><th scope='col'>Критерий ТЗ</th><th scope='col' title='Уровень A · в контуре'>Korus<br/><span class='tier-tag'>A</span></th><th scope='col' title='Уровень A · облако'>VK SaaS<br/><span class='tier-tag'>A</span></th><th scope='col' title='Уровень A · в контуре'>eXpress<br/><span class='tier-tag'>A</span></th><th scope='col' title='Уровень A · облако'>Пачка<br/><span class='tier-tag'>A</span></th><th scope='col' title='Уровень B · в контуре / облако'>Loop<br/><span class='tier-tag'>B</span></th><th scope='col' title='Уровень B · в контуре / облако'>Mattermost<br/><span class='tier-tag'>B</span></th><th scope='col' title='Уровень B · в контуре / облако'>Rocket.Chat<br/><span class='tier-tag'>B</span></th><th scope='col' title='Уровень B · в контуре'>VK Superapp<br/><span class='tier-tag'>B</span></th><th scope='col' title='Уровень C · облако / в контуре'>Compass<br/><span class='tier-tag'>C</span></th><th scope='col' title='Уровень C · в контуре / UC'>TrueConf<br/><span class='tier-tag'>C</span></th><th scope='col' title='Уровень C · облако / в контуре'>МТС Линк<br/><span class='tier-tag'>C</span></th></tr></thead><tbody><tr><th scope='row'>Развёртывание в контуре</th><td>✓</td><td>—</td><td>✓</td><td>—</td><td>✓ (Корп.)</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr><tr><th scope='row'>Экспорт / legal hold</th><td>✓ ядро</td><td>зависит</td><td>DLP / политики</td><td>API экспорта</td><td>плагины</td><td>плагины</td><td>плагины</td><td>◐</td><td>◐</td><td>◐</td><td>◐</td></tr><tr><th scope='row'>Ретенция / архив</th><td>dual-TTL</td><td>облако</td><td>политики</td><td>облако</td><td>настраивается</td><td>настраивается</td><td>MongoDB</td><td>◐</td><td>◐</td><td>◐</td><td>◐</td></tr><tr><th scope='row'>Поиск</th><td>Solr / SQL</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Elasticsearch</td><td>✓</td><td>✓</td><td>✓</td><td>◐</td><td>✓</td></tr><tr><th scope='row'>Сквозное шифрование</th><td>MLS (приёмка)</td><td>—</td><td>✓ E2EE</td><td>—</td><td>опционально</td><td>опционально</td><td>E2EE opt</td><td>—</td><td>—</td><td>—</td><td>—</td></tr><tr><th scope='row'>Боты / API</th><td>✓ L0–L3 platform</td><td>◐</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>◐</td><td>✓</td><td>◐</td><td>◐</td></tr><tr><th scope='row'>SSO / LDAP</th><td>Keycloak</td><td>✓</td><td>✓</td><td>◐</td><td>◐</td><td>✓</td><td>✓</td><td>✓</td><td>◐</td><td>LDAP/AD</td><td>AD (док.)</td></tr><tr><th scope='row'>Звонки / ВКС</th><td>WebRTC</td><td>✓</td><td>до 500</td><td>до 10</td><td>звонки</td><td>интеграции</td><td>интеграции</td><td>✓</td><td>✓</td><td>✓ ядро UC</td><td>✓ из чата</td></tr></tbody></table></div></article><article id="pm-s3" class="subsection"><section class="section-wrap section-pm-s3"><h3 class="section-headline">TCO (кратко)</h3><div class="section-body">
+<p>TCO: лицензия конкурента vs infra Korus на том же числе рег. Полная таблица — <a href="#sales-s3">§ TCO (продажная)</a>.</p>
+<div class="callout callout-warn">
+<h4>Что мешает промышленному запуску</h4>
+<ul class="bullet-clean"><li>Нет промышленного stage/prod стенда (планируется с сентября 2026) — formal load test и ops sign-off отложены</li><li>Prod HTTPS/TLS: поставка в Ansible есть, боевые сертификаты и vault — на контуре заказчика</li><li>E2EE: инженерная приёмка пройдена; требуется sign-off ИБ перед массовым включением</li><li>WebRTC: mesh из чата готов; TURN в prod-контуре — настройка IT заказчика</li><li>Web Push: UI/worker готовы; боевые VAPID и проверка на стенде — ops</li></ul>
+</div>
+
+<div class="units-box" id="units-legend">
+  <h4>Единицы измерения</h4>
+  <dl class="units-dl">
+    <dt>RU</dt><dd>зарегистрированные пользователи (учётные записи), не одновременные сессии</dd>
+    <dt>₽/год · ₽/мес</dt><dd>рубли РФ, без НДС; infra — серверы и канал, не лицензия ПО конкурента</dd>
+    <dt>Infra Korus</dt><dd>медиана смет по REG.RU, Yandex Cloud, Timeweb Cloud на дату 2026-06-15</dd>
+    <dt>FTE</dt><dd>сопровождение (люди), не CPU; ставка 180 000 ₽/мес за 1 FTE (8×5)</dd>
+    <dt>RAM</dt><dd>суммарная RAM по §10.3, ГБ; VM-тир — ближайший стандартный объём</dd>
+  </dl>
+</div></div></section><div class='table-wrap table-wrap-wide'><table class='compare-table compare-tco compare-tco-wide'><thead><tr><th scope='col'>Тариф конкурента</th><th scope='col' title='Зарегистрированные пользователи'>RU,<br/>рег.</th><th scope='col' title='Годовая стоимость по публичному прайсу'>Конкурент,<br/>₽/год</th><th scope="col" class="prov-col" title="https://www.reg.ru/vps/tariffs">REG.RU,<br/>₽/год</th><th scope="col" class="prov-col" title="https://cloud.yandex.ru/docs/compute/pricing">Yandex Cloud,<br/>₽/год</th><th scope="col" class="prov-col" title="https://timeweb.cloud/prices">Timeweb Cloud,<br/>₽/год</th><th scope='col' title='Медиана трёх провайдеров'>Медиана,<br/>₽/год</th><th scope='col'>Источник</th></tr></thead><tbody><tr><td>Enterprise on-prem <span class='row-product'>(express)</span></td><td>10 000</td><td>30 000 000 ₽</td><td>3 843 696 ₽</td><td class="price-min">2 321 256 ₽</td><td>2 626 716 ₽</td><td class='med-col'>2 626 716 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://express.ms/pricing" rel="noopener noreferrer">https://express.ms/pricing…</a></td></tr><tr><td>Corporate on-prem (до 1 000) <span class='row-product'>(express)</span></td><td>1 000</td><td>3 000 000 ₽</td><td>3 633 060 ₽</td><td class="price-min">2 046 552 ₽</td><td>2 454 204 ₽</td><td class='med-col'>2 454 204 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://docs.express.ms/" rel="noopener noreferrer">https://docs.express.ms/…</a></td></tr><tr><td>Корпоративный (годовая оплата) <span class='row-product'>(pachka)</span></td><td>500</td><td>2 394 000 ₽</td><td>3 628 020 ₽</td><td class="price-min">2 040 504 ₽</td><td>2 450 028 ₽</td><td class='med-col'>2 450 028 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://pachca.ru/pricing" rel="noopener noreferrer">https://pachca.ru/pricing…</a></td></tr><tr><td>Корпоративный (помесячно) <span class='row-product'>(pachka)</span></td><td>500</td><td>2 994 000 ₽</td><td>3 628 020 ₽</td><td class="price-min">2 040 504 ₽</td><td>2 450 028 ₽</td><td class='med-col'>2 450 028 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://pachca.ru/pricing" rel="noopener noreferrer">https://pachca.ru/pricing…</a></td></tr><tr><td>WorkSpace (годовая оплата) <span class='row-product'>(vk_saas)</span></td><td>1 000</td><td>2 484 000 ₽</td><td>3 633 060 ₽</td><td class="price-min">2 046 552 ₽</td><td>2 454 204 ₽</td><td class='med-col'>2 454 204 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://biz.mail.ru/docs/saas/workspace-price/index.html" rel="noopener noreferrer">https://biz.mail.ru/docs/saas/wo…</a></td></tr><tr><td>WorkSpace (помесячно) <span class='row-product'>(vk_saas)</span></td><td>1 000</td><td>3 108 000 ₽</td><td>3 633 060 ₽</td><td class="price-min">2 046 552 ₽</td><td>2 454 204 ₽</td><td class='med-col'>2 454 204 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://biz.mail.ru/docs/saas/workspace-price/index.html" rel="noopener noreferrer">https://biz.mail.ru/docs/saas/wo…</a></td></tr></tbody></table></div><p class='footnote'>* Зелёная ячейка — минимальная смета infra среди провайдеров; медиана — для диаграммы TCO; headroom — запас RU в том же VM-тире</p><p class="table-more"><a href="#sales-s3">Ещё 16 строк → вкладка «Продажная»</a></p><div class="tco-chart" role="img" aria-label="Сравнение TCO"><div class="tco-legend"><span><i class="swatch swatch-comp"></i> Лицензия/облако конкурента, ₽/год</span><span><i class="swatch swatch-korus"></i> Infra Korus (медиана 3 провайдеров), ₽/год @ тот же RU</span></div><div class="tco-row"><div class="tco-label" title="Enterprise on-prem"><strong>Enterprise on-prem</strong><span class="tco-ru">10 000 рег.</span></div><div class="tco-bars"><div class="bar-comp" style="width:100%"></div><div class="bar-korus" style="width:8%"></div></div><div class="tco-vals">30 000 000 ₽<br/>2 626 716 ₽</div></div><div class="tco-row"><div class="tco-label" title="Corporate on-prem (до 1 000)"><strong>Corporate on-prem (до 1 000)</strong><span class="tco-ru">1 000 рег.</span></div><div class="tco-bars"><div class="bar-comp" style="width:10%"></div><div class="bar-korus" style="width:8%"></div></div><div class="tco-vals">3 000 000 ₽<br/>2 454 204 ₽</div></div><div class="tco-row"><div class="tco-label" title="Корпоративный (годовая оплата)"><strong>Корпоративный (годовая оплат</strong><span class="tco-ru">500 рег.</span></div><div class="tco-bars"><div class="bar-comp" style="width:7%"></div><div class="bar-korus" style="width:8%"></div></div><div class="tco-vals">2 394 000 ₽<br/>2 450 028 ₽</div></div><div class="tco-row"><div class="tco-label" title="Корпоративный (помесячно)"><strong>Корпоративный (помесячно)</strong><span class="tco-ru">500 рег.</span></div><div class="tco-bars"><div class="bar-comp" style="width:9%"></div><div class="bar-korus" style="width:8%"></div></div><div class="tco-vals">2 994 000 ₽<br/>2 450 028 ₽</div></div><div class="tco-row"><div class="tco-label" title="WorkSpace (годовая оплата)"><strong>WorkSpace (годовая оплата)</strong><span class="tco-ru">1 000 рег.</span></div><div class="tco-bars"><div class="bar-comp" style="width:8%"></div><div class="bar-korus" style="width:8%"></div></div><div class="tco-vals">2 484 000 ₽<br/>2 454 204 ₽</div></div></div></article><article id="pm-s4" class="subsection"><section class="section-wrap section-pm-s4"><h3 class="section-headline">Сопровождение</h3><div class="section-body">
+<p><strong>Сопровождение</strong> — стоимость команды (FTE), не серверов. Расчёт infra — <a href="#tech-s4">§ Калькулятор infra (техническая)</a>.</p>
+<p class="small">Модель упрощённая: RU, режим поддержки, релизы, топология, интеграции и модель команды — в калькуляторе; остальное — в методике § «Сопровождение».</p>
+</div></section><p class="calc-intro">Полная модель сопровождения (FTE × ставка). Infra — <a href="#tech-s4">калькулятор infra</a>.</p>
+<div class="calc-shell calc-shell-emerald" id="calc-pm">
+  <div class="calc-shell-head">
+    <h4 class="calc-shell-title">Калькулятор сопровождения</h4>
+    <p class="calc-shell-sub">Все факторы: от RU до DR и ФСТЭК.</p>
+  </div>
+  <div class="calc-shell-body">
+    <div class="calc-form-grid"><div class="calc-section-label">Масштаб и режим</div>
+<div class="calc-field">
+  <label for="calc-pm-ru">Зарегистрированные пользователи (RU)</label>
+  <input type="number" id="calc-pm-ru" value="12000" min="1" step="1"/>
+</div>
+<div class="calc-field">
+  <label for="calc-pm-sla">Режим поддержки</label>
+  <select id="calc-pm-sla"><option value="business">Будни 8×5</option><option value="24x7">Круглосуточно 24×7</option></select>
+</div>
+<div class="calc-field calc-field-check">
+  <label><input type="checkbox" id="calc-pm-upd" checked/> Регулярные обновления релизов</label>
+</div>
+<div class="calc-field">
+  <label for="calc-pm-team">Команда</label>
+  <select id="calc-pm-team"><option value="shared">Общий service desk</option><option value="dedicated">Выделенная на мессенджер</option></select>
+</div><div class="calc-section-label">Инфраструктура и интеграции</div>
+<div class="calc-field">
+  <label for="calc-pm-topo">Топология</label>
+  <select id="calc-pm-topo"><option value="compact">Компактный контур</option><option value="cluster">Кластер (несколько узлов)</option></select>
+</div>
+<div class="calc-field">
+  <label for="calc-pm-integ">Интеграции</label>
+  <select id="calc-pm-integ"><option value="none">Нет</option><option value="few" selected>1–3 (LDAP, боты…)</option><option value="many">4+ / кастом</option></select>
+</div>
+<div class="calc-field">
+  <label for="calc-pm-orgs">Организации / филиалы</label>
+  <select id="calc-pm-orgs"><option value="one">1</option><option value="few">2–5</option><option value="many">6+</option></select>
+</div><div class="calc-section-label">Пользователи и безопасность</div>
+<div class="calc-field">
+  <label for="calc-pm-l1">L1 (первая линия у пользователей)</label>
+  <select id="calc-pm-l1"><option value="none">Нет</option><option value="partial" selected>Частично</option><option value="full">Полная L1</option></select>
+</div>
+<div class="calc-field">
+  <label for="calc-pm-training">Обучение</label>
+  <select id="calc-pm-training"><option value="none">Не нужно</option><option value="annual" selected>Ежегодно</option><option value="quarterly">Ежеквартально</option></select>
+</div>
+<div class="calc-field">
+  <label for="calc-pm-e2ee">E2EE / MLS</label>
+  <select id="calc-pm-e2ee"><option value="off">Не используется</option><option value="roadmap" selected>В приёмке</option><option value="prod">В промышленной эксплуатации</option></select>
+</div>
+<div class="calc-field">
+  <label for="calc-pm-compliance">ИБ / комплаенс</label>
+  <select id="calc-pm-compliance"><option value="none">Базовый</option><option value="dlp">DLP / расширенный аудит</option><option value="fstec">Требования ФСТЭК</option></select>
+</div>
+<div class="calc-field">
+  <label for="calc-pm-dr">Резерв / DR</label>
+  <select id="calc-pm-dr"><option value="none">Нет</option><option value="backup">Резервный ЦОД</option><option value="full">DR + регулярные учения</option></select>
+</div><div class="calc-section-label">Экономика команды</div>
+<div class="calc-field">
+  <label for="calc-pm-staffing">Штат / субподряд</label>
+  <select id="calc-pm-staffing"><option value="inhouse">Штат заказчика</option><option value="outsource">Аутстафф / интегратор</option></select>
+</div>
+<div class="calc-field">
+  <label for="calc-pm-region">Регион ставок</label>
+  <select id="calc-pm-region"><option value="msk">Москва / СПб</option><option value="region">Регионы РФ</option></select>
+</div>
+<div class="calc-field calc-field-check">
+  <label><input type="checkbox" id="calc-pm-overhead" checked/> Надбавка 5% (НДС, командировки)</label>
+</div></div>
+    <div class="calc-actions">
+      <button type="button" class="btn-calc" id="calc-pm-run">Рассчитать</button>
+    </div>
+    <div class="calc-result-panel" id="calc-pm-out" aria-live="polite"></div>
+  </div>
 </div></article></div>
-  <div id="tab-tech" class="tab-panel" role="tabpanel" data-testid="deck-panel-tech"><article id="tech-s1" class="subsection"><section class="section-wrap section-tech-s1"><h3 class="section-headline">Архитектура</h3><div class="section-body"><p class="status-link"><a href="#block-0">↑ см. статус прототипа</a></p>
-<p>Java 25 monolith + workers: PostgreSQL, NATS, Redis, Solr (Standard), MinIO, Keycloak, ws-gateway.</p>
-<p>Deploy profiles: Pilot (lean, SQL search), Standard (Solr HA, replica PG). Логическая схема — прототип на лабораторном dev-стенде<sup>†</sup>.</p>
-<p class="footnote"><sup>†</sup> QEMU — footnote для разработчиков, не customer-facing runtime.</p>
-</div></section><svg viewBox="0 0 520 200" width="520" height="200" xmlns="http://www.w3.org/2000/svg">
+  <div id="tab-tech" class="tab-panel" role="tabpanel" data-testid="deck-panel-tech"><p class="tab-intro">Для DevOps и разработки: архитектура, sizing по числу рег., калькулятор infra.</p><nav class="sub-nav" aria-label="Подразделы"><a href="#tech-s1">Архитектура</a><a href="#tech-s2">Конкуренты</a><a href="#tech-s3">Матрица и мощности</a><a href="#tech-s4">Калькулятор infra</a></nav><article id="tech-s1" class="subsection"><section class="section-wrap section-tech-s1"><h3 class="section-headline">Архитектура</h3><div class="section-body"><p class="status-link"><a href="#block-0">Статус продукта ↑</a></p>
+<p>Модульный монолит Java 25: API, фоновые воркеры, WebSocket-шлюз. Ниже — <a href="#tech-stack-nodes">стек по узлам</a> и
+<a href="#tech-competencies">компетенции</a> команды.</p>
+<p class="footnote">Лабораторный стенд — для приёмки функций, не для нагрузочного soak-теста.</p>
+</div></section><figure class="fig"><svg viewBox="0 0 520 200" width="520" height="200" xmlns="http://www.w3.org/2000/svg">
   <text x="260" y="18" text-anchor="middle" font-size="12" font-weight="bold">Логическая схема прототипа</text>
   <rect x="20" y="40" width="120" height="40" rx="4" fill="#dbeafe"/><text x="80" y="65" text-anchor="middle" font-size="10">Web UI</text>
   <rect x="180" y="40" width="120" height="40" rx="4" fill="#bbf7d0"/><text x="240" y="65" text-anchor="middle" font-size="10">core-api</text>
@@ -136,71 +511,196 @@ body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); col
   <line x1="240" y1="80" x2="150" y2="110" stroke="#64748b"/>
   <line x1="240" y1="80" x2="260" y2="110" stroke="#64748b"/>
   <line x1="400" y1="80" x2="360" y2="110" stroke="#64748b"/>
-</svg></article><article id="tech-s2" class="subsection"><section class="section-wrap section-tech-s2"><h3 class="section-headline">Конкуренты (ops)</h3><div class="section-body">
-<p>Фокус: on-prem sizing, ops transparency, публичные прайсы где есть.</p>
-<p>Tier B/C: Loop, Rocket.Chat, Mattermost — concurrent vs registered — не смешиваем в TCO v1.</p>
-</div></section><table class='compare-table'><tr><th>Продукт</th><th>Tier</th><th>Deploy</th><th>Offerings</th></tr><tr><td>Korus</td><td>A</td><td>в контуре</td><td>2</td></tr><tr><td>eXpress</td><td>A</td><td>в контуре</td><td>3</td></tr><tr><td>Пачка</td><td>A</td><td>облако</td><td>3</td></tr><tr><td>VK SaaS</td><td>A</td><td>облако</td><td>3</td></tr><tr><td>Loop</td><td>B</td><td>в контуре / облако</td><td>3</td></tr><tr><td>Rocket.Chat</td><td>B</td><td>в контуре / облако</td><td>1</td></tr><tr><td>Mattermost</td><td>B</td><td>в контуре / облако</td><td>1</td></tr><tr><td>VK Superapp</td><td>B</td><td>в контуре</td><td>1</td></tr><tr><td>МТС Линк</td><td>C</td><td>облако / в контуре</td><td>1</td></tr><tr><td>Compass</td><td>C</td><td>облако / в контуре</td><td>3</td></tr><tr><td>TrueConf</td><td>C</td><td>в контуре / UC</td><td>1</td></tr></table></article><article id="tech-s3" class="subsection"><section class="section-wrap section-tech-s3"><h3 class="section-headline">Критерии + sizing</h3><div class="section-body">
-<p>18 критериев — qualitative matrix; sizing @ RU конкурента + headroom chip.</p>
-<p>RAM bar строится по профилю Korus, покрывающему RU строки конкурента.</p>
-</div></section><div class='matrix-scroll'><table class='matrix-table'><tr><th></th><th>В контуре заказчика / из</th><th>Экспорт / legal hold / d</th><th>Журнал аудита / комплаен</th><th>Полнотекстовый поиск</th><th>Сквозное шифрование (E2E</th><th>ВКС / голос</th><th>Мобильные клиенты</th><th>Суперапп / SmartApps</th><th>ФСТЭК / реестр РФ</th><th>Публичный sizing от 10 т</th><th>Публичный прайс лицензии</th><th>SLA / отказоустойчивость</th><th>Единый вход (SSO) / LDAP</th><th>Боты / API / интеграции</th><th>Ретенция / архив (полити</th><th>Мультитenant / шардирова</th><th>Федерация / внешние доме</th><th>Прозрачность эксплуатаци</th></tr><tr><th>Korus</th><td>✓</td><td>✓ ядро</td><td>✓</td><td>Solr / SQL</td><td>MLS (приёмка)</td><td>WebRTC</td><td>дорожная карта</td><td>◐ integrations</td><td>в процессе</td><td>✓ профили</td><td>КП</td><td>HA ref-arch</td><td>Keycloak</td><td>✓ L0–L3 platform</td><td>dual-TTL</td><td>org-shard</td><td>org-level</td><td>Java monolith + workers</td></tr><tr><th>eXpress</th><td>✓</td><td>DLP / политики</td><td>✓</td><td>✓</td><td>✓ E2EE</td><td>до 500</td><td>iOS/Android/Аврора</td><td>✓ SmartApps</td><td>✓ №4997</td><td>частично</td><td>✓</td><td>HA + media</td><td>✓</td><td>✓</td><td>политики</td><td>✓</td><td>✓</td><td>Kafka, etcd, Redis</td></tr><tr><th>Пачка</th><td>—</td><td>API экспорта</td><td>◐</td><td>✓</td><td>—</td><td>до 10</td><td>✓</td><td>боты/API</td><td>✓</td><td>—</td><td>✓</td><td>99,9%</td><td>◐</td><td>✓</td><td>облако</td><td>◐</td><td>—</td><td>SaaS</td></tr><tr><th>VK SaaS</th><td>—</td><td>зависит</td><td>◐</td><td>✓</td><td>—</td><td>✓</td><td>✓</td><td>workspace</td><td>✓</td><td>—</td><td>✓ SaaS</td><td>SaaS</td><td>✓</td><td>◐</td><td>облако</td><td>◐</td><td>—</td><td>SaaS</td></tr><tr><th>Loop</th><td>✓ (Корп.)</td><td>плагины</td><td>◐</td><td>✓</td><td>опционально</td><td>звонки</td><td>✓</td><td>плагины</td><td>✓ реестр</td><td>до ~2k док.</td><td>◐ облако</td><td>◐</td><td>◐</td><td>✓</td><td>настраивается</td><td>◐</td><td>—</td><td>Mattermost-fork</td></tr><tr><th>Rocket.Chat</th><td>✓</td><td>плагины</td><td>◐</td><td>✓</td><td>E2EE opt</td><td>интеграции</td><td>✓</td><td>marketplace</td><td>◐</td><td>concurrent</td><td>КП EE</td><td>◐</td><td>✓</td><td>✓</td><td>MongoDB</td><td>◐</td><td>◐</td><td>MongoDB replica</td></tr><tr><th>Mattermost</th><td>✓</td><td>плагины</td><td>◐</td><td>Elasticsearch</td><td>опционально</td><td>интеграции</td><td>✓</td><td>apps</td><td>◐</td><td>concurrent ref</td><td>КП EE</td><td>ref-arch</td><td>✓</td><td>✓</td><td>настраивается</td><td>◐</td><td>—</td><td>Go + PostgreSQL</td></tr><tr><th>VK Superapp</th><td>✓</td><td>◐</td><td>◐</td><td>✓</td><td>—</td><td>✓</td><td>✓</td><td>почта+календарь</td><td>✓</td><td>док. @2k</td><td>КП</td><td>◐</td><td>✓</td><td>◐</td><td>◐</td><td>◐</td><td>—</td><td>Superapp bundle</td></tr><tr><th>МТС Линк</th><td>✓</td><td>◐</td><td>◐</td><td>✓</td><td>—</td><td>✓ из чата</td><td>✓</td><td>команды, ИИ</td><td>✓ реестр</td><td>—</td><td>по КП</td><td>◐</td><td>AD (док.)</td><td>◐</td><td>◐</td><td>◐</td><td>—</td><td>МТС</td></tr><tr><th>Compass</th><td>✓</td><td>◐</td><td>◐</td><td>✓</td><td>—</td><td>✓</td><td>✓</td><td>◐</td><td>◐</td><td>до 100k заявл.</td><td>✓ от 390/490</td><td>◐</td><td>◐</td><td>✓</td><td>◐</td><td>◐</td><td>—</td><td>SaaS / on-prem</td></tr><tr><th>TrueConf</th><td>✓</td><td>◐</td><td>◐</td><td>◐</td><td>—</td><td>✓ ядро UC</td><td>✓</td><td>чат + ВКС</td><td>✓ реестр</td><td>PRO/online</td><td>от 23k/год</td><td>◐</td><td>LDAP/AD</td><td>◐</td><td>◐</td><td>◐</td><td>SIP/H.323</td><td>UC-платформа</td></tr></table></div><svg viewBox="0 0 480 70" width="480" height="70" xmlns="http://www.w3.org/2000/svg">
-  <text x="0" y="14" font-size="11">RAM @ 10,000 рег.: 14 ГБ (профиль Pilot)</text>
-  <rect x="0" y="24" width="300" height="16" fill="#e5e7eb"/>
-  <rect x="0" y="24" width="9" height="16" fill="#22c55e"/>
-  
-  <text x="0" y="62" font-size="9" fill="#64748b">оценка по профилю infra, не stage load test</text>
-</svg></article><article id="tech-s4" class="subsection"><section class="section-wrap section-tech-s4"><h3 class="section-headline">Калькулятор мощностей</h3><div class="section-body">
-<p>Калькулятор мощностей: произвольный RU → RAM, узлы, headroom профиля.</p>
-</div></section>
-<div class="calc" data-calc="tech">
-  <label>Рег. пользователей <input type="number" id="calc-tech-ru" value="500" min="1"/></label>
-  <button type="button" id="calc-tech-run">Рассчитать</button>
-  <output id="calc-tech-out"></output>
+</svg><figcaption class="fig-cap">Логическая схема прототипа</figcaption></figure>
+<div class="stack-block" id="tech-stack-nodes">
+  <h4>Стек по узлам (Korus)</h4>
+  <p class="footnote">Production full — все роли из compose. Dev-min (QEMU) объединяет роли на одной VM для разработки.</p>
+  <div class="table-wrap"><table class="feature-table">
+    <thead><tr><th>Узел / роль</th><th>Назначение</th><th>Стек</th></tr></thead>
+    <tbody><tr><td><strong>Web / LB</strong></td><td>nginx или korus-web (Tomcat), статика webui</td><td>Tomcat 11, vanilla JS webui, TLS termination</td></tr><tr><td><strong>App (core-api)</strong></td><td>REST API, админка, auth policy, E2EE/MLS orchestration</td><td>Java 25, Jersey 4, embedded Tomcat, Flyway, Nimbus JWT</td></tr><tr><td><strong>WS gateway</strong></td><td>WebSocket клиентов, fan-out событий</td><td>Java, отдельный контейнер ws-gateway</td></tr><tr><td><strong>Workers</strong></td><td>message-pipeline, retention, export-replay, push, preview, deep-archiver</td><td>Java workers, NATS JetStream consumers</td></tr><tr><td><strong>Indexer (hot-plug)</strong></td><td>Solr indexing, опциональный вынос</td><td>Java services/indexer, ADR hot-plug</td></tr><tr><td><strong>PostgreSQL hot</strong></td><td>OLTP: чаты, сообщения, orgs, auth policy</td><td>PostgreSQL 16</td></tr><tr><td><strong>PostgreSQL archive</strong></td><td>deep-archive, compliance export (profile full)</td><td>PostgreSQL 16</td></tr><tr><td><strong>NATS</strong></td><td>async bus, JetStream</td><td>NATS 2.10</td></tr><tr><td><strong>Redis</strong></td><td>кэш, сессии, rate limits</td><td>Redis 7</td></tr><tr><td><strong>MinIO</strong></td><td>object storage: файлы, вложения</td><td>S3-compatible</td></tr><tr><td><strong>Solr + ZooKeeper</strong></td><td>полнотекстовый поиск (profile full/solr)</td><td>Solr, ZooKeeper 3.9</td></tr><tr><td><strong>Keycloak</strong></td><td>IdP, OIDC/SAML, realm per org</td><td>Keycloak 24</td></tr><tr><td><strong>Integrations node</strong></td><td>L1–L3 плагины, bot-delivery, внешние API</td><td>отдельная VM/контейнер; код плагина не в JVM core-api</td></tr><tr><td><strong>LiveKit (опц.)</strong></td><td>WebRTC SFU для конференций</td><td>LiveKit server, отдельный профиль</td></tr></tbody>
+  </table></div>
+</div>
+<div class="stack-block" id="tech-competencies">
+  <h4>Компетенции для развития и поддержки</h4>
+  <p class="footnote">Минимальный набор ролей для in-house команды или аутстаффа; объём FTE — в калькуляторе сопровождения (Sales §4).</p>
+  <div class="table-wrap"><table class="feature-table">
+    <thead><tr><th>Роль</th><th>Навыки</th><th>Зона ответственности</th></tr></thead>
+    <tbody><tr><td><strong>Backend (Java)</strong></td><td>Java 17+, REST/Jersey, SQL/Flyway, NATS, unit/H2-тесты</td><td>core-api, workers, контракты API/NATS</td></tr><tr><td><strong>Frontend (webui)</strong></td><td>Vanilla JS, WebSocket, i18n, Playwright, E2EE WASM hooks</td><td>web-client, inner tier acceptance</td></tr><tr><td><strong>DevOps / SRE</strong></td><td>Docker Compose, Ansible, VM sizing, Prometheus, backup/DR</td><td>развёртывание prod-full, мониторинг, §10 sizing</td></tr><tr><td><strong>Интегратор L1–L2</strong></td><td>HTTP/webhook, LDAP/AD, Keycloak, bot API, observability плагина</td><td>узел integrations, FR-INT-09/10</td></tr><tr><td><strong>ИБ / комплаенс</strong></td><td>E2EE/MLS review, audit, retention/export, auth policy</td><td>заказчик enterprise-auth, deep-archive</td></tr><tr><td><strong>L1 поддержка</strong></td><td>runbook, эскалация, RU/режим поддержки из калькулятора</td><td>первая линия по договору сопровождения</td></tr><tr><td><strong>QA</strong></td><td>JUnit, Playwright tiers, smoke scripts, QEMU acceptance</td><td>US9 inner/outer gate</td></tr></tbody>
+  </table></div>
+</div></article><article id="tech-s2" class="subsection"><section class="section-wrap section-tech-s2"><h3 class="section-headline">Конкуренты</h3><div class="section-body">
+<p>Реестр <strong>11</strong> продуктов: tier, deploy, offerings. Ниже — <a href="#tech-competitor-stacks">сравнение ops-стеков</a> (Kafka vs NATS и т.д.).</p>
+<p class="small">Concurrent vs registered users не смешиваются в TCO v1.</p>
+</div></section><div class='table-wrap'><table class='compare-table'><thead><tr><th>Продукт</th><th>Tier</th><th>Deploy</th><th>Offerings</th></tr></thead><tbody><tr><td>Korus</td><td>A</td><td>в контуре</td><td>2</td></tr><tr><td>eXpress</td><td>A</td><td>в контуре</td><td>3</td></tr><tr><td>Пачка</td><td>A</td><td>облако</td><td>3</td></tr><tr><td>VK SaaS</td><td>A</td><td>облако</td><td>3</td></tr><tr><td>Loop</td><td>B</td><td>в контуре / облако</td><td>3</td></tr><tr><td>Rocket.Chat</td><td>B</td><td>в контуре / облако</td><td>1</td></tr><tr><td>Mattermost</td><td>B</td><td>в контуре / облако</td><td>1</td></tr><tr><td>VK Superapp</td><td>B</td><td>в контуре</td><td>1</td></tr><tr><td>МТС Линк</td><td>C</td><td>облако / в контуре</td><td>1</td></tr><tr><td>Compass</td><td>C</td><td>облако / в контуре</td><td>3</td></tr><tr><td>TrueConf</td><td>C</td><td>в контуре / UC</td><td>1</td></tr></tbody></table></div>
+<div class="stack-block" id="tech-competitor-stacks">
+  <h4>Стеки конкурентов (ops)</h4>
+  <p class="footnote">Поле <code>ops</code> из реестра конкурентов — для сравнения архитектурной сложности сопровождения,
+  не для «лучше/хуже». Korus: <strong>Java modular monolith + workers; PG 16, NATS, Redis, MinIO, Solr, Keycloak</strong>.</p>
+  <div class="table-wrap"><table class="feature-table">
+    <thead><tr><th>Продукт</th><th>Ops / стек (кратко)</th><th>Развёртывание</th></tr></thead>
+    <tbody><tr><td>eXpress</td><td>Kafka, etcd, Redis</td><td>в контуре</td></tr><tr><td>Пачка</td><td>SaaS</td><td>облако</td></tr><tr><td>VK SaaS</td><td>SaaS</td><td>облако</td></tr><tr><td>Loop</td><td>Mattermost-fork</td><td>в контуре / облако</td></tr><tr><td>Rocket.Chat</td><td>MongoDB replica</td><td>в контуре / облако</td></tr><tr><td>Mattermost</td><td>Go + PostgreSQL</td><td>в контуре / облако</td></tr><tr><td>VK Superapp</td><td>Superapp bundle</td><td>в контуре</td></tr><tr><td>МТС Линк</td><td>МТС</td><td>облако / в контуре</td></tr><tr><td>Compass</td><td>SaaS / on-prem</td><td>облако / в контуре</td></tr><tr><td>TrueConf</td><td>UC-платформа</td><td>в контуре / UC</td></tr></tbody>
+  </table></div>
+</div></article><article id="tech-s3" class="subsection"><section class="section-wrap section-tech-s3"><h3 class="section-headline">Матрица и мощности</h3><div class="section-body">
+<p>RAM-бар — суммарная RAM <strong>prod full</strong> при RU строки сравнения (§10.3). Ниже — <a href="#tech-plugins">плагины L0–L3</a> и матрица критериев.</p>
+</div></section><figure class="fig"><svg viewBox="0 0 480 78" width="100%" max-width="480" height="78" xmlns="http://www.w3.org/2000/svg">
+  <text x="0" y="14" font-size="11">@ 10,000 рег.: ~80 ГБ RAM из тира 128 ГБ (62%)</text>
+  <rect x="0" y="24" width="300" height="16" fill="#e5e7eb" stroke="#94a3b8" stroke-width="1"/>
+  <rect x="0" y="24" width="187" height="16" fill="#22c55e"/>
+  <text x="320" y="48" font-size="10" fill="#22c55e">запас до 41 143 рег.</text>
+  <text x="0" y="62" font-size="9" fill="#64748b">Sizing §10.3: RAM prod full; load test — QEMU/stage</text>
+  <text x="0" y="74" font-size="9" fill="#64748b">Не схема стека — см. «Стек по узлам» ниже</text>
+</svg><figcaption class="fig-cap">RAM prod full (§10.3)</figcaption></figure>
+<div class="stack-block" id="tech-plugins">
+  <h4>Гибкие плагины L0–L3 и границы применения</h4>
+  <p class="footnote">Источник: <code>docs/PRODUCT_PRESENTATION.md</code> §10.7, §12.5; контракты FR-INT-09/10.
+  Код плагина <strong>не</strong> загружается в JVM <code>core-api</code> — только узел integrations / sidecar.</p>
+  <div class="table-wrap"><table class="feature-table">
+    <thead><tr><th>Уровень</th><th>Тип</th><th>Описание</th><th>Граница</th></tr></thead>
+    <tbody><tr><td><strong>L0</strong></td><td>Встроенные интеграции</td><td>LDAP sync, Keycloak, стандартные webhook — в составе продукта</td><td>Без отдельного узла; конфиг + core-api</td></tr><tr><td><strong>L1</strong></td><td>Лёгкий плагин</td><td>HTTP in/out, cron, маппинг полей; ~512 МБ RAM / 0.25 vCPU</td><td>Узел integrations; не hot-path сообщений</td></tr><tr><td><strong>L2</strong></td><td>Средний плагин</td><td>Очереди, state, несколько API; ~2 ГБ / 1 vCPU</td><td>Изолированный процесс; SLA отдельно от core</td></tr><tr><td><strong>L3</strong></td><td>Тяжёлый / custom</td><td>Своя БД, ML, legacy ERP; ~8+ ГБ / 4+ vCPU</td><td>Отдельная VM или cell; граница — не блокировать message pipeline</td></tr></tbody>
+  </table></div>
+  <ul class="footnote stack-notes">
+    <li>Hot-path (отправка сообщений, WS, retention) — только core + workers.</li>
+    <li>L1–L3 добавляют RAM/vCPU на узел integrations; учитывать в sizing §10.3.</li>
+    <li>L3 и custom — отдельный cell/VM при риске noisy neighbor.</li>
+  </ul>
+</div><p class='small'>Полная матрица 18×11 — для архитекторов. Заголовки сокращены; полный текст — при наведении.</p><div class='matrix-scroll'><table class='matrix-table matrix-full'><thead><tr><th scope='col'>Продукт</th><th scope='col' title='В контуре заказчика / изолированный контур'>В контуре заказчик</th><th scope='col' title='Экспорт / legal hold / dual-TTL'>Экспорт / legal ho</th><th scope='col' title='Журнал аудита / комплаенс-ядро'>Журнал аудита / ко</th><th scope='col' title='Полнотекстовый поиск'>Полнотекстовый пои</th><th scope='col' title='Сквозное шифрование (E2EE) / MLS'>Сквозное шифровани</th><th scope='col' title='ВКС / голос'>ВКС / голос</th><th scope='col' title='Мобильные клиенты'>Мобильные клиенты</th><th scope='col' title='Суперапп / SmartApps'>Суперапп / SmartAp</th><th scope='col' title='ФСТЭК / реестр РФ'>ФСТЭК / реестр РФ</th><th scope='col' title='Публичный sizing от 10 тыс. рег.'>Публичный sizing о</th><th scope='col' title='Публичный прайс лицензии'>Публичный прайс ли</th><th scope='col' title='SLA / отказоустойчивость (док.)'>SLA / отказоустойч</th><th scope='col' title='Единый вход (SSO) / LDAP / Keycloak'>Единый вход (SSO) </th><th scope='col' title='Боты / API / интеграции'>Боты / API / интег</th><th scope='col' title='Ретенция / архив (политики)'>Ретенция / архив (</th><th scope='col' title='Мультитenant / шардирование организаций'>Мультитenant / шар</th><th scope='col' title='Федерация / внешние домены'>Федерация / внешни</th><th scope='col' title='Прозрачность эксплуатационного стека'>Прозрачность экспл</th></tr></thead><tbody><tr><th scope='row'>Korus</th><td>✓</td><td>✓ ядро</td><td>✓</td><td>Solr / SQL</td><td>MLS (приёмка)</td><td>WebRTC</td><td>дорожная карта</td><td>◐ integrations</td><td>в процессе</td><td>✓ профили</td><td>КП</td><td>HA ref-arch</td><td>Keycloak</td><td>✓ L0–L3 platform</td><td>dual-TTL</td><td>org-shard</td><td>org-level</td><td>Java monolith + workers</td></tr><tr><th scope='row'>eXpress</th><td>✓</td><td>DLP / политики</td><td>✓</td><td>✓</td><td>✓ E2EE</td><td>до 500</td><td>iOS/Android/Аврора</td><td>✓ SmartApps</td><td>✓ №4997</td><td>частично</td><td>✓</td><td>HA + media</td><td>✓</td><td>✓</td><td>политики</td><td>✓</td><td>✓</td><td>Kafka, etcd, Redis</td></tr><tr><th scope='row'>Пачка</th><td>—</td><td>API экспорта</td><td>◐</td><td>✓</td><td>—</td><td>до 10</td><td>✓</td><td>боты/API</td><td>✓</td><td>—</td><td>✓</td><td>99,9%</td><td>◐</td><td>✓</td><td>облако</td><td>◐</td><td>—</td><td>SaaS</td></tr><tr><th scope='row'>VK SaaS</th><td>—</td><td>зависит</td><td>◐</td><td>✓</td><td>—</td><td>✓</td><td>✓</td><td>workspace</td><td>✓</td><td>—</td><td>✓ SaaS</td><td>SaaS</td><td>✓</td><td>◐</td><td>облако</td><td>◐</td><td>—</td><td>SaaS</td></tr><tr><th scope='row'>Loop</th><td>✓ (Корп.)</td><td>плагины</td><td>◐</td><td>✓</td><td>опционально</td><td>звонки</td><td>✓</td><td>плагины</td><td>✓ реестр</td><td>до ~2k док.</td><td>◐ облако</td><td>◐</td><td>◐</td><td>✓</td><td>настраивается</td><td>◐</td><td>—</td><td>Mattermost-fork</td></tr><tr><th scope='row'>Rocket.Chat</th><td>✓</td><td>плагины</td><td>◐</td><td>✓</td><td>E2EE opt</td><td>интеграции</td><td>✓</td><td>marketplace</td><td>◐</td><td>concurrent</td><td>КП EE</td><td>◐</td><td>✓</td><td>✓</td><td>MongoDB</td><td>◐</td><td>◐</td><td>MongoDB replica</td></tr><tr><th scope='row'>Mattermost</th><td>✓</td><td>плагины</td><td>◐</td><td>Elasticsearch</td><td>опционально</td><td>интеграции</td><td>✓</td><td>apps</td><td>◐</td><td>concurrent ref</td><td>КП EE</td><td>ref-arch</td><td>✓</td><td>✓</td><td>настраивается</td><td>◐</td><td>—</td><td>Go + PostgreSQL</td></tr><tr><th scope='row'>VK Superapp</th><td>✓</td><td>◐</td><td>◐</td><td>✓</td><td>—</td><td>✓</td><td>✓</td><td>почта+календарь</td><td>✓</td><td>док. @2k</td><td>КП</td><td>◐</td><td>✓</td><td>◐</td><td>◐</td><td>◐</td><td>—</td><td>Superapp bundle</td></tr><tr><th scope='row'>МТС Линк</th><td>✓</td><td>◐</td><td>◐</td><td>✓</td><td>—</td><td>✓ из чата</td><td>✓</td><td>команды, ИИ</td><td>✓ реестр</td><td>—</td><td>по КП</td><td>◐</td><td>AD (док.)</td><td>◐</td><td>◐</td><td>◐</td><td>—</td><td>МТС</td></tr><tr><th scope='row'>Compass</th><td>✓</td><td>◐</td><td>◐</td><td>✓</td><td>—</td><td>✓</td><td>✓</td><td>◐</td><td>◐</td><td>до 100k заявл.</td><td>✓ от 390/490</td><td>◐</td><td>◐</td><td>✓</td><td>◐</td><td>◐</td><td>—</td><td>SaaS / on-prem</td></tr><tr><th scope='row'>TrueConf</th><td>✓</td><td>◐</td><td>◐</td><td>◐</td><td>—</td><td>✓ ядро UC</td><td>✓</td><td>чат + ВКС</td><td>✓ реестр</td><td>PRO/online</td><td>от 23k/год</td><td>◐</td><td>LDAP/AD</td><td>◐</td><td>◐</td><td>◐</td><td>SIP/H.323</td><td>UC-платформа</td></tr></tbody></table></div></article><article id="tech-s4" class="subsection"><section class="section-wrap section-tech-s4"><h3 class="section-headline">Калькулятор infra</h3><div class="section-body">
+<p>Калькулятор: <strong>от нагрузки</strong> (RU, пик онлайн, msg/s, retention) → таблица модулей и смета; или <strong>от модулей</strong> → предел RU/онлайн/msg/s и срок HDD.</p>
+<p class="footnote">Dev-min (QEMU) — только разработка, не sizing. Prod — всегда full stack (<code>docker-compose.full-server.yml</code>).</p>
+</div></section><p class="calc-intro">Production full stack — без Pilot/Standard/Enterprise. Dev-min (QEMU) не sizing; только prod-full.</p>
+<div class="calc-shell calc-shell-sky" id="calc-tech">
+  <div class="calc-shell-head">
+    <h4 class="calc-shell-title">Калькулятор мощностей</h4>
+    <p class="calc-shell-sub">Два режима: нагрузка → серверы или модули → предел RU/онлайн/хранилища.</p>
+  </div>
+  <div class="calc-shell-body">
+    <div class="calc-form-grid">
+<div class="calc-field">
+  <label for="calc-tech-mode">Режим расчёта</label>
+  <select id="calc-tech-mode"><option value="load">От нагрузки → состав серверов</option><option value="modules">От модулей → предел нагрузки</option></select>
+</div><div id="calc-tech-load-panel"><div class="calc-section-label">Пользователи и нагрузка</div>
+<div class="calc-field">
+  <label for="calc-tech-ru">Всего рег. пользователей (RU)</label>
+  <input type="number" id="calc-tech-ru" value="10000" min="1" step="1"/>
+</div>
+<div class="calc-field">
+  <label for="calc-tech-peak-online">Пик онлайн (0 = авто из §10.1)</label>
+  <input type="number" id="calc-tech-peak-online" value="0" min="0" step="1" placeholder="авто"/>
+</div>
+<div class="calc-field">
+  <label for="calc-tech-peak-msg">Пик msg/s (0 = авто)</label>
+  <input type="number" id="calc-tech-peak-msg" value="0" min="0" step="0.1" placeholder="авто"/>
+</div>
+<div class="calc-field">
+  <label for="calc-tech-msgs-day">Сообщений / DAU / день</label>
+  <input type="number" id="calc-tech-msgs-day" value="40" min="1" step="1"/>
+</div><div class="calc-section-label">Хранение</div>
+<div class="calc-field">
+  <label for="calc-tech-gb-user">Файлы, ГБ / рег. / год</label>
+  <input type="number" id="calc-tech-gb-user" value="0.5" min="0" step="0.1"/>
+</div>
+<div class="calc-field">
+  <label for="calc-tech-retention">Retention, лет</label>
+  <input type="number" id="calc-tech-retention" value="3" min="1" step="1"/>
+</div><div class="calc-section-label">Контур</div>
+<div class="calc-field calc-field-check">
+  <label><input type="checkbox" id="calc-tech-ha"/> HA (реплики PG/Redis/NATS, ≥2 app)</label>
+</div>
+<div class="calc-field">
+  <label for="calc-tech-plugins">Плагины L1+ на integrations</label>
+  <input type="number" id="calc-tech-plugins" value="0" min="0" step="1"/>
+</div></div><div id="calc-tech-modules-panel" hidden><div class="calc-section-label">Состав prod full (docker-compose.full-server)</div><div class="calc-module-grid"><label class="calc-module-check"><input type="checkbox" class="calc-mod" data-mod="postgres-hot" checked/> PostgreSQL (hot) (4.0 ГБ)</label><label class="calc-module-check"><input type="checkbox" class="calc-mod" data-mod="postgres-archive" checked/> PostgreSQL (archive) (4.0 ГБ)</label><label class="calc-module-check"><input type="checkbox" class="calc-mod" data-mod="redis" checked/> Redis (2.0 ГБ)</label><label class="calc-module-check"><input type="checkbox" class="calc-mod" data-mod="nats" checked/> NATS JetStream (4.0 ГБ)</label><label class="calc-module-check"><input type="checkbox" class="calc-mod" data-mod="minio" checked/> MinIO (4.0 ГБ)</label><label class="calc-module-check"><input type="checkbox" class="calc-mod" data-mod="zookeeper" checked/> ZooKeeper (2.0 ГБ)</label><label class="calc-module-check"><input type="checkbox" class="calc-mod" data-mod="solr" checked/> Solr (8.0 ГБ)</label><label class="calc-module-check"><input type="checkbox" class="calc-mod" data-mod="keycloak" checked/> Keycloak (8.0 ГБ)</label><label class="calc-module-check"><input type="checkbox" class="calc-mod" data-mod="core-api" checked/> core-api (8.0 ГБ)</label><label class="calc-module-check"><input type="checkbox" class="calc-mod" data-mod="ws-gateway" checked/> ws-gateway (4.0 ГБ)</label><label class="calc-module-check"><input type="checkbox" class="calc-mod" data-mod="workers" checked/> Workers (pipeline, retention, export…) (8.0 ГБ)</label><label class="calc-module-check"><input type="checkbox" class="calc-mod" data-mod="web-lb" checked/> Web / nginx LB (8.0 ГБ)</label><label class="calc-module-check"><input type="checkbox" class="calc-mod" data-mod="integrations"/> Integrations node (8.0 ГБ)</label></div>
+<div class="calc-field">
+  <label for="calc-tech-mod-ssd">SSD, ТБ</label>
+  <input type="number" id="calc-tech-mod-ssd" value="2" min="0" step="0.1"/>
+</div>
+<div class="calc-field">
+  <label for="calc-tech-mod-hdd">HDD archive, ТБ</label>
+  <input type="number" id="calc-tech-mod-hdd" value="5" min="0" step="0.1"/>
+</div>
+<div class="calc-field calc-field-check">
+  <label><input type="checkbox" id="calc-tech-mod-ha"/> HA для datastore</label>
+</div>
+<div class="calc-field">
+  <label for="calc-tech-mod-plugins">Плагины integrations</label>
+  <input type="number" id="calc-tech-mod-plugins" value="0" min="0" step="1"/>
+</div></div></div>
+    <div class="calc-actions">
+      <button type="button" class="btn-calc" id="calc-tech-run">Рассчитать</button>
+    </div>
+    <div class="calc-result-panel" id="calc-tech-out" aria-live="polite"></div>
+  </div>
 </div></article></div>
-  <div id="tab-sales" class="tab-panel" role="tabpanel" data-testid="deck-panel-sales"><article id="sales-s1" class="subsection"><section class="section-wrap section-sales-s1"><h3 class="section-headline">Value prop</h3><div class="section-body"><p class="status-link"><a href="#block-0">↑ см. статус прототипа</a></p>
-<p>Value: on-prem контур, compliance-ядро (export, dual-TTL), bot platform L0–L3.</p>
-<p>Deployment: Pilot (10k рег.), Standard (100k), Enterprise roadmap — pilot ≠ production.</p>
-<p>Cells (spec 011): Phase 0–1 engineering closed; ops → Sep 2026+.</p>
-</div></section></article><article id="sales-s2" class="subsection"><section class="section-wrap section-sales-s2"><h3 class="section-headline">Конкуренты</h3><div class="section-body"><ul><li>eXpress — tier A</li><li>Пачка — tier A</li><li>VK SaaS — tier A</li><li>Loop — tier B</li><li>Rocket.Chat — tier B</li><li>Mattermost — tier B</li><li>VK Superapp — tier B</li><li>МТС Линк — tier C</li><li>Compass — tier C</li><li>TrueConf — tier C</li></ul></div></section><table class='compare-table'><tr><th>Продукт</th><th>Tier</th><th>Deploy</th><th>Offerings</th></tr><tr><td>Korus</td><td>A</td><td>в контуре</td><td>2</td></tr><tr><td>eXpress</td><td>A</td><td>в контуре</td><td>3</td></tr><tr><td>Пачка</td><td>A</td><td>облако</td><td>3</td></tr><tr><td>VK SaaS</td><td>A</td><td>облако</td><td>3</td></tr><tr><td>Loop</td><td>B</td><td>в контуре / облако</td><td>3</td></tr><tr><td>Rocket.Chat</td><td>B</td><td>в контуре / облако</td><td>1</td></tr><tr><td>Mattermost</td><td>B</td><td>в контуре / облако</td><td>1</td></tr><tr><td>VK Superapp</td><td>B</td><td>в контуре</td><td>1</td></tr><tr><td>МТС Линк</td><td>C</td><td>облако / в контуре</td><td>1</td></tr><tr><td>Compass</td><td>C</td><td>облако / в контуре</td><td>3</td></tr><tr><td>TrueConf</td><td>C</td><td>в контуре / UC</td><td>1</td></tr></table></article><article id="sales-s3" class="subsection"><section class="section-wrap section-sales-s3"><h3 class="section-headline">TCO таблицы</h3><div class="section-body">
-<p>TCO-таблица: одна строка = публичный тариф конкурента. Источник — кликабельный URL.</p>
-<p class="small">Строки без публичной цены — «цена по запросу», TCO compare пропущен.</p>
-</div></section><table class='compare-table'><tr><th>Тариф</th><th>RU</th><th>₽/год конкурент</th><th>Korus infra ₽/год</th><th>Источник</th></tr><tr><td>Enterprise on-prem (express)</td><td>10 000</td><td>30 000 000 ₽</td><td>736 200 ₽ </td><td><a href="https://express.ms/pricing" rel="noopener">https://express.ms/pricing…</a></td></tr><tr><td>Corporate on-prem (до 1 000) (express)</td><td>1 000</td><td>3 000 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://docs.express.ms/" rel="noopener">https://docs.express.ms/…</a></td></tr><tr><td>Корпоративный (годовая оплата) (pachka)</td><td>500</td><td>2 394 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://pachca.ru/pricing" rel="noopener">https://pachca.ru/pricing…</a></td></tr><tr><td>Корпоративный (помесячно) (pachka)</td><td>500</td><td>2 994 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://pachca.ru/pricing" rel="noopener">https://pachca.ru/pricing…</a></td></tr><tr><td>WorkSpace (годовая оплата) (vk_saas)</td><td>1 000</td><td>2 484 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://biz.mail.ru/docs/saas/workspace-price/index.html" rel="noopener">https://biz.mail.ru/docs/saas/workspace-…</a></td></tr><tr><td>WorkSpace (помесячно) (vk_saas)</td><td>1 000</td><td>3 108 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://biz.mail.ru/docs/saas/workspace-price/index.html" rel="noopener">https://biz.mail.ru/docs/saas/workspace-…</a></td></tr><tr><td>Pro (облако) (loop)</td><td>500</td><td>1 194 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://loop.ru/pricing" rel="noopener">https://loop.ru/pricing…</a></td></tr><tr><td>Start (облако) (loop)</td><td>100</td><td>142 800 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://loop.ru/pricing" rel="noopener">https://loop.ru/pricing…</a></td></tr><tr><td>Корпоративный on-prem (loop)</td><td>2 000</td><td>нет публичного прайса</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://loop.ru/pricing" rel="noopener">https://loop.ru/pricing…</a></td></tr><tr><td>Облако (compass)</td><td>100</td><td>468 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://getcompass.ru/pricing" rel="noopener">https://getcompass.ru/pricing…</a></td></tr><tr><td>On-prem (compass)</td><td>100</td><td>588 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://getcompass.ru/pricing" rel="noopener">https://getcompass.ru/pricing…</a></td></tr><tr><td>Server (entry) (trueconf)</td><td>50</td><td>23 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://trueconf.ru/price/server/" rel="noopener">https://trueconf.ru/price/server/…</a></td></tr><tr><td>Pilot on-prem (infra) (korus)</td><td>10 000</td><td>736 200 ₽</td><td>736 200 ₽ </td><td><a href="https://github.com/kumekay/korus_messenger/blob/main/docs/DEV_STACK_PROFILES.md" rel="noopener">https://github.com/kumekay/korus_messeng…</a></td></tr><tr><td>Standard on-prem (infra) (korus)</td><td>100 000</td><td>3 984 000 ₽</td><td>3 984 000 ₽ </td><td><a href="https://github.com/kumekay/korus_messenger/blob/main/docs/DEV_STACK_PROFILES.md" rel="noopener">https://github.com/kumekay/korus_messeng…</a></td></tr><tr><td>On-prem / enterprise (mts_link)</td><td>5 000</td><td>нет публичного прайса</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://mts-link.ru/chats/" rel="noopener">https://mts-link.ru/chats/…</a></td></tr><tr><td>Enterprise Edition (rocket)</td><td>1 000</td><td>нет публичного прайса</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://www.rocket.chat/pricing" rel="noopener">https://www.rocket.chat/pricing…</a></td></tr><tr><td>Enterprise (mattermost)</td><td>1 000</td><td>нет публичного прайса</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://mattermost.com/pricing/" rel="noopener">https://mattermost.com/pricing/…</a></td></tr><tr><td>Superapp on-prem (vk_onprem)</td><td>2 000</td><td>нет публичного прайса</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://workspace.vk.ru/" rel="noopener">https://workspace.vk.ru/…</a></td></tr><tr><td>Enterprise on-prem (100k) (express)</td><td>100 000</td><td>300 000 000 ₽</td><td>3 984 000 ₽ </td><td><a href="https://express.ms/pricing" rel="noopener">https://express.ms/pricing…</a></td></tr><tr><td>On-prem (1 000 рег.) (compass)</td><td>1 000</td><td>5 880 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://getcompass.ru/pricing" rel="noopener">https://getcompass.ru/pricing…</a></td></tr><tr><td>Корпоративный (5 000 активных) (pachka)</td><td>5 000</td><td>23 940 000 ₽</td><td>736 200 ₽ <span class="chip chip-headroom" title="без изменения цены/мощностей">до 10 000 рег. на тех же мощностях*</span></td><td><a href="https://pachca.ru/pricing" rel="noopener">https://pachca.ru/pricing…</a></td></tr><tr><td>WorkSpace 10 000 (год) (vk_saas)</td><td>10 000</td><td>24 840 000 ₽</td><td>736 200 ₽ </td><td><a href="https://biz.mail.ru/docs/saas/workspace-price/index.html" rel="noopener">https://biz.mail.ru/docs/saas/workspace-…</a></td></tr></table><p class='footnote'>* headroom — без изменения цены/мощностей</p><svg viewBox="0 0 540 218" width="540" height="218" xmlns="http://www.w3.org/2000/svg">
-  <text x="120" y="16" font-size="11">■ конкурент  ■ Korus infra @ их RU</text>
-  <text x="0" y="30" font-size="10">Enterprise on-prem</text><rect x="120" y="20" width="400" height="8" fill="#6366f1"/><rect x="120" y="32" width="9" height="8" fill="#22c55e"/><text x="0" y="58" font-size="10">Corporate on-prem (д</text><rect x="120" y="48" width="40" height="8" fill="#6366f1"/><rect x="120" y="60" width="9" height="8" fill="#22c55e"/><text x="0" y="86" font-size="10">Корпоративный (годов</text><rect x="120" y="76" width="31" height="8" fill="#6366f1"/><rect x="120" y="88" width="9" height="8" fill="#22c55e"/><text x="0" y="114" font-size="10">Корпоративный (помес</text><rect x="120" y="104" width="39" height="8" fill="#6366f1"/><rect x="120" y="116" width="9" height="8" fill="#22c55e"/><text x="0" y="142" font-size="10">WorkSpace (годовая о</text><rect x="120" y="132" width="33" height="8" fill="#6366f1"/><rect x="120" y="144" width="9" height="8" fill="#22c55e"/><text x="0" y="170" font-size="10">WorkSpace (помесячно</text><rect x="120" y="160" width="41" height="8" fill="#6366f1"/><rect x="120" y="172" width="9" height="8" fill="#22c55e"/>
-</svg></article><article id="sales-s4" class="subsection"><section class="section-wrap section-sales-s4"><h3 class="section-headline">Калькулятор TCO</h3><div class="section-body">
-<p>Калькулятор TCO: введите RU → ₽/мес и ₽/год infra Korus (не лицензия вендора).</p>
-</div></section>
-<div class="calc" data-calc="sales">
-  <label>Рег. пользователей <input type="number" id="calc-sales-ru" value="7500" min="1"/></label>
-  <button type="button" id="calc-sales-run">Рассчитать</button>
-  <output id="calc-sales-out"></output>
+  <div id="tab-sales" class="tab-panel" role="tabpanel" data-testid="deck-panel-sales"><p class="tab-intro">Для presales: ценность, TCO по публичным тарифам конкурентов и трём облакам.</p><nav class="sub-nav" aria-label="Подразделы"><a href="#sales-s1">Ценность</a><a href="#sales-s2">Конкуренты</a><a href="#sales-s3">TCO</a><a href="#sales-s4">Калькулятор infra</a></nav><article id="sales-s1" class="subsection"><section class="section-wrap section-sales-s1"><h3 class="section-headline">Ценность</h3><div class="section-body"><p class="status-link"><a href="#block-0">Статус продукта ↑</a></p>
+<div class="card-grid card-grid-3">
+<div class="card"><h4>On-prem</h4><p>Данные в контуре заказчика. Export, dual-TTL, legal hold.</p></div>
+<div class="card"><h4>Масштабирование</h4><p>Рост от тысяч до сотен тысяч рег. без смены продукта.</p></div>
+<div class="card"><h4>Платформа ботов</h4><p>L0–L3: меню, webhook, интеграции через sidecar-мосты.</p></div>
+</div>
+<p class="small">Цены infra — ориентиры по REG.RU, Yandex Cloud, Timeweb; не коммерческое предложение.</p>
+</div></section></article><article id="sales-s2" class="subsection"><section class="section-wrap section-sales-s2"><h3 class="section-headline">Конкуренты</h3><div class="section-body">
+<p>Реестр <strong>11</strong> продуктов (включая Korus): tier, модель развёртывания, число тарифных строк в TCO.</p>
+</div></section><div class='table-wrap'><table class='compare-table'><thead><tr><th>Продукт</th><th>Tier</th><th>Deploy</th><th>Offerings</th></tr></thead><tbody><tr><td>Korus</td><td>A</td><td>в контуре</td><td>2</td></tr><tr><td>eXpress</td><td>A</td><td>в контуре</td><td>3</td></tr><tr><td>Пачка</td><td>A</td><td>облако</td><td>3</td></tr><tr><td>VK SaaS</td><td>A</td><td>облако</td><td>3</td></tr><tr><td>Loop</td><td>B</td><td>в контуре / облако</td><td>3</td></tr><tr><td>Rocket.Chat</td><td>B</td><td>в контуре / облако</td><td>1</td></tr><tr><td>Mattermost</td><td>B</td><td>в контуре / облако</td><td>1</td></tr><tr><td>VK Superapp</td><td>B</td><td>в контуре</td><td>1</td></tr><tr><td>МТС Линк</td><td>C</td><td>облако / в контуре</td><td>1</td></tr><tr><td>Compass</td><td>C</td><td>облако / в контуре</td><td>3</td></tr><tr><td>TrueConf</td><td>C</td><td>в контуре / UC</td><td>1</td></tr></tbody></table></div></article><article id="sales-s3" class="subsection"><section class="section-wrap section-sales-s3"><h3 class="section-headline">TCO</h3><div class="section-body">
+<p>Каждая строка — публичный тариф конкурента. Infra Korus — три колонки (REG.RU, Yandex Cloud, Timeweb) + медиана для диаграммы.</p>
+<p class="small">Нет публичной цены — «по запросу». Мелкий on-prem может быть дороже облачного тарифа — это честное сравнение.</p>
+
+<div class="units-box" id="units-legend">
+  <h4>Единицы измерения</h4>
+  <dl class="units-dl">
+    <dt>RU</dt><dd>зарегистрированные пользователи (учётные записи), не одновременные сессии</dd>
+    <dt>₽/год · ₽/мес</dt><dd>рубли РФ, без НДС; infra — серверы и канал, не лицензия ПО конкурента</dd>
+    <dt>Infra Korus</dt><dd>медиана смет по REG.RU, Yandex Cloud, Timeweb Cloud на дату 2026-06-15</dd>
+    <dt>FTE</dt><dd>сопровождение (люди), не CPU; ставка 180 000 ₽/мес за 1 FTE (8×5)</dd>
+    <dt>RAM</dt><dd>суммарная RAM по §10.3, ГБ; VM-тир — ближайший стандартный объём</dd>
+  </dl>
+</div><div class="method-box" id="price-sources"><h4>Источники цен infra</h4><ul class="bullet-clean"><li><strong>REG.RU:</strong> <a href="https://www.reg.ru/vps/tariffs" rel="noopener noreferrer">https://www.reg.ru/vps/tariffs</a> — VPS/VDS: тарифы «Эконом» и «SSD» на reg.ru/vps/tariffs, снимок 2026-06-15</li><li><strong>Yandex Cloud:</strong> <a href="https://cloud.yandex.ru/docs/compute/pricing" rel="noopener noreferrer">https://cloud.yandex.ru/docs/compute/pricing</a> — Compute: standard-v3, RAM и vCPU по прайсу cloud.yandex.ru, снимок 2026-06-15</li><li><strong>Timeweb Cloud:</strong> <a href="https://timeweb.cloud/prices" rel="noopener noreferrer">https://timeweb.cloud/prices</a> — Облачные серверы timeweb.cloud/prices — бюджетный сегмент, снимок 2026-06-15</li></ul></div></div></section><div class='table-wrap table-wrap-wide'><table class='compare-table compare-tco compare-tco-wide'><thead><tr><th scope='col'>Тариф конкурента</th><th scope='col' title='Зарегистрированные пользователи'>RU,<br/>рег.</th><th scope='col' title='Годовая стоимость по публичному прайсу'>Конкурент,<br/>₽/год</th><th scope="col" class="prov-col" title="https://www.reg.ru/vps/tariffs">REG.RU,<br/>₽/год</th><th scope="col" class="prov-col" title="https://cloud.yandex.ru/docs/compute/pricing">Yandex Cloud,<br/>₽/год</th><th scope="col" class="prov-col" title="https://timeweb.cloud/prices">Timeweb Cloud,<br/>₽/год</th><th scope='col' title='Медиана трёх провайдеров'>Медиана,<br/>₽/год</th><th scope='col'>Источник</th></tr></thead><tbody><tr><td>Enterprise on-prem <span class='row-product'>(express)</span></td><td>10 000</td><td>30 000 000 ₽</td><td>3 843 696 ₽</td><td class="price-min">2 321 256 ₽</td><td>2 626 716 ₽</td><td class='med-col'>2 626 716 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://express.ms/pricing" rel="noopener noreferrer">https://express.ms/pricing…</a></td></tr><tr><td>Corporate on-prem (до 1 000) <span class='row-product'>(express)</span></td><td>1 000</td><td>3 000 000 ₽</td><td>3 633 060 ₽</td><td class="price-min">2 046 552 ₽</td><td>2 454 204 ₽</td><td class='med-col'>2 454 204 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://docs.express.ms/" rel="noopener noreferrer">https://docs.express.ms/…</a></td></tr><tr><td>Корпоративный (годовая оплата) <span class='row-product'>(pachka)</span></td><td>500</td><td>2 394 000 ₽</td><td>3 628 020 ₽</td><td class="price-min">2 040 504 ₽</td><td>2 450 028 ₽</td><td class='med-col'>2 450 028 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://pachca.ru/pricing" rel="noopener noreferrer">https://pachca.ru/pricing…</a></td></tr><tr><td>Корпоративный (помесячно) <span class='row-product'>(pachka)</span></td><td>500</td><td>2 994 000 ₽</td><td>3 628 020 ₽</td><td class="price-min">2 040 504 ₽</td><td>2 450 028 ₽</td><td class='med-col'>2 450 028 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://pachca.ru/pricing" rel="noopener noreferrer">https://pachca.ru/pricing…</a></td></tr><tr><td>WorkSpace (годовая оплата) <span class='row-product'>(vk_saas)</span></td><td>1 000</td><td>2 484 000 ₽</td><td>3 633 060 ₽</td><td class="price-min">2 046 552 ₽</td><td>2 454 204 ₽</td><td class='med-col'>2 454 204 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://biz.mail.ru/docs/saas/workspace-price/index.html" rel="noopener noreferrer">https://biz.mail.ru/docs/saas/wo…</a></td></tr><tr><td>WorkSpace (помесячно) <span class='row-product'>(vk_saas)</span></td><td>1 000</td><td>3 108 000 ₽</td><td>3 633 060 ₽</td><td class="price-min">2 046 552 ₽</td><td>2 454 204 ₽</td><td class='med-col'>2 454 204 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://biz.mail.ru/docs/saas/workspace-price/index.html" rel="noopener noreferrer">https://biz.mail.ru/docs/saas/wo…</a></td></tr><tr><td>Pro (облако) <span class='row-product'>(loop)</span></td><td>500</td><td>1 194 000 ₽</td><td>3 628 020 ₽</td><td class="price-min">2 040 504 ₽</td><td>2 450 028 ₽</td><td class='med-col'>2 450 028 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://loop.ru/pricing" rel="noopener noreferrer">https://loop.ru/pricing…</a></td></tr><tr><td>Start (облако) <span class='row-product'>(loop)</span></td><td>100</td><td>142 800 ₽</td><td>3 624 240 ₽</td><td class="price-min">2 035 968 ₽</td><td>2 446 896 ₽</td><td class='med-col'>2 446 896 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://loop.ru/pricing" rel="noopener noreferrer">https://loop.ru/pricing…</a></td></tr><tr><td>Корпоративный on-prem <span class='row-product'>(loop)</span></td><td>2 000</td><td>нет публичного прайса</td><td>3 651 996 ₽</td><td class="price-min">2 070 972 ₽</td><td>2 469 744 ₽</td><td class='med-col'>2 469 744 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://loop.ru/pricing" rel="noopener noreferrer">https://loop.ru/pricing…</a></td></tr><tr><td>Облако <span class='row-product'>(compass)</span></td><td>100</td><td>468 000 ₽</td><td>3 624 240 ₽</td><td class="price-min">2 035 968 ₽</td><td>2 446 896 ₽</td><td class='med-col'>2 446 896 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://getcompass.ru/pricing" rel="noopener noreferrer">https://getcompass.ru/pricing…</a></td></tr><tr><td>On-prem <span class='row-product'>(compass)</span></td><td>100</td><td>588 000 ₽</td><td>3 624 240 ₽</td><td class="price-min">2 035 968 ₽</td><td>2 446 896 ₽</td><td class='med-col'>2 446 896 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://getcompass.ru/pricing" rel="noopener noreferrer">https://getcompass.ru/pricing…</a></td></tr><tr><td>Server (entry) <span class='row-product'>(trueconf)</span></td><td>50</td><td>23 000 ₽</td><td>3 623 820 ₽</td><td class="price-min">2 035 464 ₽</td><td>2 446 548 ₽</td><td class='med-col'>2 446 548 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://trueconf.ru/price/server/" rel="noopener noreferrer">https://trueconf.ru/price/server…</a></td></tr><tr><td>Prod full on-prem @10k RU (infra) <span class='row-product'>(korus)</span></td><td>10 000</td><td>736 200 ₽</td><td>3 843 696 ₽</td><td class="price-min">2 321 256 ₽</td><td>2 626 716 ₽</td><td class='med-col'>2 626 716 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://github.com/kumekay/korus_messenger/blob/main/docs/DEV_STACK_PROFILES.md" rel="noopener noreferrer">https://github.com/kumekay/korus…</a></td></tr><tr><td>Prod full on-prem @100k RU (infra) <span class='row-product'>(korus)</span></td><td>100 000</td><td>3 984 000 ₽</td><td>14 273 976 ₽</td><td class="price-min">8 668 320 ₽</td><td>9 717 864 ₽</td><td class='med-col'>9 717 864 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 211 592 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://github.com/kumekay/korus_messenger/blob/main/docs/DEV_STACK_PROFILES.md" rel="noopener noreferrer">https://github.com/kumekay/korus…</a></td></tr><tr><td>On-prem / enterprise <span class='row-product'>(mts_link)</span></td><td>5 000</td><td>нет публичного прайса</td><td>3 723 948 ₽</td><td class="price-min">2 164 908 ₽</td><td>2 528 664 ₽</td><td class='med-col'>2 528 664 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://mts-link.ru/chats/" rel="noopener noreferrer">https://mts-link.ru/chats/…</a></td></tr><tr><td>Enterprise Edition <span class='row-product'>(rocket)</span></td><td>1 000</td><td>нет публичного прайса</td><td>3 633 060 ₽</td><td class="price-min">2 046 552 ₽</td><td>2 454 204 ₽</td><td class='med-col'>2 454 204 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://www.rocket.chat/pricing" rel="noopener noreferrer">https://www.rocket.chat/pricing…</a></td></tr><tr><td>Enterprise <span class='row-product'>(mattermost)</span></td><td>1 000</td><td>нет публичного прайса</td><td>3 633 060 ₽</td><td class="price-min">2 046 552 ₽</td><td>2 454 204 ₽</td><td class='med-col'>2 454 204 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://mattermost.com/pricing/" rel="noopener noreferrer">https://mattermost.com/pricing/…</a></td></tr><tr><td>Superapp on-prem <span class='row-product'>(vk_onprem)</span></td><td>2 000</td><td>нет публичного прайса</td><td>3 651 996 ₽</td><td class="price-min">2 070 972 ₽</td><td>2 469 744 ₽</td><td class='med-col'>2 469 744 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://workspace.vk.ru/" rel="noopener noreferrer">https://workspace.vk.ru/…</a></td></tr><tr><td>Enterprise on-prem (100k) <span class='row-product'>(express)</span></td><td>100 000</td><td>300 000 000 ₽</td><td>14 273 976 ₽</td><td class="price-min">8 668 320 ₽</td><td>9 717 864 ₽</td><td class='med-col'>9 717 864 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 211 592 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://express.ms/pricing" rel="noopener noreferrer">https://express.ms/pricing…</a></td></tr><tr><td>On-prem (1 000 рег.) <span class='row-product'>(compass)</span></td><td>1 000</td><td>5 880 000 ₽</td><td>3 633 060 ₽</td><td class="price-min">2 046 552 ₽</td><td>2 454 204 ₽</td><td class='med-col'>2 454 204 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://getcompass.ru/pricing" rel="noopener noreferrer">https://getcompass.ru/pricing…</a></td></tr><tr><td>Корпоративный (5 000 активных) <span class='row-product'>(pachka)</span></td><td>5 000</td><td>23 940 000 ₽</td><td>3 723 948 ₽</td><td class="price-min">2 164 908 ₽</td><td>2 528 664 ₽</td><td class='med-col'>2 528 664 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://pachca.ru/pricing" rel="noopener noreferrer">https://pachca.ru/pricing…</a></td></tr><tr><td>WorkSpace 10 000 (год) <span class='row-product'>(vk_saas)</span></td><td>10 000</td><td>24 840 000 ₽</td><td>3 843 696 ₽</td><td class="price-min">2 321 256 ₽</td><td>2 626 716 ₽</td><td class='med-col'>2 626 716 ₽ <span class="chip chip-headroom" title="без изменения VM-тира (округлённая RAM)">до 41 143 рег. на том же VM-тире*</span></td><td class="src-cell"><a href="https://biz.mail.ru/docs/saas/workspace-price/index.html" rel="noopener noreferrer">https://biz.mail.ru/docs/saas/wo…</a></td></tr></tbody></table></div><p class='footnote'>* Зелёная ячейка — минимальная смета infra среди провайдеров; медиана — для диаграммы TCO; headroom — запас RU в том же VM-тире</p><div class="tco-chart" role="img" aria-label="Сравнение TCO"><div class="tco-legend"><span><i class="swatch swatch-comp"></i> Лицензия/облако конкурента, ₽/год</span><span><i class="swatch swatch-korus"></i> Infra Korus (медиана 3 провайдеров), ₽/год @ тот же RU</span></div><div class="tco-row"><div class="tco-label" title="Enterprise on-prem"><strong>Enterprise on-prem</strong><span class="tco-ru">10 000 рег.</span></div><div class="tco-bars"><div class="bar-comp" style="width:100%"></div><div class="bar-korus" style="width:8%"></div></div><div class="tco-vals">30 000 000 ₽<br/>2 626 716 ₽</div></div><div class="tco-row"><div class="tco-label" title="Corporate on-prem (до 1 000)"><strong>Corporate on-prem (до 1 000)</strong><span class="tco-ru">1 000 рег.</span></div><div class="tco-bars"><div class="bar-comp" style="width:10%"></div><div class="bar-korus" style="width:8%"></div></div><div class="tco-vals">3 000 000 ₽<br/>2 454 204 ₽</div></div><div class="tco-row"><div class="tco-label" title="Корпоративный (годовая оплата)"><strong>Корпоративный (годовая оплат</strong><span class="tco-ru">500 рег.</span></div><div class="tco-bars"><div class="bar-comp" style="width:7%"></div><div class="bar-korus" style="width:8%"></div></div><div class="tco-vals">2 394 000 ₽<br/>2 450 028 ₽</div></div><div class="tco-row"><div class="tco-label" title="Корпоративный (помесячно)"><strong>Корпоративный (помесячно)</strong><span class="tco-ru">500 рег.</span></div><div class="tco-bars"><div class="bar-comp" style="width:9%"></div><div class="bar-korus" style="width:8%"></div></div><div class="tco-vals">2 994 000 ₽<br/>2 450 028 ₽</div></div><div class="tco-row"><div class="tco-label" title="WorkSpace (годовая оплата)"><strong>WorkSpace (годовая оплата)</strong><span class="tco-ru">1 000 рег.</span></div><div class="tco-bars"><div class="bar-comp" style="width:8%"></div><div class="bar-korus" style="width:8%"></div></div><div class="tco-vals">2 484 000 ₽<br/>2 454 204 ₽</div></div><div class="tco-row"><div class="tco-label" title="WorkSpace (помесячно)"><strong>WorkSpace (помесячно)</strong><span class="tco-ru">1 000 рег.</span></div><div class="tco-bars"><div class="bar-comp" style="width:10%"></div><div class="bar-korus" style="width:8%"></div></div><div class="tco-vals">3 108 000 ₽<br/>2 454 204 ₽</div></div><div class="tco-row"><div class="tco-label" title="Pro (облако)"><strong>Pro (облако)</strong><span class="tco-ru">500 рег.</span></div><div class="tco-bars"><div class="bar-comp" style="width:3%"></div><div class="bar-korus" style="width:8%"></div></div><div class="tco-vals">1 194 000 ₽<br/>2 450 028 ₽</div></div><div class="tco-row"><div class="tco-label" title="Start (облако)"><strong>Start (облако)</strong><span class="tco-ru">100 рег.</span></div><div class="tco-bars"><div class="bar-comp" style="width:2%"></div><div class="bar-korus" style="width:8%"></div></div><div class="tco-vals">142 800 ₽<br/>2 446 896 ₽</div></div></div></article><article id="sales-s4" class="subsection"><section class="section-wrap section-sales-s4"><h3 class="section-headline">Калькулятор infra</h3><div class="section-body">
+<p>Калькулятор: число рег. → смета infra (REG.RU, Yandex Cloud, Timeweb) с разбивкой и ссылками на прайсы.</p>
+</div></section><p class="calc-intro">Infra по публичным прайсам <a href="#price-sources">REG.RU · Yandex Cloud · Timeweb</a>. Без лицензии, TURN, НДС.</p>
+<div class="calc-shell calc-shell-indigo" id="calc-sales">
+  <div class="calc-shell-head">
+    <h4 class="calc-shell-title">Калькулятор infra</h4>
+    <p class="calc-shell-sub">Смета серверов и канала на ваше число рег.</p>
+  </div>
+  <div class="calc-shell-body">
+    <div class="calc-form-grid">
+<div class="calc-field">
+  <label for="calc-sales-ru">Зарегистрированные пользователи (RU)</label>
+  <input type="number" id="calc-sales-ru" value="7500" min="1" step="1"/>
+</div></div>
+    <div class="calc-actions">
+      <button type="button" class="btn-calc" id="calc-sales-run">Рассчитать</button>
+    </div>
+    <div class="calc-result-panel" id="calc-sales-out" aria-live="polite"></div>
+  </div>
 </div></article></div>
-  <div id="tab-user" class="tab-panel" role="tabpanel" data-testid="deck-panel-user"><article id="user-s1" class="subsection"><section class="section-wrap section-user-s1"><h3 class="section-headline">Зачем мессенджер</h3><div class="section-body"><p class="status-link"><a href="#block-0">↑ см. статус прототипа</a></p>
-<p>Корпоративный мессенджер — как чат в телефоне, но для работы: переписка, файлы, звонки.</p>
-<p>Данные остаются у вашей компании. Администратор видит, кто что отправил — для порядка и аудита.</p>
-<p>Сейчас это рабочий прототип: основные сценарии работают на тестовом стенде.</p>
-</div></section><svg viewBox="0 0 500 90" width="500" height="90" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="40" r="8" fill="#22c55e"/><text x="20" y="70" text-anchor="middle" font-size="9">Утро: проверить ча</text><line x1="28" y1="40" x2="92" y2="40" stroke="#cbd5e1"/><circle cx="140" cy="40" r="8" fill="#22c55e"/><text x="140" y="70" text-anchor="middle" font-size="9">День: файл коллеге</text><line x1="148" y1="40" x2="212" y2="40" stroke="#cbd5e1"/><circle cx="260" cy="40" r="8" fill="#22c55e"/><text x="260" y="70" text-anchor="middle" font-size="9">Созвон из чата</text><line x1="268" y1="40" x2="332" y2="40" stroke="#cbd5e1"/><circle cx="380" cy="40" r="8" fill="#22c55e"/><text x="380" y="70" text-anchor="middle" font-size="9">Поиск старого доку</text></svg></article><article id="user-s2" class="subsection"><section class="section-wrap section-user-s2"><h3 class="section-headline">Альтернативы</h3><div class="section-body">
-<p>Есть облачные сервисы и решения «у себя в офисе». Korus — для организаций, где важны контроль данных и экспорт.</p>
-<p>Мобильные приложения из магазина — пока не в поставке; браузер и установка «как приложение» — да.</p>
+  <div id="tab-user" class="tab-panel" role="tabpanel" data-testid="deck-panel-user"><p class="tab-intro">Для сотрудника офиса: простым языком, без технических терминов.</p><nav class="sub-nav" aria-label="Подразделы"><a href="#user-s1">Зачем нужен</a><a href="#user-s2">Альтернативы</a><a href="#user-s3">Удобство</a><a href="#user-s4">Справка</a></nav><article id="user-s1" class="subsection"><section class="section-wrap section-user-s1"><h3 class="section-headline">Зачем нужен</h3><div class="section-body">
+<p>Корпоративный мессенджер — как привычный чат, но для работы: переписка с коллегами, файлы, звонок из чата.</p>
+<p>Данные хранятся у вашей компании. Администратор может посмотреть переписку по правилам компании — для порядка и проверок.</p>
+<p>Сейчас это рабочий прототип: основные сценарии уже можно попробовать на тестовом стенде.</p>
+</div></section><figure class="fig"><svg viewBox="0 0 500 90" width="100%" height="90" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="40" r="8" fill="#6366f1"/><text x="20" y="70" text-anchor="middle" font-size="9">Проверить чаты</text><line x1="28" y1="40" x2="92" y2="40" stroke="#cbd5e1"/><circle cx="140" cy="40" r="8" fill="#6366f1"/><text x="140" y="70" text-anchor="middle" font-size="9">Отправить файл</text><line x1="148" y1="40" x2="212" y2="40" stroke="#cbd5e1"/><circle cx="260" cy="40" r="8" fill="#6366f1"/><text x="260" y="70" text-anchor="middle" font-size="9">Созвон из чата</text><line x1="268" y1="40" x2="332" y2="40" stroke="#cbd5e1"/><circle cx="380" cy="40" r="8" fill="#6366f1"/><text x="380" y="70" text-anchor="middle" font-size="9">Найти документ</text></svg><figcaption class="fig-cap">Типичный рабочий день</figcaption></figure></article><article id="user-s2" class="subsection"><section class="section-wrap section-user-s2"><h3 class="section-headline">Альтернативы</h3><div class="section-body">
+<p>Есть облачные сервисы и решения «сервер у себя». Korus — когда важны контроль данных и выгрузка для аудита.</p>
+<p>Отдельного приложения в App Store пока нет — достаточно браузера или «добавить на рабочий стол».</p>
 </div></section></article><article id="user-s3" class="subsection"><section class="section-wrap section-user-s3"><h3 class="section-headline">Удобство</h3><div class="section-body">
-<p>Удобство: поиск по переписке, файлы в чате, звонок одной кнопкой.</p>
-<p>Частично: уведомления на телефон — нужна настройка IT; усиленное шифрование — после согласования с безопасностью.</p>
-</div></section></article><article id="user-s4" class="subsection"><section class="section-wrap section-user-s4"><h3 class="section-headline">Мастер и FAQ</h3><div class="section-body">
-<p>Мастер сценариев, FAQ и короткий тур — без технических терминов.</p>
-<p>FAQ: Telegram/WhatsApp — удобны, но корпоративный аудит и хранение по политике компании — в Korus.</p>
+<p>Удобно: поиск по переписке, файлы в чате, звонок одной кнопкой.</p>
+<p>Частично готово: уведомления на телефон настраивает IT; усиленное шифрование — после согласования с безопасностью.</p>
+</div></section></article><article id="user-s4" class="subsection"><section class="section-wrap section-user-s4"><h3 class="section-headline">Справка</h3><div class="section-body">
+<p>Выберите сценарий — пошаговая подсказка. Ниже — частые вопросы.</p>
 </div></section>
-<div class="user-wizard">
-  <h4>Мастер сценариев</h4>
-  <select id="wizard-scenario"><option value="message">Написать коллеге</option><option value="search">Найти файл</option><option value="call">Позвонить</option></select>
-  <ol id="wizard-steps"></ol>
-  <h4>FAQ</h4>
-  <details><summary>Чем не Telegram?</summary><p>Корпоративный аудит, хранение по политике компании, экспорт для комплаенса.</p></details>
-  <details><summary>Нужно ли ставить приложение?</summary><p>Достаточно браузера; можно добавить на рабочий стол как приложение.</p></details>
-  <h4>Тур</h4>
+<div class="user-wizard calc-card">
+  <h4 class="wizard-h">Мастер сценариев</h4>
+  <select id="wizard-scenario" class="wizard-select">
+    <option value="message">Написать коллеге</option>
+    <option value="search">Найти файл</option>
+    <option value="call">Позвонить</option>
+  </select>
+  <ol id="wizard-steps" class="wizard-steps"></ol>
+  <h4 class="wizard-h">Частые вопросы</h4>
+  <details class="faq"><summary>Чем не Telegram?</summary><p>Корпоративный аудит, хранение по политике компании, выгрузка для комплаенса.</p></details>
+  <details class="faq"><summary>Нужно ли ставить приложение?</summary><p>Достаточно браузера; можно добавить ярлык на рабочий стол.</p></details>
+  <h4 class="wizard-h">Краткий тур</h4>
   <ol class="tour-steps"><li>Вход</li><li>Список чатов</li><li>Сообщение</li><li>Поиск</li></ol>
 </div></article></div>
 </main>
 <footer class="deck-footer">1.0.0 | 2026-06-18 | PRICE_AS_OF 2026-06-15 | offerings 2026-06-15 | Playwright 34/34</footer>
-<script type="application/json" id="deck-data">{"profiles": [{"id": "pilot", "ram_gb": 14, "max_registered_users": 10000, "monthly_rub": 61350}, {"id": "standard", "ram_gb": 140, "max_registered_users": 100000, "monthly_rub": 332000}, {"id": "enterprise", "ram_gb": 450, "max_registered_users": 500000, "monthly_rub": 980000}], "offerings": [{"id": "express-onprem-10k", "label": "Enterprise on-prem", "value": 10000, "product_id": "express", "price_is_public": true}, {"id": "express-onprem-1k", "label": "Corporate on-prem (до 1 000)", "value": 1000, "product_id": "express", "price_is_public": true}, {"id": "pachka-corp-year", "label": "Корпоративный (годовая оплата)", "value": 500, "product_id": "pachka", "price_is_public": true}, {"id": "pachka-corp-month", "label": "Корпоративный (помесячно)", "value": 500, "product_id": "pachka", "price_is_public": true}, {"id": "vk-saas-year", "label": "WorkSpace (годовая оплата)", "value": 1000, "product_id": "vk_saas", "price_is_public": true}, {"id": "vk-saas-month", "label": "WorkSpace (помесячно)", "value": 1000, "product_id": "vk_saas", "price_is_public": true}, {"id": "loop-pro-500", "label": "Pro (облако)", "value": 500, "product_id": "loop", "price_is_public": true}, {"id": "loop-start-100", "label": "Start (облако)", "value": 100, "product_id": "loop", "price_is_public": true}, {"id": "loop-enterprise-kp", "label": "Корпоративный on-prem", "value": 2000, "product_id": "loop", "price_is_public": false}, {"id": "compass-cloud-390", "label": "Облако", "value": 100, "product_id": "compass", "price_is_public": true}, {"id": "compass-onprem-490", "label": "On-prem", "value": 100, "product_id": "compass", "price_is_public": true}, {"id": "trueconf-server-entry", "label": "Server (entry)", "value": 50, "product_id": "trueconf", "price_is_public": true}, {"id": "korus-pilot-10k", "label": "Pilot on-prem (infra)", "value": 10000, "product_id": "korus", "price_is_public": true}, {"id": "korus-standard-100k", "label": "Standard on-prem (infra)", "value": 100000, "product_id": "korus", "price_is_public": true}, {"id": "mts-link-kp", "label": "On-prem / enterprise", "value": 5000, "product_id": "mts_link", "price_is_public": false}, {"id": "rocket-ee-kp", "label": "Enterprise Edition", "value": 1000, "product_id": "rocket", "price_is_public": false}, {"id": "mattermost-ee-kp", "label": "Enterprise", "value": 1000, "product_id": "mattermost", "price_is_public": false}, {"id": "vk-onprem-kp", "label": "Superapp on-prem", "value": 2000, "product_id": "vk_onprem", "price_is_public": false}, {"id": "express-onprem-100k", "label": "Enterprise on-prem (100k)", "value": 100000, "product_id": "express", "price_is_public": true}, {"id": "compass-onprem-1k", "label": "On-prem (1 000 рег.)", "value": 1000, "product_id": "compass", "price_is_public": true}, {"id": "pachka-corp-5k", "label": "Корпоративный (5 000 активных)", "value": 5000, "product_id": "pachka", "price_is_public": true}, {"id": "vk-saas-10k", "label": "WorkSpace 10 000 (год)", "value": 10000, "product_id": "vk_saas", "price_is_public": true}], "price_as_of": "2026-06-15", "offerings_max_as_of": "2026-06-15", "fte_base": {"base": 0.15, "divisor": 80000, "cap": 4.0}, "scenarios": {"message": ["Откройте чат", "Выберите коллегу", "Напишите сообщение"], "search": ["Введите запрос", "Выберите результат", "Откройте файл"], "call": ["Откройте чат", "Нажмите звонок", "Разрешите микрофон"]}}</script>
+<script type="application/json" id="deck-data">{"ram_anchors": [[1000, 32], [10000, 64], [100000, 160], [500000, 480], [1000000, 960]], "vm_tiers": [8, 16, 32, 64, 128, 256, 512, 1024], "providers": [{"id": "regru", "label": "REG.RU", "pricing_url": "https://www.reg.ru/vps/tariffs", "ram_rub_gb": 1750, "vcpu_rub": 2200, "ssd_tb_rub": 3500, "hdd_tb_rub": 800, "channel_200": 8000, "channel_1g": 35000, "ops_base": 5000}, {"id": "yandex", "label": "Yandex Cloud", "pricing_url": "https://cloud.yandex.ru/docs/compute/pricing", "ram_rub_gb": 720, "vcpu_rub": 2040, "ssd_tb_rub": 4200, "hdd_tb_rub": 1100, "channel_200": 9500, "channel_1g": 38000, "ops_base": 6500}, {"id": "timeweb", "label": "Timeweb Cloud", "pricing_url": "https://timeweb.cloud/prices", "ram_rub_gb": 1120, "vcpu_rub": 1680, "ssd_tb_rub": 2900, "hdd_tb_rub": 650, "channel_200": 6500, "channel_1g": 28000, "ops_base": 4200}], "offerings": [{"id": "express-onprem-10k", "label": "Enterprise on-prem", "value": 10000, "product_id": "express", "price_is_public": true}, {"id": "express-onprem-1k", "label": "Corporate on-prem (до 1 000)", "value": 1000, "product_id": "express", "price_is_public": true}, {"id": "pachka-corp-year", "label": "Корпоративный (годовая оплата)", "value": 500, "product_id": "pachka", "price_is_public": true}, {"id": "pachka-corp-month", "label": "Корпоративный (помесячно)", "value": 500, "product_id": "pachka", "price_is_public": true}, {"id": "vk-saas-year", "label": "WorkSpace (годовая оплата)", "value": 1000, "product_id": "vk_saas", "price_is_public": true}, {"id": "vk-saas-month", "label": "WorkSpace (помесячно)", "value": 1000, "product_id": "vk_saas", "price_is_public": true}, {"id": "loop-pro-500", "label": "Pro (облако)", "value": 500, "product_id": "loop", "price_is_public": true}, {"id": "loop-start-100", "label": "Start (облако)", "value": 100, "product_id": "loop", "price_is_public": true}, {"id": "loop-enterprise-kp", "label": "Корпоративный on-prem", "value": 2000, "product_id": "loop", "price_is_public": false}, {"id": "compass-cloud-390", "label": "Облако", "value": 100, "product_id": "compass", "price_is_public": true}, {"id": "compass-onprem-490", "label": "On-prem", "value": 100, "product_id": "compass", "price_is_public": true}, {"id": "trueconf-server-entry", "label": "Server (entry)", "value": 50, "product_id": "trueconf", "price_is_public": true}, {"id": "korus-pilot-10k", "label": "Prod full on-prem @10k RU (infra)", "value": 10000, "product_id": "korus", "price_is_public": true}, {"id": "korus-standard-100k", "label": "Prod full on-prem @100k RU (infra)", "value": 100000, "product_id": "korus", "price_is_public": true}, {"id": "mts-link-kp", "label": "On-prem / enterprise", "value": 5000, "product_id": "mts_link", "price_is_public": false}, {"id": "rocket-ee-kp", "label": "Enterprise Edition", "value": 1000, "product_id": "rocket", "price_is_public": false}, {"id": "mattermost-ee-kp", "label": "Enterprise", "value": 1000, "product_id": "mattermost", "price_is_public": false}, {"id": "vk-onprem-kp", "label": "Superapp on-prem", "value": 2000, "product_id": "vk_onprem", "price_is_public": false}, {"id": "express-onprem-100k", "label": "Enterprise on-prem (100k)", "value": 100000, "product_id": "express", "price_is_public": true}, {"id": "compass-onprem-1k", "label": "On-prem (1 000 рег.)", "value": 1000, "product_id": "compass", "price_is_public": true}, {"id": "pachka-corp-5k", "label": "Корпоративный (5 000 активных)", "value": 5000, "product_id": "pachka", "price_is_public": true}, {"id": "vk-saas-10k", "label": "WorkSpace 10 000 (год)", "value": 10000, "product_id": "vk_saas", "price_is_public": true}], "price_as_of": "2026-06-15", "offerings_max_as_of": "2026-06-15", "fte_rate_monthly": 180000, "support": {"fte_base": {"base": 0.15, "divisor": 80000, "cap": 4.0}, "updates_fte": {"lt5k": 0.1, "lt50k": 0.3, "gte50k": 0.8}, "topology_fte": {"compact": 0.0, "cluster": 0.3}, "integrations_fte": {"none": 0.0, "few": 0.2, "many": 0.5}, "orgs_fte": {"one": 0.0, "few": 0.15, "many": 0.35}, "l1_fte": {"none": 0.0, "partial": 0.25, "full": 0.6}, "training_fte": {"none": 0.0, "annual": 0.1, "quarterly": 0.25}, "e2ee_fte": {"off": 0.0, "roadmap": 0.15, "prod": 0.4}, "compliance_fte": {"none": 0.0, "dlp": 0.2, "fstec": 0.5}, "dr_fte": {"none": 0.0, "backup": 0.25, "full": 0.5}, "team_mult": {"shared": 1.0, "dedicated": 1.25}, "support_mode_mult": {"business": 1.0, "24x7": 2.5}, "staffing_rate_mult": {"inhouse": 1.0, "outsource": 1.15}, "region_rate_mult": {"msk": 1.0, "region": 0.88}, "overhead_pct": 0.05, "base_rate_rub": 180000}, "modules": [{"id": "postgres-hot", "label": "PostgreSQL (hot)", "ram_gb": 4.0, "vcpu": 2.0, "required": true, "per_plugin": false}, {"id": "postgres-archive", "label": "PostgreSQL (archive)", "ram_gb": 4.0, "vcpu": 2.0, "required": true, "per_plugin": false}, {"id": "redis", "label": "Redis", "ram_gb": 2.0, "vcpu": 1.0, "required": true, "per_plugin": false}, {"id": "nats", "label": "NATS JetStream", "ram_gb": 4.0, "vcpu": 2.0, "required": true, "per_plugin": false}, {"id": "minio", "label": "MinIO", "ram_gb": 4.0, "vcpu": 2.0, "required": true, "per_plugin": false}, {"id": "zookeeper", "label": "ZooKeeper", "ram_gb": 2.0, "vcpu": 1.0, "required": true, "per_plugin": false}, {"id": "solr", "label": "Solr", "ram_gb": 8.0, "vcpu": 2.0, "required": true, "per_plugin": false}, {"id": "keycloak", "label": "Keycloak", "ram_gb": 8.0, "vcpu": 4.0, "required": true, "per_plugin": false}, {"id": "core-api", "label": "core-api", "ram_gb": 8.0, "vcpu": 4.0, "required": true, "per_plugin": false}, {"id": "ws-gateway", "label": "ws-gateway", "ram_gb": 4.0, "vcpu": 2.0, "required": true, "per_plugin": false}, {"id": "workers", "label": "Workers (pipeline, retention, export…)", "ram_gb": 8.0, "vcpu": 4.0, "required": true, "per_plugin": false}, {"id": "web-lb", "label": "Web / nginx LB", "ram_gb": 8.0, "vcpu": 2.0, "required": true, "per_plugin": false}, {"id": "integrations", "label": "Integrations node", "ram_gb": 8.0, "vcpu": 2.0, "required": false, "per_plugin": true}], "load_defaults": {"msgs_per_user_day": 40.0, "gb_files_per_user_yr": 0.5, "retention_years": 3, "peak_burst": 3.5}, "scenarios": {"message": ["Откройте чат", "Выберите коллегу", "Напишите сообщение"], "search": ["Введите запрос", "Выберите результат", "Откройте файл"], "call": ["Откройте чат", "Нажмите звонок", "Разрешите микрофон"]}}</script>
 <script>
 (function(){
   const tabs = document.querySelectorAll('[role="tab"]');
@@ -218,38 +718,358 @@ body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); col
     if(e.key==='ArrowLeft') tabs[(i-1+tabs.length)%tabs.length].focus();
   });
   const hash=(location.hash||'#pm').slice(1);
-  activate(['pm','tech','sales','user'].includes(hash)?hash:'pm');
+  const tabId=['pm','tech','sales','user'].includes(hash.split('-')[0])?hash.split('-')[0]:'pm';
+  activate(tabId);
 
   const data=JSON.parse(document.getElementById('deck-data').textContent);
-  function pickProfile(ru){
-    for(const p of data.profiles) if(ru<=p.max_registered_users) return p;
-    return data.profiles[data.profiles.length-1];
-  }
   function fmt(n){ return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ')+' ₽'; }
 
-  document.getElementById('calc-sales-run')?.addEventListener('click', ()=>{
+  function estimateRam(ru){
+    const anchors=data.ram_anchors;
+    if(ru<=anchors[0][0]) return anchors[0][1];
+    for(let i=0;i<anchors.length-1;i++){
+      const [r0,g0]=anchors[i], [r1,g1]=anchors[i+1];
+      if(ru<=r1){
+        const t=(Math.log(ru)-Math.log(r0))/(Math.log(r1)-Math.log(r0));
+        return Math.max(g0, Math.round(g0+t*(g1-g0)));
+      }
+    }
+    return anchors[anchors.length-1][1];
+  }
+  function vmTier(ram){
+    for(const t of data.vm_tiers) if(ram<=t) return t;
+    return data.vm_tiers[data.vm_tiers.length-1];
+  }
+  function activityRate(ru){
+    if(ru<=10000) return 0.5;
+    if(ru<=100000) return 0.45;
+    if(ru<=500000) return 0.35;
+    return 0.25;
+  }
+  function peakOnlineRate(ru){
+    if(ru<=10000) return 0.15;
+    if(ru<=100000) return 0.12;
+    return 0.10;
+  }
+  function derivePeakOnline(ru, po){
+    if(po>0) return po;
+    return Math.max(1, Math.round(ru*activityRate(ru)*peakOnlineRate(ru)));
+  }
+  function derivePeakMsgS(ru, pms, mpd, po){
+    if(pms>0) return pms;
+    const dau=Math.max(1, Math.round(ru*activityRate(ru)));
+    const avg=(dau*mpd)/86400;
+    return Math.max(0.5, avg*(data.load_defaults?.peak_burst||3.5));
+  }
+  function scaleModRam(id, base, ru, po, pms){
+    if(id==='postgres-hot') return base+ru/8000+pms/8;
+    if(id==='core-api') return base+po/400+pms/1.5;
+    if(id==='ws-gateway') return base+po/800;
+    if(id==='workers') return base+pms/2.5;
+    if(id==='nats') return base+pms/20;
+    if(id==='solr') return base+ru/15000;
+    if(id==='minio') return base+ru/20000;
+    return base;
+  }
+  function appNodeCount(pms, po){
+    let n=1;
+    if(pms>30||po>3000) n=2;
+    if(pms>120||po>12000) n=3;
+    if(pms>400) n=Math.max(n,6);
+    return n;
+  }
+  function webNodeCount(po, ha){
+    let n= po<=5000?1:2;
+    if(po>20000) n=Math.max(n,3);
+    if(ha) n=Math.max(n,2);
+    return n;
+  }
+  function storageTb(ru, mpd, gbUser, retY){
+    const dau=Math.max(1, Math.round(ru*activityRate(ru)));
+    const msgsDay=dau*mpd;
+    const msgGbYr=msgsDay*365*2048/(1024**3);
+    const filesGbYr=ru*gbUser;
+    const totalGb=(msgGbYr+filesGbYr)*retY;
+    return {
+      ssd: Math.round((0.5+totalGb*0.15/1024)*100)/100,
+      hdd: Math.round(Math.max(2, totalGb/1024)*100)/100
+    };
+  }
+  function estimateFromLoad(inp){
+    const ru=Math.max(1, inp.ru);
+    const po=derivePeakOnline(ru, inp.peakOnline);
+    const pms=derivePeakMsgS(ru, inp.peakMsgS, inp.msgsDay, po);
+    const mods=data.modules||[];
+    const enabled= inp.enabled || new Set(mods.map(m=>m.id));
+    let appN=appNodeCount(pms, po);
+    let webN=webNodeCount(po, inp.ha);
+    if(inp.ha) appN=Math.max(appN,2);
+    const instances=[];
+    let totalRam=0, totalVcpu=0;
+    const haIds=new Set(['postgres-hot','redis','nats','keycloak']);
+    for(const spec of mods){
+      if(!enabled.has(spec.id)) continue;
+      let count=1;
+      if(spec.per_plugin){
+        count=Math.max(0, inp.plugins||0);
+        if(count===0) continue;
+      } else if(spec.id==='core-api') count=appN;
+      else if(spec.id==='web-lb') count=webN;
+      else if(inp.ha && haIds.has(spec.id)) count=2;
+      let ram=scaleModRam(spec.id, spec.ram_gb, ru, po, pms);
+      if(inp.ha && ['postgres-hot','nats','redis'].includes(spec.id)) ram*=1.1;
+      const ramTot=Math.round(ram*count*10)/10;
+      const vcpuTot=Math.round(spec.vcpu*count*10)/10;
+      instances.push({id:spec.id, label:spec.label, count, ramGb:ramTot, vcpu:vcpuTot});
+      totalRam+=ramTot;
+      totalVcpu+=vcpuTot;
+    }
+    totalRam=Math.ceil(totalRam);
+    totalVcpu=Math.ceil(totalVcpu);
+    const stor=storageTb(ru, inp.msgsDay, inp.gbUser, inp.retention);
+    return {
+      ru, peakOnline:po, peakMsgS:Math.round(pms*10)/10,
+      dau:Math.max(1, Math.round(ru*activityRate(ru))),
+      modules:instances, totalRam, totalVcpu,
+      ssdTb:stor.ssd, hddTb:stor.hdd,
+      channel: po<8000?200:1000, appNodes:appN, webNodes:webN
+    };
+  }
+  function loadInpFromForm(){
+    return {
+      ru:+document.getElementById('calc-tech-ru').value||1,
+      peakOnline:+document.getElementById('calc-tech-peak-online').value||0,
+      peakMsgS:+document.getElementById('calc-tech-peak-msg').value||0,
+      msgsDay:+document.getElementById('calc-tech-msgs-day').value||40,
+      gbUser:+document.getElementById('calc-tech-gb-user').value||0.5,
+      retention:+document.getElementById('calc-tech-retention').value||3,
+      ha:document.getElementById('calc-tech-ha').checked,
+      plugins:+document.getElementById('calc-tech-plugins').value||0
+    };
+  }
+  function quoteProviderLoad(inp, p){
+    const le=estimateFromLoad(inp);
+    const ramBilled=vmTier(le.totalRam);
+    const vmCompute=ramBilled*p.ram_rub_gb + le.totalVcpu*p.vcpu_rub;
+    const disk=Math.round(le.ssdTb*p.ssd_tb_rub + le.hddTb*p.hdd_tb_rub);
+    const channel= le.channel<=200?p.channel_200:p.channel_1g;
+    const ops=p.ops_base*(le.ru<50000?1:2);
+    const lines=[
+      ['Серверы (prod full)', vmCompute],
+      ['Диски', disk],
+      ['Канал', channel],
+      ['Backup и мониторинг', ops]
+    ];
+    const monthly=lines.reduce((s,x)=>s+x[1],0);
+    return {provider:p, monthly, yearly:monthly*12, lines, load:le, ramBilled};
+  }
+  function renderModuleTable(mods){
+    const rows=mods.map(m=>'<tr><td>'+m.label+'</td><td>'+m.count+'</td><td>'+m.ramGb+'</td><td>'+m.vcpu+'</td></tr>').join('');
+    return '<div class="table-wrap"><table class="feature-table"><thead><tr><th>Модуль</th><th>×</th><th>RAM ГБ</th><th>vCPU</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }
+  function estimateCapacityFromModules(enabled, plugins, ssdTb, hddTb, ha){
+    const specs=data.modules||[];
+    const specMap={}; specs.forEach(s=>specMap[s.id]=s);
+    const haIds=new Set(['postgres-hot','redis','nats','keycloak']);
+    let totalRam=0, totalVcpu=0;
+    enabled.forEach(id=>{
+      const s=specMap[id]; if(!s) return;
+      let count= s.per_plugin?Math.max(0,plugins): (ha&&haIds.has(id)?2:1);
+      if(s.per_plugin && count===0) return;
+      totalRam+=s.ram_gb*count;
+      totalVcpu+=s.vcpu*count;
+    });
+    totalRam=Math.ceil(totalRam);
+    totalVcpu=Math.ceil(totalVcpu);
+    let maxPo=100000, maxPms=10000, maxRu=1000000;
+    if(enabled.has('ws-gateway')){
+      const ws=specMap['ws-gateway'].ram_gb;
+      maxPo=Math.min(maxPo, Math.max(100, Math.floor((ws-4)*800)));
+    }
+    if(enabled.has('core-api')){
+      const c=specMap['core-api'].ram_gb;
+      maxPo=Math.min(maxPo, Math.max(100, Math.floor((c-8)*400)));
+      maxPms=Math.min(maxPms, Math.max(1, (c-8)*1.5));
+    }
+    if(enabled.has('workers')){
+      const w=specMap['workers'].ram_gb;
+      maxPms=Math.min(maxPms, Math.max(1, (w-8)*2.5));
+    }
+    if(enabled.has('postgres-hot')){
+      const pg=specMap['postgres-hot'].ram_gb;
+      maxRu=Math.min(maxRu, Math.max(1000, Math.floor((pg-4)*8000)));
+    }
+    const needHdd=storageTb(10000, 40, 0.5, 3).hdd;
+    const storY= needHdd>0? Math.round(hddTb/needHdd*3*10)/10 : 0;
+    return {totalRam, totalVcpu, ssdTb, hddTb, maxRu, maxPo, maxPms:Math.round(maxPms*10)/10, storY};
+  }
+  function median(vals){
+    const s=[...vals].sort((a,b)=>a-b);
+    const m=Math.floor(s.length/2);
+    return s.length%2?s[m]:Math.round((s[m-1]+s[m])/2);
+  }
+  function renderProviderCards(quotes){
+    const minM=Math.min(...quotes.map(q=>q.monthly));
+    return '<div class="calc-provider-grid">'+quotes.map(q=>{
+      const isMin=q.monthly===minM;
+      let rows=q.lines.map(l=>'<tr><td>'+l[0]+'</td><td>'+fmt(l[1])+'</td></tr>').join('');
+      return '<article class="calc-provider-card'+(isMin?' is-min':'')+'">'+
+        '<div class="calc-provider-head"><span>'+q.provider.label+(isMin?' · мин.':'')+'</span>'+
+        '<a href="'+q.provider.pricing_url+'" rel="noopener" target="_blank">прайс ↗</a></div>'+
+        '<div class="calc-provider-total">'+fmt(q.monthly)+'/мес · '+fmt(q.yearly)+'/год</div>'+
+        '<table class="calc-breakdown"><tbody>'+rows+'</tbody></table></article>';
+    }).join('')+'</div>';
+  }
+  function renderHero(stats){
+    return '<div class="calc-hero">'+stats.map(s=>'<div class="calc-stat"><div class="calc-stat-val">'+
+      s.val+'</div><div class="calc-stat-label">'+s.label+'</div></div>').join('')+'</div>';
+  }
+  function supportUpdatesFte(ru, include, m){
+    if(!include) return 0;
+    if(ru<5000) return m.updates_fte.lt5k;
+    if(ru<50000) return m.updates_fte.lt50k;
+    return m.updates_fte.gte50k;
+  }
+  function computeSupport(inp){
+    const m=data.support||{};
+    const fb=m.fte_base||{base:0.15,divisor:80000,cap:4};
+    let base=fb.base+inp.ru/fb.divisor; if(base>fb.cap) base=fb.cap;
+    const lines=[
+      ['База (масштаб RU)', base],
+      ['Обновления релизов', supportUpdatesFte(inp.ru, inp.upd, m)],
+      ['Топология', (m.topology_fte||{})[inp.topo]||0],
+      ['Интеграции', (m.integrations_fte||{})[inp.integ]||0],
+      ['Организации / филиалы', (m.orgs_fte||{})[inp.orgs]||0],
+      ['L1 (первая линия)', (m.l1_fte||{})[inp.l1]||0],
+      ['Обучение', (m.training_fte||{})[inp.training]||0],
+      ['E2EE / MLS', (m.e2ee_fte||{})[inp.e2ee]||0],
+      ['ИБ / комплаенс', (m.compliance_fte||{})[inp.compliance]||0],
+      ['Резерв / DR', (m.dr_fte||{})[inp.dr]||0]
+    ];
+    const sub=lines.reduce((s,x)=>s+x[1],0);
+    const modeMult=(m.support_mode_mult||{})[inp.sla]||1;
+    const teamMult=(m.team_mult||{})[inp.team]||1;
+    const fte=sub*modeMult*teamMult;
+    let rate=(m.base_rate_rub||180000);
+    rate*=((m.staffing_rate_mult||{})[inp.staffing]||1);
+    rate*=((m.region_rate_mult||{})[inp.region]||1);
+    rate=Math.round(rate);
+    const overhead=inp.overhead?(m.overhead_pct||0):0;
+    const monthly=Math.round(fte*rate*(1+overhead));
+    return {lines, sub, modeMult, teamMult, fte, rate, overhead, monthly};
+  }
+
+  function renderProviderTables(quotes){ return renderProviderCards(quotes); }
+
+  function runSales(){
     const ru=+document.getElementById('calc-sales-ru').value||1;
-    const p=pickProfile(ru);
-    document.getElementById('calc-sales-out').textContent=
-      `Профиль ${p.id}: ${fmt(p.monthly_rub)}/мес, ${fmt(p.monthly_rub*12)}/год (~${(p.monthly_rub/ru).toFixed(1)} ₽/рег./мес)`;
+    const inp={ru, peakOnline:0, peakMsgS:0, msgsDay:40, gbUser:0.5, retention:3, ha:false, plugins:0};
+    const quotes=data.providers.map(p=>quoteProviderLoad(inp,p));
+    const med=median(quotes.map(q=>q.monthly));
+    const le=quotes[0].load;
+    document.getElementById('calc-sales-out').innerHTML=
+      renderHero([
+        {val:ru.toLocaleString('ru-RU'), label:'рег.'},
+        {val:le.totalRam+' ГБ', label:'RAM prod full'},
+        {val:fmt(med), label:'медиана / мес'},
+        {val:fmt(med*12), label:'медиана / год'}
+      ])+renderProviderCards(quotes)+
+      '<p class="small">Prod full, авто-нагрузка §10.1. На 1 рег.: ~'+(med/ru).toFixed(2)+' ₽/мес. Без лицензии, TURN/VKS. '
+      +'<a href="#price-sources">Источники цен</a>.</p>';
+  }
+  function runTechLoad(){
+    const inp=loadInpFromForm();
+    const quotes=data.providers.map(p=>quoteProviderLoad(inp,p));
+    const le=quotes[0].load;
+    const med=median(quotes.map(q=>q.monthly));
+    document.getElementById('calc-tech-out').innerHTML=
+      renderHero([
+        {val:le.totalRam+' ГБ', label:'RAM суммарно'},
+        {val:String(le.totalVcpu), label:'vCPU'},
+        {val:le.appNodes+' app · '+le.webNodes+' web', label:'узлы'},
+        {val:fmt(med)+'/мес', label:'медиана infra'}
+      ])+
+      '<div class="calc-assumptions"><p class="small"><strong>Нагрузка:</strong> RU '+le.ru.toLocaleString('ru-RU')+
+      ' · DAU ~'+le.dau+' · пик онлайн '+le.peakOnline+' · пик msg/s '+le.peakMsgS+
+      ' · SSD '+le.ssdTb+' ТБ · HDD '+le.hddTb+' ТБ · канал '+le.channel+' Мбит/с</p></div>'+
+      renderModuleTable(le.modules)+renderProviderCards(quotes);
+  }
+  function runTechModules(){
+    const enabled=new Set();
+    document.querySelectorAll('.calc-mod:checked').forEach(el=>enabled.add(el.dataset.mod));
+    const plugins=+document.getElementById('calc-tech-mod-plugins').value||0;
+    const ssdTb=+document.getElementById('calc-tech-mod-ssd').value||0;
+    const hddTb=+document.getElementById('calc-tech-mod-hdd').value||0;
+    const ha=document.getElementById('calc-tech-mod-ha').checked;
+    const cap=estimateCapacityFromModules(enabled, plugins, ssdTb, hddTb, ha);
+    document.getElementById('calc-tech-out').innerHTML=
+      renderHero([
+        {val:cap.totalRam+' ГБ', label:'RAM модулей'},
+        {val:String(cap.totalVcpu), label:'vCPU'},
+        {val:cap.maxRu.toLocaleString('ru-RU'), label:'макс. RU'},
+        {val:cap.storY+' лет', label:'HDD @10k RU'}
+      ])+
+      '<div class="calc-assumptions"><p class="small"><strong>Предел нагрузки</strong> (базовый экз. каждого модуля): пик онлайн до '+
+      cap.maxPo.toLocaleString('ru-RU')+' · пик msg/s до '+cap.maxPms+
+      ' · рег. пользователей до '+cap.maxRu.toLocaleString('ru-RU')+
+      '</p><p class="small">Хранилище '+hddTb+' ТБ HDD хватит ~'+cap.storY+' лет при 10k RU и retention 3 года (§10.1).</p></div>';
+  }
+  function runTech(){
+    const mode=document.getElementById('calc-tech-mode').value;
+    if(mode==='modules') runTechModules(); else runTechLoad();
+  }
+  function syncTechMode(){
+    const mode=document.getElementById('calc-tech-mode').value;
+    document.getElementById('calc-tech-load-panel').hidden=(mode!=='load');
+    document.getElementById('calc-tech-modules-panel').hidden=(mode!=='modules');
+  }
+  function runPm(){
+    const inp={
+      ru:+document.getElementById('calc-pm-ru').value||1,
+      sla:document.getElementById('calc-pm-sla').value,
+      upd:document.getElementById('calc-pm-upd').checked,
+      topo:document.getElementById('calc-pm-topo').value,
+      integ:document.getElementById('calc-pm-integ').value,
+      team:document.getElementById('calc-pm-team').value,
+      orgs:document.getElementById('calc-pm-orgs').value,
+      l1:document.getElementById('calc-pm-l1').value,
+      training:document.getElementById('calc-pm-training').value,
+      e2ee:document.getElementById('calc-pm-e2ee').value,
+      compliance:document.getElementById('calc-pm-compliance').value,
+      dr:document.getElementById('calc-pm-dr').value,
+      staffing:document.getElementById('calc-pm-staffing').value,
+      region:document.getElementById('calc-pm-region').value,
+      overhead:document.getElementById('calc-pm-overhead').checked
+    };
+    const r=computeSupport(inp);
+    let body=r.lines.map(l=>'<tr><td>'+l[0]+'</td><td>'+(l[1]>0&&l[0]!=='База (масштаб RU)'?'+':'')+l[1].toFixed(2)+' FTE</td></tr>').join('');
+    document.getElementById('calc-pm-out').innerHTML=
+      renderHero([
+        {val:r.fte.toFixed(2), label:'FTE итого'},
+        {val:fmt(r.monthly), label:'₽ / мес'},
+        {val:fmt(r.monthly*12), label:'₽ / год'},
+        {val:fmt(r.rate), label:'ставка / FTE'}
+      ])+
+      '<table class="calc-breakdown"><tbody>'+body+
+      '<tr><td>Сумма до режима</td><td>'+r.sub.toFixed(2)+' FTE</td></tr>'+
+      '<tr><td>Режим поддержки</td><td>×'+r.modeMult+'</td></tr>'+
+      '<tr><td>Модель команды</td><td>×'+r.teamMult+'</td></tr>'+
+      (r.overhead?'<tr><td>Надбавка НДС/командировки</td><td>+'+(r.overhead*100)+'%</td></tr>':'')+
+      '</tbody></table>'+
+      '<p class="small">Полная модель сопровождения; не заменяет детальное КП.</p>';
+  }
+
+  document.getElementById('calc-tech-mode')?.addEventListener('change', syncTechMode);
+  document.getElementById('calc-sales-run')?.addEventListener('click', runSales);
+  document.getElementById('calc-tech-run')?.addEventListener('click', runTech);
+  document.getElementById('calc-pm-run')?.addEventListener('click', runPm);
+  syncTechMode();
+  runSales(); runTech(); runPm();
+
+  document.querySelector('a[href="#sales-s3"]')?.addEventListener('click', e=>{
+    e.preventDefault(); activate('sales'); location.hash='sales-s3';
   });
-  document.getElementById('calc-tech-run')?.addEventListener('click', ()=>{
-    const ru=+document.getElementById('calc-tech-ru').value||1;
-    const p=pickProfile(ru);
-    const nodes = p.id==='pilot'?1:(p.id==='standard'?3:6);
-    document.getElementById('calc-tech-out').textContent=
-      `RAM ${p.ram_gb} ГБ, узлов ~${nodes}, headroom до ${p.max_registered_users} рег.`;
-  });
-  document.getElementById('calc-pm-run')?.addEventListener('click', ()=>{
-    const ru=+document.getElementById('calc-pm-ru').value||1;
-    const sla=document.getElementById('calc-pm-sla').value;
-    const upd=document.getElementById('calc-pm-upd').checked;
-    let fte=0.15+ru/80000; if(fte>4) fte=4;
-    if(upd) fte+= ru<5000?0.1:(ru<50000?0.3:0.8);
-    if(sla==='24x7') fte*=2.5;
-    const rub=Math.round(fte*180000);
-    document.getElementById('calc-pm-out').textContent=`FTE ${fte.toFixed(2)}, ~${fmt(rub)}/мес`;
-  });
+
   const wiz=document.getElementById('wizard-scenario');
   const steps=document.getElementById('wizard-steps');
   function renderWiz(){ const s=data.scenarios[wiz.value]||[]; steps.innerHTML=s.map(x=>'<li>'+x+'</li>').join(''); }

@@ -28,7 +28,7 @@ def test_block0_negation_allowed():
     <section id="block-0">
       <p>Korus — рабочий прототип. Продукт не готов к промышленной эксплуатации.</p>
     </section>
-    <div id="tab-user"><p>Простой текст для сотрудника.</p></div>
+    <div id="tab-user"><p>Простой текст для сотрудника.</p></main>
     """
     violations = [v for v in check_html(html) if v.pattern == "promyshlennaya"]
     assert not violations
@@ -37,7 +37,7 @@ def test_block0_negation_allowed():
 def test_user_jargon_in_user_tab():
     html = """
     <section id="block-0"><p>рабочий прототип</p></section>
-    <div id="tab-user"><p>Используем JWT для входа</p></div>
+    <div id="tab-user"><p>Используем JWT для входа</p></main>
     """
     violations = check_html(html)
     assert any(v.pattern == "user_jargon" for v in violations)

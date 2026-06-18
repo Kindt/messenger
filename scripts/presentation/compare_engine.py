@@ -6,7 +6,15 @@ from dataclasses import dataclass
 from html import escape
 from typing import Any
 
-from scripts.presentation import sizing_pricing as sp
+from scripts.presentation import sizing_engine as se
+
+
+@dataclass(frozen=True)
+class ProviderYearly:
+    provider_id: str
+    label: str
+    yearly_rub: int
+    pricing_url: str
 
 
 @dataclass(frozen=True)
@@ -14,13 +22,13 @@ class CompareRow:
     offering: dict[str, Any]
     competitor_total_yearly_rub: int | None
     korus_infra_yearly_rub: int
+    korus_providers: tuple[ProviderYearly, ...]
     korus_at_competitor_ru: int
     korus_headroom_ru: int | None
     headroom_note: str
-    profile_id: str
 
 
-HEADROOM_NOTE = "без изменения цены/мощностей"
+HEADROOM_NOTE = "без изменения VM-тира (округлённая RAM)"
 
 
 def _yearly_price(offering: dict[str, Any]) -> int | None:
@@ -37,25 +45,28 @@ def _yearly_price(offering: dict[str, Any]) -> int | None:
     if period == "year":
         return price
     if period == "month":
-        # Per-user monthly → total yearly
         return price * value * 12
     return None
 
 
 def build_compare_row(offering: dict[str, Any]) -> CompareRow:
     ru = offering["value"]
-    profile = sp.pick_profile(ru)
-    korus_yearly = sp.infra_yearly(profile)
+    quotes = se.quote_all_providers(ru)
+    providers = tuple(
+        ProviderYearly(q.provider_id, q.provider_label, q.yearly_rub, q.pricing_url)
+        for q in quotes
+    )
+    korus_yearly = se.median_yearly(ru)
     competitor_yearly = _yearly_price(offering)
-    headroom = sp.headroom_ru(profile, ru)
+    headroom = se.headroom_ru(ru)
     return CompareRow(
         offering=offering,
         competitor_total_yearly_rub=competitor_yearly,
         korus_infra_yearly_rub=korus_yearly,
+        korus_providers=providers,
         korus_at_competitor_ru=ru,
         korus_headroom_ru=headroom,
         headroom_note=HEADROOM_NOTE if headroom else "",
-        profile_id=profile.id,
     )
 
 
@@ -65,7 +76,7 @@ def render_headroom_badge(row: CompareRow) -> str:
     n = f"{row.korus_headroom_ru:,}".replace(",", " ")
     return (
         f'<span class="chip chip-headroom" title="{escape(row.headroom_note)}">'
-        f"до {n} рег. на тех же мощностях*</span>"
+        f"до {n} рег. на том же VM-тире*</span>"
     )
 
 

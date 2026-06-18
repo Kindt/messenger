@@ -18,3 +18,8 @@ def wrap_callout(draft_html: str, variant: str = "info") -> str:
 def wrap_grid(items: list[str], columns: int = 2) -> str:
     cells = "".join(f'<div class="grid-cell">{item}</div>' for item in items)
     return f'<div class="grid grid-cols-{columns}">{cells}</div>'
+
+
+def wrap_figure(svg_html: str, caption: str = "") -> str:
+    cap = f'<figcaption class="fig-cap">{escape(caption)}</figcaption>' if caption else ""
+    return f'<figure class="fig">{svg_html}{cap}</figure>'

@@ -7,13 +7,46 @@ from datetime import date
 from html import escape
 from typing import Any
 
+from scripts.presentation import calc_ui as cui
+from scripts.presentation import capabilities as cap
+from scripts.presentation import support_model as sm
 from scripts.presentation import content as cnt
 from scripts.presentation import marketing as mkt
 from scripts.presentation import product_status as ps
+from scripts.presentation import sizing_engine as se
+from scripts.presentation import module_sizing as ms
 from scripts.presentation import sizing_pricing as sp
+from scripts.presentation import stacks as stk
 from scripts.presentation import visuals as viz
 from scripts.presentation.compare_engine import build_all_rows, render_headroom_badge
+from scripts.presentation.calculators import sales_tco, support_cost, tech_capacity
 from scripts.presentation.data_loader import load_competitors, load_offerings
+
+
+def _units_legend() -> str:
+    fte = f"{sp.FTE_RATE_RUB_PER_MONTH:,}".replace(",", " ")
+    provs = ", ".join(p.label for p in sp.PROVIDERS)
+    return f"""
+<div class="units-box" id="units-legend">
+  <h4>Единицы измерения</h4>
+  <dl class="units-dl">
+    <dt>RU</dt><dd>зарегистрированные пользователи (учётные записи), не одновременные сессии</dd>
+    <dt>₽/год · ₽/мес</dt><dd>рубли РФ, без НДС; infra — серверы и канал, не лицензия ПО конкурента</dd>
+    <dt>Infra Korus</dt><dd>медиана смет по {escape(provs)} на дату {sp.PRICE_AS_OF}</dd>
+    <dt>FTE</dt><dd>сопровождение (люди), не CPU; ставка {fte} ₽/мес за 1 FTE (8×5)</dd>
+    <dt>RAM</dt><dd>суммарная RAM по §10.3, ГБ; VM-тир — ближайший стандартный объём</dd>
+  </dl>
+</div>"""
+
+
+def _price_sources_html() -> str:
+    links = "".join(
+        f'<li><strong>{escape(p.label)}:</strong> '
+        f'<a href="{escape(p.pricing_url)}" rel="noopener noreferrer">{escape(p.pricing_url)}</a> '
+        f"— {escape(p.source_note)}</li>"
+        for p in sp.PROVIDERS
+    )
+    return f'<div class="method-box" id="price-sources"><h4>Источники цен infra</h4><ul class="bullet-clean">{links}</ul></div>'
 
 
 def _fmt_rub(n: int | None) -> str:
@@ -24,40 +57,55 @@ def _fmt_rub(n: int | None) -> str:
 
 def render_block0() -> str:
     blockers = "".join(f"<li>{escape(b)}</li>" for b in ps.PRODUCTION_BLOCKERS)
-    done_rows = "".join(
-        f"<tr><td>{escape(f[1])}</td><td>{ps.tag_html(f[2])}</td><td>{escape(f[3])}</td></tr>"
-        for f in ps.features_by_status("done")
-    )
-    partial_rows = "".join(
-        f"<tr><td>{escape(f[1])}</td><td>{ps.tag_html(f[2])}</td><td>{escape(f[3])}</td></tr>"
-        for f in ps.features_by_status("partial")
-    )
-    planned_out = ps.features_by_status("planned") + ps.features_by_status("out")
-    po_rows = "".join(
-        f"<tr><td>{escape(f[1])}</td><td>{ps.tag_html(f[2])}</td><td>{escape(f[3])}</td></tr>"
-        for f in planned_out
-    )
-    donut = viz.render_feature_donut_svg()
+    done = len(ps.features_by_status("done"))
+    partial = len(ps.features_by_status("partial"))
+    planned = len(ps.features_by_status("planned"))
+    out_n = len(ps.features_by_status("out"))
+    donut = mkt.wrap_figure(viz.render_feature_donut_svg(), "Распределение функций по статусу")
+
+    def _feature_table(status: str) -> str:
+        rows = ps.features_by_status(status)
+        if not rows:
+            return ""
+        body = "".join(
+            f"<tr><td>{escape(f[1])}</td><td>{ps.tag_html(f[2])}</td>"
+            f"<td>{escape(f[3]) if f[3] else '—'}</td></tr>"
+            for f in rows
+        )
+        return f"<table class='feature-table'><tr><th>Модуль</th><th>Статус</th><th>Примечание</th></tr>{body}</table>"
+
     return f"""
 <section id="block-0" class="block-0 hero-warning" aria-label="Статус продукта">
-  <h1>Korus Messenger — <span class="stage-label">{escape(ps.PRODUCT_STAGE_LABEL.lower())}</span></h1>
-  <p class="disclaimer"><strong>Продукт не готов</strong> к промышленной эксплуатации (production).
-  Демонстрирует архитектуру на <strong>лабораторном dev-стенде</strong>.</p>
-  <p class="metrics">Playwright {ps.PLAYWRIGHT_PASSED}/{ps.PLAYWRIGHT_TOTAL} ({ps.PLAYWRIGHT_DATE});
-  deck {ps.DECK_VERSION}; PRODUCTION_READY = false</p>
-  <div class="block0-grid">
-    <div>{donut}</div>
-    <div>
-      <h2>§0.1 Блокеры production</h2>
-      <ul>{blockers}</ul>
+  <div class="hero-inner">
+    <p class="deck-kicker">Korus Messenger · AvandocMsg</p>
+    <h1>Корпоративный мессенджер</h1>
+    <p class="stage-badge">{escape(ps.PRODUCT_STAGE_LABEL)}</p>
+    <p class="disclaimer">Продукт <strong>не готов</strong> к промышленной эксплуатации. Демонстрация возможностей на <strong>лабораторном dev-стенде</strong>.</p>
+    <div class="stat-row">
+      <span class="stat-pill">Автотесты UI: {ps.PLAYWRIGHT_PASSED}/{ps.PLAYWRIGHT_TOTAL}</span>
+      <span class="stat-pill">Реализовано: {done}</span>
+      <span class="stat-pill">Частично: {partial}</span>
+      <span class="stat-pill">Версия {ps.PRODUCT_VERSION}</span>
     </div>
+    <div class="block0-grid">
+      <div>{donut}</div>
+      <div class="callout callout-warn">
+        <h2 class="block0-h2">Что мешает production</h2>
+        <ul class="bullet-clean">{blockers}</ul>
+      </div>
+    </div>
+    <details class="feature-details">
+      <summary>Полная матрица модулей по статусу</summary>
+      <p class="small">Карточки «что умеет приложение» — в <a href="#pm-s1">§ Что умеет продукт</a>.</p>
+      <h3 class="detail-h">Реализовано ({done})</h3>
+      {_feature_table("done")}
+      <h3 class="detail-h">Частично ({partial})</h3>
+      {_feature_table("partial")}
+      <h3 class="detail-h">Запланировано и вне scope</h3>
+      {_feature_table("planned")}
+      {_feature_table("out")}
+    </details>
   </div>
-  <h2>§0.2 Реализовано</h2>
-  <table class="feature-table"><tr><th>Модуль</th><th>Статус</th><th>Примечание</th></tr>{done_rows}</table>
-  <h2>§0.3 Частично</h2>
-  <table class="feature-table"><tr><th>Модуль</th><th>Статус</th><th>Примечание</th></tr>{partial_rows}</table>
-  <h2>§0.4 Не реализовано / вне scope</h2>
-  <table class="feature-table"><tr><th>Модуль</th><th>Статус</th><th>Примечание</th></tr>{po_rows}</table>
 </section>
 """
 
@@ -73,14 +121,21 @@ def render_competitor_list() -> str:
             f"<td>{escape(p['deployment'])}</td><td>{n}</td></tr>"
         )
     return (
-        "<table class='compare-table'><tr><th>Продукт</th><th>Tier</th><th>Deploy</th>"
-        f"<th>Offerings</th></tr>{''.join(rows)}</table>"
+        "<div class='table-wrap'><table class='compare-table'><thead><tr><th>Продукт</th><th>Tier</th>"
+        f"<th>Deploy</th><th>Offerings</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>"
     )
 
 
-def render_compare_table() -> str:
+def render_compare_table(limit: int | None = None) -> str:
     rows_html = []
-    for row in build_all_rows(load_offerings()):
+    all_rows = build_all_rows(load_offerings())
+    slice_rows = all_rows[:limit] if limit else all_rows
+    prov_headers = "".join(
+        f'<th scope="col" class="prov-col" title="{escape(p.pricing_url)}">'
+        f"{escape(p.label)},<br/>₽/год</th>"
+        for p in se.PROVIDERS
+    )
+    for row in slice_rows:
         o = row.offering
         if not o.get("price_is_public", True):
             comp_cell = "нет публичного прайса"
@@ -88,31 +143,54 @@ def render_compare_table() -> str:
             comp_cell = _fmt_rub(row.competitor_total_yearly_rub)
         badge = render_headroom_badge(row)
         src = escape(o["source_url"])
+        yearly_vals = [p.yearly_rub for p in row.korus_providers]
+        min_y = min(yearly_vals) if yearly_vals else 0
+        prov_cells = ""
+        for p in row.korus_providers:
+            cls = ' class="price-min"' if p.yearly_rub == min_y and len(yearly_vals) > 1 else ""
+            prov_cells += f"<td{cls}>{_fmt_rub(p.yearly_rub)}</td>"
         rows_html.append(
-            f"<tr><td>{escape(o['label'])} ({escape(o['product_id'])})</td>"
+            f"<tr><td>{escape(o['label'])} <span class='row-product'>({escape(o['product_id'])})</span></td>"
             f"<td>{o['value']:,}</td>".replace(",", " ")
             + f"<td>{comp_cell}</td>"
-            f"<td>{_fmt_rub(row.korus_infra_yearly_rub)} {badge}</td>"
-            f'<td><a href="{src}" rel="noopener">{src[:40]}…</a></td></tr>'
+            f"{prov_cells}"
+            f"<td class='med-col'>{_fmt_rub(row.korus_infra_yearly_rub)} {badge}</td>"
+            f'<td class="src-cell"><a href="{src}" rel="noopener noreferrer">{src[:32]}…</a></td></tr>'
         )
+    more = ""
+    if limit and len(all_rows) > limit:
+        more = f'<p class="table-more"><a href="#sales-s3">Ещё {len(all_rows) - limit} строк → вкладка «Продажная»</a></p>'
     return (
-        "<table class='compare-table'><tr><th>Тариф</th><th>RU</th><th>₽/год конкурент</th>"
-        f"<th>Korus infra ₽/год</th><th>Источник</th></tr>{''.join(rows_html)}</table>"
-        "<p class='footnote'>* headroom — без изменения цены/мощностей</p>"
+        "<div class='table-wrap table-wrap-wide'><table class='compare-table compare-tco compare-tco-wide'><thead><tr>"
+        "<th scope='col'>Тариф конкурента</th>"
+        "<th scope='col' title='Зарегистрированные пользователи'>RU,<br/>рег.</th>"
+        "<th scope='col' title='Годовая стоимость по публичному прайсу'>Конкурент,<br/>₽/год</th>"
+        f"{prov_headers}"
+        "<th scope='col' title='Медиана трёх провайдеров'>Медиана,<br/>₽/год</th>"
+        "<th scope='col'>Источник</th></tr></thead><tbody>"
+        f"{''.join(rows_html)}</tbody></table></div>"
+        "<p class='footnote'>* Зелёная ячейка — минимальная смета infra среди провайдеров; медиана — для диаграммы TCO; "
+        "headroom — запас RU в том же VM-тире</p>"
+        f"{more}"
     )
 
 
 def render_feature_matrix() -> str:
     data = load_competitors()
     crit = data["criteria"]
-    header = "".join(f"<th>{escape(c['title'][:24])}</th>" for c in crit)
+    header = "".join(
+        f"<th scope='col' title='{escape(c['title'])}'>{escape(c['title'][:18])}</th>"
+        for c in crit
+    )
     body = []
     for p in data["products"]:
         cells = "".join(f"<td>{escape(p['features'].get(c['id'], '—'))}</td>" for c in crit)
-        body.append(f"<tr><th>{escape(p['label'])}</th>{cells}</tr>")
+        body.append(f"<tr><th scope='row'>{escape(p['label'])}</th>{cells}</tr>")
     return (
-        f"<div class='matrix-scroll'><table class='matrix-table'><tr><th></th>{header}</tr>"
-        f"{''.join(body)}</table></div>"
+        "<p class='small'>Полная матрица 18×11 — для архитекторов. Заголовки сокращены; полный текст — при наведении.</p>"
+        f"<div class='matrix-scroll'><table class='matrix-table matrix-full'>"
+        f"<thead><tr><th scope='col'>Продукт</th>{header}</tr></thead>"
+        f"<tbody>{''.join(body)}</tbody></table></div>"
     )
 
 
@@ -122,107 +200,329 @@ def _section(tab: str, idx: int, title: str, body: str, extra: str = "") -> str:
     return f'<article id="{sid}" class="subsection">{wrapped}{extra}</article>'
 
 
+def _sub_nav(tab: str) -> str:
+    titles = cnt.SECTION_TITLES[tab]
+    links = "".join(
+        f'<a href="#{tab}-s{i}">{escape(t)}</a>' for i, t in enumerate(titles, start=1)
+    )
+    return f'<nav class="sub-nav" aria-label="Подразделы">{links}</nav>'
+
+
+def _tab_shell(tab: str, inner: str) -> str:
+    intro = escape(cnt.TAB_INTRO[tab])
+    return f'<p class="tab-intro">{intro}</p>{_sub_nav(tab)}{inner}'
+
+
 def render_tab_pm() -> str:
-    compare = render_compare_table()
-    tco_svg = viz.render_tco_bars_svg(build_all_rows(load_offerings()))
-    s1 = _section("pm", 1, "Ценность и roadmap", cnt.draft_pm_s1(), viz.render_feature_donut_svg())
-    s2 = _section("pm", 2, "11 конкурентов", cnt.draft_pm_s2(), render_competitor_list())
-    s3 = _section("pm", 3, "Сравнение тарифов", cnt.draft_pm_s3(), compare + tco_svg)
-    s4 = _section("pm", 4, "Калькулятор поддержки", cnt.draft_pm_s4(), _calc_pm_html())
-    return s1 + s2 + s3 + s4
+    data = load_competitors()
+    tco_chart = viz.render_tco_chart_html(build_all_rows(load_offerings()), limit=5)
+    t = cnt.SECTION_TITLES["pm"]
+    s1 = _section(
+        "pm",
+        1,
+        t[0],
+        cnt.draft_pm_s1() + cap.render_capability_cards(),
+        mkt.wrap_figure(viz.render_roadmap_svg(), "Дорожная карта"),
+    )
+    s2 = _section(
+        "pm",
+        2,
+        t[1],
+        cnt.draft_pm_s2() + render_competitor_list(),
+        cap.render_focus_matrix(data["products"]),
+    )
+    s3 = _section(
+        "pm",
+        3,
+        t[2],
+        cnt.draft_pm_s3() + _units_legend(),
+        render_compare_table(limit=6) + tco_chart,
+    )
+    s4 = _section("pm", 4, t[3], cnt.draft_pm_s4(), _calc_pm_html())
+    return _tab_shell("pm", s1 + s2 + s3 + s4)
 
 
 def render_tab_tech() -> str:
     rows = build_all_rows(load_offerings())
     ru = rows[0].korus_at_competitor_ru if rows else 10_000
-    s1 = _section("tech", 1, "Архитектура", cnt.draft_tech_s1(), viz.render_architecture_svg())
-    s2 = _section("tech", 2, "Конкуренты (ops)", cnt.draft_tech_s2(), render_competitor_list())
+    t = cnt.SECTION_TITLES["tech"]
+    s1 = _section(
+        "tech",
+        1,
+        t[0],
+        cnt.draft_tech_s1(),
+        mkt.wrap_figure(viz.render_architecture_svg(), "Логическая схема прототипа")
+        + stk.render_node_stack_table()
+        + stk.render_competencies_table(),
+    )
+    s2 = _section(
+        "tech",
+        2,
+        t[1],
+        cnt.draft_tech_s2(),
+        render_competitor_list() + stk.render_competitor_stacks_table(),
+    )
     s3 = _section(
         "tech",
         3,
-        "Критерии + sizing",
+        t[2],
         cnt.draft_tech_s3(),
-        render_feature_matrix() + viz.render_ram_bar_svg(ru),
+        mkt.wrap_figure(viz.render_ram_bar_svg(ru), "RAM prod full (§10.3)")
+        + stk.render_plugin_platform()
+        + render_feature_matrix(),
     )
-    s4 = _section("tech", 4, "Калькулятор мощностей", cnt.draft_tech_s4(), _calc_tech_html())
-    return s1 + s2 + s3 + s4
+    s4 = _section("tech", 4, t[3], cnt.draft_tech_s4(), _calc_tech_html())
+    return _tab_shell("tech", s1 + s2 + s3 + s4)
 
 
 def render_tab_sales() -> str:
     compare = render_compare_table()
-    s1 = _section("sales", 1, "Value prop", cnt.draft_sales_s1())
-    s2 = _section("sales", 2, "Конкуренты", cnt.draft_sales_s2(), render_competitor_list())
+    tco_chart = viz.render_tco_chart_html(build_all_rows(load_offerings()), limit=8)
+    t = cnt.SECTION_TITLES["sales"]
+    s1 = _section("sales", 1, t[0], cnt.draft_sales_s1())
+    s2 = _section("sales", 2, t[1], cnt.draft_sales_s2(), render_competitor_list())
     s3 = _section(
         "sales",
         3,
-        "TCO таблицы",
-        cnt.draft_sales_s3(),
-        compare + viz.render_tco_bars_svg(build_all_rows(load_offerings())),
+        t[2],
+        cnt.draft_sales_s3() + _units_legend() + _price_sources_html(),
+        compare + tco_chart,
     )
-    s4 = _section("sales", 4, "Калькулятор TCO", cnt.draft_sales_s4(), _calc_sales_html())
-    return s1 + s2 + s3 + s4
+    s4 = _section("sales", 4, t[3], cnt.draft_sales_s4(), _calc_sales_html())
+    return _tab_shell("sales", s1 + s2 + s3 + s4)
 
 
 def render_tab_user() -> str:
-    s1 = _section("user", 1, "Зачем мессенджер", cnt.draft_user_s1(), viz.render_user_timeline_svg())
-    s2 = _section("user", 2, "Альтернативы", cnt.draft_user_s2())
-    s3 = _section("user", 3, "Удобство", cnt.draft_user_s3())
-    s4 = _section("user", 4, "Мастер и FAQ", cnt.draft_user_s4(), _user_wizard_html())
-    return s1 + s2 + s3 + s4
+    t = cnt.SECTION_TITLES["user"]
+    s1 = _section(
+        "user",
+        1,
+        t[0],
+        cnt.draft_user_s1(),
+        mkt.wrap_figure(viz.render_user_timeline_svg(), "Типичный рабочий день"),
+    )
+    s2 = _section("user", 2, t[1], cnt.draft_user_s2())
+    s3 = _section("user", 3, t[2], cnt.draft_user_s3())
+    s4 = _section("user", 4, t[3], cnt.draft_user_s4(), _user_wizard_html())
+    return _tab_shell("user", s1 + s2 + s3 + s4)
 
 
 def _calc_sales_html() -> str:
-    return """
-<div class="calc" data-calc="sales">
-  <label>Рег. пользователей <input type="number" id="calc-sales-ru" value="7500" min="1"/></label>
-  <button type="button" id="calc-sales-run">Рассчитать</button>
-  <output id="calc-sales-out"></output>
-</div>"""
+    form = (
+        cui.field_number("calc-sales-ru", "Зарегистрированные пользователи (RU)", 7500)
+    )
+    return (
+        '<p class="calc-intro">Infra по публичным прайсам '
+        '<a href="#price-sources">REG.RU · Yandex Cloud · Timeweb</a>. '
+        "Без лицензии, TURN, НДС.</p>"
+        + cui.calc_shell(
+            "calc-sales",
+            "Калькулятор infra",
+            "Смета серверов и канала на ваше число рег.",
+            form,
+            "calc-sales-out",
+            "calc-sales-run",
+            accent="indigo",
+        )
+    )
+
+
+def _calc_tech_module_checks() -> str:
+    boxes = []
+    for m in ms.PRODUCTION_MODULES:
+        checked = " checked" if m.required else ""
+        boxes.append(
+            f'<label class="calc-module-check"><input type="checkbox" class="calc-mod" '
+            f'data-mod="{escape(m.id)}"{checked}/> {escape(m.label)} ({m.ram_gb} ГБ)</label>'
+        )
+    return '<div class="calc-module-grid">' + "".join(boxes) + "</div>"
 
 
 def _calc_tech_html() -> str:
-    return """
-<div class="calc" data-calc="tech">
-  <label>Рег. пользователей <input type="number" id="calc-tech-ru" value="500" min="1"/></label>
-  <button type="button" id="calc-tech-run">Рассчитать</button>
-  <output id="calc-tech-out"></output>
-</div>"""
+    form = (
+        cui.field_select(
+            "calc-tech-mode",
+            "Режим расчёта",
+            [("load", "От нагрузки → состав серверов"), ("modules", "От модулей → предел нагрузки")],
+        )
+        + '<div id="calc-tech-load-panel">'
+        + '<div class="calc-section-label">Пользователи и нагрузка</div>'
+        + cui.field_number("calc-tech-ru", "Всего рег. пользователей (RU)", 10_000)
+        + cui.field_number(
+            "calc-tech-peak-online",
+            "Пик онлайн (0 = авто из §10.1)",
+            0,
+            min_val=0,
+            placeholder="авто",
+        )
+        + cui.field_number(
+            "calc-tech-peak-msg",
+            "Пик msg/s (0 = авто)",
+            0,
+            min_val=0,
+            step="0.1",
+            placeholder="авто",
+        )
+        + cui.field_number("calc-tech-msgs-day", "Сообщений / DAU / день", 40, min_val=1)
+        + '<div class="calc-section-label">Хранение</div>'
+        + cui.field_number(
+            "calc-tech-gb-user",
+            "Файлы, ГБ / рег. / год",
+            0.5,
+            min_val=0,
+            step="0.1",
+        )
+        + cui.field_number("calc-tech-retention", "Retention, лет", 3, min_val=1)
+        + '<div class="calc-section-label">Контур</div>'
+        + cui.field_checkbox("calc-tech-ha", "HA (реплики PG/Redis/NATS, ≥2 app)", False)
+        + cui.field_number("calc-tech-plugins", "Плагины L1+ на integrations", 0, min_val=0)
+        + "</div>"
+        + '<div id="calc-tech-modules-panel" hidden>'
+        + '<div class="calc-section-label">Состав prod full (docker-compose.full-server)</div>'
+        + _calc_tech_module_checks()
+        + cui.field_number("calc-tech-mod-ssd", "SSD, ТБ", 2, min_val=0, step="0.1")
+        + cui.field_number("calc-tech-mod-hdd", "HDD archive, ТБ", 5, min_val=0, step="0.1")
+        + cui.field_checkbox("calc-tech-mod-ha", "HA для datastore", False)
+        + cui.field_number("calc-tech-mod-plugins", "Плагины integrations", 0, min_val=0)
+        + "</div>"
+    )
+    return (
+        '<p class="calc-intro">Production full stack — без Pilot/Standard/Enterprise. '
+        "Dev-min (QEMU) не sizing; только prod-full.</p>"
+        + cui.calc_shell(
+            "calc-tech",
+            "Калькулятор мощностей",
+            "Два режима: нагрузка → серверы или модули → предел RU/онлайн/хранилища.",
+            form,
+            "calc-tech-out",
+            "calc-tech-run",
+            accent="sky",
+        )
+    )
 
 
 def _calc_pm_html() -> str:
-    return """
-<div class="calc" data-calc="pm">
-  <label>Рег. пользователей <input type="number" id="calc-pm-ru" value="12000" min="1"/></label>
-  <label>SLA <select id="calc-pm-sla"><option value="business">8×5</option><option value="24x7">24×7</option></select></label>
-  <label><input type="checkbox" id="calc-pm-upd" checked/> Обновления</label>
-  <button type="button" id="calc-pm-run">Рассчитать</button>
-  <output id="calc-pm-out"></output>
-</div>"""
+    form = (
+        '<div class="calc-section-label">Масштаб и режим</div>'
+        + cui.field_number("calc-pm-ru", "Зарегистрированные пользователи (RU)", 12000)
+        + cui.field_select(
+            "calc-pm-sla",
+            "Режим поддержки",
+            [("business", "Будни 8×5"), ("24x7", "Круглосуточно 24×7")],
+        )
+        + cui.field_checkbox("calc-pm-upd", "Регулярные обновления релизов", True)
+        + cui.field_select(
+            "calc-pm-team",
+            "Команда",
+            [("shared", "Общий service desk"), ("dedicated", "Выделенная на мессенджер")],
+        )
+        + '<div class="calc-section-label">Инфраструктура и интеграции</div>'
+        + cui.field_select(
+            "calc-pm-topo",
+            "Топология",
+            [("compact", "Компактный контур"), ("cluster", "Кластер (несколько узлов)")],
+        )
+        + cui.field_select(
+            "calc-pm-integ",
+            "Интеграции",
+            [("none", "Нет"), ("few", "1–3 (LDAP, боты…)"), ("many", "4+ / кастом")],
+            selected="few",
+        )
+        + cui.field_select(
+            "calc-pm-orgs",
+            "Организации / филиалы",
+            [("one", "1"), ("few", "2–5"), ("many", "6+")],
+        )
+        + '<div class="calc-section-label">Пользователи и безопасность</div>'
+        + cui.field_select(
+            "calc-pm-l1",
+            "L1 (первая линия у пользователей)",
+            [("none", "Нет"), ("partial", "Частично"), ("full", "Полная L1")],
+            selected="partial",
+        )
+        + cui.field_select(
+            "calc-pm-training",
+            "Обучение",
+            [("none", "Не нужно"), ("annual", "Ежегодно"), ("quarterly", "Ежеквартально")],
+            selected="annual",
+        )
+        + cui.field_select(
+            "calc-pm-e2ee",
+            "E2EE / MLS",
+            [("off", "Не используется"), ("roadmap", "В приёмке"), ("prod", "В промышленной эксплуатации")],
+            selected="roadmap",
+        )
+        + cui.field_select(
+            "calc-pm-compliance",
+            "ИБ / комплаенс",
+            [("none", "Базовый"), ("dlp", "DLP / расширенный аудит"), ("fstec", "Требования ФСТЭК")],
+        )
+        + cui.field_select(
+            "calc-pm-dr",
+            "Резерв / DR",
+            [("none", "Нет"), ("backup", "Резервный ЦОД"), ("full", "DR + регулярные учения")],
+        )
+        + '<div class="calc-section-label">Экономика команды</div>'
+        + cui.field_select(
+            "calc-pm-staffing",
+            "Штат / субподряд",
+            [("inhouse", "Штат заказчика"), ("outsource", "Аутстафф / интегратор")],
+        )
+        + cui.field_select(
+            "calc-pm-region",
+            "Регион ставок",
+            [("msk", "Москва / СПб"), ("region", "Регионы РФ")],
+        )
+        + cui.field_checkbox("calc-pm-overhead", "Надбавка 5% (НДС, командировки)", True)
+    )
+    return (
+        '<p class="calc-intro">Полная модель сопровождения (FTE × ставка). '
+        'Infra — <a href="#tech-s4">калькулятор infra</a>.</p>'
+        + cui.calc_shell(
+            "calc-pm",
+            "Калькулятор сопровождения",
+            "Все факторы: от RU до DR и ФСТЭК.",
+            form,
+            "calc-pm-out",
+            "calc-pm-run",
+            accent="emerald",
+        )
+    )
 
 
 def _user_wizard_html() -> str:
     return """
-<div class="user-wizard">
-  <h4>Мастер сценариев</h4>
-  <select id="wizard-scenario"><option value="message">Написать коллеге</option><option value="search">Найти файл</option><option value="call">Позвонить</option></select>
-  <ol id="wizard-steps"></ol>
-  <h4>FAQ</h4>
-  <details><summary>Чем не Telegram?</summary><p>Корпоративный аудит, хранение по политике компании, экспорт для комплаенса.</p></details>
-  <details><summary>Нужно ли ставить приложение?</summary><p>Достаточно браузера; можно добавить на рабочий стол как приложение.</p></details>
-  <h4>Тур</h4>
+<div class="user-wizard calc-card">
+  <h4 class="wizard-h">Мастер сценариев</h4>
+  <select id="wizard-scenario" class="wizard-select">
+    <option value="message">Написать коллеге</option>
+    <option value="search">Найти файл</option>
+    <option value="call">Позвонить</option>
+  </select>
+  <ol id="wizard-steps" class="wizard-steps"></ol>
+  <h4 class="wizard-h">Частые вопросы</h4>
+  <details class="faq"><summary>Чем не Telegram?</summary><p>Корпоративный аудит, хранение по политике компании, выгрузка для комплаенса.</p></details>
+  <details class="faq"><summary>Нужно ли ставить приложение?</summary><p>Достаточно браузера; можно добавить ярлык на рабочий стол.</p></details>
+  <h4 class="wizard-h">Краткий тур</h4>
   <ol class="tour-steps"><li>Вход</li><li>Список чатов</li><li>Сообщение</li><li>Поиск</li></ol>
 </div>"""
 
 
 def deck_data_json() -> dict[str, Any]:
-    profiles = [
+    providers = [
         {
             "id": p.id,
-            "ram_gb": p.ram_gb,
-            "max_registered_users": p.max_registered_users,
-            "monthly_rub": p.monthly_rub,
+            "label": p.label,
+            "pricing_url": p.pricing_url,
+            "ram_rub_gb": p.rub_per_gb_ram_month,
+            "vcpu_rub": p.rub_per_vcpu_month,
+            "ssd_tb_rub": p.rub_per_tb_ssd_month,
+            "hdd_tb_rub": p.rub_per_tb_hdd_month,
+            "channel_200": p.rub_channel_200_mbps,
+            "channel_1g": p.rub_channel_1gbps,
+            "ops_base": p.rub_ops_base_month,
         }
-        for p in sp.PROFILES
+        for p in se.PROVIDERS
     ]
     offerings = [
         {
@@ -236,11 +536,21 @@ def deck_data_json() -> dict[str, Any]:
     ]
     max_as_of = max(o["source_accessed_at"] for o in load_offerings())
     return {
-        "profiles": profiles,
+        "ram_anchors": list(se.RAM_ANCHORS),
+        "vm_tiers": list(se.VM_RAM_TIERS),
+        "providers": providers,
         "offerings": offerings,
-        "price_as_of": sp.PRICE_AS_OF,
+        "price_as_of": se.PRICE_AS_OF,
         "offerings_max_as_of": max_as_of,
-        "fte_base": {"base": 0.15, "divisor": 80000, "cap": 4.0},
+        "fte_rate_monthly": se.FTE_RATE_RUB_PER_MONTH,
+        "support": sm.support_model_json(),
+        "modules": ms.modules_catalog_json(),
+        "load_defaults": {
+            "msgs_per_user_day": ms.DEFAULT_MSGS_PER_USER_DAY,
+            "gb_files_per_user_yr": ms.DEFAULT_GB_FILES_PER_USER_YR,
+            "retention_years": ms.DEFAULT_RETENTION_YEARS,
+            "peak_burst": ms.PEAK_MSG_BURST,
+        },
         "scenarios": {
             "message": ["Откройте чат", "Выберите коллегу", "Напишите сообщение"],
             "search": ["Введите запрос", "Выберите результат", "Откройте файл"],
@@ -251,47 +561,323 @@ def deck_data_json() -> dict[str, Any]:
 
 def _deck_css() -> str:
     return """
-:root { --accent: #22c55e; --warn: #f59e0b; --bg: #fafafa; --text: #1e293b; }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #0f172a; --text: #e2e8f0; }
+:root {
+  --brand: #1e3a5f; --accent: #6366f1; --accent-soft: #eef2ff;
+  --ok: #047857; --warn: #c2410c; --bg: #f8fafc; --surface: #fff;
+  --text: #111827; --muted: #6b7280; --border: #e5e7eb; --radius: 10px;
 }
 * { box-sizing: border-box; }
-body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); line-height: 1.5; }
-.block-0 { background: #fff7ed; border-bottom: 3px solid var(--warn); padding: 1rem 1.5rem; }
-@media (prefers-color-scheme: dark) { .block-0 { background: #451a03; } }
-.hero-warning h1 { margin-top: 0; }
-.tab-bar { display: flex; flex-wrap: wrap; gap: .5rem; padding: .75rem 1rem; position: sticky; top: 0; background: var(--bg); border-bottom: 1px solid #cbd5e1; z-index: 10; }
-.tab-bar button { min-height: 44px; padding: .5rem 1rem; border: 1px solid #94a3b8; background: #fff; cursor: pointer; border-radius: 6px; }
-.tab-bar button[aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
-.tab-panel { display: none; padding: 1rem 1.5rem; max-width: 1100px; margin: 0 auto; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  margin: 0; background: var(--bg); color: var(--text); line-height: 1.55;
+  font-size: 15px;
+}
+.hero-inner, .tab-panel, .deck-footer-inner { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+.block-0 {
+  background: linear-gradient(180deg, #fff7ed 0%, #fff 100%);
+  border-bottom: 3px solid #fdba74; padding: 28px 0 24px;
+}
+.deck-kicker { font-size: 13px; color: var(--muted); margin: 0 0 4px; letter-spacing: .02em; }
+.block-0 h1 { font-size: 28px; margin: 0 0 8px; color: var(--brand); font-weight: 700; }
+.stage-badge {
+  display: inline-block; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d;
+  padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; margin-bottom: 12px;
+}
+.disclaimer { max-width: 720px; margin: 0 0 16px; color: #374151; }
+.stat-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.stat-pill {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+  padding: 6px 14px; font-size: 13px; color: #374151;
+}
+.block0-grid { display: grid; grid-template-columns: minmax(280px, 420px) 1fr; gap: 20px; align-items: start; }
+.block0-h2 { font-size: 16px; margin: 0 0 8px; color: var(--brand); }
+.feature-details {
+  margin-top: 20px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px;
+}
+.feature-details summary { cursor: pointer; font-weight: 600; color: var(--brand); }
+.detail-h { font-size: 14px; color: #374151; margin: 16px 0 8px; }
+.tab-bar {
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px; position: sticky; top: 0;
+  background: rgba(248,250,252,.95); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border); z-index: 20; justify-content: center;
+}
+.tab-bar button {
+  min-height: 44px; padding: 8px 18px; border: 1px solid #c7d2fe; background: var(--surface);
+  cursor: pointer; border-radius: 999px; font-size: 14px; font-weight: 500; color: #4338ca;
+  transition: background .15s, color .15s;
+}
+.tab-bar button:hover { background: var(--accent-soft); }
+.tab-bar button[aria-selected="true"] {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(99,102,241,.35);
+}
+.tab-panel { display: none; padding: 24px 0 40px; }
 .tab-panel.active { display: block; }
-.sub-nav { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
-.sub-nav a { font-size: .9rem; }
-.compare-table, .feature-table, .matrix-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-.compare-table th, .compare-table td, .feature-table th, .feature-table td { border: 1px solid #cbd5e1; padding: .35rem .5rem; }
-.matrix-scroll { overflow-x: auto; }
-.tag { font-size: .75rem; padding: .1rem .4rem; border-radius: 4px; }
-.tag-done { background: #dcfce7; }
-.tag-partial { background: #fef3c7; border: 1px dashed #f59e0b; }
-.tag-planned { background: #e2e8f0; }
-.tag-out { background: #fecaca; }
-.chip-headroom { background: #dcfce7; color: #166534; font-size: .75rem; padding: .1rem .35rem; border-radius: 4px; margin-left: .25rem; }
-.callout-info { background: #eff6ff; padding: .75rem; border-left: 4px solid #3b82f6; }
-.deck-footer { text-align: center; font-size: .8rem; padding: 1.5rem; color: #64748b; border-top: 1px solid #e2e8f0; }
-.calc output { display: block; margin-top: .5rem; font-weight: 600; }
+.tab-intro {
+  background: var(--accent-soft); border-left: 4px solid var(--accent);
+  padding: 12px 16px; border-radius: 0 var(--radius) var(--radius) 0;
+  margin: 0 20px 16px; max-width: 940px; color: #3730a3; font-size: 14px;
+}
+.sub-nav {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 0 20px 24px; max-width: 940px;
+}
+.sub-nav a {
+  font-size: 13px; text-decoration: none; color: #4338ca; background: var(--surface);
+  border: 1px solid #c7d2fe; padding: 6px 12px; border-radius: 999px;
+}
+.sub-nav a:hover { background: var(--accent-soft); }
+.subsection {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px 22px; margin: 0 20px 20px; max-width: 940px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+.section-headline {
+  font-size: 18px; margin: 0 0 12px; color: var(--brand);
+  border-bottom: 2px solid var(--accent); padding-bottom: 8px;
+}
+.section-body p { margin: 0 0 10px; }
+.bullet-clean { margin: 8px 0; padding-left: 20px; }
+.bullet-clean li { margin: 4px 0; }
+.status-link a { color: #4338ca; font-size: 13px; }
+.table-wrap { overflow-x: auto; margin: 12px 0; border-radius: 8px; border: 1px solid var(--border); }
+.compare-table, .feature-table, .matrix-table {
+  width: 100%; border-collapse: collapse; font-size: 13px; background: var(--surface);
+}
+.compare-table thead th, .feature-table th, .matrix-table th {
+  background: var(--accent-soft); text-align: left; font-weight: 600; color: var(--brand);
+  padding: 10px 12px; border-bottom: 2px solid #c7d2fe;
+}
+.compare-table td, .feature-table td, .matrix-table td {
+  padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top;
+}
+.compare-table tbody tr:nth-child(even), .feature-table tbody tr:nth-child(even) { background: #f9fafb; }
+.row-product { color: var(--muted); font-size: 11px; }
+.src-cell a { color: #4338ca; word-break: break-all; }
+.matrix-scroll { overflow-x: auto; margin: 12px 0; }
+.tag { display: inline-block; font-size: 11px; padding: 2px 10px; border-radius: 999px; font-weight: 600; }
+.tag-done { background: #dcfce7; color: #166534; }
+.tag-partial { background: #fef9c3; color: #854d0e; border: 1px dashed #fbbf24; }
+.tag-planned { background: #e0e7ff; color: #3730a3; }
+.tag-out { background: #f3f4f6; color: #4b5563; }
+.chip-headroom {
+  background: #dcfce7; color: #166534; font-size: 11px; padding: 2px 8px;
+  border-radius: 999px; margin-left: 4px; white-space: nowrap;
+}
+.callout { padding: 14px 16px; border-radius: var(--radius); margin: 12px 0; }
+.callout-warn { background: #fff7ed; border: 1px solid #fdba74; }
+.callout-info { background: #eff6ff; border-left: 4px solid #3b82f6; }
+.card-grid { display: grid; gap: 12px; margin: 12px 0; }
+.card-grid-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.card {
+  background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 14px;
+  border-left: 4px solid var(--accent);
+}
+.card h4 { margin: 0 0 6px; font-size: 14px; color: var(--brand); }
+.card p { margin: 0; font-size: 13px; color: #4b5563; }
+.fig { margin: 16px 0; text-align: center; }
+.fig svg { max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.fig-cap { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.footnote, .small { font-size: 12px; color: var(--muted); }
+.calc-assumptions { margin: 12px 0 16px; padding: 12px 14px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; }
+.calc-assumptions p { margin: 0 0 6px; }
+.calc-assumptions p:last-child { margin-bottom: 0; }
+.calc-module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; margin: 8px 0 12px; }
+.calc-module-check { font-size: 13px; display: flex; gap: 6px; align-items: flex-start; }
+.stack-block { margin-top: 24px; }
+.stack-block h4 { margin: 0 0 8px; font-size: 15px; }
+.stack-notes { margin: 8px 0 0 18px; padding: 0; }
+.table-more { font-size: 13px; margin-top: 8px; }
+.table-more a { color: #4338ca; }
+.calc-card {
+  background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius);
+  padding: 16px; margin-top: 12px;
+}
+.calc-intro { font-size: 13px; color: #4b5563; margin: 0 0 12px; }
+.calc-shell {
+  border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+  margin: 12px 0; background: var(--surface);
+  box-shadow: 0 4px 14px rgba(30,58,95,.08);
+}
+.calc-shell-head {
+  padding: 18px 22px; color: #fff;
+  background: linear-gradient(135deg, #1e3a5f 0%, #4338ca 100%);
+}
+.calc-shell-emerald .calc-shell-head { background: linear-gradient(135deg, #065f46, #059669); }
+.calc-shell-sky .calc-shell-head { background: linear-gradient(135deg, #0369a1, #0ea5e9); }
+.calc-shell-indigo .calc-shell-head { background: linear-gradient(135deg, #312e81, #6366f1); }
+.calc-shell-title { margin: 0; font-size: 17px; font-weight: 700; }
+.calc-shell-sub { margin: 6px 0 0; font-size: 13px; opacity: .92; }
+.calc-shell-body { padding: 18px 20px 22px; }
+.calc-form-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px 16px;
+}
+.calc-section-label {
+  grid-column: 1 / -1; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: #6366f1; margin-top: 4px; padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.calc-section-label:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+.calc-field { display: flex; flex-direction: column; gap: 6px; }
+.calc-field label { font-size: 12px; font-weight: 600; color: var(--brand); line-height: 1.35; }
+.calc-field input, .calc-field select {
+  padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px;
+  font-size: 14px; background: #fff; width: 100%;
+}
+.calc-field input:focus, .calc-field select:focus {
+  outline: 2px solid #a5b4fc; border-color: #6366f1;
+}
+.calc-field-check { justify-content: flex-end; }
+.calc-field-check label { font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.calc-actions { margin-top: 16px; }
+.btn-calc {
+  background: linear-gradient(135deg, #4338ca, #6366f1); color: #fff; border: none;
+  padding: 12px 28px; border-radius: 10px; cursor: pointer; font-weight: 700;
+  font-size: 14px; box-shadow: 0 2px 8px rgba(99,102,241,.35);
+}
+.btn-calc:hover { filter: brightness(1.05); }
+.calc-result-panel { margin-top: 18px; }
+.calc-hero {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px; margin-bottom: 16px;
+}
+.calc-stat {
+  background: linear-gradient(180deg, #f0fdf4, #fff); border: 1px solid #bbf7d0;
+  border-radius: 12px; padding: 14px 10px; text-align: center;
+}
+.calc-stat-val { font-size: 20px; font-weight: 800; color: #047857; line-height: 1.2; }
+.calc-stat-label { font-size: 10px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .04em; }
+.calc-provider-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
+}
+.calc-provider-card {
+  border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fafafa;
+}
+.calc-provider-card.is-min { border-color: #86efac; box-shadow: 0 0 0 2px rgba(34,197,94,.2); }
+.calc-provider-head {
+  padding: 10px 14px; background: var(--accent-soft); font-weight: 700; font-size: 13px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.calc-provider-head a { font-weight: 500; font-size: 11px; }
+.calc-provider-total {
+  padding: 12px 14px; font-size: 15px; font-weight: 700; color: var(--brand);
+  border-bottom: 1px solid var(--border); background: #fff;
+}
+.price-min { background: #ecfdf5 !important; font-weight: 600; color: #047857; }
+.med-col { font-size: 11px; color: var(--muted); }
+.prov-col { min-width: 88px; font-size: 11px !important; }
+.table-wrap-wide { max-width: 100%; }
+.compare-tco-wide { min-width: 720px; }
+.calc-label { display: block; margin: 8px 0; font-size: 14px; }
+.calc-label input, .calc-label select, .wizard-select {
+  margin-left: 8px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+}
+.calc-check input { margin-right: 6px; }
+.btn-primary {
+  margin-top: 8px; background: var(--accent); color: #fff; border: none;
+  padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;
+}
+.btn-primary:hover { background: #4f46e5; }
+.calc-result { display: block; margin-top: 12px; font-weight: 600; color: var(--ok); font-size: 15px; }
+.user-wizard .wizard-h { margin: 16px 0 8px; font-size: 15px; color: var(--brand); }
+.faq { margin: 8px 0; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; background: #fafafa; }
+.faq summary { cursor: pointer; font-weight: 500; }
+.tour-steps, .wizard-steps { padding-left: 20px; }
+.deck-footer {
+  text-align: center; font-size: 12px; padding: 24px 20px; color: var(--muted);
+  border-top: 1px solid var(--border); background: var(--surface);
+}
+.compare-table thead th { white-space: normal; line-height: 1.35; min-width: 72px; vertical-align: bottom; }
+.compare-tco th, .compare-tco td { font-size: 12px; }
+.matrix-compact th, .matrix-compact td { font-size: 12px; white-space: normal; line-height: 1.35; }
+.matrix-compact th[scope=row] { min-width: 140px; font-weight: 600; }
+.tier-tag { display: inline-block; font-size: 10px; font-weight: 700; color: #6366f1; background: #eef2ff; padding: 1px 6px; border-radius: 4px; margin-top: 2px; }
+.matrix-focus-wide { overflow-x: auto; }
+.matrix-focus-wide .matrix-compact th, .matrix-focus-wide .matrix-compact td { font-size: 11px; min-width: 72px; }
+.matrix-full th { max-width: 88px; white-space: normal; line-height: 1.25; font-size: 11px; }
+.cap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 16px 0; }
+.cap-card { background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.cap-card h4 { margin: 0 0 4px; font-size: 14px; color: var(--brand); }
+.cap-status { font-size: 11px; font-weight: 600; color: #4338ca; margin: 0 0 6px; }
+.cap-card p { margin: 0; font-size: 13px; color: #374151; }
+.overlap-list li { margin: 6px 0; }
+.units-box, .method-box {
+  background: #f8fafc; border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 14px; margin: 12px 0; font-size: 13px;
+}
+.units-box h4, .method-box h4 { margin: 0 0 8px; font-size: 14px; color: var(--brand); }
+.units-dl { margin: 0; display: grid; grid-template-columns: 100px 1fr; gap: 6px 12px; }
+.units-dl dt { font-weight: 600; color: #4338ca; }
+.units-dl dd { margin: 0; }
+.tco-chart { margin: 16px 0; padding: 12px; background: #fafafa; border-radius: 8px; border: 1px solid var(--border); }
+.tco-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 12px; font-size: 12px; color: #374151; }
+.swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+.swatch-comp { background: #6366f1; }
+.swatch-korus { background: #22c55e; }
+.tco-row { display: grid; grid-template-columns: minmax(120px, 180px) 1fr minmax(100px, 130px); gap: 10px; align-items: center; margin: 10px 0; }
+.tco-label { font-size: 12px; line-height: 1.3; }
+.tco-ru { display: block; color: var(--muted); font-size: 11px; }
+.tco-bars { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bar-comp, .bar-korus { height: 14px; border-radius: 4px; min-width: 4px; }
+.bar-comp { background: #6366f1; }
+.bar-korus { background: #22c55e; }
+.tco-vals { font-size: 11px; line-height: 1.4; text-align: right; }
+.calc-result { font-weight: 400; color: var(--text); font-size: 14px; }
+.calc-result strong { color: var(--brand); }
+.calc-breakdown { width: 100%; margin-top: 10px; font-size: 13px; border-collapse: collapse; }
+.calc-breakdown th, .calc-breakdown td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; }
+.calc-breakdown th { background: #eef2ff; }
+.donut-chart {
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 18px; max-width: 420px;
+}
+.donut-title { font-weight: 700; color: var(--brand); margin: 0 0 12px; font-size: 15px; }
+.donut-layout { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.donut-ring {
+  width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+  position: relative;
+}
+.donut-ring::after {
+  content: ""; position: absolute; inset: 22%; background: #fff; border-radius: 50%;
+}
+.donut-legend { list-style: none; margin: 0; padding: 0; font-size: 13px; flex: 1; min-width: 180px; }
+.donut-legend li { margin: 6px 0; display: flex; align-items: baseline; gap: 8px; }
+.donut-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; display: inline-block; }
+.factors-out { color: #4b5563; font-size: 13px; }
+.delta-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0;
+}
+.delta-col {
+  background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px;
+}
+.delta-korus { border-left: 4px solid #22c55e; }
+.delta-peer { border-left: 4px solid #6366f1; }
+.delta-col h4 { margin: 0 0 10px; font-size: 15px; color: var(--brand); }
+.delta-col li { font-size: 13px; margin: 6px 0; }
 @media (max-width: 640px) {
-  .tab-bar { flex-direction: column; }
+  .delta-grid { grid-template-columns: 1fr; }
+}
+.provider-block { margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.provider-block h5 { margin: 0 0 6px; font-size: 14px; color: var(--brand); }
+@media (max-width: 640px) {
+  .tab-bar { flex-direction: column; align-items: stretch; }
   .tab-bar button { width: 100%; }
-  .block0-grid { display: block; }
-  .compare-table { display: block; overflow-x: auto; white-space: nowrap; }
+  .block0-grid { grid-template-columns: 1fr; }
+  .subsection, .tab-intro, .sub-nav { margin-left: 12px; margin-right: 12px; }
+  .tco-row { grid-template-columns: 1fr; }
+  .tco-vals { text-align: left; }
+  .units-dl { grid-template-columns: 1fr; }
 }
 @media (max-width: 375px) {
-  .tab-bar button { font-size: .85rem; padding: .45rem .65rem; }
-  .tab-panel { padding: .75rem .65rem; }
-  .sub-nav a { font-size: .8rem; }
-  h2 { font-size: 1.05rem; }
+  .block-0 h1 { font-size: 22px; }
+  .tab-bar button { font-size: 13px; }
 }
-@media print { .tab-bar, .sub-nav, .calc button { display: none; } .tab-panel { display: block !important; page-break-before: always; } }
+@media print {
+  .tab-bar, .sub-nav, .btn-primary, .btn-calc { display: none; }
+  .tab-panel { display: block !important; page-break-before: always; }
+}
 """
 
 
@@ -313,38 +899,358 @@ def _deck_js() -> str:
     if(e.key==='ArrowLeft') tabs[(i-1+tabs.length)%tabs.length].focus();
   });
   const hash=(location.hash||'#pm').slice(1);
-  activate(['pm','tech','sales','user'].includes(hash)?hash:'pm');
+  const tabId=['pm','tech','sales','user'].includes(hash.split('-')[0])?hash.split('-')[0]:'pm';
+  activate(tabId);
 
   const data=JSON.parse(document.getElementById('deck-data').textContent);
-  function pickProfile(ru){
-    for(const p of data.profiles) if(ru<=p.max_registered_users) return p;
-    return data.profiles[data.profiles.length-1];
-  }
   function fmt(n){ return n.toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g,' ')+' ₽'; }
 
-  document.getElementById('calc-sales-run')?.addEventListener('click', ()=>{
+  function estimateRam(ru){
+    const anchors=data.ram_anchors;
+    if(ru<=anchors[0][0]) return anchors[0][1];
+    for(let i=0;i<anchors.length-1;i++){
+      const [r0,g0]=anchors[i], [r1,g1]=anchors[i+1];
+      if(ru<=r1){
+        const t=(Math.log(ru)-Math.log(r0))/(Math.log(r1)-Math.log(r0));
+        return Math.max(g0, Math.round(g0+t*(g1-g0)));
+      }
+    }
+    return anchors[anchors.length-1][1];
+  }
+  function vmTier(ram){
+    for(const t of data.vm_tiers) if(ram<=t) return t;
+    return data.vm_tiers[data.vm_tiers.length-1];
+  }
+  function activityRate(ru){
+    if(ru<=10000) return 0.5;
+    if(ru<=100000) return 0.45;
+    if(ru<=500000) return 0.35;
+    return 0.25;
+  }
+  function peakOnlineRate(ru){
+    if(ru<=10000) return 0.15;
+    if(ru<=100000) return 0.12;
+    return 0.10;
+  }
+  function derivePeakOnline(ru, po){
+    if(po>0) return po;
+    return Math.max(1, Math.round(ru*activityRate(ru)*peakOnlineRate(ru)));
+  }
+  function derivePeakMsgS(ru, pms, mpd, po){
+    if(pms>0) return pms;
+    const dau=Math.max(1, Math.round(ru*activityRate(ru)));
+    const avg=(dau*mpd)/86400;
+    return Math.max(0.5, avg*(data.load_defaults?.peak_burst||3.5));
+  }
+  function scaleModRam(id, base, ru, po, pms){
+    if(id==='postgres-hot') return base+ru/8000+pms/8;
+    if(id==='core-api') return base+po/400+pms/1.5;
+    if(id==='ws-gateway') return base+po/800;
+    if(id==='workers') return base+pms/2.5;
+    if(id==='nats') return base+pms/20;
+    if(id==='solr') return base+ru/15000;
+    if(id==='minio') return base+ru/20000;
+    return base;
+  }
+  function appNodeCount(pms, po){
+    let n=1;
+    if(pms>30||po>3000) n=2;
+    if(pms>120||po>12000) n=3;
+    if(pms>400) n=Math.max(n,6);
+    return n;
+  }
+  function webNodeCount(po, ha){
+    let n= po<=5000?1:2;
+    if(po>20000) n=Math.max(n,3);
+    if(ha) n=Math.max(n,2);
+    return n;
+  }
+  function storageTb(ru, mpd, gbUser, retY){
+    const dau=Math.max(1, Math.round(ru*activityRate(ru)));
+    const msgsDay=dau*mpd;
+    const msgGbYr=msgsDay*365*2048/(1024**3);
+    const filesGbYr=ru*gbUser;
+    const totalGb=(msgGbYr+filesGbYr)*retY;
+    return {
+      ssd: Math.round((0.5+totalGb*0.15/1024)*100)/100,
+      hdd: Math.round(Math.max(2, totalGb/1024)*100)/100
+    };
+  }
+  function estimateFromLoad(inp){
+    const ru=Math.max(1, inp.ru);
+    const po=derivePeakOnline(ru, inp.peakOnline);
+    const pms=derivePeakMsgS(ru, inp.peakMsgS, inp.msgsDay, po);
+    const mods=data.modules||[];
+    const enabled= inp.enabled || new Set(mods.map(m=>m.id));
+    let appN=appNodeCount(pms, po);
+    let webN=webNodeCount(po, inp.ha);
+    if(inp.ha) appN=Math.max(appN,2);
+    const instances=[];
+    let totalRam=0, totalVcpu=0;
+    const haIds=new Set(['postgres-hot','redis','nats','keycloak']);
+    for(const spec of mods){
+      if(!enabled.has(spec.id)) continue;
+      let count=1;
+      if(spec.per_plugin){
+        count=Math.max(0, inp.plugins||0);
+        if(count===0) continue;
+      } else if(spec.id==='core-api') count=appN;
+      else if(spec.id==='web-lb') count=webN;
+      else if(inp.ha && haIds.has(spec.id)) count=2;
+      let ram=scaleModRam(spec.id, spec.ram_gb, ru, po, pms);
+      if(inp.ha && ['postgres-hot','nats','redis'].includes(spec.id)) ram*=1.1;
+      const ramTot=Math.round(ram*count*10)/10;
+      const vcpuTot=Math.round(spec.vcpu*count*10)/10;
+      instances.push({id:spec.id, label:spec.label, count, ramGb:ramTot, vcpu:vcpuTot});
+      totalRam+=ramTot;
+      totalVcpu+=vcpuTot;
+    }
+    totalRam=Math.ceil(totalRam);
+    totalVcpu=Math.ceil(totalVcpu);
+    const stor=storageTb(ru, inp.msgsDay, inp.gbUser, inp.retention);
+    return {
+      ru, peakOnline:po, peakMsgS:Math.round(pms*10)/10,
+      dau:Math.max(1, Math.round(ru*activityRate(ru))),
+      modules:instances, totalRam, totalVcpu,
+      ssdTb:stor.ssd, hddTb:stor.hdd,
+      channel: po<8000?200:1000, appNodes:appN, webNodes:webN
+    };
+  }
+  function loadInpFromForm(){
+    return {
+      ru:+document.getElementById('calc-tech-ru').value||1,
+      peakOnline:+document.getElementById('calc-tech-peak-online').value||0,
+      peakMsgS:+document.getElementById('calc-tech-peak-msg').value||0,
+      msgsDay:+document.getElementById('calc-tech-msgs-day').value||40,
+      gbUser:+document.getElementById('calc-tech-gb-user').value||0.5,
+      retention:+document.getElementById('calc-tech-retention').value||3,
+      ha:document.getElementById('calc-tech-ha').checked,
+      plugins:+document.getElementById('calc-tech-plugins').value||0
+    };
+  }
+  function quoteProviderLoad(inp, p){
+    const le=estimateFromLoad(inp);
+    const ramBilled=vmTier(le.totalRam);
+    const vmCompute=ramBilled*p.ram_rub_gb + le.totalVcpu*p.vcpu_rub;
+    const disk=Math.round(le.ssdTb*p.ssd_tb_rub + le.hddTb*p.hdd_tb_rub);
+    const channel= le.channel<=200?p.channel_200:p.channel_1g;
+    const ops=p.ops_base*(le.ru<50000?1:2);
+    const lines=[
+      ['Серверы (prod full)', vmCompute],
+      ['Диски', disk],
+      ['Канал', channel],
+      ['Backup и мониторинг', ops]
+    ];
+    const monthly=lines.reduce((s,x)=>s+x[1],0);
+    return {provider:p, monthly, yearly:monthly*12, lines, load:le, ramBilled};
+  }
+  function renderModuleTable(mods){
+    const rows=mods.map(m=>'<tr><td>'+m.label+'</td><td>'+m.count+'</td><td>'+m.ramGb+'</td><td>'+m.vcpu+'</td></tr>').join('');
+    return '<div class="table-wrap"><table class="feature-table"><thead><tr><th>Модуль</th><th>×</th><th>RAM ГБ</th><th>vCPU</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }
+  function estimateCapacityFromModules(enabled, plugins, ssdTb, hddTb, ha){
+    const specs=data.modules||[];
+    const specMap={}; specs.forEach(s=>specMap[s.id]=s);
+    const haIds=new Set(['postgres-hot','redis','nats','keycloak']);
+    let totalRam=0, totalVcpu=0;
+    enabled.forEach(id=>{
+      const s=specMap[id]; if(!s) return;
+      let count= s.per_plugin?Math.max(0,plugins): (ha&&haIds.has(id)?2:1);
+      if(s.per_plugin && count===0) return;
+      totalRam+=s.ram_gb*count;
+      totalVcpu+=s.vcpu*count;
+    });
+    totalRam=Math.ceil(totalRam);
+    totalVcpu=Math.ceil(totalVcpu);
+    let maxPo=100000, maxPms=10000, maxRu=1000000;
+    if(enabled.has('ws-gateway')){
+      const ws=specMap['ws-gateway'].ram_gb;
+      maxPo=Math.min(maxPo, Math.max(100, Math.floor((ws-4)*800)));
+    }
+    if(enabled.has('core-api')){
+      const c=specMap['core-api'].ram_gb;
+      maxPo=Math.min(maxPo, Math.max(100, Math.floor((c-8)*400)));
+      maxPms=Math.min(maxPms, Math.max(1, (c-8)*1.5));
+    }
+    if(enabled.has('workers')){
+      const w=specMap['workers'].ram_gb;
+      maxPms=Math.min(maxPms, Math.max(1, (w-8)*2.5));
+    }
+    if(enabled.has('postgres-hot')){
+      const pg=specMap['postgres-hot'].ram_gb;
+      maxRu=Math.min(maxRu, Math.max(1000, Math.floor((pg-4)*8000)));
+    }
+    const needHdd=storageTb(10000, 40, 0.5, 3).hdd;
+    const storY= needHdd>0? Math.round(hddTb/needHdd*3*10)/10 : 0;
+    return {totalRam, totalVcpu, ssdTb, hddTb, maxRu, maxPo, maxPms:Math.round(maxPms*10)/10, storY};
+  }
+  function median(vals){
+    const s=[...vals].sort((a,b)=>a-b);
+    const m=Math.floor(s.length/2);
+    return s.length%2?s[m]:Math.round((s[m-1]+s[m])/2);
+  }
+  function renderProviderCards(quotes){
+    const minM=Math.min(...quotes.map(q=>q.monthly));
+    return '<div class="calc-provider-grid">'+quotes.map(q=>{
+      const isMin=q.monthly===minM;
+      let rows=q.lines.map(l=>'<tr><td>'+l[0]+'</td><td>'+fmt(l[1])+'</td></tr>').join('');
+      return '<article class="calc-provider-card'+(isMin?' is-min':'')+'">'+
+        '<div class="calc-provider-head"><span>'+q.provider.label+(isMin?' · мин.':'')+'</span>'+
+        '<a href="'+q.provider.pricing_url+'" rel="noopener" target="_blank">прайс ↗</a></div>'+
+        '<div class="calc-provider-total">'+fmt(q.monthly)+'/мес · '+fmt(q.yearly)+'/год</div>'+
+        '<table class="calc-breakdown"><tbody>'+rows+'</tbody></table></article>';
+    }).join('')+'</div>';
+  }
+  function renderHero(stats){
+    return '<div class="calc-hero">'+stats.map(s=>'<div class="calc-stat"><div class="calc-stat-val">'+
+      s.val+'</div><div class="calc-stat-label">'+s.label+'</div></div>').join('')+'</div>';
+  }
+  function supportUpdatesFte(ru, include, m){
+    if(!include) return 0;
+    if(ru<5000) return m.updates_fte.lt5k;
+    if(ru<50000) return m.updates_fte.lt50k;
+    return m.updates_fte.gte50k;
+  }
+  function computeSupport(inp){
+    const m=data.support||{};
+    const fb=m.fte_base||{base:0.15,divisor:80000,cap:4};
+    let base=fb.base+inp.ru/fb.divisor; if(base>fb.cap) base=fb.cap;
+    const lines=[
+      ['База (масштаб RU)', base],
+      ['Обновления релизов', supportUpdatesFte(inp.ru, inp.upd, m)],
+      ['Топология', (m.topology_fte||{})[inp.topo]||0],
+      ['Интеграции', (m.integrations_fte||{})[inp.integ]||0],
+      ['Организации / филиалы', (m.orgs_fte||{})[inp.orgs]||0],
+      ['L1 (первая линия)', (m.l1_fte||{})[inp.l1]||0],
+      ['Обучение', (m.training_fte||{})[inp.training]||0],
+      ['E2EE / MLS', (m.e2ee_fte||{})[inp.e2ee]||0],
+      ['ИБ / комплаенс', (m.compliance_fte||{})[inp.compliance]||0],
+      ['Резерв / DR', (m.dr_fte||{})[inp.dr]||0]
+    ];
+    const sub=lines.reduce((s,x)=>s+x[1],0);
+    const modeMult=(m.support_mode_mult||{})[inp.sla]||1;
+    const teamMult=(m.team_mult||{})[inp.team]||1;
+    const fte=sub*modeMult*teamMult;
+    let rate=(m.base_rate_rub||180000);
+    rate*=((m.staffing_rate_mult||{})[inp.staffing]||1);
+    rate*=((m.region_rate_mult||{})[inp.region]||1);
+    rate=Math.round(rate);
+    const overhead=inp.overhead?(m.overhead_pct||0):0;
+    const monthly=Math.round(fte*rate*(1+overhead));
+    return {lines, sub, modeMult, teamMult, fte, rate, overhead, monthly};
+  }
+
+  function renderProviderTables(quotes){ return renderProviderCards(quotes); }
+
+  function runSales(){
     const ru=+document.getElementById('calc-sales-ru').value||1;
-    const p=pickProfile(ru);
-    document.getElementById('calc-sales-out').textContent=
-      `Профиль ${p.id}: ${fmt(p.monthly_rub)}/мес, ${fmt(p.monthly_rub*12)}/год (~${(p.monthly_rub/ru).toFixed(1)} ₽/рег./мес)`;
+    const inp={ru, peakOnline:0, peakMsgS:0, msgsDay:40, gbUser:0.5, retention:3, ha:false, plugins:0};
+    const quotes=data.providers.map(p=>quoteProviderLoad(inp,p));
+    const med=median(quotes.map(q=>q.monthly));
+    const le=quotes[0].load;
+    document.getElementById('calc-sales-out').innerHTML=
+      renderHero([
+        {val:ru.toLocaleString('ru-RU'), label:'рег.'},
+        {val:le.totalRam+' ГБ', label:'RAM prod full'},
+        {val:fmt(med), label:'медиана / мес'},
+        {val:fmt(med*12), label:'медиана / год'}
+      ])+renderProviderCards(quotes)+
+      '<p class="small">Prod full, авто-нагрузка §10.1. На 1 рег.: ~'+(med/ru).toFixed(2)+' ₽/мес. Без лицензии, TURN/VKS. '
+      +'<a href="#price-sources">Источники цен</a>.</p>';
+  }
+  function runTechLoad(){
+    const inp=loadInpFromForm();
+    const quotes=data.providers.map(p=>quoteProviderLoad(inp,p));
+    const le=quotes[0].load;
+    const med=median(quotes.map(q=>q.monthly));
+    document.getElementById('calc-tech-out').innerHTML=
+      renderHero([
+        {val:le.totalRam+' ГБ', label:'RAM суммарно'},
+        {val:String(le.totalVcpu), label:'vCPU'},
+        {val:le.appNodes+' app · '+le.webNodes+' web', label:'узлы'},
+        {val:fmt(med)+'/мес', label:'медиана infra'}
+      ])+
+      '<div class="calc-assumptions"><p class="small"><strong>Нагрузка:</strong> RU '+le.ru.toLocaleString('ru-RU')+
+      ' · DAU ~'+le.dau+' · пик онлайн '+le.peakOnline+' · пик msg/s '+le.peakMsgS+
+      ' · SSD '+le.ssdTb+' ТБ · HDD '+le.hddTb+' ТБ · канал '+le.channel+' Мбит/с</p></div>'+
+      renderModuleTable(le.modules)+renderProviderCards(quotes);
+  }
+  function runTechModules(){
+    const enabled=new Set();
+    document.querySelectorAll('.calc-mod:checked').forEach(el=>enabled.add(el.dataset.mod));
+    const plugins=+document.getElementById('calc-tech-mod-plugins').value||0;
+    const ssdTb=+document.getElementById('calc-tech-mod-ssd').value||0;
+    const hddTb=+document.getElementById('calc-tech-mod-hdd').value||0;
+    const ha=document.getElementById('calc-tech-mod-ha').checked;
+    const cap=estimateCapacityFromModules(enabled, plugins, ssdTb, hddTb, ha);
+    document.getElementById('calc-tech-out').innerHTML=
+      renderHero([
+        {val:cap.totalRam+' ГБ', label:'RAM модулей'},
+        {val:String(cap.totalVcpu), label:'vCPU'},
+        {val:cap.maxRu.toLocaleString('ru-RU'), label:'макс. RU'},
+        {val:cap.storY+' лет', label:'HDD @10k RU'}
+      ])+
+      '<div class="calc-assumptions"><p class="small"><strong>Предел нагрузки</strong> (базовый экз. каждого модуля): пик онлайн до '+
+      cap.maxPo.toLocaleString('ru-RU')+' · пик msg/s до '+cap.maxPms+
+      ' · рег. пользователей до '+cap.maxRu.toLocaleString('ru-RU')+
+      '</p><p class="small">Хранилище '+hddTb+' ТБ HDD хватит ~'+cap.storY+' лет при 10k RU и retention 3 года (§10.1).</p></div>';
+  }
+  function runTech(){
+    const mode=document.getElementById('calc-tech-mode').value;
+    if(mode==='modules') runTechModules(); else runTechLoad();
+  }
+  function syncTechMode(){
+    const mode=document.getElementById('calc-tech-mode').value;
+    document.getElementById('calc-tech-load-panel').hidden=(mode!=='load');
+    document.getElementById('calc-tech-modules-panel').hidden=(mode!=='modules');
+  }
+  function runPm(){
+    const inp={
+      ru:+document.getElementById('calc-pm-ru').value||1,
+      sla:document.getElementById('calc-pm-sla').value,
+      upd:document.getElementById('calc-pm-upd').checked,
+      topo:document.getElementById('calc-pm-topo').value,
+      integ:document.getElementById('calc-pm-integ').value,
+      team:document.getElementById('calc-pm-team').value,
+      orgs:document.getElementById('calc-pm-orgs').value,
+      l1:document.getElementById('calc-pm-l1').value,
+      training:document.getElementById('calc-pm-training').value,
+      e2ee:document.getElementById('calc-pm-e2ee').value,
+      compliance:document.getElementById('calc-pm-compliance').value,
+      dr:document.getElementById('calc-pm-dr').value,
+      staffing:document.getElementById('calc-pm-staffing').value,
+      region:document.getElementById('calc-pm-region').value,
+      overhead:document.getElementById('calc-pm-overhead').checked
+    };
+    const r=computeSupport(inp);
+    let body=r.lines.map(l=>'<tr><td>'+l[0]+'</td><td>'+(l[1]>0&&l[0]!=='База (масштаб RU)'?'+':'')+l[1].toFixed(2)+' FTE</td></tr>').join('');
+    document.getElementById('calc-pm-out').innerHTML=
+      renderHero([
+        {val:r.fte.toFixed(2), label:'FTE итого'},
+        {val:fmt(r.monthly), label:'₽ / мес'},
+        {val:fmt(r.monthly*12), label:'₽ / год'},
+        {val:fmt(r.rate), label:'ставка / FTE'}
+      ])+
+      '<table class="calc-breakdown"><tbody>'+body+
+      '<tr><td>Сумма до режима</td><td>'+r.sub.toFixed(2)+' FTE</td></tr>'+
+      '<tr><td>Режим поддержки</td><td>×'+r.modeMult+'</td></tr>'+
+      '<tr><td>Модель команды</td><td>×'+r.teamMult+'</td></tr>'+
+      (r.overhead?'<tr><td>Надбавка НДС/командировки</td><td>+'+(r.overhead*100)+'%</td></tr>':'')+
+      '</tbody></table>'+
+      '<p class="small">Полная модель сопровождения; не заменяет детальное КП.</p>';
+  }
+
+  document.getElementById('calc-tech-mode')?.addEventListener('change', syncTechMode);
+  document.getElementById('calc-sales-run')?.addEventListener('click', runSales);
+  document.getElementById('calc-tech-run')?.addEventListener('click', runTech);
+  document.getElementById('calc-pm-run')?.addEventListener('click', runPm);
+  syncTechMode();
+  runSales(); runTech(); runPm();
+
+  document.querySelector('a[href="#sales-s3"]')?.addEventListener('click', e=>{
+    e.preventDefault(); activate('sales'); location.hash='sales-s3';
   });
-  document.getElementById('calc-tech-run')?.addEventListener('click', ()=>{
-    const ru=+document.getElementById('calc-tech-ru').value||1;
-    const p=pickProfile(ru);
-    const nodes = p.id==='pilot'?1:(p.id==='standard'?3:6);
-    document.getElementById('calc-tech-out').textContent=
-      `RAM ${p.ram_gb} ГБ, узлов ~${nodes}, headroom до ${p.max_registered_users} рег.`;
-  });
-  document.getElementById('calc-pm-run')?.addEventListener('click', ()=>{
-    const ru=+document.getElementById('calc-pm-ru').value||1;
-    const sla=document.getElementById('calc-pm-sla').value;
-    const upd=document.getElementById('calc-pm-upd').checked;
-    let fte=0.15+ru/80000; if(fte>4) fte=4;
-    if(upd) fte+= ru<5000?0.1:(ru<50000?0.3:0.8);
-    if(sla==='24x7') fte*=2.5;
-    const rub=Math.round(fte*180000);
-    document.getElementById('calc-pm-out').textContent=`FTE ${fte.toFixed(2)}, ~${fmt(rub)}/мес`;
-  });
+
   const wiz=document.getElementById('wizard-scenario');
   const steps=document.getElementById('wizard-steps');
   function renderWiz(){ const s=data.scenarios[wiz.value]||[]; steps.innerHTML=s.map(x=>'<li>'+x+'</li>').join(''); }
@@ -357,7 +1263,7 @@ def render_deck_html() -> str:
     build_day = date.today().isoformat()
     data = deck_data_json()
     footer = (
-        f"{ps.DECK_VERSION} | {build_day} | PRICE_AS_OF {sp.PRICE_AS_OF} | "
+        f"{ps.DECK_VERSION} | {build_day} | PRICE_AS_OF {se.PRICE_AS_OF} | "
         f"offerings {data['offerings_max_as_of']} | Playwright {ps.PLAYWRIGHT_PASSED}/{ps.PLAYWRIGHT_TOTAL}"
     )
     return f"""<!DOCTYPE html>

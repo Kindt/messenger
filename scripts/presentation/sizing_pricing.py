@@ -1,75 +1,61 @@
-"""Infra sizing profiles and cost formulas — no comparison anchors."""
+"""Infra pricing facade — re-exports sizing_engine for deck calculators and compare."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from scripts.presentation import sizing_engine as se
 
-PRICE_AS_OF = "2026-06-15"
+PRICE_AS_OF = se.PRICE_AS_OF
 PRICE_REGION = "РФ (Москва / СПб, коммерческий сегмент)"
-PRICE_VAT = "Без НДС"
+PRICE_VAT = se.PRICE_VAT
+FTE_RATE_RUB_PER_MONTH = se.FTE_RATE_RUB_PER_MONTH
 
 PRICE_SOURCES: list[tuple[str, str]] = [
-    (
-        "VDS / dedicated",
-        "Усреднённые публичные тарифы аренды VM (8–64 ГБ RAM, 4–8 vCPU), "
-        "ориентир H1 2026; не прайс-лист конкретного провайдера.",
-    ),
-    (
-        "Диски",
-        "Block SSD и HDD archive tier, ₽/ТБ/мес; объёмы — из §10.3 презентации.",
-    ),
-    (
-        "Канал",
-        "Выделенный интернет / DIA 200 Мбит/с и 1 Гбит/с, без last-mile и без TURN.",
-    ),
-    (
-        "Ops",
-        "Базовый backup + мониторинг (Pilot) или расширенный контур (Standard).",
-    ),
+    (p.label, p.source_note) for p in se.PROVIDERS
 ]
 
+PROVIDERS = se.PROVIDERS
+fmt_rub = se.fmt_rub
+estimate_resources = se.estimate_resources
+quote_all_providers = se.quote_all_providers
+quote_provider = se.quote_provider
+median_monthly = se.median_monthly
+median_yearly = se.median_yearly
+headroom_ru = se.headroom_ru
 
-@dataclass(frozen=True)
-class InfraProfile:
-    id: str
-    label: str
-    ram_gb: int
-    max_registered_users: int
-    monthly_rub: int
-
-
-PROFILES: tuple[InfraProfile, ...] = (
-    InfraProfile("pilot", "Pilot", 14, 10_000, 61_350),
-    InfraProfile("standard", "Standard", 140, 100_000, 332_000),
-    InfraProfile("enterprise", "Enterprise", 450, 500_000, 980_000),
-)
-
-_PROFILE_MAP = {p.id: p for p in PROFILES}
+# Legacy names for tests / compare_engine field
+def pick_profile(registered_users: int):
+    """Deprecated: returns estimate only (no Pilot/Standard labels)."""
+    return estimate_resources(registered_users)
 
 
-def pick_profile(registered_users: int) -> InfraProfile:
-    """Minimum profile covering registered_users."""
-    for profile in PROFILES:
-        if registered_users <= profile.max_registered_users:
-            return profile
-    return PROFILES[-1]
+def infra_monthly(registered_users: int | se.ResourceEstimate) -> int:
+    if isinstance(registered_users, se.ResourceEstimate):
+        ru = registered_users.registered_users
+    else:
+        ru = registered_users
+    return median_monthly(ru)
 
 
-def infra_monthly(profile_id: str | InfraProfile) -> int:
-    if isinstance(profile_id, InfraProfile):
-        return profile_id.monthly_rub
-    return _PROFILE_MAP[profile_id].monthly_rub
+def infra_yearly(registered_users: int | se.ResourceEstimate) -> int:
+    return infra_monthly(registered_users) * 12
 
 
-def infra_yearly(profile_id: str | InfraProfile) -> int:
-    return infra_monthly(profile_id) * 12
-
-
-def headroom_ru(profile: InfraProfile, at_ru: int) -> int | None:
-    if profile.max_registered_users > at_ru:
-        return profile.max_registered_users
-    return None
-
-
-def fmt_rub(amount: int) -> str:
-    return f"{amount:,}".replace(",", " ") + " ₽"
+def infra_breakdown_lines(registered_users: int) -> list[tuple[str, int]]:
+    """Median breakdown labels across providers (for compact tables)."""
+    quotes = quote_all_providers(registered_users)
+    labels = [ln.label for ln in quotes[0].lines]
+    out: list[tuple[str, int]] = []
+    for label in labels:
+        vals = []
+        for q in quotes:
+            for ln in q.lines:
+                if ln.label == label:
+                    vals.append(ln.amount_rub_month)
+        out.append((label, round(sum(vals) / len(vals))))
+    total = sum(a for _, a in out)
+    med = median_monthly(registered_users)
+    if total != med and out:
+        diff = med - total
+        lbl, amt = out[-1]
+        out[-1] = (lbl, amt + diff)
+    return out

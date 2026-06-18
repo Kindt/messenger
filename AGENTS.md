@@ -386,6 +386,7 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 | **Коммиты** | По умолчанию — только по явной просьбе; **QEMU redeploy-цикл** — коммит после каждого fix+restart (см. `qemu-redeploy-monitor.mdc`) |
 | **Scope** | Минимальный diff; не трогать unrelated code |
 | **Runtime Windows** | **QEMU only** — не Docker/Ansible на хосте ([qemu-host-isolation](.cursor/rules/qemu-host-isolation.mdc)) |
+| **Presentation deck / sizing** | **Не использовать Pilot/Standard/Enterprise** в deck и калькуляторах. Только **prod full** (все модули `full-server.yml`) для sizing/TCO. **Dev-min** — только QEMU/разработка. Расчёт: нагрузка (RU + онлайн + msg/s + хранение) → модули **или** модули → предел нагрузки. См. `scripts/presentation/module_sizing.py`, `METRIC_POLICY.md`. |
 | **Presentation deck** | `python scripts/presentation/build.py` → `docs/index.html`; см. [`scripts/presentation/README.md`](scripts/presentation/README.md) |
 | **QEMU lifecycle** | Не `qemu-down` без запроса; не kill non-Korus QEMU |
 | **Документация** | Не создавать markdown «просто так»; docs по запросу или в рамках spec-kit |
@@ -400,6 +401,11 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 ## Project Learnings
 
 Накопленные знания (обновлять при новых находках):
+
+### Presentation / sizing (2026-06-18)
+
+- **Product deck:** не Pilot/Standard/Enterprise — только **prod full** для sizing/TCO; **dev-min** — только QEMU/разработка.
+- Калькулятор deck: `scripts/presentation/module_sizing.py` — режим «нагрузка → модули» или «модули → предел RU/онлайн/хранилища».
 
 ### QEMU / dev stack
 

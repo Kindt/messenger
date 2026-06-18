@@ -40,7 +40,7 @@ def _extract_block0(html: str) -> str:
 
 
 def _extract_user_tab(html: str) -> str:
-    m = re.search(r'id="tab-user"(.*?)(?:id="tab-|$)', html, re.S | re.I)
+    m = re.search(r'id="tab-user"[^>]*>(.*?)</main>', html, re.S | re.I)
     return m.group(1) if m else ""
 
 
