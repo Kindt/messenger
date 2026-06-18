@@ -79,28 +79,14 @@ subprojects {
     }
 }
 
-/** Python PR gates: product deck (spec 018) + Cell manifests (spec 011). */
-tasks.register<Exec>("checkPresentationGate") {
+/** Python PR gate: Korus Cloud Cell manifests (spec 011). */
+tasks.register<Exec>("checkCellManifest") {
     group = "verification"
-    description = "Validate product deck and Cell manifests (run_python_verification.py)"
+    description = "Validate Korus Cloud Cell manifests (test_cell_manifest.py)"
     workingDir = rootDir
     val pythonCmd = System.getenv("PYTHON")
         ?: if (System.getProperty("os.name").lowercase().contains("win")) "python" else "python3"
-    commandLine(pythonCmd, "scripts/run_python_verification.py")
-}
-
-/** @deprecated use checkPresentationGate */
-tasks.register("checkCompetitorRegistry") {
-    group = "verification"
-    description = "Alias for checkPresentationGate (legacy task name)"
-    dependsOn("checkPresentationGate")
-}
-
-/** Alias for spec 011 — runs same Python gate as checkPresentationGate. */
-tasks.register("checkCellManifest") {
-    group = "verification"
-    description = "Validate Korus Cloud Cell manifests (via run_python_verification.py)"
-    dependsOn("checkPresentationGate")
+    commandLine(pythonCmd, "scripts/test_cell_manifest.py")
 }
 
 /** npm audit for webui-build (spec 014 S1-3). */
@@ -118,7 +104,7 @@ tasks.named("spotlessJava") {
         mustRunAfter(sub.tasks.named("build"))
     }
     mustRunAfter(tasks.named("checkBundleParity"))
-    mustRunAfter(tasks.named("checkPresentationGate"))
+    mustRunAfter(tasks.named("checkCellManifest"))
     mustRunAfter(tasks.named("checkNpmAudit"))
     mustRunAfter(project(":modules:core-api").tasks.named("benchmark"))
 }
@@ -129,7 +115,7 @@ tasks.register("buildIntegrity") {
     description = "Compile, run all unit tests, assemble, spotless (ratchet), npm audit, benchmark"
     dependsOn(
         "checkBundleParity",
-        "checkPresentationGate",
+        "checkCellManifest",
         "checkNpmAudit",
         "spotlessCheck",
         ":modules:core-api:benchmark"

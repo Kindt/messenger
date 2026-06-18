@@ -41,13 +41,10 @@ jobs:
         run: npm ci
         working-directory: modules/web-client/webui-build
 
-      - name: Set up Python (presentation verification gate)
+      - name: Set up Python (cell manifest gate)
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-
-      - name: Install Python verification deps
-        run: pip install pytest pyyaml
 
       - name: "buildIntegrity (compile, test, spotless ratchet, npm audit, benchmark)"
         run: chmod +x gradlew && ./gradlew buildIntegrity --no-daemon

@@ -23,7 +23,38 @@ korus-web/.env
 dev-overlay/webui/*
 !dev-overlay/webui/.gitkeep
 
-# ---- QEMU local dev (not in repo; may exist on disk only) ----
+scripts/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# =============================================================================
+# Не продукт: агенты, спеки, документация, презентации, E2E (только локально)
+# =============================================================================
+.cursor/
+.specify/
+.opencode/
+specs/
+docs/
+tests/e2e-web/
+AGENTS.md
+CHANGELOG.md
+tz_full.html
+tz_revision_proposal.md
+
+scripts/presentation/
+scripts/run_python_verification.py
+scripts/profiling/
+scripts/publish-spec-001-branch.ps1
+scripts/playwright-staging-gate.ps1
+scripts/write-runtime-gate-report.ps1
+scripts/webui-locale-parity-audit.js
+
+.github/workflows/deploy-pages.yml
+.github/workflows/pages-deck.yml
+
+# =============================================================================
+# QEMU local dev (not in repo; may exist on disk only)
+# =============================================================================
 deploy/qemu/
 deploy/ansible/inventory/qemu/
 deploy/ansible/playbooks/qemu-*.yml
@@ -37,16 +68,9 @@ scripts/stop-qemu-plan-orchestrator.ps1
 scripts/preload-qemu-docker-images.ps1
 scripts/playwright-dev-loop.ps1
 scripts/livekit-host-tunnel.ps1
-scripts/profiling/profile-qemu-workers.ps1
 korus-web/docker-compose.qemu*.yml
 korus-web/docker-compose.hotswap-qemu.yml
-docs/benchmarks/qemu-*.json
-docs/plans/*qemu*
-docs/review/archive/**/smoke-qemu-*
-specs/**/qemu-*.md
-specs/**/contracts/qemu-*.md
 
-# Legacy QEMU runtime artifacts (if present locally)
 deploy/qemu/tools/
 deploy/qemu/images/*.img
 deploy/qemu/images/*.img.partial
@@ -54,17 +78,13 @@ deploy/qemu/images/*.qcow2
 deploy/qemu/backups/
 deploy/qemu/run/
 deploy/qemu/tools/__pycache__/
-scripts/__pycache__/
-**/*.pyc
-**/*.pyo
 
-# Cursor superpowers vendor clone (junctions in .cursor/skills/superpowers-* are committed)
-.cursor/superpowers/
-
-# Playwright E2E (spec 003)
+# Playwright artifacts (when e2e tree exists locally)
 tests/e2e-web/node_modules/
 tests/e2e-web/test-results/
 tests/e2e-web/playwright-report/
 tests/e2e-web/blob-report/
 /test-results/
 
+# Cursor superpowers vendor clone
+.cursor/superpowers/
