@@ -261,7 +261,7 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 | **contracts в `specs/*/contracts/`** | изменение acceptance criteria |
 | **`runtime-gate-report.md`** | после green Playwright на QEMU |
 | **`ops-signoff-log.md`** | ops/security gates |
-| **Этот `AGENTS.md`** | новые learnings / preferences (см. ниже) |
+| **`docs/index.html`** | product deck (GitHub Pages); rebuild: `python scripts/presentation/build.py` |
 
 ### Spec-kit артефакты по фичам
 
@@ -269,6 +269,7 @@ Preflight fail → **не** гонять full suite. Outer orchestrator → **bl
 
 | Spec | Назначение |
 |------|------------|
+| [`specs/018-product-deck/`](specs/018-product-deck/) | Product deck — `docs/index.html`, honesty gate, GitHub Pages |
 | [`specs/015-live-server-ops-backlog/`](specs/015-live-server-ops-backlog/) | **Deferred ops registry** — live-server задачи (Sep 2026+); не в списках доработок агента |
 | [`specs/011-korus-cloud-platform/`](specs/011-korus-cloud-platform/) | Korus Cloud Cells — Phase 0–1 closed; Phase 2+ ops → spec 015 |
 | [`specs/007-platform-stage-readiness/`](specs/007-platform-stage-readiness/) | Ops/stage gates T601–T607 (eng. ✅; ops → spec 015) |
@@ -385,7 +386,7 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 | **Коммиты** | По умолчанию — только по явной просьбе; **QEMU redeploy-цикл** — коммит после каждого fix+restart (см. `qemu-redeploy-monitor.mdc`) |
 | **Scope** | Минимальный diff; не трогать unrelated code |
 | **Runtime Windows** | **QEMU only** — не Docker/Ansible на хосте ([qemu-host-isolation](.cursor/rules/qemu-host-isolation.mdc)) |
-| **Acceptance** | Inner tier (`playwright-dev-loop -Tier …`) **до** full orchestrator |
+| **Presentation deck** | `python scripts/presentation/build.py` → `docs/index.html`; см. [`scripts/presentation/README.md`](scripts/presentation/README.md) |
 | **QEMU lifecycle** | Не `qemu-down` без запроса; не kill non-Korus QEMU |
 | **Документация** | Не создавать markdown «просто так»; docs по запросу или в рамках spec-kit |
 | **Тесты** | Полезные тесты только при реальном coverage; не trivial asserts |

@@ -62,7 +62,7 @@
     "playwright_all_inner": "PASS (30 tests)"
   },
   "presentation_notes": [
-    "Цифры с QEMU dev на Windows-хосте; не stage/prod soak-тест.",
+    "Цифры с лабораторного стенда разработки; не stage/prod soak-тест.",
     "Health p95 11 мс — лёгкий endpoint через port-forward; REST с авторизацией тяжелее.",
     "Пиковая рассылка ~6 сообщ/с — end-to-end (API + NATS + pipeline + WS/REST), не чистый API RPS.",
     "Для слайдов §10.2: инженерный smoke-baseline; формальный soak — на stage."

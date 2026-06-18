@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Product deck acceptance (spec 018)",
+  "version": "1.0.0",
+  "artifact": "docs/index.html",
+  "build_command": "python scripts/presentation/build.py",
+  "criteria": [
+    {
+      "id": "A0",
+      "description": "Block 0: prototype status, blockers, feature matrix (done/partial/planned/out)"
+    },
+    {
+      "id": "A0b",
+      "description": "honesty_check.py exit 0; block-0 negation allowlist for banned phrases"
+    },
+    {
+      "id": "A0c",
+      "description": "User tab office-level copy; no JWT/Keycloak/NATS/Solr/mesh jargon"
+    },
+    {
+      "id": "A0d",
+      "description": "At least one inline SVG per persona tab (pm, tech, sales, user)"
+    },
+    {
+      "id": "A1",
+      "description": "Self-contained HTML; no external src=http fetch"
+    },
+    {
+      "id": "A2",
+      "description": "4 tabs x 4 subsections each"
+    },
+    {
+      "id": "A3",
+      "description": "Compare via competitor_offerings; no S-* / E-* anchor labels in data or UI"
+    },
+    {
+      "id": "A3b",
+      "description": "Headroom chip when profile max_registered_users > offering.value"
+    },
+    {
+      "id": "A3c",
+      "description": "competitor_offerings.json validates against schema"
+    },
+    {
+      "id": "A3d",
+      "description": "At least 18 offerings; tier-A products have >=2 registered_users rows"
+    },
+    {
+      "id": "A3e",
+      "description": "Every TCO row has HTTPS source_url or price_is_public false (qualitative skip)"
+    },
+    {
+      "id": "A4",
+      "description": "4 calculators accept arbitrary RU (sales, tech, pm/support, user wizard)"
+    },
+    {
+      "id": "A5",
+      "description": "User tab: wizard + FAQ + tour sections present"
+    },
+    {
+      "id": "A6",
+      "description": "Partial/planned features and ops footnotes marked"
+    },
+    {
+      "id": "A7",
+      "description": "./gradlew buildIntegrity green"
+    },
+    {
+      "id": "A8",
+      "description": "GitHub Pages URL loads or enable instructions documented"
+    },
+    {
+      "id": "A9",
+      "description": "Usable layout at 375px viewport width"
+    },
+    {
+      "id": "A10",
+      "description": "Footer metadata matches scripts/presentation/product_status.py"
+    }
+  ],
+  "gates": [
+    "python scripts/presentation/smoke_deck.py",
+    "python scripts/presentation/analyze_deck.py",
+    "python -m pytest scripts/presentation/ -q"
+  ]
+}

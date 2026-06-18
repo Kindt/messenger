@@ -6,6 +6,15 @@
 
 ---
 
+### 2026-06-18 — Spec 018: 4-tab product deck (GitHub Pages)
+
+- **Новый pipeline:** `scripts/presentation/` — data, compare_engine, calculators, content/marketing/visuals, honesty gate.
+- **Артефакт:** `docs/index.html` — self-contained deck (Block 0, 4×4 sections, TCO @ competitor RU, headroom badges).
+- **Данные:** `competitor_offerings.json` (22 rows, open `source_url`), `METRIC_POLICY.md`, schema validation.
+- **CI:** `run_python_verification.py` → presentation pytest + smoke_deck; workflow `.github/workflows/pages-deck.yml`.
+- **Spec:** `specs/018-product-deck/` + `contracts/deck-acceptance.json`.
+- **Удалены legacy:** `product_presentation.html`, `competitor_comparison*.html`, `tz_product.html` (сохранён `tz_full.html`).
+
 ### 2026-06-17 — Презентации: техпис правки (сноски, SSO, TCO)
 
 - **Сноски:** маркер RPO/RTO **§ → ※** (не путается с номером раздела); легенда **† ‡ ※ ¶ # ⊕** в MD и HTML.

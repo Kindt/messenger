@@ -1,0 +1,733 @@
+{
+  "version": 1,
+  "tier_labels": {
+    "A": "Уровень A — полная промышленная матрица TCO",
+    "B": "Уровень B — альтернативы в контуре (функции + оценочный TCO)",
+    "C": "Уровень C — рынок РФ (функции + прайс где есть)"
+  },
+  "criteria": [
+    {
+      "id": "onprem",
+      "title": "В контуре заказчика / изолированный контур"
+    },
+    {
+      "id": "export",
+      "title": "Экспорт / legal hold / dual-TTL"
+    },
+    {
+      "id": "audit",
+      "title": "Журнал аудита / комплаенс-ядро"
+    },
+    {
+      "id": "search",
+      "title": "Полнотекстовый поиск"
+    },
+    {
+      "id": "e2ee",
+      "title": "Сквозное шифрование (E2EE) / MLS"
+    },
+    {
+      "id": "vks",
+      "title": "ВКС / голос"
+    },
+    {
+      "id": "mobile",
+      "title": "Мобильные клиенты"
+    },
+    {
+      "id": "superapp",
+      "title": "Суперапп / SmartApps"
+    },
+    {
+      "id": "fstec",
+      "title": "ФСТЭК / реестр РФ"
+    },
+    {
+      "id": "sizing",
+      "title": "Публичный sizing от 10 тыс. рег."
+    },
+    {
+      "id": "pricing",
+      "title": "Публичный прайс лицензии"
+    },
+    {
+      "id": "sla",
+      "title": "SLA / отказоустойчивость (док.)"
+    },
+    {
+      "id": "sso",
+      "title": "Единый вход (SSO) / LDAP / Keycloak"
+    },
+    {
+      "id": "bots",
+      "title": "Боты / API / интеграции"
+    },
+    {
+      "id": "retention",
+      "title": "Ретенция / архив (политики)"
+    },
+    {
+      "id": "multitenant",
+      "title": "Мультитenant / шардирование организаций"
+    },
+    {
+      "id": "federation",
+      "title": "Федерация / внешние домены"
+    },
+    {
+      "id": "ops",
+      "title": "Прозрачность эксплуатационного стека"
+    }
+  ],
+  "products": [
+    {
+      "id": "korus",
+      "label": "Korus",
+      "tier": "A",
+      "deployment": "в контуре",
+      "features": {
+        "onprem": "✓",
+        "export": "✓ ядро",
+        "audit": "✓",
+        "search": "Solr / SQL",
+        "e2ee": "MLS (приёмка)",
+        "vks": "WebRTC",
+        "mobile": "дорожная карта",
+        "superapp": "◐ integrations",
+        "fstec": "в процессе",
+        "sizing": "✓ профили",
+        "pricing": "КП",
+        "sla": "HA ref-arch",
+        "sso": "Keycloak",
+        "bots": "✓ L0–L3 platform",
+        "retention": "dual-TTL",
+        "multitenant": "org-shard",
+        "federation": "org-level",
+        "ops": "Java monolith + workers"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "~",
+        "S3": "✓",
+        "S4": "✓"
+      }
+    },
+    {
+      "id": "express",
+      "label": "eXpress",
+      "tier": "A",
+      "deployment": "в контуре",
+      "features": {
+        "onprem": "✓",
+        "export": "DLP / политики",
+        "audit": "✓",
+        "search": "✓",
+        "e2ee": "✓ E2EE",
+        "vks": "до 500",
+        "mobile": "iOS/Android/Аврора",
+        "superapp": "✓ SmartApps",
+        "fstec": "✓ №4997",
+        "sizing": "частично",
+        "pricing": "✓",
+        "sla": "HA + media",
+        "sso": "✓",
+        "bots": "✓",
+        "retention": "политики",
+        "multitenant": "✓",
+        "federation": "✓",
+        "ops": "Kafka, etcd, Redis"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "—",
+        "S3": "✓",
+        "S4": "~"
+      }
+    },
+    {
+      "id": "pachka",
+      "label": "Пачка",
+      "tier": "A",
+      "deployment": "облако",
+      "features": {
+        "onprem": "—",
+        "export": "API экспорта",
+        "audit": "◐",
+        "search": "✓",
+        "e2ee": "—",
+        "vks": "до 10",
+        "mobile": "✓",
+        "superapp": "боты/API",
+        "fstec": "✓",
+        "sizing": "—",
+        "pricing": "✓",
+        "sla": "99,9%",
+        "sso": "◐",
+        "bots": "✓",
+        "retention": "облако",
+        "multitenant": "◐",
+        "federation": "—",
+        "ops": "SaaS"
+      },
+      "scenario_fit": {
+        "S1": "—",
+        "S2": "✓",
+        "S3": "—",
+        "S4": "✓"
+      }
+    },
+    {
+      "id": "vk_saas",
+      "label": "VK SaaS",
+      "tier": "A",
+      "deployment": "облако",
+      "features": {
+        "onprem": "—",
+        "export": "зависит",
+        "audit": "◐",
+        "search": "✓",
+        "e2ee": "—",
+        "vks": "✓",
+        "mobile": "✓",
+        "superapp": "workspace",
+        "fstec": "✓",
+        "sizing": "—",
+        "pricing": "✓ SaaS",
+        "sla": "SaaS",
+        "sso": "✓",
+        "bots": "◐",
+        "retention": "облако",
+        "multitenant": "◐",
+        "federation": "—",
+        "ops": "SaaS"
+      },
+      "scenario_fit": {
+        "S1": "—",
+        "S2": "✓",
+        "S3": "—",
+        "S4": "✓"
+      }
+    },
+    {
+      "id": "loop",
+      "label": "Loop",
+      "tier": "B",
+      "deployment": "в контуре / облако",
+      "features": {
+        "onprem": "✓ (Корп.)",
+        "export": "плагины",
+        "audit": "◐",
+        "search": "✓",
+        "e2ee": "опционально",
+        "vks": "звонки",
+        "mobile": "✓",
+        "superapp": "плагины",
+        "fstec": "✓ реестр",
+        "sizing": "до ~2k док.",
+        "pricing": "◐ облако",
+        "sla": "◐",
+        "sso": "◐",
+        "bots": "✓",
+        "retention": "настраивается",
+        "multitenant": "◐",
+        "federation": "—",
+        "ops": "Mattermost-fork"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "✓",
+        "S3": "~",
+        "S4": "✓"
+      }
+    },
+    {
+      "id": "rocket",
+      "label": "Rocket.Chat",
+      "tier": "B",
+      "deployment": "в контуре / облако",
+      "features": {
+        "onprem": "✓",
+        "export": "плагины",
+        "audit": "◐",
+        "search": "✓",
+        "e2ee": "E2EE opt",
+        "vks": "интеграции",
+        "mobile": "✓",
+        "superapp": "marketplace",
+        "fstec": "◐",
+        "sizing": "concurrent",
+        "pricing": "КП EE",
+        "sla": "◐",
+        "sso": "✓",
+        "bots": "✓",
+        "retention": "MongoDB",
+        "multitenant": "◐",
+        "federation": "◐",
+        "ops": "MongoDB replica"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "✓",
+        "S3": "~",
+        "S4": "~"
+      }
+    },
+    {
+      "id": "mattermost",
+      "label": "Mattermost",
+      "tier": "B",
+      "deployment": "в контуре / облако",
+      "features": {
+        "onprem": "✓",
+        "export": "плагины",
+        "audit": "◐",
+        "search": "Elasticsearch",
+        "e2ee": "опционально",
+        "vks": "интеграции",
+        "mobile": "✓",
+        "superapp": "apps",
+        "fstec": "◐",
+        "sizing": "concurrent ref",
+        "pricing": "КП EE",
+        "sla": "ref-arch",
+        "sso": "✓",
+        "bots": "✓",
+        "retention": "настраивается",
+        "multitenant": "◐",
+        "federation": "—",
+        "ops": "Go + PostgreSQL"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "✓",
+        "S3": "✓",
+        "S4": "~"
+      }
+    },
+    {
+      "id": "vk_onprem",
+      "label": "VK Superapp",
+      "tier": "B",
+      "deployment": "в контуре",
+      "features": {
+        "onprem": "✓",
+        "export": "◐",
+        "audit": "◐",
+        "search": "✓",
+        "e2ee": "—",
+        "vks": "✓",
+        "mobile": "✓",
+        "superapp": "почта+календарь",
+        "fstec": "✓",
+        "sizing": "док. @2k",
+        "pricing": "КП",
+        "sla": "◐",
+        "sso": "✓",
+        "bots": "◐",
+        "retention": "◐",
+        "multitenant": "◐",
+        "federation": "—",
+        "ops": "Superapp bundle"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "—",
+        "S3": "~",
+        "S4": "~"
+      }
+    },
+    {
+      "id": "mts_link",
+      "label": "МТС Линк",
+      "tier": "C",
+      "deployment": "облако / в контуре",
+      "features": {
+        "onprem": "✓",
+        "export": "◐",
+        "audit": "◐",
+        "search": "✓",
+        "e2ee": "—",
+        "vks": "✓ из чата",
+        "mobile": "✓",
+        "superapp": "команды, ИИ",
+        "fstec": "✓ реестр",
+        "sizing": "—",
+        "pricing": "по КП",
+        "sla": "◐",
+        "sso": "AD (док.)",
+        "bots": "◐",
+        "retention": "◐",
+        "multitenant": "◐",
+        "federation": "—",
+        "ops": "МТС"
+      },
+      "scenario_fit": {
+        "S1": "~",
+        "S2": "~",
+        "S3": "—",
+        "S4": "~"
+      }
+    },
+    {
+      "id": "compass",
+      "label": "Compass",
+      "tier": "C",
+      "deployment": "облако / в контуре",
+      "features": {
+        "onprem": "✓",
+        "export": "◐",
+        "audit": "◐",
+        "search": "✓",
+        "e2ee": "—",
+        "vks": "✓",
+        "mobile": "✓",
+        "superapp": "◐",
+        "fstec": "◐",
+        "sizing": "до 100k заявл.",
+        "pricing": "✓ от 390/490",
+        "sla": "◐",
+        "sso": "◐",
+        "bots": "✓",
+        "retention": "◐",
+        "multitenant": "◐",
+        "federation": "—",
+        "ops": "SaaS / on-prem"
+      },
+      "scenario_fit": {
+        "S1": "✓",
+        "S2": "✓",
+        "S3": "~",
+        "S4": "✓"
+      }
+    },
+    {
+      "id": "trueconf",
+      "label": "TrueConf",
+      "tier": "C",
+      "deployment": "в контуре / UC",
+      "features": {
+        "onprem": "✓",
+        "export": "◐",
+        "audit": "◐",
+        "search": "◐",
+        "e2ee": "—",
+        "vks": "✓ ядро UC",
+        "mobile": "✓",
+        "superapp": "чат + ВКС",
+        "fstec": "✓ реестр",
+        "sizing": "PRO/online",
+        "pricing": "от 23k/год",
+        "sla": "◐",
+        "sso": "LDAP/AD",
+        "bots": "◐",
+        "retention": "◐",
+        "multitenant": "◐",
+        "federation": "SIP/H.323",
+        "ops": "UC-платформа"
+      },
+      "scenario_fit": {
+        "S1": "~",
+        "S2": "—",
+        "S3": "—",
+        "S4": "~"
+      }
+    }
+  ],
+  "pros_cons": {
+    "Korus Messenger": {
+      "pros": [
+        "Предсказуемый OPEX: ~3,3 ₽/рег. пользов./мес при 100 тыс. рег. — без per-user лицензии",
+        "Комплаенс в ядре: экспорт, legal hold, dual-TTL, audit — не «на доработку»",
+        "Платформа ботов L0–L3: sidecars, bridges, admin policy — отдельный узел интеграций",
+        "В контуре заказчика: мультитenant, путь Пробник → Стандарт → Корпоративный",
+        "Пилот отделён от production-матрицы — честный TCO с 10 тыс. рег.",
+        "Инженерный эталон: health p95 11 мс, REST ~250 запр/с (QEMU, июнь 2026)"
+      ],
+      "cons": [
+        "Меньше готового супераппа (SmartApps, почта, ВКС 500)",
+        "Нативные мобильные — в дорожной карте",
+        "Промышленная приёмка E2EE — в процессе",
+        "ФСТЭК — в процессе (vs eXpress №4997)"
+      ]
+    },
+    "eXpress Corporate": {
+      "pros": [
+        "ФСТЭК №4997, сертифицированный суперапп",
+        "Публичный прайс 3 000 ₽/рег. пользов./год",
+        "ВКС до 500, SmartApps, федерация, iOS/Android/Аврора",
+        "Детальные таблицы sizing до ~1 тыс. рег. пользов."
+      ],
+      "cons": [
+        "Лицензия 83–99% TCO при 10–100 тыс. рег.",
+        "Sizing от 10 тыс. рег. — инд. проект",
+        "Тяжёлый стек: Kafka, etcd, transcoding, media",
+        "Внедрение и сопровождение — отдельно от лицензии"
+      ]
+    },
+    "Пачка (облако)": {
+      "pros": [
+        "Без своего железа; SLA 99,9%",
+        "BYOK hybrid для корпораций",
+        "399 ₽/рег. пользов./мес (год), оплата за активных",
+        "Быстрый старт, мобильные клиенты"
+      ],
+      "cons": [
+        "Не on-prem в контуре заказчика",
+        "TCO при 100 тыс. рег. ~480 млн ₽/год",
+        "Нет server sizing и air-gap",
+        "Export/compliance — слабее dedicated gate"
+      ]
+    },
+    "VK WorkSpace SaaS": {
+      "pros": [
+        "Полный workspace: почта, диск, задачи, ВКС",
+        "207 ₽/рег. пользов./мес (год) — прозрачный SaaS",
+        "Мобильные клиенты, экосистема VK"
+      ],
+      "cons": [
+        "On-prem «только чат» — инд. КП",
+        "TCO SaaS при 100 тыс. рег. ~248 млн ₽/год",
+        "Не сравнивать с IM-only без оговорки bundle",
+        "Compliance export — зависит от тарифа"
+      ]
+    },
+    "Loop": {
+      "pros": [
+        "Реестр РФ; Mattermost-совместимая линейка",
+        "On-prem на тарифе «Корпоративный» (loop.ru/pricing)",
+        "Облако от 119–199 ₽/акт. пользов./мес (публично)",
+        "Миграция из Telegram, Slack, Rocket.Chat, Mattermost"
+      ],
+      "cons": [
+        "On-prem цена — по КП (тариф «Корпоративный»)",
+        "Compliance export/legal hold — плагины, не ядро",
+        "Sizing @10k+ — не опубликован",
+        "ВКС — базовые звонки, не media-кластер eXpress"
+      ]
+    },
+    "Rocket.Chat": {
+      "pros": [
+        "Open core; on-prem и облако",
+        "Mobile, marketplace, federation (EE)",
+        "Зрелые боты и интеграции",
+        "Ref-arch по concurrent users"
+      ],
+      "cons": [
+        "EE pricing — по КП, не per-user публично",
+        "MongoDB ops и replica — overhead",
+        "Compliance РФ-аудита — самостоятельно",
+        "Concurrent ≠ рег. пользов. без пересчёта"
+      ]
+    },
+    "Mattermost EE": {
+      "pros": [
+        "Ref-arch 15k/100k concurrent (mattermost.com)",
+        "Elasticsearch-поиск, зрелый продукт",
+        "On-prem и cloud, SSO, bots",
+        "Широкое community"
+      ],
+      "cons": [
+        "Concurrent ≠ рег. пользов. Korus/eXpress",
+        "Не российский вендор; ФСТЭК — отдельный контур",
+        "Лицензия EE — по КП",
+        "Export/legal hold — плагины"
+      ]
+    },
+    "VK Superapp on-prem": {
+      "pros": [
+        "Документирован sizing @2k: 22 vCPU, 56 ГБ (workspace.vk.ru)",
+        "Почта, календарь, ВКС — полный workspace",
+        "On-prem в контуре заказчика",
+        "Реестр РФ"
+      ],
+      "cons": [
+        "Не «только мессенджер» — сравнение с оговоркой",
+        "От 10 тыс. рег. — инд. расчёт",
+        "TCO bundle выше IM-only",
+        "Export gate — не профиль «только чат»"
+      ]
+    },
+    "МТС Линк Чаты": {
+      "pros": [
+        "Реестр РФ; облако и on-prem (mts-link.ru)",
+        "ВКС из чата, команды, ИИ-помощник",
+        "iOS/Android/desktop; AD-интеграция (док.)",
+        "Часть экосистемы МТС Линк (доски, встречи)"
+      ],
+      "cons": [
+        "Публичный per-user прайс on-prem — по КП",
+        "Sizing @10k+ — не опубликован",
+        "Compliance export/dual-TTL — не заявлено как ядро",
+        "История Dialog → бренд МТС Линк — уточнять у вендора"
+      ]
+    },
+    "Compass": {
+      "pros": [
+        "Публичный прайс: облако 390 ₽, on-prem 490 ₽/рег. пользов./мес (getcompass.ru)",
+        "On-prem до 100 тыс. рег. (заявление вендора)",
+        "ВКС, боты, mobile; быстрый UX",
+        "Пробный период 30 дней"
+      ],
+      "cons": [
+        "Compliance export/legal hold — не ядро продукта",
+        "ФСТЭК — уточнять актуальный статус",
+        "Infra @10k — оценка отдельно от лицензии",
+        "Акции/reseller — цена может отличаться от прайса"
+      ]
+    },
+    "TrueConf Server": {
+      "pros": [
+        "On-prem UC + мессенджер; реестр РФ",
+        "ВКС до 1500 участников (док. вендора)",
+        "LDAP/AD; air-gap / закрытая сеть",
+        "От 23 000 ₽/год (trueconf.ru) — entry tier"
+      ],
+      "cons": [
+        "Лицензия PRO/online/guest — не простой ₽/reg",
+        "Фокус UC/ВКС, не pure IM compliance",
+        "Поиск/архив слабее Solr/export gate",
+        "TCO @10k — калькулятор + менеджер, не оферта"
+      ]
+    }
+  },
+  "radar": {
+    "max": 5,
+    "axes": [
+      {
+        "id": "compliance",
+        "label": "Комплаенс"
+      },
+      {
+        "id": "security",
+        "label": "E2EE / ИБ"
+      },
+      {
+        "id": "economics",
+        "label": "Экономика"
+      },
+      {
+        "id": "product",
+        "label": "Функции"
+      },
+      {
+        "id": "scale",
+        "label": "Масштабирование"
+      },
+      {
+        "id": "reg",
+        "label": "Реестр / ФСТЭК"
+      }
+    ],
+    "series": [
+      {
+        "id": "korus",
+        "label": "Korus",
+        "color": "#22c55e",
+        "scores": [
+          5,
+          4,
+          4,
+          5,
+          5,
+          3
+        ]
+      },
+      {
+        "id": "express",
+        "label": "eXpress",
+        "color": "#6366f1",
+        "scores": [
+          4,
+          5,
+          2,
+          5,
+          3,
+          5
+        ]
+      },
+      {
+        "id": "loop",
+        "label": "Loop",
+        "color": "#f59e0b",
+        "scores": [
+          2,
+          3,
+          4,
+          4,
+          2,
+          4
+        ]
+      },
+      {
+        "id": "compass",
+        "label": "Compass",
+        "color": "#ec4899",
+        "scores": [
+          2,
+          2,
+          3,
+          4,
+          3,
+          3
+        ]
+      },
+      {
+        "id": "mts_link",
+        "label": "МТС Линк",
+        "color": "#ef4444",
+        "scores": [
+          3,
+          2,
+          2,
+          4,
+          2,
+          5
+        ]
+      },
+      {
+        "id": "rocket",
+        "label": "Rocket.Chat",
+        "color": "#0ea5e9",
+        "scores": [
+          2,
+          3,
+          2,
+          4,
+          3,
+          2
+        ]
+      },
+      {
+        "id": "trueconf",
+        "label": "TrueConf",
+        "color": "#8b5cf6",
+        "scores": [
+          2,
+          3,
+          2,
+          3,
+          4,
+          4
+        ]
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "S1",
+      "title": "Изолированный контур + комплаенс"
+    },
+    {
+      "id": "S2",
+      "title": "Облако / быстрый старт"
+    },
+    {
+      "id": "S3",
+      "title": "Миграция с legacy IM"
+    },
+    {
+      "id": "S4",
+      "title": "Ценовое давление (рынок РФ)"
+    }
+  ]
+}

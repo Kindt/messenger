@@ -19,6 +19,7 @@
 
 | Документ | Содержание |
 |----------|------------|
+| **[Презентация продукта](docs/index.html)** | **GitHub Pages:** 4 вкладки (РП, tech, sales, user), Block 0 «рабочий прототип», rebuild: [`scripts/presentation/README.md`](scripts/presentation/README.md) |
 | **`modules/web-client`** | Веб-клиент на **Java + встроенный Tomcat** (см. **`modules/web-client/README.md`**): статика **`webui/`**, прокси **`/api/*`** на **`WEB_CLIENT_API_UPSTREAM`**; URL WebSocket — **`WEB_CLIENT_WS_PUBLIC_URL`** (**`WebClientEnvServlet`**). Запуск: **`.\gradlew.bat :modules:web-client:run`**, порт **`WEB_CLIENT_PORT`** (9080). Образ: **`docker/Dockerfile.web-client`**. |
 | **`korus-web/`** | **Отдельное развёртывание** в Docker: **`docker compose up`** из каталога — две реплики клиента + **nginx** (балансировка HTTP, прокси **`/ws`** на ws-gateway). Опционально **`docker-compose.attach.yml`** — та же Docker-сеть, что и **`docker-compose.dev-min.yml`** (**`core-api`** / **`ws-gateway`** по именам). Подробности: **`korus-web/README.md`**, переменные — **`korus-web/.env.example`**. |
 | **`deploy/two-host/`** | **Два хоста в LAN:** машина 1 — **`scripts/server-host-up.*`** или **Ansible** `deploy/ansible/playbooks/server-only.yml`; машина 2 — **`scripts/web-host-up.*`** или Ansible `web-only.yml`. Linux: **`deploy/ansible/playbooks/site.yml`**. Hot-swap UI: **`dev-overlay/`**, … Чеклист: **`deploy/two-host/README.md`**. |

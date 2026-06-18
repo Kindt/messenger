@@ -30,7 +30,7 @@
 
 
 
-**Presentation source:** [`docs/PRODUCT_PRESENTATION.md`](../../docs/PRODUCT_PRESENTATION.md) §4
+**Presentation source:** [`docs/index.html`](../../docs/index.html) (spec 018 product deck)
 
 
 

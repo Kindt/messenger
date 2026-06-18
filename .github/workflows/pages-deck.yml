@@ -1,0 +1,27 @@
+name: pages-deck-smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/index.html'
+      - 'scripts/presentation/**'
+  pull_request:
+    paths:
+      - 'docs/index.html'
+      - 'scripts/presentation/**'
+
+jobs:
+  deck-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Presentation tests
+        run: python -m pytest scripts/presentation/ -q
+      - name: smoke_deck
+        run: python scripts/presentation/smoke_deck.py
+      - name: analyze_deck
+        run: python scripts/presentation/analyze_deck.py --verbose
