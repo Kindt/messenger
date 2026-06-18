@@ -19,6 +19,7 @@
 - **Keycloak sync:** `KeycloakAuthSyncClient` — LDAP user federation + OIDC/SAML brokers from admin policy.
 - **Web UI:** dynamic login screen (SSO buttons, registration gate from policy).
 - **Dev:** `docker/docker-compose.openldap-dev.yml`, `scripts/smoke-ldap-auth.sh`, Playwright `auth-login-options.spec.ts`.
+- **Fix:** `V042__default_login_org` + `KORUS_DEFAULT_ORG_ID` — login-options 200 на QEMU при нескольких org без slug.
 
 ### 2026-06-17 — L0+ menu v2 (spec 014) + spec 016 chat message actions
 

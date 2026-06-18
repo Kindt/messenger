@@ -125,6 +125,8 @@ services:
       MEDIA_MAX_UPLOAD_BYTES: "52428800"
       JITSI_MEET_BASE_URL: https://meet.jit.si
       WEBRTC_STUN_URIS: stun:stun.l.google.com:19302
+      KORUS_DEFAULT_ORG_ID: "11111111-1111-4111-8111-111111111111"
+      WEB_PUBLIC_BASE_URL: "http://127.0.0.1:19088/"
     depends_on:
       postgres-hot:
         condition: service_healthy

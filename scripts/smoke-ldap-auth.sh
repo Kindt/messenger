@@ -7,7 +7,7 @@ URL="$API/api/v1/auth/login-options"
 
 echo "=== smoke-ldap-auth GET $URL ==="
 code=$(curl -sS -o /tmp/korus-login-options.json -w "%{http_code}" "$URL")
-if [ "$code" != "200" ] && [ "$code" != "404" ]; then
+if [ "$code" != "200" ]; then
   echo "[FAIL] login-options HTTP $code"
   cat /tmp/korus-login-options.json
   exit 1

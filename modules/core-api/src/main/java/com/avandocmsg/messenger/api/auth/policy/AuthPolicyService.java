@@ -133,7 +133,14 @@ public class AuthPolicyService {
         }
         var defaultId = appConfig.defaultOrgId();
         if (defaultId.isPresent()) {
-            return organizationRepository.findById(defaultId.get());
+            var byDefault = organizationRepository.findById(defaultId.get());
+            if (byDefault.isPresent()) {
+                return byDefault;
+            }
+        }
+        var byDevSlug = organizationRepository.findBySlug("dev");
+        if (byDevSlug.isPresent()) {
+            return byDevSlug;
         }
         return organizationRepository.findSingle();
     }
