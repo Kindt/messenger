@@ -82,6 +82,7 @@ class AdminExportComplianceSeedH2Test {
                   deleted BOOLEAN NOT NULL DEFAULT false,
                   visibility_ttl_seconds INT,
                   attachment_file_id UUID,
+                  voice_duration_ms INT,
                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                   edited_at TIMESTAMP
                 )

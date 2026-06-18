@@ -113,6 +113,21 @@ public class ChatResource {
             return Response.status(Response.Status.CREATED).entity(chat).build();
         }
 
+        if ("channel".equals(request.type())) {
+            if (request.memberIds() != null) {
+                for (var mid : request.memberIds()) {
+                    UuidParams.required(mid, "member_id");
+                }
+            }
+            var chat = chatService.createChannel(request.title(), userId, request.memberIds());
+            if (chat == null) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ApiError(400, messages.get("error.chat.cannot_create_channel")))
+                    .build();
+            }
+            return Response.status(Response.Status.CREATED).entity(chat).build();
+        }
+
         return Response.status(Response.Status.BAD_REQUEST)
             .entity(new ApiError(400, messages.get("error.chat.invalid_type")))
             .build();

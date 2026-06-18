@@ -16,5 +16,7 @@ public record SendMessageRequest(
     @Schema(description = "Срок переноса тела в deep-archive в секундах; null = без archive TTL", example = "86400")
     @JsonProperty("archive_ttl_seconds") Integer archiveTtlSeconds,
     @Schema(description = "E2EE scheme: mls (RFC 9420 wire) or legacy (client-side X25519)", example = "mls")
-    @JsonProperty("e2ee_scheme") String e2eeScheme
+    @JsonProperty("e2ee_scheme") String e2eeScheme,
+    @Schema(description = "Voice message duration in milliseconds (type=voice)")
+    @JsonProperty("duration_ms") Integer durationMs
 ) {}

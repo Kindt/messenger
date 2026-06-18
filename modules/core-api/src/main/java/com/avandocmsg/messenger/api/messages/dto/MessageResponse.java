@@ -32,6 +32,11 @@ public record MessageResponse(
     @JsonProperty("mention_user_ids") java.util.List<String> mentionUserIds,
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonProperty("mention_all") Boolean mentionAll,
+    @Schema(description = "Voice message duration in milliseconds")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("duration_ms") Integer durationMs,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("link_preview") MessageLinkPreview linkPreview,
     @Schema(description = "Preview of parent message when replying")
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonProperty("reply_preview") MessageReplyPreview replyPreview
@@ -50,7 +55,7 @@ public record MessageResponse(
         String attachmentFileId
     ) {
         this(id, chatId, senderId, type, content, replyToMsgId, deleted, createdAt, editedAt,
-            visibilityTtlSeconds, attachmentFileId, null, null, null, null, null);
+            visibilityTtlSeconds, attachmentFileId, null, null, null, null, null, null, null);
     }
 
     public MessageResponse(
@@ -68,6 +73,6 @@ public record MessageResponse(
         MessageReplyPreview replyPreview
     ) {
         this(id, chatId, senderId, type, content, replyToMsgId, deleted, createdAt, editedAt,
-            visibilityTtlSeconds, attachmentFileId, null, null, null, null, replyPreview);
+            visibilityTtlSeconds, attachmentFileId, null, null, null, null, null, null, replyPreview);
     }
 }

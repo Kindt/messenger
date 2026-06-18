@@ -83,7 +83,7 @@ class MessageApplicationServiceWriteTest {
         chatRepo.bannedUsers.add(bannedUserId);
 
         var result = messageService.sendMessage(chatId, bannedUserId,
-            new SendMessageRequest("text", "hello", null, null, null, null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null, null, null, null), null);
 
         assertNull(result);
     }
@@ -91,7 +91,7 @@ class MessageApplicationServiceWriteTest {
     @Test
     void sendMessage_allowsNonBannedUser() {
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null, null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null, null, null, null), null);
 
         assertNotNull(result);
         assertEquals("text", result.type());
@@ -105,7 +105,7 @@ class MessageApplicationServiceWriteTest {
         blockRepo.blockedPairs.add(userId.toString() + ":" + peer);
 
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null, null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null, null, null, null), null);
 
         assertNull(result);
         assertTrue(messageService.sendBlockedReason(chatId, userId).isPresent());
@@ -116,7 +116,7 @@ class MessageApplicationServiceWriteTest {
         mlsService.encryptResult = "encrypted_hello";
 
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null, null, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, null, null, null, null), null);
 
         assertNotNull(result);
         assertEquals("e2ee-text", result.type());
@@ -126,7 +126,7 @@ class MessageApplicationServiceWriteTest {
     void sendMessage_passesTtlToRepository() {
         msgRepo.lastInsertVisibilityTtl = null;
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", null, null, null, 120, null, null), null);
+            new SendMessageRequest("text", "hello", null, null, null, 120, null, null, null), null);
 
         assertNotNull(result);
         assertEquals(120, msgRepo.lastInsertVisibilityTtl);
@@ -138,7 +138,7 @@ class MessageApplicationServiceWriteTest {
         var replyId = UUID.randomUUID();
         msgRepo.lastInsertReplyTo = null;
         var result = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("text", "hello", replyId.toString(), null, null, null, null, null), replyId);
+            new SendMessageRequest("text", "hello", replyId.toString(), null, null, null, null, null, null), replyId);
 
         assertNotNull(result);
         assertEquals(replyId, msgRepo.lastInsertReplyTo);
@@ -260,7 +260,7 @@ class MessageApplicationServiceWriteTest {
         var fileId = UUID.randomUUID();
         mlsService.encryptResult = "encrypted_blob";
         var sent = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("e2ee-file", fileId.toString(), null, null, null, null, null, null), null);
+            new SendMessageRequest("e2ee-file", fileId.toString(), null, null, null, null, null, null, null), null);
         assertNotNull(sent);
         assertEquals(fileId.toString(), sent.attachmentFileId());
         assertEquals(1, msgRepo.messages.size());
@@ -398,6 +398,14 @@ class MessageApplicationServiceWriteTest {
         public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
                                        UUID replyToMsgId, String clientMsgId, Integer visibilityTtlSeconds) {
             return insert(id, chatId, senderId, type, content, replyToMsgId, clientMsgId, visibilityTtlSeconds, null);
+        }
+
+        @Override
+        public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
+                                       UUID replyToMsgId, UUID threadId, String clientMsgId,
+                                       Integer visibilityTtlSeconds, UUID attachmentFileId, Integer voiceDurationMs) {
+            return insert(id, chatId, senderId, type, content, replyToMsgId, clientMsgId, visibilityTtlSeconds,
+                attachmentFileId);
         }
 
         @Override

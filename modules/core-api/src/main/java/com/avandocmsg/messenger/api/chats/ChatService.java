@@ -78,6 +78,27 @@ public class ChatService {
         return chatRepository.findById(chatId, ownerId).orElse(null);
     }
 
+    public ChatResponse createChannel(String title, UUID ownerId, List<String> memberIds) {
+        if (title == null || title.isBlank()) {
+            return null;
+        }
+        var chatId = uuidGenerator.randomUuid();
+        var chat = chatRepository.createChannel(chatId, title, ownerId);
+        if (chat == null) {
+            return null;
+        }
+        if (memberIds != null) {
+            for (var mid : memberIds) {
+                var memberUuid = UUID.fromString(mid);
+                if (!memberUuid.equals(ownerId)) {
+                    chatRepository.addMember(chatId, memberUuid, "member");
+                }
+            }
+        }
+        invalidateChatMutationForMembers(ownerId, memberIds);
+        return chatRepository.findById(chatId, ownerId).orElse(null);
+    }
+
     public ChatResponse findOrCreateP2P(UUID user1Id, UUID user2Id) {
         if (user1Id.equals(user2Id)) {
             return null;

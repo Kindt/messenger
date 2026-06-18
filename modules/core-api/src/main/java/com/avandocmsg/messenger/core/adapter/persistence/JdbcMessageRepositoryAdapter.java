@@ -42,7 +42,8 @@ public final class JdbcMessageRepositoryAdapter implements MessageRepositoryPort
             command.threadId(),
             command.clientMsgId(),
             command.visibilityTtlSeconds(),
-            command.attachmentFileId());
+            command.attachmentFileId(),
+            command.voiceDurationMs());
         if (response == null) {
             return Optional.empty();
         }

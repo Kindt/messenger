@@ -245,6 +245,7 @@ public class BotResource {
             request.clientMsgId(),
             null,
             null,
+            null,
             null);
         var msg = botService.sendMessage(botUserId, chatId, sendRequest);
         if (msg == null) {

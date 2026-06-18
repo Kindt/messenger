@@ -17,5 +17,6 @@ public record MessageInsert(
     UUID threadId,
     String clientMsgId,
     Integer visibilityTtlSeconds,
-    UUID attachmentFileId
+    UUID attachmentFileId,
+    Integer voiceDurationMs
 ) {}

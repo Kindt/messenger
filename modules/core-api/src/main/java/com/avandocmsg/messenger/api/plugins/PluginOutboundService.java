@@ -59,6 +59,7 @@ public class PluginOutboundService {
                 "plugin-outbound-" + UUID.randomUUID(),
                 null,
                 null,
+                null,
                 null
             );
             var msg = messageApplicationService.sendMessage(

@@ -56,6 +56,7 @@ class JdbcMessageRepositoryAdapterH2Test {
                   deleted BOOLEAN NOT NULL DEFAULT false,
                   visibility_ttl_seconds INT,
                   attachment_file_id UUID,
+                  voice_duration_ms INT,
                   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                   edited_at TIMESTAMP
                 )
@@ -86,6 +87,7 @@ class JdbcMessageRepositoryAdapterH2Test {
             null,
             "client-1",
             3600,
+            null,
             null));
         assertTrue(inserted.isPresent());
         assertEquals("hello hex", inserted.get().content());

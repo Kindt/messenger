@@ -38,7 +38,13 @@
     export DOCKER_BUILDKIT={{ korus_docker_buildkit | default('1') }}
     export COMPOSE_BAKE={{ korus_compose_bake | default('1') }}
     export KORUS_FLEET_LAB={{ 1 if (korus_fleet_lab | default(false) | bool) else 0 }}
-    {% if korus_fleet_lab | default(false) | bool and korus_fleet_targets_json is defined %}
+    {% if korus_fleet_lab | default(false) | bool %}
+    if [[ -f docker/fleet-targets.qemu.json ]]; then
+      export FLEET_TARGETS_JSON="$(tr -d '\n\r' < docker/fleet-targets.qemu.json)"
+    elif [[ -f docker/fleet-targets.lab.json ]]; then
+      export FLEET_TARGETS_JSON="$(tr -d '\n\r' < docker/fleet-targets.lab.json)"
+    fi
+    {% elif korus_fleet_targets_json is defined %}
     export FLEET_TARGETS_JSON='{{ korus_fleet_targets_json }}'
     {% endif %}
     if [[ -f "{{ korus_server_env_path }}" ]]; then
@@ -112,3 +118,10 @@
     executable: /bin/bash
   changed_when: false
   when: (korus_deploy_profile | default('standard')) != 'pilot'
+
+- name: Media enterprise profile notes (spec 022)
+  ansible.builtin.debug:
+    msg: "media_enterprise tag applied — see docs/sizing/MEDIA_ENTERPRISE.md and docker compose overlays"
+  tags:
+    - media_enterprise
+    - never

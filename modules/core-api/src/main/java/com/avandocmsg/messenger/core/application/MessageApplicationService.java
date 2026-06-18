@@ -204,7 +204,19 @@ public final class MessageApplicationService {
         if (isP2PMessagingBlocked(chatId, senderId)) {
             return Optional.of("error.message.send_denied.blocked");
         }
+        if (isChannelMemberPostDenied(chatId, senderId)) {
+            return Optional.of("error.message.send_denied.channel_readonly");
+        }
         return Optional.empty();
+    }
+
+    private boolean isChannelMemberPostDenied(UUID chatId, UUID senderId) {
+        var type = chatRepository.getChatType(chatId).orElse(null);
+        if (!"channel".equals(type)) {
+            return false;
+        }
+        var role = chatRepository.getMemberRole(chatId, senderId);
+        return "member".equals(role);
     }
 
     public MessageResponse sendMessage(UUID chatId, UUID senderId, SendMessageRequest request, UUID replyToMsgId) {

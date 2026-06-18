@@ -54,7 +54,8 @@ public final class MessageSendSupport {
             return null;
         }
         var base = type.startsWith("e2ee-") ? type.substring(5) : type;
-        if (!"file".equals(base) && !"image".equals(base) && !"video".equals(base)) {
+        if (!"file".equals(base) && !"image".equals(base) && !"video".equals(base)
+            && !"voice".equals(base) && !"audio".equals(base)) {
             return null;
         }
         try {

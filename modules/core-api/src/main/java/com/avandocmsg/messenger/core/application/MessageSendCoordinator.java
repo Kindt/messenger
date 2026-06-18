@@ -102,7 +102,8 @@ public final class MessageSendCoordinator {
             threadId,
             request.clientMsgId(),
             request.visibilityTtlSeconds(),
-            attachmentFileId));
+            attachmentFileId,
+            voiceDurationMs(request)));
         if (inserted.isEmpty()) {
             return null;
         }
@@ -144,7 +145,8 @@ public final class MessageSendCoordinator {
             null,
             null,
             null,
-            attachmentFileId));
+            attachmentFileId,
+            null));
         if (inserted.isEmpty()) {
             return null;
         }
@@ -152,6 +154,13 @@ public final class MessageSendCoordinator {
         publishSendEvent(msg, null);
         invalidateUnreadForChatMembers(targetChatId, userId);
         return msg;
+    }
+
+    private static Integer voiceDurationMs(SendMessageRequest request) {
+        if (request == null || request.type() == null || !"voice".equalsIgnoreCase(request.type())) {
+            return null;
+        }
+        return request.durationMs();
     }
 
     public void publishSendEvent(MessageResponse msg, String clientMsgId) {

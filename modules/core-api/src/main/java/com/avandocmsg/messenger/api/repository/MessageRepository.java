@@ -31,12 +31,12 @@ public class MessageRepository {
         "CASE WHEN p.type LIKE 'e2ee-%' THEN NULL ELSE p.content END AS reply_preview_content";
     private static final String SQL_MESSAGE_COLUMNS =
         "m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.thread_id, m.deleted, m.created_at, "
-            + "m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id";
+            + "m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id, m.voice_duration_ms";
     private static final String SQL_LIST_MESSAGE_COLUMNS =
         "m.id, m.chat_id, m.sender_id, m.type, "
             + SQL_LIST_CONTENT_PROJECTION
             + ", m.reply_to_msg_id, m.thread_id, m.deleted, m.created_at, "
-            + "m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id";
+            + "m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id, m.voice_duration_ms";
     private static final String SQL_THREAD_VISIBILITY_VISIBLE =
         "(tr.visibility_ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tr.created_at)) < tr.visibility_ttl_seconds)";
     private static final String SQL_THREAD_REPLY_COUNT =
@@ -113,7 +113,67 @@ public class MessageRepository {
                     m.threadId(), m.threadReplyCount(),
                     summary.userIds().isEmpty() ? null : summary.userIds(),
                     summary.mentionAll() ? true : null,
+                    m.durationMs(),
+                    m.linkPreview(),
                     m.replyPreview()));
+            } catch (IllegalArgumentException ignored) {
+                // skip
+            }
+        }
+    }
+
+    private void attachLinkPreviews(List<MessageResponse> messages) {
+        if (messages == null || messages.isEmpty() || dataSource == null) {
+            return;
+        }
+        var ids = new ArrayList<UUID>(messages.size());
+        for (var m : messages) {
+            try {
+                ids.add(UUID.fromString(m.id()));
+            } catch (IllegalArgumentException ignored) {
+                // skip
+            }
+        }
+        if (ids.isEmpty()) {
+            return;
+        }
+        var sql = new StringBuilder(
+            "SELECT message_id, url, title FROM message_link_previews WHERE message_id IN (");
+        for (int i = 0; i < ids.size(); i++) {
+            sql.append(i == 0 ? "?" : ", ?");
+        }
+        sql.append(")");
+        var previews = new HashMap<UUID, com.avandocmsg.messenger.api.messages.dto.MessageLinkPreview>();
+        try (var conn = read().getConnection();
+             var stmt = conn.prepareStatement(sql.toString())) {
+            int idx = 1;
+            for (var id : ids) {
+                stmt.setObject(idx++, id);
+            }
+            try (var rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    var msgId = rs.getObject("message_id", UUID.class);
+                    previews.put(msgId, new com.avandocmsg.messenger.api.messages.dto.MessageLinkPreview(
+                        rs.getString("url"),
+                        rs.getString("title")));
+                }
+            }
+        } catch (Exception e) {
+            log.debug("attachLinkPreviews skipped: {}", e.getMessage());
+            return;
+        }
+        for (int i = 0; i < messages.size(); i++) {
+            var m = messages.get(i);
+            try {
+                var preview = previews.get(UUID.fromString(m.id()));
+                if (preview == null) {
+                    continue;
+                }
+                messages.set(i, new MessageResponse(
+                    m.id(), m.chatId(), m.senderId(), m.type(), m.content(), m.replyToMsgId(),
+                    m.deleted(), m.createdAt(), m.editedAt(), m.visibilityTtlSeconds(), m.attachmentFileId(),
+                    m.threadId(), m.threadReplyCount(), m.mentionUserIds(), m.mentionAll(),
+                    m.durationMs(), preview, m.replyPreview()));
             } catch (IllegalArgumentException ignored) {
                 // skip
             }
@@ -135,10 +195,17 @@ public class MessageRepository {
     public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
                                   UUID replyToMsgId, UUID threadId, String clientMsgId,
                                   Integer visibilityTtlSeconds, UUID attachmentFileId) {
+        return insert(id, chatId, senderId, type, content, replyToMsgId, threadId, clientMsgId,
+            visibilityTtlSeconds, attachmentFileId, null);
+    }
+
+    public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
+                                  UUID replyToMsgId, UUID threadId, String clientMsgId,
+                                  Integer visibilityTtlSeconds, UUID attachmentFileId, Integer voiceDurationMs) {
         var sql = """
             INSERT INTO messages (id, chat_id, sender_id, type, content, reply_to_msg_id, thread_id, client_msg_id,
-                visibility_ttl_seconds, attachment_file_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())
+                visibility_ttl_seconds, attachment_file_id, voice_duration_ms, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
@@ -152,12 +219,18 @@ public class MessageRepository {
             stmt.setObject(8, clientMsgId);
             stmt.setObject(9, visibilityTtlSeconds);
             stmt.setObject(10, attachmentFileId);
+            if (voiceDurationMs != null) {
+                stmt.setInt(11, voiceDurationMs);
+            } else {
+                stmt.setObject(11, null);
+            }
             stmt.executeUpdate();
             return new MessageResponse(id.toString(), chatId.toString(), senderId.toString(),
                 type != null ? type : "text", content, replyToMsgId != null ? replyToMsgId.toString() : null,
                 false, clock.instant(), null, visibilityTtlSeconds,
                 attachmentFileId != null ? attachmentFileId.toString() : null,
-                threadId != null ? threadId.toString() : null, null, null, null, null);
+                threadId != null ? threadId.toString() : null, null, null, null,
+                voiceDurationMs, null, null);
         } catch (Exception e) {
             log.error("Failed to insert message", e);
             return null;
@@ -197,6 +270,7 @@ public class MessageRepository {
                 if (rs.next()) {
                     var msg = mapMessage(rs);
                     attachMentions(List.of(msg));
+                    attachLinkPreviews(List.of(msg));
                     return Optional.of(msg);
                 }
             }
@@ -268,6 +342,7 @@ public class MessageRepository {
             log.error("Failed to find messages for chat {}", chatId, e);
         }
         attachMentions(result);
+        attachLinkPreviews(result);
         return result;
     }
 
@@ -657,6 +732,10 @@ public class MessageRepository {
                 threadReplyCount = n.intValue();
             }
         }
+        Integer durationMs = null;
+        if (hasColumn(rs, "voice_duration_ms")) {
+            durationMs = (Integer) rs.getObject("voice_duration_ms");
+        }
         return new MessageResponse(
             rs.getObject("id", UUID.class).toString(),
             rs.getObject("chat_id", UUID.class).toString(),
@@ -672,6 +751,8 @@ public class MessageRepository {
             threadId != null ? threadId.toString() : null,
             threadReplyCount,
             null,
+            null,
+            durationMs,
             null,
             mapReplyPreview(rs)
         );

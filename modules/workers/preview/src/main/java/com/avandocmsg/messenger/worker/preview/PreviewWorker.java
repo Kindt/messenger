@@ -30,6 +30,7 @@ public class PreviewWorker {
     private final Connection connection;
     private final DataSource previewDataSource;
     private final MessageContentLoader contentLoader;
+    private final MessageLinkPreviewStore linkPreviewStore;
     private final LinkPreviewFetcher fetcher;
     private final TtlStringCache cache;
     private final String previewTestUrl;
@@ -40,6 +41,7 @@ public class PreviewWorker {
         this.previewDataSource = previewDataSource;
         this.workerMessages = workerMessages;
         this.contentLoader = previewDataSource != null ? new MessageContentLoader(previewDataSource, workerMessages) : null;
+        this.linkPreviewStore = previewDataSource != null ? new MessageLinkPreviewStore(previewDataSource) : null;
         this.fetcher = fetcher;
         this.cache = cache;
         this.previewTestUrl = previewTestUrl != null && !previewTestUrl.isBlank() ? previewTestUrl.trim() : null;
@@ -98,6 +100,9 @@ public class PreviewWorker {
         }
         var title = fetcher.fetchPreviewTitle(targetUrl).orElse("(no title)");
         cache.put(targetUrl, title);
+        if (linkPreviewStore != null) {
+            linkPreviewStore.upsert(UUID.fromString(event.messageId()), targetUrl, title);
+        }
         log.info(workerMessages.format("worker.preview.link_preview", event.messageId(), targetUrl, title));
     }
 

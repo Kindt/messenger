@@ -24,6 +24,8 @@ public final class MessageDomainMapper {
             null,
             null,
             null,
+            null,
+            null,
             null);
     }
 }

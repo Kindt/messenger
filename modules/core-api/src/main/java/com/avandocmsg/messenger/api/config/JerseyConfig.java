@@ -18,6 +18,7 @@ import com.avandocmsg.messenger.api.contacts.ContactService;
 import com.avandocmsg.messenger.api.contacts.SearchResource;
 import com.avandocmsg.messenger.api.crypto.CryptoResource;
 import com.avandocmsg.messenger.api.devices.DeviceResource;
+import com.avandocmsg.messenger.api.admin.AdminMigrationImportResource;
 import com.avandocmsg.messenger.api.admin.AdminResource;
 import com.avandocmsg.messenger.api.admin.fleet.FleetSnapshotService;
 import com.avandocmsg.messenger.api.admin.ui.AdminServerStatsService;
@@ -249,6 +250,7 @@ public class JerseyConfig extends ResourceConfig {
         register(com.avandocmsg.messenger.api.scim.ScimUsersResource.class);
         register(com.avandocmsg.messenger.api.scim.ScimGroupsResource.class);
         register(AdminResource.class);
+        register(AdminMigrationImportResource.class);
         register(AdminConsoleRedirectResource.class);
         register(AdminUiResource.class);
         register(UserResource.class);

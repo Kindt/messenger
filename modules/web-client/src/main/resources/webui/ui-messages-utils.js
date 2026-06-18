@@ -91,6 +91,7 @@
   function messageTypeForMime(mime) {
     if (mime && mime.indexOf("image/") === 0) return "image";
     if (mime && mime.indexOf("video/") === 0) return "video";
+    if (mime && mime.indexOf("audio/") === 0) return "audio";
     return "file";
   }
 

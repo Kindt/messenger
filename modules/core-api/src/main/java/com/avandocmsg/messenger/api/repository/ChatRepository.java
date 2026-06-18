@@ -155,6 +155,45 @@ public class ChatRepository {
         }
     }
 
+    public ChatResponse createChannel(UUID chatId, String title, UUID ownerId) {
+        var sql = """
+            INSERT INTO chats (id, title, type, owner_id, channel_post_policy, created_at, updated_at)
+            VALUES (?, ?, 'channel', ?, 'admins_only', now(), now())
+            """;
+        try (var conn = dataSource.getConnection()) {
+            conn.setAutoCommit(false);
+            try (var stmt = conn.prepareStatement(sql)) {
+                stmt.setObject(1, chatId);
+                stmt.setString(2, title);
+                stmt.setObject(3, ownerId);
+                stmt.executeUpdate();
+            }
+            addMemberInternal(conn, chatId, ownerId, "owner");
+            conn.commit();
+            return new ChatResponse(chatId.toString(), title, "channel", ownerId.toString(), 1, false, false, null,
+                clock.instant(), null, null, "admins_only");
+        } catch (Exception e) {
+            log.error("Failed to create channel", e);
+            return null;
+        }
+    }
+
+    public Optional<String> getChatType(UUID chatId) {
+        var sql = "SELECT type FROM chats WHERE id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, chatId);
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.ofNullable(rs.getString("type"));
+                }
+            }
+        } catch (Exception e) {
+            log.error("getChatType failed chatId={}", chatId, e);
+        }
+        return Optional.empty();
+    }
+
     public ChatResponse createP2P(UUID chatId, UUID user1Id, UUID user2Id) {
         var sql = "INSERT INTO chats (id, title, type, owner_id, created_at, updated_at) VALUES (?, '', 'p2p', ?, now(), now())";
         try (var conn = dataSource.getConnection()) {
@@ -199,7 +238,7 @@ public class ChatRepository {
     public List<ChatResponse> listByUser(UUID userId) {
         var sql = """
             SELECT c.id, c.title, c.type, c.owner_id, cm.muted, cm.personal_filter_active,
-                   c.ttl_seconds, c.created_at,
+                   c.ttl_seconds, c.created_at, c.channel_post_policy, cm.archived_at, cm.folder_tag,
                    (SELECT COUNT(*) FROM chat_members WHERE chat_id = c.id) AS member_count
             FROM chats c
             JOIN chat_members cm ON cm.chat_id = c.id
@@ -263,7 +302,7 @@ public class ChatRepository {
     public Optional<ChatResponse> findById(UUID chatId, UUID userId) {
         var sql = """
             SELECT c.id, c.title, c.type, c.owner_id, cm.muted, cm.personal_filter_active,
-                   c.ttl_seconds, c.created_at,
+                   c.ttl_seconds, c.created_at, c.channel_post_policy, cm.archived_at, cm.folder_tag,
                    (SELECT COUNT(*) FROM chat_members WHERE chat_id = c.id) AS member_count
             FROM chats c
             INNER JOIN chat_members cm ON cm.chat_id = c.id AND cm.user_id = ? AND cm.banned = false
@@ -542,22 +581,6 @@ public class ChatRepository {
         return result;
     }
 
-    public Optional<String> getChatType(UUID chatId) {
-        var sql = "SELECT type FROM chats WHERE id = ?";
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, chatId);
-            try (var rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.of(rs.getString("type"));
-                }
-            }
-        } catch (Exception e) {
-            log.error("Failed to read chat type {}", chatId, e);
-        }
-        return Optional.empty();
-    }
-
     private void addMemberInternal(java.sql.Connection conn, UUID chatId, UUID userId, String role) throws Exception {
         var sql = "INSERT INTO chat_members (chat_id, user_id, role, joined_at) VALUES (?, ?, ?, now())";
         try (var stmt = conn.prepareStatement(sql)) {
@@ -569,6 +592,13 @@ public class ChatRepository {
     }
 
     private ChatResponse mapChat(ResultSet rs) throws Exception {
+        Boolean archived = null;
+        if (hasColumn(rs, "archived_at")) {
+            var archivedTs = rs.getTimestamp("archived_at");
+            archived = archivedTs != null;
+        }
+        String folderTag = hasColumn(rs, "folder_tag") ? rs.getString("folder_tag") : null;
+        String channelPolicy = hasColumn(rs, "channel_post_policy") ? rs.getString("channel_post_policy") : null;
         return new ChatResponse(
             rs.getObject("id", UUID.class).toString(),
             rs.getString("title"),
@@ -578,7 +608,18 @@ public class ChatRepository {
             rs.getBoolean("muted"),
             rs.getBoolean("personal_filter_active"),
             rs.getObject("ttl_seconds", Integer.class),
-            rs.getTimestamp("created_at").toInstant()
-        );
+            rs.getTimestamp("created_at").toInstant(),
+            archived,
+            folderTag,
+            channelPolicy);
+    }
+
+    private static boolean hasColumn(ResultSet rs, String column) {
+        try {
+            rs.findColumn(column);
+            return true;
+        } catch (SQLException e) {
+            return false;
+        }
     }
 }

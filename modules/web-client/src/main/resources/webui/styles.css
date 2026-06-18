@@ -2144,3 +2144,70 @@ button {
   border-top: 1px solid var(--border);
   margin-top: auto;
 }
+
+.msg-thread-badge,
+.chat-type-badge.channel {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--panel2);
+  color: var(--muted);
+  margin-right: 6px;
+}
+
+.msg-voice-player {
+  width: 100%;
+  max-width: 280px;
+  margin-top: 4px;
+}
+
+.msg-link-preview {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel2);
+  max-width: 360px;
+}
+
+.msg-link-preview-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.msg-link-preview-url {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.msg-reaction-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  z-index: 1200;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.msg-reaction-picker-item {
+  border: none;
+  background: transparent;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.msg-reaction-picker-item:hover {
+  background: var(--panel2);
+}
+
+.composer-format .btn.active {
+  background: var(--accent);
+  color: #fff;
+}

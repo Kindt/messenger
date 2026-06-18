@@ -4171,7 +4171,7 @@
   function messageAttachmentKind(m) {
     if (!m || !m.type) return null;
     var base = e2eePlainType(m.type);
-    if (base === "image" || base === "video" || base === "file") return base;
+    if (base === "image" || base === "video" || base === "file" || base === "voice" || base === "audio") return base;
     return null;
   }
 
@@ -4185,13 +4185,25 @@
     return null;
   }
 
-  function appendMessageAttachment(bodyEl, kind, fileId) {
+  function appendMessageAttachment(bodyEl, kind, fileId, durationMs) {
     if (kind === "image") {
       var img = document.createElement("img");
       img.className = "msg-attachment-image";
       img.alt = L("ui.message.image");
       bodyEl.appendChild(img);
       attachAuthenticatedImage(fileId, img);
+      return;
+    }
+    if (kind === "voice" || kind === "audio") {
+      var audio = document.createElement("audio");
+      audio.className = "msg-voice-player";
+      audio.controls = true;
+      audio.setAttribute("data-testid", "message-voice-player");
+      if (durationMs) {
+        audio.title = Math.round(durationMs / 1000) + "s";
+      }
+      bodyEl.appendChild(audio);
+      attachAuthenticatedAudio(fileId, audio);
       return;
     }
     var label = kind === "video" ? L("ui.message.video") : L("ui.message.file");
@@ -5361,6 +5373,20 @@
     } catch (e) {}
   }
 
+  async function attachAuthenticatedAudio(fileId, audioEl) {
+    try {
+      var res = await apiFetch("/files/" + fileId + "/download", {
+        method: "GET",
+        headers: { Accept: "*/*" },
+      });
+      if (!res.ok) return;
+      var blob = await res.blob();
+      var u = URL.createObjectURL(blob);
+      state.blobUrls.push(u);
+      audioEl.src = u;
+    } catch (e) {}
+  }
+
   async function openChatMessageForFile(fileId) {
     if (!fileId || !state.tokens) return;
     state.busy = true;
@@ -5409,8 +5435,15 @@
     var attachKind = messageAttachmentKind(m);
     var fileId = messageAttachmentFileId(m);
     if (attachKind && fileId) {
-      appendMessageAttachment(bodyEl, attachKind, fileId);
+      appendMessageAttachment(bodyEl, attachKind, fileId, m.duration_ms);
       return;
+    }
+    if (m.link_preview && m.link_preview.url) {
+      var lp = el("div", "msg-link-preview");
+      var lpTitle = m.link_preview.title || m.link_preview.url;
+      lp.appendChild(el("div", "msg-link-preview-title", lpTitle));
+      lp.appendChild(el("div", "msg-link-preview-url", m.link_preview.url));
+      bodyEl.appendChild(lp);
     }
     if (isE2eeType(t)) {
       var chatId = m.chat_id || state.selectedId;
@@ -6138,6 +6171,42 @@
     ta.focus();
     ta.selectionStart = s + before.length;
     ta.selectionEnd = s + before.length + sel.length;
+  }
+
+  var VOICE_MAX_MS = 120000;
+  var REACTION_PICKER_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "🎉", "👀", "✅"];
+
+  async function sendVoiceMessage(blob, durationMs) {
+    if (!blob || !state.tokens || !state.selectedId) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      var file = new File([blob], "voice.webm", { type: blob.type || "audio/webm" });
+      var up = await uploadChatFile(file);
+      var body = {
+        type: "voice",
+        content: up.id,
+        duration_ms: durationMs || null,
+        reply_to_msg_id: currentReplyToId(),
+        client_msg_id: null,
+        visibility_ttl_seconds: getComposerTtlSeconds(),
+      };
+      if (state.discussionThreadRootId) {
+        body.thread_id = state.discussionThreadRootId;
+      }
+      var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
+        method: "POST",
+        jsonBody: body,
+      });
+      clearReplyTo();
+      await afterLocalSend(state.selectedId, sent);
+    } catch (err) {
+      state.error = err.message || L("messages.sendVoiceFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
   }
 
   async function sendFileMessage(file) {
@@ -7644,6 +7713,9 @@
       var txt = el("div", "chat-item-text");
       var unread = state.unreadByChat[c.id] || 0;
       var titleRow = el("div", "chat-item-title-row");
+      if (c.type === "channel") {
+        titleRow.appendChild(el("span", "chat-type-badge channel", L("ui.chat.channel")));
+      }
       titleRow.appendChild(
         el(
           "div",
@@ -8014,7 +8086,41 @@
           art.appendChild(reactBar);
         }
         if (!m.deleted) {
+          var addReact = iconBtn("+", L("ui.message.addReaction"), {
+            testId: "message-reaction-picker-btn",
+            onClick: function (ev) {
+              ev.stopPropagation();
+              var pop = el("div", "msg-reaction-picker");
+              REACTION_PICKER_EMOJIS.forEach(function (em) {
+                var b = el("button", "msg-reaction-picker-item", em);
+                b.type = "button";
+                b.onclick = function () {
+                  toggleReaction(m.id, em).catch(function (err) {
+                    state.error = err.message || L("messages.reactionFailed");
+                    render();
+                  });
+                  if (pop.parentNode) pop.parentNode.removeChild(pop);
+                };
+                pop.appendChild(b);
+              });
+              document.body.appendChild(pop);
+              var rect = ev.target.getBoundingClientRect();
+              pop.style.position = "fixed";
+              pop.style.left = Math.max(8, rect.left) + "px";
+              pop.style.top = (rect.bottom + 4) + "px";
+              setTimeout(function () {
+                document.addEventListener(
+                  "click",
+                  function closePop() {
+                    if (pop.parentNode) pop.parentNode.removeChild(pop);
+                  },
+                  { once: true }
+                );
+              }, 0);
+            },
+          });
           var actions = el("div", "msg-actions");
+          actions.appendChild(addReact);
           actions.appendChild(
             iconBtn("↩", L("ui.actions.reply"), {
               testId: "message-reply-button",
@@ -8283,6 +8389,56 @@
         filePick.value = "";
       };
       fmt.appendChild(bFile);
+      var voiceState = { recorder: null, chunks: [], startedAt: 0 };
+      var bVoice = iconBtn("🎙", L("ui.thread.voiceRecord"), {
+        testId: "voice-record-btn",
+        disabled: state.busy || !window.MediaRecorder,
+        onClick: function () {
+          if (voiceState.recorder) {
+            voiceState.recorder.stop();
+            return;
+          }
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            state.error = L("messages.voiceNotSupported");
+            render();
+            return;
+          }
+          navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+            voiceState.chunks = [];
+            voiceState.startedAt = Date.now();
+            var rec = new MediaRecorder(stream);
+            voiceState.recorder = rec;
+            bVoice.classList.add("active");
+            rec.ondataavailable = function (ev) {
+              if (ev.data && ev.data.size) voiceState.chunks.push(ev.data);
+            };
+            rec.onstop = function () {
+              stream.getTracks().forEach(function (t) {
+                t.stop();
+              });
+              voiceState.recorder = null;
+              bVoice.classList.remove("active");
+              var durationMs = Date.now() - voiceState.startedAt;
+              if (durationMs > VOICE_MAX_MS) durationMs = VOICE_MAX_MS;
+              var blob = new Blob(voiceState.chunks, { type: "audio/webm" });
+              if (blob.size > 0) {
+                sendVoiceMessage(blob, durationMs).catch(function (err) {
+                  state.error = err.message || L("messages.sendVoiceFailed");
+                  render();
+                });
+              }
+            };
+            rec.start();
+            setTimeout(function () {
+              if (voiceState.recorder) voiceState.recorder.stop();
+            }, VOICE_MAX_MS);
+          }).catch(function () {
+            state.error = L("messages.voiceMicDenied");
+            render();
+          });
+        },
+      });
+      fmt.appendChild(bVoice);
       fmt.appendChild(filePick);
       fmt.appendChild(el("span", "composer-md-hint", L("ui.thread.markdownHint")));
       comp.appendChild(fmt);

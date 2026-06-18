@@ -4,5 +4,6 @@ package com.avandocmsg.messenger.core.domain;
 public enum ChatType {
     P2P,
     GROUP,
+    CHANNEL,
     SAVED
 }
