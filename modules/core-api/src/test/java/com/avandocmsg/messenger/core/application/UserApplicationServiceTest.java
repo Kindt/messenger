@@ -22,7 +22,8 @@ class UserApplicationServiceTest {
     private final StubUserPort userPort = new StubUserPort();
     private final StubSavedChatPort savedChatPort = new StubSavedChatPort();
     private final UserApplicationService service = new UserApplicationService(
-        userPort, savedChatPort, NoOpReadCacheAdapter.INSTANCE, new AppConfig());
+        userPort, savedChatPort, NoOpReadCacheAdapter.INSTANCE, new AppConfig(),
+        new UserPresencePublisher(null));
 
     @Test
     void getProfileForViewer_returnsFullProfileForSelf() {
@@ -121,7 +122,9 @@ class UserApplicationServiceTest {
             Instant.parse("2026-01-02T00:00:00Z"),
             "org-1",
             true,
-            "ru");
+            "ru",
+            null,
+            null);
     }
 
     static final class StubSavedChatPort implements SavedChatPort {
@@ -165,7 +168,9 @@ class UserApplicationServiceTest {
                 profile.lastSeenAt(),
                 profile.orgId(),
                 profile.privacyDisableReadReceipts(),
-                profile.uiLocale());
+                profile.uiLocale(),
+                profile.customStatusText(),
+                profile.dndUntil());
             return true;
         }
 
@@ -185,7 +190,32 @@ class UserApplicationServiceTest {
                 profile.lastSeenAt(),
                 profile.orgId(),
                 profile.privacyDisableReadReceipts(),
-                profile.uiLocale());
+                profile.uiLocale(),
+                profile.customStatusText(),
+                profile.dndUntil());
+            return true;
+        }
+
+        @Override
+        public boolean updateUserStatus(UserId id, String presenceStatus, String customStatusText,
+                                        java.time.Instant dndUntil, boolean clearDndUntil) {
+            if (!updatePresenceOk || profile == null) {
+                return false;
+            }
+            profile = new UserProfile(
+                profile.id(),
+                profile.username(),
+                profile.displayName(),
+                profile.phone(),
+                profile.hidden(),
+                profile.createdAt(),
+                presenceStatus != null ? presenceStatus : profile.presenceStatus(),
+                profile.lastSeenAt(),
+                profile.orgId(),
+                profile.privacyDisableReadReceipts(),
+                profile.uiLocale(),
+                customStatusText != null ? customStatusText : profile.customStatusText(),
+                clearDndUntil ? null : (dndUntil != null ? dndUntil : profile.dndUntil()));
             return true;
         }
 
@@ -205,7 +235,9 @@ class UserApplicationServiceTest {
                 profile.lastSeenAt(),
                 profile.orgId(),
                 disableReadReceipts,
-                profile.uiLocale());
+                profile.uiLocale(),
+                profile.customStatusText(),
+                profile.dndUntil());
             return true;
         }
 
@@ -225,7 +257,9 @@ class UserApplicationServiceTest {
                 profile.lastSeenAt(),
                 profile.orgId(),
                 profile.privacyDisableReadReceipts(),
-                uiLocale);
+                uiLocale,
+                profile.customStatusText(),
+                profile.dndUntil());
             return true;
         }
 

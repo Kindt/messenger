@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.core.application;
 
+import com.avandocmsg.messenger.api.users.dto.UpdatePresenceRequest;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.UserId;
@@ -18,15 +19,18 @@ public final class UserApplicationService {
     private final SavedChatPort savedChatPort;
     private final ReadCachePort readCachePort;
     private final AppConfig appConfig;
+    private final UserPresencePublisher presencePublisher;
 
     public UserApplicationService(UserRepositoryPort userRepositoryPort,
                                   SavedChatPort savedChatPort,
                                   ReadCachePort readCachePort,
-                                  AppConfig appConfig) {
+                                  AppConfig appConfig,
+                                  UserPresencePublisher presencePublisher) {
         this.userRepositoryPort = userRepositoryPort;
         this.savedChatPort = savedChatPort;
         this.readCachePort = readCachePort;
         this.appConfig = appConfig;
+        this.presencePublisher = presencePublisher != null ? presencePublisher : new UserPresencePublisher(null);
     }
 
     public Optional<ChatId> getSavedChatId(UserId userId) {
@@ -62,7 +66,33 @@ public final class UserApplicationService {
         }
         ReadCacheCoordinator.invalidateUserProfile(readCachePort, userId.value());
         ReadCacheCoordinator.invalidateUserPresence(readCachePort, userId.value());
-        return getProfileForViewer(userId, userId);
+        var profile = getProfileForViewer(userId, userId).orElse(null);
+        if (profile != null) {
+            presencePublisher.publish(profile);
+        }
+        return Optional.ofNullable(profile);
+    }
+
+    public Optional<UserProfile> updateUserStatus(UserId userId, UpdatePresenceRequest request) {
+        if (request == null) {
+            return Optional.empty();
+        }
+        var clearDnd = request.presenceStatus() != null && !"dnd".equals(request.presenceStatus());
+        if (!userRepositoryPort.updateUserStatus(
+            userId,
+            request.presenceStatus(),
+            request.customStatusText(),
+            request.dndUntil(),
+            clearDnd)) {
+            return Optional.empty();
+        }
+        ReadCacheCoordinator.invalidateUserProfile(readCachePort, userId.value());
+        ReadCacheCoordinator.invalidateUserPresence(readCachePort, userId.value());
+        var profile = getProfileForViewer(userId, userId).orElse(null);
+        if (profile != null) {
+            presencePublisher.publish(profile);
+        }
+        return Optional.ofNullable(profile);
     }
 
     public Optional<UserProfile> updatePrivacy(UserId userId, boolean disableReadReceipts) {
@@ -113,6 +143,8 @@ public final class UserApplicationService {
             profile.lastSeenAt(),
             null,
             false,
+            null,
+            profile.customStatusText(),
             null);
     }
 }

@@ -64,6 +64,20 @@ public final class CoreAdminUiContributor implements AdminUiContributor {
                 null
             ),
             new AdminUiSectionDescriptor(
+                "core-ip-allowlist",
+                "IP allowlist (org)",
+                23,
+                AdminUiSectionKind.JSON_PANEL,
+                null
+            ),
+            new AdminUiSectionDescriptor(
+                "core-migration-import",
+                "Migration import",
+                24,
+                AdminUiSectionKind.JSON_PANEL,
+                null
+            ),
+            new AdminUiSectionDescriptor(
                 "core-user-organization",
                 "Пользователь → организация",
                 25,

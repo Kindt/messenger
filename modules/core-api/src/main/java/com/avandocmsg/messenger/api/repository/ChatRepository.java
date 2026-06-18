@@ -365,6 +365,39 @@ public class ChatRepository {
         }
     }
 
+    public boolean setArchived(UUID chatId, UUID userId, boolean archived) {
+        var sql = archived
+            ? "UPDATE chat_members SET archived_at = now() WHERE chat_id = ? AND user_id = ?"
+            : "UPDATE chat_members SET archived_at = NULL WHERE chat_id = ? AND user_id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, chatId);
+            stmt.setObject(2, userId);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            log.error("Failed to set archive", e);
+            return false;
+        }
+    }
+
+    public boolean setFolderTag(UUID chatId, UUID userId, String folderTag) {
+        var sql = "UPDATE chat_members SET folder_tag = ? WHERE chat_id = ? AND user_id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            if (folderTag == null || folderTag.isBlank()) {
+                stmt.setNull(1, java.sql.Types.VARCHAR);
+            } else {
+                stmt.setString(1, folderTag.trim());
+            }
+            stmt.setObject(2, chatId);
+            stmt.setObject(3, userId);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            log.error("Failed to set folder tag", e);
+            return false;
+        }
+    }
+
     public boolean addMember(UUID chatId, UUID userId, String role) {
         try (var conn = dataSource.getConnection()) {
             conn.setAutoCommit(false);

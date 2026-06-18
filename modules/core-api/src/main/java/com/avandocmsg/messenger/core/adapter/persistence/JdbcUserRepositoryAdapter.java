@@ -14,7 +14,8 @@ import java.util.UUID;
 public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
     private static final String SELECT_USER = """
         SELECT id, username, display_name, phone, hidden, created_at,
-               presence_status, last_seen_at, org_id, privacy_disable_read_receipts, ui_locale
+               presence_status, last_seen_at, org_id, privacy_disable_read_receipts, ui_locale,
+               custom_status_text, dnd_until
         FROM users
         WHERE id = ?
         """;
@@ -66,16 +67,48 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
 
     @Override
     public boolean updatePresence(UserId id, String presenceStatus) {
+        return updateUserStatus(id, presenceStatus, null, null, false);
+    }
+
+    @Override
+    public boolean updateUserStatus(UserId id, String presenceStatus, String customStatusText,
+                                    java.time.Instant dndUntil, boolean clearDndUntil) {
         if (dataSource == null) {
             return false;
         }
-        var sql = """
-            UPDATE users SET presence_status = ?, last_seen_at = now(), updated_at = now() WHERE id = ?
-            """;
+        var updates = new java.util.ArrayList<String>();
+        var params = new java.util.ArrayList<Object>();
+        if (presenceStatus != null) {
+            updates.add("presence_status = ?");
+            params.add(presenceStatus);
+        }
+        if (customStatusText != null) {
+            updates.add("custom_status_text = ?");
+            params.add(customStatusText);
+        }
+        if (dndUntil != null) {
+            updates.add("dnd_until = ?");
+            params.add(Timestamp.from(dndUntil));
+        } else if (clearDndUntil) {
+            updates.add("dnd_until = NULL");
+        }
+        if (updates.isEmpty()) {
+            return false;
+        }
+        updates.add("last_seen_at = now()");
+        updates.add("updated_at = now()");
+        var sql = "UPDATE users SET " + String.join(", ", updates) + " WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, presenceStatus);
-            stmt.setObject(2, id.value());
+            int idx = 1;
+            for (var param : params) {
+                if (param instanceof Timestamp ts) {
+                    stmt.setTimestamp(idx++, ts);
+                } else {
+                    stmt.setObject(idx++, param);
+                }
+            }
+            stmt.setObject(idx, id.value());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             return false;
@@ -187,6 +220,8 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
         var lastSeenTs = rs.getTimestamp("last_seen_at");
         Instant lastSeen = lastSeenTs != null ? lastSeenTs.toInstant() : null;
         var org = rs.getObject("org_id", UUID.class);
+        var dndTs = rs.getTimestamp("dnd_until");
+        Instant dndUntil = dndTs != null ? dndTs.toInstant() : null;
         return new UserProfile(
             UserId.of(rs.getObject("id", UUID.class)),
             rs.getString("username"),
@@ -198,6 +233,8 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
             lastSeen,
             org != null ? org.toString() : null,
             rs.getBoolean("privacy_disable_read_receipts"),
-            rs.getString("ui_locale"));
+            rs.getString("ui_locale"),
+            rs.getString("custom_status_text"),
+            dndUntil);
     }
 }

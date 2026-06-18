@@ -1,7 +1,6 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
 import com.avandocmsg.messenger.core.domain.UserId;
-import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.AfterEach;
@@ -42,7 +41,9 @@ class JdbcUserRepositoryAdapterH2Test {
                   last_seen_at TIMESTAMP,
                   org_id UUID,
                   privacy_disable_read_receipts BOOLEAN NOT NULL DEFAULT false,
-                  ui_locale VARCHAR(8)
+                  ui_locale VARCHAR(8),
+                  custom_status_text VARCHAR(128) NOT NULL DEFAULT '',
+                  dnd_until TIMESTAMP
                 )
                 """);
         }

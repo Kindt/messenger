@@ -12,6 +12,7 @@ import com.avandocmsg.messenger.common.dto.ReadCacheInvalidateEvent;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.dto.RtcSignalEvent;
 import com.avandocmsg.messenger.common.dto.TypingEvent;
+import com.avandocmsg.messenger.common.dto.UserPresenceEvent;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.nats.JetStreamMessagingSetup;
@@ -52,6 +53,7 @@ public class MessagePipelineWorker {
     private static final String CONFERENCE_QUEUE_GROUP = "conference-pipeline-workers";
     private static final String LIVE_SESSION_QUEUE_GROUP = "live-session-pipeline-workers";
     private static final String READ_RECEIPT_QUEUE_GROUP = "read-receipt-pipeline-workers";
+    private static final String USER_PRESENCE_QUEUE_GROUP = "user-presence-pipeline-workers";
 
     private final DataSource dataSource;
     private final Connection natsConnection;
@@ -120,6 +122,7 @@ public class MessagePipelineWorker {
         subscribeConferenceFanout();
         subscribeLiveSessionFanout();
         subscribeReadReceiptFanout();
+        subscribeUserPresenceFanout();
     }
 
     private void subscribeReadReceiptFanout() {
@@ -479,6 +482,37 @@ public class MessagePipelineWorker {
 
     private static String fanoutDedupId(String... parts) {
         return String.join("|", parts);
+    }
+
+    private void subscribeUserPresenceFanout() {
+        var dispatcher = natsConnection.createDispatcher(this::handleUserPresenceCoreMessage);
+        dispatcher.subscribe(NatsSubjects.USER_PRESENCE, USER_PRESENCE_QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed_for",
+            NatsSubjects.USER_PRESENCE, USER_PRESENCE_QUEUE_GROUP, "user presence"));
+    }
+
+    private void handleUserPresenceCoreMessage(Message msg) {
+        try {
+            handleUserPresencePayload(msg.getData());
+        } catch (Exception e) {
+            log.error("user presence fan-out failed", e);
+        }
+    }
+
+    private void handleUserPresencePayload(byte[] raw) throws Exception {
+        var evt = MAPPER.readValue(raw, UserPresenceEvent.class);
+        if (!UserPresenceEvent.TYPE.equals(evt.type())) {
+            return;
+        }
+        var userId = UUID.fromString(evt.userId());
+        var orgId = evt.orgId() != null ? UUID.fromString(evt.orgId()) : null;
+        if (orgId == null) {
+            return;
+        }
+        var members = PipelineFanoutLogic.loadOrgUserIds(dataSource, orgId, userId, workerMessages);
+        members.add(userId.toString());
+        DeliverFanout.publish(natsConnection, members, userId.toString(), raw, deliverConfig, fanoutDedup,
+            fanoutDedupId("presence", evt.userId(), Long.toString(evt.ts())));
     }
 
     private void startMetricsServer() {

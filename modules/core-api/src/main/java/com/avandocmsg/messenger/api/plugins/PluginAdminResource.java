@@ -40,6 +40,7 @@ public class PluginAdminResource {
     private final PluginRepository repository;
     private final PluginPlatformService platformService;
     private final PluginPolicyService policyService;
+    private final PluginIntegrationsComposeService integrationsComposeService;
 
     @Inject
     public PluginAdminResource(
@@ -50,6 +51,7 @@ public class PluginAdminResource {
         this.repository = repository;
         this.platformService = platformService;
         this.policyService = policyService;
+        this.integrationsComposeService = new PluginIntegrationsComposeService();
     }
 
     @GET
@@ -206,6 +208,25 @@ public class PluginAdminResource {
             case RUNTIME_ERROR -> Response.status(Response.Status.BAD_GATEWAY)
                 .entity(error(result.errorKey())).build();
         };
+    }
+
+    @POST
+    @Path("integrations/compose")
+    @Operation(summary = "Plan integrations guest compose (scaffold — returns host command)")
+    public Response integrationsCompose(PluginAdminDtos.IntegrationsComposeRequest request) {
+        if (request == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        try {
+            var plan = integrationsComposeService.plan(request.action(), request.services());
+            return Response.ok(new PluginAdminDtos.IntegrationsComposeResponse(
+                plan.status(),
+                plan.recommendedCommand(),
+                plan.note()
+            )).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(error(e.getMessage())).build();
+        }
     }
 
     private static InstanceJson toJson(PluginRepository.InstanceRow row) {

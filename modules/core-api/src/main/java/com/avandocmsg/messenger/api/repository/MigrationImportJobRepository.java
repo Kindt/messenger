@@ -50,7 +50,8 @@ public class MigrationImportJobRepository {
 
     public Optional<JobRow> findById(UUID id) {
         var sql = """
-            SELECT id, org_id, source, status, config_json::text, result_json::text
+            SELECT id, org_id, source, status,
+                   config_json::text AS config_json, result_json::text AS result_json
             FROM migration_import_jobs WHERE id = ?
             """;
         try (var conn = dataSource.getConnection();
@@ -69,7 +70,8 @@ public class MigrationImportJobRepository {
 
     public List<JobRow> listForOrg(UUID orgId, int limit) {
         var sql = """
-            SELECT id, org_id, source, status, config_json::text, result_json::text
+            SELECT id, org_id, source, status,
+                   config_json::text AS config_json, result_json::text AS result_json
             FROM migration_import_jobs
             WHERE org_id = ?
             ORDER BY created_at DESC
@@ -89,6 +91,24 @@ public class MigrationImportJobRepository {
         } catch (Exception e) {
             log.error("migration import list failed org={}", orgId, e);
             return List.of();
+        }
+    }
+
+    public boolean updateStatus(UUID id, String status, String resultJson) {
+        var sql = """
+            UPDATE migration_import_jobs
+            SET status = ?, result_json = ?::jsonb, updated_at = now()
+            WHERE id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, status);
+            stmt.setString(2, resultJson != null ? resultJson : "{}");
+            stmt.setObject(3, id);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            log.error("migration import status update failed {}", id, e);
+            return false;
         }
     }
 

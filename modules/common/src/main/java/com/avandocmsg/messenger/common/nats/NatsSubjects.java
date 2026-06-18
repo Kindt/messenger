@@ -85,6 +85,9 @@ public final class NatsSubjects {
     /** Per-participant read receipt (JSON {@link com.avandocmsg.messenger.common.dto.ReadReceiptEvent}). */
     public static final String MSG_READ_RECEIPT = "msg.read_receipt";
 
+    /** User profile presence/custom status fan-out (spec 022). */
+    public static final String USER_PRESENCE = "user.presence";
+
     /**
      * Read-cache invalidation hint for core-api (JSON {@link com.avandocmsg.messenger.common.dto.ReadCacheInvalidateEvent}).
      * Published by message-pipeline after fan-out; core-api applies Redis DEL via {@code ReadCacheCoordinator}.

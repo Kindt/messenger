@@ -31,11 +31,13 @@ import java.util.UUID;
 public class AdminMigrationImportResource {
 
     private final MigrationImportJobRepository jobRepository;
+    private final MigrationImportProcessor processor;
     private final UserRepository userRepository;
 
     @Inject
     public AdminMigrationImportResource(DataSource dataSource, UserRepository userRepository) {
         this.jobRepository = new MigrationImportJobRepository(dataSource);
+        this.processor = new MigrationImportProcessor(jobRepository);
         this.userRepository = userRepository;
     }
 
@@ -78,6 +80,20 @@ public class AdminMigrationImportResource {
         try {
             var id = UUID.fromString(jobIdStr);
             return jobRepository.findById(id)
+                .map(row -> Response.ok(MigrationImportJobResponse.from(row)).build())
+                .orElse(Response.status(Response.Status.NOT_FOUND).build());
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+    }
+
+    @POST
+    @Path("/{jobId}/process")
+    @Operation(summary = "Run scaffold import processor for one job")
+    public Response process(@PathParam("jobId") String jobIdStr) {
+        try {
+            var id = UUID.fromString(jobIdStr);
+            return processor.process(id)
                 .map(row -> Response.ok(MigrationImportJobResponse.from(row)).build())
                 .orElse(Response.status(Response.Status.NOT_FOUND).build());
         } catch (IllegalArgumentException e) {

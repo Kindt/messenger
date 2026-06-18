@@ -271,10 +271,13 @@
     swUpdateReady: false,
     savedChatId: null,
     myPresence: "online",
+    myCustomStatus: "",
     blockedUsers: null,
     sidebarMode: "chats",
+    sidebarFolder: "all",
     discussionThreadRootId: null,
     integrations: null,
+    integrationsVitrine: null,
     contacts: null,
     contactsBusy: false,
     myDisplayName: "",
@@ -990,6 +993,7 @@
       var p = await apiJson("/users/me", { method: "GET" });
       if (p) {
         if (p.presence_status) state.myPresence = p.presence_status;
+        if (p.custom_status_text) state.myCustomStatus = p.custom_status_text;
         state.myDisplayName = p.display_name || p.username || "";
         if (opts.applyLocale) {
           await applyProfileLocale(p);
@@ -1032,6 +1036,7 @@
     try {
       var res = await apiJson("/me/integrations", { method: "GET" });
       state.integrations = res && res.items ? res.items : [];
+      state.integrationsVitrine = res && res.vitrine_tiles ? res.vitrine_tiles : [];
     } catch (e) {
       state.integrations = [];
     }
@@ -1260,6 +1265,48 @@
       chat.personal_filter_active = next;
     } catch (e) {
       state.error = e.message || L("profile.filterFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function toggleChatArchive() {
+    var chat = currentChat();
+    if (!chat || !state.tokens) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      var next = !chat.archived;
+      await apiJson("/chats/" + chat.id + "/archive", {
+        method: "PATCH",
+        jsonBody: { archived: next },
+      });
+      chat.archived = next;
+      await loadChats();
+    } catch (e) {
+      state.error = e.message || L("ui.sidebar.archiveFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function setChatFolder(tag) {
+    var chat = currentChat();
+    if (!chat || !state.tokens) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      await apiJson("/chats/" + chat.id + "/folder", {
+        method: "PATCH",
+        jsonBody: { folder_tag: tag || null },
+      });
+      chat.folder_tag = tag || null;
+    } catch (e) {
+      state.error = e.message || L("ui.sidebar.folderFailed");
     } finally {
       state.busy = false;
       render();
@@ -1953,14 +2000,44 @@
     state.error = null;
     render();
     try {
+      var body = { presence_status: status };
+      if (state.myCustomStatus) {
+        body.custom_status_text = state.myCustomStatus;
+      }
       var p = await apiJson("/users/me/presence", {
         method: "PATCH",
-        jsonBody: { presence_status: status },
+        jsonBody: body,
       });
       if (p && p.presence_status) {
         state.myPresence = p.presence_status;
       } else {
         state.myPresence = status;
+      }
+      if (p && p.custom_status_text) {
+        state.myCustomStatus = p.custom_status_text;
+      }
+    } catch (e) {
+      state.error = e.message || L("profile.presenceUpdateFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function saveCustomStatus() {
+    if (!state.tokens) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      var p = await apiJson("/users/me/presence", {
+        method: "PATCH",
+        jsonBody: {
+          custom_status_text: state.myCustomStatus || "",
+        },
+      });
+      if (p && p.custom_status_text) {
+        state.myCustomStatus = p.custom_status_text;
       }
     } catch (e) {
       state.error = e.message || L("profile.presenceUpdateFailed");
@@ -4105,8 +4182,22 @@
       typeof o.user_id === "string" &&
       typeof o.ts === "number" &&
       !o.messageId &&
-      o.type !== "read_receipt"
+      o.type !== "read_receipt" &&
+      o.type !== "presence"
     );
+  }
+
+  function isPresenceEvent(o) {
+    return o && o.type === "presence" && o.user_id;
+  }
+
+  function applyPresenceEvent(ev) {
+    if (!ev || !ev.user_id) return;
+    var myId = jwtSub(state.tokens && state.tokens.access_token);
+    if (myId && ev.user_id === myId) {
+      if (ev.presence_status) state.myPresence = ev.presence_status;
+      if (ev.custom_status_text) state.myCustomStatus = ev.custom_status_text;
+    }
   }
 
   function isReadReceiptEvent(o) {
@@ -5567,6 +5658,12 @@
           scheduleTypingSidebarRefresh();
           return;
         }
+        if (isPresenceEvent(data)) {
+          sendHeartbeatThrottled();
+          applyPresenceEvent(data);
+          scheduleRender();
+          return;
+        }
         if (isReadReceiptEvent(data)) {
           sendHeartbeatThrottled();
           applyReadReceiptEvent(data);
@@ -5776,6 +5873,24 @@
     var base = state.chats.filter(function (c) {
       return c.type !== "saved";
     });
+    if (state.sidebarFolder === "archive") {
+      base = base.filter(function (c) {
+        return c.archived;
+      });
+    } else {
+      base = base.filter(function (c) {
+        return !c.archived;
+      });
+      if (state.sidebarFolder === "work") {
+        base = base.filter(function (c) {
+          return c.folder_tag === "work";
+        });
+      } else if (state.sidebarFolder === "personal") {
+        base = base.filter(function (c) {
+          return c.folder_tag === "personal";
+        });
+      }
+    }
     var q = (state.sidebarSearch || "").trim().toLowerCase();
     var list = q
       ? base.filter(function (c) {
@@ -6858,6 +6973,25 @@
     rowPres.appendChild(presSel);
     panel.appendChild(rowPres);
 
+    var rowCustom = el("div", "settings-row");
+    var customLabel = document.createElement("label");
+    customLabel.setAttribute("for", "settings-custom-status");
+    customLabel.textContent = L("ui.settings.customStatus");
+    rowCustom.appendChild(customLabel);
+    var customInp = document.createElement("input");
+    customInp.type = "text";
+    customInp.id = "settings-custom-status";
+    customInp.className = "settings-input";
+    customInp.maxLength = 128;
+    customInp.value = state.myCustomStatus || "";
+    customInp.disabled = state.busy;
+    customInp.onchange = function () {
+      state.myCustomStatus = customInp.value;
+      saveCustomStatus();
+    };
+    rowCustom.appendChild(customInp);
+    panel.appendChild(rowCustom);
+
     var rowProf = el("div", "settings-row");
     var nameLabel = document.createElement("label");
     nameLabel.setAttribute("for", "settings-display-name");
@@ -7669,6 +7803,24 @@
       side.appendChild(impBlock);
     } else if (state.sidebarMode === "integrations") {
       var iList = el("div", "chat-list integrations-list");
+      var vitrine = state.integrationsVitrine || [];
+      if (vitrine.length) {
+        var vitBlock = el("div", "integrations-vitrine");
+        vitBlock.appendChild(el("div", "user-search-label", L("ui.sidebar.vitrine")));
+        vitrine.forEach(function (tile) {
+          var row = el("button", "chat-item integration-vitrine-item");
+          row.type = "button";
+          row.setAttribute("data-testid", "vitrine-tile-" + (tile.connector_key || tile.id));
+          row.textContent = tile.label || tile.connector_key || tile.id;
+          if (tile.info_url) {
+            row.onclick = function () {
+              window.open(tile.info_url, "_blank", "noopener,noreferrer");
+            };
+          }
+          vitBlock.appendChild(row);
+        });
+        iList.appendChild(vitBlock);
+      }
       var items = state.integrations || [];
       if (!items.length) {
         iList.appendChild(el("div", "chat-list-empty", L("ui.sidebar.noIntegrations")));
@@ -7691,6 +7843,22 @@
       }
       side.appendChild(iList);
     } else {
+    var folderBar = el("div", "sidebar-folder-bar");
+    ["all", "work", "personal", "archive"].forEach(function (fid) {
+      var fb = el(
+        "button",
+        "sidebar-folder-chip" + (state.sidebarFolder === fid ? " active" : ""),
+        L("ui.sidebar.folder." + fid)
+      );
+      fb.type = "button";
+      fb.setAttribute("data-testid", "sidebar-folder-" + fid);
+      fb.onclick = function () {
+        state.sidebarFolder = fid;
+        render();
+      };
+      folderBar.appendChild(fb);
+    });
+    side.appendChild(folderBar);
     var list = el("div", "chat-list");
     list.addEventListener("scroll", function () {
       if (list.scrollTop + list.clientHeight >= list.scrollHeight - 48) {
@@ -7834,6 +8002,22 @@
           }
         );
         thActs.appendChild(bFilter);
+        thActs.appendChild(
+          iconBtn(sel.archived ? "📂" : "🗄", L("ui.sidebar.archiveToggle"), {
+            disabled: state.busy,
+            onClick: function () {
+              toggleChatArchive();
+            },
+          })
+        );
+        thActs.appendChild(
+          iconBtn("🏷", L("ui.sidebar.folderWork"), {
+            disabled: state.busy,
+            onClick: function () {
+              setChatFolder(sel.folder_tag === "work" ? null : "work");
+            },
+          })
+        );
         if (sel.type === "group") {
           thActs.appendChild(
             iconBtn("👥", L("ui.common.members"), {

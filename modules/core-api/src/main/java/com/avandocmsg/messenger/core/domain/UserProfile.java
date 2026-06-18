@@ -14,5 +14,7 @@ public record UserProfile(
     Instant lastSeenAt,
     String orgId,
     boolean privacyDisableReadReceipts,
-    String uiLocale
+    String uiLocale,
+    String customStatusText,
+    Instant dndUntil
 ) {}

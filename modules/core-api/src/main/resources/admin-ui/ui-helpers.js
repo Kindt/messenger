@@ -74,6 +74,13 @@
       desc: "LDAP directory sync: статус последнего прогона и ручной запуск для org.",
       orgScoped: true,
     },
+    "core-ip-allowlist": {
+      desc: "IP allowlist org: GET/PATCH /admin/orgs/{orgId}/ip-allowlist (lab enforce ORG_IP_ALLOWLIST_ENFORCE).",
+      orgScoped: true,
+    },
+    "core-migration-import": {
+      desc: "Migration import jobs (Telegram export scaffold): create, list, process.",
+    },
     "core-user-organization": {
       desc: "Привязка пользователя к организации (PATCH).",
     },
@@ -267,6 +274,7 @@
         btn.type = "button";
         btn.className = "nav-item";
         btn.textContent = s.title;
+        btn.setAttribute("data-testid", "admin-nav-" + s.id);
         btn.addEventListener("click", () => onSelect(s, li));
         li.appendChild(btn);
         ul.appendChild(li);

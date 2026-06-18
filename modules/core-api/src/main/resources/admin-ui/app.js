@@ -545,6 +545,7 @@
     }
     const box = document.createElement("div");
     box.className = "admin-toolbar";
+    box.setAttribute("data-testid", "admin-audit-toolbar");
     const mk = (id, label, ph) => {
       const l = document.createElement("label");
       l.className = "small";
@@ -573,7 +574,8 @@
     box.appendChild(limLbl);
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.textContent = "Применить";
+    btn.setAttribute("data-testid", "admin-audit-apply");
+    btn.textContent = "Загрузить";
     btn.addEventListener("click", () => onApply());
     box.appendChild(btn);
     container.appendChild(box);
@@ -856,6 +858,7 @@
     }
     const wrap = document.createElement("div");
     wrap.className = "retention-patch-block";
+    wrap.setAttribute("data-testid", "admin-retention-patch-form");
     const hint = document.createElement("p");
     hint.className = "muted small";
     hint.textContent =
@@ -881,6 +884,9 @@
       const inp = document.createElement("input");
       inp.type = "checkbox";
       inp.id = id;
+      if (id === "retentionPatchLegal") {
+        inp.setAttribute("data-testid", "admin-retention-patch-legal");
+      }
       l.appendChild(inp);
       l.appendChild(document.createTextNode(" " + label));
       return l;
@@ -893,6 +899,7 @@
     const btn = document.createElement("button");
     btn.type = "button";
     btn.id = "retentionPatchSubmit";
+    btn.setAttribute("data-testid", "admin-retention-patch-submit");
     btn.textContent = "Применить PATCH";
     const msg = document.createElement("span");
     msg.id = "retentionPatchMsg";
@@ -2253,11 +2260,13 @@
           appendJsonPanelReload(summary, reloadGuide);
           await reloadGuide();
         } else if (section.id === "core-audit-events") {
+          cap.textContent = "GET " + API + "/admin/audit-events — фильтры и пресеты export ниже.";
           const reloadAudit = async () => {
             try {
               const fp = auditEventsFetchPath();
               const data = await apiFetch(fp);
               await paintTableAndJson(data, fp);
+              summary.querySelector(".json-table-wrap")?.setAttribute("data-testid", "admin-audit-table");
             } catch (e) {
               pre.textContent = "Ошибка: " + e.message;
             }
@@ -2266,10 +2275,12 @@
           appendJsonPanelReload(summary, reloadAudit);
           await reloadAudit();
         } else if (section.id === "core-organizations") {
+          cap.textContent = "GET " + API + "/admin/organizations — список и CRUD ниже.";
           const reloadOrgs = async () => {
             try {
               const d = await apiFetch("/admin/organizations");
               await paintTableAndJson(d, "/admin/organizations");
+              summary.querySelector(".json-table-wrap")?.setAttribute("data-testid", "admin-orgs-table");
             } catch (e) {
               pre.textContent = "Ошибка: " + e.message;
             }
@@ -2339,7 +2350,7 @@
         } else if (section.id === "core-auth-policy") {
           authPolicyTargetOrgId = null;
           cap.textContent =
-            "GET " + API + "/admin/orgs/{orgId}/auth-policy — введите UUID организации и нажмите «Загрузить».";
+            "GET " + API + "/admin/orgs/{orgId}/auth-policy — org из панели «Организация» подхватывается автоматически.";
           const subcap = document.createElement("p");
           subcap.className = "muted small";
           subcap.id = "authPolicyLastFetch";
@@ -2403,6 +2414,22 @@
           row.appendChild(msg);
           summary.appendChild(row);
           appendAuthPolicyForm(summary);
+          const orgPrefill =
+            (window.AdminUi && AdminUi.getOrgId && AdminUi.getOrgId()) ||
+            (document.getElementById("globalOrgId") && document.getElementById("globalOrgId").value.trim()) ||
+            "";
+          if (orgPrefill) {
+            inp.value = orgPrefill;
+            (async () => {
+              try {
+                const path = "/admin/orgs/" + encodeURIComponent(orgPrefill) + "/auth-policy";
+                const data = await apiFetch(path);
+                showAuthPolicy(data, path, orgPrefill);
+              } catch (e) {
+                msg.textContent = e.message || String(e);
+              }
+            })();
+          }
           const reloadAuthPolicy = async () => {
             try {
               if (!authPolicyTargetOrgId) {
@@ -2417,7 +2444,9 @@
             }
           };
           appendJsonPanelReload(summary, reloadAuthPolicy);
-          pre.textContent = "Введите UUID организации и нажмите «Загрузить».";
+          pre.textContent = orgPrefill
+            ? "Политика загружена для org из контекста."
+            : "Введите UUID организации и нажмите «Загрузить».";
         } else if (section.id === "core-retention") {
           retentionPatchTarget = null;
           cap.textContent =
@@ -2425,7 +2454,7 @@
             API +
             "/admin/organizations/{orgId}/retention и GET " +
             API +
-            "/admin/chats/{chatId}/retention — введите UUID и нажмите «Загрузить».";
+            "/admin/chats/{chatId}/retention — один «Загрузить», org из контекста автоматически.";
           const subcap = document.createElement("p");
           subcap.className = "muted small";
           subcap.id = "retentionLastFetch";
@@ -2450,44 +2479,78 @@
               pm.textContent = "";
             }
           };
-          const mkRow = (inputId, labelText, buildPath, kind) => {
-            const row = document.createElement("div");
-            row.className = "admin-toolbar";
-            const lbl = document.createElement("label");
-            lbl.className = "small";
-            lbl.textContent = labelText;
-            const inp = document.createElement("input");
-            inp.type = "text";
-            inp.id = inputId;
-            inp.placeholder = "UUID";
-            lbl.appendChild(inp);
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.textContent = "Загрузить";
-            const msg = document.createElement("span");
-            msg.className = "muted small";
-            btn.addEventListener("click", async () => {
-              msg.textContent = "";
-              const uuid = inp.value.trim();
-              if (!uuid) {
-                msg.textContent = "Введите UUID";
-                return;
+          const kindSel = document.createElement("select");
+          kindSel.id = "retentionKind";
+          [
+            { v: "org", t: "Организация" },
+            { v: "chat", t: "Чат" },
+          ].forEach((o) => {
+            const opt = document.createElement("option");
+            opt.value = o.v;
+            opt.textContent = o.t;
+            kindSel.appendChild(opt);
+          });
+          const loadRow = document.createElement("div");
+          loadRow.className = "admin-toolbar";
+          const kindLbl = document.createElement("label");
+          kindLbl.className = "small";
+          kindLbl.textContent = "Объект";
+          kindLbl.appendChild(kindSel);
+          loadRow.appendChild(kindLbl);
+          const idLbl = document.createElement("label");
+          idLbl.className = "small";
+          idLbl.textContent = "UUID";
+          const idInp = document.createElement("input");
+          idInp.type = "text";
+          idInp.id = "retentionTargetId";
+          idInp.placeholder = "UUID";
+          idLbl.appendChild(idInp);
+          loadRow.appendChild(idLbl);
+    const loadBtn = document.createElement("button");
+    loadBtn.type = "button";
+    loadBtn.textContent = "Загрузить";
+    loadBtn.setAttribute("data-testid", "admin-retention-load");
+          const loadMsg = document.createElement("span");
+          loadMsg.className = "muted small";
+          async function loadRetention(kind, uuid, silent) {
+            loadMsg.textContent = "";
+            if (!uuid) {
+              if (!silent) {
+                loadMsg.textContent = "Введите UUID";
               }
-              try {
-                const path = buildPath(uuid);
-                const data = await apiFetch(path);
-                showRetention(data, path, kind, uuid);
-              } catch (e) {
-                msg.textContent = e.message || String(e);
+              return false;
+            }
+            const path =
+              kind === "org"
+                ? "/admin/organizations/" + encodeURIComponent(uuid) + "/retention"
+                : "/admin/chats/" + encodeURIComponent(uuid) + "/retention";
+            try {
+              const data = await apiFetch(path);
+              showRetention(data, path, kind, uuid);
+              if (!silent) {
+                loadMsg.textContent = "Загружено.";
               }
-            });
-            row.appendChild(lbl);
-            row.appendChild(btn);
-            row.appendChild(msg);
-            summary.appendChild(row);
-          };
-          mkRow("retentionOrgId", "Организация", (uuid) => "/admin/organizations/" + encodeURIComponent(uuid) + "/retention", "org");
-          mkRow("retentionChatId", "Чат", (uuid) => "/admin/chats/" + encodeURIComponent(uuid) + "/retention", "chat");
+              return true;
+            } catch (e) {
+              loadMsg.textContent = e.message || String(e);
+              return false;
+            }
+          }
+          loadBtn.addEventListener("click", () => {
+            loadRetention(kindSel.value, idInp.value.trim(), false);
+          });
+          loadRow.appendChild(loadBtn);
+          loadRow.appendChild(loadMsg);
+          summary.appendChild(loadRow);
+          const retentionOrgPrefill =
+            (window.AdminUi && AdminUi.getOrgId && AdminUi.getOrgId()) ||
+            (document.getElementById("globalOrgId") && document.getElementById("globalOrgId").value.trim()) ||
+            "";
+          if (retentionOrgPrefill) {
+            idInp.value = retentionOrgPrefill;
+            kindSel.value = "org";
+            loadRetention("org", retentionOrgPrefill, true);
+          }
           appendRetentionPatchForm(summary);
           const reloadRetentionGet = async () => {
             try {
@@ -2507,7 +2570,9 @@
             }
           };
           appendJsonPanelReload(summary, reloadRetentionGet);
-          pre.textContent = "Введите UUID организации или чата и нажмите «Загрузить».";
+          pre.textContent = retentionOrgPrefill
+            ? "Ретенция org загружена из контекста."
+            : "Выберите org или chat и нажмите «Загрузить».";
         } else {
           let basePath = normalizePanelPath(section.data_path);
           const reloadGeneric = async () => {

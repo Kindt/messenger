@@ -554,6 +554,7 @@
     const statusBox = document.createElement("div");
     statusBox.id = "dsStatusBox";
     statusBox.className = "status-cards";
+    statusBox.setAttribute("data-testid", "admin-directory-sync-status");
     box.appendChild(statusBox);
 
     function orgIdVal() {
@@ -654,7 +655,7 @@
     const hint = document.createElement("p");
     hint.className = "muted small";
     hint.textContent =
-      "Allowlist: env FLEET_TARGETS_JSON. Hot-plug workers — NATS $SVC.heartbeat.* (всегда слушается).";
+      "Allowlist: env FLEET_TARGETS_JSON. HTTP probes + NATS hot-plug workers (Phase B summary).";
     summary.appendChild(hint);
     const btn = document.createElement("button");
     btn.type = "button";
@@ -674,6 +675,7 @@
     }
     const wrap = document.createElement("div");
     wrap.className = "json-table-wrap fleet-table-wrap";
+    wrap.setAttribute("data-testid", "admin-fleet-table");
     const table = document.createElement("table");
     table.className = "json-panel-table";
     const head = document.createElement("thead");
@@ -720,13 +722,23 @@
     wrap.appendChild(table);
     const meta = document.createElement("p");
     meta.className = "muted small json-panel-note";
+    const comps = data.components || [];
+    const readyCount = comps.filter((c) => c.ready === true).length;
+    const httpCount = comps.filter((c) => c.source === "http-probe").length;
+    const hotplugCount = comps.filter((c) => c.role === "hotplug-worker").length;
     meta.textContent =
       "Aggregator: " +
       (data.aggregator_node || "?") +
       " · generated: " +
       (data.generated_at || "?") +
-      " · targets: " +
-      String(data.components.length);
+      " · ready " +
+      readyCount +
+      "/" +
+      comps.length +
+      " · http-probe " +
+      httpCount +
+      " · hotplug " +
+      hotplugCount;
     wrap.appendChild(meta);
     container.appendChild(wrap);
   }
@@ -824,6 +836,66 @@
     outRow.appendChild(outMsg);
     box.appendChild(outRow);
 
+    const composeCap = document.createElement("p");
+    composeCap.className = "muted small";
+    composeCap.textContent =
+      "Integrations guest compose (scaffold): планирует команду qemu-guest-compose на хосте Windows.";
+    box.appendChild(composeCap);
+    const composeRow = document.createElement("div");
+    composeRow.className = "admin-toolbar";
+    composeRow.setAttribute("data-testid", "admin-plugin-compose-toolbar");
+    const actSel = document.createElement("select");
+    actSel.id = "pluginComposeAction";
+    ["up", "down", "build"].forEach((v) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = v;
+      actSel.appendChild(o);
+    });
+    const svcSel = document.createElement("select");
+    svcSel.id = "pluginComposeService";
+    [
+      "connector-runtime",
+      "onec-bridge",
+      "exchange-bridge",
+      "mock-apis",
+      "echo-php",
+    ].forEach((v) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = v;
+      svcSel.appendChild(o);
+    });
+    const composeBtn = document.createElement("button");
+    composeBtn.type = "button";
+    composeBtn.className = "btn btn-secondary btn-sm";
+    composeBtn.setAttribute("data-testid", "admin-plugin-compose-btn");
+    composeBtn.textContent = "Plan compose";
+    const composeMsg = document.createElement("span");
+    composeMsg.className = "muted small";
+    composeBtn.addEventListener("click", async () => {
+      composeMsg.textContent = "";
+      try {
+        const res = await ctx.apiFetch("/admin/plugins/integrations/compose", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: actSel.value,
+            services: [svcSel.value],
+          }),
+        });
+        composeMsg.textContent = res.status || "OK";
+        showResult(pre, res, null);
+      } catch (e) {
+        composeMsg.textContent = e.message || String(e);
+      }
+    });
+    composeRow.appendChild(actSel);
+    composeRow.appendChild(svcSel);
+    composeRow.appendChild(composeBtn);
+    composeRow.appendChild(composeMsg);
+    box.appendChild(composeRow);
+
     summary.insertBefore(box, summary.firstChild);
   }
 
@@ -907,10 +979,284 @@
     summary.insertBefore(box, summary.firstChild);
   }
 
+  function mountIpAllowlist(summary, pre, ctx) {
+    summary.innerHTML = "";
+    summary.hidden = false;
+    pre.textContent = "Загрузите политику IP allowlist для организации.";
+
+    const box = document.createElement("div");
+    box.className = "panel-form ip-allowlist-form";
+    box.setAttribute("data-testid", "admin-ip-allowlist-form");
+    const hint = document.createElement("p");
+    hint.className = "muted small";
+    hint.textContent =
+      "GET/PATCH /api/v1/admin/orgs/{orgId}/ip-allowlist. При ORG_IP_ALLOWLIST_ENFORCE=1 фильтр блокирует API.";
+    box.appendChild(hint);
+
+    const row = document.createElement("div");
+    row.className = "admin-toolbar";
+    row.appendChild(mkField("ipAllowOrgId", "org_id", "UUID org"));
+    const loadBtn = document.createElement("button");
+    loadBtn.type = "button";
+    loadBtn.className = "btn btn-secondary";
+    loadBtn.setAttribute("data-testid", "admin-ip-allowlist-load");
+    loadBtn.textContent = "Загрузить";
+    const msg = document.createElement("span");
+    msg.className = "muted small";
+    row.appendChild(loadBtn);
+    row.appendChild(msg);
+    box.appendChild(row);
+
+    const flags = document.createElement("div");
+    flags.className = "admin-toolbar";
+    const enLbl = document.createElement("label");
+    enLbl.className = "checkbox-inline";
+    const enCb = document.createElement("input");
+    enCb.type = "checkbox";
+    enCb.id = "ipAllowEnabled";
+    enLbl.appendChild(enCb);
+    enLbl.appendChild(document.createTextNode(" enabled"));
+    flags.appendChild(enLbl);
+    const cidrsLbl = document.createElement("label");
+    cidrsLbl.className = "small";
+    cidrsLbl.textContent = "allowed_cidrs";
+    const cidrsInp = document.createElement("textarea");
+    cidrsInp.id = "ipAllowCidrs";
+    cidrsInp.rows = 2;
+    cidrsInp.placeholder = "127.0.0.1,192.168.1.10";
+    cidrsLbl.appendChild(cidrsInp);
+    flags.appendChild(cidrsLbl);
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.className = "btn btn-primary";
+    saveBtn.setAttribute("data-testid", "admin-ip-allowlist-save");
+    saveBtn.textContent = "Сохранить";
+    const saveMsg = document.createElement("span");
+    saveMsg.className = "muted small";
+    flags.appendChild(saveBtn);
+    flags.appendChild(saveMsg);
+    box.appendChild(flags);
+
+    function orgIdVal() {
+      const fromField = document.getElementById("ipAllowOrgId")?.value.trim();
+      if (fromField) {
+        return fromField;
+      }
+      return getOrgId(ctx);
+    }
+
+    async function loadPolicy() {
+      msg.textContent = "";
+      const oid = orgIdVal();
+      if (!oid) {
+        msg.textContent = "Нужен org_id.";
+        return;
+      }
+      try {
+        const data = await ctx.apiFetch("/admin/orgs/" + encodeURIComponent(oid) + "/ip-allowlist");
+        enCb.checked = !!data.enabled;
+        cidrsInp.value = data.allowed_cidrs || "";
+        showResult(pre, data, null);
+        msg.textContent = "Загружено.";
+      } catch (e) {
+        msg.textContent = e.message || String(e);
+      }
+    }
+
+    loadBtn.addEventListener("click", () => loadPolicy().catch(() => {}));
+    saveBtn.addEventListener("click", async () => {
+      saveMsg.textContent = "";
+      const oid = orgIdVal();
+      if (!oid) {
+        saveMsg.textContent = "Нужен org_id.";
+        return;
+      }
+      try {
+        const data = await ctx.apiFetch("/admin/orgs/" + encodeURIComponent(oid) + "/ip-allowlist", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            enabled: enCb.checked,
+            allowed_cidrs: cidrsInp.value.trim(),
+          }),
+        });
+        showResult(pre, data, null);
+        saveMsg.textContent = "Сохранено.";
+      } catch (e) {
+        saveMsg.textContent = e.message || String(e);
+      }
+    });
+
+    const orgPrefill = getOrgId(ctx);
+    if (orgPrefill) {
+      const inp = document.getElementById("ipAllowOrgId");
+      if (inp) {
+        inp.value = orgPrefill;
+      }
+      loadPolicy().catch(() => {});
+    }
+
+    summary.appendChild(box);
+    if (global.AdminUi) {
+      AdminUi.showJsonBlock(true);
+    }
+  }
+
+  function mountMigrationImport(summary, pre, ctx) {
+    summary.innerHTML = "";
+    summary.hidden = false;
+    pre.textContent = "Создайте job импорта или обработайте pending job.";
+
+    const box = document.createElement("div");
+    box.className = "panel-form migration-import-form";
+    box.setAttribute("data-testid", "admin-migration-import-form");
+    const hint = document.createElement("p");
+    hint.className = "muted small";
+    hint.textContent =
+      "POST /api/v1/admin/migration-import · POST .../{jobId}/process — scaffold processor (spec 022).";
+    box.appendChild(hint);
+
+    const createRow = document.createElement("div");
+    createRow.className = "admin-toolbar";
+    const srcLbl = document.createElement("label");
+    srcLbl.className = "small";
+    srcLbl.textContent = "source";
+    const srcInp = document.createElement("input");
+    srcInp.id = "migrationImportSource";
+    srcInp.value = "telegram_export_v1";
+    srcLbl.appendChild(srcInp);
+    const cfgLbl = document.createElement("label");
+    cfgLbl.className = "small";
+    cfgLbl.textContent = "config_json";
+    const cfgInp = document.createElement("input");
+    cfgInp.id = "migrationImportConfig";
+    cfgInp.placeholder = "{}";
+    cfgInp.value = "{}";
+    cfgLbl.appendChild(cfgInp);
+    const createBtn = document.createElement("button");
+    createBtn.type = "button";
+    createBtn.className = "btn btn-primary";
+    createBtn.setAttribute("data-testid", "admin-migration-import-create");
+    createBtn.textContent = "Создать job";
+    const createMsg = document.createElement("span");
+    createMsg.className = "muted small";
+    createBtn.addEventListener("click", async () => {
+      createMsg.textContent = "";
+      try {
+        const data = await ctx.apiFetch("/admin/migration-import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            source: srcInp.value.trim() || "telegram_export_v1",
+            config_json: cfgInp.value.trim() || "{}",
+          }),
+        });
+        createMsg.textContent = "job " + (data.id || "?");
+        showResult(pre, data, null);
+        await reloadJobs();
+      } catch (e) {
+        createMsg.textContent = e.message || String(e);
+      }
+    });
+    createRow.appendChild(srcLbl);
+    createRow.appendChild(cfgLbl);
+    createRow.appendChild(createBtn);
+    createRow.appendChild(createMsg);
+    box.appendChild(createRow);
+
+    const listRow = document.createElement("div");
+    listRow.className = "admin-toolbar";
+    const reloadBtn = document.createElement("button");
+    reloadBtn.type = "button";
+    reloadBtn.className = "btn btn-secondary";
+    reloadBtn.textContent = "Обновить список";
+    const listMsg = document.createElement("span");
+    listMsg.className = "muted small";
+    listRow.appendChild(reloadBtn);
+    listRow.appendChild(listMsg);
+    box.appendChild(listRow);
+
+    const jobsWrap = document.createElement("div");
+    jobsWrap.className = "json-table-wrap";
+    jobsWrap.setAttribute("data-testid", "admin-migration-import-jobs");
+    box.appendChild(jobsWrap);
+
+    async function reloadJobs() {
+      listMsg.textContent = "";
+      try {
+        const jobs = await ctx.apiFetch("/admin/migration-import?limit=20");
+        jobsWrap.innerHTML = "";
+        if (!Array.isArray(jobs) || jobs.length === 0) {
+          jobsWrap.textContent = "Нет jobs.";
+          return;
+        }
+        const table = document.createElement("table");
+        table.className = "json-panel-table";
+        const head = document.createElement("thead");
+        const hr = document.createElement("tr");
+        ["id", "status", "source", "process"].forEach((h) => {
+          const th = document.createElement("th");
+          th.textContent = h;
+          hr.appendChild(th);
+        });
+        head.appendChild(hr);
+        table.appendChild(head);
+        const body = document.createElement("tbody");
+        jobs.forEach((j) => {
+          const tr = document.createElement("tr");
+          const idTd = document.createElement("td");
+          idTd.textContent = j.id || "";
+          tr.appendChild(idTd);
+          const stTd = document.createElement("td");
+          stTd.textContent = j.status || "";
+          tr.appendChild(stTd);
+          const srcTd = document.createElement("td");
+          srcTd.textContent = j.source || "";
+          tr.appendChild(srcTd);
+          const actTd = document.createElement("td");
+          const procBtn = document.createElement("button");
+          procBtn.type = "button";
+          procBtn.className = "btn btn-secondary btn-sm";
+          procBtn.textContent = "Process";
+          procBtn.addEventListener("click", async () => {
+            try {
+              const res = await ctx.apiFetch(
+                "/admin/migration-import/" + encodeURIComponent(j.id) + "/process",
+                { method: "POST" }
+              );
+              showResult(pre, res, null);
+              await reloadJobs();
+            } catch (e) {
+              listMsg.textContent = e.message || String(e);
+            }
+          });
+          actTd.appendChild(procBtn);
+          tr.appendChild(actTd);
+          body.appendChild(tr);
+        });
+        table.appendChild(body);
+        jobsWrap.appendChild(table);
+        listMsg.textContent = jobs.length + " job(s)";
+      } catch (e) {
+        listMsg.textContent = e.message || String(e);
+      }
+    }
+
+    reloadBtn.addEventListener("click", () => reloadJobs().catch(() => {}));
+    reloadJobs().catch(() => {});
+
+    summary.appendChild(box);
+    if (global.AdminUi) {
+      AdminUi.showJsonBlock(true);
+    }
+  }
+
   const HANDLERS = {
     "plugins-l0-wizard": mountL0Wizard,
     "core-legal-hold": mountLegalHold,
     "core-directory-sync": mountDirectorySync,
+    "core-ip-allowlist": mountIpAllowlist,
+    "core-migration-import": mountMigrationImport,
   };
 
   function tryMount(section, ctx) {

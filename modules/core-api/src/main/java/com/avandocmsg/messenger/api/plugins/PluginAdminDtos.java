@@ -68,4 +68,15 @@ public final class PluginAdminDtos {
             this(instances, instances.size(), instances.size(), 0);
         }
     }
+
+    public record IntegrationsComposeRequest(
+        String action,
+        List<String> services
+    ) {}
+
+    public record IntegrationsComposeResponse(
+        String status,
+        @JsonProperty("recommended_command") String recommendedCommand,
+        String note
+    ) {}
 }

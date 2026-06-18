@@ -20,6 +20,8 @@ public final class UserDomainMapper {
             profile.lastSeenAt(),
             profile.orgId(),
             profile.privacyDisableReadReceipts(),
-            profile.uiLocale());
+            profile.uiLocale(),
+            profile.customStatusText(),
+            profile.dndUntil());
     }
 }

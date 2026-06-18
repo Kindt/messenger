@@ -159,6 +159,28 @@ public class ChatService {
         return chatRepository.setMuted(chatId, userId, muted);
     }
 
+    public boolean setArchived(UUID chatId, UUID userId, boolean archived) {
+        if (chatRepository.getMemberRole(chatId, userId) == null) {
+            return false;
+        }
+        var ok = chatRepository.setArchived(chatId, userId, archived);
+        if (ok) {
+            ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, userId);
+        }
+        return ok;
+    }
+
+    public boolean setFolderTag(UUID chatId, UUID userId, String folderTag) {
+        if (chatRepository.getMemberRole(chatId, userId) == null) {
+            return false;
+        }
+        var ok = chatRepository.setFolderTag(chatId, userId, folderTag);
+        if (ok) {
+            ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, userId);
+        }
+        return ok;
+    }
+
     public boolean setPersonalFilter(UUID chatId, UUID userId, boolean active) {
         return chatRepository.setPersonalFilterActive(chatId, userId, active);
     }

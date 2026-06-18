@@ -920,4 +920,13 @@ public class AppConfig {
         var raw = props.getProperty("scim.bearer.token", "").trim();
         return raw.isEmpty() ? Optional.empty() : Optional.of(raw);
     }
+
+    /** When true, enforce {@code org_ip_allowlist} in Jersey filter (lab). Env: ORG_IP_ALLOWLIST_ENFORCE. */
+    public boolean orgIpAllowlistEnforce() {
+        var env = System.getenv("ORG_IP_ALLOWLIST_ENFORCE");
+        if (env != null && !env.isBlank()) {
+            return Boolean.parseBoolean(env.trim());
+        }
+        return Boolean.parseBoolean(props.getProperty("org.ip.allowlist.enforce", "false"));
+    }
 }

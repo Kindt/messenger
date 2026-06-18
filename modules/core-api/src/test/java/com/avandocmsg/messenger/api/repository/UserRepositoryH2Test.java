@@ -38,7 +38,9 @@ class UserRepositoryH2Test {
                   last_seen_at TIMESTAMP,
                   org_id UUID,
                   privacy_disable_read_receipts BOOLEAN NOT NULL DEFAULT false,
-                  ui_locale VARCHAR(8)
+                  ui_locale VARCHAR(8),
+                  custom_status_text VARCHAR(128) NOT NULL DEFAULT '',
+                  dnd_until TIMESTAMP
                 )
                 """);
         }

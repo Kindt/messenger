@@ -13,6 +13,9 @@ public interface UserRepositoryPort {
 
     boolean updatePresence(UserId id, String presenceStatus);
 
+    boolean updateUserStatus(UserId id, String presenceStatus, String customStatusText,
+                             java.time.Instant dndUntil, boolean clearDndUntil);
+
     boolean updatePrivacy(UserId id, boolean disableReadReceipts);
 
     boolean updateUiLocale(UserId id, String uiLocale);

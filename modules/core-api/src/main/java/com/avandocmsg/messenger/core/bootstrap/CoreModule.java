@@ -202,9 +202,14 @@ public final class CoreModule {
     public static UserApplicationService userApplicationService(DataSource dataSource,
                                                                 UuidGenerator uuidGenerator,
                                                                 ReadCachePort readCachePort,
-                                                                AppConfig appConfig) {
+                                                                AppConfig appConfig,
+                                                                com.avandocmsg.messenger.core.port.NatsOutboundPort natsOutbound) {
         return new UserApplicationService(
-            userRepositoryPort(dataSource), savedChatPort(dataSource, uuidGenerator), readCachePort, appConfig);
+            userRepositoryPort(dataSource),
+            savedChatPort(dataSource, uuidGenerator),
+            readCachePort,
+            appConfig,
+            new com.avandocmsg.messenger.core.application.UserPresencePublisher(natsOutbound));
     }
 
     public static PublicLinkPort publicLinkPort(FilePublicLinkRepository legacy) {

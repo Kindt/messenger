@@ -112,18 +112,30 @@ public class UserResource {
     @PATCH
     @Path("/me/presence")
     @Operation(summary = "Установить статус присутствия",
-        description = "presence_status: online | away | dnd | offline")
+        description = "presence_status: online | away | dnd | offline; optional custom_status_text and dnd_until")
     public Response updatePresence(UpdatePresenceRequest request,
                                    @Context SecurityContext securityContext) {
-        if (request == null || request.presenceStatus() == null
-            || !PRESENCE_ALLOWED.contains(request.presenceStatus())) {
+        if (request == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.user.presence_invalid")))
+                .build();
+        }
+        if (request.presenceStatus() != null
+            && !PRESENCE_ALLOWED.contains(request.presenceStatus())) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.user.presence_invalid")))
+                .build();
+        }
+        if (request.presenceStatus() == null
+            && request.customStatusText() == null
+            && request.dndUntil() == null) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(new ApiError(400, messages.get("error.user.presence_invalid")))
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
         return userApplicationService
-            .updatePresence(UserId.of(userId), request.presenceStatus())
+            .updateUserStatus(UserId.of(userId), request)
             .map(UserDomainMapper::toResponse)
             .map(p -> Response.ok(p).build())
             .orElse(Response.status(Response.Status.INTERNAL_SERVER_ERROR)

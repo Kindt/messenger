@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.api.chats;
 
+import com.avandocmsg.messenger.api.chats.dto.ChatArchiveRequest;
+import com.avandocmsg.messenger.api.chats.dto.ChatFolderRequest;
 import com.avandocmsg.messenger.api.chats.dto.AddMemberRequest;
 import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
 import com.avandocmsg.messenger.api.chats.dto.ChatResponse;
@@ -49,6 +51,8 @@ import java.util.UUID;
 @Consumes(MediaType.APPLICATION_JSON)
 @Tag(name = "Chats", description = "Chat and group management")
 public class ChatResource {
+
+    private static final java.util.Set<String> FOLDER_TAGS = java.util.Set.of("work", "personal");
 
     private final ChatService chatService;
     private final ReadReceiptService readReceiptService;
@@ -282,6 +286,47 @@ public class ChatResource {
                                     @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
         chatService.setPersonalFilter(UuidParams.required(chatIdStr, "chat_id"), userId, request.active());
+        return Response.ok().build();
+    }
+
+    @PATCH
+    @Path("/{chatId}/archive")
+    @Operation(summary = "Archive chat", description = "Per-user archive flag (spec 022 US17)")
+    public Response archive(@PathParam("chatId") String chatIdStr,
+                            ChatArchiveRequest request,
+                            @Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        if (request == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        if (!chatService.setArchived(chatId, userId, request.archived())) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(new ApiError(403, messages.get("error.chat.not_a_member")))
+                .build();
+        }
+        return Response.ok().build();
+    }
+
+    @PATCH
+    @Path("/{chatId}/folder")
+    @Operation(summary = "Folder tag", description = "Per-user folder tag: work, personal, or clear")
+    public Response folder(@PathParam("chatId") String chatIdStr,
+                           ChatFolderRequest request,
+                           @Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var tag = request != null ? request.folderTag() : null;
+        if (tag != null && !tag.isBlank() && !FOLDER_TAGS.contains(tag)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.chat.folder_invalid")))
+                .build();
+        }
+        if (!chatService.setFolderTag(chatId, userId, tag)) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(new ApiError(403, messages.get("error.chat.not_a_member")))
+                .build();
+        }
         return Response.ok().build();
     }
 

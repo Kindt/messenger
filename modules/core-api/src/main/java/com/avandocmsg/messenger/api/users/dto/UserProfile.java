@@ -18,5 +18,7 @@ public record UserProfile(
     @JsonProperty("last_seen_at") Instant lastSeenAt,
     @JsonProperty("org_id") String orgId,
     @JsonProperty("privacy_disable_read_receipts") boolean privacyDisableReadReceipts,
-    @JsonProperty("ui_locale") String uiLocale
+    @JsonProperty("ui_locale") String uiLocale,
+    @JsonProperty("custom_status_text") String customStatusText,
+    @JsonProperty("dnd_until") Instant dndUntil
 ) {}

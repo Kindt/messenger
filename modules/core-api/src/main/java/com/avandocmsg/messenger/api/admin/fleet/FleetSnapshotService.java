@@ -3,6 +3,7 @@ package com.avandocmsg.messenger.api.admin.fleet;
 import com.avandocmsg.messenger.api.admin.fleet.dto.FleetSnapshotResponse;
 import com.avandocmsg.messenger.api.admin.ui.AdminStatsPort;
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.api.metrics.FleetSnapshotMetrics;
 import com.avandocmsg.messenger.common.hotplug.HotPlugRegistry;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -107,13 +108,15 @@ public final class FleetSnapshotService {
             )
         );
 
-        return new FleetSnapshotResponse(
+        var response = new FleetSnapshotResponse(
             now,
             appConfig.fleetAggregatorNode(),
             appConfig.fleetProbeTimeoutMs(),
             List.copyOf(components),
             shared
         );
+        FleetSnapshotMetrics.record(response);
+        return response;
     }
 
     private FleetSnapshotResponse.FleetComponentSnapshot localComponent() {

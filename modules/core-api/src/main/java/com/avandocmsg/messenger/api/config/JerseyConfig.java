@@ -61,6 +61,7 @@ import com.avandocmsg.messenger.api.filter.BotTokenAuthFilter;
 import com.avandocmsg.messenger.api.filter.ScimBearerAuthFilter;
 import com.avandocmsg.messenger.api.filter.JwtAuthFilter;
 import com.avandocmsg.messenger.api.filter.OrgRoutingClearFilter;
+import com.avandocmsg.messenger.api.filter.OrgIpAllowlistFilter;
 import com.avandocmsg.messenger.api.filter.OrgRoutingFilter;
 import com.avandocmsg.messenger.api.health.HealthResource;
 import com.avandocmsg.messenger.api.messages.MessageResource;
@@ -238,6 +239,9 @@ public class JerseyConfig extends ResourceConfig {
                 bind(CoreModule.orgUserDirectoryPort(userRepository)).to(OrgUserDirectoryPort.class);
                 bind(CoreModule.scimGroupRepositoryPort(dataSource)).to(ScimGroupRepositoryPort.class);
                 bind(BotRateLimiter.fromEnv()).to(BotRateLimiter.class);
+                bind(new com.avandocmsg.messenger.api.security.OrgIpAllowlistService(
+                    new com.avandocmsg.messenger.api.security.OrgIpAllowlistRepository(dataSource)))
+                    .to(com.avandocmsg.messenger.api.security.OrgIpAllowlistService.class);
             }
         });
 
@@ -246,6 +250,7 @@ public class JerseyConfig extends ResourceConfig {
         register(HealthResource.class);
         register(AuthResource.class);
         register(AuthPolicyAdminResource.class);
+        register(com.avandocmsg.messenger.api.security.OrgIpAllowlistAdminResource.class);
         register(com.avandocmsg.messenger.api.directory.DirectorySyncAdminResource.class);
         register(com.avandocmsg.messenger.api.scim.ScimUsersResource.class);
         register(com.avandocmsg.messenger.api.scim.ScimGroupsResource.class);
@@ -283,6 +288,7 @@ public class JerseyConfig extends ResourceConfig {
         register(ScimBearerAuthFilter.class);
         register(BotRateLimitFilter.class);
         register(JwtAuthFilter.class);
+        register(OrgIpAllowlistFilter.class);
         register(OrgRoutingFilter.class);
         register(OrgRoutingClearFilter.class);
         register(JacksonFeature.class);

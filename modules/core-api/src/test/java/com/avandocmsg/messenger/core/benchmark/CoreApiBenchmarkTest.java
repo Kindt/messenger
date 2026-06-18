@@ -75,7 +75,15 @@ class CoreApiBenchmarkTest {
                     null,
                     null,
                     false,
+                    null,
+                    null,
                     null));
+            }
+
+            @Override
+            public boolean updateUserStatus(UserId id, String presenceStatus, String customStatusText,
+                                            java.time.Instant dndUntil, boolean clearDndUntil) {
+                return false;
             }
 
             @Override
@@ -123,7 +131,9 @@ class CoreApiBenchmarkTest {
                 return Optional.empty();
             }
         };
-        var service = new UserApplicationService(port, savedChatPort, NoOpReadCacheAdapter.INSTANCE, new AppConfig());
+        var service = new UserApplicationService(
+            port, savedChatPort, NoOpReadCacheAdapter.INSTANCE, new AppConfig(),
+            new com.avandocmsg.messenger.core.application.UserPresencePublisher(null));
 
         var start = System.nanoTime();
         for (int i = 0; i < 1000; i++) {

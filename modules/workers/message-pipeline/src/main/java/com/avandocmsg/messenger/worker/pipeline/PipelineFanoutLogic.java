@@ -74,6 +74,29 @@ public final class PipelineFanoutLogic {
         return result;
     }
 
+    /** Active users in org (for presence fan-out). */
+    public static List<String> loadOrgUserIds(DataSource dataSource, UUID orgId, UUID excludeUserId,
+                                              UserMessageSource workerMessages) {
+        var sql = """
+            SELECT id FROM users
+            WHERE org_id = ? AND hidden = false AND id != ?
+            """;
+        var result = new ArrayList<String>();
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, orgId);
+            stmt.setObject(2, excludeUserId);
+            try (var rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(rs.getObject("id", UUID.class).toString());
+                }
+            }
+        } catch (Exception e) {
+            log.error("org users load failed org={}", orgId, e);
+        }
+        return result;
+    }
+
     public static boolean isChatMember(DataSource dataSource, UUID chatId, UUID userId,
                                        UserMessageSource workerMessages) {
         var sql = """

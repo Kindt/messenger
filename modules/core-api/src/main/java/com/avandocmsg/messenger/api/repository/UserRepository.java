@@ -19,7 +19,8 @@ public class UserRepository {
 
     private static final String SELECT_USER = """
         SELECT id, username, display_name, phone, email, external_id, hidden, created_at,
-               presence_status, last_seen_at, org_id, privacy_disable_read_receipts, ui_locale
+               presence_status, last_seen_at, org_id, privacy_disable_read_receipts, ui_locale,
+               custom_status_text, dnd_until
         FROM users
         """;
 
@@ -399,6 +400,9 @@ public class UserRepository {
         var lastSeenTs = rs.getTimestamp("last_seen_at");
         Instant lastSeen = lastSeenTs != null ? lastSeenTs.toInstant() : null;
         var org = rs.getObject("org_id", UUID.class);
+        var dndTs = hasColumn(rs, "dnd_until") ? rs.getTimestamp("dnd_until") : null;
+        Instant dndUntil = dndTs != null ? dndTs.toInstant() : null;
+        var customStatus = hasColumn(rs, "custom_status_text") ? rs.getString("custom_status_text") : null;
         return new UserProfile(
             rs.getObject("id", UUID.class).toString(),
             rs.getString("username"),
@@ -412,7 +416,18 @@ public class UserRepository {
             lastSeen,
             org != null ? org.toString() : null,
             rs.getBoolean("privacy_disable_read_receipts"),
-            rs.getString("ui_locale")
+            rs.getString("ui_locale"),
+            customStatus,
+            dndUntil
         );
+    }
+
+    private static boolean hasColumn(ResultSet rs, String column) {
+        try {
+            rs.findColumn(column);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

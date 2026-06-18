@@ -8,7 +8,6 @@ import com.avandocmsg.messenger.core.port.SavedChatPort;
 import com.avandocmsg.messenger.core.port.UserRepositoryPort;
 import org.junit.jupiter.api.Test;
 
-import java.time.Clock;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -146,6 +145,12 @@ class AuthServiceTest {
 
         @Override
         public boolean updatePresence(UserId id, String presenceStatus) {
+            return false;
+        }
+
+        @Override
+        public boolean updateUserStatus(UserId id, String presenceStatus, String customStatusText,
+                                        java.time.Instant dndUntil, boolean clearDndUntil) {
             return false;
         }
 

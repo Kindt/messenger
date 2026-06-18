@@ -40,7 +40,7 @@ public class MeIntegrationsResource {
         var userId = CurrentUserId.uuid(securityContext);
         var profile = userRepository.findById(userId).orElse(null);
         if (profile == null || profile.orgId() == null || profile.orgId().isBlank()) {
-            return Response.ok(new MeIntegrationsResponse(List.of())).build();
+            return Response.ok(new MeIntegrationsResponse(List.of(), MeIntegrationsVitrine.tiles())).build();
         }
         var orgId = UUID.fromString(profile.orgId());
         var items = new ArrayList<MeIntegrationsResponse.IntegrationItem>();
@@ -71,7 +71,7 @@ public class MeIntegrationsResource {
                 launchUrl,
                 openMode));
         }
-        return Response.ok(new MeIntegrationsResponse(items)).build();
+        return Response.ok(new MeIntegrationsResponse(items, MeIntegrationsVitrine.tiles())).build();
     }
 
     private static LauncherConfig launcherFromConfig(JsonNode config) {
