@@ -7,47 +7,92 @@
   <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-<header class="top">
-  <div class="title-row">
-    <h1>Админ-консоль</h1>
-    <span id="apiVersionLabel" class="muted small" hidden></span>
+<header class="app-header" data-testid="admin-header">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">K</div>
+    <div class="brand-text">
+      <h1 class="brand-title">Админ-консоль</h1>
+      <span id="apiVersionLabel" class="brand-version muted" hidden></span>
+    </div>
   </div>
-  <div class="auth">
-    <label>Логин <input type="text" id="username" autocomplete="username"/></label>
-    <label>Пароль <input type="password" id="password" autocomplete="current-password"/></label>
-    <button type="button" id="btnLogin">Войти</button>
-    <button type="button" id="btnLogout" hidden>Выйти</button>
-    <span id="authStatus" class="muted"></span>
+  <div class="auth-bar" id="authBar" data-testid="admin-auth">
+    <div class="auth-fields" id="authFields">
+      <label class="field">
+        <span class="field-label">Логин</span>
+        <input type="text" id="username" autocomplete="username" data-testid="admin-login-user"/>
+      </label>
+      <label class="field">
+        <span class="field-label">Пароль</span>
+        <input type="password" id="password" autocomplete="current-password" data-testid="admin-login-pass"/>
+      </label>
+      <button type="button" id="btnLogin" class="btn btn-primary" data-testid="admin-login-btn">Войти</button>
+    </div>
+    <div class="auth-session" id="authSession" hidden>
+      <span id="authStatus" class="auth-status muted"></span>
+      <button type="button" id="btnLogout" class="btn btn-ghost" data-testid="admin-logout-btn">Выйти</button>
+    </div>
   </div>
 </header>
 
-<main class="layout">
-  <nav class="sidebar" id="sidebar">
-    <p class="muted small">Разделы подгружаются из подключённых модулей (SPI).</p>
-    <ul id="sectionList"></ul>
-  </nav>
-  <section class="panel" id="panel">
-    <p class="muted" id="panelHint">Войдите под пользователем с realm-ролью <code>admin</code>, затем выберите раздел.</p>
-    <div id="panelSummary" class="panel-summary" hidden></div>
-    <pre id="panelContent" hidden></pre>
-  </section>
+<main class="app-shell" id="appShell">
+  <aside class="nav" id="sidebar" aria-label="Разделы администрирования">
+    <p class="nav-hint muted" id="navHint">Разделы подгружаются из подключённых модулей.</p>
+    <div id="sectionList" class="nav-groups"></div>
+  </aside>
+
+  <div class="workspace">
+    <header class="workspace-header" id="panelHeader" hidden>
+      <div class="workspace-header-text">
+        <h2 id="panelTitle" class="workspace-title"></h2>
+        <p id="panelDesc" class="workspace-desc muted"></p>
+      </div>
+    </header>
+
+    <div class="org-context" id="orgContextBar" hidden data-testid="admin-org-bar">
+      <label class="field field-inline">
+        <span class="field-label">Организация</span>
+        <input type="text" id="globalOrgId" placeholder="UUID организации" spellcheck="false"/>
+      </label>
+      <button type="button" id="btnApplyOrg" class="btn btn-secondary">Применить</button>
+      <span id="orgContextMsg" class="muted small"></span>
+    </div>
+
+    <section class="panel" id="panel" data-testid="admin-panel">
+      <div class="welcome-card" id="panelHint">
+        <div class="welcome-icon" aria-hidden="true">⚙</div>
+        <h2>Добро пожаловать</h2>
+        <p class="muted">Войдите под учётной записью с realm-ролью <code>admin</code>, затем выберите раздел в меню слева.</p>
+        <ul class="welcome-list muted">
+          <li>Статистика сервера и состояние зависимостей</li>
+          <li>Организации, политики входа и ретенция</li>
+          <li>Экспорт, аудит и настройка плагинов-ботов</li>
+        </ul>
+      </div>
+      <div id="panelSummary" class="panel-summary" hidden></div>
+      <div class="json-block" id="jsonBlock" hidden>
+        <div class="json-block-head">
+          <span class="json-block-label">Ответ API (JSON)</span>
+          <button type="button" id="btnToggleJson" class="btn btn-ghost btn-sm">Свернуть</button>
+        </div>
+        <pre id="panelContent" hidden></pre>
+      </div>
+    </section>
+  </div>
 </main>
 
 <footer class="site-footer muted small">
-  <a href="/api/v1/admin/console" rel="noopener">Вход через API (редирект)</a>
-  ·
-  Без JWT:
-  <a href="/api/v1/health" target="_blank" rel="noopener">health</a>
-  ·
-  <a href="/api/v1/health/ready" target="_blank" rel="noopener">ready</a>
-  ·
-  <a href="/api/v1/media/capabilities" target="_blank" rel="noopener">capabilities</a>
-  ·
-  <a href="/api/v1/metrics/prometheus" target="_blank" rel="noopener">Prometheus</a>
-  ·
-  <a href="/openapi.json" target="_blank" rel="noopener">OpenAPI</a>
+  <nav class="footer-links" aria-label="Служебные ссылки">
+    <a href="/api/v1/admin/console" rel="noopener">Вход через API</a>
+    <a href="/api/v1/health" target="_blank" rel="noopener">health</a>
+    <a href="/api/v1/health/ready" target="_blank" rel="noopener">ready</a>
+    <a href="/api/v1/media/capabilities" target="_blank" rel="noopener">capabilities</a>
+    <a href="/api/v1/metrics/prometheus" target="_blank" rel="noopener">Prometheus</a>
+    <a href="/openapi.json" target="_blank" rel="noopener">OpenAPI</a>
+  </nav>
 </footer>
 
+<script src="ui-helpers.js"></script>
+<script src="panels.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

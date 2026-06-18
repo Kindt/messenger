@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.api.admin.ui;
 
+import com.avandocmsg.messenger.api.admin.fleet.FleetSnapshotService;
+import com.avandocmsg.messenger.api.admin.fleet.dto.FleetSnapshotResponse;
 import com.avandocmsg.messenger.api.admin.ui.dto.AdminExportComplianceGuideResponse;
 import com.avandocmsg.messenger.api.admin.ui.dto.AdminManifestResponse;
 import com.avandocmsg.messenger.api.admin.ui.dto.AdminServerStatsResponse;
@@ -29,12 +31,19 @@ public class AdminUiResource {
 
     private final AdminUiManifest manifest;
     private final AdminStatsPort stats;
+    private final FleetSnapshotService fleetSnapshot;
     private final AppConfig appConfig;
 
     @Inject
-    public AdminUiResource(AdminUiManifest manifest, AdminStatsPort stats, AppConfig appConfig) {
+    public AdminUiResource(
+        AdminUiManifest manifest,
+        AdminStatsPort stats,
+        FleetSnapshotService fleetSnapshot,
+        AppConfig appConfig
+    ) {
         this.manifest = manifest;
         this.stats = stats;
+        this.fleetSnapshot = fleetSnapshot;
         this.appConfig = appConfig;
     }
 
@@ -58,6 +67,17 @@ public class AdminUiResource {
         content = @Content(schema = @Schema(implementation = AdminServerStatsResponse.class)))
     public AdminServerStatsResponse stats() {
         return stats.snapshot();
+    }
+
+    @GET
+    @Path("fleet/snapshot")
+    @Operation(summary = "Fleet snapshot (all allowlisted components + hot-plug)",
+        description = "Параллельный HTTP probe целей из FLEET_TARGETS_JSON, локальный core-api и NATS heartbeats.",
+        security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "200",
+        content = @Content(schema = @Schema(implementation = FleetSnapshotResponse.class)))
+    public FleetSnapshotResponse fleetSnapshot() {
+        return fleetSnapshot.snapshot();
     }
 
     @GET

@@ -13,6 +13,8 @@ public enum AdminUiSectionKind {
      * ответ показывается как форматированный JSON (массив или объект).
      */
     JSON_PANEL("json_panel"),
+    /** Встроенная панель fleet snapshot (все компоненты). */
+    FLEET_GRID("fleet_grid"),
     /** Расширение: статический бандл или отдельный endpoint модуля (будущее). */
     CUSTOM("custom");
 

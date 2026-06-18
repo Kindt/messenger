@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.api.mls;
 
 import com.avandocmsg.messenger.api.crypto.E2EEService;
 import com.avandocmsg.messenger.api.mls.dto.EncryptedMessage;
+import com.avandocmsg.messenger.api.mls.openmls.OpenMlsWireLayout;
 import com.avandocmsg.messenger.api.mls.wire.MlsWireCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +19,6 @@ import java.util.UUID;
  */
 public class MlsService {
     private static final Logger log = LoggerFactory.getLogger(MlsService.class);
-    private static final String DEFAULT_CIPHER_SUITE = "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519";
 
     private final SessionRepository sessionRepository;
     private final E2EEService e2eeService;
@@ -33,7 +33,7 @@ public class MlsService {
         if (existing.isPresent()) {
             return Optional.of(existing.get().id().toString());
         }
-        var session = sessionRepository.create(chatId, DEFAULT_CIPHER_SUITE);
+        var session = sessionRepository.create(chatId, OpenMlsWireLayout.DEFAULT_CIPHER_SUITE);
         if (session == null) {
             return Optional.empty();
         }
@@ -51,7 +51,7 @@ public class MlsService {
         }
         var session = sessionOpt.get();
         var sessionKey = deriveSessionKey(session.id(), session.chatId());
-        var aad = (session.chatId().toString() + ":" + session.epoch()).getBytes(StandardCharsets.UTF_8);
+        var aad = OpenMlsWireLayout.aadBytes(session.chatId(), session.epoch());
         var ciphertext = e2eeService.encrypt(
             plaintext.getBytes(StandardCharsets.UTF_8), sessionKey, aad);
         if (ciphertext == null) return null;
@@ -66,7 +66,7 @@ public class MlsService {
         }
         var session = sessionOpt.get();
         var sessionKey = deriveSessionKey(session.id(), session.chatId());
-        var aad = (session.chatId().toString() + ":" + session.epoch()).getBytes(StandardCharsets.UTF_8);
+        var aad = OpenMlsWireLayout.aadBytes(session.chatId(), session.epoch());
         var fullCiphertext = new byte[nonce.length + ciphertext.length];
         System.arraycopy(nonce, 0, fullCiphertext, 0, nonce.length);
         System.arraycopy(ciphertext, 0, fullCiphertext, nonce.length, ciphertext.length);
@@ -130,7 +130,7 @@ public class MlsService {
             return null;
         }
         var sessionKey = deriveSessionKey(session.id(), session.chatId());
-        var aad = (session.chatId().toString() + ":" + session.epoch()).getBytes(StandardCharsets.UTF_8);
+        var aad = OpenMlsWireLayout.aadBytes(session.chatId(), session.epoch());
         var plaintext = e2eeService.decrypt(full, sessionKey, aad);
         if (plaintext == null) {
             return null;

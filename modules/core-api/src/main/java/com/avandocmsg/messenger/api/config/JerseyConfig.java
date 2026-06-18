@@ -19,6 +19,7 @@ import com.avandocmsg.messenger.api.contacts.SearchResource;
 import com.avandocmsg.messenger.api.crypto.CryptoResource;
 import com.avandocmsg.messenger.api.devices.DeviceResource;
 import com.avandocmsg.messenger.api.admin.AdminResource;
+import com.avandocmsg.messenger.api.admin.fleet.FleetSnapshotService;
 import com.avandocmsg.messenger.api.admin.ui.AdminServerStatsService;
 import com.avandocmsg.messenger.api.admin.ui.AdminStatsPort;
 import com.avandocmsg.messenger.api.admin.ui.AdminUiManifest;
@@ -69,6 +70,7 @@ import com.avandocmsg.messenger.api.mls.MlsWirePublisher;
 import com.avandocmsg.messenger.api.mls.SessionRepository;
 import com.avandocmsg.messenger.core.application.ChatApplicationService;
 import com.avandocmsg.messenger.core.bootstrap.CoreModule;
+import com.avandocmsg.messenger.core.port.OrgUserDirectoryPort;
 import com.avandocmsg.messenger.core.port.ScimGroupRepositoryPort;
 import com.avandocmsg.messenger.core.application.FileApplicationService;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
@@ -89,6 +91,7 @@ import com.avandocmsg.messenger.api.users.UserResource;
 import com.avandocmsg.messenger.core.adapter.messaging.NatsConnectionOutbound;
 import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
+import com.avandocmsg.messenger.core.port.OpenMlsBindingPort;
 import com.avandocmsg.messenger.core.port.PublicLinkPort;
 import com.avandocmsg.messenger.core.port.ReadCachePort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
@@ -127,7 +130,8 @@ public class JerseyConfig extends ResourceConfig {
                         ChatBanRepository chatBanRepository, ChatBanService chatBanService,
                         E2EEService e2eeService, KeyPackageRepository keyPackageRepository,
                         SessionRepository sessionRepository, MlsService mlsService, MlsGroupManager mlsGroupManager,
-                        MlsMigrationService mlsMigrationService, MlsWirePublisher mlsWirePublisher,
+                        MlsMigrationService mlsMigrationService, OpenMlsBindingPort openMlsBindingPort,
+                        MlsWirePublisher mlsWirePublisher,
                         FileProxy fileProxy, ConferenceService conferenceService,
                         LiveSessionService liveSessionService,
                         ChatCallLiveKitService chatCallLiveKitService,
@@ -144,6 +148,7 @@ public class JerseyConfig extends ResourceConfig {
                         MessageSearchService messageSearchService,
                         AdminUiManifest adminUiManifest,
                         AdminServerStatsService adminServerStatsService,
+                        FleetSnapshotService fleetSnapshotService,
                         RedisProbe redisProbe,
                         ReadCachePort readCachePort,
                         LegalHoldRepository legalHoldRepository,
@@ -198,6 +203,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(mlsService).to(MlsService.class);
                 bind(mlsGroupManager).to(MlsGroupManager.class);
                 bind(mlsMigrationService).to(MlsMigrationService.class);
+                bind(openMlsBindingPort).to(OpenMlsBindingPort.class);
                 bind(mlsWirePublisher).to(MlsWirePublisher.class);
                 bind(conferenceService).to(ConferenceService.class);
                 bind(liveSessionService).to(LiveSessionService.class);
@@ -216,6 +222,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(adminUiManifest).to(AdminUiManifest.class);
                 bind(adminServerStatsService).to(AdminStatsPort.class);
                 bind(adminServerStatsService).to(AdminServerStatsService.class);
+                bind(fleetSnapshotService).to(FleetSnapshotService.class);
                 bind(legalHoldRepository).to(LegalHoldRepository.class);
                 bind(purgeStatusService).to(PurgeStatusService.class);
                 bind(botRepository).to(BotRepository.class);
@@ -226,6 +233,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(pluginOutboundService).to(com.avandocmsg.messenger.api.plugins.PluginOutboundService.class);
                 bind(authPolicyService).to(AuthPolicyService.class);
                 bind(directorySyncService).to(DirectorySyncService.class);
+                bind(CoreModule.orgUserDirectoryPort(userRepository)).to(OrgUserDirectoryPort.class);
                 bind(CoreModule.scimGroupRepositoryPort(dataSource)).to(ScimGroupRepositoryPort.class);
                 bind(BotRateLimiter.fromEnv()).to(BotRateLimiter.class);
             }

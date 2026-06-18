@@ -22,6 +22,13 @@ public final class CoreAdminUiContributor implements AdminUiContributor {
                 "/admin/ui/stats"
             ),
             new AdminUiSectionDescriptor(
+                "core-fleet-stats",
+                "Инфраструктура (fleet)",
+                11,
+                AdminUiSectionKind.FLEET_GRID,
+                "/admin/ui/fleet/snapshot"
+            ),
+            new AdminUiSectionDescriptor(
                 "core-export-compliance",
                 "Экспорт / GDPR",
                 12,
@@ -46,6 +53,13 @@ public final class CoreAdminUiContributor implements AdminUiContributor {
                 "core-auth-policy",
                 "Вход / Identity",
                 21,
+                AdminUiSectionKind.JSON_PANEL,
+                null
+            ),
+            new AdminUiSectionDescriptor(
+                "core-directory-sync",
+                "Directory sync (LDAP)",
+                22,
                 AdminUiSectionKind.JSON_PANEL,
                 null
             ),

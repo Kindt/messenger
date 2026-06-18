@@ -1,7 +1,7 @@
 package com.avandocmsg.messenger.api.scim;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.port.OrgUserDirectoryPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.security.RolesAllowed;
@@ -30,13 +30,13 @@ import java.util.UUID;
 public class ScimUsersResource {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final UserRepository userRepository;
+    private final OrgUserDirectoryPort userDirectory;
     private final AppConfig appConfig;
     private final UuidGenerator uuidGenerator;
 
     @Inject
-    public ScimUsersResource(UserRepository userRepository, AppConfig appConfig, UuidGenerator uuidGenerator) {
-        this.userRepository = userRepository;
+    public ScimUsersResource(OrgUserDirectoryPort userDirectory, AppConfig appConfig, UuidGenerator uuidGenerator) {
+        this.userDirectory = userDirectory;
         this.appConfig = appConfig;
         this.uuidGenerator = uuidGenerator;
     }
@@ -52,7 +52,7 @@ public class ScimUsersResource {
         var start = startIndex != null && startIndex > 0 ? startIndex : 1;
         var pageSize = count != null && count > 0 ? Math.min(count, 200) : 100;
         var offset = start - 1;
-        var profiles = userRepository.listByOrg(orgId, offset, pageSize);
+        var profiles = userDirectory.listByOrg(orgId, offset, pageSize);
         if (filter != null && filter.contains("userName eq")) {
             var userName = extractEqValue(filter, "userName");
             if (userName != null) {
@@ -61,7 +61,7 @@ public class ScimUsersResource {
                     .toList();
             }
         }
-        var total = userRepository.countByOrg(orgId);
+        var total = userDirectory.countByOrg(orgId);
         var base = baseLocation(uriInfo);
         return Response.ok(ScimUserMapper.toList(profiles, total, start, base)).build();
     }
@@ -70,7 +70,7 @@ public class ScimUsersResource {
     @Path("{id}")
     public Response get(@PathParam("id") String id, @Context UriInfo uriInfo) {
         var userId = parseUuid(id);
-        var profile = userRepository.findById(userId)
+        var profile = userDirectory.findById(userId)
             .orElseThrow(NotFoundException::new);
         return Response.ok(ScimUserMapper.toResource(profile, baseLocation(uriInfo))).build();
     }
@@ -84,11 +84,11 @@ public class ScimUsersResource {
         }
         var orgId = ScimUserMapper.defaultOrgId(appConfig);
         var id = uuidGenerator.randomUuid();
-        if (!userRepository.upsertFromScim(
+        if (!userDirectory.upsertFromScim(
             id, orgId, parsed.userName(), parsed.email(), parsed.externalId(), parsed.displayName(), parsed.active())) {
             return Response.status(409).entity(scimError(409, "user create failed")).build();
         }
-        var profile = userRepository.findById(id).orElseThrow();
+        var profile = userDirectory.findById(id).orElseThrow();
         var location = baseLocation(uriInfo) + profile.id();
         return Response.status(201).entity(ScimUserMapper.toResource(profile, baseLocation(uriInfo)))
             .header("Location", location)
@@ -99,15 +99,15 @@ public class ScimUsersResource {
     @Path("{id}")
     public Response patch(@PathParam("id") String id, String body, @Context UriInfo uriInfo) throws Exception {
         var userId = parseUuid(id);
-        var existing = userRepository.findById(userId).orElseThrow(NotFoundException::new);
+        var existing = userDirectory.findById(userId).orElseThrow(NotFoundException::new);
         var node = MAPPER.readTree(body);
         var patch = ScimUserMapper.parsePatch(node);
         var userName = patch.userName() != null ? patch.userName() : existing.username();
         var displayName = patch.displayName() != null ? patch.displayName() : existing.displayName();
         var active = patch.active() != null ? patch.active() : !existing.hidden();
         var orgId = existing.orgId() != null ? UUID.fromString(existing.orgId()) : ScimUserMapper.defaultOrgId(appConfig);
-        userRepository.upsertFromScim(userId, orgId, userName, patch.email(), patch.externalId(), displayName, active);
-        var updated = userRepository.findById(userId).orElseThrow(NotFoundException::new);
+        userDirectory.upsertFromScim(userId, orgId, userName, patch.email(), patch.externalId(), displayName, active);
+        var updated = userDirectory.findById(userId).orElseThrow(NotFoundException::new);
         return Response.ok(ScimUserMapper.toResource(updated, baseLocation(uriInfo))).build();
     }
 
@@ -115,10 +115,10 @@ public class ScimUsersResource {
     @Path("{id}")
     public Response delete(@PathParam("id") String id) {
         var userId = parseUuid(id);
-        if (userRepository.findById(userId).isEmpty()) {
+        if (userDirectory.findById(userId).isEmpty()) {
             throw new NotFoundException();
         }
-        userRepository.setActive(userId, false);
+        userDirectory.setActive(userId, false);
         return Response.noContent().build();
     }
 

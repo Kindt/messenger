@@ -8,17 +8,14 @@ import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
-import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
-import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import org.junit.jupiter.api.Test;
 
 import java.security.Principal;
-import java.time.Clock;
 import java.util.Set;
 import java.util.UUID;
 
@@ -156,6 +153,7 @@ class AdminExportEnqueueTest {
             jobs,
             new ExportFileAccess(cfg),
             nats,
+            null,
             null,
             null,
             null,

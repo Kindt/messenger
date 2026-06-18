@@ -9,7 +9,6 @@ import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
-import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.common.export.ExportOutputRef;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
@@ -107,6 +106,7 @@ class AdminExportInspectTest {
             jobs,
             access,
             nats,
+            null,
             null,
             null,
             null,

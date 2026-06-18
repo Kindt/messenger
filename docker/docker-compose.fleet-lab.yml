@@ -1,0 +1,19 @@
+# Lab overlay: admin fleet snapshot probes (Docker network hostnames).
+# Use with full-server base:
+#
+#   docker compose -f docker/docker-compose.full-server.yml \
+#     -f docker/docker-compose.fleet-lab.yml up -d
+#
+# Admin UI: http://localhost:8080/admin/ -> "Infrastructure (fleet)"
+# Host-side FLEET_TARGETS_JSON example (QEMU / two-host): see docker/fleet-targets.host-lab.json
+
+version: "3.8"
+
+services:
+  core-api:
+    environment:
+      FLEET_AGGREGATOR_NODE: core-api@qemu-server
+      FLEET_PROBE_TIMEOUT_MS: "2000"
+      FLEET_TARGETS_JSON: >-
+        [{"id":"ws-gateway","role":"ws-gateway","base_url":"http://ws-gateway:9191","health_path":"/health"},
+        {"id":"message-pipeline","role":"worker","base_url":"http://message-pipeline:9191","health_path":"/health"}]

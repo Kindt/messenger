@@ -15,6 +15,8 @@ import com.avandocmsg.messenger.api.config.HotReloadWatcher;
 import com.avandocmsg.messenger.api.config.JerseyConfig;
 import com.avandocmsg.messenger.api.config.SolrClientFactory;
 import com.avandocmsg.messenger.api.auth.AuthRateLimiter;
+import com.avandocmsg.messenger.api.admin.fleet.FleetSnapshotService;
+import com.avandocmsg.messenger.api.admin.fleet.FleetTargetRegistry;
 import com.avandocmsg.messenger.api.admin.ui.AdminServerStatsService;
 import com.avandocmsg.messenger.api.admin.ui.AdminUiManifest;
 import com.avandocmsg.messenger.api.admin.ui.ClasspathAdminStaticServlet;
@@ -60,6 +62,7 @@ import com.avandocmsg.messenger.api.mls.MlsWireHandler;
 import com.avandocmsg.messenger.api.mls.MlsWirePublisher;
 import com.avandocmsg.messenger.api.mls.MlsWireSubscriber;
 import com.avandocmsg.messenger.api.mls.SessionRepository;
+import com.avandocmsg.messenger.core.adapter.mls.OpenMlsBindingFactory;
 import com.avandocmsg.messenger.core.bootstrap.CoreModule;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatBanRepository;
@@ -275,21 +278,20 @@ public class MessengerApplication {
         }
 
         if (appConfig.hotplugIndexerPresenceRequired()) {
-            indexerHotPlugMonitor = new IndexerHotPlugMonitor(
-                natsConnection,
-                appConfig.hotplugHeartbeatTtlMs(),
-                appConfig.hotplugIndexerServiceId()
-            );
-            indexerHotPlugMonitor.start();
             log.info(
                 "Indexer hot-plug presence check enabled (serviceId={}, ttlMs={})",
                 appConfig.hotplugIndexerServiceId(),
                 appConfig.hotplugHeartbeatTtlMs()
             );
         } else {
-            indexerHotPlugMonitor = null;
-            log.info("Indexer hot-plug presence check disabled (HOTPLUG_INDEXER_PRESENCE_REQUIRED=false)");
+            log.info("Indexer hot-plug presence gating disabled (HOTPLUG_INDEXER_PRESENCE_REQUIRED=false)");
         }
+        indexerHotPlugMonitor = new IndexerHotPlugMonitor(
+            natsConnection,
+            appConfig.hotplugHeartbeatTtlMs(),
+            appConfig.hotplugIndexerServiceId()
+        );
+        indexerHotPlugMonitor.start();
 
         directorySyncScheduler = new com.avandocmsg.messenger.api.directory.DirectorySyncScheduler(
             appConfig, directorySyncService);
@@ -335,6 +337,15 @@ public class MessengerApplication {
         var natsOutbound = new NatsConnectionOutbound(natsConnection, jetStreamOptional());
         var adminManifest = AdminUiManifest.load(MessengerApplication.class.getClassLoader());
         var adminServerStatsService = new AdminServerStatsService(dataSource, appConfig, natsOutbound, redisProbe);
+        var fleetTargetRegistry = FleetTargetRegistry.fromJson(appConfig.fleetTargetsJson());
+        var fleetHotPlugRegistry = indexerHotPlugMonitor != null ? indexerHotPlugMonitor.registry() : null;
+        var fleetSnapshotService = new FleetSnapshotService(
+            fleetTargetRegistry,
+            adminServerStatsService,
+            appConfig,
+            fleetHotPlugRegistry,
+            appConfig.hotplugHeartbeatTtlMs()
+        );
         var chatService = new ChatService(chatRepository, blockRepository, chatReadRepository,
             messageRepository, natsOutbound, this.clock, this.uuidGenerator, readCachePort, appConfig);
         var readReceiptService = new ReadReceiptService(messageReadReceiptRepository, chatRepository,
@@ -345,6 +356,7 @@ public class MessengerApplication {
         var mlsGroupManager = new MlsGroupManager(mlsGroupStateRepository, mlsService,
             this.uuidGenerator, this.clock, mlsWirePublisher);
         var mlsMigrationService = new MlsMigrationService(dataSource, mlsGroupManager, chatRepository);
+        var openMlsBindingPort = OpenMlsBindingFactory.create(appConfig, mlsService);
         var chatApplicationService = CoreModule.chatApplicationService(dataSource, chatRepository);
         var userApplicationService = CoreModule.userApplicationService(dataSource, this.uuidGenerator, readCachePort, appConfig);
         var objectStoragePort = CoreModule.objectStoragePort(appConfig, minioClient, fileProxy);
@@ -411,11 +423,12 @@ public class MessengerApplication {
         var authPolicyService = new com.avandocmsg.messenger.api.auth.policy.AuthPolicyService(
             appConfig, authPolicyRepository, organizationRepository, keycloakAuthSyncClient);
 
-        var directorySyncRunRepository = new com.avandocmsg.messenger.api.directory.DirectorySyncRunRepository(dataSource);
+        var directorySyncRunRepository = CoreModule.directorySyncRunRepositoryPort(dataSource);
+        var orgUserDirectory = CoreModule.orgUserDirectoryPort(userRepository);
         var ldapDirectoryClient = new com.avandocmsg.messenger.api.directory.JndiLdapDirectoryClient();
         this.directorySyncService = new com.avandocmsg.messenger.api.directory.DirectorySyncService(
             authPolicyRepository, organizationRepository, directorySyncRunRepository,
-            userRepository, ldapDirectoryClient, this.uuidGenerator);
+            orgUserDirectory, ldapDirectoryClient, this.uuidGenerator);
 
         var jerseyServlet = new ServletContainer(
             new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
@@ -428,12 +441,12 @@ public class MessengerApplication {
                 minioClient, fileRepository, fileService,
                 chatBanRepository, chatBanService,
                 e2eeService, keyPackageRepository, sessionRepository, mlsService, mlsGroupManager,
-                mlsMigrationService, mlsWirePublisher, fileProxy, conferenceService, liveSessionService,
+                mlsMigrationService, openMlsBindingPort, mlsWirePublisher, fileProxy, conferenceService, liveSessionService,
                 chatCallLiveKitService,
                 auditRepository, exportJobRepository, exportJobEnqueuer, exportFileAccess, this.exportSuggestedHandler,
                 exportComplianceSeed,
                 organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,
-                publicLinkPort, messageSearchService, adminManifest, adminServerStatsService, redisProbe,
+                publicLinkPort, messageSearchService, adminManifest, adminServerStatsService, fleetSnapshotService, redisProbe,
                 readCachePort, legalHoldRepository, purgeStatusService, botRepository, botService,
                 pluginRepository, pluginPlatformService, pluginPolicyService, pluginOutboundService,
                 authPolicyService, directorySyncService));

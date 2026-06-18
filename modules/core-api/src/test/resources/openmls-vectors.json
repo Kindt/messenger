@@ -1,0 +1,24 @@
+{
+  "schema_version": "1",
+  "description": "Minimal OpenMLS interop vectors for spec 020 Phase 0 (1:1 group, hybrid stub baseline).",
+  "cipher_suite_default": "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519",
+  "vectors": [
+    {
+      "id": "p2p-text-roundtrip",
+      "group_size": 2,
+      "message_type": "e2ee-text",
+      "plaintext": "hello-openmls-vector",
+      "notes": "Phase 0 uses hybrid Web Crypto; OpenMLS WASM must reproduce decrypt on server KMLS session."
+    },
+    {
+      "id": "p2p-file-attachment",
+      "group_size": 2,
+      "message_type": "e2ee-file",
+      "attachment_file_id": "00000000-0000-4000-8000-000000000001",
+      "plaintext": "00000000-0000-4000-8000-000000000001",
+      "notes": "content field carries file UUID before encryption; see MessageSendSupport.parseAttachmentFileId."
+    }
+  ],
+  "wire_subjects": ["mls.welcome", "mls.commit", "mls.epoch"],
+  "server_session_api": "/api/v1/e2ee/mls/session/{chatId}"
+}

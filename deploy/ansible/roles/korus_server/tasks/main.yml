@@ -37,6 +37,7 @@
     export SKIP_KORUS_ENSURE=1
     export DOCKER_BUILDKIT={{ korus_docker_buildkit | default('1') }}
     export COMPOSE_BAKE={{ korus_compose_bake | default('1') }}
+    export KORUS_FLEET_LAB={{ 1 if (korus_fleet_lab | default(false) | bool) else 0 }}
     if [[ -f "{{ korus_server_env_path }}" ]]; then
       set -a
       # shellcheck source=/dev/null

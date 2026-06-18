@@ -9,7 +9,6 @@ import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
-import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
@@ -89,6 +88,7 @@ class AdminExportCompliancePrepTest {
             null,
             new ExportFileAccess(cfg),
             mock(NatsOutboundPort.class),
+            null,
             null,
             null,
             null,

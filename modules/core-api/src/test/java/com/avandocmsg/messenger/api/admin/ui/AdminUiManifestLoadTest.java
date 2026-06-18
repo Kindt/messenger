@@ -14,6 +14,8 @@ class AdminUiManifestLoadTest {
         assertTrue(manifest.sections().size() >= 8);
         assertTrue(manifest.sections().stream().anyMatch(s -> "core-export-compliance".equals(s.id())));
         assertTrue(manifest.sections().stream().anyMatch(s -> "core-server-stats".equals(s.id())));
+        assertTrue(manifest.sections().stream().anyMatch(s -> "core-fleet-stats".equals(s.id())
+            && s.kind() == AdminUiSectionKind.FLEET_GRID));
         assertTrue(manifest.sections().stream().anyMatch(s -> "core-organizations".equals(s.id())
             && s.kind() == AdminUiSectionKind.JSON_PANEL));
         assertTrue(manifest.sections().stream().anyMatch(s -> "core-audit-events".equals(s.id())

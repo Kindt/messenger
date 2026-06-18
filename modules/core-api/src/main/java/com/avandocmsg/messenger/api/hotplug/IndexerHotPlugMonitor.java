@@ -35,6 +35,11 @@ public final class IndexerHotPlugMonitor implements AutoCloseable {
         return registry.isPresent(indexerServiceId, now);
     }
 
+    /** Shared hot-plug registry (NATS heartbeats from workers). */
+    public HotPlugRegistry registry() {
+        return registry;
+    }
+
     void onMessage(io.nats.client.Message msg) {
         try {
             registry.onHeartbeatPayload(msg.getData(), System.currentTimeMillis());

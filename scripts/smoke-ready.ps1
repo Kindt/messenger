@@ -6,7 +6,9 @@ param(
     [string]$User = "csadmin",
     [string]$Pass = "csadmin",
     # Требовать в ответе health/ready: redis_ok и nats_ok = true (полный стек, не только PostgreSQL).
-    [switch]$StrictDependencies
+    [switch]$StrictDependencies,
+    # QEMU lab: fleet overlay probes ws-gateway + message-pipeline (>= 3 components).
+    [switch]$StrictFleet
 )
 $ErrorActionPreference = "Stop"
 
@@ -62,7 +64,8 @@ try {
     Fail $_
 }
 try {
-    $null = Test-SmokeAdminUiApi -BaseUrl $BaseUrl -AuthHeaders $hdr
+    $fleetMin = if ($StrictFleet) { 3 } else { 0 }
+    $null = Test-SmokeAdminUiApi -BaseUrl $BaseUrl -AuthHeaders $hdr -MinFleetComponents $fleetMin
 } catch {
     Fail $_
 }

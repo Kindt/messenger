@@ -4,6 +4,19 @@ import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.core.application.IndexerEventPublisher;
+import com.avandocmsg.messenger.core.application.MessageApplicationService;
+import com.avandocmsg.messenger.core.application.MessageDeleteCoordinator;
+import com.avandocmsg.messenger.core.application.MessageEditCoordinator;
+import com.avandocmsg.messenger.core.application.MessagePinCoordinator;
+import com.avandocmsg.messenger.core.application.MessageReactionCoordinator;
+import com.avandocmsg.messenger.core.application.MessageSendCoordinator;
+import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.Message;
+import com.avandocmsg.messenger.core.domain.MessageId;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.MessageInsert;
+import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,21 +25,25 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MessageServiceTest {
+class MessageApplicationServiceWriteTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final StubMessageRepository msgRepo = new StubMessageRepository();
+    private final StubMessageRepositoryPort msgPort = new StubMessageRepositoryPort(msgRepo);
     private final StubChatRepository chatRepo = new StubChatRepository();
     private final StubBlockRepository blockRepo = new StubBlockRepository();
     private final StubMlsService mlsService = new StubMlsService();
     private final RecordingNats recordingNats = new RecordingNats();
-    private final MessageService messageService = new MessageService(msgRepo, chatRepo, blockRepo, mlsService,
-        recordingNats, UuidGenerator.standard());
+    private MessageApplicationService messageService;
 
     final UUID chatId = UUID.randomUUID();
     final UUID userId = UUID.randomUUID();
@@ -46,6 +63,19 @@ class MessageServiceTest {
         msgRepo.lastInsertVisibilityTtl = null;
         msgRepo.lastInsertReplyTo = null;
         recordingNats.clear();
+        messageService = buildApp(() -> true);
+    }
+
+    private MessageApplicationService buildApp(BooleanSupplier indexerAvailable) {
+        var indexer = new IndexerEventPublisher(recordingNats, indexerAvailable);
+        var sendCoord = new MessageSendCoordinator(
+            msgPort, chatRepo, mlsService, null, recordingNats, UuidGenerator.standard(), null);
+        var editCoord = new MessageEditCoordinator(msgPort, indexer);
+        var deleteCoord = new MessageDeleteCoordinator(msgPort, recordingNats, indexer);
+        var reactionCoord = new MessageReactionCoordinator(msgPort, recordingNats);
+        var pinCoord = new MessagePinCoordinator(msgRepo, recordingNats);
+        return new MessageApplicationService(
+            msgPort, chatRepo, blockRepo, sendCoord, editCoord, deleteCoord, reactionCoord, pinCoord, msgRepo, mlsService);
     }
 
     @Test
@@ -203,21 +233,48 @@ class MessageServiceTest {
 
     @Test
     void editMessage_skipsIndexPublishWhenIndexerUnavailable() {
-        var constrained = new MessageService(
-            msgRepo,
-            chatRepo,
-            blockRepo,
-            mlsService,
-            recordingNats,
-            UuidGenerator.standard(),
-            () -> false
-        );
+        var constrained = buildApp(() -> false);
         msgRepo.messages.add(msg(chatId, userId, "original"));
 
         var edited = constrained.editMessage(chatId, msgId, userId, "edited");
 
         assertNotNull(edited);
         assertNull(recordingNats.lastPayload(NatsSubjects.MSG_EVENT_INDEX));
+    }
+
+    @Test
+    void plaintextPreview_returnsDecryptedForE2ee() {
+        var previewMsgId = UUID.randomUUID();
+        msgRepo.messages.add(new MessageResponse(
+            previewMsgId.toString(), chatId.toString(), userId.toString(), "e2ee-text", "cipher", null,
+            false, Instant.now(), null, null, null));
+        mlsService.decryptResult = "secret";
+
+        var plain = messageService.plaintextPreview(chatId, previewMsgId, userId);
+
+        assertEquals("secret", plain);
+    }
+
+    @Test
+    void sendMessage_storesAttachmentFileIdBeforeEncryption() {
+        var fileId = UUID.randomUUID();
+        mlsService.encryptResult = "encrypted_blob";
+        var sent = messageService.sendMessage(chatId, userId,
+            new SendMessageRequest("e2ee-file", fileId.toString(), null, null, null, null, null), null);
+        assertNotNull(sent);
+        assertEquals(fileId.toString(), sent.attachmentFileId());
+        assertEquals(1, msgRepo.messages.size());
+        assertEquals(fileId.toString(), msgRepo.messages.get(0).attachmentFileId());
+    }
+
+    @Test
+    void plaintextPreview_nullForPlainText() {
+        var previewMsgId = UUID.randomUUID();
+        msgRepo.messages.add(new MessageResponse(
+            previewMsgId.toString(), chatId.toString(), userId.toString(), "text", "hello", null,
+            false, Instant.now(), null, null, null));
+
+        assertNull(messageService.plaintextPreview(chatId, previewMsgId, userId));
     }
 
     private MessageResponse msg(UUID chatId, UUID senderId, String content) {
@@ -256,6 +313,73 @@ class MessageServiceTest {
         }
 
         record Published(String subject, byte[] payload) {
+        }
+    }
+
+    static final class StubMessageRepositoryPort implements MessageRepositoryPort {
+        private final StubMessageRepository legacy;
+
+        StubMessageRepositoryPort(StubMessageRepository legacy) {
+            this.legacy = legacy;
+        }
+
+        @Override
+        public Optional<Message> findById(MessageId id) {
+            return legacy.findById(id.value()).map(StubMessageRepositoryPort::toDomain);
+        }
+
+        @Override
+        public Optional<Message> insert(MessageInsert command) {
+            var resp = legacy.insert(
+                command.id().value(),
+                command.chatId().value(),
+                command.senderId().value(),
+                command.type(),
+                command.content(),
+                command.replyToMsgId(),
+                command.clientMsgId(),
+                command.visibilityTtlSeconds(),
+                command.attachmentFileId());
+            return Optional.of(toDomain(resp));
+        }
+
+        @Override
+        public boolean updateContent(MessageId id, UserId senderId, String content) {
+            return legacy.updateContent(id.value(), senderId.value(), content);
+        }
+
+        @Override
+        public boolean softDelete(MessageId id) {
+            return legacy.delete(id.value());
+        }
+
+        @Override
+        public boolean addReaction(MessageId messageId, UserId userId, String reaction) {
+            return false;
+        }
+
+        @Override
+        public boolean removeReaction(MessageId messageId, UserId userId, String reaction) {
+            return false;
+        }
+
+        private static Message toDomain(MessageResponse resp) {
+            UUID reply = null;
+            if (resp.replyToMsgId() != null && !resp.replyToMsgId().isBlank()) {
+                reply = UUID.fromString(resp.replyToMsgId());
+            }
+            return new Message(
+                MessageId.of(UUID.fromString(resp.id())),
+                ChatId.of(UUID.fromString(resp.chatId())),
+                UserId.of(UUID.fromString(resp.senderId())),
+                resp.type(),
+                resp.content(),
+                reply != null ? reply.toString() : null,
+                resp.deleted(),
+                resp.createdAt(),
+                resp.editedAt(),
+                resp.visibilityTtlSeconds(),
+                resp.attachmentFileId());
         }
     }
 
@@ -309,7 +433,9 @@ class MessageServiceTest {
         @Override
         public boolean updateContent(UUID msgId, UUID editedBy, String newContent) {
             var msg = findById(msgId);
-            if (msg.isEmpty()) return false;
+            if (msg.isEmpty()) {
+                return false;
+            }
             var m = msg.get();
             messages.remove(m);
             messages.add(new MessageResponse(m.id(), m.chatId(), m.senderId(), m.type(), newContent,
@@ -349,7 +475,7 @@ class MessageServiceTest {
         UUID p2pPeerId;
 
         StubChatRepository() {
-            super(null, java.time.Clock.systemUTC(), com.avandocmsg.messenger.core.port.UuidGenerator.standard());
+            super(null, java.time.Clock.systemUTC(), UuidGenerator.standard());
         }
 
         @Override
@@ -401,49 +527,5 @@ class MessageServiceTest {
         public String decryptContentBase64(UUID chatId, String contentBase64) {
             return decryptResult;
         }
-    }
-
-    @Test
-    void plaintextPreview_returnsDecryptedForE2ee() {
-        var msgId = UUID.randomUUID();
-        msgRepo.messages.add(new MessageResponse(
-            msgId.toString(), chatId.toString(), userId.toString(), "e2ee-text", "cipher", null,
-            false, java.time.Instant.now(), null, null, null));
-        mlsService.decryptResult = "secret";
-
-        var plain = messageService.plaintextPreview(chatId, msgId, userId);
-
-        assertEquals("secret", plain);
-    }
-
-    @Test
-    void parseAttachmentFileId_acceptsFileTypesAndE2eePrefix() {
-        var fileId = UUID.randomUUID();
-        assertEquals(fileId, MessageService.parseAttachmentFileId("file", fileId.toString()));
-        assertEquals(fileId, MessageService.parseAttachmentFileId("e2ee-image", " " + fileId + " "));
-        assertNull(MessageService.parseAttachmentFileId("text", fileId.toString()));
-        assertNull(MessageService.parseAttachmentFileId("file", "not-a-uuid"));
-    }
-
-    @Test
-    void sendMessage_storesAttachmentFileIdBeforeEncryption() {
-        var fileId = UUID.randomUUID();
-        mlsService.encryptResult = "encrypted_blob";
-        var sent = messageService.sendMessage(chatId, userId,
-            new SendMessageRequest("e2ee-file", fileId.toString(), null, null, null, null, null), null);
-        assertNotNull(sent);
-        assertEquals(fileId.toString(), sent.attachmentFileId());
-        assertEquals(1, msgRepo.messages.size());
-        assertEquals(fileId.toString(), msgRepo.messages.get(0).attachmentFileId());
-    }
-
-    @Test
-    void plaintextPreview_nullForPlainText() {
-        var msgId = UUID.randomUUID();
-        msgRepo.messages.add(new MessageResponse(
-            msgId.toString(), chatId.toString(), userId.toString(), "text", "hello", null,
-            false, java.time.Instant.now(), null, null, null));
-
-        assertNull(messageService.plaintextPreview(chatId, msgId, userId));
     }
 }

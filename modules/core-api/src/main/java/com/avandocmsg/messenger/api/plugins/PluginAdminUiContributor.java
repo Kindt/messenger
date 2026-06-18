@@ -12,6 +12,13 @@ public final class PluginAdminUiContributor implements AdminUiContributor {
     public List<AdminUiSectionDescriptor> sections() {
         return List.of(
             new AdminUiSectionDescriptor(
+                "plugins-l0-wizard",
+                "Создать L0-бота",
+                48,
+                AdminUiSectionKind.JSON_PANEL,
+                null
+            ),
+            new AdminUiSectionDescriptor(
                 "plugins-policies",
                 "Плагины: org policy",
                 49,

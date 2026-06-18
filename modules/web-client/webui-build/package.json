@@ -5,7 +5,8 @@
   "scripts": {
     "build:css": "tailwindcss -i ./src/input.css -o ../src/main/resources/webui/tailwind.css --minify",
     "build:locales": "node scripts/build-locales.mjs",
-    "build:assets": "npm run build:css && npm run build:locales",
+    "build:openmls": "node scripts/build-openmls.mjs",
+    "build:assets": "npm run build:css && npm run build:locales && npm run build:openmls",
     "watch:css": "tailwindcss -i ./src/input.css -o ../src/main/resources/webui/tailwind.css --watch"
   },
   "devDependencies": {

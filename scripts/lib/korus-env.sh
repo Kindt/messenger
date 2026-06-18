@@ -14,6 +14,15 @@ korus_export_smoke_compose_args() {
   fi
 }
 
+# Admin fleet snapshot lab probes (ws-gateway, message-pipeline on Docker network).
+# Enable: KORUS_FLEET_LAB=1 (QEMU inventory sets via Ansible).
+korus_fleet_lab_compose_args() {
+  local root="$1"
+  if [[ "${KORUS_FLEET_LAB:-0}" == "1" ]]; then
+    printf '%s\n' -f "$root/docker/docker-compose.fleet-lab.yml"
+  fi
+}
+
 korus_set_path_env() {
   local root="$1"
   export KORUS_REPO_ROOT="$root"
@@ -25,6 +34,7 @@ korus_set_path_env() {
   # Legacy standalone (deprecated): docker/docker-compose.pilot.yml — use full-server + pilot-overrides
   export KORUS_COMPOSE_KEYCLOAK_PROD="$root/docker/docker-compose.keycloak-prod.yml"
   export KORUS_COMPOSE_LAN_PUBLISH="$root/docker/docker-compose.lan-publish.yml"
+  export KORUS_COMPOSE_FLEET_LAB="$root/docker/docker-compose.fleet-lab.yml"
   export KORUS_DEV_OVERLAY_DIR="$root/dev-overlay"
   export KORUS_SCRIPTS_DIR="$root/scripts"
   export KORUS_KORUS_WEB_DIR="$root/korus-web"

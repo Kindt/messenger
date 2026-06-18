@@ -55,6 +55,7 @@ class AdminResourceTest {
             null,
             null,
             null,
+            null,
             I18nTestFixtures.messagesEn());
         var principal = new UserPrincipal(id, "csadmin", Set.of("admin", "offline_access"));
 
@@ -177,6 +178,7 @@ class AdminResourceTest {
             null,
             new ExportFileAccess(cfg),
             mock(NatsOutboundPort.class),
+            null,
             null,
             null,
             null,

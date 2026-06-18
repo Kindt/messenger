@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.api.mls;
 
 import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.api.mls.openmls.OpenMlsWireLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,6 +72,34 @@ public class MlsMigrationService {
         return Optional.of(groupId);
     }
 
+    /** Ensures MLS group exists using OpenMLS wire profile ({@link OpenMlsWireLayout#WIRE_PROFILE}). */
+    public Optional<UUID> migrateToOpenMlsGroup(UUID chatId) {
+        var groupId = migrateToMls(chatId);
+        if (groupId.isPresent()) {
+            log.info("OpenMLS wire profile {} applied for chat {}", OpenMlsWireLayout.WIRE_PROFILE, chatId);
+        }
+        return groupId;
+    }
+
+    /**
+     * Batch migration for OpenMLS wire profile (idempotent when group already exists).
+     */
+    public BatchMigrationResult batchMigrateToOpenMls(int limit) {
+        var capped = Math.max(1, Math.min(limit, 500));
+        var pending = listPendingChatIds(capped);
+        var migrated = new ArrayList<UUID>();
+        var failed = new ArrayList<UUID>();
+        for (var chatId : pending) {
+            var result = migrateToOpenMlsGroup(chatId);
+            if (result.isPresent()) {
+                migrated.add(chatId);
+            } else {
+                failed.add(chatId);
+            }
+        }
+        return new BatchMigrationResult(migrated.size(), failed.size(), pendingMigrationCount(), migrated, failed);
+    }
+
     /**
      * Batch migration stub: migrates up to {@code limit} chats that have legacy E2EE sessions but no MLS group.
      */
@@ -95,11 +124,12 @@ public class MlsMigrationService {
             return List.of();
         }
         var sql = """
-            SELECT DISTINCT s.chat_id
+            SELECT s.chat_id
             FROM e2ee_sessions s
             LEFT JOIN mls_group_state g ON g.chat_id = s.chat_id
             WHERE g.chat_id IS NULL
-            ORDER BY s.updated_at ASC
+            GROUP BY s.chat_id
+            ORDER BY MIN(s.updated_at) ASC
             LIMIT ?
             """;
         var out = new ArrayList<UUID>();

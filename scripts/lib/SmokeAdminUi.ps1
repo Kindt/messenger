@@ -44,8 +44,13 @@ function Test-SmokeAdminStaticPage {
     if ($adminPage.StatusCode -ne 200) {
         throw "admin static: status $($adminPage.StatusCode)"
     }
-    if ($adminPage.Content -notmatch "Админ|Администр|admin-ui|Korus Messenger") {
+    if ($adminPage.Content -notmatch "Админ|Администр|admin-ui|Korus Messenger|panels\.js") {
         throw "admin static: unexpected body"
+    }
+    Write-Host "GET $BaseUrl/admin/panels.js ..." -ForegroundColor Cyan
+    $panels = Invoke-WebRequest -Uri "$BaseUrl/admin/panels.js" -UseBasicParsing -Method Get
+    if ($panels.StatusCode -ne 200) {
+        throw "admin static panels.js: status $($panels.StatusCode)"
     }
 }
 
@@ -53,7 +58,8 @@ function Test-SmokeAdminUiApi {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$BaseUrl,
-        [Parameter(Mandatory)][hashtable]$AuthHeaders
+        [Parameter(Mandatory)][hashtable]$AuthHeaders,
+        [int]$MinFleetComponents = 0
     )
     Write-Host "GET $BaseUrl/api/v1/admin/ui/manifest ..." -ForegroundColor Cyan
     $manifest = Invoke-RestMethod -Uri "$BaseUrl/api/v1/admin/ui/manifest" -Headers $AuthHeaders -Method Get
@@ -71,6 +77,7 @@ function Test-SmokeAdminUiApi {
     $hasUserOrg = $false
     $hasSession = $false
     $hasUiManifest = $false
+    $hasFleet = $false
     foreach ($s in $sectionList) {
         if ($s.id -eq 'core-retention') {
             $hasRetention = $true
@@ -83,6 +90,9 @@ function Test-SmokeAdminUiApi {
         }
         if ($s.id -eq 'core-admin-manifest') {
             $hasUiManifest = $true
+        }
+        if ($s.id -eq 'core-fleet-stats') {
+            $hasFleet = $true
         }
     }
     if (-not $hasRetention) {
@@ -97,15 +107,31 @@ function Test-SmokeAdminUiApi {
     if (-not $hasUiManifest) {
         throw "admin/ui/manifest: missing section id core-admin-manifest"
     }
+    if (-not $hasFleet) {
+        throw "admin/ui/manifest: missing section id core-fleet-stats"
+    }
     Write-Host "GET $BaseUrl/api/v1/admin/ui/stats ..." -ForegroundColor Cyan
     $stats = Invoke-RestMethod -Uri "$BaseUrl/api/v1/admin/ui/stats" -Headers $AuthHeaders -Method Get
     if (-not $stats.api_version) {
         throw "admin/ui/stats: no api_version"
     }
+    Write-Host "GET $BaseUrl/api/v1/admin/ui/fleet/snapshot ..." -ForegroundColor Cyan
+    $fleet = Invoke-RestMethod -Uri "$BaseUrl/api/v1/admin/ui/fleet/snapshot" -Headers $AuthHeaders -Method Get
+    if (-not $fleet.generated_at) {
+        throw "admin/ui/fleet/snapshot: no generated_at"
+    }
+    $components = @($fleet.components)
+    if ($components.Count -lt 1) {
+        throw "admin/ui/fleet/snapshot: no components"
+    }
+    if ($MinFleetComponents -gt 0 -and $components.Count -lt $MinFleetComponents) {
+        throw "admin/ui/fleet/snapshot: expected at least $MinFleetComponents components, got $($components.Count)"
+    }
     $sectionCount = $sectionList.Count
     return @{
         Manifest = $manifest
         Stats    = $stats
+        Fleet    = $fleet
         SectionCount = $sectionCount
     }
 }

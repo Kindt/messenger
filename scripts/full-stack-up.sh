@@ -62,6 +62,9 @@ if [ "${KORUS_QEMU_CONSOLE:-0}" = "1" ]; then
 fi
 echo "cd $ROOT"
 compose_args=(-f "$COMPOSE" --profile full --profile push)
+while IFS= read -r arg; do
+  compose_args+=("$arg")
+done < <(korus_fleet_lab_compose_args "$ROOT")
 if $EXPORT_SMOKE; then
   while IFS= read -r arg; do
     compose_args+=("$arg")

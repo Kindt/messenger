@@ -17,19 +17,31 @@
 
   function updateLogoutButton() {
     const btn = el("btnLogout");
+    const hasToken = !!token();
     if (btn) {
-      btn.hidden = !token();
+      btn.hidden = !hasToken;
+    }
+    if (window.AdminUi) {
+      AdminUi.setAuthenticated(hasToken);
     }
   }
 
   function resetPanelAfterLogout() {
-    const ul = el("sectionList");
-    if (ul) {
-      ul.innerHTML = "";
+    const nav = el("sectionList");
+    if (nav) {
+      nav.innerHTML = "";
     }
     const hint = el("panelHint");
     if (hint) {
       hint.hidden = false;
+    }
+    const header = el("panelHeader");
+    if (header) {
+      header.hidden = true;
+    }
+    const orgBar = el("orgContextBar");
+    if (orgBar) {
+      orgBar.hidden = true;
     }
     const summary = el("panelSummary");
     if (summary) {
@@ -40,6 +52,12 @@
     if (pre) {
       pre.hidden = true;
       pre.textContent = "";
+      pre.classList.remove("is-collapsed");
+    }
+    if (window.AdminUi) {
+      AdminUi.showJsonBlock(false);
+      AdminUi.setPanelHeader(null);
+      AdminUi.setActiveSectionId(null);
     }
     const ver = el("apiVersionLabel");
     if (ver) {
@@ -85,13 +103,37 @@
   function renderCoreStatsSummary(stats, container) {
     container.innerHTML = "";
     container.hidden = false;
+    const badge = window.AdminUi && AdminUi.statusBadge;
+    const grid = document.createElement("div");
+    grid.className = "stats-grid";
+    const addCard = (label, valueNode) => {
+      const card = document.createElement("div");
+      card.className = "stat-card";
+      const lbl = document.createElement("div");
+      lbl.className = "stat-card-label";
+      lbl.textContent = label;
+      const val = document.createElement("div");
+      val.className = "stat-card-value";
+      if (typeof valueNode === "string") {
+        val.textContent = valueNode;
+      } else {
+        val.appendChild(valueNode);
+      }
+      card.appendChild(lbl);
+      card.appendChild(val);
+      grid.appendChild(card);
+    };
     const table = document.createElement("table");
     const addRow = (label, value) => {
       const tr = document.createElement("tr");
       const th = document.createElement("th");
       th.textContent = label;
       const td = document.createElement("td");
-      td.textContent = value;
+      if (value instanceof Node) {
+        td.appendChild(value);
+      } else {
+        td.textContent = value;
+      }
       tr.appendChild(th);
       tr.appendChild(td);
       table.appendChild(tr);
@@ -99,13 +141,23 @@
     const j = stats.jvm || {};
     const d = stats.dependencies || {};
     const c = stats.counts || {};
-    addRow("Версия API", String(stats.api_version || "—"));
-    addRow("Uptime JVM", formatDuration(j.uptime_ms));
+    addCard("Версия API", String(stats.api_version || "—"));
+    addCard("Uptime JVM", formatDuration(j.uptime_ms));
+    addCard(
+      "PostgreSQL",
+      badge ? badge(!!d.database_ok, d.database_ok ? "ok" : "нет") : d.database_ok ? "ok" : "недоступна"
+    );
+    addCard(
+      "Redis",
+      badge ? badge(!!d.redis_ok, d.redis_ok ? "ok" : "нет") : d.redis_ok ? "ok" : "недоступен"
+    );
+    addCard(
+      "NATS",
+      badge ? badge(!!d.nats_ok, d.nats_ok ? "ok" : "нет") : d.nats_ok ? "ok" : "нет соединения"
+    );
+    container.appendChild(grid);
     addRow("Heap (used / max)", formatBytes(j.heap_used_bytes) + " / " + formatBytes(j.heap_max_bytes));
     addRow("Процессоры", String(j.processors != null ? j.processors : "—"));
-    addRow("PostgreSQL", d.database_ok ? "ok" : "недоступна");
-    addRow("Redis", d.redis_ok ? "ok" : "недоступен");
-    addRow("NATS", d.nats_ok ? "ok" : "нет соединения");
     if (c.counts_available) {
       addRow("Пользователи", String(c.users));
       addRow("Чаты", String(c.chats));
@@ -1305,6 +1357,10 @@
   }
 
   function renderSections(sections) {
+    if (window.AdminUi) {
+      AdminUi.renderGroupedNav(sections, (s, li) => selectSection(s, li));
+      return;
+    }
     const ul = el("sectionList");
     ul.innerHTML = "";
     sections.forEach((s, idx) => {
@@ -1322,15 +1378,26 @@
   }
 
   async function selectSection(section, liNode) {
-    document.querySelectorAll(".sidebar li").forEach((n) => n.classList.remove("active"));
-    if (liNode) {
-      liNode.classList.add("active");
+    if (window.AdminUi) {
+      AdminUi.setActiveNav(liNode);
+      AdminUi.setPanelHeader(section);
+      AdminUi.setActiveSectionId(section.id);
+      AdminUi.setOnOrgApply(() => selectSection(section, liNode));
+    } else {
+      document.querySelectorAll(".nav-list li, .sidebar li").forEach((n) => n.classList.remove("active"));
+      if (liNode) {
+        liNode.classList.add("active");
+      }
     }
     const pre = el("panelContent");
     const summary = el("panelSummary");
     summary.hidden = true;
     summary.innerHTML = "";
     pre.hidden = false;
+    pre.classList.remove("is-collapsed");
+    if (window.AdminUi) {
+      AdminUi.showJsonBlock(true);
+    }
     pre.textContent = "Загрузка…";
     try {
       if (section.kind === "core_stats" && section.data_path) {
@@ -1353,9 +1420,40 @@
           }
         };
         await reloadStats();
+      } else if (section.kind === "fleet_grid" && section.data_path) {
+        let p = section.data_path;
+        if (!p.startsWith("/")) {
+          p = "/" + p;
+        }
+        summary.hidden = false;
+        summary.innerHTML = "";
+        if (window.AdminPanels && AdminPanels.mountFleetGrid) {
+          AdminPanels.mountFleetGrid(summary, pre, {
+            summary: summary,
+            pre: pre,
+            apiFetch: apiFetch,
+          });
+        } else {
+          const data = await apiFetch(p);
+          pre.textContent = JSON.stringify(data, null, 2);
+        }
+      } else if (
+        window.AdminPanels &&
+        AdminPanels.tryMount(section, {
+          summary: summary,
+          pre: pre,
+          apiFetch: apiFetch,
+          getOrgId: window.AdminUi ? () => AdminUi.getOrgId() : () => "",
+          renderFlatObjectTable: renderFlatObjectTable,
+        })
+      ) {
+        /* panels.js */
       } else if (
         section.kind === "json_panel" &&
-        (section.data_path || section.id === "core-retention" || section.id === "core-user-organization" || section.id === "core-auth-policy")
+        (section.data_path ||
+          section.id === "core-retention" ||
+          section.id === "core-user-organization" ||
+          section.id === "core-auth-policy")
       ) {
         summary.hidden = false;
         summary.innerHTML = "";
@@ -2411,15 +2509,60 @@
           appendJsonPanelReload(summary, reloadRetentionGet);
           pre.textContent = "Введите UUID организации или чата и нажмите «Загрузить».";
         } else {
-          const basePath = normalizePanelPath(section.data_path);
+          let basePath = normalizePanelPath(section.data_path);
           const reloadGeneric = async () => {
             try {
-              const data = await apiFetch(basePath);
-              await paintTableAndJson(data, basePath);
+              let fetchPath = basePath;
+              if (window.AdminUi && section.id.startsWith("plugins-")) {
+                fetchPath = AdminUi.appendPathWithOrg(basePath);
+              }
+              const data = await apiFetch(fetchPath);
+              await paintTableAndJson(data, fetchPath);
+              if (window.AdminPanels && section.id === "plugins-instances") {
+                AdminPanels.enhancePluginInstances(summary, pre, {
+                  summary: summary,
+                  pre: pre,
+                  apiFetch: apiFetch,
+                });
+                if (Array.isArray(data.instances) && data.instances[0] && data.instances[0].id) {
+                  const inp = document.getElementById("pluginInstId");
+                  if (inp && !inp.value.trim()) {
+                    inp.value = data.instances[0].id;
+                  }
+                }
+              }
+              if (window.AdminPanels && section.id === "plugins-policies") {
+                AdminPanels.enhancePluginPolicies(summary, pre, {
+                  summary: summary,
+                  pre: pre,
+                  apiFetch: apiFetch,
+                });
+                if (data && data.llm_mode) {
+                  const sel = document.getElementById("pluginPolicyLlm");
+                  if (sel) {
+                    sel.value = data.llm_mode;
+                  }
+                }
+                if (data && typeof data.ocr_on_prem_only === "boolean") {
+                  const cb = document.getElementById("pluginPolicyOcr");
+                  if (cb) {
+                    cb.checked = data.ocr_on_prem_only;
+                  }
+                }
+                if (data && Array.isArray(data.allowed_preset_ids)) {
+                  const pr = document.getElementById("pluginPolicyPresets");
+                  if (pr) {
+                    pr.value = data.allowed_preset_ids.join(", ");
+                  }
+                }
+              }
             } catch (e) {
               pre.textContent = "Ошибка: " + e.message;
             }
           };
+          if (window.AdminUi && section.id.startsWith("plugins-")) {
+            AdminUi.appendPluginOrgToolbar(summary, reloadGeneric);
+          }
           appendJsonPanelReload(summary, reloadGeneric);
           await reloadGeneric();
         }

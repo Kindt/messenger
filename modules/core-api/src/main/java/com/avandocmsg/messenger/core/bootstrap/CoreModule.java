@@ -14,11 +14,14 @@ import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.FilePublicLinkRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.FilePublicLinkPortAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcFileMetadataAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrganizationRepositoryAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcDirectorySyncRunRepositoryAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrgUserDirectoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcScimGroupRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcSavedChatAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcUserRepositoryAdapter;
@@ -39,6 +42,8 @@ import com.avandocmsg.messenger.core.port.ObjectStoragePort;
 import com.avandocmsg.messenger.core.port.OrganizationRepositoryPort;
 import com.avandocmsg.messenger.core.port.PublicLinkPort;
 import com.avandocmsg.messenger.core.port.ReadCachePort;
+import com.avandocmsg.messenger.core.port.DirectorySyncRunRepositoryPort;
+import com.avandocmsg.messenger.core.port.OrgUserDirectoryPort;
 import com.avandocmsg.messenger.core.port.ScimGroupRepositoryPort;
 import com.avandocmsg.messenger.core.port.SavedChatPort;
 import com.avandocmsg.messenger.core.port.UserRepositoryPort;
@@ -118,6 +123,15 @@ public final class CoreModule {
 
     public static ScimGroupRepositoryPort scimGroupRepositoryPort(DataSource dataSource) {
         return new JdbcScimGroupRepositoryAdapter(dataSource);
+    }
+
+    public static OrgUserDirectoryPort orgUserDirectoryPort(UserRepository userRepository) {
+        return new JdbcOrgUserDirectoryAdapter(userRepository);
+    }
+
+    public static DirectorySyncRunRepositoryPort directorySyncRunRepositoryPort(DataSource dataSource) {
+        return new JdbcDirectorySyncRunRepositoryAdapter(
+            new com.avandocmsg.messenger.api.directory.DirectorySyncRunRepository(dataSource));
     }
 
     public static MessageReactionCoordinator messageReactionCoordinator(DataSource dataSource, NatsOutboundPort natsOutbound) {

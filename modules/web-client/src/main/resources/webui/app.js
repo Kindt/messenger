@@ -2854,9 +2854,22 @@
 
   var exportPollGenerationRef = { value: exportPollGeneration };
   var korusMlsWasmInstance = null;
+  function isOpenMlsDevEnabled() {
+    try {
+      if (localStorage.getItem("e2ee_openmls_dev") === "1") return true;
+      var q = new URLSearchParams(window.location.search);
+      return q.get("e2ee_openmls_dev") === "1";
+    } catch (e) {
+      return false;
+    }
+  }
   function getKorusMlsWasm() {
-    if (!korusMlsWasmInstance && window.KorusMlsWasmFactory) {
-      korusMlsWasmInstance = window.KorusMlsWasmFactory(apiJson);
+    if (!korusMlsWasmInstance) {
+      var factory = isOpenMlsDevEnabled() && window.KorusOpenMlsDevFactory
+        ? window.KorusOpenMlsDevFactory
+        : window.KorusMlsWasmFactory;
+      if (!factory) return null;
+      korusMlsWasmInstance = factory(apiJson);
       window.KorusMlsWasm = korusMlsWasmInstance;
     }
     return korusMlsWasmInstance;

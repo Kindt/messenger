@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.api.scim;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrgUserDirectoryAdapter;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -22,6 +23,7 @@ class ScimUsersResourceTest {
 
     private HikariDataSource ds;
     private UserRepository userRepository;
+    private JdbcOrgUserDirectoryAdapter userDirectory;
     private ScimUsersResource resource;
     private UriInfo uriInfo;
 
@@ -52,7 +54,8 @@ class ScimUsersResourceTest {
                 """);
         }
         userRepository = new UserRepository(ds);
-        resource = new ScimUsersResource(userRepository, new AppConfig(), UuidGenerator.standard());
+        userDirectory = new JdbcOrgUserDirectoryAdapter(userRepository);
+        resource = new ScimUsersResource(userDirectory, new AppConfig(), UuidGenerator.standard());
         uriInfo = mock(UriInfo.class);
         when(uriInfo.getAbsolutePathBuilder()).thenReturn(UriBuilder.fromPath("http://localhost/api/scim/v2/Users"));
     }

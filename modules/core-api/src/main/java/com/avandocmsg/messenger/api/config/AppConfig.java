@@ -111,9 +111,13 @@ public class AppConfig {
         override("SERVICE_HEARTBEAT_TTL_MS", "hotplug.heartbeat.ttl.ms");
         override("HOTPLUG_INDEXER_SERVICE_ID", "hotplug.indexer.service.id");
         override("HOTPLUG_INDEXER_PRESENCE_REQUIRED", "hotplug.indexer.presence.required");
+        override("FLEET_TARGETS_JSON", "fleet.targets.json");
+        override("FLEET_PROBE_TIMEOUT_MS", "fleet.probe.timeout.ms");
+        override("FLEET_AGGREGATOR_NODE", "fleet.aggregator.node");
         override("MLS_STATUS", "mls.status");
         override("MLS_WIRE_ENABLED", "mls.wire.enabled");
         override("MLS_WIRE_SUBSCRIBER_ENABLED", "mls.wire.subscriber.enabled");
+        override("OPENMLS_NATIVE", "openmls.native.enabled");
         override("REDIS_READ_CACHE_ENABLED", "redis.read.cache.enabled");
         override("REDIS_READ_CACHE_TTL_CHAT_LIST_SECONDS", "redis.read.cache.ttl.chat_list.seconds");
         override("REDIS_READ_CACHE_TTL_CHAT_UNREAD_SECONDS", "redis.read.cache.ttl.chat_unread.seconds");
@@ -701,6 +705,45 @@ public class AppConfig {
         return Boolean.parseBoolean(props.getProperty("hotplug.indexer.presence.required", "false"));
     }
 
+    /** JSON array of {@link com.avandocmsg.messenger.api.admin.fleet.FleetTarget} for admin fleet snapshot. */
+    public String fleetTargetsJson() {
+        var env = System.getenv("FLEET_TARGETS_JSON");
+        if (env != null && !env.isBlank()) {
+            return env.trim();
+        }
+        return props.getProperty("fleet.targets.json", "").trim();
+    }
+
+    /** HTTP probe timeout for fleet snapshot (ms). Env: {@code FLEET_PROBE_TIMEOUT_MS}; default {@code 2000}. */
+    public int fleetProbeTimeoutMs() {
+        var raw = props.getProperty("fleet.probe.timeout.ms", "2000").trim();
+        if (System.getenv("FLEET_PROBE_TIMEOUT_MS") != null) {
+            raw = System.getenv("FLEET_PROBE_TIMEOUT_MS").trim();
+        }
+        try {
+            return Math.min(10000, Math.max(500, Integer.parseInt(raw)));
+        } catch (NumberFormatException e) {
+            return 2000;
+        }
+    }
+
+    /** Label of this core-api node in fleet snapshot. Env: {@code FLEET_AGGREGATOR_NODE} or hostname. */
+    public String fleetAggregatorNode() {
+        var env = System.getenv("FLEET_AGGREGATOR_NODE");
+        if (env != null && !env.isBlank()) {
+            return env.trim();
+        }
+        var prop = props.getProperty("fleet.aggregator.node", "").trim();
+        if (!prop.isBlank()) {
+            return prop;
+        }
+        var host = System.getenv("HOSTNAME");
+        if (host != null && !host.isBlank()) {
+            return host.trim();
+        }
+        return "core-api-local";
+    }
+
     /**
      * Jobs in {@code processing} with {@code updated_at} older than this are "stale" (metrics + admin stats).
      * Env: {@code EXPORT_PROCESSING_STALE_MINUTES}; default {@code 30}.
@@ -810,6 +853,14 @@ public class AppConfig {
         return mlsWireEnabled()
             ? List.of("legacy", "mls")
             : List.of("legacy", "mls-stub");
+    }
+
+    /**
+     * Attempt OpenMLS JNI/FFI load at startup. Env: {@code OPENMLS_NATIVE}; property {@code openmls.native.enabled};
+     * default {@code false}.
+     */
+    public boolean openmlsNativeEnabled() {
+        return Boolean.parseBoolean(props.getProperty("openmls.native.enabled", "false"));
     }
 
     /** Spec 014: default connector-runtime on korus-integrations VM. */

@@ -35,6 +35,7 @@ class WebUiParityAssetsTest {
             "ui-live-session.js",
             "ui-pwa-settings-utils.js",
             "korus-mls-wasm.js",
+            "e2ee/openmls/korus-openmls-dev.js",
             "ui-export-utils.js",
             "ui-e2ee-mls.js",
             "ui-e2ee-utils.js",
@@ -76,6 +77,8 @@ class WebUiParityAssetsTest {
         assertTrue(app.contains("reply_preview"), "reply_preview from API");
         assertTrue(app.contains("mesh-webrtc-button"), "mesh webrtc testid");
         assertTrue(app.contains("KorusMlsWasmFactory"), "mls wasm factory");
+        assertTrue(app.contains("e2ee_openmls_dev"), "openmls dev flag");
+        assertTrue(app.contains("KorusOpenMlsDevFactory"), "openmls dev factory selection");
         assertTrue(app.contains("chat-export-button"), "export button testid");
         var mlsWasm = readResource("webui/korus-mls-wasm.js");
         assertTrue(mlsWasm.contains("/e2ee/mls/session/"), "mls session API for client encrypt");

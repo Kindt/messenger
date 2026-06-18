@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.api.mls;
 
 import com.avandocmsg.messenger.api.mls.dto.EncryptedMessage;
+import com.avandocmsg.messenger.api.mls.openmls.OpenMlsWireLayout;
 import com.avandocmsg.messenger.api.mls.wire.MlsCommitPayload;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 
@@ -15,8 +16,6 @@ import java.util.UUID;
  * and emits RFC 9420 phase-1 wire events via {@link MlsWirePublisher}.
  */
 public class MlsGroupManager {
-    private static final String DEFAULT_CIPHER_SUITE = "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519";
-
     private final MlsGroupStateRepository groupStateRepository;
     private final MlsService mlsService;
     private final UuidGenerator uuidGenerator;
@@ -56,7 +55,7 @@ public class MlsGroupManager {
         }
         mlsService.ensureSession(chatId);
         if (wirePublisher != null) {
-            wirePublisher.publishWelcome(state, members, DEFAULT_CIPHER_SUITE);
+            wirePublisher.publishWelcome(state, members, OpenMlsWireLayout.DEFAULT_CIPHER_SUITE);
         }
         return groupId;
     }

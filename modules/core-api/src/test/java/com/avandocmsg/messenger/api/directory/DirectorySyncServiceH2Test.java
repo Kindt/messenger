@@ -5,6 +5,8 @@ import com.avandocmsg.messenger.api.auth.policy.AuthProviderEntry;
 import com.avandocmsg.messenger.api.auth.policy.OrgAuthPolicyRow;
 import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcDirectorySyncRunRepositoryAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrgUserDirectoryAdapter;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -89,8 +91,8 @@ class DirectorySyncServiceH2Test {
 
         var authPolicyRepository = new AuthPolicyRepository(ds);
         var orgRepo = new OrganizationRepository(ds, java.time.Clock.systemUTC(), UuidGenerator.standard());
-        var runRepo = new DirectorySyncRunRepository(ds);
-        var userRepo = new UserRepository(ds);
+        var runRepo = new JdbcDirectorySyncRunRepositoryAdapter(new DirectorySyncRunRepository(ds));
+        var userRepo = new JdbcOrgUserDirectoryAdapter(new UserRepository(ds));
         ldapClient = new StubLdapClient();
         service = new DirectorySyncService(
             authPolicyRepository, orgRepo, runRepo, userRepo, ldapClient, UuidGenerator.standard());

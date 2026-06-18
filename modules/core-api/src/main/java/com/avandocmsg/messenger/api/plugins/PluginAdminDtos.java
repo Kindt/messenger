@@ -20,9 +20,9 @@ public final class PluginAdminDtos {
     ) {}
 
     public record ConfigureOutboundRequest(
-        UUID targetChatId,
-        UUID actorUserId,
-        String outboundToken
+        @JsonProperty("target_chat_id") UUID targetChatId,
+        @JsonProperty("actor_user_id") UUID actorUserId,
+        @JsonProperty("outbound_token") String outboundToken
     ) {}
 
     public record InstanceJson(
@@ -40,10 +40,10 @@ public final class PluginAdminDtos {
     ) {}
 
     public record CreateL0InstanceRequest(
-        UUID orgId,
-        String botName,
-        String displayName,
-        JsonNode configJson
+        @JsonProperty("org_id") UUID orgId,
+        @JsonProperty("bot_name") String botName,
+        @JsonProperty("display_name") String displayName,
+        @JsonProperty("config_json") JsonNode configJson
     ) {}
 
     public record InvokePluginRequest(

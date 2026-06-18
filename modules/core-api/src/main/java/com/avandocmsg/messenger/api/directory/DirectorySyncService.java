@@ -3,7 +3,8 @@ package com.avandocmsg.messenger.api.directory;
 import com.avandocmsg.messenger.api.auth.policy.AuthPolicyRepository;
 import com.avandocmsg.messenger.api.auth.policy.AuthProviderEntry;
 import com.avandocmsg.messenger.api.repository.OrganizationRepository;
-import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.port.DirectorySyncRunRepositoryPort;
+import com.avandocmsg.messenger.core.port.OrgUserDirectoryPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,23 +19,23 @@ public class DirectorySyncService {
 
     private final AuthPolicyRepository authPolicyRepository;
     private final OrganizationRepository organizationRepository;
-    private final DirectorySyncRunRepository runRepository;
-    private final UserRepository userRepository;
+    private final DirectorySyncRunRepositoryPort runRepository;
+    private final OrgUserDirectoryPort userDirectory;
     private final LdapDirectoryClient ldapClient;
     private final UuidGenerator uuidGenerator;
 
     public DirectorySyncService(
         AuthPolicyRepository authPolicyRepository,
         OrganizationRepository organizationRepository,
-        DirectorySyncRunRepository runRepository,
-        UserRepository userRepository,
+        DirectorySyncRunRepositoryPort runRepository,
+        OrgUserDirectoryPort userDirectory,
         LdapDirectoryClient ldapClient,
         UuidGenerator uuidGenerator
     ) {
         this.authPolicyRepository = authPolicyRepository;
         this.organizationRepository = organizationRepository;
         this.runRepository = runRepository;
-        this.userRepository = userRepository;
+        this.userDirectory = userDirectory;
         this.ldapClient = ldapClient;
         this.uuidGenerator = uuidGenerator;
     }
@@ -43,7 +44,7 @@ public class DirectorySyncService {
         if (!organizationRepository.exists(orgId)) {
             return Optional.empty();
         }
-        return runRepository.findLatestByOrg(orgId);
+        return runRepository.findLatestByOrg(orgId).map(DirectorySyncService::toApiRow);
     }
 
     public boolean orgExists(UUID orgId) {
@@ -58,7 +59,7 @@ public class DirectorySyncService {
         if (provider.isEmpty()) {
             var run = runRepository.startRun(orgId);
             runRepository.finishRun(run.id(), "error", 0, "no_enabled_ldap_provider");
-            return runRepository.findLatestByOrg(orgId);
+            return runRepository.findLatestByOrg(orgId).map(DirectorySyncService::toApiRow);
         }
         var run = runRepository.startRun(orgId);
         try {
@@ -67,7 +68,7 @@ public class DirectorySyncService {
             var upserted = 0;
             for (var entry : entries) {
                 var id = uuidGenerator.randomUuid();
-                if (userRepository.upsertFromDirectory(
+                if (userDirectory.upsertFromDirectory(
                     id, orgId, entry.externalId(), entry.username(), entry.email(), entry.displayName())) {
                     upserted++;
                 }
@@ -77,7 +78,7 @@ public class DirectorySyncService {
             log.warn("directory sync failed orgId={}: {}", orgId, e.getMessage());
             runRepository.finishRun(run.id(), "error", 0, e.getMessage());
         }
-        return runRepository.findLatestByOrg(orgId);
+        return runRepository.findLatestByOrg(orgId).map(DirectorySyncService::toApiRow);
     }
 
     public void syncAllOrgsWithLdap() {
@@ -94,6 +95,17 @@ public class DirectorySyncService {
         return row.providers().stream()
             .filter(p -> p.enabled() && "ldap".equalsIgnoreCase(p.type()))
             .findFirst();
+    }
+
+    private static DirectorySyncRunRow toApiRow(DirectorySyncRunRepositoryPort.DirectorySyncRunRow row) {
+        return new DirectorySyncRunRow(
+            row.id(),
+            row.orgId(),
+            row.status(),
+            row.usersUpserted(),
+            row.error(),
+            row.startedAt(),
+            row.finishedAt());
     }
 
     private Map<String, String> resolvedSettings(AuthProviderEntry provider) {

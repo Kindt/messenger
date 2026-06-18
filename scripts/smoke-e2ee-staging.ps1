@@ -20,10 +20,9 @@ if ([string]::IsNullOrWhiteSpace($AdminToken)) {
 $headers = @{ Authorization = "Bearer $AdminToken" }
 $status = Invoke-WebRequest -Uri "$root/api/v1/admin/e2ee/status" -Headers $headers -UseBasicParsing
 Write-Host "[OK] GET /admin/e2ee/status -> $($status.StatusCode)"
-$body = @{ limit = $MigrateLimit } | ConvertTo-Json
 try {
-    $migrate = Invoke-WebRequest -Uri "$root/api/v1/admin/e2ee/migrate-batch" -Method POST -Headers $headers `
-        -ContentType "application/json" -Body $body -UseBasicParsing
+    $migrate = Invoke-WebRequest -Uri "$root/api/v1/admin/e2ee/migrate-batch?limit=$MigrateLimit" -Method POST -Headers $headers `
+        -ContentType "application/json" -Body "{}" -UseBasicParsing
     Write-Host "[OK] POST /admin/e2ee/migrate-batch -> $($migrate.StatusCode)"
 } catch {
     Write-Host "[WARN] migrate-batch: $($_.Exception.Message) (may be expected if MLS already active)"

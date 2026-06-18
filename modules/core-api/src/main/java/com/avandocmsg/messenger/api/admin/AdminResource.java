@@ -2,7 +2,6 @@ package com.avandocmsg.messenger.api.admin;
 
 import com.avandocmsg.messenger.api.admin.dto.LegalHoldResponse;
 import com.avandocmsg.messenger.api.admin.dto.LegalHoldUpdateRequest;
-import com.avandocmsg.messenger.api.admin.dto.PurgeStatusResponse;
 import com.avandocmsg.messenger.api.admin.dto.AdminExportCompliancePrepRequest;
 import com.avandocmsg.messenger.api.admin.dto.AdminExportCompliancePrepResponse;
 import com.avandocmsg.messenger.api.admin.dto.AdminExportSuggestRequest;
@@ -15,6 +14,8 @@ import com.avandocmsg.messenger.api.admin.dto.UpdateRetentionPolicyRequest;
 import com.avandocmsg.messenger.api.chats.ReadReceiptService;
 import com.avandocmsg.messenger.api.mls.MlsGroupManager;
 import com.avandocmsg.messenger.api.mls.MlsMigrationService;
+import com.avandocmsg.messenger.core.adapter.mls.NoOpOpenMlsBindingAdapter;
+import com.avandocmsg.messenger.core.port.OpenMlsBindingPort;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
@@ -93,6 +94,7 @@ public class AdminResource {
     private final ReadReceiptService readReceiptService;
     private final MlsGroupManager mlsGroupManager;
     private final MlsMigrationService mlsMigrationService;
+    private final OpenMlsBindingPort openMlsBindingPort;
     private final LegalHoldRepository legalHoldRepository;
     private final PurgeStatusService purgeStatusService;
     private final UserMessageSource messages;
@@ -112,6 +114,7 @@ public class AdminResource {
                          ReadReceiptService readReceiptService,
                          MlsGroupManager mlsGroupManager,
                          MlsMigrationService mlsMigrationService,
+                         OpenMlsBindingPort openMlsBindingPort,
                          LegalHoldRepository legalHoldRepository,
                          PurgeStatusService purgeStatusService,
                          UserMessageSource messages) {
@@ -136,6 +139,7 @@ public class AdminResource {
         this.readReceiptService = readReceiptService;
         this.mlsGroupManager = mlsGroupManager;
         this.mlsMigrationService = mlsMigrationService;
+        this.openMlsBindingPort = openMlsBindingPort;
         this.legalHoldRepository = legalHoldRepository;
         this.purgeStatusService = purgeStatusService;
         this.messages = messages;
@@ -227,6 +231,24 @@ public class AdminResource {
     }
 
     @POST
+    @Path("e2ee/migrate-openmls-batch")
+    @Operation(summary = "Batch migrate legacy E2EE chats to OpenMLS wire profile")
+    public Response migrateOpenMlsBatch(@QueryParam("limit") @DefaultValue("50") int limit) {
+        if (mlsMigrationService == null) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                .entity(new ApiError(503, messages.get("error.message.send_failed")))
+                .build();
+        }
+        var result = mlsMigrationService.batchMigrateToOpenMls(limit);
+        return Response.ok(new BatchMigrationResponse(
+            result.migratedCount(),
+            result.failedCount(),
+            result.remainingPending(),
+            result.migratedChatIds(),
+            result.failedChatIds())).build();
+    }
+
+    @POST
     @Path("e2ee/migrate-batch")
     @Operation(summary = "Batch migrate legacy E2EE chats to MLS")
     public Response migrateBatch(@QueryParam("limit") @DefaultValue("50") int limit) {
@@ -259,18 +281,25 @@ public class AdminResource {
     public Response e2eeStatus() {
         var groups = mlsGroupManager != null ? mlsGroupManager.groupCount() : 0L;
         var pending = mlsMigrationService != null ? mlsMigrationService.pendingMigrationCount() : 0L;
+        var binding = openMlsBindingPort != null ? openMlsBindingPort : NoOpOpenMlsBindingAdapter.INSTANCE;
         return Response.ok(new E2eeStatusResponse(
             groups,
             pending,
             appConfig.mlsStatus(),
-            appConfig.e2eeSchemes())).build();
+            appConfig.e2eeSchemes(),
+            binding.wireProfile(),
+            binding.libraryVersion(),
+            binding.nativeBindingAvailable())).build();
     }
 
     public record E2eeStatusResponse(
         @JsonProperty("mls_group_count") long mlsGroupCount,
         @JsonProperty("pending_migrations_count") long pendingMigrationsCount,
         @JsonProperty("mls_status") String mlsStatus,
-        @JsonProperty("e2ee_schemes") List<String> e2eeSchemes
+        @JsonProperty("e2ee_schemes") List<String> e2eeSchemes,
+        @JsonProperty("openmls_wire_profile") String openmlsWireProfile,
+        @JsonProperty("openmls_library_version") String openmlsLibraryVersion,
+        @JsonProperty("openmls_native_binding") boolean openmlsNativeBinding
     ) {
     }
 

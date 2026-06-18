@@ -1,0 +1,20 @@
+[
+  {
+    "id": "core-api-host",
+    "role": "core-api",
+    "base_url": "http://127.0.0.1:18080",
+    "health_path": "/api/v1/health/ready"
+  },
+  {
+    "id": "web-lb",
+    "role": "web-client",
+    "base_url": "http://127.0.0.1:19088",
+    "health_path": "/"
+  },
+  {
+    "id": "ws-gateway-host",
+    "role": "ws-gateway",
+    "base_url": "http://127.0.0.1:9198",
+    "health_path": "/health"
+  }
+]
