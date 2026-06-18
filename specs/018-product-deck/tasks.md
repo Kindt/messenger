@@ -16,4 +16,4 @@
 - [x] T01812 Docs: README, AGENTS, CHANGELOG, ROADMAP, DEV_STACK
 - [x] T01813 Review R1–R3 + deck-review logs
 - [x] T01814 buildIntegrity green + commit
-- [x] T01815 Push (branch `feat/spec-017-enterprise-auth`); Pages URL after merge to `main` + Settings → Pages → `/docs`
+- [x] T01815 Push + merge to `main` (57aaa35); **Pages:** enable once in GitHub Settings → Pages → branch `main` → folder `/docs` → URL https://kindt.github.io/messenger/
