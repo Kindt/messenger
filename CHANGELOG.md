@@ -10,6 +10,13 @@
 
 ## [Unreleased]
 
+### 2026-06-18 — Cleanup: удаление legacy-презентаций
+
+- **Удалены:** `product_presentation.html`, `competitor_comparison*.html`, `tz_product.html`, `docs/PRODUCT_PRESENTATION.md`, `docs/COMPETITOR_COMPARISON_METHODOLOGY.md`.
+- **Удалены build-скрипты:** `build-tz-product-html.py`, `build-competitor-comparison-html.py`, `tz_product_*.py`, `competitor_products.py`, `competitor_comparison_data.py`, `scripts/competitors/registry.json`.
+- **Единственная customer-facing презентация:** `docs/index.html` (`scripts/presentation/`).
+- **Gradle:** `checkPresentationGate` (alias `checkCompetitorRegistry`).
+
 ### 2026-06-18 — QEMU: WHPX policy + status accel
 
 - **`qemu-dev-mode -Mode warm`:** clears stray `KORUS_QEMU_FORCE_TCG=1`; WHPX is default.

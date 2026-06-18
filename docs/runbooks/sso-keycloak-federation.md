@@ -83,6 +83,6 @@ curl -fsS -H "Authorization: Bearer $TOKEN" http://127.0.0.1:18080/api/v1/users/
 
 ## Связанные документы
 
-- `docs/PRODUCT_PRESENTATION.md` §12.3  
+- Product deck [`docs/index.html`](../index.html) (PM/Tech — enterprise IdP)  
 - `deploy/ansible/inventory/stage/group_vars/vault.yml.example` — `korus_keycloak_admin_password`  
 - `docker/docker-compose.keycloak-prod.yml` — prod Keycloak overlay

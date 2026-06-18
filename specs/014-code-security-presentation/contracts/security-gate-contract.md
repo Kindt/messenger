@@ -7,7 +7,7 @@ MUST pass:
 | Step | Command / task |
 |------|----------------|
 | Bundle parity | `checkBundleParity` |
-| Python registry | `checkCompetitorRegistry` |
+| Python deck gate | `checkPresentationGate` |
 | Code style | `spotlessCheck` (ratchet `origin/main`) |
 | npm audit | `checkNpmAudit` — 0 high/critical |
 | Benchmark | `:modules:core-api:benchmark` |

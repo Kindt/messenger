@@ -12,7 +12,7 @@
 | **Проверка wrapper** | **`gradle/actions/wrapper-validation@v5`** — контроль целостности **`gradle-wrapper.jar`** (файл **должен** быть в репозитории; не игнорировать **`*.jar`** для `gradle/wrapper/`, см. **`!gradle/wrapper/gradle-wrapper.jar`** в **`.gitignore`**) |
 | **Checkout** | **`actions/checkout@v6`** (рантайм экшенов на Node.js **24**, см. [changelog GitHub Actions](https://github.blog/changelog/)) |
 | **Node (Tailwind / Playwright)** | **`actions/setup-node@v6`**, **`node-version: "22"`** для `modules/web-client/webui-build` и E2E |
-| **Команда** | **`chmod +x gradlew && ./gradlew buildIntegrity --no-daemon`** — **`buildIntegrity`** = subproject **`build`** + **`checkBundleParity`** + **`checkCompetitorRegistry`** + **`spotlessCheck`** (ratchet `origin/main`) + **`checkNpmAudit`** + **`:modules:core-api:benchmark`** (spec 014) |
+| **Команда** | **`chmod +x gradlew && ./gradlew buildIntegrity --no-daemon`** — **`buildIntegrity`** = subproject **`build`** + **`checkBundleParity`** + **`checkPresentationGate`** + **`spotlessCheck`** (ratchet `origin/main`) + **`checkNpmAudit`** + **`:modules:core-api:benchmark`** (spec 014) |
 | **Права** | **`permissions: contents: read`** у job |
 | **Concurrency** | Одна активная сборка на ветку; новый запуск отменяет предыдущий (**`cancel-in-progress: true`**) |
 

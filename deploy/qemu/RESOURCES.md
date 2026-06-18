@@ -84,7 +84,7 @@ Optional compose profiles: `push`, `retention`, `compliance` (archiver/deep/inde
 | **Pilot prod** | `start --optimized` + import | **256–512 MB** (heap `-Xmx256m`, `mem_limit=512m`) | `docker-compose.keycloak-prod.yml`, ≤10k RU |
 | **Standard HA** | 2× `start` + external DB | 2×512 MB | ≥50k RU (вне scope Wave 1) |
 
-> Строка §10.2 ТЗ «Keycloak 8 GB» — sizing production HA, не dev/pilot. См. сноску в `docs/PRODUCT_PRESENTATION.md` §10.2.1.
+> Строка §10.2 ТЗ «Keycloak 8 GB» — sizing production HA, не dev/pilot. См. product deck [`docs/index.html`](../docs/index.html) (Tech §4).
 
 ## korus-web
 

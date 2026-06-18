@@ -16,7 +16,7 @@ python -m pytest scripts/presentation/ -q
 
 ## When to rebuild
 
-- Изменения `FEATURES` / `PRODUCTION_BLOCKERS` в `product_status.py`
+- Изменения `FEATURES` / `PRODUCTION_BLOCKERS` в `scripts/presentation/product_status.py`
 - Обновление `competitor_offerings.json` (`source_accessed_at`)
 - Новый счётчик Playwright
 - Константы pricing в `sizing_pricing.py`

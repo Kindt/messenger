@@ -56,4 +56,4 @@ Stage prep checklist (T601–T607 artifacts):
 | `pilot-health.js` | `GET /api/v1/health` sustained load |
 | `pilot-rest.js` | login + chat list (authenticated REST) |
 
-Target peak for Pilot profile: see [`docs/PRODUCT_PRESENTATION.md`](../docs/PRODUCT_PRESENTATION.md) §10.2 — run at **20%** of documented peak when matrix is finalized.
+Target peak for prod-full sizing: see product deck [`docs/index.html`](../docs/index.html) (Tech §4) — run at **20%** of documented peak when matrix is finalized.
