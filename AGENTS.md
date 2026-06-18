@@ -422,7 +422,8 @@ Graphical: `.\scripts\qemu-dev-up.ps1` → API http://127.0.0.1:18080, UI http:/
 - **Git push GitHub:** `.\scripts\git-push.ps1` или `git -c http.proxy= -c https.proxy= push`.
 - **L2 live (QEMU, parallel agents):** API smoke `.\scripts\smoke-live-session.ps1`; UI — `enable-hotswap` + `sync-ui` (не `rebuild-web`); LiveKit `:17880` без `qemu-down` — `.\scripts\livekit-host-tunnel.ps1` (отдельный терминал); secret ≥32 байт (`korus-dev-livekit-secret-32bytes!`).
 - **QEMU backup:** `qemu-backup.ps1` / `qemu-restore.ps1` (ВМ остановлены).
-- **VM падают ~10 мин в server redeploy** (WHPX/host load): цикл retry через monitored script; при повторе — `KORUS_QEMU_FORCE_TCG=1` или проверка RAM (~13 ГБ).
+- **VM падают ~10 мин в server redeploy** (WHPX/host load): цикл retry через monitored script; **не** ставить `KORUS_QEMU_FORCE_TCG=1` на warm/после backup — сначала WHPX (`qemu-up -KeepDisks`, `qemu-fast-up.ps1`), проверка RAM (~13 ГБ для 2-VM). TCG — только monitored после VM death <15m.
+- **WHPX warning `hr=80370300`** (perf monitoring) — **не ошибка**; если VM падает сразу — чаще RAM или отсутствие dot-source `Start-KorusRepoHttp` в `qemu-up.ps1`.
 
 ### Playwright / US9
 

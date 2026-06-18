@@ -10,6 +10,13 @@
 
 ## [Unreleased]
 
+### 2026-06-18 — QEMU: WHPX policy + status accel
+
+- **`qemu-dev-mode -Mode warm`:** clears stray `KORUS_QEMU_FORCE_TCG=1`; WHPX is default.
+- **`Get-KorusQemuDevStatus`:** prints `VM accel` (whpx/tcg) with TCG warning.
+- **`Start-KorusVm`:** server RAM retry 10240→8192 on immediate exit; WHPX perf-monitor hint in error.
+- **Agent rules:** `qemu-redeploy-monitor.mdc` + `AGENTS.md` — no agent-initiated TCG on warm/backup.
+
 ### 2026-06-18 — Spec 019 phase 3 (hex tail: indexer queue, SCIM port, MessageService retired from HTTP)
 
 - **`IndexerEventPublisher`:** hot-plug queue for `MSG_EVENT_INDEX`; wired into `MessageEditCoordinator` / `MessageDeleteCoordinator` (production path regains indexer replay).

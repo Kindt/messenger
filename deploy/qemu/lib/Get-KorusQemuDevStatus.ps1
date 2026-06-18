@@ -39,7 +39,13 @@ function Get-KorusQemuDevStatus {
 
     $health = Get-KorusHostHealthSummary
 
+    $vmAccel = "n/a"
     if ($vmUp) {
+        $accelProc = Get-CimInstance Win32_Process -Filter "name='qemu-system-x86_64.exe'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.CommandLine -match '\bkorus-server\b' } | Select-Object -First 1
+        if ($accelProc -and $accelProc.CommandLine -match '-accel\s+(whpx|tcg)') {
+            $vmAccel = $Matches[1]
+        }
         $shk = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "server-serial.log") -Role server -SshPort 12221
         if ($shk) {
             $st = Get-KorusGuestBootstrapTail -HostKey $shk -Port 12221
@@ -69,6 +75,7 @@ function Get-KorusQemuDevStatus {
         WebuiSyncAt   = $webuiSync
         GoldenLock    = (Test-Path (Join-Path $RunDir "golden-path.no-auto-restart"))
         TcgForced     = ($env:KORUS_QEMU_FORCE_TCG -eq '1')
+        VmAccel       = $vmAccel
     }
 }
 
@@ -77,6 +84,13 @@ function Write-KorusQemuDevStatus {
     Write-Host "=== Korus QEMU dev status ===" -ForegroundColor Cyan
     Write-Host "  Stack profile:  $($S.StackProfile)"
     Write-Host "  VM running:     $($S.VmUp)"
+    if ($S.VmAccel -and $S.VmAccel -ne "n/a") {
+        $accelColor = if ($S.VmAccel -eq "whpx") { "Green" } else { "Yellow" }
+        Write-Host "  VM accel:       $($S.VmAccel)" -ForegroundColor $accelColor
+        if ($S.VmAccel -eq "tcg") {
+            Write-Host "  -> WHPX required: clear KORUS_QEMU_FORCE_TCG; qemu-down; qemu-up -KeepDisks" -ForegroundColor Yellow
+        }
+    }
     Write-Host "  API /health:    $($S.ApiHealth)  /ready: $($S.ApiReady)"
     Write-Host "  UI :19088:      $($S.Web)  tailwind.css: $($S.TailwindCss)"
     Write-Host "  Hotswap:        $($S.Hotswap)"

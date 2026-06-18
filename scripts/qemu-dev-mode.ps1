@@ -60,6 +60,10 @@ switch ($Mode) {
         exit $LASTEXITCODE
     }
     "warm" {
+        if ($env:KORUS_QEMU_FORCE_TCG -eq "1") {
+            Write-Host "[WARN] KORUS_QEMU_FORCE_TCG=1 ignored for warm - project default is WHPX. Diagnose RAM/repo-http, not TCG." -ForegroundColor Yellow
+            Remove-Item Env:KORUS_QEMU_FORCE_TCG -ErrorAction SilentlyContinue
+        }
         & (Join-Path $Root "scripts\qemu-up.ps1") -KeepDisks -StackProfile dev
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         & (Join-Path $Root "scripts\qemu-stack-wait.ps1") -MaxMinutes 30

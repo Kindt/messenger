@@ -97,6 +97,9 @@ function Start-KorusQemuVm {
     if ($Role -eq "integrations" -and $memMb -gt $KorusQemuIntegrationsMemoryMbMin) {
         $memAttempts += $KorusQemuIntegrationsMemoryMbMin
     }
+    if ($Role -eq "server" -and $memMb -gt $KorusQemuThreeVmServerMemoryMb) {
+        $memAttempts += $KorusQemuThreeVmServerMemoryMb
+    }
     $smp = switch ($Role) {
         "server" { $KorusQemuServerSmp }
         "web" { $KorusQemuWebSmp }
@@ -158,6 +161,9 @@ function Start-KorusQemuVm {
         $err = if (Test-Path $errLog) { Get-Content -Raw $errLog } else { "" }
         Write-KorusDebugLog -Location "Start-KorusVm.ps1:fail" -Message "vm exit" -HypothesisId "H1" -Data @{ Role = $Role; err = $err.Substring(0, [Math]::Min(500, $err.Length)) }
         $hint = ""
+        if ($err -match "Failed to get performance monitoring features" -and $err -notmatch "failed to initialize whpx|No accelerator found") {
+            $hint = " WHPX perf-monitor warning (hr=80370300) is non-fatal per RESOURCES.md; check host RAM for -m ${memMb}MB or missing lib dot-source (Start-KorusRepoHttp)."
+        }
         if ($Role -eq "integrations") {
             $hostMb = Get-KorusQemuHostMemoryMb
             $hint = " Hint: 3-VM needs ~22GB host RAM at full sizing; with server+web use auto 4096MB integrations or set KORUS_QEMU_INTEGRATIONS_MEMORY_MB. Do not set KORUS_QEMU_FORCE_TCG unless WHPX is broken (host ~${hostMb}MB)."

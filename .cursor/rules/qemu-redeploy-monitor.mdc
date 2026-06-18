@@ -29,7 +29,7 @@ Default redeploy = **sync** (`KORUS_BUILD=0`). Full build only with `-Rebuild` o
 
 1. **Monitor** — `qemu-dev-mode -Mode status`, guest bootstrap phase in redeploy wait-loop
 2. **Diagnose** — VM died / stale lock / gradle stuck >45m (phase log, not blind HTTP)
-3. **Fix** — minimal diff; TCG fallback in monitored after VM death <15m
+3. **Fix** — minimal diff; **WHPX first** (default). Never set `KORUS_QEMU_FORCE_TCG=1` on warm/backup-restore — diagnose `Start-KorusRepoHttp`, host RAM (`deploy/qemu/RESOURCES.md`), `qemu-fast-up.ps1`. TCG only via `qemu-redeploy-monitored` after confirmed VM death <15m.
 4. **Restart** — `qemu-redeploy-monitored.ps1` (sync default) or `qemu-dev-mode -Mode monitored`
 5. **Commit** — after each fix+restart cycle that changes repo files
 
