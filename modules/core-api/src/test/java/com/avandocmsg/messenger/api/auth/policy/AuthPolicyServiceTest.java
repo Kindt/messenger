@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.api.auth.policy;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrganizationLookupAdapter;
 import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +46,7 @@ class AuthPolicyServiceTest {
                 return Optional.empty();
             }
         };
-        service = new AuthPolicyService(appConfig, policyRepo, orgRepo, new KeycloakAuthSyncClient(appConfig) {
+        service = new AuthPolicyService(appConfig, policyRepo, new JdbcOrganizationLookupAdapter(orgRepo), new KeycloakAuthSyncClient(appConfig) {
             @Override
             public ApplyResult upsertLdap(String name, java.util.Map<String, String> settings) {
                 return new ApplyResult(true, "kc-ldap-id", null);

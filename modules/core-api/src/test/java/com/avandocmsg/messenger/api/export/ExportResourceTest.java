@@ -12,6 +12,9 @@ import com.avandocmsg.messenger.api.repository.ExportJobRepository;
 import com.avandocmsg.messenger.common.dto.ExportReplayJob;
 import com.avandocmsg.messenger.common.export.ExportOutputRef;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -245,8 +248,11 @@ class ExportResourceTest {
 
     private ExportResource resource(ChatRepository chats, ExportJobRepository jobs, AuditRepository audit,
                                     NatsOutboundPort nats, ExportFileAccess exportFiles) {
-        var enqueuer = new ExportJobEnqueuer(jobs, audit, nats, UuidGenerator.standard());
-        return new ExportResource(chats, jobs, enqueuer, audit, I18nTestFixtures.messagesEn(), exportFiles, nats);
+        var exportJobPort = new JdbcExportJobAdapter(jobs);
+        var auditPort = new JdbcAuditAdapter(audit);
+        var enqueuer = new ExportJobEnqueuer(exportJobPort, auditPort, nats, UuidGenerator.standard());
+        return new ExportResource(new JdbcChatPersistenceAdapter(chats), exportJobPort, enqueuer, auditPort,
+            I18nTestFixtures.messagesEn(), exportFiles, nats);
     }
 
     private static ExportFileAccess unconfiguredExportFiles() {

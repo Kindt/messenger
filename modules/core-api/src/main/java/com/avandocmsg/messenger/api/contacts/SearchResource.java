@@ -1,7 +1,7 @@
 package com.avandocmsg.messenger.api.contacts;
 
 import com.avandocmsg.messenger.api.params.CurrentUserId;
-import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.port.UserLookupPort;
 import com.avandocmsg.messenger.api.search.MessageSearchService;
 import com.avandocmsg.messenger.api.users.dto.UserSearchHit;
 import com.avandocmsg.messenger.common.dto.ApiError;
@@ -28,14 +28,14 @@ import jakarta.ws.rs.core.SecurityContext;
 @Tag(name = "Search", description = "Поиск пользователей и сообщений")
 public class SearchResource {
 
-    private final UserRepository userRepository;
+    private final UserLookupPort userLookupPort;
     private final MessageSearchService messageSearchService;
     private final UserMessageSource messages;
 
     @Inject
-    public SearchResource(UserRepository userRepository, MessageSearchService messageSearchService,
+    public SearchResource(UserLookupPort userLookupPort, MessageSearchService messageSearchService,
                           UserMessageSource messages) {
-        this.userRepository = userRepository;
+        this.userLookupPort = userLookupPort;
         this.messageSearchService = messageSearchService;
         this.messages = messages;
     }
@@ -61,7 +61,7 @@ public class SearchResource {
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
-        var results = userRepository.searchForViewer(userId, query, 20);
+        var results = userLookupPort.searchForViewer(userId, query, 20);
         return Response.ok(results).build();
     }
 

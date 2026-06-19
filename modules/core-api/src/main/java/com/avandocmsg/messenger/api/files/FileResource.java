@@ -11,7 +11,7 @@ import com.avandocmsg.messenger.api.files.dto.FileUploadResponse;
 import com.avandocmsg.messenger.api.metrics.ApiDeniedMetrics;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.core.port.PublicLinkPort;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
@@ -86,7 +86,7 @@ public class FileResource {
     private final FileApplicationService fileApplicationService;
     private final AppConfig appConfig;
     private final PublicLinkPort publicLinkPort;
-    private final AuditRepository auditRepository;
+    private final AuditPort auditPort;
     private final Clock clock;
     private final UserMessageSource messages;
 
@@ -94,12 +94,12 @@ public class FileResource {
     public FileResource(FileService fileService, FileApplicationService fileApplicationService,
                           AppConfig appConfig,
                           PublicLinkPort publicLinkPort,
-                          AuditRepository auditRepository, Clock clock, UserMessageSource messages) {
+                          AuditPort auditPort, Clock clock, UserMessageSource messages) {
         this.fileService = fileService;
         this.fileApplicationService = fileApplicationService;
         this.appConfig = appConfig;
         this.publicLinkPort = publicLinkPort;
-        this.auditRepository = auditRepository;
+        this.auditPort = auditPort;
         this.clock = clock;
         this.messages = messages;
     }
@@ -497,7 +497,7 @@ public class FileResource {
                 .build();
         }
         var c = created.get();
-        auditRepository.record(userId, "file.public_link.create", "file", fileIdStr,
+        auditPort.record(userId, "file.public_link.create", "file", fileIdStr,
             publicLinkCreateAuditDetails(c.id(), kind));
         var hint = "/api/v1/files/pub/" + c.rawToken() + (kind == 'B' ? " (use /auth-link/ with Bearer for kind B)" : "");
         return Response.status(Response.Status.CREATED)
@@ -523,7 +523,7 @@ public class FileResource {
                 .entity(new ApiError(404, messages.get("error.file.link_not_found_revoked")))
                 .build();
         }
-        auditRepository.record(userId, "file.public_link.revoke", "file", fileIdStr,
+        auditPort.record(userId, "file.public_link.revoke", "file", fileIdStr,
             publicLinkRevokeAuditDetails(linkId));
         return Response.noContent().build();
     }

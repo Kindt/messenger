@@ -2,8 +2,8 @@ package com.avandocmsg.messenger.api.export;
 
 import com.avandocmsg.messenger.api.export.dto.ExportCancelResponse;
 import com.avandocmsg.messenger.api.metrics.ExportMetrics;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
-import com.avandocmsg.messenger.api.repository.ExportJobRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
+import com.avandocmsg.messenger.core.port.ExportJobPort;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
@@ -27,13 +27,13 @@ public final class ExportJobCancelSupport {
     private ExportJobCancelSupport() {}
 
     public static Response cancel(
-        ExportJobRepository.ExportJobRow job,
+        ExportJobPort.ExportJobRow job,
         UUID chatId,
         UUID jobId,
         UUID actorUserId,
         String auditAction,
-        ExportJobRepository exportJobRepository,
-        AuditRepository auditRepository,
+        ExportJobPort exportJobPort,
+        AuditPort auditPort,
         UserMessageSource messages,
         NatsOutboundPort natsOutbound
     ) {
@@ -43,7 +43,7 @@ public final class ExportJobCancelSupport {
                 .entity(new ApiError(409, messages.get("error.export.not_cancellable")))
                 .build();
         }
-        if (!exportJobRepository.cancelIfActive(jobId, chatId)) {
+        if (!exportJobPort.cancelIfActive(jobId, chatId)) {
             ExportMetrics.jobCancelRejected(auditAction, "db_race");
             return Response.status(Response.Status.CONFLICT)
                 .entity(new ApiError(409, messages.get("error.export.not_cancellable")))
@@ -51,7 +51,7 @@ public final class ExportJobCancelSupport {
         }
         ExportCancelPublisher.publish(natsOutbound, jobId, chatId);
         ExportMetrics.jobCancelled(auditAction, job.status());
-        auditRepository.record(
+        auditPort.record(
             actorUserId,
             auditAction,
             "export_job",

@@ -1,7 +1,7 @@
 package com.avandocmsg.messenger.api.admin.dto;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
+import com.avandocmsg.messenger.core.port.RetentionPolicyPort;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -73,7 +73,7 @@ class RetentionPolicyResponseTest {
     void resolved_withStoredRow_nullIntsFallBackToPlatformDefaults() {
         var orgId = UUID.randomUUID();
         var ts = Instant.parse("2024-06-01T12:00:00Z");
-        var stored = new RetentionPolicyRepository.StoredRow(
+        var stored = new RetentionPolicyPort.StoredRow(
             orgId, null, null, false, true, true, ts, null);
         var r = RetentionPolicyResponse.resolved(orgId, new TestAppConfig(), Optional.of(stored));
         assertEquals(100, r.hotMessageBodyMaxAgeDays());

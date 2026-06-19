@@ -1,7 +1,7 @@
 package com.avandocmsg.messenger.api.filter;
 
 import com.avandocmsg.messenger.api.config.OrgRoutingContext;
-import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.port.UserLookupPort;
 import jakarta.annotation.Priority;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Priorities;
@@ -19,11 +19,11 @@ import java.util.UUID;
 @Priority(Priorities.AUTHENTICATION + 100)
 public class OrgRoutingFilter implements ContainerRequestFilter {
 
-    private final UserRepository userRepository;
+    private final UserLookupPort userLookupPort;
 
     @Inject
-    public OrgRoutingFilter(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public OrgRoutingFilter(UserLookupPort userLookupPort) {
+        this.userLookupPort = userLookupPort;
     }
 
     @Override
@@ -37,7 +37,7 @@ public class OrgRoutingFilter implements ContainerRequestFilter {
         }
         try {
             var userId = UUID.fromString(sc.getUserPrincipal().getName());
-            userRepository.findById(userId)
+            userLookupPort.findById(userId)
                 .map(p -> p.orgId())
                 .filter(org -> org != null && !org.isBlank())
                 .map(UUID::fromString)

@@ -1,8 +1,8 @@
 package com.avandocmsg.messenger.api.admin.dto;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
-import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
+import com.avandocmsg.messenger.core.port.ChatRetentionPolicyPort;
+import com.avandocmsg.messenger.core.port.RetentionPolicyPort;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -30,8 +30,8 @@ public record ChatRetentionPolicyResponse(
         UUID chatId,
         Optional<UUID> baseOrgId,
         AppConfig app,
-        Optional<RetentionPolicyRepository.StoredRow> orgStored,
-        Optional<ChatRetentionPolicyRepository.StoredRow> chatStored
+        Optional<RetentionPolicyPort.StoredRow> orgStored,
+        Optional<ChatRetentionPolicyPort.StoredRow> chatStored
     ) {
         RetentionPolicyResponse orgLayer = baseOrgId
             .map(oid -> RetentionPolicyResponse.resolved(oid, app, orgStored))

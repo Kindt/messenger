@@ -8,7 +8,7 @@ import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.api.mls.SessionRepository;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,7 +32,6 @@ import jakarta.ws.rs.core.SecurityContext;
 
 import java.util.Base64;
 import java.util.Map;
-import java.util.UUID;
 
 @Path("/v1/e2ee")
 @Produces(MediaType.APPLICATION_JSON)
@@ -45,20 +44,20 @@ public class CryptoResource {
     private final MlsService mlsService;
     private final MlsMigrationService mlsMigrationService;
     private final SessionRepository sessionRepository;
-    private final ChatRepository chatRepository;
+    private final ChatPersistencePort chatPersistencePort;
     private final UserMessageSource messages;
 
     @Inject
     public CryptoResource(E2EEService e2eeService, KeyPackageRepository keyPackageRepository,
                           MlsService mlsService, MlsMigrationService mlsMigrationService,
-                          SessionRepository sessionRepository, ChatRepository chatRepository,
+                          SessionRepository sessionRepository, ChatPersistencePort chatPersistencePort,
                           UserMessageSource messages) {
         this.e2eeService = e2eeService;
         this.keyPackageRepository = keyPackageRepository;
         this.mlsService = mlsService;
         this.mlsMigrationService = mlsMigrationService;
         this.sessionRepository = sessionRepository;
-        this.chatRepository = chatRepository;
+        this.chatPersistencePort = chatPersistencePort;
         this.messages = messages;
     }
 
@@ -113,8 +112,8 @@ public class CryptoResource {
                                 @Context SecurityContext securityContext) {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var userId = CurrentUserId.uuid(securityContext);
-        var role = chatRepository.getMemberRole(chatId, userId);
-        if (role == null || chatRepository.isMemberBanned(chatId, userId)) {
+        var role = chatPersistencePort.getMemberRole(chatId, userId);
+        if (role == null || chatPersistencePort.isMemberBanned(chatId, userId)) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.message.not_member")))
                 .build();

@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.api.mls;
 
 import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.api.crypto.E2EEService;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
@@ -11,7 +12,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,7 +33,7 @@ class MlsMigrationServiceTest {
         var mlsService = new MlsService(sessionRepository, new E2EEService());
         var clock = Clock.fixed(Instant.parse("2026-06-09T12:00:00Z"), ZoneOffset.UTC);
         groupManager = new MlsGroupManager(groupStateRepository, mlsService, UuidGenerator.standard(), clock);
-        migrationService = new MlsMigrationService(null, groupManager, chatRepository);
+        migrationService = new MlsMigrationService(null, groupManager, new JdbcChatPersistenceAdapter(chatRepository));
     }
 
     @Test
@@ -56,7 +56,7 @@ class MlsMigrationServiceTest {
             member.toString(), "alice", "Alice", "member", false, false, Instant.now())));
         chatRepository.members.put(chat2, List.of(new ChatMemberResponse(
             member.toString(), "bob", "Bob", "member", false, false, Instant.now())));
-        var batchService = new MlsMigrationService(null, groupManager, chatRepository) {
+        var batchService = new MlsMigrationService(null, groupManager, new JdbcChatPersistenceAdapter(chatRepository)) {
             @Override
             List<UUID> listPendingChatIds(int limit) {
                 return List.of(chatId, chat2);

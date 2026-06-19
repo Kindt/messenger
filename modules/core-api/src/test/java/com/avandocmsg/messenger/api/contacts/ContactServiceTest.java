@@ -1,9 +1,9 @@
 package com.avandocmsg.messenger.api.contacts;
 
-import com.avandocmsg.messenger.api.contacts.dto.ContactResponse;
 import com.avandocmsg.messenger.api.users.dto.UserProfile;
 import com.avandocmsg.messenger.core.domain.Contact;
 import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcUserLookupAdapter;
 import com.avandocmsg.messenger.core.port.ContactRepositoryPort;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +17,7 @@ class ContactServiceTest {
     private final StubContactPort contactRepo = new StubContactPort();
     private final StubUserRepository userRepo = new StubUserRepository();
     private final StubBlockPort blockRepo = new StubBlockPort();
-    private final ContactService contactService = new ContactService(contactRepo, userRepo, blockRepo);
+    private final ContactService contactService = new ContactService(contactRepo, new JdbcUserLookupAdapter(userRepo), blockRepo);
 
     final UUID userId = UUID.randomUUID();
     final UUID contactId = UUID.randomUUID();

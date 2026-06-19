@@ -1,6 +1,6 @@
 package com.avandocmsg.messenger.api.admin;
 
-import com.avandocmsg.messenger.api.repository.AuditRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
 
 import javax.sql.DataSource;
 
@@ -11,17 +11,17 @@ public final class PurgeStatusService {
     private static final String PURGE_ERROR_ACTION = "message.retention.purge_error";
 
     private final DataSource dataSource;
-    private final AuditRepository auditRepository;
+    private final AuditPort auditPort;
 
-    public PurgeStatusService(DataSource dataSource, AuditRepository auditRepository) {
+    public PurgeStatusService(DataSource dataSource, AuditPort auditPort) {
         this.dataSource = dataSource;
-        this.auditRepository = auditRepository;
+        this.auditPort = auditPort;
     }
 
     public com.avandocmsg.messenger.api.admin.dto.PurgeStatusResponse status() {
-        var total = auditRepository.countByAction(PURGED_ACTION);
-        var last = auditRepository.latestOccurredAtByAction(PURGED_ACTION).orElse(null);
-        var errors = auditRepository.countByAction(PURGE_ERROR_ACTION);
+        var total = auditPort.countByAction(PURGED_ACTION);
+        var last = auditPort.latestOccurredAtByAction(PURGED_ACTION).orElse(null);
+        var errors = auditPort.countByAction(PURGE_ERROR_ACTION);
         var pending = countPendingHotRowCandidates();
         return new com.avandocmsg.messenger.api.admin.dto.PurgeStatusResponse(total, last, errors, pending);
     }

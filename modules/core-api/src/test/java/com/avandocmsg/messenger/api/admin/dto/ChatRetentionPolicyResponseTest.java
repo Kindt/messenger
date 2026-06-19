@@ -1,8 +1,8 @@
 package com.avandocmsg.messenger.api.admin.dto;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
-import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
+import com.avandocmsg.messenger.core.port.ChatRetentionPolicyPort;
+import com.avandocmsg.messenger.core.port.RetentionPolicyPort;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -63,7 +63,7 @@ class ChatRetentionPolicyResponseTest {
         var orgId = UUID.randomUUID();
         var app = new TestAppConfig();
         var ts = Instant.parse("2024-06-01T12:00:00Z");
-        var orgStored = new RetentionPolicyRepository.StoredRow(
+        var orgStored = new RetentionPolicyPort.StoredRow(
             orgId, 20, 3, false, true, false, ts, null);
         var r = ChatRetentionPolicyResponse.resolved(chatId, Optional.of(orgId), app, Optional.of(orgStored), Optional.empty());
         assertEquals(orgId.toString(), r.baseOrgId());
@@ -81,9 +81,9 @@ class ChatRetentionPolicyResponseTest {
         var chatId = UUID.randomUUID();
         var orgId = UUID.randomUUID();
         var app = new TestAppConfig();
-        var orgStored = new RetentionPolicyRepository.StoredRow(
+        var orgStored = new RetentionPolicyPort.StoredRow(
             orgId, 50, 8, true, false, false, Instant.now(), null);
-        var chatStored = new ChatRetentionPolicyRepository.StoredRow(
+        var chatStored = new ChatRetentionPolicyPort.StoredRow(
             chatId, null, null, false, true, true, Instant.parse("2024-07-01T00:00:00Z"), "actor");
         var r = ChatRetentionPolicyResponse.resolved(chatId, Optional.of(orgId), app, Optional.of(orgStored), Optional.of(chatStored));
         assertEquals(50, r.hotMessageBodyMaxAgeDays());

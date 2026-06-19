@@ -1,17 +1,15 @@
 package com.avandocmsg.messenger.api.chats;
 
 import com.avandocmsg.messenger.api.chats.dto.ReadReceiptResponse;
-import com.avandocmsg.messenger.api.chats.dto.ReadReceiptUserInfo;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.metrics.ReadReceiptMetrics;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
-import com.avandocmsg.messenger.api.repository.ChatReadRepository;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.MessageReadReceiptRepository;
-import com.avandocmsg.messenger.api.repository.UserRepository;
-import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.MessageId;
+import com.avandocmsg.messenger.core.port.AuditPort;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
+import com.avandocmsg.messenger.core.port.ChatReadStatePort;
+import com.avandocmsg.messenger.core.port.MessageReadReceiptPort;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
+import com.avandocmsg.messenger.core.port.UserLookupPort;
 import com.avandocmsg.messenger.common.dto.ReadReceiptEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
@@ -34,46 +32,46 @@ public class ReadReceiptService {
     private static final Logger log = LoggerFactory.getLogger(ReadReceiptService.class);
     private static final ObjectMapper JSON = new ObjectMapper();
 
-    private final MessageReadReceiptRepository readReceiptRepository;
-    private final ChatRepository chatRepository;
+    private final MessageReadReceiptPort readReceiptPort;
+    private final ChatPersistencePort chatPersistencePort;
     private final MessageRepositoryPort messageRepositoryPort;
-    private final ChatReadRepository chatReadRepository;
-    private final UserRepository userRepository;
-    private final AuditRepository auditRepository;
+    private final ChatReadStatePort chatReadStatePort;
+    private final UserLookupPort userLookupPort;
+    private final AuditPort auditPort;
     private final NatsOutboundPort natsOutbound;
     private final AppConfig appConfig;
     private final Clock clock;
     private final ReadCachePort readCache;
 
-    public ReadReceiptService(MessageReadReceiptRepository readReceiptRepository,
-                              ChatRepository chatRepository,
+    public ReadReceiptService(MessageReadReceiptPort readReceiptPort,
+                              ChatPersistencePort chatPersistencePort,
                               MessageRepositoryPort messageRepositoryPort,
-                              ChatReadRepository chatReadRepository,
-                              UserRepository userRepository,
-                              AuditRepository auditRepository,
+                              ChatReadStatePort chatReadStatePort,
+                              UserLookupPort userLookupPort,
+                              AuditPort auditPort,
                               NatsOutboundPort natsOutbound,
                               AppConfig appConfig,
                               Clock clock) {
-        this(readReceiptRepository, chatRepository, messageRepositoryPort, chatReadRepository, userRepository,
-            auditRepository, natsOutbound, appConfig, clock, NoOpReadCacheAdapter.INSTANCE);
+        this(readReceiptPort, chatPersistencePort, messageRepositoryPort, chatReadStatePort, userLookupPort,
+            auditPort, natsOutbound, appConfig, clock, NoOpReadCacheAdapter.INSTANCE);
     }
 
-    public ReadReceiptService(MessageReadReceiptRepository readReceiptRepository,
-                              ChatRepository chatRepository,
+    public ReadReceiptService(MessageReadReceiptPort readReceiptPort,
+                              ChatPersistencePort chatPersistencePort,
                               MessageRepositoryPort messageRepositoryPort,
-                              ChatReadRepository chatReadRepository,
-                              UserRepository userRepository,
-                              AuditRepository auditRepository,
+                              ChatReadStatePort chatReadStatePort,
+                              UserLookupPort userLookupPort,
+                              AuditPort auditPort,
                               NatsOutboundPort natsOutbound,
                               AppConfig appConfig,
                               Clock clock,
                               ReadCachePort readCache) {
-        this.readReceiptRepository = readReceiptRepository;
-        this.chatRepository = chatRepository;
+        this.readReceiptPort = readReceiptPort;
+        this.chatPersistencePort = chatPersistencePort;
         this.messageRepositoryPort = messageRepositoryPort;
-        this.chatReadRepository = chatReadRepository;
-        this.userRepository = userRepository;
-        this.auditRepository = auditRepository;
+        this.chatReadStatePort = chatReadStatePort;
+        this.userLookupPort = userLookupPort;
+        this.auditPort = auditPort;
         this.natsOutbound = natsOutbound;
         this.appConfig = appConfig;
         this.clock = clock;
@@ -88,24 +86,24 @@ public class ReadReceiptService {
     }
 
     public MarkResult markMessageRead(UUID chatId, UUID userId, UUID messageId) {
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return MarkResult.NOT_MEMBER;
         }
         var msg = messageRepositoryPort.findById(MessageId.of(messageId)).orElse(null);
         if (msg == null || !msg.chatId().value().equals(chatId)) {
             return MarkResult.MESSAGE_NOT_FOUND;
         }
-        if (userRepository.isReadReceiptsDisabled(userId)) {
-            chatReadRepository.upsertLastRead(userId, chatId, messageId);
+        if (userLookupPort.isReadReceiptsDisabled(userId)) {
+            chatReadStatePort.upsertLastRead(userId, chatId, messageId);
             ReadCacheCoordinator.invalidateChatUnread(readCache, userId);
             return MarkResult.OK;
         }
         var now = clock.instant();
-        var inserted = readReceiptRepository.insert(messageId, userId, now);
-        chatReadRepository.upsertLastRead(userId, chatId, messageId);
+        var inserted = readReceiptPort.insert(messageId, userId, now);
+        chatReadStatePort.upsertLastRead(userId, chatId, messageId);
         if (inserted) {
             ReadReceiptMetrics.insertRecorded();
-            auditRepository.record(userId, "message.read", "message", messageId.toString(), null);
+            auditPort.record(userId, "message.read", "message", messageId.toString(), null);
             publishReceipt(ReadReceiptEvent.single(chatId.toString(), messageId.toString(), userId.toString(),
                 now.toEpochMilli()));
         }
@@ -114,7 +112,7 @@ public class ReadReceiptService {
     }
 
     public MarkResult markBatchRead(UUID chatId, UUID userId, List<UUID> messageIds) {
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return MarkResult.NOT_MEMBER;
         }
         if (messageIds == null || messageIds.isEmpty()) {
@@ -131,17 +129,17 @@ public class ReadReceiptService {
             }
             validated.add(messageId);
         }
-        if (userRepository.isReadReceiptsDisabled(userId)) {
+        if (userLookupPort.isReadReceiptsDisabled(userId)) {
             upsertAggregateRead(chatId, userId, validated);
             ReadCacheCoordinator.invalidateChatUnread(readCache, userId);
             return MarkResult.OK;
         }
         var now = clock.instant();
-        var inserted = readReceiptRepository.insertBatch(validated, userId, now);
+        var inserted = readReceiptPort.insertBatch(validated, userId, now);
         upsertAggregateRead(chatId, userId, validated);
         ReadReceiptMetrics.batchRecorded(validated.size());
         if (inserted > 0) {
-            auditRepository.record(userId, "message.read.batch", "chat", chatId.toString(),
+            auditPort.record(userId, "message.read.batch", "chat", chatId.toString(),
                 "{\"count\":" + inserted + "}");
             var ids = validated.stream().map(UUID::toString).toList();
             publishReceipt(ReadReceiptEvent.batch(chatId.toString(), userId.toString(), now.toEpochMilli(), ids));
@@ -151,19 +149,19 @@ public class ReadReceiptService {
     }
 
     public Optional<ReadReceiptResponse> listForMessage(UUID chatId, UUID viewerId, UUID messageId, int offset, int limit) {
-        if (chatRepository.getMemberRole(chatId, viewerId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, viewerId) == null) {
             return Optional.empty();
         }
         var msg = messageRepositoryPort.findById(MessageId.of(messageId)).orElse(null);
         if (msg == null || !msg.chatId().value().equals(chatId)) {
             return Optional.empty();
         }
-        var rows = readReceiptRepository.findByMessageId(messageId, offset, limit);
+        var rows = readReceiptPort.findByMessageId(messageId, offset, limit);
         return Optional.of(new ReadReceiptResponse(messageId.toString(), rows));
     }
 
     public long totalRows() {
-        return readReceiptRepository.countAll();
+        return readReceiptPort.countAll();
     }
 
     private void upsertAggregateRead(UUID chatId, UUID userId, List<UUID> messageIds) {
@@ -171,7 +169,7 @@ public class ReadReceiptService {
             .map(id -> messageRepositoryPort.findById(MessageId.of(id)).orElse(null))
             .filter(m -> m != null)
             .max(Comparator.comparing(m -> m.createdAt()))
-            .ifPresent(latest -> chatReadRepository.upsertLastRead(userId, chatId, latest.id().value()));
+            .ifPresent(latest -> chatReadStatePort.upsertLastRead(userId, chatId, latest.id().value()));
     }
 
     private void publishReceipt(ReadReceiptEvent event) {

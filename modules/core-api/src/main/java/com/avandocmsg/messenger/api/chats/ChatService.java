@@ -5,8 +5,8 @@ import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
 import com.avandocmsg.messenger.api.chats.dto.ChatResponse;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
-import com.avandocmsg.messenger.api.repository.ChatReadRepository;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
+import com.avandocmsg.messenger.core.port.ChatReadStatePort;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
@@ -37,9 +37,9 @@ public class ChatService {
     private static final TypeReference<List<ChatResponse>> CHAT_LIST_TYPE = new TypeReference<>() {
     };
 
-    private final ChatRepository chatRepository;
+    private final ChatPersistencePort chatPersistencePort;
     private final BlockRepositoryPort blockRepositoryPort;
-    private final ChatReadRepository chatReadRepository;
+    private final ChatReadStatePort chatReadStatePort;
     private final MessageRepositoryPort messageRepositoryPort;
     private final MessageQueryPort messageQueryPort;
     private final NatsOutboundPort natsOutbound;
@@ -48,14 +48,14 @@ public class ChatService {
     private final ReadCachePort readCachePort;
     private final AppConfig appConfig;
 
-    public ChatService(ChatRepository chatRepository, BlockRepositoryPort blockRepositoryPort,
-                       ChatReadRepository chatReadRepository, MessageRepositoryPort messageRepositoryPort,
+    public ChatService(ChatPersistencePort chatPersistencePort, BlockRepositoryPort blockRepositoryPort,
+                       ChatReadStatePort chatReadStatePort, MessageRepositoryPort messageRepositoryPort,
                        MessageQueryPort messageQueryPort,
                        NatsOutboundPort natsOutbound, Clock clock, UuidGenerator uuidGenerator,
                        ReadCachePort readCachePort, AppConfig appConfig) {
-        this.chatRepository = chatRepository;
+        this.chatPersistencePort = chatPersistencePort;
         this.blockRepositoryPort = blockRepositoryPort;
-        this.chatReadRepository = chatReadRepository;
+        this.chatReadStatePort = chatReadStatePort;
         this.messageRepositoryPort = messageRepositoryPort;
         this.messageQueryPort = messageQueryPort;
         this.natsOutbound = natsOutbound;
@@ -70,7 +70,7 @@ public class ChatService {
             return null;
         }
         var chatId = uuidGenerator.randomUuid();
-        var chat = chatRepository.createGroup(chatId, title, ownerId);
+        var chat = chatPersistencePort.createGroup(chatId, title, ownerId);
         if (chat == null) {
             return null;
         }
@@ -78,12 +78,12 @@ public class ChatService {
             for (var mid : memberIds) {
                 var memberUuid = UUID.fromString(mid);
                 if (!memberUuid.equals(ownerId)) {
-                    chatRepository.addMember(chatId, memberUuid, "member");
+                    chatPersistencePort.addMember(chatId, memberUuid, "member");
                 }
             }
         }
         invalidateChatMutationForMembers(ownerId, memberIds);
-        return chatRepository.findById(chatId, ownerId).orElse(null);
+        return chatPersistencePort.findById(chatId, ownerId).orElse(null);
     }
 
     public ChatResponse createChannel(String title, UUID ownerId, List<String> memberIds) {
@@ -91,7 +91,7 @@ public class ChatService {
             return null;
         }
         var chatId = uuidGenerator.randomUuid();
-        var chat = chatRepository.createChannel(chatId, title, ownerId);
+        var chat = chatPersistencePort.createChannel(chatId, title, ownerId);
         if (chat == null) {
             return null;
         }
@@ -99,28 +99,28 @@ public class ChatService {
             for (var mid : memberIds) {
                 var memberUuid = UUID.fromString(mid);
                 if (!memberUuid.equals(ownerId)) {
-                    chatRepository.addMember(chatId, memberUuid, "member");
+                    chatPersistencePort.addMember(chatId, memberUuid, "member");
                 }
             }
         }
         invalidateChatMutationForMembers(ownerId, memberIds);
-        return chatRepository.findById(chatId, ownerId).orElse(null);
+        return chatPersistencePort.findById(chatId, ownerId).orElse(null);
     }
 
     public ChatResponse findOrCreateP2P(UUID user1Id, UUID user2Id) {
         if (user1Id.equals(user2Id)) {
             return null;
         }
-        var existing = chatRepository.findP2PChat(user1Id, user2Id);
+        var existing = chatPersistencePort.findP2PChat(user1Id, user2Id);
         if (existing.isPresent()) {
-            return chatRepository.findById(existing.get(), user1Id).orElse(null);
+            return chatPersistencePort.findById(existing.get(), user1Id).orElse(null);
         }
         if (blockRepositoryPort.exists(UserId.of(user1Id), UserId.of(user2Id))
             || blockRepositoryPort.exists(UserId.of(user2Id), UserId.of(user1Id))) {
             return null;
         }
         var chatId = uuidGenerator.randomUuid();
-        var created = chatRepository.createP2P(chatId, user1Id, user2Id);
+        var created = chatPersistencePort.createP2P(chatId, user1Id, user2Id);
         if (created != null) {
             ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, user1Id, user2Id);
         }
@@ -139,7 +139,7 @@ public class ChatService {
                     readCachePort.invalidate(key);
                 }
             }
-            var list = chatRepository.listByUser(userId);
+            var list = chatPersistencePort.listByUser(userId);
             try {
                 readCachePort.put(key, JSON.writeValueAsString(list),
                     appConfig.readCacheTtlSeconds(ReadCacheKind.CHAT_LIST));
@@ -148,31 +148,31 @@ public class ChatService {
             }
             return list;
         }
-        return chatRepository.listByUser(userId);
+        return chatPersistencePort.listByUser(userId);
     }
 
     public ChatResponse getById(UUID chatId, UUID userId) {
-        return chatRepository.findById(chatId, userId).orElse(null);
+        return chatPersistencePort.findById(chatId, userId).orElse(null);
     }
 
     public boolean updateTitle(UUID chatId, UUID userId, String title) {
-        var role = chatRepository.getMemberRole(chatId, userId);
+        var role = chatPersistencePort.getMemberRole(chatId, userId);
         if (role == null || (!role.equals("owner") && !role.equals("admin"))) {
             log.warn("User {} not authorized to update chat {}", userId, chatId);
             return false;
         }
-        return chatRepository.updateTitle(chatId, title);
+        return chatPersistencePort.updateTitle(chatId, title);
     }
 
     public boolean setMuted(UUID chatId, UUID userId, boolean muted) {
-        return chatRepository.setMuted(chatId, userId, muted);
+        return chatPersistencePort.setMuted(chatId, userId, muted);
     }
 
     public boolean setArchived(UUID chatId, UUID userId, boolean archived) {
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return false;
         }
-        var ok = chatRepository.setArchived(chatId, userId, archived);
+        var ok = chatPersistencePort.setArchived(chatId, userId, archived);
         if (ok) {
             ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, userId);
         }
@@ -180,10 +180,10 @@ public class ChatService {
     }
 
     public boolean setFolderTag(UUID chatId, UUID userId, String folderTag) {
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return false;
         }
-        var ok = chatRepository.setFolderTag(chatId, userId, folderTag);
+        var ok = chatPersistencePort.setFolderTag(chatId, userId, folderTag);
         if (ok) {
             ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, userId);
         }
@@ -191,18 +191,18 @@ public class ChatService {
     }
 
     public boolean setPersonalFilter(UUID chatId, UUID userId, boolean active) {
-        return chatRepository.setPersonalFilterActive(chatId, userId, active);
+        return chatPersistencePort.setPersonalFilterActive(chatId, userId, active);
     }
 
     public boolean addMember(UUID chatId, UUID actorId, UUID targetUserId) {
-        var role = chatRepository.getMemberRole(chatId, actorId);
+        var role = chatPersistencePort.getMemberRole(chatId, actorId);
         if (role == null || (!role.equals("owner") && !role.equals("admin"))) {
             return false;
         }
         if (blockRepositoryPort.exists(UserId.of(targetUserId), UserId.of(actorId))) {
             return false;
         }
-        var ok = chatRepository.addMember(chatId, targetUserId, "member");
+        var ok = chatPersistencePort.addMember(chatId, targetUserId, "member");
         if (ok) {
             ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, actorId, targetUserId);
         }
@@ -210,20 +210,20 @@ public class ChatService {
     }
 
     public boolean removeMember(UUID chatId, UUID actorId, UUID targetUserId) {
-        var actorRole = chatRepository.getMemberRole(chatId, actorId);
-        var targetRole = chatRepository.getMemberRole(chatId, targetUserId);
+        var actorRole = chatPersistencePort.getMemberRole(chatId, actorId);
+        var targetRole = chatPersistencePort.getMemberRole(chatId, targetUserId);
         if (actorRole == null || targetRole == null) {
             return false;
         }
         if (actorRole.equals("owner")) {
-            var ok = chatRepository.removeMember(chatId, targetUserId);
+            var ok = chatPersistencePort.removeMember(chatId, targetUserId);
             if (ok) {
                 ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, actorId, targetUserId);
             }
             return ok;
         }
         if (actorRole.equals("admin") && !targetRole.equals("owner")) {
-            var ok = chatRepository.removeMember(chatId, targetUserId);
+            var ok = chatPersistencePort.removeMember(chatId, targetUserId);
             if (ok) {
                 ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, actorId, targetUserId);
             }
@@ -233,8 +233,8 @@ public class ChatService {
     }
 
     public boolean setRole(UUID chatId, UUID actorId, UUID targetUserId, String newRole) {
-        var actorRole = chatRepository.getMemberRole(chatId, actorId);
-        var targetRole = chatRepository.getMemberRole(chatId, targetUserId);
+        var actorRole = chatPersistencePort.getMemberRole(chatId, actorId);
+        var targetRole = chatPersistencePort.getMemberRole(chatId, targetUserId);
         if (actorRole == null || targetRole == null) {
             return false;
         }
@@ -244,21 +244,21 @@ public class ChatService {
         if (!newRole.equals("admin") && !newRole.equals("member")) {
             return false;
         }
-        return chatRepository.setRole(chatId, targetUserId, newRole);
+        return chatPersistencePort.setRole(chatId, targetUserId, newRole);
     }
 
     /**
      * Members list is visible only to users who are members of the chat (including banned members with a row in {@code chat_members}).
      */
     public Optional<List<ChatMemberResponse>> listMembersForViewer(UUID chatId, UUID viewerId) {
-        if (chatRepository.getMemberRole(chatId, viewerId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, viewerId) == null) {
             return Optional.empty();
         }
-        return Optional.of(chatRepository.listMembers(chatId));
+        return Optional.of(chatPersistencePort.listMembers(chatId));
     }
 
     public boolean markRead(UUID chatId, UUID userId, UUID upToMessageId) {
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return false;
         }
         UUID markId = upToMessageId;
@@ -272,7 +272,7 @@ public class ChatService {
         if (msg == null || !msg.chatId().value().equals(chatId)) {
             return false;
         }
-        var ok = chatReadRepository.upsertLastRead(userId, chatId, markId);
+        var ok = chatReadStatePort.upsertLastRead(userId, chatId, markId);
         if (ok) {
             ReadCacheCoordinator.invalidateChatUnread(readCachePort, userId);
         }
@@ -280,7 +280,7 @@ public class ChatService {
     }
 
     public int unreadCount(UUID chatId, UUID userId) {
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return -1;
         }
         if (readCachePort.enabled()) {
@@ -293,16 +293,16 @@ public class ChatService {
                     readCachePort.invalidate(key);
                 }
             }
-            var count = chatReadRepository.countUnreadFromOthers(userId, chatId);
+            var count = chatReadStatePort.countUnreadFromOthers(userId, chatId);
             readCachePort.put(key, Integer.toString(count),
                 appConfig.readCacheTtlSeconds(ReadCacheKind.CHAT_UNREAD));
             return count;
         }
-        return chatReadRepository.countUnreadFromOthers(userId, chatId);
+        return chatReadStatePort.countUnreadFromOthers(userId, chatId);
     }
 
     public void publishTyping(UUID chatId, UUID userId) {
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return;
         }
         try {

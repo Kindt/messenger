@@ -1,6 +1,6 @@
 package com.avandocmsg.messenger.api.mls;
 
-import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.api.mls.openmls.OpenMlsWireLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,12 +19,12 @@ public class MlsMigrationService {
 
     private final DataSource dataSource;
     private final MlsGroupManager groupManager;
-    private final ChatRepository chatRepository;
+    private final ChatPersistencePort chatPersistencePort;
 
-    public MlsMigrationService(DataSource dataSource, MlsGroupManager groupManager, ChatRepository chatRepository) {
+    public MlsMigrationService(DataSource dataSource, MlsGroupManager groupManager, ChatPersistencePort chatPersistencePort) {
         this.dataSource = dataSource;
         this.groupManager = groupManager;
-        this.chatRepository = chatRepository;
+        this.chatPersistencePort = chatPersistencePort;
     }
 
     public long pendingMigrationCount() {
@@ -57,7 +57,7 @@ public class MlsMigrationService {
         if (existing.isPresent()) {
             return Optional.of(existing.get().groupId());
         }
-        var members = chatRepository.listMembers(chatId).stream()
+        var members = chatPersistencePort.listMembers(chatId).stream()
             .map(m -> UUID.fromString(m.userId()))
             .collect(Collectors.toList());
         if (members.isEmpty()) {

@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.export;
 
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
 import com.avandocmsg.messenger.api.repository.ExportJobRepository;
 import com.avandocmsg.messenger.common.dto.ExportReplayCompleteEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,7 +35,7 @@ class ExportReplayCompleteSubscriberTest {
         var handlerCaptor = ArgumentCaptor.forClass(MessageHandler.class);
         when(connection.createDispatcher(handlerCaptor.capture())).thenReturn(dispatcher);
 
-        new ExportReplayCompleteSubscriber(connection, repo);
+        new ExportReplayCompleteSubscriber(connection, new JdbcExportJobAdapter(repo));
 
         var event = new ExportReplayCompleteEvent(jobId.toString(), UUID.randomUUID().toString(), "export_v1",
             "/export/x.json", true);
@@ -53,7 +54,7 @@ class ExportReplayCompleteSubscriberTest {
         var handlerCaptor = ArgumentCaptor.forClass(MessageHandler.class);
         when(connection.createDispatcher(handlerCaptor.capture())).thenReturn(dispatcher);
 
-        new ExportReplayCompleteSubscriber(connection, repo);
+        new ExportReplayCompleteSubscriber(connection, new JdbcExportJobAdapter(repo));
 
         var msg = mock(Message.class);
         when(msg.getData()).thenReturn("{\"jobId\":\"not-uuid\",\"status\":\"export_v1\"}".getBytes(StandardCharsets.UTF_8));

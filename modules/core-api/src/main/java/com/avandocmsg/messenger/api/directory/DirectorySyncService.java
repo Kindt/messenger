@@ -2,7 +2,7 @@ package com.avandocmsg.messenger.api.directory;
 
 import com.avandocmsg.messenger.api.auth.policy.AuthPolicyRepository;
 import com.avandocmsg.messenger.api.auth.policy.AuthProviderEntry;
-import com.avandocmsg.messenger.api.repository.OrganizationRepository;
+import com.avandocmsg.messenger.core.port.OrganizationLookupPort;
 import com.avandocmsg.messenger.core.port.DirectorySyncRunRepositoryPort;
 import com.avandocmsg.messenger.core.port.OrgUserDirectoryPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
@@ -18,7 +18,7 @@ public class DirectorySyncService {
     private static final Logger log = LoggerFactory.getLogger(DirectorySyncService.class);
 
     private final AuthPolicyRepository authPolicyRepository;
-    private final OrganizationRepository organizationRepository;
+    private final OrganizationLookupPort organizationLookupPort;
     private final DirectorySyncRunRepositoryPort runRepository;
     private final OrgUserDirectoryPort userDirectory;
     private final LdapDirectoryClient ldapClient;
@@ -26,14 +26,14 @@ public class DirectorySyncService {
 
     public DirectorySyncService(
         AuthPolicyRepository authPolicyRepository,
-        OrganizationRepository organizationRepository,
+        OrganizationLookupPort organizationLookupPort,
         DirectorySyncRunRepositoryPort runRepository,
         OrgUserDirectoryPort userDirectory,
         LdapDirectoryClient ldapClient,
         UuidGenerator uuidGenerator
     ) {
         this.authPolicyRepository = authPolicyRepository;
-        this.organizationRepository = organizationRepository;
+        this.organizationLookupPort = organizationLookupPort;
         this.runRepository = runRepository;
         this.userDirectory = userDirectory;
         this.ldapClient = ldapClient;
@@ -41,18 +41,18 @@ public class DirectorySyncService {
     }
 
     public Optional<DirectorySyncRunRow> latestStatus(UUID orgId) {
-        if (!organizationRepository.exists(orgId)) {
+        if (!organizationLookupPort.exists(orgId)) {
             return Optional.empty();
         }
         return runRepository.findLatestByOrg(orgId).map(DirectorySyncService::toApiRow);
     }
 
     public boolean orgExists(UUID orgId) {
-        return organizationRepository.exists(orgId);
+        return organizationLookupPort.exists(orgId);
     }
 
     public Optional<DirectorySyncRunRow> syncFromLdap(UUID orgId) {
-        if (!organizationRepository.exists(orgId)) {
+        if (!organizationLookupPort.exists(orgId)) {
             return Optional.empty();
         }
         var provider = findLdapProvider(orgId);
@@ -82,7 +82,7 @@ public class DirectorySyncService {
     }
 
     public void syncAllOrgsWithLdap() {
-        for (var org : organizationRepository.listAll()) {
+        for (var org : organizationLookupPort.listAll()) {
             var orgId = UUID.fromString(org.id());
             if (findLdapProvider(orgId).isPresent()) {
                 syncFromLdap(orgId);

@@ -1,9 +1,9 @@
 package com.avandocmsg.messenger.api.export;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.ExportJobRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
+import com.avandocmsg.messenger.core.port.ExportJobPort;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -26,24 +26,24 @@ public final class ExportAutoQueueOnSuggested {
     static final String AUDIT_SKIPPED = "export.auto_queue_skipped";
 
     private final ExportJobEnqueuer enqueuer;
-    private final ExportJobRepository exportJobRepository;
-    private final ChatRepository chatRepository;
-    private final AuditRepository auditRepository;
+    private final ExportJobPort exportJobPort;
+    private final ChatPersistencePort chatPersistencePort;
+    private final AuditPort auditPort;
     private final Optional<UUID> actorUserIdOverride;
     private final int cooldownMinutes;
 
     public ExportAutoQueueOnSuggested(
         AppConfig appConfig,
         ExportJobEnqueuer enqueuer,
-        ExportJobRepository exportJobRepository,
-        ChatRepository chatRepository,
-        AuditRepository auditRepository
+        ExportJobPort exportJobPort,
+        ChatPersistencePort chatPersistencePort,
+        AuditPort auditPort
     ) {
         this(
             enqueuer,
-            exportJobRepository,
-            chatRepository,
-            auditRepository,
+            exportJobPort,
+            chatPersistencePort,
+            auditPort,
             appConfig.exportAutoQueueActorUserId(),
             appConfig.exportAutoQueueCooldownMinutes()
         );
@@ -51,16 +51,16 @@ public final class ExportAutoQueueOnSuggested {
 
     ExportAutoQueueOnSuggested(
         ExportJobEnqueuer enqueuer,
-        ExportJobRepository exportJobRepository,
-        ChatRepository chatRepository,
-        AuditRepository auditRepository,
+        ExportJobPort exportJobPort,
+        ChatPersistencePort chatPersistencePort,
+        AuditPort auditPort,
         Optional<UUID> actorUserIdOverride,
         int cooldownMinutes
     ) {
         this.enqueuer = enqueuer;
-        this.exportJobRepository = exportJobRepository;
-        this.chatRepository = chatRepository;
-        this.auditRepository = auditRepository;
+        this.exportJobPort = exportJobPort;
+        this.chatPersistencePort = chatPersistencePort;
+        this.auditPort = auditPort;
         this.actorUserIdOverride = actorUserIdOverride;
         this.cooldownMinutes = cooldownMinutes;
     }
@@ -70,7 +70,7 @@ public final class ExportAutoQueueOnSuggested {
         if (chatId == null) {
             return Optional.empty();
         }
-        if (exportJobRepository.hasBlockingJobForChat(chatId, cooldownMinutes)) {
+        if (exportJobPort.hasBlockingJobForChat(chatId, cooldownMinutes)) {
             recordSkip(chatId, "cooldown_or_pending", event);
             log.debug("Auto export skipped (blocking job) chatId={}", chatId);
             return Optional.empty();
@@ -97,11 +97,11 @@ public final class ExportAutoQueueOnSuggested {
         if (actorUserIdOverride.isPresent()) {
             return actorUserIdOverride;
         }
-        return chatRepository.findOwnerId(chatId);
+        return chatPersistencePort.findOwnerId(chatId);
     }
 
     private void recordAutoQueued(UUID chatId, UUID jobId, UUID actor, ExportSuggestedEvent event) {
-        auditRepository.record(
+        auditPort.record(
             actor,
             AUDIT_AUTO_QUEUED,
             "export_job",
@@ -111,7 +111,7 @@ public final class ExportAutoQueueOnSuggested {
     }
 
     private void recordSkip(UUID chatId, String reason, ExportSuggestedEvent event) {
-        auditRepository.record(
+        auditPort.record(
             null,
             AUDIT_SKIPPED,
             "chat",

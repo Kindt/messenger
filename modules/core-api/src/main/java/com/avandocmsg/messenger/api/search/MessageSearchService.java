@@ -2,7 +2,7 @@ package com.avandocmsg.messenger.api.search;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import org.apache.solr.client.solrj.SolrClient;
@@ -26,15 +26,15 @@ public class MessageSearchService {
 
     private final AppConfig appConfig;
     private final MessageQueryPort messageQueryPort;
-    private final ChatRepository chatRepository;
+    private final ChatPersistencePort chatPersistencePort;
     private final SolrClient solrClient;
     private final boolean solrCloud;
 
     public MessageSearchService(AppConfig appConfig, MessageQueryPort messageQueryPort,
-                                ChatRepository chatRepository, SolrClient solrClient, boolean solrCloud) {
+                                ChatPersistencePort chatPersistencePort, SolrClient solrClient, boolean solrCloud) {
         this.appConfig = appConfig;
         this.messageQueryPort = messageQueryPort;
-        this.chatRepository = chatRepository;
+        this.chatPersistencePort = chatPersistencePort;
         this.solrClient = solrClient;
         this.solrCloud = solrCloud;
     }
@@ -48,7 +48,7 @@ public class MessageSearchService {
             return List.of();
         }
         int lim = Math.min(Math.max(limit, 1), 100);
-        var chatIds = chatRepository.listChatIdsForUser(userId);
+        var chatIds = chatPersistencePort.listChatIdsForUser(userId);
         if (chatIds.isEmpty()) {
             return List.of();
         }

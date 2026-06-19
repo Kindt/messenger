@@ -6,6 +6,11 @@ import com.avandocmsg.messenger.api.export.dto.ExportAttachmentsListResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportJobStatusResponse;
 import com.avandocmsg.messenger.api.filter.UserPrincipal;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRetentionPolicyAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcRetentionPolicyAdapter;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
@@ -91,19 +96,20 @@ class AdminExportInspectTest {
                 return java.util.Optional.of(exportDir);
             }
         };
-        var audit = new AuditRepository(null);
+        var audit = new JdbcAuditAdapter(new AuditRepository(null));
         var nats = mock(NatsOutboundPort.class);
-        var enqueuer = new ExportJobEnqueuer(jobs, audit, nats, UuidGenerator.standard());
+        var exportJobPort = new JdbcExportJobAdapter(jobs);
+        var enqueuer = new ExportJobEnqueuer(exportJobPort, audit, nats, UuidGenerator.standard());
         return new AdminResource(cfg, audit,
             com.avandocmsg.messenger.core.bootstrap.CoreModule.organizationApplicationService(
                 null, UuidGenerator.standard()),
-            new RetentionPolicyRepository(null),
-            new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
-            new ChatRetentionPolicyRepository(null),
+            new JdbcRetentionPolicyAdapter(new RetentionPolicyRepository(null)),
+            new JdbcChatPersistenceAdapter(new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard())),
+            new JdbcChatRetentionPolicyAdapter(new ChatRetentionPolicyRepository(null)),
             new ExportSuggestedHandler(audit),
             mock(AdminExportComplianceSeed.class),
             enqueuer,
-            jobs,
+            exportJobPort,
             access,
             nats,
             null,

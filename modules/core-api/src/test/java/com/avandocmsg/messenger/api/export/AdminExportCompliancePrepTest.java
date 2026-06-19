@@ -6,6 +6,10 @@ import com.avandocmsg.messenger.api.admin.dto.AdminExportCompliancePrepResponse;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.filter.UserPrincipal;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRetentionPolicyAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcRetentionPolicyAdapter;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
@@ -75,13 +79,14 @@ class AdminExportCompliancePrepTest {
     }
 
     private static AdminResource adminResource(AppConfig cfg, AdminExportComplianceSeed seed) {
-        var audit = new AuditRepository(null);
+        var audit = new JdbcAuditAdapter(new AuditRepository(null));
+        var chatRepo = new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard());
         return new AdminResource(cfg, audit,
             com.avandocmsg.messenger.core.bootstrap.CoreModule.organizationApplicationService(
                 null, UuidGenerator.standard()),
-            new RetentionPolicyRepository(null),
-            new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard()),
-            new ChatRetentionPolicyRepository(null),
+            new JdbcRetentionPolicyAdapter(new RetentionPolicyRepository(null)),
+            new JdbcChatPersistenceAdapter(chatRepo),
+            new JdbcChatRetentionPolicyAdapter(new ChatRetentionPolicyRepository(null)),
             new ExportSuggestedHandler(audit),
             seed,
             new ExportJobEnqueuer(null, audit, mock(NatsOutboundPort.class), UuidGenerator.standard()),

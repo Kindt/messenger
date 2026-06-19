@@ -11,14 +11,14 @@ class DeviceResourceTest {
 
     @Test
     void register_requiresPushToken() {
-        var resource = new DeviceResource(null, null, null, I18nTestFixtures.messagesEn());
+        var resource = new DeviceResource(null, I18nTestFixtures.messagesEn());
         var resp = resource.register(new RegisterDeviceRequest("web-client", "web", "  "), null);
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
     }
 
     @Test
     void unregister_requiresDeviceName() {
-        var resource = new DeviceResource(null, null, null, I18nTestFixtures.messagesEn());
+        var resource = new DeviceResource(null, I18nTestFixtures.messagesEn());
         var resp = resource.unregister("  ", null);
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
     }

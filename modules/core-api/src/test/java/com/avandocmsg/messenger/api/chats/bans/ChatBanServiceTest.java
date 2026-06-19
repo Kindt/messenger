@@ -1,6 +1,8 @@
 package com.avandocmsg.messenger.api.chats.bans;
 
 import com.avandocmsg.messenger.api.chats.bans.dto.ChatBanResponse;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatBanAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +16,7 @@ class ChatBanServiceTest {
 
     private final StubChatBanRepository banRepo = new StubChatBanRepository();
     private final StubChatRepository chatRepo = new StubChatRepository();
-    private final ChatBanService banService = new ChatBanService(banRepo, chatRepo);
+    private final ChatBanService banService = new ChatBanService(new JdbcChatBanAdapter(banRepo), new JdbcChatPersistenceAdapter(chatRepo));
 
     final UUID chatId = UUID.randomUUID();
     final UUID ownerId = UUID.randomUUID();

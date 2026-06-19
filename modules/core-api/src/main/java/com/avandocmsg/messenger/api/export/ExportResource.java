@@ -6,9 +6,9 @@ import com.avandocmsg.messenger.api.export.dto.ExportCancelResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportJobStatusResponse;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.ExportJobRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
+import com.avandocmsg.messenger.core.port.ExportJobPort;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
@@ -48,23 +48,23 @@ import java.util.UUID;
 public class ExportResource {
     private static final Logger log = LoggerFactory.getLogger(ExportResource.class);
 
-    private final ChatRepository chatRepository;
-    private final ExportJobRepository exportJobRepository;
+    private final ChatPersistencePort chatPersistencePort;
+    private final ExportJobPort exportJobPort;
     private final ExportJobEnqueuer exportJobEnqueuer;
-    private final AuditRepository auditRepository;
+    private final AuditPort auditPort;
     private final UserMessageSource messages;
     private final ExportFileAccess exportFileAccess;
     private final NatsOutboundPort natsOutbound;
 
     @Inject
-    public ExportResource(ChatRepository chatRepository, ExportJobRepository exportJobRepository,
-                          ExportJobEnqueuer exportJobEnqueuer, AuditRepository auditRepository,
+    public ExportResource(ChatPersistencePort chatPersistencePort, ExportJobPort exportJobPort,
+                          ExportJobEnqueuer exportJobEnqueuer, AuditPort auditPort,
                           UserMessageSource messages, ExportFileAccess exportFileAccess,
                           NatsOutboundPort natsOutbound) {
-        this.chatRepository = chatRepository;
-        this.exportJobRepository = exportJobRepository;
+        this.chatPersistencePort = chatPersistencePort;
+        this.exportJobPort = exportJobPort;
         this.exportJobEnqueuer = exportJobEnqueuer;
-        this.auditRepository = auditRepository;
+        this.auditPort = auditPort;
         this.messages = messages;
         this.exportFileAccess = exportFileAccess;
         this.natsOutbound = natsOutbound;
@@ -131,7 +131,7 @@ public class ExportResource {
             return denied;
         }
 
-        var row = exportJobRepository.findByIdAndChat(jobId, chatId);
+        var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.export.job_not_found")))
@@ -161,7 +161,7 @@ public class ExportResource {
             return denied;
         }
 
-        var row = exportJobRepository.findByIdAndChat(jobId, chatId);
+        var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
             return ExportJobReadSupport.jobNotFound(messages);
         }
@@ -172,8 +172,8 @@ public class ExportResource {
             jobId,
             userId,
             ExportJobCancelSupport.AUDIT_USER_CANCEL,
-            exportJobRepository,
-            auditRepository,
+            exportJobPort,
+            auditPort,
             messages,
             natsOutbound);
     }
@@ -201,7 +201,7 @@ public class ExportResource {
             return denied;
         }
 
-        var row = exportJobRepository.findByIdAndChat(jobId, chatId);
+        var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.export.job_not_found")))
@@ -242,7 +242,7 @@ public class ExportResource {
             return denied;
         }
 
-        var row = exportJobRepository.findByIdAndChat(jobId, chatId);
+        var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.export.job_not_found")))
@@ -256,7 +256,7 @@ public class ExportResource {
             userId,
             ExportDownloadSupport.AUDIT_USER_DOWNLOAD,
             exportFileAccess,
-            auditRepository,
+            auditPort,
             messages,
             part,
             fileIdStr,
@@ -264,13 +264,13 @@ public class ExportResource {
     }
 
     private Response authorizeExport(UUID chatId, UUID userId) {
-        var role = chatRepository.getMemberRole(chatId, userId);
+        var role = chatPersistencePort.getMemberRole(chatId, userId);
         if (role == null) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.export.chat_not_found_or_member")))
                 .build();
         }
-        if (chatRepository.isMemberBanned(chatId, userId)) {
+        if (chatPersistencePort.isMemberBanned(chatId, userId)) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.export.banned")))
                 .build();

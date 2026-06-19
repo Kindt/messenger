@@ -4,10 +4,9 @@ import com.avandocmsg.messenger.api.devices.dto.DeviceListResponse;
 import com.avandocmsg.messenger.api.devices.dto.DeviceResponse;
 import com.avandocmsg.messenger.api.devices.dto.RegisterDeviceRequest;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
-import com.avandocmsg.messenger.api.repository.DeviceRepository;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
-import com.avandocmsg.messenger.core.port.UuidGenerator;
+import com.avandocmsg.messenger.core.port.DevicePort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -26,26 +25,18 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 
-import javax.sql.DataSource;
-import java.time.Clock;
-
 @Path("/v1/me/devices")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @Tag(name = "Devices", description = "Регистрация устройств и push-токенов")
 public class DeviceResource {
 
-    private final DataSource dataSource;
-    private final Clock clock;
-    private final UuidGenerator uuidGenerator;
+    private final DevicePort devicePort;
     private final UserMessageSource messages;
 
     @Inject
-    public DeviceResource(DataSource dataSource, Clock clock, UuidGenerator uuidGenerator,
-                          UserMessageSource messages) {
-        this.dataSource = dataSource;
-        this.clock = clock;
-        this.uuidGenerator = uuidGenerator;
+    public DeviceResource(DevicePort devicePort, UserMessageSource messages) {
+        this.devicePort = devicePort;
         this.messages = messages;
     }
 
@@ -55,8 +46,7 @@ public class DeviceResource {
         content = @Content(schema = @Schema(implementation = DeviceListResponse.class)))
     public Response list(@Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var repo = new DeviceRepository(dataSource, clock, uuidGenerator);
-        return Response.ok(new DeviceListResponse(repo.listForUser(userId))).build();
+        return Response.ok(new DeviceListResponse(devicePort.listForUser(userId))).build();
     }
 
     @DELETE
@@ -76,8 +66,7 @@ public class DeviceResource {
             name = name.substring(0, 256);
         }
         var userId = CurrentUserId.uuid(securityContext);
-        var repo = new DeviceRepository(dataSource, clock, uuidGenerator);
-        if (!repo.clearPushToken(userId, name)) {
+        if (!devicePort.clearPushToken(userId, name)) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.device.not_found")))
                 .build();
@@ -111,8 +100,7 @@ public class DeviceResource {
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
-        var repo = new DeviceRepository(dataSource, clock, uuidGenerator);
-        var device = repo.upsertPushDevice(userId, name, provider, token);
+        var device = devicePort.upsertPushDevice(userId, name, provider, token);
         if (device == null) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(new ApiError(500, messages.get("error.device.register_failed")))

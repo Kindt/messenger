@@ -1,6 +1,6 @@
 package com.avandocmsg.messenger.api.admin.dto;
 
-import com.avandocmsg.messenger.api.repository.MigrationImportJobRepository;
+import com.avandocmsg.messenger.core.port.MigrationImportJobPort;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record MigrationImportJobResponse(
@@ -11,7 +11,7 @@ public record MigrationImportJobResponse(
     @JsonProperty("config_json") String configJson,
     @JsonProperty("result_json") String resultJson
 ) {
-    public static MigrationImportJobResponse from(MigrationImportJobRepository.JobRow row) {
+    public static MigrationImportJobResponse from(MigrationImportJobPort.JobRow row) {
         return new MigrationImportJobResponse(
             row.id().toString(),
             row.orgId().toString(),

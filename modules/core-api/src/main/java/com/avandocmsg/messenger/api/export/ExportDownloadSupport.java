@@ -1,8 +1,8 @@
 package com.avandocmsg.messenger.api.export;
 
 import com.avandocmsg.messenger.api.params.UuidParams;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
-import com.avandocmsg.messenger.api.repository.ExportJobRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
+import com.avandocmsg.messenger.core.port.ExportJobPort;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.export.ExportOutputRef;
 import com.avandocmsg.messenger.common.export.ExportZipManifestReader;
@@ -26,13 +26,13 @@ public final class ExportDownloadSupport {
     private ExportDownloadSupport() {}
 
     public static Response download(
-        ExportJobRepository.ExportJobRow job,
+        ExportJobPort.ExportJobRow job,
         UUID chatId,
         UUID jobId,
         UUID actorUserId,
         String auditAction,
         ExportFileAccess exportFileAccess,
-        AuditRepository auditRepository,
+        AuditPort auditPort,
         UserMessageSource messages,
         String part,
         String fileIdStr,
@@ -114,7 +114,7 @@ public final class ExportDownloadSupport {
             }
         }
         var target = ExportFileAccess.downloadTarget(job, downloadPart, binaryRef);
-        auditRepository.record(
+        auditPort.record(
             actorUserId,
             auditAction,
             "export_job",
@@ -156,7 +156,7 @@ public final class ExportDownloadSupport {
     private static String downloadAuditDetails(
         UUID chatId,
         ExportFileAccess.DownloadPart part,
-        ExportJobRepository.ExportJobRow job,
+        ExportJobPort.ExportJobRow job,
         UUID fileId,
         List<UUID> fileIds
     ) {

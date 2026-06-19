@@ -20,10 +20,12 @@ import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
 import com.avandocmsg.messenger.api.filter.UserPrincipal;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
-import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
+import com.avandocmsg.messenger.core.port.ChatRetentionPolicyPort;
+import com.avandocmsg.messenger.core.port.ExportJobPort;
+import com.avandocmsg.messenger.core.port.LegalHoldPort;
+import com.avandocmsg.messenger.core.port.RetentionPolicyPort;
 import com.avandocmsg.messenger.api.export.AdminExportComplianceSeed;
 import com.avandocmsg.messenger.api.export.ExportFileAccess;
 import com.avandocmsg.messenger.api.export.ExportJobEnqueuer;
@@ -35,8 +37,6 @@ import com.avandocmsg.messenger.api.export.dto.ExportAttachmentsListResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportCancelResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportJobListResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportJobStatusResponse;
-import com.avandocmsg.messenger.api.repository.LegalHoldRepository;
-import com.avandocmsg.messenger.api.repository.ExportJobRepository;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
 import com.avandocmsg.messenger.core.domain.OrganizationId;
@@ -85,53 +85,53 @@ import java.util.UUID;
 public class AdminResource {
 
     private final AppConfig appConfig;
-    private final AuditRepository auditRepository;
+    private final AuditPort auditPort;
     private final OrganizationApplicationService organizationApplicationService;
-    private final RetentionPolicyRepository retentionPolicyRepository;
-    private final ChatRepository chatRepository;
-    private final ChatRetentionPolicyRepository chatRetentionPolicyRepository;
+    private final RetentionPolicyPort retentionPolicyPort;
+    private final ChatPersistencePort chatPersistencePort;
+    private final ChatRetentionPolicyPort chatRetentionPolicyPort;
     private final AdminExportFacade exportFacade;
     private final ReadReceiptService readReceiptService;
     private final MlsGroupManager mlsGroupManager;
     private final MlsMigrationService mlsMigrationService;
     private final OpenMlsBindingPort openMlsBindingPort;
-    private final LegalHoldRepository legalHoldRepository;
+    private final LegalHoldPort legalHoldPort;
     private final PurgeStatusService purgeStatusService;
     private final UserMessageSource messages;
 
     @Inject
-    public AdminResource(AppConfig appConfig, AuditRepository auditRepository,
+    public AdminResource(AppConfig appConfig, AuditPort auditPort,
                          OrganizationApplicationService organizationApplicationService,
-                         RetentionPolicyRepository retentionPolicyRepository,
-                         ChatRepository chatRepository,
-                         ChatRetentionPolicyRepository chatRetentionPolicyRepository,
+                         RetentionPolicyPort retentionPolicyPort,
+                         ChatPersistencePort chatPersistencePort,
+                         ChatRetentionPolicyPort chatRetentionPolicyPort,
                          ExportSuggestedHandler exportSuggestedHandler,
                          AdminExportComplianceSeed exportComplianceSeed,
                          ExportJobEnqueuer exportJobEnqueuer,
-                         ExportJobRepository exportJobRepository,
+                         ExportJobPort exportJobPort,
                          ExportFileAccess exportFileAccess,
                          NatsOutboundPort natsOutbound,
                          ReadReceiptService readReceiptService,
                          MlsGroupManager mlsGroupManager,
                          MlsMigrationService mlsMigrationService,
                          OpenMlsBindingPort openMlsBindingPort,
-                         LegalHoldRepository legalHoldRepository,
+                         LegalHoldPort legalHoldPort,
                          PurgeStatusService purgeStatusService,
                          UserMessageSource messages) {
         this.appConfig = appConfig;
-        this.auditRepository = auditRepository;
+        this.auditPort = auditPort;
         this.organizationApplicationService = organizationApplicationService;
-        this.retentionPolicyRepository = retentionPolicyRepository;
-        this.chatRepository = chatRepository;
-        this.chatRetentionPolicyRepository = chatRetentionPolicyRepository;
+        this.retentionPolicyPort = retentionPolicyPort;
+        this.chatPersistencePort = chatPersistencePort;
+        this.chatRetentionPolicyPort = chatRetentionPolicyPort;
         this.exportFacade = new AdminExportFacade(
             appConfig,
-            auditRepository,
-            chatRepository,
+            auditPort,
+            chatPersistencePort,
             exportSuggestedHandler,
             exportComplianceSeed,
             exportJobEnqueuer,
-            exportJobRepository,
+            exportJobPort,
             exportFileAccess,
             natsOutbound,
             messages
@@ -140,7 +140,7 @@ public class AdminResource {
         this.mlsGroupManager = mlsGroupManager;
         this.mlsMigrationService = mlsMigrationService;
         this.openMlsBindingPort = openMlsBindingPort;
-        this.legalHoldRepository = legalHoldRepository;
+        this.legalHoldPort = legalHoldPort;
         this.purgeStatusService = purgeStatusService;
         this.messages = messages;
     }
@@ -160,11 +160,11 @@ public class AdminResource {
     @Operation(summary = "Extended legal-hold flags for organization")
     public Response getOrgLegalHold(@PathParam("orgId") String orgIdStr) {
         var orgId = UuidParams.required(orgIdStr, "org_id");
-        if (legalHoldRepository == null) {
+        if (legalHoldPort == null) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
         }
-        var row = legalHoldRepository.findOrg(orgId)
-            .orElse(new LegalHoldRepository.LegalHoldRow(false, false, false));
+        var row = legalHoldPort.findOrg(orgId)
+            .orElse(new LegalHoldPort.LegalHoldRow(false, false, false));
         return Response.ok(toLegalHoldResponse(row)).build();
     }
 
@@ -182,11 +182,11 @@ public class AdminResource {
     @Operation(summary = "Extended legal-hold flags for chat")
     public Response getChatLegalHold(@PathParam("chatId") String chatIdStr) {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
-        if (legalHoldRepository == null) {
+        if (legalHoldPort == null) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
         }
-        var row = legalHoldRepository.findChat(chatId)
-            .orElse(new LegalHoldRepository.LegalHoldRow(false, false, false));
+        var row = legalHoldPort.findChat(chatId)
+            .orElse(new LegalHoldPort.LegalHoldRow(false, false, false));
         return Response.ok(toLegalHoldResponse(row)).build();
     }
 
@@ -201,32 +201,32 @@ public class AdminResource {
 
     private Response patchLegalHold(boolean org, String idStr, LegalHoldUpdateRequest request,
                                     SecurityContext securityContext) {
-        if (legalHoldRepository == null || request == null) {
+        if (legalHoldPort == null || request == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
         var id = UuidParams.required(idStr, org ? "org_id" : "chat_id");
         var actor = CurrentUserId.uuid(securityContext);
         var current = org
-            ? legalHoldRepository.findOrg(id).orElse(new LegalHoldRepository.LegalHoldRow(false, false, false))
-            : legalHoldRepository.findChat(id).orElse(new LegalHoldRepository.LegalHoldRow(false, false, false));
-        var next = new LegalHoldRepository.LegalHoldRow(
+            ? legalHoldPort.findOrg(id).orElse(new LegalHoldPort.LegalHoldRow(false, false, false))
+            : legalHoldPort.findChat(id).orElse(new LegalHoldPort.LegalHoldRow(false, false, false));
+        var next = new LegalHoldPort.LegalHoldRow(
             request.legalHold() != null ? request.legalHold() : current.legalHold(),
             request.legalHoldFiles() != null ? request.legalHoldFiles() : current.legalHoldFiles(),
             request.legalHoldDeepArchive() != null ? request.legalHoldDeepArchive() : current.legalHoldDeepArchive());
         var ok = org
-            ? legalHoldRepository.upsertOrg(id, next, actor)
-            : legalHoldRepository.upsertChat(id, next, actor);
+            ? legalHoldPort.upsertOrg(id, next, actor)
+            : legalHoldPort.upsertChat(id, next, actor);
         if (!ok) {
             return Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new ApiError(502, messages.get("error.admin.save_retention_failed")))
                 .build();
         }
-        auditRepository.record(actor, org ? "organization.legal_hold.set" : "chat.legal_hold.set",
+        auditPort.record(actor, org ? "organization.legal_hold.set" : "chat.legal_hold.set",
             org ? "organization" : "chat", id.toString(), null);
         return Response.ok(toLegalHoldResponse(next)).build();
     }
 
-    private static LegalHoldResponse toLegalHoldResponse(LegalHoldRepository.LegalHoldRow row) {
+    private static LegalHoldResponse toLegalHoldResponse(LegalHoldPort.LegalHoldRow row) {
         return new LegalHoldResponse(row.legalHold(), row.legalHoldFiles(), row.legalHoldDeepArchive());
     }
 
@@ -346,7 +346,7 @@ public class AdminResource {
         @QueryParam("resource_type") String resourceType,
         @QueryParam("resource_id") String resourceId
     ) {
-        var rows = auditRepository.listRecent(limit, action, resourceType, resourceId);
+        var rows = auditPort.listRecent(limit, action, resourceType, resourceId);
         var out = new ArrayList<AuditEventJson>();
         for (var r : rows) {
             out.add(new AuditEventJson(r.id(), r.occurredAt(), r.actorUserId(), r.action(),
@@ -588,7 +588,7 @@ public class AdminResource {
             || organizationApplicationService.findById(OrganizationId.of(orgId)).isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.org_not_found"))).build();
         }
-        var stored = retentionPolicyRepository.findByOrgId(orgId);
+        var stored = retentionPolicyPort.findByOrgId(orgId);
         var body = RetentionPolicyResponse.resolved(orgId, appConfig, stored);
         return Response.ok(body).build();
     }
@@ -600,12 +600,12 @@ public class AdminResource {
         security = @SecurityRequirement(name = "bearerAuth"))
     public Response getChatRetention(@PathParam("chatId") String chatIdStr) {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
-        if (!chatRepository.chatExists(chatId)) {
+        if (!chatPersistencePort.chatExists(chatId)) {
             return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.chat_not_found"))).build();
         }
-        var baseOrgId = chatRepository.findOrgIdForRetentionOverlay(chatId);
-        var orgStored = baseOrgId.flatMap(retentionPolicyRepository::findByOrgId);
-        var chatStored = chatRetentionPolicyRepository.findByChatId(chatId);
+        var baseOrgId = chatPersistencePort.findOrgIdForRetentionOverlay(chatId);
+        var orgStored = baseOrgId.flatMap(retentionPolicyPort::findByOrgId);
+        var chatStored = chatRetentionPolicyPort.findByChatId(chatId);
         var body = ChatRetentionPolicyResponse.resolved(chatId, baseOrgId, appConfig, orgStored, chatStored);
         return Response.ok(body).build();
     }
@@ -648,11 +648,11 @@ public class AdminResource {
                 .build();
         }
         var chatId = UuidParams.required(chatIdStr, "chat_id");
-        if (!chatRepository.chatExists(chatId)) {
+        if (!chatPersistencePort.chatExists(chatId)) {
             return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.chat_not_found"))).build();
         }
         var actor = CurrentUserId.uuid(securityContext);
-        var ok = chatRetentionPolicyRepository.upsert(
+        var ok = chatRetentionPolicyPort.upsert(
             chatId,
             bodyDays,
             metaDays,
@@ -673,10 +673,10 @@ public class AdminResource {
             request.deepArchiveEnabled(),
             request.legalHold()
         );
-        auditRepository.record(actor, "chat.retention.set", "chat", chatIdStr, details);
-        var baseOrgId = chatRepository.findOrgIdForRetentionOverlay(chatId);
-        var orgStored = baseOrgId.flatMap(retentionPolicyRepository::findByOrgId);
-        var chatStored = chatRetentionPolicyRepository.findByChatId(chatId);
+        auditPort.record(actor, "chat.retention.set", "chat", chatIdStr, details);
+        var baseOrgId = chatPersistencePort.findOrgIdForRetentionOverlay(chatId);
+        var orgStored = baseOrgId.flatMap(retentionPolicyPort::findByOrgId);
+        var chatStored = chatRetentionPolicyPort.findByChatId(chatId);
         var body = ChatRetentionPolicyResponse.resolved(chatId, baseOrgId, appConfig, orgStored, chatStored);
         return Response.ok(body).build();
     }
@@ -723,7 +723,7 @@ public class AdminResource {
             return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.org_not_found"))).build();
         }
         var actor = CurrentUserId.uuid(securityContext);
-        var ok = retentionPolicyRepository.upsert(
+        var ok = retentionPolicyPort.upsert(
             orgId,
             bodyDays,
             metaDays,
@@ -744,8 +744,8 @@ public class AdminResource {
             request.deepArchiveEnabled(),
             request.legalHold()
         );
-        auditRepository.record(actor, "organization.retention.set", "organization", orgIdStr, details);
-        var stored = retentionPolicyRepository.findByOrgId(orgId);
+        auditPort.record(actor, "organization.retention.set", "organization", orgIdStr, details);
+        var stored = retentionPolicyPort.findByOrgId(orgId);
         var body = RetentionPolicyResponse.resolved(orgId, appConfig, stored);
         return Response.ok(body).build();
     }
@@ -778,7 +778,7 @@ public class AdminResource {
         }
         var created = org.get();
         var actor = CurrentUserId.uuid(securityContext);
-        auditRepository.record(actor, "organization.create", "organization", created.id().value().toString(),
+        auditPort.record(actor, "organization.create", "organization", created.id().value().toString(),
             organizationCreateAuditDetails(created.name()));
         return Response.status(Response.Status.CREATED)
             .entity(new OrganizationJson(created.id().value().toString(), created.name(), created.createdAt()))
@@ -802,7 +802,7 @@ public class AdminResource {
                 .build();
         }
         var actor = CurrentUserId.uuid(securityContext);
-        auditRepository.record(actor, "organization.delete", "organization", orgIdStr,
+        auditPort.record(actor, "organization.delete", "organization", orgIdStr,
             organizationDeleteAuditDetails(orgName));
         return Response.noContent().build();
     }
@@ -823,7 +823,7 @@ public class AdminResource {
             return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.user_not_updated"))).build();
         }
         var actor = CurrentUserId.uuid(securityContext);
-        auditRepository.record(actor, "user.organization.set", "user", userIdStr,
+        auditPort.record(actor, "user.organization.set", "user", userIdStr,
             userOrganizationSetAuditDetails(orgId));
         return Response.noContent().build();
     }

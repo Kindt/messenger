@@ -5,6 +5,11 @@ import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.export.dto.ExportAcceptedResponse;
 import com.avandocmsg.messenger.api.filter.UserPrincipal;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRetentionPolicyAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcRetentionPolicyAdapter;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
@@ -140,17 +145,19 @@ class AdminExportEnqueueTest {
         NatsOutboundPort nats,
         AuditRepository audit
     ) {
-        var enqueuer = new ExportJobEnqueuer(jobs, audit, nats, UuidGenerator.standard());
-        return new AdminResource(cfg, audit,
+        var auditPort = new JdbcAuditAdapter(audit);
+        var exportJobPort = new JdbcExportJobAdapter(jobs);
+        var enqueuer = new ExportJobEnqueuer(exportJobPort, auditPort, nats, UuidGenerator.standard());
+        return new AdminResource(cfg, auditPort,
             com.avandocmsg.messenger.core.bootstrap.CoreModule.organizationApplicationService(
                 null, UuidGenerator.standard()),
-            new RetentionPolicyRepository(null),
-            chats,
-            new ChatRetentionPolicyRepository(null),
-            new ExportSuggestedHandler(audit),
+            new JdbcRetentionPolicyAdapter(new RetentionPolicyRepository(null)),
+            new JdbcChatPersistenceAdapter(chats),
+            new JdbcChatRetentionPolicyAdapter(new ChatRetentionPolicyRepository(null)),
+            new ExportSuggestedHandler(auditPort),
             mock(AdminExportComplianceSeed.class),
             enqueuer,
-            jobs,
+            exportJobPort,
             new ExportFileAccess(cfg),
             nats,
             null,

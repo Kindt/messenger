@@ -1,5 +1,8 @@
 package com.avandocmsg.messenger.api.export;
 
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
@@ -24,7 +27,7 @@ class ExportSuggestedHandlerTest {
     void handle_recordsSuggestedAudit_onlyWhenAutoQueueDisabled() throws Exception {
         var chatId = UUID.randomUUID();
         var audit = new RecordingAudit();
-        var handler = new ExportSuggestedHandler(audit);
+        var handler = new ExportSuggestedHandler(new JdbcAuditAdapter(audit));
         var event = new ExportSuggestedEvent(
             chatId.toString(),
             ExportSuggestedEvent.REASON_HOT_BODY_CANDIDATES,
@@ -42,16 +45,16 @@ class ExportSuggestedHandlerTest {
         var jobs = new ExportResourceTest.InMemoryExportJobs();
         var nats = new RecordingNats();
         var audit = new RecordingAudit();
-        var enqueuer = new ExportJobEnqueuer(jobs, audit, nats, UuidGenerator.standard());
+        var enqueuer = new ExportJobEnqueuer(new JdbcExportJobAdapter(jobs), new JdbcAuditAdapter(audit), nats, UuidGenerator.standard());
         var auto = new ExportAutoQueueOnSuggested(
             enqueuer,
-            jobs,
-            ownerRepo(chatId, ownerId),
-            audit,
+            new JdbcExportJobAdapter(jobs),
+            new JdbcChatPersistenceAdapter(ownerRepo(chatId, ownerId)),
+            new JdbcAuditAdapter(audit),
             Optional.of(ownerId),
             1440
         );
-        var handler = new ExportSuggestedHandler(audit, Optional.of(auto));
+        var handler = new ExportSuggestedHandler(new JdbcAuditAdapter(audit), Optional.of(auto));
         var event = new ExportSuggestedEvent(
             chatId.toString(),
             ExportSuggestedEvent.REASON_HOT_BODY_CANDIDATES,

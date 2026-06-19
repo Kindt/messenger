@@ -1,7 +1,7 @@
 package com.avandocmsg.messenger.api.admin.dto;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
+import com.avandocmsg.messenger.core.port.RetentionPolicyPort;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -42,7 +42,7 @@ public record RetentionPolicyResponse(
         );
     }
 
-    public static RetentionPolicyResponse resolved(UUID orgId, AppConfig app, Optional<RetentionPolicyRepository.StoredRow> stored) {
+    public static RetentionPolicyResponse resolved(UUID orgId, AppConfig app, Optional<RetentionPolicyPort.StoredRow> stored) {
         if (stored.isEmpty()) {
             return new RetentionPolicyResponse(
                 orgId.toString(),

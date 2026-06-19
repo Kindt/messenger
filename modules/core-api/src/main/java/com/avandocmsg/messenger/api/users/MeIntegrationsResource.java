@@ -2,7 +2,7 @@ package com.avandocmsg.messenger.api.users;
 
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.plugins.PluginRepository;
-import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.port.UserLookupPort;
 import com.avandocmsg.messenger.api.users.dto.MeIntegrationsResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,12 +25,12 @@ import java.util.UUID;
 @Tag(name = "Integrations", description = "User-visible L0 SmartApps launcher")
 public class MeIntegrationsResource {
 
-    private final UserRepository userRepository;
+    private final UserLookupPort userLookupPort;
     private final PluginRepository pluginRepository;
 
     @Inject
-    public MeIntegrationsResource(UserRepository userRepository, PluginRepository pluginRepository) {
-        this.userRepository = userRepository;
+    public MeIntegrationsResource(UserLookupPort userLookupPort, PluginRepository pluginRepository) {
+        this.userLookupPort = userLookupPort;
         this.pluginRepository = pluginRepository;
     }
 
@@ -38,7 +38,7 @@ public class MeIntegrationsResource {
     @Operation(summary = "List integrations", description = "Enabled L0 plugin instances visible in web launcher")
     public Response list(@Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var profile = userRepository.findById(userId).orElse(null);
+        var profile = userLookupPort.findById(userId).orElse(null);
         if (profile == null || profile.orgId() == null || profile.orgId().isBlank()) {
             return Response.ok(new MeIntegrationsResponse(List.of(), MeIntegrationsVitrine.tiles())).build();
         }

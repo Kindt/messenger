@@ -2,7 +2,7 @@ package com.avandocmsg.messenger.api.export;
 
 import com.avandocmsg.messenger.api.export.dto.ExportAttachmentsListResponse;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
-import com.avandocmsg.messenger.api.repository.ExportJobRepository.ExportJobRow;
+import com.avandocmsg.messenger.core.port.ExportJobPort.ExportJobRow;
 import com.avandocmsg.messenger.common.export.ExportOutputRef;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

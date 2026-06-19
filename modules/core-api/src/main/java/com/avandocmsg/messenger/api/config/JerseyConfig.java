@@ -46,11 +46,15 @@ import com.avandocmsg.messenger.api.files.FileResource;
 import com.avandocmsg.messenger.api.files.FileService;
 import com.avandocmsg.messenger.api.media.MediaCapabilitiesResource;
 import com.avandocmsg.messenger.api.metrics.PrometheusMetricsResource;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
-import com.avandocmsg.messenger.api.repository.ExportJobRepository;
-import com.avandocmsg.messenger.api.repository.OrganizationRepository;
-import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
-import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
+import com.avandocmsg.messenger.core.port.ChatRetentionPolicyPort;
+import com.avandocmsg.messenger.core.port.DevicePort;
+import com.avandocmsg.messenger.core.port.ExportJobPort;
+import com.avandocmsg.messenger.core.port.LegalHoldPort;
+import com.avandocmsg.messenger.core.port.MigrationImportJobPort;
+import com.avandocmsg.messenger.core.port.RetentionPolicyPort;
+import com.avandocmsg.messenger.core.port.UserLookupPort;
 import com.avandocmsg.messenger.api.search.MessageSearchService;
 import com.avandocmsg.messenger.api.bots.BotRepository;
 import com.avandocmsg.messenger.api.bots.BotResource;
@@ -79,16 +83,10 @@ import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
 import com.avandocmsg.messenger.core.application.UserApplicationService;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
-import com.avandocmsg.messenger.api.repository.ChatBanRepository;
 import com.avandocmsg.messenger.api.admin.PurgeStatusService;
-import com.avandocmsg.messenger.api.repository.LegalHoldRepository;
-import com.avandocmsg.messenger.api.repository.ChatReadRepository;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.core.port.ContactRepositoryPort;
-import com.avandocmsg.messenger.api.repository.FileRepository;
 import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
-import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.api.users.MeIntegrationsResource;
 import com.avandocmsg.messenger.api.users.MeSettingsResource;
 import com.avandocmsg.messenger.api.users.UserResource;
@@ -118,10 +116,10 @@ public class JerseyConfig extends ResourceConfig {
     public JerseyConfig(DataSource dataSource, AppConfig appConfig, UserMessageSource userMessages, Clock clock, UuidGenerator uuidGenerator,
                         TokenValidator tokenValidator, AuthService authService,
                         AuthRateLimiter authRateLimiter,
-                        UserRepository userRepository,
+                        UserLookupPort userLookupPort,
                         ContactRepositoryPort contactRepositoryPort, ContactService contactService,
-                        ChatRepository chatRepository, ChatService chatService,
-                        ChatReadRepository chatReadRepository, ReadReceiptService readReceiptService,
+                        ChatService chatService,
+                        ReadReceiptService readReceiptService,
                         ChatApplicationService chatApplicationService,
                         MessageApplicationService messageApplicationService,
                         UserApplicationService userApplicationService,
@@ -131,8 +129,8 @@ public class JerseyConfig extends ResourceConfig {
                         MessageRepositoryPort messageRepositoryPort,
                         MessageQueryPort messageQueryPort,
                         Connection natsConnection, NatsConnectionOutbound natsOutbound,
-                        MinioClient minioClient, FileRepository fileRepository, FileService fileService,
-                        ChatBanRepository chatBanRepository, ChatBanService chatBanService,
+                        MinioClient minioClient, FileService fileService,
+                        ChatBanService chatBanService,
                         E2EEService e2eeService, KeyPackageRepository keyPackageRepository,
                         SessionRepository sessionRepository, MlsService mlsService, MlsGroupManager mlsGroupManager,
                         MlsMigrationService mlsMigrationService, OpenMlsBindingPort openMlsBindingPort,
@@ -140,15 +138,15 @@ public class JerseyConfig extends ResourceConfig {
                         FileProxy fileProxy, ConferenceService conferenceService,
                         LiveSessionService liveSessionService,
                         ChatCallLiveKitService chatCallLiveKitService,
-                        AuditRepository auditRepository,
-                        ExportJobRepository exportJobRepository,
+                        AuditPort auditPort,
+                        ExportJobPort exportJobPort,
                         ExportJobEnqueuer exportJobEnqueuer,
                         ExportFileAccess exportFileAccess,
                         ExportSuggestedHandler exportSuggestedHandler,
                         AdminExportComplianceSeed exportComplianceSeed,
-                        OrganizationRepository organizationRepository,
-                        RetentionPolicyRepository retentionPolicyRepository,
-                        ChatRetentionPolicyRepository chatRetentionPolicyRepository,
+                        RetentionPolicyPort retentionPolicyPort,
+                        ChatRetentionPolicyPort chatRetentionPolicyPort,
+                        ChatPersistencePort chatPersistencePort,
                         PublicLinkPort publicLinkPort,
                         MessageSearchService messageSearchService,
                         AdminUiManifest adminUiManifest,
@@ -156,7 +154,7 @@ public class JerseyConfig extends ResourceConfig {
                         FleetSnapshotService fleetSnapshotService,
                         RedisProbe redisProbe,
                         ReadCachePort readCachePort,
-                        LegalHoldRepository legalHoldRepository,
+                        LegalHoldPort legalHoldPort,
                         PurgeStatusService purgeStatusService,
                         BotRepository botRepository,
                         BotService botService,
@@ -165,7 +163,10 @@ public class JerseyConfig extends ResourceConfig {
                         com.avandocmsg.messenger.api.plugins.PluginPolicyService pluginPolicyService,
                         com.avandocmsg.messenger.api.plugins.PluginOutboundService pluginOutboundService,
                         AuthPolicyService authPolicyService,
-                        DirectorySyncService directorySyncService) {
+                        DirectorySyncService directorySyncService,
+                        MigrationImportJobPort migrationImportJobPort,
+                        DevicePort devicePort,
+                        OrgUserDirectoryPort orgUserDirectoryPort) {
         register(new AbstractBinder() {
             @Override
             protected void configure() {
@@ -179,10 +180,9 @@ public class JerseyConfig extends ResourceConfig {
                 bind(tokenValidator).to(TokenValidator.class);
                 bind(authService).to(AuthService.class);
                 bind(authRateLimiter).to(AuthRateLimiter.class);
-                bind(userRepository).to(UserRepository.class);
+                bind(userLookupPort).to(UserLookupPort.class);
                 bind(contactRepositoryPort).to(ContactRepositoryPort.class);
                 bind(contactService).to(ContactService.class);
-                bind(chatRepository).to(ChatRepository.class);
                 bind(chatService).to(ChatService.class);
                 bind(readReceiptService).to(ReadReceiptService.class);
                 bind(chatApplicationService).to(ChatApplicationService.class);
@@ -190,7 +190,6 @@ public class JerseyConfig extends ResourceConfig {
                 bind(userApplicationService).to(UserApplicationService.class);
                 bind(fileApplicationService).to(FileApplicationService.class);
                 bind(organizationApplicationService).to(OrganizationApplicationService.class);
-                bind(chatReadRepository).to(ChatReadRepository.class);
                 bind(blockRepositoryPort).to(BlockRepositoryPort.class);
                 bind(messageRepositoryPort).to(MessageRepositoryPort.class);
                 bind(messageQueryPort).to(MessageQueryPort.class);
@@ -199,9 +198,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(natsOutbound).to(NatsConnectionStatus.class);
                 bind(minioClient).to(MinioClient.class);
                 bind(fileProxy).to(FileProxy.class);
-                bind(fileRepository).to(FileRepository.class);
                 bind(fileService).to(FileService.class);
-                bind(chatBanRepository).to(ChatBanRepository.class);
                 bind(chatBanService).to(ChatBanService.class);
                 bind(e2eeService).to(E2EEService.class);
                 bind(keyPackageRepository).to(KeyPackageRepository.class);
@@ -214,22 +211,22 @@ public class JerseyConfig extends ResourceConfig {
                 bind(conferenceService).to(ConferenceService.class);
                 bind(liveSessionService).to(LiveSessionService.class);
                 bind(chatCallLiveKitService).to(ChatCallLiveKitService.class);
-                bind(auditRepository).to(AuditRepository.class);
-                bind(exportJobRepository).to(ExportJobRepository.class);
+                bind(auditPort).to(AuditPort.class);
+                bind(exportJobPort).to(ExportJobPort.class);
                 bind(exportJobEnqueuer).to(ExportJobEnqueuer.class);
                 bind(exportFileAccess).to(ExportFileAccess.class);
                 bind(exportSuggestedHandler).to(ExportSuggestedHandler.class);
                 bind(exportComplianceSeed).to(AdminExportComplianceSeed.class);
-                bind(organizationRepository).to(OrganizationRepository.class);
-                bind(retentionPolicyRepository).to(RetentionPolicyRepository.class);
-                bind(chatRetentionPolicyRepository).to(ChatRetentionPolicyRepository.class);
+                bind(retentionPolicyPort).to(RetentionPolicyPort.class);
+                bind(chatRetentionPolicyPort).to(ChatRetentionPolicyPort.class);
+                bind(chatPersistencePort).to(ChatPersistencePort.class);
                 bind(publicLinkPort).to(PublicLinkPort.class);
                 bind(messageSearchService).to(MessageSearchService.class);
                 bind(adminUiManifest).to(AdminUiManifest.class);
                 bind(adminServerStatsService).to(AdminStatsPort.class);
                 bind(adminServerStatsService).to(AdminServerStatsService.class);
                 bind(fleetSnapshotService).to(FleetSnapshotService.class);
-                bind(legalHoldRepository).to(LegalHoldRepository.class);
+                bind(legalHoldPort).to(LegalHoldPort.class);
                 bind(purgeStatusService).to(PurgeStatusService.class);
                 bind(botRepository).to(BotRepository.class);
                 bind(botService).to(BotService.class);
@@ -239,7 +236,9 @@ public class JerseyConfig extends ResourceConfig {
                 bind(pluginOutboundService).to(com.avandocmsg.messenger.api.plugins.PluginOutboundService.class);
                 bind(authPolicyService).to(AuthPolicyService.class);
                 bind(directorySyncService).to(DirectorySyncService.class);
-                bind(CoreModule.orgUserDirectoryPort(userRepository)).to(OrgUserDirectoryPort.class);
+                bind(migrationImportJobPort).to(MigrationImportJobPort.class);
+                bind(devicePort).to(DevicePort.class);
+                bind(orgUserDirectoryPort).to(OrgUserDirectoryPort.class);
                 bind(CoreModule.scimGroupRepositoryPort(dataSource)).to(ScimGroupRepositoryPort.class);
                 bind(BotRateLimiter.fromEnv()).to(BotRateLimiter.class);
                 bind(new com.avandocmsg.messenger.api.security.OrgIpAllowlistService(

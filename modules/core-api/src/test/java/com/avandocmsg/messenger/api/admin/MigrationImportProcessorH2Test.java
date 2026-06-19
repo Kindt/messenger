@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.api.admin;
 
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcMigrationImportJobAdapter;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MigrationImportJobRepository;
 import com.avandocmsg.messenger.core.bootstrap.CoreModule;
@@ -110,7 +112,10 @@ class MigrationImportProcessorH2Test {
         var chatRepo = new ChatRepository(ds, Clock.systemUTC(), UuidGenerator.standard());
         var msgPort = CoreModule.messageRepositoryPort(ds);
         var processor = new MigrationImportProcessor(
-            jobRepository, chatRepo, msgPort, UuidGenerator.standard());
+            new JdbcMigrationImportJobAdapter(jobRepository),
+            new JdbcChatPersistenceAdapter(chatRepo),
+            msgPort,
+            UuidGenerator.standard());
 
         var first = processor.process(jobId).orElseThrow();
         assertEquals("completed", first.status());

@@ -1,5 +1,8 @@
 package com.avandocmsg.messenger.api.export;
 
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
@@ -27,12 +30,14 @@ class ExportAutoQueueOnSuggestedTest {
         var jobs = new ExportResourceTest.InMemoryExportJobs();
         var nats = new RecordingNats();
         var audit = new AuditRepository(null);
-        var enqueuer = new ExportJobEnqueuer(jobs, audit, nats, UuidGenerator.standard());
+        var auditPort = new JdbcAuditAdapter(audit);
+        var exportJobPort = new JdbcExportJobAdapter(jobs);
+        var enqueuer = new ExportJobEnqueuer(exportJobPort, auditPort, nats, UuidGenerator.standard());
         var auto = new ExportAutoQueueOnSuggested(
             enqueuer,
-            jobs,
-            ownerRepo(chatId, ownerId),
-            audit,
+            exportJobPort,
+            new JdbcChatPersistenceAdapter(ownerRepo(chatId, ownerId)),
+            auditPort,
             Optional.of(ownerId),
             1440
         );
@@ -54,12 +59,14 @@ class ExportAutoQueueOnSuggestedTest {
         jobs.put(UUID.randomUUID(), chatId, ownerId, "queued", null);
         var nats = new RecordingNats();
         var audit = new AuditRepository(null);
-        var enqueuer = new ExportJobEnqueuer(jobs, audit, nats, UuidGenerator.standard());
+        var auditPort = new JdbcAuditAdapter(audit);
+        var exportJobPort = new JdbcExportJobAdapter(jobs);
+        var enqueuer = new ExportJobEnqueuer(exportJobPort, auditPort, nats, UuidGenerator.standard());
         var auto = new ExportAutoQueueOnSuggested(
             enqueuer,
-            jobs,
-            ownerRepo(chatId, ownerId),
-            audit,
+            exportJobPort,
+            new JdbcChatPersistenceAdapter(ownerRepo(chatId, ownerId)),
+            auditPort,
             Optional.of(ownerId),
             1440
         );

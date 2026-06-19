@@ -415,5 +415,3 @@ public final class JdbcMessageRepositoryAdapter implements MessageRepositoryPort
     }
 
 }
-
-

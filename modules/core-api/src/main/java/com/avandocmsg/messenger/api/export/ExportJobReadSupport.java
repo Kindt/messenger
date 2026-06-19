@@ -1,16 +1,14 @@
 package com.avandocmsg.messenger.api.export;
 
 import com.avandocmsg.messenger.api.export.dto.ExportAdminJobsListResponse;
-import com.avandocmsg.messenger.api.export.dto.ExportAttachmentsListResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportJobListResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportJobStatusResponse;
-import com.avandocmsg.messenger.api.repository.ExportJobRepository;
+import com.avandocmsg.messenger.core.port.ExportJobPort;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.export.ExportOutputRef;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import jakarta.ws.rs.core.Response;
 
-import java.util.UUID;
 
 /** Shared export job status / manifest reads for user and admin APIs. */
 public final class ExportJobReadSupport {
@@ -20,7 +18,7 @@ public final class ExportJobReadSupport {
 
     private ExportJobReadSupport() {}
 
-    public static ExportJobListResponse.ExportJobListItem toListItem(ExportJobRepository.ExportJobRow j) {
+    public static ExportJobListResponse.ExportJobListItem toListItem(ExportJobPort.ExportJobRow j) {
         return new ExportJobListResponse.ExportJobListItem(
             j.id().toString(),
             j.status(),
@@ -33,7 +31,7 @@ public final class ExportJobReadSupport {
     }
 
     public static ExportAdminJobsListResponse.ExportAdminJobListItem toAdminListItem(
-        ExportJobRepository.ExportJobRow j
+        ExportJobPort.ExportJobRow j
     ) {
         return new ExportAdminJobsListResponse.ExportAdminJobListItem(
             j.id().toString(),
@@ -47,7 +45,7 @@ public final class ExportJobReadSupport {
             formatInstant(j.completedAt()));
     }
 
-    public static ExportJobStatusResponse toStatusResponse(ExportJobRepository.ExportJobRow j) {
+    public static ExportJobStatusResponse toStatusResponse(ExportJobPort.ExportJobRow j) {
         return new ExportJobStatusResponse(
             j.id().toString(),
             j.chatId().toString(),
@@ -63,7 +61,7 @@ public final class ExportJobReadSupport {
     }
 
     public static Response attachmentsResponse(
-        ExportJobRepository.ExportJobRow job,
+        ExportJobPort.ExportJobRow job,
         ExportFileAccess exportFileAccess,
         UserMessageSource messages,
         int offset,

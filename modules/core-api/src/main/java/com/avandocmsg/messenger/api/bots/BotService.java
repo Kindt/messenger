@@ -9,8 +9,8 @@ import com.avandocmsg.messenger.api.bots.dto.RotateBotTokenResponse;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanService;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,21 +28,21 @@ public class BotService {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final BotRepository botRepository;
-    private final ChatRepository chatRepository;
+    private final ChatPersistencePort chatPersistencePort;
     private final MessageApplicationService messageApplicationService;
     private final ChatBanService chatBanService;
-    private final AuditRepository auditRepository;
+    private final AuditPort auditPort;
     private final UuidGenerator uuidGenerator;
 
-    public BotService(BotRepository botRepository, ChatRepository chatRepository,
+    public BotService(BotRepository botRepository, ChatPersistencePort chatPersistencePort,
                       MessageApplicationService messageApplicationService,
                       ChatBanService chatBanService,
-                      AuditRepository auditRepository, UuidGenerator uuidGenerator) {
+                      AuditPort auditPort, UuidGenerator uuidGenerator) {
         this.botRepository = botRepository;
-        this.chatRepository = chatRepository;
+        this.chatPersistencePort = chatPersistencePort;
         this.messageApplicationService = messageApplicationService;
         this.chatBanService = chatBanService;
-        this.auditRepository = auditRepository;
+        this.auditPort = auditPort;
         this.uuidGenerator = uuidGenerator;
     }
 
@@ -74,7 +74,7 @@ public class BotService {
         if (!botRepository.createBot(botId, ownerId, null, request.botName(), displayName, tokenHash, listenMode, webhook)) {
             return new CreateResult(CreateOutcome.PERSISTENCE_FAILED, null);
         }
-        auditRepository.record(ownerId, "bot.create", "bot", botId.toString(), null);
+        auditPort.record(ownerId, "bot.create", "bot", botId.toString(), null);
         return new CreateResult(CreateOutcome.SUCCESS, new CreateBotResponse(
             botId.toString(),
             request.botName(),
@@ -100,7 +100,7 @@ public class BotService {
         }
         var ok = botRepository.updateDefaultWebhook(botId, ownerId, webhookUrl.trim());
         if (ok) {
-            auditRepository.record(ownerId, "bot.webhook.update", "bot", botId.toString(), null);
+            auditPort.record(ownerId, "bot.webhook.update", "bot", botId.toString(), null);
         }
         return ok;
     }
@@ -112,7 +112,7 @@ public class BotService {
         if (bot.isEmpty()) {
             return SubscribeOutcome.NOT_FOUND;
         }
-        if (chatRepository.getMemberRole(chatId, ownerId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, ownerId) == null) {
             return SubscribeOutcome.NOT_MEMBER;
         }
         var url = trimToNull(webhookOverride);
@@ -125,11 +125,11 @@ public class BotService {
         if (!isHttpsUrl(url)) {
             return SubscribeOutcome.INVALID_WEBHOOK;
         }
-        chatRepository.addMember(chatId, botId, "member");
+        chatPersistencePort.addMember(chatId, botId, "member");
         if (!botRepository.upsertSubscription(botId, chatId, url.trim())) {
             return SubscribeOutcome.PERSISTENCE_FAILED;
         }
-        auditRepository.record(ownerId, "bot.subscribe", "chat", chatId.toString(), botId.toString());
+        auditPort.record(ownerId, "bot.subscribe", "chat", chatId.toString(), botId.toString());
         return SubscribeOutcome.SUCCESS;
     }
 
@@ -140,7 +140,7 @@ public class BotService {
         }
         var ok = botRepository.deleteSubscription(botId, chatId);
         if (ok) {
-            auditRepository.record(ownerId, "bot.unsubscribe", "chat", chatId.toString(), botId.toString());
+            auditPort.record(ownerId, "bot.unsubscribe", "chat", chatId.toString(), botId.toString());
         }
         return ok;
     }
@@ -165,7 +165,7 @@ public class BotService {
         if (!botRepository.updateTokenHash(botId, ownerId, hash)) {
             return Optional.empty();
         }
-        auditRepository.record(ownerId, "bot.token.rotate", "bot", botId.toString(), null);
+        auditPort.record(ownerId, "bot.token.rotate", "bot", botId.toString(), null);
         return Optional.of(new RotateBotTokenResponse(botId.toString(), token));
     }
 
@@ -195,7 +195,7 @@ public class BotService {
     }
 
     public boolean pinMessage(UUID botUserId, UUID chatId, UUID msgId) {
-        var role = chatRepository.getMemberRole(chatId, botUserId);
+        var role = chatPersistencePort.getMemberRole(chatId, botUserId);
         if (role == null || (!role.equals("owner") && !role.equals("admin"))) {
             return false;
         }

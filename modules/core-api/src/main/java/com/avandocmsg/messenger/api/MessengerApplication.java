@@ -71,8 +71,6 @@ import com.avandocmsg.messenger.api.admin.PurgeStatusService;
 import com.avandocmsg.messenger.api.repository.LegalHoldRepository;
 import com.avandocmsg.messenger.api.repository.ChatReadRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.FileRepository;
-import com.avandocmsg.messenger.api.repository.MessageReadReceiptRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageReadRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageWriteRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageRepositoryAdapter;
@@ -115,7 +113,6 @@ public class MessengerApplication {
     private final BlockRepositoryPort blockRepositoryPort;
     private final ChatRepository chatRepository;
     private final JdbcMessageRepositoryAdapter messagePersistence;
-    private final FileRepository fileRepository;
     private final ChatBanRepository chatBanRepository;
     private final E2EEService e2eeService;
     private final KeyPackageRepository keyPackageRepository;
@@ -182,7 +179,6 @@ public class MessengerApplication {
         var mentionRepositoryPort = new JdbcMessageMentionRepositoryAdapter(dataSource);
         this.messagePersistence = new JdbcMessageRepositoryAdapter(
             messageReadRepo, messageWriteRepo, mentionRepositoryPort);
-        this.fileRepository = new FileRepository(dataSource);
         this.chatBanRepository = new ChatBanRepository(dataSource, clock, uuidGenerator);
         this.e2eeService = new E2EEService();
         this.keyPackageRepository = new KeyPackageRepository(dataSource, clock, uuidGenerator);
@@ -191,18 +187,21 @@ public class MessengerApplication {
         this.fileProxy = createFileProxy();
         this.exportJobRepository = new ExportJobRepository(dataSource);
         this.auditRepository = new AuditRepository(dataSource);
+        var exportJobPort = CoreModule.exportJobPort(exportJobRepository);
+        var auditPort = CoreModule.auditPort(auditRepository);
+        var chatPersistencePort = CoreModule.chatPersistencePort(chatRepository);
         var natsOutbound = new NatsConnectionOutbound(natsConnection, jetStreamOptional());
         this.exportJobEnqueuer = new ExportJobEnqueuer(
-            exportJobRepository,
-            auditRepository,
+            exportJobPort,
+            auditPort,
             natsOutbound,
             uuidGenerator
         );
         var exportAutoQueue = appConfig.exportAutoQueueOnSuggestedEnabled()
             ? Optional.of(new ExportAutoQueueOnSuggested(
-                appConfig, exportJobEnqueuer, exportJobRepository, chatRepository, auditRepository))
+                appConfig, exportJobEnqueuer, exportJobPort, chatPersistencePort, auditPort))
             : Optional.<ExportAutoQueueOnSuggested>empty();
-        this.exportSuggestedHandler = new ExportSuggestedHandler(auditRepository, exportAutoQueue);
+        this.exportSuggestedHandler = new ExportSuggestedHandler(auditPort, exportAutoQueue);
         ExportJobsDbCollector.registerDefault(dataSource, appConfig.exportProcessingStaleMinutes());
         // Prime labeled export counters for Prometheus scrape before first enqueue/cancel.
         ExportMetrics.ensureRegistered();
@@ -255,7 +254,7 @@ public class MessengerApplication {
         log.info("core-api started on port {} (API locale: {})", appConfig.port(), appConfig.locale().toLanguageTag());
 
         if (appConfig.exportCompleteSubscriberEnabled()) {
-            exportCompleteSubscriber = new ExportReplayCompleteSubscriber(natsConnection, exportJobRepository);
+            exportCompleteSubscriber = new ExportReplayCompleteSubscriber(natsConnection, CoreModule.exportJobPort(exportJobRepository));
             exportCompleteSubscriber.start();
         } else {
             exportCompleteSubscriber = null;
@@ -328,16 +327,26 @@ public class MessengerApplication {
         var retentionPolicyRepository = new RetentionPolicyRepository(dataSource);
         var chatRetentionPolicyRepository = new ChatRetentionPolicyRepository(dataSource);
         var filePublicLinkRepository = new FilePublicLinkRepository(dataSource, this.uuidGenerator);
+        var chatPersistencePort = CoreModule.chatPersistencePort(chatRepository);
+        var chatReadStatePort = CoreModule.chatReadStatePort(new ChatReadRepository(dataSource));
+        var messageReadReceiptPort = CoreModule.messageReadReceiptPort(dataSource);
+        var userLookupPort = CoreModule.userLookupPort(userRepository);
+        var auditPort = CoreModule.auditPort(auditRepository);
+        var exportJobPort = CoreModule.exportJobPort(exportJobRepository);
+        var retentionPolicyPort = CoreModule.retentionPolicyPort(retentionPolicyRepository);
+        var chatRetentionPolicyPort = CoreModule.chatRetentionPolicyPort(chatRetentionPolicyRepository);
+        var legalHoldPort = CoreModule.legalHoldPort(new LegalHoldRepository(dataSource));
+        var organizationLookupPort = CoreModule.organizationLookupPort(organizationRepository);
+        var migrationImportJobPort = CoreModule.migrationImportJobPort(dataSource);
+        var devicePort = CoreModule.devicePort(dataSource, this.clock, this.uuidGenerator);
         var messageRepoPort = messagePersistence;
         var messageQueryPort = messagePersistence;
-        var messageSearchService = new MessageSearchService(appConfig, messageQueryPort, chatRepository,
+        var messageSearchService = new MessageSearchService(appConfig, messageQueryPort, chatPersistencePort,
             solrBinding.client(), solrBinding.cloudMode());
-        var chatReadRepository = new ChatReadRepository(dataSource);
-        var messageReadReceiptRepository = new MessageReadReceiptRepository(dataSource);
 
         var authService = new AuthService(
             appConfig,
-            userRepository,
+            userLookupPort,
             CoreModule.userRepositoryPort(dataSource),
             CoreModule.savedChatPort(dataSource, this.uuidGenerator));
         var authRateLimiter = redisConfig != null
@@ -345,7 +354,7 @@ public class MessengerApplication {
             : AuthRateLimiter.noop();
         this.readCachePort = CoreModule.readCachePort(
             redisConfig != null ? redisConfig.sync() : null, appConfig);
-        var contactService = new ContactService(contactRepositoryPort, userRepository, blockRepositoryPort);
+        var contactService = new ContactService(contactRepositoryPort, userLookupPort, blockRepositoryPort);
         var natsOutbound = new NatsConnectionOutbound(natsConnection, jetStreamOptional());
         var adminManifest = AdminUiManifest.load(MessengerApplication.class.getClassLoader());
         var adminServerStatsService = new AdminServerStatsService(dataSource, appConfig, natsOutbound, redisProbe);
@@ -358,16 +367,16 @@ public class MessengerApplication {
             fleetHotPlugRegistry,
             appConfig.hotplugHeartbeatTtlMs()
         );
-        var chatService = new ChatService(chatRepository, blockRepositoryPort, chatReadRepository,
+        var chatService = new ChatService(chatPersistencePort, blockRepositoryPort, chatReadStatePort,
             messageRepoPort, messageQueryPort, natsOutbound, this.clock, this.uuidGenerator, readCachePort, appConfig);
-        var readReceiptService = new ReadReceiptService(messageReadReceiptRepository, chatRepository,
-            messageRepoPort, chatReadRepository, userRepository, auditRepository, natsOutbound,
+        var readReceiptService = new ReadReceiptService(messageReadReceiptPort, chatPersistencePort,
+            messageRepoPort, chatReadStatePort, userLookupPort, auditPort, natsOutbound,
             appConfig, this.clock, readCachePort);
         var mlsGroupStateRepository = new MlsGroupStateRepository(dataSource, this.clock);
         var mlsWirePublisher = new MlsWirePublisher(natsOutbound, appConfig);
         var mlsGroupManager = new MlsGroupManager(mlsGroupStateRepository, mlsService,
             this.uuidGenerator, this.clock, mlsWirePublisher);
-        var mlsMigrationService = new MlsMigrationService(dataSource, mlsGroupManager, chatRepository);
+        var mlsMigrationService = new MlsMigrationService(dataSource, mlsGroupManager, chatPersistencePort);
         var openMlsBindingPort = OpenMlsBindingFactory.create(appConfig, mlsService);
         var chatApplicationService = CoreModule.chatApplicationService(dataSource);
         var userApplicationService = CoreModule.userApplicationService(
@@ -377,8 +386,7 @@ public class MessengerApplication {
             dataSource, messageQueryPort, objectStoragePort, this.uuidGenerator, appConfig);
         var organizationApplicationService = CoreModule.organizationApplicationService(dataSource, this.uuidGenerator);
         var publicLinkPort = CoreModule.publicLinkPort(filePublicLinkRepository);
-        var legalHoldRepository = new LegalHoldRepository(dataSource);
-        var purgeStatusService = new PurgeStatusService(dataSource, auditRepository);
+        var purgeStatusService = new PurgeStatusService(dataSource, auditPort);
         java.util.function.BooleanSupplier indexerAvailable =
             () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent();
         var indexerEventPublisher = CoreModule.indexerEventPublisher(natsOutbound, indexerAvailable);
@@ -402,10 +410,12 @@ public class MessengerApplication {
             messageQueryPort, mlsService);
         var fileService = new FileService(fileApplicationService, messageQueryPort);
         var exportComplianceSeed = new AdminExportComplianceSeed(
-            chatService, messageApplicationService, fileService, chatRepository, chatRetentionPolicyRepository);
-        var chatBanService = new ChatBanService(chatBanRepository, chatRepository);
+            chatService, messageApplicationService, fileService, chatPersistencePort, chatRetentionPolicyPort);
+        var chatBanService = new ChatBanService(
+            CoreModule.chatBanPort(chatBanRepository), chatPersistencePort);
         var conferenceRepository = new com.avandocmsg.messenger.api.repository.ConferenceRepository(dataSource, appConfig,
             this.uuidGenerator);
+        var conferencePort = CoreModule.conferencePort(conferenceRepository);
 
         UserMessageSource userMessages = new CompositeMessageSource(appConfig.locale(),
             MessengerApplication.class.getClassLoader(),
@@ -414,19 +424,20 @@ public class MessengerApplication {
                 "com.avandocmsg.messenger.i18n.messages_common"));
 
         var conferenceService = new com.avandocmsg.messenger.api.conference.ConferenceService(
-            conferenceRepository, chatRepository, chatService, natsOutbound, userMessages);
+            conferencePort, chatPersistencePort, chatService, natsOutbound, userMessages);
 
         var liveKitTokenService = new com.avandocmsg.messenger.api.live.LiveKitTokenService(appConfig);
         var liveSessionRepository = new com.avandocmsg.messenger.api.repository.LiveSessionRepository(
             dataSource, appConfig, this.uuidGenerator);
+        var liveSessionPort = CoreModule.liveSessionPort(liveSessionRepository);
         var liveSessionService = new com.avandocmsg.messenger.api.live.LiveSessionService(
-            liveSessionRepository, chatRepository, liveKitTokenService, natsOutbound, userMessages);
+            liveSessionPort, chatPersistencePort, liveKitTokenService, natsOutbound, userMessages);
         var chatCallLiveKitService = new com.avandocmsg.messenger.api.live.ChatCallLiveKitService(
-            chatRepository, liveKitTokenService);
+            chatPersistencePort, liveKitTokenService);
 
         var botRepository = new BotRepository(dataSource);
-        var botService = new BotService(botRepository, chatRepository, messageApplicationService,
-            chatBanService, auditRepository, this.uuidGenerator);
+        var botService = new BotService(botRepository, chatPersistencePort, messageApplicationService,
+            chatBanService, auditPort, this.uuidGenerator);
 
         var pluginRepository = new com.avandocmsg.messenger.api.plugins.PluginRepository(dataSource);
         var integrationRouterClient = new com.avandocmsg.messenger.api.plugins.IntegrationRouterClient(
@@ -440,35 +451,35 @@ public class MessengerApplication {
         var authPolicyRepository = new com.avandocmsg.messenger.api.auth.policy.AuthPolicyRepository(dataSource);
         var keycloakAuthSyncClient = new com.avandocmsg.messenger.api.auth.policy.KeycloakAuthSyncClient(appConfig);
         var authPolicyService = new com.avandocmsg.messenger.api.auth.policy.AuthPolicyService(
-            appConfig, authPolicyRepository, organizationRepository, keycloakAuthSyncClient);
+            appConfig, authPolicyRepository, organizationLookupPort, keycloakAuthSyncClient);
 
         var directorySyncRunRepository = CoreModule.directorySyncRunRepositoryPort(dataSource);
         var orgUserDirectory = CoreModule.orgUserDirectoryPort(userRepository);
         var ldapDirectoryClient = new com.avandocmsg.messenger.api.directory.JndiLdapDirectoryClient();
         this.directorySyncService = new com.avandocmsg.messenger.api.directory.DirectorySyncService(
-            authPolicyRepository, organizationRepository, directorySyncRunRepository,
+            authPolicyRepository, organizationLookupPort, directorySyncRunRepository,
             orgUserDirectory, ldapDirectoryClient, this.uuidGenerator);
 
         var jerseyServlet = new ServletContainer(
             new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
-                userRepository, contactRepositoryPort, contactService,
-                chatRepository, chatService, chatReadRepository, readReceiptService, chatApplicationService,
+                userLookupPort, contactRepositoryPort, contactService,
+                chatService, readReceiptService, chatApplicationService,
                 messageApplicationService, userApplicationService, fileApplicationService,
                 organizationApplicationService,
                 blockRepositoryPort,
                 messagePersistence, messagePersistence, natsConnection, natsOutbound,
-                minioClient, fileRepository, fileService,
-                chatBanRepository, chatBanService,
+                minioClient, fileService,
+                chatBanService,
                 e2eeService, keyPackageRepository, sessionRepository, mlsService, mlsGroupManager,
                 mlsMigrationService, openMlsBindingPort, mlsWirePublisher, fileProxy, conferenceService, liveSessionService,
                 chatCallLiveKitService,
-                auditRepository, exportJobRepository, exportJobEnqueuer, exportFileAccess, this.exportSuggestedHandler,
+                auditPort, exportJobPort, exportJobEnqueuer, exportFileAccess, this.exportSuggestedHandler,
                 exportComplianceSeed,
-                organizationRepository, retentionPolicyRepository, chatRetentionPolicyRepository,
+                retentionPolicyPort, chatRetentionPolicyPort, chatPersistencePort,
                 publicLinkPort, messageSearchService, adminManifest, adminServerStatsService, fleetSnapshotService, redisProbe,
-                readCachePort, legalHoldRepository, purgeStatusService, botRepository, botService,
+                readCachePort, legalHoldPort, purgeStatusService, botRepository, botService,
                 pluginRepository, pluginPlatformService, pluginPolicyService, pluginOutboundService,
-                authPolicyService, directorySyncService));
+                authPolicyService, directorySyncService, migrationImportJobPort, devicePort, orgUserDirectory));
         Tomcat.addServlet(ctx, SERVLET_NAME, jerseyServlet);
         ctx.addServletMappingDecoded("/api/*", SERVLET_NAME);
 

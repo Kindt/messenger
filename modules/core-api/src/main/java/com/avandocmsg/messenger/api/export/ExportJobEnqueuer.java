@@ -1,8 +1,8 @@
 package com.avandocmsg.messenger.api.export;
 
 import com.avandocmsg.messenger.api.metrics.ExportMetrics;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
-import com.avandocmsg.messenger.api.repository.ExportJobRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
+import com.avandocmsg.messenger.core.port.ExportJobPort;
 import com.avandocmsg.messenger.common.dto.ExportReplayJob;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
@@ -23,19 +23,19 @@ public final class ExportJobEnqueuer {
     private static final Logger log = LoggerFactory.getLogger(ExportJobEnqueuer.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final ExportJobRepository exportJobRepository;
-    private final AuditRepository auditRepository;
+    private final ExportJobPort exportJobPort;
+    private final AuditPort auditPort;
     private final NatsOutboundPort natsOutbound;
     private final UuidGenerator uuidGenerator;
 
     public ExportJobEnqueuer(
-        ExportJobRepository exportJobRepository,
-        AuditRepository auditRepository,
+        ExportJobPort exportJobPort,
+        AuditPort auditPort,
         NatsOutboundPort natsOutbound,
         UuidGenerator uuidGenerator
     ) {
-        this.exportJobRepository = exportJobRepository;
-        this.auditRepository = auditRepository;
+        this.exportJobPort = exportJobPort;
+        this.auditPort = auditPort;
         this.natsOutbound = natsOutbound;
         this.uuidGenerator = uuidGenerator;
     }
@@ -48,16 +48,16 @@ public final class ExportJobEnqueuer {
         throws ExportEnqueueException {
         var jobId = uuidGenerator.randomUuid();
         var job = new ExportReplayJob(jobId.toString(), chatId.toString(), requestedBy.toString());
-        exportJobRepository.insertQueued(jobId, chatId, requestedBy);
+        exportJobPort.insertQueued(jobId, chatId, requestedBy);
         try {
             natsOutbound.publish(NatsSubjects.MSG_EXPORT_REPLAY, MAPPER.writeValueAsBytes(job));
             natsOutbound.flush(Duration.ofSeconds(2));
         } catch (Exception e) {
             log.error("Failed to publish export job {}", jobId, e);
-            exportJobRepository.markTerminal(jobId, "export_failed", null);
+            exportJobPort.markTerminal(jobId, "export_failed", null);
             throw new ExportEnqueueException("nats publish failed", e);
         }
-        auditRepository.record(
+        auditPort.record(
             requestedBy,
             "export.requested",
             "export_job",

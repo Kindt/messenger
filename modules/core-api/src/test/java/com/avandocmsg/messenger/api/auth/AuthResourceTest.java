@@ -5,6 +5,7 @@ import com.avandocmsg.messenger.api.auth.policy.AuthPolicyRepository;
 import com.avandocmsg.messenger.api.auth.policy.AuthPolicyService;
 import com.avandocmsg.messenger.api.auth.policy.KeycloakAuthSyncClient;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrganizationLookupAdapter;
 import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import org.junit.jupiter.api.Test;
@@ -57,7 +58,7 @@ class AuthResourceTest {
         return new AuthPolicyService(
             appConfig,
             new AuthPolicyRepository(null),
-            new OrganizationRepository(null, null, null),
+            new JdbcOrganizationLookupAdapter(new OrganizationRepository(null, null, null)),
             new KeycloakAuthSyncClient(appConfig));
     }
 

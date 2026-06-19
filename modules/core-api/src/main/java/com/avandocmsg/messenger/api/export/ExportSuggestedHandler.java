@@ -1,6 +1,6 @@
 package com.avandocmsg.messenger.api.export;
 
-import com.avandocmsg.messenger.api.repository.AuditRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,15 +19,15 @@ public final class ExportSuggestedHandler {
     static final String AUDIT_ACTION = "export.suggested";
     static final String RESOURCE_TYPE_CHAT = "chat";
 
-    private final AuditRepository auditRepository;
+    private final AuditPort auditPort;
     private final Optional<ExportAutoQueueOnSuggested> autoQueue;
 
-    public ExportSuggestedHandler(AuditRepository auditRepository) {
-        this(auditRepository, Optional.empty());
+    public ExportSuggestedHandler(AuditPort auditPort) {
+        this(auditPort, Optional.empty());
     }
 
-    public ExportSuggestedHandler(AuditRepository auditRepository, Optional<ExportAutoQueueOnSuggested> autoQueue) {
-        this.auditRepository = auditRepository;
+    public ExportSuggestedHandler(AuditPort auditPort, Optional<ExportAutoQueueOnSuggested> autoQueue) {
+        this.auditPort = auditPort;
         this.autoQueue = autoQueue != null ? autoQueue : Optional.empty();
     }
 
@@ -43,7 +43,7 @@ public final class ExportSuggestedHandler {
         details.put("reason", event.reason() != null ? event.reason() : "");
         details.put("candidate_message_count", event.candidateMessageCount());
         details.put("suggested_at_epoch_ms", event.suggestedAtEpochMs());
-        auditRepository.record(
+        auditPort.record(
             null,
             AUDIT_ACTION,
             RESOURCE_TYPE_CHAT,

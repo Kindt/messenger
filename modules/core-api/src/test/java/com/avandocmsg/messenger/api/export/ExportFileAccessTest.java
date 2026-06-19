@@ -1,7 +1,7 @@
 package com.avandocmsg.messenger.api.export;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.api.repository.ExportJobRepository.ExportJobRow;
+import com.avandocmsg.messenger.core.port.ExportJobPort.ExportJobRow;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

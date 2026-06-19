@@ -4,8 +4,8 @@ import com.avandocmsg.messenger.api.live.dto.CreateLiveSessionRequest;
 import com.avandocmsg.messenger.api.live.dto.JoinLiveSessionResponse;
 import com.avandocmsg.messenger.api.live.dto.LiveIngressResponse;
 import com.avandocmsg.messenger.api.live.dto.LiveSessionResponse;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.LiveSessionRepository;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
+import com.avandocmsg.messenger.core.port.LiveSessionPort;
 import com.avandocmsg.messenger.common.dto.LiveSessionChangeEvent;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
@@ -23,19 +23,19 @@ public class LiveSessionService {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final int TOKEN_TTL_SEC = 3600;
 
-    private final LiveSessionRepository liveSessionRepository;
-    private final ChatRepository chatRepository;
+    private final LiveSessionPort liveSessionPort;
+    private final ChatPersistencePort chatPersistencePort;
     private final LiveKitTokenService liveKitTokenService;
     private final NatsOutboundPort natsOutbound;
     private final UserMessageSource messages;
 
-    public LiveSessionService(LiveSessionRepository liveSessionRepository,
-                              ChatRepository chatRepository,
+    public LiveSessionService(LiveSessionPort liveSessionPort,
+                              ChatPersistencePort chatPersistencePort,
                               LiveKitTokenService liveKitTokenService,
                               NatsOutboundPort natsOutbound,
                               UserMessageSource messages) {
-        this.liveSessionRepository = liveSessionRepository;
-        this.chatRepository = chatRepository;
+        this.liveSessionPort = liveSessionPort;
+        this.chatPersistencePort = chatPersistencePort;
         this.liveKitTokenService = liveKitTokenService;
         this.natsOutbound = natsOutbound;
         this.messages = messages;
@@ -50,70 +50,70 @@ public class LiveSessionService {
             log.warn("Live streaming not configured (LiveKit env missing)");
             return Optional.empty();
         }
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return Optional.empty();
         }
         var title = request != null && request.title() != null ? request.title().trim() : defaultTitle();
-        var room = liveSessionRepository.newRoomName();
-        var created = liveSessionRepository.insert(chatId, userId, title, room);
+        var room = liveSessionPort.newRoomName();
+        var created = liveSessionPort.insert(chatId, userId, title, room);
         created.ifPresent(session -> {
-            liveSessionRepository.join(UUID.fromString(session.liveSessionId()), userId, "host");
+            liveSessionPort.join(UUID.fromString(session.liveSessionId()), userId, "host");
             publishChange("created", session, userId);
-            liveSessionRepository.findById(UUID.fromString(session.liveSessionId()))
+            liveSessionPort.findById(UUID.fromString(session.liveSessionId()))
                 .ifPresent(s -> publishChange("updated", s, userId));
         });
-        return created.flatMap(s -> liveSessionRepository.findById(UUID.fromString(s.liveSessionId())));
+        return created.flatMap(s -> liveSessionPort.findById(UUID.fromString(s.liveSessionId())));
     }
 
     public List<LiveSessionResponse> listForChat(UUID chatId, UUID userId, boolean activeOnly) {
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return List.of();
         }
-        return liveSessionRepository.listForChat(chatId, activeOnly);
+        return liveSessionPort.listForChat(chatId, activeOnly);
     }
 
     public Optional<LiveSessionResponse> get(UUID sessionId, UUID userId) {
-        var session = liveSessionRepository.findById(sessionId);
+        var session = liveSessionPort.findById(sessionId);
         if (session.isEmpty()) {
             return Optional.empty();
         }
         var chatId = UUID.fromString(session.get().chatId());
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return Optional.empty();
         }
         return session;
     }
 
     public Optional<JoinLiveSessionResponse> join(UUID sessionId, UUID userId) {
-        var sessionOpt = liveSessionRepository.findById(sessionId);
+        var sessionOpt = liveSessionPort.findById(sessionId);
         if (sessionOpt.isEmpty() || !"active".equals(sessionOpt.get().status())) {
             return Optional.empty();
         }
         var session = sessionOpt.get();
         var chatId = UUID.fromString(session.chatId());
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return Optional.empty();
         }
         if (!liveKitTokenService.enabled()) {
             return Optional.empty();
         }
-        var existingRole = liveSessionRepository.viewerRole(sessionId, userId);
+        var existingRole = liveSessionPort.viewerRole(sessionId, userId);
         if (existingRole.isEmpty()) {
-            var active = liveSessionRepository.countActiveViewers(sessionId);
+            var active = liveSessionPort.countActiveViewers(sessionId);
             if (active >= session.maxViewers()) {
                 log.warn("Live session {} at viewer cap {}", sessionId, session.maxViewers());
                 return Optional.empty();
             }
         }
         var role = existingRole.orElse("viewer");
-        var creator = liveSessionRepository.findCreatorId(sessionId);
+        var creator = liveSessionPort.findCreatorId(sessionId);
         if (creator.map(userId::equals).orElse(false)) {
             role = "host";
         }
-        if (!liveSessionRepository.join(sessionId, userId, role)) {
+        if (!liveSessionPort.join(sessionId, userId, role)) {
             return Optional.empty();
         }
-        var updated = liveSessionRepository.findById(sessionId).orElse(session);
+        var updated = liveSessionPort.findById(sessionId).orElse(session);
         var canPublish = "host".equals(role) || "cohost".equals(role);
         var token = liveKitTokenService.createAccessToken(updated.roomName(), userId.toString(), canPublish, TOKEN_TTL_SEC);
         publishChange("updated", updated, userId);
@@ -129,33 +129,33 @@ public class LiveSessionService {
     }
 
     public boolean leave(UUID sessionId, UUID userId) {
-        if (!liveSessionRepository.leave(sessionId, userId)) {
+        if (!liveSessionPort.leave(sessionId, userId)) {
             return false;
         }
-        liveSessionRepository.findById(sessionId).ifPresent(s -> publishChange("updated", s, userId));
+        liveSessionPort.findById(sessionId).ifPresent(s -> publishChange("updated", s, userId));
         return true;
     }
 
     public boolean end(UUID sessionId, UUID userId) {
-        var session = liveSessionRepository.findById(sessionId);
+        var session = liveSessionPort.findById(sessionId);
         if (session.isEmpty() || !"active".equals(session.get().status())) {
             return false;
         }
         var chatId = UUID.fromString(session.get().chatId());
-        var role = chatRepository.getMemberRole(chatId, userId);
+        var role = chatPersistencePort.getMemberRole(chatId, userId);
         if (role == null) {
             return false;
         }
-        var creator = liveSessionRepository.findCreatorId(sessionId);
+        var creator = liveSessionPort.findCreatorId(sessionId);
         boolean creatorOk = creator.map(userId::equals).orElse(false);
         boolean moderator = "owner".equals(role) || "admin".equals(role);
         if (!creatorOk && !moderator) {
             return false;
         }
-        if (!liveSessionRepository.endSession(sessionId)) {
+        if (!liveSessionPort.endSession(sessionId)) {
             return false;
         }
-        liveSessionRepository.findById(sessionId).ifPresent(s -> publishChange("ended", s, userId));
+        liveSessionPort.findById(sessionId).ifPresent(s -> publishChange("ended", s, userId));
         return true;
     }
 
@@ -167,10 +167,10 @@ public class LiveSessionService {
         if (playlistUrl == null || playlistUrl.isBlank()) {
             return Optional.empty();
         }
-        if (!liveSessionRepository.updateDvrPlaylist(sessionId, playlistUrl.trim())) {
+        if (!liveSessionPort.updateDvrPlaylist(sessionId, playlistUrl.trim())) {
             return Optional.empty();
         }
-        return liveSessionRepository.findById(sessionId).map(s -> {
+        return liveSessionPort.findById(sessionId).map(s -> {
             publishChange("updated", s, userId);
             return s;
         });
@@ -187,14 +187,14 @@ public class LiveSessionService {
         }
         var normalized = action.trim().toLowerCase();
         var trimmedReason = reason != null ? reason.trim() : null;
-        if (!liveSessionRepository.recordModerationEvent(sessionId, userId, normalized, trimmedReason)) {
+        if (!liveSessionPort.recordModerationEvent(sessionId, userId, normalized, trimmedReason)) {
             return Optional.empty();
         }
-        resolveModerationState(normalized).ifPresent(state -> liveSessionRepository.setModerationState(sessionId, state));
+        resolveModerationState(normalized).ifPresent(state -> liveSessionPort.setModerationState(sessionId, state));
         if ("stop".equals(normalized) || "stopped".equals(normalized)) {
-            liveSessionRepository.endSession(sessionId);
+            liveSessionPort.endSession(sessionId);
         }
-        return liveSessionRepository.findById(sessionId).map(s -> {
+        return liveSessionPort.findById(sessionId).map(s -> {
             publishChange("stop".equals(normalized) || "stopped".equals(normalized) ? "ended" : "updated", s, userId);
             return s;
         });
@@ -216,11 +216,11 @@ public class LiveSessionService {
     }
 
     private Optional<LiveSessionResponse> requireActiveSessionInChat(UUID chatId, UUID sessionId, UUID userId) {
-        var session = liveSessionRepository.findById(sessionId);
+        var session = liveSessionPort.findById(sessionId);
         if (session.isEmpty() || !chatId.toString().equals(session.get().chatId())) {
             return Optional.empty();
         }
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return Optional.empty();
         }
         if (!"active".equals(session.get().status())) {
@@ -230,11 +230,11 @@ public class LiveSessionService {
     }
 
     private boolean isHost(UUID sessionId, UUID userId) {
-        var creator = liveSessionRepository.findCreatorId(sessionId);
+        var creator = liveSessionPort.findCreatorId(sessionId);
         if (creator.map(userId::equals).orElse(false)) {
             return true;
         }
-        return liveSessionRepository.viewerRole(sessionId, userId)
+        return liveSessionPort.viewerRole(sessionId, userId)
             .map(role -> "host".equals(role) || "cohost".equals(role))
             .orElse(false);
     }
@@ -243,7 +243,7 @@ public class LiveSessionService {
         if (isHost(sessionId, userId)) {
             return true;
         }
-        var role = chatRepository.getMemberRole(chatId, userId);
+        var role = chatPersistencePort.getMemberRole(chatId, userId);
         return "owner".equals(role) || "admin".equals(role);
     }
 

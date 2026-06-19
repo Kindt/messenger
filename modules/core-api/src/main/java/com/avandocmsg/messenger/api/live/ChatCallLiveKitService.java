@@ -1,7 +1,7 @@
 package com.avandocmsg.messenger.api.live;
 
 import com.avandocmsg.messenger.api.live.dto.JoinLiveKitCallResponse;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -10,11 +10,11 @@ import java.util.UUID;
 public class ChatCallLiveKitService {
     private static final int TOKEN_TTL_SEC = 3600;
 
-    private final ChatRepository chatRepository;
+    private final ChatPersistencePort chatPersistencePort;
     private final LiveKitTokenService liveKitTokenService;
 
-    public ChatCallLiveKitService(ChatRepository chatRepository, LiveKitTokenService liveKitTokenService) {
-        this.chatRepository = chatRepository;
+    public ChatCallLiveKitService(ChatPersistencePort chatPersistencePort, LiveKitTokenService liveKitTokenService) {
+        this.chatPersistencePort = chatPersistencePort;
         this.liveKitTokenService = liveKitTokenService;
     }
 
@@ -26,7 +26,7 @@ public class ChatCallLiveKitService {
         if (!groupCallSfuEnabled()) {
             return Optional.empty();
         }
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return Optional.empty();
         }
         var room = "call-" + chatId.toString().replace("-", "");

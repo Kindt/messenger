@@ -5,7 +5,7 @@ import com.avandocmsg.messenger.api.blocks.dto.BlockedUserResponse;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
 import com.avandocmsg.messenger.core.port.ContactRepositoryPort;
-import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.port.UserLookupPort;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.core.domain.BlockedUser;
@@ -26,7 +26,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 
-import java.util.UUID;
 
 @Path("/v1/blocks")
 @Produces(MediaType.APPLICATION_JSON)
@@ -35,17 +34,17 @@ import java.util.UUID;
 public class BlocksResource {
 
     private final BlockRepositoryPort blockRepositoryPort;
-    private final UserRepository userRepository;
+    private final UserLookupPort userLookupPort;
     private final ContactRepositoryPort contactRepositoryPort;
     private final UserMessageSource messages;
 
     @Inject
     public BlocksResource(BlockRepositoryPort blockRepositoryPort,
-                          UserRepository userRepository,
+                          UserLookupPort userLookupPort,
                           ContactRepositoryPort contactRepositoryPort,
                           UserMessageSource messages) {
         this.blockRepositoryPort = blockRepositoryPort;
-        this.userRepository = userRepository;
+        this.userLookupPort = userLookupPort;
         this.contactRepositoryPort = contactRepositoryPort;
         this.messages = messages;
     }
@@ -77,7 +76,7 @@ public class BlocksResource {
                 .entity(new ApiError(400, messages.get("error.blocks.cannot_block_self")))
                 .build();
         }
-        if (userRepository.findById(targetId).isEmpty()) {
+        if (userLookupPort.findById(targetId).isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.blocks.user_not_found")))
                 .build();

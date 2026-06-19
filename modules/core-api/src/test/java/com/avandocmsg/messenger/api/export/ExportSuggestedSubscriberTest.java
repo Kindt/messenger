@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.export;
 
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
 import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,7 +30,7 @@ class ExportSuggestedSubscriberTest {
     void onMessage_recordsAudit() throws Exception {
         var chatId = UUID.randomUUID();
         var audit = mock(AuditRepository.class);
-        var handler = new ExportSuggestedHandler(audit);
+        var handler = new ExportSuggestedHandler(new JdbcAuditAdapter(audit));
         var connection = mock(Connection.class);
         var dispatcher = mock(Dispatcher.class);
         var handlerCaptor = ArgumentCaptor.forClass(MessageHandler.class);
@@ -64,7 +65,7 @@ class ExportSuggestedSubscriberTest {
         var chatId = UUID.randomUUID();
         var audit = mock(AuditRepository.class);
         var autoQueue = mock(ExportAutoQueueOnSuggested.class);
-        var handler = new ExportSuggestedHandler(audit, Optional.of(autoQueue));
+        var handler = new ExportSuggestedHandler(new JdbcAuditAdapter(audit), Optional.of(autoQueue));
         var connection = mock(Connection.class);
         var dispatcher = mock(Dispatcher.class);
         var handlerCaptor = ArgumentCaptor.forClass(MessageHandler.class);
@@ -84,7 +85,7 @@ class ExportSuggestedSubscriberTest {
     void onMessage_skipsAutoQueueWhenAbsent() throws Exception {
         var audit = mock(AuditRepository.class);
         var autoQueue = mock(ExportAutoQueueOnSuggested.class);
-        var handler = new ExportSuggestedHandler(audit);
+        var handler = new ExportSuggestedHandler(new JdbcAuditAdapter(audit));
         var connection = mock(Connection.class);
         var dispatcher = mock(Dispatcher.class);
         var handlerCaptor = ArgumentCaptor.forClass(MessageHandler.class);

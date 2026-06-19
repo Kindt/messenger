@@ -17,9 +17,9 @@ import com.avandocmsg.messenger.api.export.dto.ExportAdminJobsListResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportJobListResponse;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.ExportJobRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
+import com.avandocmsg.messenger.core.port.ExportJobPort;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
@@ -41,35 +41,35 @@ final class AdminExportFacade {
     private static final ObjectMapper ADMIN_AUDIT_JSON = new ObjectMapper();
 
     private final AppConfig appConfig;
-    private final AuditRepository auditRepository;
-    private final ChatRepository chatRepository;
+    private final AuditPort auditPort;
+    private final ChatPersistencePort chatPersistencePort;
     private final ExportSuggestedHandler exportSuggestedHandler;
     private final AdminExportComplianceSeed exportComplianceSeed;
     private final ExportJobEnqueuer exportJobEnqueuer;
-    private final ExportJobRepository exportJobRepository;
+    private final ExportJobPort exportJobPort;
     private final ExportFileAccess exportFileAccess;
     private final NatsOutboundPort natsOutbound;
     private final UserMessageSource messages;
 
     AdminExportFacade(
         AppConfig appConfig,
-        AuditRepository auditRepository,
-        ChatRepository chatRepository,
+        AuditPort auditPort,
+        ChatPersistencePort chatPersistencePort,
         ExportSuggestedHandler exportSuggestedHandler,
         AdminExportComplianceSeed exportComplianceSeed,
         ExportJobEnqueuer exportJobEnqueuer,
-        ExportJobRepository exportJobRepository,
+        ExportJobPort exportJobPort,
         ExportFileAccess exportFileAccess,
         NatsOutboundPort natsOutbound,
         UserMessageSource messages
     ) {
         this.appConfig = appConfig;
-        this.auditRepository = auditRepository;
-        this.chatRepository = chatRepository;
+        this.auditPort = auditPort;
+        this.chatPersistencePort = chatPersistencePort;
         this.exportSuggestedHandler = exportSuggestedHandler;
         this.exportComplianceSeed = exportComplianceSeed;
         this.exportJobEnqueuer = exportJobEnqueuer;
-        this.exportJobRepository = exportJobRepository;
+        this.exportJobPort = exportJobPort;
         this.exportFileAccess = exportFileAccess;
         this.natsOutbound = natsOutbound;
         this.messages = messages;
@@ -160,7 +160,7 @@ final class AdminExportFacade {
                 .build();
         }
         var chatId = UuidParams.required(chatIdStr, "chat_id");
-        if (!chatRepository.chatExists(chatId)) {
+        if (!chatPersistencePort.chatExists(chatId)) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.export.chat_not_found")))
                 .build();
@@ -182,7 +182,7 @@ final class AdminExportFacade {
     Response listExportJobs(String chatIdStr, String status, int limit, SecurityContext securityContext) {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var lim = ExportJobReadSupport.normalizeJobsListLimit(limit);
-        var rows = exportJobRepository.listForChat(chatId, status, lim);
+        var rows = exportJobPort.listForChat(chatId, status, lim);
         var items = rows.stream().map(ExportJobReadSupport::toListItem).toList();
         if (!rows.isEmpty()) {
             auditExportInspect(securityContext, rows.getFirst().id(), chatId, "jobs_list");
@@ -202,7 +202,7 @@ final class AdminExportFacade {
         }
         var lim = ExportJobReadSupport.normalizeJobsListLimit(limit);
         var statusFilter = status != null && !status.isBlank() ? status.trim() : null;
-        var rows = exportJobRepository.listRecent(statusFilter, chatFilter, lim);
+        var rows = exportJobPort.listRecent(statusFilter, chatFilter, lim);
         var items = rows.stream().map(ExportJobReadSupport::toAdminListItem).toList();
         auditExportGlobalJobsList(securityContext, statusFilter, chatFilter, items.size());
         return Response.ok(new ExportAdminJobsListResponse(
@@ -214,7 +214,7 @@ final class AdminExportFacade {
 
     Response exportLatestStatus(String chatIdStr, SecurityContext securityContext) {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var row = exportJobRepository.findLatestForChat(chatId);
+        var row = exportJobPort.findLatestForChat(chatId);
         if (row.isEmpty()) {
             return ExportJobReadSupport.jobNotFound(messages);
         }
@@ -225,7 +225,7 @@ final class AdminExportFacade {
     Response exportJobStatus(String chatIdStr, String jobIdStr, SecurityContext securityContext) {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var jobId = UuidParams.required(jobIdStr, "job_id");
-        var row = exportJobRepository.findByIdAndChat(jobId, chatId);
+        var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
             return ExportJobReadSupport.jobNotFound(messages);
         }
@@ -241,7 +241,7 @@ final class AdminExportFacade {
         }
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var jobId = UuidParams.required(jobIdStr, "job_id");
-        var row = exportJobRepository.findByIdAndChat(jobId, chatId);
+        var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
             return ExportJobReadSupport.jobNotFound(messages);
         }
@@ -251,8 +251,8 @@ final class AdminExportFacade {
             jobId,
             CurrentUserId.uuid(securityContext),
             ExportJobCancelSupport.AUDIT_ADMIN_CANCEL,
-            exportJobRepository,
-            auditRepository,
+            exportJobPort,
+            auditPort,
             messages,
             natsOutbound);
     }
@@ -266,7 +266,7 @@ final class AdminExportFacade {
     ) {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var jobId = UuidParams.required(jobIdStr, "job_id");
-        var row = exportJobRepository.findByIdAndChat(jobId, chatId);
+        var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
             return ExportJobReadSupport.jobNotFound(messages);
         }
@@ -284,7 +284,7 @@ final class AdminExportFacade {
     ) {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var jobId = UuidParams.required(jobIdStr, "job_id");
-        var row = exportJobRepository.findByIdAndChat(jobId, chatId);
+        var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
             return ExportJobReadSupport.jobNotFound(messages);
         }
@@ -295,7 +295,7 @@ final class AdminExportFacade {
             CurrentUserId.uuid(securityContext),
             ExportDownloadSupport.AUDIT_ADMIN_DOWNLOAD,
             exportFileAccess,
-            auditRepository,
+            auditPort,
             messages,
             part,
             fileIdStr,
@@ -307,7 +307,7 @@ final class AdminExportFacade {
             var details = ADMIN_AUDIT_JSON.createObjectNode()
                 .put("chat_id", chatId.toString())
                 .put("view", view);
-            auditRepository.record(
+            auditPort.record(
                 CurrentUserId.uuid(securityContext),
                 "export.admin_inspected",
                 "export_job",
@@ -334,7 +334,7 @@ final class AdminExportFacade {
             if (chatIdFilter != null) {
                 details.put("chat_id_filter", chatIdFilter.toString());
             }
-            auditRepository.record(
+            auditPort.record(
                 CurrentUserId.uuid(securityContext),
                 "export.admin_inspected",
                 "export_jobs",

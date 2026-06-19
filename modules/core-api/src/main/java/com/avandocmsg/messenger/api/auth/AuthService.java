@@ -5,7 +5,7 @@ import com.avandocmsg.messenger.api.auth.dto.LoginResponse;
 import com.avandocmsg.messenger.api.auth.dto.RegisterRequest;
 import com.avandocmsg.messenger.api.auth.dto.RegisterResponse;
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.port.UserLookupPort;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.SavedChatPort;
 import com.avandocmsg.messenger.core.port.UserRepositoryPort;
@@ -28,19 +28,19 @@ public class AuthService {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final AppConfig appConfig;
-    private final UserRepository userRepository;
+    private final UserLookupPort userLookupPort;
     private final UserRepositoryPort userRepositoryPort;
     private final SavedChatPort savedChatPort;
     private final HttpClient httpClient;
 
     public AuthService(
         AppConfig appConfig,
-        UserRepository userRepository,
+        UserLookupPort userLookupPort,
         UserRepositoryPort userRepositoryPort,
         SavedChatPort savedChatPort
     ) {
         this.appConfig = appConfig;
-        this.userRepository = userRepository;
+        this.userLookupPort = userLookupPort;
         this.userRepositoryPort = userRepositoryPort;
         this.savedChatPort = savedChatPort;
         this.httpClient = HttpClient.newBuilder()
@@ -96,7 +96,7 @@ public class AuthService {
         }
         if (!userRepositoryPort.createLocalUser(UserId.of(keycloakUserId), request.username(), request.displayName())) {
             log.warn("Local user row not created for {} (id={})", request.username(), keycloakUserId);
-            if (userRepository.findByUsername(request.username()).isPresent()) {
+            if (userLookupPort.findByUsername(request.username()).isPresent()) {
                 return RegisterOutcome.failure(RegisterOutcome.Status.USERNAME_EXISTS);
             }
             return RegisterOutcome.failure(RegisterOutcome.Status.PERSISTENCE_FAILED);

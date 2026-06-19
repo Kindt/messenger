@@ -9,6 +9,8 @@ import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ConferenceRepository;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcConferenceAdapter;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.junit.jupiter.api.Test;
@@ -27,7 +29,7 @@ class ConferenceServiceTest {
     private final StubChatRepository chatRepo = new StubChatRepository();
     private final RecordingChatService chatService = new RecordingChatService(chatRepo);
     private final ConferenceService service = new ConferenceService(
-        conferenceRepo, chatRepo, chatService, NatsOutboundPort.noop(), I18nTestFixtures.messagesEn());
+        new JdbcConferenceAdapter(conferenceRepo), new JdbcChatPersistenceAdapter(chatRepo), chatService, NatsOutboundPort.noop(), I18nTestFixtures.messagesEn());
 
     private final UUID userId = UUID.randomUUID();
     private final UUID chatId = UUID.randomUUID();
@@ -132,7 +134,7 @@ class ConferenceServiceTest {
         String lastGroupTitle;
 
         RecordingChatService(ChatRepository chatRepository) {
-            super(chatRepository, null, null, null, null, NatsOutboundPort.noop(), Clock.systemUTC(),
+            super(new JdbcChatPersistenceAdapter(chatRepository), null, null, null, null, NatsOutboundPort.noop(), Clock.systemUTC(),
                 UuidGenerator.standard(), NoOpReadCacheAdapter.INSTANCE, new AppConfig());
         }
 

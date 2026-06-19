@@ -10,7 +10,6 @@ import com.avandocmsg.messenger.core.domain.StoredFile;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.FileMetadataPort;
 import com.avandocmsg.messenger.core.port.ObjectStoragePort;
-import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;

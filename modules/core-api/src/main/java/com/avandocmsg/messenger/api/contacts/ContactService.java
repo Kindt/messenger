@@ -2,7 +2,7 @@ package com.avandocmsg.messenger.api.contacts;
 
 import com.avandocmsg.messenger.api.contacts.dto.ContactResponse;
 import com.avandocmsg.messenger.api.contacts.dto.ImportContactsResponse;
-import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.port.UserLookupPort;
 import com.avandocmsg.messenger.core.domain.Contact;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
@@ -17,13 +17,13 @@ public class ContactService {
     private static final Logger log = LoggerFactory.getLogger(ContactService.class);
 
     private final ContactRepositoryPort contactRepositoryPort;
-    private final UserRepository userRepository;
+    private final UserLookupPort userLookupPort;
     private final BlockRepositoryPort blockRepositoryPort;
 
-    public ContactService(ContactRepositoryPort contactRepositoryPort, UserRepository userRepository,
+    public ContactService(ContactRepositoryPort contactRepositoryPort, UserLookupPort userLookupPort,
                           BlockRepositoryPort blockRepositoryPort) {
         this.contactRepositoryPort = contactRepositoryPort;
-        this.userRepository = userRepository;
+        this.userLookupPort = userLookupPort;
         this.blockRepositoryPort = blockRepositoryPort;
     }
 
@@ -37,7 +37,7 @@ public class ContactService {
         if (userId.equals(contactUserId)) {
             return false;
         }
-        if (userRepository.findById(contactUserId).isEmpty()) {
+        if (userLookupPort.findById(contactUserId).isEmpty()) {
             return false;
         }
         var user = UserId.of(userId);
@@ -58,7 +58,7 @@ public class ContactService {
         var contacts = foundIds.stream()
             .map(id -> {
                 contactRepositoryPort.add(owner, UserId.of(id));
-                return userRepository.findById(id).orElse(null);
+                return userLookupPort.findById(id).orElse(null);
             })
             .filter(u -> u != null)
             .map(u -> new ContactResponse(u.id(), u.username(), u.displayName(), u.phone(), null))

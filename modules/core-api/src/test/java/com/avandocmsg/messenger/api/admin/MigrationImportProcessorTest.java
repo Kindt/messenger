@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.admin;
 
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcMigrationImportJobAdapter;
 import com.avandocmsg.messenger.api.repository.MigrationImportJobRepository;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +34,7 @@ class MigrationImportProcessorTest {
                 return true;
             }
         };
-        var processor = new MigrationImportProcessor(repo);
+        var processor = new MigrationImportProcessor(new JdbcMigrationImportJobAdapter(repo));
         var out = processor.process(jobId);
         assertTrue(out.isPresent());
         assertEquals("completed", out.get().status());
@@ -65,7 +66,7 @@ class MigrationImportProcessorTest {
                 return false;
             }
         };
-        var processor = new MigrationImportProcessor(repo);
+        var processor = new MigrationImportProcessor(new JdbcMigrationImportJobAdapter(repo));
         var out = processor.process(jobId);
         assertTrue(out.isPresent());
         assertEquals("failed", out.get().status());

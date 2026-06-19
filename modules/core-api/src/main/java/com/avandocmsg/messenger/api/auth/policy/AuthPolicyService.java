@@ -4,7 +4,7 @@ import com.avandocmsg.messenger.api.auth.dto.AuthPolicyResponse;
 import com.avandocmsg.messenger.api.auth.dto.LoginOptionsResponse;
 import com.avandocmsg.messenger.api.auth.dto.UpdateAuthPolicyRequest;
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.api.repository.OrganizationRepository;
+import com.avandocmsg.messenger.core.port.OrganizationLookupPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,18 +28,18 @@ public class AuthPolicyService {
 
     private final AppConfig appConfig;
     private final AuthPolicyRepository authPolicyRepository;
-    private final OrganizationRepository organizationRepository;
+    private final OrganizationLookupPort organizationLookupPort;
     private final KeycloakAuthSyncClient keycloakAuthSyncClient;
 
     public AuthPolicyService(
         AppConfig appConfig,
         AuthPolicyRepository authPolicyRepository,
-        OrganizationRepository organizationRepository,
+        OrganizationLookupPort organizationLookupPort,
         KeycloakAuthSyncClient keycloakAuthSyncClient
     ) {
         this.appConfig = appConfig;
         this.authPolicyRepository = authPolicyRepository;
-        this.organizationRepository = organizationRepository;
+        this.organizationLookupPort = organizationLookupPort;
         this.keycloakAuthSyncClient = keycloakAuthSyncClient;
     }
 
@@ -48,7 +48,7 @@ public class AuthPolicyService {
     }
 
     public Optional<AuthPolicyResponse> getPolicy(UUID orgId) {
-        if (!organizationRepository.exists(orgId)) {
+        if (!organizationLookupPort.exists(orgId)) {
             return Optional.empty();
         }
         var row = authPolicyRepository.findByOrgId(orgId).orElseGet(() -> authPolicyRepository.defaultPolicy(orgId));
@@ -56,7 +56,7 @@ public class AuthPolicyService {
     }
 
     public Optional<AuthPolicyResponse> updatePolicy(UUID orgId, UpdateAuthPolicyRequest request, UUID actorId) {
-        if (!organizationRepository.exists(orgId)) {
+        if (!organizationLookupPort.exists(orgId)) {
             return Optional.empty();
         }
         var current = authPolicyRepository.findByOrgId(orgId).orElseGet(() -> authPolicyRepository.defaultPolicy(orgId));
@@ -86,7 +86,7 @@ public class AuthPolicyService {
     public record PolicyTestResult(boolean ok, String message) {}
 
     public Optional<PolicyTestResult> testPolicy(UUID orgId, String providerId) {
-        if (!organizationRepository.exists(orgId)) {
+        if (!organizationLookupPort.exists(orgId)) {
             return Optional.empty();
         }
         var row = authPolicyRepository.findByOrgId(orgId).orElseGet(() -> authPolicyRepository.defaultPolicy(orgId));
@@ -165,7 +165,7 @@ public class AuthPolicyService {
         }
     }
 
-    private LoginOptionsResponse buildLoginOptions(OrganizationRepository.OrgRow org, String redirectBase) {
+    private LoginOptionsResponse buildLoginOptions(OrganizationLookupPort.OrgSummary org, String redirectBase) {
         var orgId = UUID.fromString(org.id());
         var row = authPolicyRepository.findByOrgId(orgId).orElseGet(() -> authPolicyRepository.defaultPolicy(orgId));
         var methods = new ArrayList<LoginOptionsResponse.LoginMethodJson>();
@@ -208,29 +208,29 @@ public class AuthPolicyService {
             + "&kc_idp_hint=" + urlEncode(idpAlias);
     }
 
-    private Optional<OrganizationRepository.OrgRow> resolveOrg(String hostHeader, String orgSlugParam) {
+    private Optional<OrganizationLookupPort.OrgSummary> resolveOrg(String hostHeader, String orgSlugParam) {
         if (orgSlugParam != null && !orgSlugParam.isBlank()) {
-            return organizationRepository.findBySlug(orgSlugParam.trim().toLowerCase());
+            return organizationLookupPort.findBySlug(orgSlugParam.trim().toLowerCase());
         }
         var fromHost = slugFromHost(hostHeader);
         if (fromHost.isPresent()) {
-            var bySlug = organizationRepository.findBySlug(fromHost.get());
+            var bySlug = organizationLookupPort.findBySlug(fromHost.get());
             if (bySlug.isPresent()) {
                 return bySlug;
             }
         }
         var defaultId = appConfig.defaultOrgId();
         if (defaultId.isPresent()) {
-            var byDefault = organizationRepository.findById(defaultId.get());
+            var byDefault = organizationLookupPort.findById(defaultId.get());
             if (byDefault.isPresent()) {
                 return byDefault;
             }
         }
-        var byDevSlug = organizationRepository.findBySlug("dev");
+        var byDevSlug = organizationLookupPort.findBySlug("dev");
         if (byDevSlug.isPresent()) {
             return byDevSlug;
         }
-        return organizationRepository.findSingle();
+        return organizationLookupPort.findSingle();
     }
 
     private static Optional<String> slugFromHost(String hostHeader) {

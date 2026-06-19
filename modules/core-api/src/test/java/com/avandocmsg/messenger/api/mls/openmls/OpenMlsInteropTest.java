@@ -5,6 +5,7 @@ import com.avandocmsg.messenger.api.crypto.E2EEService;
 import com.avandocmsg.messenger.api.mls.MlsGroupManager;
 import com.avandocmsg.messenger.api.mls.MlsGroupState;
 import com.avandocmsg.messenger.api.mls.MlsGroupStateRepository;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.api.mls.MlsMigrationService;
 import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.api.mls.SessionRepository.MlsSession;
@@ -99,7 +100,7 @@ class OpenMlsInteropTest {
         var chatRepo = new StubChatRepository();
         chatRepo.members.put(chatId, List.of(new ChatMemberResponse(
             member.toString(), "alice", "Alice", "member", false, false, Instant.now())));
-        var migration = new MlsMigrationService(null, groupManager, chatRepo);
+        var migration = new MlsMigrationService(null, groupManager, new JdbcChatPersistenceAdapter(chatRepo));
 
         var first = migration.migrateToOpenMlsGroup(chatId).orElseThrow();
         var second = migration.migrateToOpenMlsGroup(chatId).orElseThrow();

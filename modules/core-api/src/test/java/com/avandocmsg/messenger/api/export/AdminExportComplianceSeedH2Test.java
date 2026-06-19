@@ -5,6 +5,8 @@ import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.files.FileService;
 import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcBlockRepositoryAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRetentionPolicyAdapter;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
@@ -179,8 +181,8 @@ class AdminExportComplianceSeedH2Test {
             null,
             messageApplicationService,
             fileService,
-            chatRepository,
-            new ChatRetentionPolicyRepository(ds)
+            new JdbcChatPersistenceAdapter(chatRepository),
+            new JdbcChatRetentionPolicyAdapter(new ChatRetentionPolicyRepository(ds))
         );
     }
 

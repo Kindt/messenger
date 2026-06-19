@@ -3,6 +3,7 @@ package com.avandocmsg.messenger.api.directory;
 import com.avandocmsg.messenger.api.auth.policy.AuthPolicyRepository;
 import com.avandocmsg.messenger.api.auth.policy.AuthProviderEntry;
 import com.avandocmsg.messenger.api.auth.policy.OrgAuthPolicyRow;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrganizationLookupAdapter;
 import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcDirectorySyncRunRepositoryAdapter;
@@ -97,7 +98,7 @@ class DirectorySyncServiceH2Test {
         var userRepo = new JdbcOrgUserDirectoryAdapter(new UserRepository(ds));
         ldapClient = new StubLdapClient();
         service = new DirectorySyncService(
-            authPolicyRepository, orgRepo, runRepo, userRepo, ldapClient, UuidGenerator.standard());
+            authPolicyRepository, new JdbcOrganizationLookupAdapter(orgRepo), runRepo, userRepo, ldapClient, UuidGenerator.standard());
 
         var ldapProvider = new AuthProviderEntry(
             "ldap1", "ldap", "corp", "Corp LDAP", 0, true, null, "applied", null,

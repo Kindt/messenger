@@ -10,12 +10,34 @@ import com.avandocmsg.messenger.core.application.MessageDeleteCoordinator;
 import com.avandocmsg.messenger.core.application.MessagePinCoordinator;
 import com.avandocmsg.messenger.core.application.MessageReactionCoordinator;
 import com.avandocmsg.messenger.core.application.MessageSendCoordinator;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatBanAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcConferenceAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcDeviceAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcLiveSessionAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatReadStateAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRetentionPolicyAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcLegalHoldAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageReadReceiptAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcMigrationImportJobAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrganizationLookupAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcRetentionPolicyAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcUserLookupAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcBlockRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcContactRepositoryAdapter;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
+import com.avandocmsg.messenger.api.repository.ChatBanRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
+import com.avandocmsg.messenger.api.repository.ExportJobRepository;
 import com.avandocmsg.messenger.api.repository.FilePublicLinkRepository;
+import com.avandocmsg.messenger.api.repository.LegalHoldRepository;
+import com.avandocmsg.messenger.api.repository.OrganizationRepository;
+import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.FilePublicLinkPortAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcFileMetadataAdapter;
@@ -282,5 +304,76 @@ public final class CoreModule {
             return NoOpReadCacheAdapter.INSTANCE;
         }
         return new RedisReadCacheAdapter(redis, appConfig);
+    }
+
+    public static com.avandocmsg.messenger.core.port.ChatPersistencePort chatPersistencePort(ChatRepository chatRepository) {
+        return new JdbcChatPersistenceAdapter(chatRepository);
+    }
+
+    public static com.avandocmsg.messenger.core.port.ChatReadStatePort chatReadStatePort(DataSource dataSource) {
+        return new JdbcChatReadStateAdapter(dataSource);
+    }
+
+    public static com.avandocmsg.messenger.core.port.ChatReadStatePort chatReadStatePort(
+        com.avandocmsg.messenger.api.repository.ChatReadRepository legacy) {
+        return new JdbcChatReadStateAdapter(legacy);
+    }
+
+    public static com.avandocmsg.messenger.core.port.MessageReadReceiptPort messageReadReceiptPort(DataSource dataSource) {
+        return new JdbcMessageReadReceiptAdapter(dataSource);
+    }
+
+    public static com.avandocmsg.messenger.core.port.UserLookupPort userLookupPort(UserRepository userRepository) {
+        return new JdbcUserLookupAdapter(userRepository);
+    }
+
+    public static com.avandocmsg.messenger.core.port.ChatBanPort chatBanPort(ChatBanRepository chatBanRepository) {
+        return new JdbcChatBanAdapter(chatBanRepository);
+    }
+
+    public static com.avandocmsg.messenger.core.port.AuditPort auditPort(AuditRepository auditRepository) {
+        return new JdbcAuditAdapter(auditRepository);
+    }
+
+    public static com.avandocmsg.messenger.core.port.ExportJobPort exportJobPort(ExportJobRepository exportJobRepository) {
+        return new JdbcExportJobAdapter(exportJobRepository);
+    }
+
+    public static com.avandocmsg.messenger.core.port.RetentionPolicyPort retentionPolicyPort(
+        RetentionPolicyRepository retentionPolicyRepository) {
+        return new JdbcRetentionPolicyAdapter(retentionPolicyRepository);
+    }
+
+    public static com.avandocmsg.messenger.core.port.ChatRetentionPolicyPort chatRetentionPolicyPort(
+        ChatRetentionPolicyRepository chatRetentionPolicyRepository) {
+        return new JdbcChatRetentionPolicyAdapter(chatRetentionPolicyRepository);
+    }
+
+    public static com.avandocmsg.messenger.core.port.LegalHoldPort legalHoldPort(LegalHoldRepository legalHoldRepository) {
+        return new JdbcLegalHoldAdapter(legalHoldRepository);
+    }
+
+    public static com.avandocmsg.messenger.core.port.OrganizationLookupPort organizationLookupPort(
+        OrganizationRepository organizationRepository) {
+        return new JdbcOrganizationLookupAdapter(organizationRepository);
+    }
+
+    public static com.avandocmsg.messenger.core.port.MigrationImportJobPort migrationImportJobPort(DataSource dataSource) {
+        return new JdbcMigrationImportJobAdapter(dataSource);
+    }
+
+    public static com.avandocmsg.messenger.core.port.ConferencePort conferencePort(
+        com.avandocmsg.messenger.api.repository.ConferenceRepository conferenceRepository) {
+        return new JdbcConferenceAdapter(conferenceRepository);
+    }
+
+    public static com.avandocmsg.messenger.core.port.LiveSessionPort liveSessionPort(
+        com.avandocmsg.messenger.api.repository.LiveSessionRepository liveSessionRepository) {
+        return new JdbcLiveSessionAdapter(liveSessionRepository);
+    }
+
+    public static com.avandocmsg.messenger.core.port.DevicePort devicePort(DataSource dataSource, Clock clock,
+                                                                           UuidGenerator uuidGenerator) {
+        return new JdbcDeviceAdapter(dataSource, clock, uuidGenerator);
     }
 }

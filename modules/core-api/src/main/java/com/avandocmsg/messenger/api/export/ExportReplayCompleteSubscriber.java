@@ -1,6 +1,6 @@
 package com.avandocmsg.messenger.api.export;
 
-import com.avandocmsg.messenger.api.repository.ExportJobRepository;
+import com.avandocmsg.messenger.core.port.ExportJobPort;
 import com.avandocmsg.messenger.common.dto.ExportReplayCompleteEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,11 +21,11 @@ public final class ExportReplayCompleteSubscriber implements AutoCloseable {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     static final String QUEUE_GROUP = "core-api-export-complete";
 
-    private final ExportJobRepository exportJobRepository;
+    private final ExportJobPort exportJobPort;
     private final Dispatcher dispatcher;
 
-    public ExportReplayCompleteSubscriber(Connection connection, ExportJobRepository exportJobRepository) {
-        this.exportJobRepository = exportJobRepository;
+    public ExportReplayCompleteSubscriber(Connection connection, ExportJobPort exportJobPort) {
+        this.exportJobPort = exportJobPort;
         this.dispatcher = connection.createDispatcher(this::onMessage);
     }
 
@@ -46,7 +46,7 @@ public final class ExportReplayCompleteSubscriber implements AutoCloseable {
                 log.warn("Export complete event has invalid jobId: {}", event.jobId());
                 return;
             }
-            if (exportJobRepository.applyCompleteIfPending(
+            if (exportJobPort.applyCompleteIfPending(
                 jobId, event.status(), event.outputPath(), event.messageTtlFilterApplied())) {
                 log.info("export_jobs synced from NATS jobId={} status={}", jobId, event.status());
             } else {

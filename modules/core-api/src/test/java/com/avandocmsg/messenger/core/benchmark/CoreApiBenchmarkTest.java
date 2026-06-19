@@ -26,7 +26,6 @@ import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
