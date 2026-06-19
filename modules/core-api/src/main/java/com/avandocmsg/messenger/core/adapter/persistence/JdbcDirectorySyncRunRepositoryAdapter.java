@@ -1,6 +1,5 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
-import com.avandocmsg.messenger.api.directory.DirectorySyncRunRepository;
 import com.avandocmsg.messenger.core.port.DirectorySyncRunRepositoryPort;
 
 import java.util.Optional;
@@ -9,9 +8,9 @@ import java.util.UUID;
 /** JDBC adapter for {@link DirectorySyncRunRepositoryPort}. */
 public final class JdbcDirectorySyncRunRepositoryAdapter implements DirectorySyncRunRepositoryPort {
 
-    private final DirectorySyncRunRepository repository;
+    private final JdbcDirectorySyncRunJdbcRepository repository;
 
-    public JdbcDirectorySyncRunRepositoryAdapter(DirectorySyncRunRepository repository) {
+    public JdbcDirectorySyncRunRepositoryAdapter(JdbcDirectorySyncRunJdbcRepository repository) {
         this.repository = repository;
     }
 

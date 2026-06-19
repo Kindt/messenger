@@ -36,6 +36,7 @@ import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRepositoryAdapt
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcFileMetadataAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrganizationRepositoryAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcDirectorySyncRunJdbcRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcDirectorySyncRunRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrgUserDirectoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcScimGroupRepositoryAdapter;
@@ -212,7 +213,7 @@ public final class CoreModule {
 
     public static DirectorySyncRunRepositoryPort directorySyncRunRepositoryPort(DataSource dataSource) {
         return new JdbcDirectorySyncRunRepositoryAdapter(
-            new com.avandocmsg.messenger.api.directory.DirectorySyncRunRepository(dataSource));
+            new JdbcDirectorySyncRunJdbcRepository(dataSource));
     }
 
     public static MessageReactionCoordinator messageReactionCoordinator(DataSource dataSource, NatsOutboundPort natsOutbound) {
