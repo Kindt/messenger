@@ -11,6 +11,7 @@ import com.avandocmsg.messenger.core.application.MessagePinCoordinator;
 import com.avandocmsg.messenger.core.application.MessageReactionCoordinator;
 import com.avandocmsg.messenger.core.application.MessageSendCoordinator;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcBlockRepositoryAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcContactRepositoryAdapter;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.FilePublicLinkRepository;
@@ -35,6 +36,7 @@ import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
 import com.avandocmsg.messenger.core.application.UserApplicationService;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
+import com.avandocmsg.messenger.core.port.ContactRepositoryPort;
 import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 import com.avandocmsg.messenger.core.port.FileMetadataPort;
 import com.avandocmsg.messenger.core.port.MessageQueryPort;
@@ -153,6 +155,10 @@ public final class CoreModule {
 
     public static BlockRepositoryPort blockRepositoryPort(BlockRepository blockRepository) {
         return new JdbcBlockRepositoryAdapter(blockRepository);
+    }
+
+    public static ContactRepositoryPort contactRepositoryPort(DataSource dataSource) {
+        return new JdbcContactRepositoryAdapter(dataSource);
     }
 
     public static MessagePinCoordinator messagePinCoordinator(DataSource dataSource, NatsOutboundPort natsOutbound) {

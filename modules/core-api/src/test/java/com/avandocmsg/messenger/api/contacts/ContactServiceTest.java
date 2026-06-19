@@ -2,6 +2,9 @@ package com.avandocmsg.messenger.api.contacts;
 
 import com.avandocmsg.messenger.api.contacts.dto.ContactResponse;
 import com.avandocmsg.messenger.api.users.dto.UserProfile;
+import com.avandocmsg.messenger.core.domain.Contact;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.ContactRepositoryPort;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -11,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ContactServiceTest {
 
-    private final StubContactRepository contactRepo = new StubContactRepository();
+    private final StubContactPort contactRepo = new StubContactPort();
     private final StubUserRepository userRepo = new StubUserRepository();
     private final StubBlockPort blockRepo = new StubBlockPort();
     private final ContactService contactService = new ContactService(contactRepo, userRepo, blockRepo);
@@ -23,7 +26,7 @@ class ContactServiceTest {
     @Test
     void list_returnsContacts() {
         contactRepo.contacts.computeIfAbsent(userId, k -> new ArrayList<>())
-            .add(new ContactResponse(contactId.toString(), "john", "John", "+1234567890", now));
+            .add(new Contact(UserId.of(contactId), "john", "John", "+1234567890", now));
 
         var result = contactService.list(userId);
         assertEquals(1, result.size());
@@ -104,33 +107,31 @@ class ContactServiceTest {
         }
     }
 
-    static class StubContactRepository extends com.avandocmsg.messenger.api.repository.ContactRepository {
-        final Map<UUID, List<ContactResponse>> contacts = new HashMap<>();
+    static class StubContactPort implements ContactRepositoryPort {
+        final Map<UUID, List<Contact>> contacts = new HashMap<>();
         final Map<UUID, List<UUID>> foundByHash = new HashMap<>();
         final Set<UUID> removable = new HashSet<>();
 
-        StubContactRepository() { super(null); }
-
         @Override
-        public List<ContactResponse> list(UUID userId) {
-            return contacts.getOrDefault(userId, List.of());
+        public List<Contact> list(UserId userId) {
+            return contacts.getOrDefault(userId.value(), List.of());
         }
 
         @Override
-        public boolean add(UUID userId, UUID contactUserId) {
-            contacts.computeIfAbsent(userId, k -> new ArrayList<>())
-                .add(new ContactResponse(contactUserId.toString(), "user", "User", null, null));
+        public boolean add(UserId userId, UserId contactUserId) {
+            contacts.computeIfAbsent(userId.value(), k -> new ArrayList<>())
+                .add(new Contact(contactUserId, "user", "User", null, null));
             return true;
         }
 
         @Override
-        public boolean remove(UUID userId, UUID contactUserId) {
-            return removable.contains(contactUserId);
+        public boolean remove(UserId userId, UserId contactUserId) {
+            return removable.contains(contactUserId.value());
         }
 
         @Override
-        public List<UUID> findByPhoneHashes(UUID userId, List<String> phoneHashes) {
-            return foundByHash.getOrDefault(userId, List.of());
+        public List<UUID> findByPhoneHashes(UserId userId, List<String> phoneHashes) {
+            return foundByHash.getOrDefault(userId.value(), List.of());
         }
     }
 

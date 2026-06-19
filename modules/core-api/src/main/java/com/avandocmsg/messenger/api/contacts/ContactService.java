@@ -2,10 +2,11 @@ package com.avandocmsg.messenger.api.contacts;
 
 import com.avandocmsg.messenger.api.contacts.dto.ContactResponse;
 import com.avandocmsg.messenger.api.contacts.dto.ImportContactsResponse;
+import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.domain.Contact;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
-import com.avandocmsg.messenger.api.repository.ContactRepository;
-import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.port.ContactRepositoryPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,19 +16,21 @@ import java.util.UUID;
 public class ContactService {
     private static final Logger log = LoggerFactory.getLogger(ContactService.class);
 
-    private final ContactRepository contactRepository;
+    private final ContactRepositoryPort contactRepositoryPort;
     private final UserRepository userRepository;
     private final BlockRepositoryPort blockRepositoryPort;
 
-    public ContactService(ContactRepository contactRepository, UserRepository userRepository,
+    public ContactService(ContactRepositoryPort contactRepositoryPort, UserRepository userRepository,
                           BlockRepositoryPort blockRepositoryPort) {
-        this.contactRepository = contactRepository;
+        this.contactRepositoryPort = contactRepositoryPort;
         this.userRepository = userRepository;
         this.blockRepositoryPort = blockRepositoryPort;
     }
 
     public List<ContactResponse> list(UUID userId) {
-        return contactRepository.list(userId);
+        return contactRepositoryPort.list(UserId.of(userId)).stream()
+            .map(ContactService::toResponse)
+            .toList();
     }
 
     public boolean add(UUID userId, UUID contactUserId) {
@@ -42,23 +45,33 @@ public class ContactService {
         if (blockRepositoryPort.exists(user, contact) || blockRepositoryPort.exists(contact, user)) {
             return false;
         }
-        return contactRepository.add(userId, contactUserId);
+        return contactRepositoryPort.add(user, contact);
     }
 
     public boolean remove(UUID userId, UUID contactUserId) {
-        return contactRepository.remove(userId, contactUserId);
+        return contactRepositoryPort.remove(UserId.of(userId), UserId.of(contactUserId));
     }
 
     public ImportContactsResponse importByPhoneHashes(UUID userId, List<String> phoneHashes) {
-        var foundIds = contactRepository.findByPhoneHashes(userId, phoneHashes);
+        var owner = UserId.of(userId);
+        var foundIds = contactRepositoryPort.findByPhoneHashes(owner, phoneHashes);
         var contacts = foundIds.stream()
             .map(id -> {
-                contactRepository.add(userId, id);
+                contactRepositoryPort.add(owner, UserId.of(id));
                 return userRepository.findById(id).orElse(null);
             })
             .filter(u -> u != null)
             .map(u -> new ContactResponse(u.id(), u.username(), u.displayName(), u.phone(), null))
             .toList();
         return new ImportContactsResponse(contacts);
+    }
+
+    private static ContactResponse toResponse(Contact contact) {
+        return new ContactResponse(
+            contact.contactUserId().value().toString(),
+            contact.username(),
+            contact.displayName(),
+            contact.phone(),
+            contact.addedAt());
     }
 }

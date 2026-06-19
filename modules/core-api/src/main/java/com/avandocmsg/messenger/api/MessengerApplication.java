@@ -65,12 +65,12 @@ import com.avandocmsg.messenger.api.mls.SessionRepository;
 import com.avandocmsg.messenger.core.adapter.mls.OpenMlsBindingFactory;
 import com.avandocmsg.messenger.core.bootstrap.CoreModule;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
+import com.avandocmsg.messenger.core.port.ContactRepositoryPort;
 import com.avandocmsg.messenger.api.repository.ChatBanRepository;
 import com.avandocmsg.messenger.api.admin.PurgeStatusService;
 import com.avandocmsg.messenger.api.repository.LegalHoldRepository;
 import com.avandocmsg.messenger.api.repository.ChatReadRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.ContactRepository;
 import com.avandocmsg.messenger.api.repository.FileRepository;
 import com.avandocmsg.messenger.api.repository.MessageReadReceiptRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageReadRepository;
@@ -111,7 +111,7 @@ public class MessengerApplication {
     private final MinioClient minioClient;
     private final TokenValidator tokenValidator;
     private final UserRepository userRepository;
-    private final ContactRepository contactRepository;
+    private final ContactRepositoryPort contactRepositoryPort;
     private final BlockRepositoryPort blockRepositoryPort;
     private final ChatRepository chatRepository;
     private final JdbcMessageRepositoryAdapter messagePersistence;
@@ -171,7 +171,7 @@ public class MessengerApplication {
         this.uuidGenerator = UuidGenerator.standard();
         this.tokenValidator = new TokenValidator(appConfig, clock);
         this.userRepository = new UserRepository(dataSource);
-        this.contactRepository = new ContactRepository(dataSource);
+        this.contactRepositoryPort = CoreModule.contactRepositoryPort(dataSource);
         this.blockRepositoryPort = CoreModule.blockRepositoryPort(dataSource);
         this.chatRepository = new ChatRepository(dataSource, readDs, clock, uuidGenerator,
             appConfig.apiJdbcQueryTimeoutSeconds());
@@ -345,7 +345,7 @@ public class MessengerApplication {
             : AuthRateLimiter.noop();
         this.readCachePort = CoreModule.readCachePort(
             redisConfig != null ? redisConfig.sync() : null, appConfig);
-        var contactService = new ContactService(contactRepository, userRepository, blockRepositoryPort);
+        var contactService = new ContactService(contactRepositoryPort, userRepository, blockRepositoryPort);
         var natsOutbound = new NatsConnectionOutbound(natsConnection, jetStreamOptional());
         var adminManifest = AdminUiManifest.load(MessengerApplication.class.getClassLoader());
         var adminServerStatsService = new AdminServerStatsService(dataSource, appConfig, natsOutbound, redisProbe);
@@ -451,7 +451,7 @@ public class MessengerApplication {
 
         var jerseyServlet = new ServletContainer(
             new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
-                userRepository, contactRepository, contactService,
+                userRepository, contactRepositoryPort, contactService,
                 chatRepository, chatService, chatReadRepository, readReceiptService, chatApplicationService,
                 messageApplicationService, userApplicationService, fileApplicationService,
                 organizationApplicationService,

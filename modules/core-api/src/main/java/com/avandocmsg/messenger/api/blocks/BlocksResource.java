@@ -4,7 +4,7 @@ import com.avandocmsg.messenger.api.blocks.dto.BlockUserRequest;
 import com.avandocmsg.messenger.api.blocks.dto.BlockedUserResponse;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
-import com.avandocmsg.messenger.api.repository.ContactRepository;
+import com.avandocmsg.messenger.core.port.ContactRepositoryPort;
 import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
@@ -36,17 +36,17 @@ public class BlocksResource {
 
     private final BlockRepositoryPort blockRepositoryPort;
     private final UserRepository userRepository;
-    private final ContactRepository contactRepository;
+    private final ContactRepositoryPort contactRepositoryPort;
     private final UserMessageSource messages;
 
     @Inject
     public BlocksResource(BlockRepositoryPort blockRepositoryPort,
                           UserRepository userRepository,
-                          ContactRepository contactRepository,
+                          ContactRepositoryPort contactRepositoryPort,
                           UserMessageSource messages) {
         this.blockRepositoryPort = blockRepositoryPort;
         this.userRepository = userRepository;
-        this.contactRepository = contactRepository;
+        this.contactRepositoryPort = contactRepositoryPort;
         this.messages = messages;
     }
 
@@ -92,8 +92,8 @@ public class BlocksResource {
                 .entity(new ApiError(500, messages.get("error.blocks.block_failed")))
                 .build();
         }
-        contactRepository.remove(blockerId, targetId);
-        contactRepository.remove(targetId, blockerId);
+        contactRepositoryPort.remove(UserId.of(blockerId), UserId.of(targetId));
+        contactRepositoryPort.remove(UserId.of(targetId), UserId.of(blockerId));
         return Response.status(Response.Status.CREATED).build();
     }
 

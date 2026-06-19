@@ -84,7 +84,7 @@ import com.avandocmsg.messenger.api.admin.PurgeStatusService;
 import com.avandocmsg.messenger.api.repository.LegalHoldRepository;
 import com.avandocmsg.messenger.api.repository.ChatReadRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.ContactRepository;
+import com.avandocmsg.messenger.core.port.ContactRepositoryPort;
 import com.avandocmsg.messenger.api.repository.FileRepository;
 import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
@@ -119,7 +119,7 @@ public class JerseyConfig extends ResourceConfig {
                         TokenValidator tokenValidator, AuthService authService,
                         AuthRateLimiter authRateLimiter,
                         UserRepository userRepository,
-                        ContactRepository contactRepository, ContactService contactService,
+                        ContactRepositoryPort contactRepositoryPort, ContactService contactService,
                         ChatRepository chatRepository, ChatService chatService,
                         ChatReadRepository chatReadRepository, ReadReceiptService readReceiptService,
                         ChatApplicationService chatApplicationService,
@@ -180,7 +180,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(authService).to(AuthService.class);
                 bind(authRateLimiter).to(AuthRateLimiter.class);
                 bind(userRepository).to(UserRepository.class);
-                bind(contactRepository).to(ContactRepository.class);
+                bind(contactRepositoryPort).to(ContactRepositoryPort.class);
                 bind(contactService).to(ContactService.class);
                 bind(chatRepository).to(ChatRepository.class);
                 bind(chatService).to(ChatService.class);
