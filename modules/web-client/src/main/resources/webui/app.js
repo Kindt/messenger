@@ -272,6 +272,8 @@
     savedChatId: null,
     myPresence: "online",
     myCustomStatus: "",
+    myDndUntil: null,
+    myDndDurationPreset: "manual",
     blockedUsers: null,
     sidebarMode: "chats",
     sidebarFolder: "all",
@@ -994,6 +996,7 @@
       if (p) {
         if (p.presence_status) state.myPresence = p.presence_status;
         if (p.custom_status_text) state.myCustomStatus = p.custom_status_text;
+        state.myDndUntil = p.dnd_until != null ? p.dnd_until : null;
         state.myDisplayName = p.display_name || p.username || "";
         if (opts.applyLocale) {
           await applyProfileLocale(p);
@@ -1994,6 +1997,32 @@
     }
   }
 
+  function instantToMs(v) {
+    if (v == null || v === "") return null;
+    if (typeof v === "number") return v < 1e12 ? v * 1000 : v;
+    var d = new Date(v);
+    return isNaN(d.getTime()) ? null : d.getTime();
+  }
+
+  function dndUntilIso(ms) {
+    if (!ms) return null;
+    return new Date(ms).toISOString();
+  }
+
+  function computeDndUntilMs(preset) {
+    var now = Date.now();
+    if (preset === "30m") return now + 30 * 60 * 1000;
+    if (preset === "1h") return now + 60 * 60 * 1000;
+    if (preset === "4h") return now + 4 * 60 * 60 * 1000;
+    if (preset === "tomorrow") {
+      var d = new Date();
+      d.setDate(d.getDate() + 1);
+      d.setHours(9, 0, 0, 0);
+      return d.getTime();
+    }
+    return null;
+  }
+
   async function updatePresence(status) {
     if (!state.tokens || !status) return;
     state.busy = true;
@@ -2003,6 +2032,12 @@
       var body = { presence_status: status };
       if (state.myCustomStatus) {
         body.custom_status_text = state.myCustomStatus;
+      }
+      if (status === "dnd") {
+        var dndMs = computeDndUntilMs(state.myDndDurationPreset);
+        if (dndMs) {
+          body.dnd_until = dndUntilIso(dndMs);
+        }
       }
       var p = await apiJson("/users/me/presence", {
         method: "PATCH",
@@ -2015,6 +2050,42 @@
       }
       if (p && p.custom_status_text) {
         state.myCustomStatus = p.custom_status_text;
+      }
+      if (p) {
+        state.myDndUntil = p.dnd_until != null ? p.dnd_until : null;
+      }
+    } catch (e) {
+      state.error = e.message || L("profile.presenceUpdateFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function updateDndSchedule(preset) {
+    if (!state.tokens || state.myPresence !== "dnd") return;
+    state.myDndDurationPreset = preset || "manual";
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      var dndMs = computeDndUntilMs(preset);
+      var body = { presence_status: "dnd" };
+      if (dndMs) {
+        body.dnd_until = dndUntilIso(dndMs);
+      }
+      var p = await apiJson("/users/me/presence", {
+        method: "PATCH",
+        jsonBody: body,
+      });
+      if (p) {
+        if (p.presence_status) state.myPresence = p.presence_status;
+        if (p.custom_status_text) state.myCustomStatus = p.custom_status_text;
+        state.myDndUntil = p.dnd_until != null ? p.dnd_until : null;
+      } else if (dndMs) {
+        state.myDndUntil = dndUntilIso(dndMs);
+      } else {
+        state.myDndUntil = null;
       }
     } catch (e) {
       state.error = e.message || L("profile.presenceUpdateFailed");
@@ -4197,6 +4268,7 @@
     if (myId && ev.user_id === myId) {
       if (ev.presence_status) state.myPresence = ev.presence_status;
       if (ev.custom_status_text) state.myCustomStatus = ev.custom_status_text;
+      if (ev.dnd_until !== undefined) state.myDndUntil = ev.dnd_until != null ? ev.dnd_until : null;
     }
   }
 
@@ -6968,10 +7040,54 @@
     });
     presSel.disabled = state.busy;
     presSel.onchange = function () {
+      if (presSel.value === "dnd" && state.myPresence !== "dnd") {
+        state.myDndDurationPreset = "1h";
+      }
       updatePresence(presSel.value);
     };
     rowPres.appendChild(presSel);
     panel.appendChild(rowPres);
+
+    if (state.myPresence === "dnd") {
+      var rowDnd = el("div", "settings-row");
+      var dndLabel = document.createElement("label");
+      dndLabel.setAttribute("for", "settings-dnd-duration");
+      dndLabel.textContent = L("ui.settings.dndSchedule");
+      rowDnd.appendChild(dndLabel);
+      var dndSel = document.createElement("select");
+      dndSel.id = "settings-dnd-duration";
+      dndSel.name = "dndDuration";
+      dndSel.className = "settings-select";
+      dndSel.setAttribute("data-testid", "settings-dnd-duration");
+      [
+        { id: "manual", key: "ui.settings.dndUntilManual" },
+        { id: "30m", key: "ui.settings.dndUntil30m" },
+        { id: "1h", key: "ui.settings.dndUntil1h" },
+        { id: "4h", key: "ui.settings.dndUntil4h" },
+        { id: "tomorrow", key: "ui.settings.dndUntilTomorrow" },
+      ].forEach(function (optDef) {
+        var opt = document.createElement("option");
+        opt.value = optDef.id;
+        opt.textContent = L(optDef.key);
+        if (optDef.id === state.myDndDurationPreset) opt.selected = true;
+        dndSel.appendChild(opt);
+      });
+      dndSel.disabled = state.busy;
+      dndSel.onchange = function () {
+        updateDndSchedule(dndSel.value);
+      };
+      rowDnd.appendChild(dndSel);
+      panel.appendChild(rowDnd);
+      if (state.myDndUntil) {
+        panel.appendChild(
+          el(
+            "p",
+            "settings-hint",
+            L("ui.settings.dndUntilActive", { until: formatInstantLabel(state.myDndUntil) })
+          )
+        );
+      }
+    }
 
     var rowCustom = el("div", "settings-row");
     var customLabel = document.createElement("label");

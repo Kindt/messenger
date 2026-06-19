@@ -29,4 +29,3 @@ class RetentionMetricsChunkingTest {
         assertTrue(afterFileRefs >= beforeFileRefs + 1.0);
     }
 }
-

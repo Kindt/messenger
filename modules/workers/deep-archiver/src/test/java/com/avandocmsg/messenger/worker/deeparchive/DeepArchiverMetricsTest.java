@@ -29,4 +29,3 @@ class DeepArchiverMetricsTest {
         assertTrue(afterMsgs >= beforeMsgs + 1.0);
     }
 }
-

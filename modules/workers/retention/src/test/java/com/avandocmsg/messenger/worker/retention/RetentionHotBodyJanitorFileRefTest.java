@@ -14,4 +14,3 @@ class RetentionHotBodyJanitorFileRefTest {
         assertFalse(RetentionHotBodyJanitor.shouldSkipSnapshotForContent(null));
     }
 }
-

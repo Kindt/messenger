@@ -56,4 +56,3 @@ class DeepArchiverWorkerFileRefTest {
         assertEquals(1, DeepArchiverWorker.parseChunkSize("1"));
     }
 }
-

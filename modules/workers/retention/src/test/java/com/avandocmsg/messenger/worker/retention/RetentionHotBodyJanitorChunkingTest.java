@@ -19,4 +19,3 @@ class RetentionHotBodyJanitorChunkingTest {
         assertFalse(RetentionHotBodyJanitor.shouldSkipSnapshotForContent("hello world"));
     }
 }
-

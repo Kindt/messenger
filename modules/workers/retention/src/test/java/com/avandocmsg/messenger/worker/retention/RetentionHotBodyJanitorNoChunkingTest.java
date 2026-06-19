@@ -14,4 +14,3 @@ class RetentionHotBodyJanitorNoChunkingTest {
         assertFalse(RetentionHotBodyJanitor.shouldWriteChunkedSnapshot(2048, 1000));
     }
 }
-
