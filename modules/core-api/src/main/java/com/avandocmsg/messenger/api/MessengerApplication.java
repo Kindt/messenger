@@ -64,7 +64,7 @@ import com.avandocmsg.messenger.api.mls.MlsWireSubscriber;
 import com.avandocmsg.messenger.api.mls.SessionRepository;
 import com.avandocmsg.messenger.core.adapter.mls.OpenMlsBindingFactory;
 import com.avandocmsg.messenger.core.bootstrap.CoreModule;
-import com.avandocmsg.messenger.api.repository.BlockRepository;
+import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import com.avandocmsg.messenger.api.repository.ChatBanRepository;
 import com.avandocmsg.messenger.api.admin.PurgeStatusService;
 import com.avandocmsg.messenger.api.repository.LegalHoldRepository;
@@ -73,8 +73,10 @@ import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ContactRepository;
 import com.avandocmsg.messenger.api.repository.FileRepository;
 import com.avandocmsg.messenger.api.repository.MessageReadReceiptRepository;
-import com.avandocmsg.messenger.api.repository.MessageRepository;
-import com.avandocmsg.messenger.api.repository.MessageMentionRepository;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageReadRepository;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageWriteRepository;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageRepositoryAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageMentionRepositoryAdapter;
 import com.avandocmsg.messenger.core.application.MessageMentionCoordinator;
 import com.avandocmsg.messenger.core.application.MessageSendCoordinator;
 import com.avandocmsg.messenger.api.chats.ReadReceiptService;
@@ -110,9 +112,9 @@ public class MessengerApplication {
     private final TokenValidator tokenValidator;
     private final UserRepository userRepository;
     private final ContactRepository contactRepository;
-    private final BlockRepository blockRepository;
+    private final BlockRepositoryPort blockRepositoryPort;
     private final ChatRepository chatRepository;
-    private final MessageRepository messageRepository;
+    private final JdbcMessageRepositoryAdapter messagePersistence;
     private final FileRepository fileRepository;
     private final ChatBanRepository chatBanRepository;
     private final E2EEService e2eeService;
@@ -170,12 +172,16 @@ public class MessengerApplication {
         this.tokenValidator = new TokenValidator(appConfig, clock);
         this.userRepository = new UserRepository(dataSource);
         this.contactRepository = new ContactRepository(dataSource);
-        this.blockRepository = new BlockRepository(dataSource);
+        this.blockRepositoryPort = CoreModule.blockRepositoryPort(dataSource);
         this.chatRepository = new ChatRepository(dataSource, readDs, clock, uuidGenerator,
             appConfig.apiJdbcQueryTimeoutSeconds());
-        this.messageRepository = new MessageRepository(dataSource, readDs, clock,
-            appConfig.apiJdbcQueryTimeoutSeconds());
-        this.messageRepository.setMentionRepository(new MessageMentionRepository(dataSource));
+        var messageWriteRepo = new JdbcMessageWriteRepository(
+            dataSource, readDs, clock, appConfig.apiJdbcQueryTimeoutSeconds());
+        var messageReadRepo = new JdbcMessageReadRepository(
+            dataSource, readDs, appConfig.apiJdbcQueryTimeoutSeconds());
+        var mentionRepositoryPort = new JdbcMessageMentionRepositoryAdapter(dataSource);
+        this.messagePersistence = new JdbcMessageRepositoryAdapter(
+            messageReadRepo, messageWriteRepo, mentionRepositoryPort);
         this.fileRepository = new FileRepository(dataSource);
         this.chatBanRepository = new ChatBanRepository(dataSource, clock, uuidGenerator);
         this.e2eeService = new E2EEService();
@@ -322,7 +328,9 @@ public class MessengerApplication {
         var retentionPolicyRepository = new RetentionPolicyRepository(dataSource);
         var chatRetentionPolicyRepository = new ChatRetentionPolicyRepository(dataSource);
         var filePublicLinkRepository = new FilePublicLinkRepository(dataSource, this.uuidGenerator);
-        var messageSearchService = new MessageSearchService(appConfig, messageRepository, chatRepository,
+        var messageRepoPort = messagePersistence;
+        var messageQueryPort = messagePersistence;
+        var messageSearchService = new MessageSearchService(appConfig, messageQueryPort, chatRepository,
             solrBinding.client(), solrBinding.cloudMode());
         var chatReadRepository = new ChatReadRepository(dataSource);
         var messageReadReceiptRepository = new MessageReadReceiptRepository(dataSource);
@@ -337,7 +345,7 @@ public class MessengerApplication {
             : AuthRateLimiter.noop();
         this.readCachePort = CoreModule.readCachePort(
             redisConfig != null ? redisConfig.sync() : null, appConfig);
-        var contactService = new ContactService(contactRepository, userRepository, blockRepository);
+        var contactService = new ContactService(contactRepository, userRepository, blockRepositoryPort);
         var natsOutbound = new NatsConnectionOutbound(natsConnection, jetStreamOptional());
         var adminManifest = AdminUiManifest.load(MessengerApplication.class.getClassLoader());
         var adminServerStatsService = new AdminServerStatsService(dataSource, appConfig, natsOutbound, redisProbe);
@@ -350,10 +358,10 @@ public class MessengerApplication {
             fleetHotPlugRegistry,
             appConfig.hotplugHeartbeatTtlMs()
         );
-        var chatService = new ChatService(chatRepository, blockRepository, chatReadRepository,
-            messageRepository, natsOutbound, this.clock, this.uuidGenerator, readCachePort, appConfig);
+        var chatService = new ChatService(chatRepository, blockRepositoryPort, chatReadRepository,
+            messageRepoPort, messageQueryPort, natsOutbound, this.clock, this.uuidGenerator, readCachePort, appConfig);
         var readReceiptService = new ReadReceiptService(messageReadReceiptRepository, chatRepository,
-            messageRepository, chatReadRepository, userRepository, auditRepository, natsOutbound,
+            messageRepoPort, chatReadRepository, userRepository, auditRepository, natsOutbound,
             appConfig, this.clock, readCachePort);
         var mlsGroupStateRepository = new MlsGroupStateRepository(dataSource, this.clock);
         var mlsWirePublisher = new MlsWirePublisher(natsOutbound, appConfig);
@@ -366,7 +374,7 @@ public class MessengerApplication {
             dataSource, this.uuidGenerator, readCachePort, appConfig, natsOutbound);
         var objectStoragePort = CoreModule.objectStoragePort(appConfig, minioClient, fileProxy);
         var fileApplicationService = CoreModule.fileApplicationService(
-            dataSource, messageRepository, objectStoragePort, this.uuidGenerator, appConfig);
+            dataSource, messageQueryPort, objectStoragePort, this.uuidGenerator, appConfig);
         var organizationApplicationService = CoreModule.organizationApplicationService(dataSource, this.uuidGenerator);
         var publicLinkPort = CoreModule.publicLinkPort(filePublicLinkRepository);
         var legalHoldRepository = new LegalHoldRepository(dataSource);
@@ -375,20 +383,24 @@ public class MessengerApplication {
             () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent();
         var indexerEventPublisher = CoreModule.indexerEventPublisher(natsOutbound, indexerAvailable);
         var messageSendCoordinator = new MessageSendCoordinator(
-            CoreModule.messageRepositoryPort(dataSource),
-            chatRepository, mlsService, mlsMigrationService, natsOutbound,
+            messagePersistence,
+            CoreModule.chatRepositoryPort(dataSource),
+            mlsService, mlsMigrationService, natsOutbound,
             this.uuidGenerator, readCachePort,
-            new MessageMentionCoordinator(chatRepository, new MessageMentionRepository(dataSource), natsOutbound));
+            new MessageMentionCoordinator(
+                CoreModule.chatRepositoryPort(dataSource),
+                new JdbcMessageMentionRepositoryAdapter(dataSource),
+                natsOutbound));
         var messageEditCoordinator = CoreModule.messageEditCoordinator(dataSource, indexerEventPublisher);
         var messageDeleteCoordinator = CoreModule.messageDeleteCoordinator(
             dataSource, natsOutbound, indexerEventPublisher);
         var messageReactionCoordinator = CoreModule.messageReactionCoordinator(dataSource, natsOutbound);
         var messagePinCoordinator = CoreModule.messagePinCoordinator(dataSource, natsOutbound);
         var messageApplicationService = CoreModule.messageApplicationService(
-            dataSource, chatRepository, blockRepository, messageSendCoordinator, messageEditCoordinator,
+            dataSource, chatRepository, blockRepositoryPort, messageSendCoordinator, messageEditCoordinator,
             messageDeleteCoordinator, messageReactionCoordinator, messagePinCoordinator,
-            messageRepository, mlsService);
-        var fileService = new FileService(fileApplicationService, messageRepository);
+            messageQueryPort, mlsService);
+        var fileService = new FileService(fileApplicationService, messageQueryPort);
         var exportComplianceSeed = new AdminExportComplianceSeed(
             chatService, messageApplicationService, fileService, chatRepository, chatRetentionPolicyRepository);
         var chatBanService = new ChatBanService(chatBanRepository, chatRepository);
@@ -443,8 +455,8 @@ public class MessengerApplication {
                 chatRepository, chatService, chatReadRepository, readReceiptService, chatApplicationService,
                 messageApplicationService, userApplicationService, fileApplicationService,
                 organizationApplicationService,
-                blockRepository,
-                messageRepository, natsConnection, natsOutbound,
+                blockRepositoryPort,
+                messagePersistence, messagePersistence, natsConnection, natsOutbound,
                 minioClient, fileRepository, fileService,
                 chatBanRepository, chatBanService,
                 e2eeService, keyPackageRepository, sessionRepository, mlsService, mlsGroupManager,

@@ -3,10 +3,15 @@ package com.avandocmsg.messenger.api.chats;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
 import com.avandocmsg.messenger.api.chats.dto.ChatResponse;
-import com.avandocmsg.messenger.api.repository.BlockRepository;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import com.avandocmsg.messenger.api.repository.ChatReadRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.MessageId;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.MessageQueryPort;
+import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.common.dto.TypingEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.application.ReadCacheCoordinator;
@@ -33,23 +38,26 @@ public class ChatService {
     };
 
     private final ChatRepository chatRepository;
-    private final BlockRepository blockRepository;
+    private final BlockRepositoryPort blockRepositoryPort;
     private final ChatReadRepository chatReadRepository;
-    private final MessageRepository messageRepository;
+    private final MessageRepositoryPort messageRepositoryPort;
+    private final MessageQueryPort messageQueryPort;
     private final NatsOutboundPort natsOutbound;
     private final Clock clock;
     private final UuidGenerator uuidGenerator;
     private final ReadCachePort readCachePort;
     private final AppConfig appConfig;
 
-    public ChatService(ChatRepository chatRepository, BlockRepository blockRepository,
-                       ChatReadRepository chatReadRepository, MessageRepository messageRepository,
+    public ChatService(ChatRepository chatRepository, BlockRepositoryPort blockRepositoryPort,
+                       ChatReadRepository chatReadRepository, MessageRepositoryPort messageRepositoryPort,
+                       MessageQueryPort messageQueryPort,
                        NatsOutboundPort natsOutbound, Clock clock, UuidGenerator uuidGenerator,
                        ReadCachePort readCachePort, AppConfig appConfig) {
         this.chatRepository = chatRepository;
-        this.blockRepository = blockRepository;
+        this.blockRepositoryPort = blockRepositoryPort;
         this.chatReadRepository = chatReadRepository;
-        this.messageRepository = messageRepository;
+        this.messageRepositoryPort = messageRepositoryPort;
+        this.messageQueryPort = messageQueryPort;
         this.natsOutbound = natsOutbound;
         this.clock = clock;
         this.uuidGenerator = uuidGenerator;
@@ -107,7 +115,8 @@ public class ChatService {
         if (existing.isPresent()) {
             return chatRepository.findById(existing.get(), user1Id).orElse(null);
         }
-        if (blockRepository.exists(user1Id, user2Id) || blockRepository.exists(user2Id, user1Id)) {
+        if (blockRepositoryPort.exists(UserId.of(user1Id), UserId.of(user2Id))
+            || blockRepositoryPort.exists(UserId.of(user2Id), UserId.of(user1Id))) {
             return null;
         }
         var chatId = uuidGenerator.randomUuid();
@@ -190,7 +199,7 @@ public class ChatService {
         if (role == null || (!role.equals("owner") && !role.equals("admin"))) {
             return false;
         }
-        if (blockRepository.exists(targetUserId, actorId)) {
+        if (blockRepositoryPort.exists(UserId.of(targetUserId), UserId.of(actorId))) {
             return false;
         }
         var ok = chatRepository.addMember(chatId, targetUserId, "member");
@@ -254,13 +263,13 @@ public class ChatService {
         }
         UUID markId = upToMessageId;
         if (markId == null) {
-            markId = messageRepository.findLatestMessageId(chatId).orElse(null);
+            markId = messageQueryPort.findLatestMessageId(ChatId.of(chatId)).map(MessageId::value).orElse(null);
         }
         if (markId == null) {
             return true;
         }
-        var msg = messageRepository.findById(markId).orElse(null);
-        if (msg == null || !msg.chatId().equals(chatId.toString())) {
+        var msg = messageRepositoryPort.findById(MessageId.of(markId)).orElse(null);
+        if (msg == null || !msg.chatId().value().equals(chatId)) {
             return false;
         }
         var ok = chatReadRepository.upsertLastRead(userId, chatId, markId);

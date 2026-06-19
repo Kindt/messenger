@@ -8,6 +8,7 @@ import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -59,6 +60,11 @@ class ChatApplicationServiceTest {
             @Override
             public Optional<UserId> findOtherP2pMember(ChatId c, UserId u) {
                 return Optional.empty();
+            }
+
+            @Override
+            public List<UserId> listMemberUserIds(ChatId c) {
+                return List.of();
             }
         };
     }

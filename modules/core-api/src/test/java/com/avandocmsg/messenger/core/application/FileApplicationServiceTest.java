@@ -1,7 +1,11 @@
 package com.avandocmsg.messenger.core.application;
 
-import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.FileId;
+import com.avandocmsg.messenger.core.domain.MessageId;
+import com.avandocmsg.messenger.core.domain.StoredFile;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.domain.StoredFile;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.FileMetadataPort;
@@ -26,10 +30,10 @@ class FileApplicationServiceTest {
     private final UUID viewerId = UUID.randomUUID();
 
     private final StubFilePort filePort = new StubFilePort();
-    private final StubMessageRepository messageRepo = new StubMessageRepository();
+    private final StubMessageQueryPort messageQuery = new StubMessageQueryPort();
     private final StubObjectStorage storage = new StubObjectStorage();
     private final FileApplicationService service = new FileApplicationService(
-        filePort, messageRepo, storage, () -> fileId, 1024, false);
+        filePort, messageQuery, storage, () -> fileId, 1024, false);
 
     @Test
     void getMetadataForUser_returnsFileForOwner() {
@@ -42,7 +46,7 @@ class FileApplicationServiceTest {
     @Test
     void getMetadataForUser_returnsFileForChatMember() {
         filePort.file = sampleFile();
-        messageRepo.mayAccess = true;
+        messageQuery.mayAccess = true;
 
         var result = service.getMetadataForUser(UserId.of(viewerId), FileId.of(fileId));
         assertTrue(result.isPresent());
@@ -51,7 +55,7 @@ class FileApplicationServiceTest {
     @Test
     void getMetadataForUser_deniesOutsider() {
         filePort.file = sampleFile();
-        messageRepo.mayAccess = false;
+        messageQuery.mayAccess = false;
 
         assertTrue(service.getMetadataForUser(UserId.of(viewerId), FileId.of(fileId)).isEmpty());
     }
@@ -103,7 +107,7 @@ class FileApplicationServiceTest {
     @Test
     void upload_dedup_reusesBlobWithoutSecondPut() throws IOException {
         var dedupService = new FileApplicationService(
-            filePort, messageRepo, storage, () -> UUID.randomUUID(), 1024, true);
+            filePort, messageQuery, storage, () -> UUID.randomUUID(), 1024, true);
         var data = "same-content".getBytes(StandardCharsets.UTF_8);
         var first = dedupService.uploadStream(
             new ByteArrayInputStream(data), "a.txt", "text/plain", UserId.of(ownerId)).orElseThrow();
@@ -208,16 +212,57 @@ class FileApplicationServiceTest {
         }
     }
 
-    static final class StubMessageRepository extends MessageRepository {
+    static final class StubMessageQueryPort implements MessageQueryPort {
         boolean mayAccess = false;
 
-        StubMessageRepository() {
-            super(null, java.time.Clock.systemUTC());
+        @Override
+        public java.util.List<com.avandocmsg.messenger.api.messages.dto.MessageResponse> findByChatId(
+            UUID chatId, int limit, UUID before, UUID filterUserId, UUID threadId) {
+            return java.util.List.of();
+        }
+
+        @Override
+        public java.util.List<com.avandocmsg.messenger.api.messages.dto.MessageVersionResponse> findVersions(UUID msgId) {
+            return java.util.List.of();
+        }
+
+        @Override
+        public java.util.List<com.avandocmsg.messenger.api.messages.dto.ReactionResponse> getReactions(UUID messageId) {
+            return java.util.List.of();
+        }
+
+        @Override
+        public java.util.List<com.avandocmsg.messenger.api.messages.dto.PinnedMessageResponse> getPinnedMessages(
+            UUID chatId) {
+            return java.util.List.of();
         }
 
         @Override
         public boolean viewerMayAccessFileViaSharedNonE2eeMessage(UUID fileId, UUID viewerId) {
             return mayAccess;
+        }
+
+        @Override
+        public Optional<com.avandocmsg.messenger.core.port.FileMessageRef> findLatestMessageRefForViewer(
+            UUID fileId, UUID viewerId) {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<MessageId> findLatestMessageId(ChatId chatId) {
+            return Optional.empty();
+        }
+
+        @Override
+        public java.util.List<com.avandocmsg.messenger.api.messages.dto.MessageResponse> searchPlaintextForUser(
+            UserId userId, java.util.List<UUID> chatIds, String queryText, int limit) {
+            return java.util.List.of();
+        }
+
+        @Override
+        public java.util.List<com.avandocmsg.messenger.api.messages.dto.MessageResponse> loadMessagesForSearchResults(
+            UserId userId, java.util.List<String> messageIdsInOrder, int limit) {
+            return java.util.List.of();
         }
     }
 }

@@ -7,6 +7,8 @@ import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 
 import javax.sql.DataSource;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -82,6 +84,27 @@ public final class JdbcChatRepositoryAdapter implements ChatRepositoryPort {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    @Override
+    public List<UserId> listMemberUserIds(ChatId chatId) {
+        if (dataSource == null || chatId == null) {
+            return List.of();
+        }
+        var sql = "SELECT user_id FROM chat_members WHERE chat_id = ?";
+        var result = new ArrayList<UserId>();
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, chatId.value());
+            try (var rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(UserId.of(rs.getObject("user_id", UUID.class)));
+                }
+            }
+        } catch (Exception e) {
+            return List.of();
+        }
+        return result;
     }
 
     @Override

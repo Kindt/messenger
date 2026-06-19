@@ -1,0 +1,72 @@
+package com.avandocmsg.messenger.core.adapter.persistence;
+
+import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
+
+import javax.sql.DataSource;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
+
+/** Attaches link previews to list reads (hex adapter). */
+final class MessageLinkPreviewEnrichment {
+    private MessageLinkPreviewEnrichment() {
+    }
+
+    static void attach(DataSource readDataSource, List<MessageResponse> messages) {
+        if (messages == null || messages.isEmpty() || readDataSource == null) {
+            return;
+        }
+        var ids = new ArrayList<UUID>(messages.size());
+        for (var m : messages) {
+            try {
+                ids.add(UUID.fromString(m.id()));
+            } catch (IllegalArgumentException ignored) {
+                // skip
+            }
+        }
+        if (ids.isEmpty()) {
+            return;
+        }
+        var sql = new StringBuilder(
+            "SELECT message_id, url, title FROM message_link_previews WHERE message_id IN (");
+        for (int i = 0; i < ids.size(); i++) {
+            sql.append(i == 0 ? "?" : ", ?");
+        }
+        sql.append(")");
+        var previews = new HashMap<UUID, com.avandocmsg.messenger.api.messages.dto.MessageLinkPreview>();
+        try (var conn = readDataSource.getConnection();
+             var stmt = conn.prepareStatement(sql.toString())) {
+            int idx = 1;
+            for (var id : ids) {
+                stmt.setObject(idx++, id);
+            }
+            try (var rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    var msgId = rs.getObject("message_id", UUID.class);
+                    previews.put(msgId, new com.avandocmsg.messenger.api.messages.dto.MessageLinkPreview(
+                        rs.getString("url"),
+                        rs.getString("title")));
+                }
+            }
+        } catch (Exception ignored) {
+            return;
+        }
+        for (int i = 0; i < messages.size(); i++) {
+            var m = messages.get(i);
+            try {
+                var preview = previews.get(UUID.fromString(m.id()));
+                if (preview == null) {
+                    continue;
+                }
+                messages.set(i, new MessageResponse(
+                    m.id(), m.chatId(), m.senderId(), m.type(), m.content(), m.replyToMsgId(),
+                    m.deleted(), m.createdAt(), m.editedAt(), m.visibilityTtlSeconds(), m.attachmentFileId(),
+                    m.threadId(), m.threadReplyCount(), m.mentionUserIds(), m.mentionAll(),
+                    m.durationMs(), preview, m.replyPreview()));
+            } catch (IllegalArgumentException ignored) {
+                // skip
+            }
+        }
+    }
+}

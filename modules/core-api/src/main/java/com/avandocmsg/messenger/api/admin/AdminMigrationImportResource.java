@@ -3,8 +3,10 @@ package com.avandocmsg.messenger.api.admin;
 import com.avandocmsg.messenger.api.admin.dto.MigrationImportCreateRequest;
 import com.avandocmsg.messenger.api.admin.dto.MigrationImportJobResponse;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
+import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MigrationImportJobRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
@@ -35,9 +37,15 @@ public class AdminMigrationImportResource {
     private final UserRepository userRepository;
 
     @Inject
-    public AdminMigrationImportResource(DataSource dataSource, UserRepository userRepository) {
+    public AdminMigrationImportResource(
+        DataSource dataSource,
+        UserRepository userRepository,
+        ChatRepository chatRepository,
+        MessageRepositoryPort messageRepositoryPort
+    ) {
         this.jobRepository = new MigrationImportJobRepository(dataSource);
-        this.processor = new MigrationImportProcessor(jobRepository, dataSource, null, null);
+        this.processor = new MigrationImportProcessor(
+            jobRepository, chatRepository, messageRepositoryPort, null);
         this.userRepository = userRepository;
     }
 

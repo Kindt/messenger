@@ -1,7 +1,7 @@
 /* Korus web-client: cache static assets; do NOT show login shell when server is down. */
 "use strict";
 
-var CACHE_NAME = "korus-web-static-v6";
+var CACHE_NAME = "korus-web-static-v8";
 
 var PRECACHE = [
   "/tailwind.css",
@@ -10,7 +10,6 @@ var PRECACHE = [
   "/manifest.json",
   "/icon.svg",
   "/locales/manifest.json",
-  "/locales/ru.json",
 ];
 
 var OFFLINE_HTML =
@@ -87,6 +86,23 @@ self.addEventListener("fetch", function (event) {
   }
 
   if (!isStaticAsset(url.pathname)) return;
+
+  if (url.pathname.indexOf("/locales/") === 0 && url.pathname.endsWith(".json")) {
+    event.respondWith(
+      fetch(event.request).then(function (response) {
+        if (response && response.ok) {
+          var copy = response.clone();
+          caches.open(CACHE_NAME).then(function (cache) {
+            cache.put(event.request, copy);
+          });
+        }
+        return response;
+      }).catch(function () {
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)

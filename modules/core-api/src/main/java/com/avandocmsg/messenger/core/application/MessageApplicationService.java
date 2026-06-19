@@ -6,14 +6,14 @@ import com.avandocmsg.messenger.api.messages.dto.PinnedMessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.ReactionResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.api.mls.MlsService;
-import com.avandocmsg.messenger.api.repository.BlockRepository;
-import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.ChatType;
 import com.avandocmsg.messenger.core.domain.Message;
 import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
+import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 
 import java.util.List;
@@ -24,13 +24,13 @@ import java.util.UUID;
 public final class MessageApplicationService {
     private final MessageRepositoryPort messageRepositoryPort;
     private final ChatRepositoryPort chatRepositoryPort;
-    private final BlockRepository blockRepository;
+    private final BlockRepositoryPort blockRepositoryPort;
     private final MessageSendCoordinator sendCoordinator;
     private final MessageEditCoordinator editCoordinator;
     private final MessageDeleteCoordinator deleteCoordinator;
     private final MessageReactionCoordinator reactionCoordinator;
     private final MessagePinCoordinator pinCoordinator;
-    private final MessageRepository legacyMessageRepository;
+    private final MessageQueryPort messageQueryPort;
     private final MlsService mlsService;
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort) {
@@ -38,54 +38,54 @@ public final class MessageApplicationService {
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
-                                     BlockRepository blockRepository) {
-        this(messageRepositoryPort, chatRepositoryPort, blockRepository, null, null, null, null, null, null, null);
+                                     BlockRepositoryPort blockRepositoryPort) {
+        this(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, null, null, null, null, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
-                                     BlockRepository blockRepository, MessageSendCoordinator sendCoordinator) {
-        this(messageRepositoryPort, chatRepositoryPort, blockRepository, sendCoordinator, null, null, null, null, null, null);
+                                     BlockRepositoryPort blockRepositoryPort, MessageSendCoordinator sendCoordinator) {
+        this(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, sendCoordinator, null, null, null, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
-                                     BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
+                                     BlockRepositoryPort blockRepositoryPort, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator) {
-        this(messageRepositoryPort, chatRepositoryPort, blockRepository, sendCoordinator, editCoordinator, null, null, null, null, null);
+        this(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, sendCoordinator, editCoordinator, null, null, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
-                                     BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
+                                     BlockRepositoryPort blockRepositoryPort, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
                                      MessageReactionCoordinator reactionCoordinator) {
-        this(messageRepositoryPort, chatRepositoryPort, blockRepository, sendCoordinator, editCoordinator,
+        this(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, sendCoordinator, editCoordinator,
             deleteCoordinator, reactionCoordinator, null, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
-                                     BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
+                                     BlockRepositoryPort blockRepositoryPort, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
                                      MessageReactionCoordinator reactionCoordinator,
                                      MessagePinCoordinator pinCoordinator) {
-        this(messageRepositoryPort, chatRepositoryPort, blockRepository, sendCoordinator, editCoordinator,
+        this(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, sendCoordinator, editCoordinator,
             deleteCoordinator, reactionCoordinator, pinCoordinator, null, null);
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
-                                     BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
+                                     BlockRepositoryPort blockRepositoryPort, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
                                      MessageReactionCoordinator reactionCoordinator,
                                      MessagePinCoordinator pinCoordinator,
-                                     MessageRepository legacyMessageRepository,
+                                     MessageQueryPort messageQueryPort,
                                      MlsService mlsService) {
         this.messageRepositoryPort = messageRepositoryPort;
         this.chatRepositoryPort = chatRepositoryPort;
-        this.blockRepository = blockRepository;
+        this.blockRepositoryPort = blockRepositoryPort;
         this.sendCoordinator = sendCoordinator;
         this.editCoordinator = editCoordinator;
         this.deleteCoordinator = deleteCoordinator;
         this.reactionCoordinator = reactionCoordinator;
         this.pinCoordinator = pinCoordinator;
-        this.legacyMessageRepository = legacyMessageRepository;
+        this.messageQueryPort = messageQueryPort;
         this.mlsService = mlsService;
     }
 
@@ -116,13 +116,13 @@ public final class MessageApplicationService {
     }
 
     public List<MessageResponse> listMessages(UUID chatId, UUID userId, int limit, UUID before, UUID threadId) {
-        if (legacyMessageRepository == null || !canAccessChat(chatId, userId)) {
+        if (messageQueryPort == null || !canAccessChat(chatId, userId)) {
             return List.of();
         }
         if (limit <= 0 || limit > 100) {
             limit = 50;
         }
-        return legacyMessageRepository.findByChatId(chatId, limit, before, userId, threadId);
+        return messageQueryPort.findByChatId(chatId, limit, before, userId, threadId);
     }
 
     /**
@@ -152,30 +152,30 @@ public final class MessageApplicationService {
     }
 
     public List<MessageVersionResponse> getMessageVersions(UUID chatId, UUID msgId, UUID userId) {
-        if (legacyMessageRepository == null) {
+        if (messageQueryPort == null) {
             return List.of();
         }
         if (messageVisibleToMember(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId)).isEmpty()) {
             return List.of();
         }
-        return legacyMessageRepository.findVersions(msgId);
+        return messageQueryPort.findVersions(msgId);
     }
 
     public List<ReactionResponse> getReactions(UUID chatId, UUID msgId, UUID userId) {
-        if (legacyMessageRepository == null) {
+        if (messageQueryPort == null) {
             return List.of();
         }
         if (messageVisibleToMember(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId)).isEmpty()) {
             return List.of();
         }
-        return legacyMessageRepository.getReactions(msgId);
+        return messageQueryPort.getReactions(msgId);
     }
 
     public List<PinnedMessageResponse> getPinnedMessages(UUID chatId, UUID userId) {
-        if (legacyMessageRepository == null || !canAccessChat(chatId, userId)) {
+        if (messageQueryPort == null || !canAccessChat(chatId, userId)) {
             return List.of();
         }
-        return legacyMessageRepository.getPinnedMessages(chatId);
+        return messageQueryPort.getPinnedMessages(chatId);
     }
 
     /** Server-side decrypt for e2ee-* messages (MLS stub on server). */
@@ -337,14 +337,16 @@ public final class MessageApplicationService {
     }
 
     private boolean isMutuallyBlocked(UUID a, UUID b) {
-        if (blockRepository == null) {
+        if (blockRepositoryPort == null) {
             return false;
         }
-        return blockRepository.exists(a, b) || blockRepository.exists(b, a);
+        var userA = UserId.of(a);
+        var userB = UserId.of(b);
+        return blockRepositoryPort.exists(userA, userB) || blockRepositoryPort.exists(userB, userA);
     }
 
     private boolean isP2PMessagingBlocked(UUID chatId, UUID senderId) {
-        if (blockRepository == null) {
+        if (blockRepositoryPort == null) {
             return false;
         }
         var chat = ChatId.of(chatId);
@@ -353,8 +355,8 @@ public final class MessageApplicationService {
             return false;
         }
         return chatRepositoryPort.findOtherP2pMember(chat, sender)
-            .map(peer -> blockRepository.exists(senderId, peer.value())
-                || blockRepository.exists(peer.value(), senderId))
+            .map(peer -> blockRepositoryPort.exists(sender, peer)
+                || blockRepositoryPort.exists(peer, sender))
             .orElse(false);
     }
 

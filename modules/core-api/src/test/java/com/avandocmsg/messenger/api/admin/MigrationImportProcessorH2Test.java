@@ -1,6 +1,9 @@
 package com.avandocmsg.messenger.api.admin;
 
+import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MigrationImportJobRepository;
+import com.avandocmsg.messenger.core.bootstrap.CoreModule;
+import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -9,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Statement;
+import java.time.Clock;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -103,7 +107,10 @@ class MigrationImportProcessorH2Test {
     void process_importsTelegramMessagesWithIdempotency() throws Exception {
         var config = "{\"export_json\":{\"name\":\"TG history\",\"messages\":[{\"id\":1,\"type\":\"message\",\"text\":\"one\"},{\"id\":2,\"type\":\"message\",\"text\":\"two\"}]}}";
         var jobId = jobRepository.insert(orgId, "telegram_export_v1", config, userId);
-        var processor = new MigrationImportProcessor(jobRepository, ds, null, null);
+        var chatRepo = new ChatRepository(ds, Clock.systemUTC(), UuidGenerator.standard());
+        var msgPort = CoreModule.messageRepositoryPort(ds);
+        var processor = new MigrationImportProcessor(
+            jobRepository, chatRepo, msgPort, UuidGenerator.standard());
 
         var first = processor.process(jobId).orElseThrow();
         assertEquals("completed", first.status());

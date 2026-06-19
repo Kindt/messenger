@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.core.benchmark;
 
-import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.core.port.MessageQueryPort;
+import com.avandocmsg.messenger.core.port.ObjectStoragePort;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
 import com.avandocmsg.messenger.core.application.ChatApplicationService;
@@ -63,6 +64,11 @@ class CoreApiBenchmarkTest {
             @Override
             public Optional<UserId> findOtherP2pMember(ChatId c, UserId u) {
                 return Optional.empty();
+            }
+
+            @Override
+            public List<UserId> listMemberUserIds(ChatId c) {
+                return List.of();
             }
         };
         var service = new ChatApplicationService(port);
@@ -206,7 +212,6 @@ class CoreApiBenchmarkTest {
                 return Optional.empty();
             }
         };
-        MessageRepository legacy = new MessageRepository(null, Clock.systemUTC());
         ObjectStoragePort storage = new ObjectStoragePort() {
             @Override
             public void put(String objectName, InputStream data, long size, String contentType) throws Exception {}
@@ -219,7 +224,62 @@ class CoreApiBenchmarkTest {
             @Override
             public void delete(String objectName) throws Exception {}
         };
-        var service = new FileApplicationService(port, legacy, storage, UuidGenerator.standard(), 1_000_000, false);
+        MessageQueryPort queryPort = new MessageQueryPort() {
+            @Override
+            public java.util.List<com.avandocmsg.messenger.api.messages.dto.MessageResponse> findByChatId(
+                UUID chatId, int limit, UUID before, UUID filterUserId, UUID threadId) {
+                return java.util.List.of();
+            }
+
+            @Override
+            public java.util.List<com.avandocmsg.messenger.api.messages.dto.MessageVersionResponse> findVersions(
+                UUID msgId) {
+                return java.util.List.of();
+            }
+
+            @Override
+            public java.util.List<com.avandocmsg.messenger.api.messages.dto.ReactionResponse> getReactions(
+                UUID messageId) {
+                return java.util.List.of();
+            }
+
+            @Override
+            public java.util.List<com.avandocmsg.messenger.api.messages.dto.PinnedMessageResponse> getPinnedMessages(
+                UUID chatId) {
+                return java.util.List.of();
+            }
+
+            @Override
+            public boolean viewerMayAccessFileViaSharedNonE2eeMessage(UUID fileId, UUID viewerId) {
+                return false;
+            }
+
+            @Override
+            public java.util.Optional<com.avandocmsg.messenger.core.port.FileMessageRef> findLatestMessageRefForViewer(
+                UUID fileId, UUID viewerId) {
+                return java.util.Optional.empty();
+            }
+
+            @Override
+            public java.util.Optional<com.avandocmsg.messenger.core.domain.MessageId> findLatestMessageId(
+                com.avandocmsg.messenger.core.domain.ChatId chatId) {
+                return java.util.Optional.empty();
+            }
+
+            @Override
+            public java.util.List<com.avandocmsg.messenger.api.messages.dto.MessageResponse> searchPlaintextForUser(
+                com.avandocmsg.messenger.core.domain.UserId userId, java.util.List<UUID> chatIds, String queryText,
+                int limit) {
+                return java.util.List.of();
+            }
+
+            @Override
+            public java.util.List<com.avandocmsg.messenger.api.messages.dto.MessageResponse> loadMessagesForSearchResults(
+                com.avandocmsg.messenger.core.domain.UserId userId, java.util.List<String> messageIdsInOrder, int limit) {
+                return java.util.List.of();
+            }
+        };
+        var service = new FileApplicationService(port, queryPort, storage, UuidGenerator.standard(), 1_000_000, false);
 
         var start = System.nanoTime();
         for (int i = 0; i < 1000; i++) {

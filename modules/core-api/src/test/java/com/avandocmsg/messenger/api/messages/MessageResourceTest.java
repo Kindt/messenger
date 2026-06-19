@@ -98,6 +98,12 @@ class MessageResourceTest {
                 com.avandocmsg.messenger.core.domain.UserId userId) {
                 return java.util.Optional.empty();
             }
+
+            @Override
+            public java.util.List<com.avandocmsg.messenger.core.domain.UserId> listMemberUserIds(
+                com.avandocmsg.messenger.core.domain.ChatId chatId) {
+                return java.util.List.of();
+            }
         };
     }
 
@@ -112,6 +118,13 @@ class MessageResourceTest {
         public java.util.Optional<com.avandocmsg.messenger.core.domain.Message> insert(
             com.avandocmsg.messenger.core.port.MessageInsert command) {
             return java.util.Optional.empty();
+        }
+
+        @Override
+        public boolean existsClientMsgId(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                         com.avandocmsg.messenger.core.domain.UserId senderId,
+                                         String clientMsgId) {
+            return false;
         }
 
         @Override
@@ -134,6 +147,19 @@ class MessageResourceTest {
         @Override
         public boolean removeReaction(com.avandocmsg.messenger.core.domain.MessageId messageId,
                                       com.avandocmsg.messenger.core.domain.UserId userId, String reaction) {
+            return false;
+        }
+
+        @Override
+        public boolean pinMessage(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                  com.avandocmsg.messenger.core.domain.MessageId messageId,
+                                  com.avandocmsg.messenger.core.domain.UserId pinnedBy) {
+            return false;
+        }
+
+        @Override
+        public boolean unpinMessage(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                    com.avandocmsg.messenger.core.domain.MessageId messageId) {
             return false;
         }
     }

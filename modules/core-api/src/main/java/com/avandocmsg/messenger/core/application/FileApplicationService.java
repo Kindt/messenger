@@ -2,11 +2,11 @@ package com.avandocmsg.messenger.core.application;
 
 import com.avandocmsg.messenger.api.metrics.FileDedupMetrics;
 import com.avandocmsg.messenger.api.metrics.FileUploadMetrics;
-import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.core.domain.FileId;
 import com.avandocmsg.messenger.core.domain.StoredFile;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.FileMetadataPort;
+import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.port.ObjectStoragePort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 
@@ -20,7 +20,7 @@ public final class FileApplicationService {
     private static final String DEDUP_PREFIX = "objects/sha256/";
 
     private final FileMetadataPort fileMetadataPort;
-    private final MessageRepository legacyMessageRepository;
+    private final MessageQueryPort messageQueryPort;
     private final ObjectStoragePort objectStoragePort;
     private final UuidGenerator uuidGenerator;
     private final long maxUploadBytes;
@@ -28,24 +28,24 @@ public final class FileApplicationService {
     private final Semaphore uploadConcurrency;
 
     public FileApplicationService(FileMetadataPort fileMetadataPort,
-                                  MessageRepository legacyMessageRepository,
+                                  MessageQueryPort messageQueryPort,
                                   ObjectStoragePort objectStoragePort,
                                   UuidGenerator uuidGenerator,
                                   long maxUploadBytes,
                                   boolean fileDedupEnabled) {
-        this(fileMetadataPort, legacyMessageRepository, objectStoragePort, uuidGenerator,
+        this(fileMetadataPort, messageQueryPort, objectStoragePort, uuidGenerator,
             maxUploadBytes, fileDedupEnabled, 20);
     }
 
     public FileApplicationService(FileMetadataPort fileMetadataPort,
-                                  MessageRepository legacyMessageRepository,
+                                  MessageQueryPort messageQueryPort,
                                   ObjectStoragePort objectStoragePort,
                                   UuidGenerator uuidGenerator,
                                   long maxUploadBytes,
                                   boolean fileDedupEnabled,
                                   int maxConcurrentUploads) {
         this.fileMetadataPort = fileMetadataPort;
-        this.legacyMessageRepository = legacyMessageRepository;
+        this.messageQueryPort = messageQueryPort;
         this.objectStoragePort = objectStoragePort;
         this.uuidGenerator = uuidGenerator;
         this.maxUploadBytes = maxUploadBytes;
@@ -201,7 +201,10 @@ public final class FileApplicationService {
         if (file.uploadedBy().equals(viewerId)) {
             return true;
         }
-        return legacyMessageRepository.viewerMayAccessFileViaSharedNonE2eeMessage(
+        if (messageQueryPort == null) {
+            return false;
+        }
+        return messageQueryPort.viewerMayAccessFileViaSharedNonE2eeMessage(
             file.id().value(), viewerId.value());
     }
 

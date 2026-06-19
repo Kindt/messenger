@@ -1,8 +1,11 @@
 package com.avandocmsg.messenger.core.application;
 
-import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.common.dto.PinChangeEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.MessageId;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -15,16 +18,16 @@ public final class MessagePinCoordinator {
     private static final Logger log = LoggerFactory.getLogger(MessagePinCoordinator.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final MessageRepository messageRepository;
+    private final MessageRepositoryPort messageRepositoryPort;
     private final NatsOutboundPort natsOutbound;
 
-    public MessagePinCoordinator(MessageRepository messageRepository, NatsOutboundPort natsOutbound) {
-        this.messageRepository = messageRepository;
+    public MessagePinCoordinator(MessageRepositoryPort messageRepositoryPort, NatsOutboundPort natsOutbound) {
+        this.messageRepositoryPort = messageRepositoryPort;
         this.natsOutbound = natsOutbound;
     }
 
     public boolean pin(UUID chatId, UUID msgId, UUID userId) {
-        if (!messageRepository.pinMessage(chatId, msgId, userId)) {
+        if (!messageRepositoryPort.pinMessage(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId))) {
             return false;
         }
         publish("pin", chatId, msgId, userId, System.currentTimeMillis());
@@ -32,7 +35,7 @@ public final class MessagePinCoordinator {
     }
 
     public boolean unpin(UUID chatId, UUID msgId, UUID userId) {
-        if (!messageRepository.unpinMessage(chatId, msgId)) {
+        if (!messageRepositoryPort.unpinMessage(ChatId.of(chatId), MessageId.of(msgId))) {
             return false;
         }
         publish("unpin", chatId, msgId, userId, null);

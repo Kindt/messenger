@@ -10,10 +10,10 @@ import com.avandocmsg.messenger.core.application.MessageDeleteCoordinator;
 import com.avandocmsg.messenger.core.application.MessagePinCoordinator;
 import com.avandocmsg.messenger.core.application.MessageReactionCoordinator;
 import com.avandocmsg.messenger.core.application.MessageSendCoordinator;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcBlockRepositoryAdapter;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.FilePublicLinkRepository;
-import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.FilePublicLinkPortAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRepositoryAdapter;
@@ -34,8 +34,10 @@ import com.avandocmsg.messenger.core.application.FileApplicationService;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
 import com.avandocmsg.messenger.core.application.UserApplicationService;
+import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 import com.avandocmsg.messenger.core.port.FileMetadataPort;
+import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.ObjectStoragePort;
@@ -73,12 +75,19 @@ public final class CoreModule {
     }
 
     public static MessageRepositoryPort messageRepositoryPort(DataSource dataSource) {
+        return messageRepositoryAdapter(dataSource);
+    }
+
+    public static MessageQueryPort messageQueryPort(DataSource dataSource) {
+        return messageRepositoryAdapter(dataSource);
+    }
+
+    private static JdbcMessageRepositoryAdapter messageRepositoryAdapter(DataSource dataSource) {
         return new JdbcMessageRepositoryAdapter(dataSource);
     }
 
     public static MessageSendCoordinator messageSendCoordinator(
             DataSource dataSource,
-            ChatRepository chatRepository,
             MlsService mlsService,
             MlsMigrationService mlsMigrationService,
             NatsOutboundPort natsOutbound,
@@ -86,7 +95,7 @@ public final class CoreModule {
             ReadCachePort readCachePort) {
         return new MessageSendCoordinator(
             messageRepositoryPort(dataSource),
-            chatRepository,
+            chatRepositoryPort(dataSource),
             mlsService,
             mlsMigrationService,
             natsOutbound,
@@ -138,57 +147,67 @@ public final class CoreModule {
         return new MessageReactionCoordinator(messageRepositoryPort(dataSource), natsOutbound);
     }
 
+    public static BlockRepositoryPort blockRepositoryPort(DataSource dataSource) {
+        return new JdbcBlockRepositoryAdapter(dataSource);
+    }
+
+    public static BlockRepositoryPort blockRepositoryPort(BlockRepository blockRepository) {
+        return new JdbcBlockRepositoryAdapter(blockRepository);
+    }
+
     public static MessagePinCoordinator messagePinCoordinator(DataSource dataSource, NatsOutboundPort natsOutbound) {
-        return new MessagePinCoordinator(new MessageRepository(dataSource, Clock.systemUTC()), natsOutbound);
+        return new MessagePinCoordinator(messageRepositoryPort(dataSource), natsOutbound);
     }
 
     public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
-                                                                      BlockRepository blockRepository,
+                                                                      BlockRepositoryPort blockRepositoryPort,
                                                                       MessageSendCoordinator sendCoordinator,
                                                                       MessageEditCoordinator editCoordinator) {
-        return messageApplicationService(dataSource, chatRepository, blockRepository, sendCoordinator,
+        return messageApplicationService(dataSource, chatRepository, blockRepositoryPort, sendCoordinator,
             editCoordinator, null, null, null);
     }
 
     public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
-                                                                      BlockRepository blockRepository,
+                                                                      BlockRepositoryPort blockRepositoryPort,
                                                                       MessageSendCoordinator sendCoordinator,
                                                                       MessageEditCoordinator editCoordinator,
                                                                       MessageDeleteCoordinator deleteCoordinator,
                                                                       MessageReactionCoordinator reactionCoordinator) {
-        return messageApplicationService(dataSource, chatRepository, blockRepository, sendCoordinator,
+        return messageApplicationService(dataSource, chatRepository, blockRepositoryPort, sendCoordinator,
             editCoordinator, deleteCoordinator, reactionCoordinator, null);
     }
 
     public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
-                                                                      BlockRepository blockRepository,
+                                                                      BlockRepositoryPort blockRepositoryPort,
                                                                       MessageSendCoordinator sendCoordinator,
                                                                       MessageEditCoordinator editCoordinator,
                                                                       MessageDeleteCoordinator deleteCoordinator,
                                                                       MessageReactionCoordinator reactionCoordinator,
                                                                       MessagePinCoordinator pinCoordinator,
-                                                                      MessageRepository legacyMessageRepository,
+                                                                      MessageQueryPort messageQueryPort,
                                                                       com.avandocmsg.messenger.api.mls.MlsService mlsService) {
-        return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepositoryPort(dataSource), blockRepository,
+        return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepositoryPort(dataSource),
+            blockRepositoryPort,
             sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator,
-            legacyMessageRepository, mlsService);
+            messageQueryPort, mlsService);
     }
 
     public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
-                                                                      BlockRepository blockRepository,
+                                                                      BlockRepositoryPort blockRepositoryPort,
                                                                       MessageSendCoordinator sendCoordinator,
                                                                       MessageEditCoordinator editCoordinator,
                                                                       MessageDeleteCoordinator deleteCoordinator,
                                                                       MessageReactionCoordinator reactionCoordinator,
                                                                       MessagePinCoordinator pinCoordinator) {
-        return messageApplicationService(dataSource, chatRepository, blockRepository, sendCoordinator,
-            editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator, null, null);
+        return messageApplicationService(dataSource, chatRepository, blockRepositoryPort, sendCoordinator,
+            editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator,
+            messageQueryPort(dataSource), null);
     }
 
     public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
-                                                                      BlockRepository blockRepository,
+                                                                      BlockRepositoryPort blockRepositoryPort,
                                                                       MessageSendCoordinator sendCoordinator) {
-        return messageApplicationService(dataSource, chatRepository, blockRepository, sendCoordinator, null);
+        return messageApplicationService(dataSource, chatRepository, blockRepositoryPort, sendCoordinator, null);
     }
 
     public static UserRepositoryPort userRepositoryPort(DataSource dataSource) {
@@ -228,13 +247,13 @@ public final class CoreModule {
     }
 
     public static FileApplicationService fileApplicationService(DataSource dataSource,
-                                                                MessageRepository legacy,
+                                                                MessageQueryPort messageQueryPort,
                                                                 ObjectStoragePort objectStoragePort,
                                                                 UuidGenerator uuidGenerator,
                                                                 AppConfig appConfig) {
         return new FileApplicationService(
             fileMetadataPort(dataSource),
-            legacy,
+            messageQueryPort,
             objectStoragePort,
             uuidGenerator,
             appConfig.mediaMaxUploadBytes(),

@@ -4,8 +4,8 @@ import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.api.mls.MlsMigrationService;
 import com.avandocmsg.messenger.api.mls.MlsService;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.common.dto.MessageSendEvent;
+import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
@@ -29,7 +29,7 @@ public final class MessageSendCoordinator {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final MessageRepositoryPort messageRepositoryPort;
-    private final ChatRepository chatRepository;
+    private final ChatRepositoryPort chatRepositoryPort;
     private final MlsService mlsService;
     private final MlsMigrationService mlsMigrationService;
     private final NatsOutboundPort natsOutbound;
@@ -39,20 +39,20 @@ public final class MessageSendCoordinator {
 
     public MessageSendCoordinator(
         MessageRepositoryPort messageRepositoryPort,
-        ChatRepository chatRepository,
+        ChatRepositoryPort chatRepositoryPort,
         MlsService mlsService,
         MlsMigrationService mlsMigrationService,
         NatsOutboundPort natsOutbound,
         UuidGenerator uuidGenerator,
         ReadCachePort readCachePort
     ) {
-        this(messageRepositoryPort, chatRepository, mlsService, mlsMigrationService,
+        this(messageRepositoryPort, chatRepositoryPort, mlsService, mlsMigrationService,
             natsOutbound, uuidGenerator, readCachePort, null);
     }
 
     public MessageSendCoordinator(
         MessageRepositoryPort messageRepositoryPort,
-        ChatRepository chatRepository,
+        ChatRepositoryPort chatRepositoryPort,
         MlsService mlsService,
         MlsMigrationService mlsMigrationService,
         NatsOutboundPort natsOutbound,
@@ -61,7 +61,7 @@ public final class MessageSendCoordinator {
         MessageMentionCoordinator mentionCoordinator
     ) {
         this.messageRepositoryPort = messageRepositoryPort;
-        this.chatRepository = chatRepository;
+        this.chatRepositoryPort = chatRepositoryPort;
         this.mlsService = mlsService;
         this.mlsMigrationService = mlsMigrationService;
         this.natsOutbound = natsOutbound;
@@ -184,14 +184,9 @@ public final class MessageSendCoordinator {
         if (!readCachePort.enabled()) {
             return;
         }
-        for (var member : chatRepository.listMembers(chatId)) {
-            try {
-                var memberId = UUID.fromString(member.userId());
-                if (!memberId.equals(senderId)) {
-                    ReadCacheCoordinator.invalidateChatUnread(readCachePort, memberId);
-                }
-            } catch (IllegalArgumentException ignored) {
-                // skip malformed member id
+        for (var memberId : chatRepositoryPort.listMemberUserIds(ChatId.of(chatId))) {
+            if (!memberId.value().equals(senderId)) {
+                ReadCacheCoordinator.invalidateChatUnread(readCachePort, memberId.value());
             }
         }
     }

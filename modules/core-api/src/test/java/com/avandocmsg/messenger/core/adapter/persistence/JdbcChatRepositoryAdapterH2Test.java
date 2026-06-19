@@ -101,4 +101,19 @@ class JdbcChatRepositoryAdapterH2Test {
         assertEquals("owner", adapter.memberRole(ChatId.of(chatId), UserId.of(memberId)).orElseThrow());
         assertTrue(adapter.isMemberBanned(ChatId.of(chatId), UserId.of(memberId)));
     }
+
+    @Test
+    void listMemberUserIds_returnsAllMembers() throws Exception {
+        var otherId = UUID.randomUUID();
+        try (var c = ds.getConnection();
+             var ps = c.prepareStatement("INSERT INTO chat_members (chat_id, user_id) VALUES (?, ?)")) {
+            ps.setObject(1, chatId);
+            ps.setObject(2, otherId);
+            ps.executeUpdate();
+        }
+        var ids = adapter.listMemberUserIds(ChatId.of(chatId));
+        assertEquals(2, ids.size());
+        assertTrue(ids.contains(UserId.of(memberId)));
+        assertTrue(ids.contains(UserId.of(otherId)));
+    }
 }

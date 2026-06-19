@@ -132,7 +132,7 @@ class ConferenceServiceTest {
         String lastGroupTitle;
 
         RecordingChatService(ChatRepository chatRepository) {
-            super(chatRepository, null, null, null, NatsOutboundPort.noop(), Clock.systemUTC(),
+            super(chatRepository, null, null, null, null, NatsOutboundPort.noop(), Clock.systemUTC(),
                 UuidGenerator.standard(), NoOpReadCacheAdapter.INSTANCE, new AppConfig());
         }
 

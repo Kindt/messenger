@@ -746,6 +746,44 @@ button {
   border-color: var(--accent);
 }
 
+.sidebar-folder-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-folder-chip {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sidebar-folder-chip.btn-icon {
+  min-width: 1.75rem;
+  padding: 4px 6px;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.sidebar-folder-chip:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.sidebar-folder-chip.active {
+  background: var(--accent-dim);
+  color: var(--text);
+  border-color: var(--accent);
+}
+
 .settings-text-input {
   flex: 1;
   min-width: 0;

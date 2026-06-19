@@ -8,8 +8,10 @@ import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatReadRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MessageReadReceiptRepository;
-import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
+import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.MessageId;
+import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.common.dto.ReadReceiptEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
@@ -34,7 +36,7 @@ public class ReadReceiptService {
 
     private final MessageReadReceiptRepository readReceiptRepository;
     private final ChatRepository chatRepository;
-    private final MessageRepository messageRepository;
+    private final MessageRepositoryPort messageRepositoryPort;
     private final ChatReadRepository chatReadRepository;
     private final UserRepository userRepository;
     private final AuditRepository auditRepository;
@@ -45,20 +47,20 @@ public class ReadReceiptService {
 
     public ReadReceiptService(MessageReadReceiptRepository readReceiptRepository,
                               ChatRepository chatRepository,
-                              MessageRepository messageRepository,
+                              MessageRepositoryPort messageRepositoryPort,
                               ChatReadRepository chatReadRepository,
                               UserRepository userRepository,
                               AuditRepository auditRepository,
                               NatsOutboundPort natsOutbound,
                               AppConfig appConfig,
                               Clock clock) {
-        this(readReceiptRepository, chatRepository, messageRepository, chatReadRepository, userRepository,
+        this(readReceiptRepository, chatRepository, messageRepositoryPort, chatReadRepository, userRepository,
             auditRepository, natsOutbound, appConfig, clock, NoOpReadCacheAdapter.INSTANCE);
     }
 
     public ReadReceiptService(MessageReadReceiptRepository readReceiptRepository,
                               ChatRepository chatRepository,
-                              MessageRepository messageRepository,
+                              MessageRepositoryPort messageRepositoryPort,
                               ChatReadRepository chatReadRepository,
                               UserRepository userRepository,
                               AuditRepository auditRepository,
@@ -68,7 +70,7 @@ public class ReadReceiptService {
                               ReadCachePort readCache) {
         this.readReceiptRepository = readReceiptRepository;
         this.chatRepository = chatRepository;
-        this.messageRepository = messageRepository;
+        this.messageRepositoryPort = messageRepositoryPort;
         this.chatReadRepository = chatReadRepository;
         this.userRepository = userRepository;
         this.auditRepository = auditRepository;
@@ -89,8 +91,8 @@ public class ReadReceiptService {
         if (chatRepository.getMemberRole(chatId, userId) == null) {
             return MarkResult.NOT_MEMBER;
         }
-        var msg = messageRepository.findById(messageId).orElse(null);
-        if (msg == null || !msg.chatId().equals(chatId.toString())) {
+        var msg = messageRepositoryPort.findById(MessageId.of(messageId)).orElse(null);
+        if (msg == null || !msg.chatId().value().equals(chatId)) {
             return MarkResult.MESSAGE_NOT_FOUND;
         }
         if (userRepository.isReadReceiptsDisabled(userId)) {
@@ -123,8 +125,8 @@ public class ReadReceiptService {
         }
         var validated = new ArrayList<UUID>();
         for (var messageId : messageIds) {
-            var msg = messageRepository.findById(messageId).orElse(null);
-            if (msg == null || !msg.chatId().equals(chatId.toString())) {
+            var msg = messageRepositoryPort.findById(MessageId.of(messageId)).orElse(null);
+            if (msg == null || !msg.chatId().value().equals(chatId)) {
                 return MarkResult.MESSAGE_NOT_FOUND;
             }
             validated.add(messageId);
@@ -152,8 +154,8 @@ public class ReadReceiptService {
         if (chatRepository.getMemberRole(chatId, viewerId) == null) {
             return Optional.empty();
         }
-        var msg = messageRepository.findById(messageId).orElse(null);
-        if (msg == null || !msg.chatId().equals(chatId.toString())) {
+        var msg = messageRepositoryPort.findById(MessageId.of(messageId)).orElse(null);
+        if (msg == null || !msg.chatId().value().equals(chatId)) {
             return Optional.empty();
         }
         var rows = readReceiptRepository.findByMessageId(messageId, offset, limit);
@@ -166,10 +168,10 @@ public class ReadReceiptService {
 
     private void upsertAggregateRead(UUID chatId, UUID userId, List<UUID> messageIds) {
         messageIds.stream()
-            .map(id -> messageRepository.findById(id).orElse(null))
+            .map(id -> messageRepositoryPort.findById(MessageId.of(id)).orElse(null))
             .filter(m -> m != null)
             .max(Comparator.comparing(m -> m.createdAt()))
-            .ifPresent(latest -> chatReadRepository.upsertLastRead(userId, chatId, UUID.fromString(latest.id())));
+            .ifPresent(latest -> chatReadRepository.upsertLastRead(userId, chatId, latest.id().value()));
     }
 
     private void publishReceipt(ReadReceiptEvent event) {

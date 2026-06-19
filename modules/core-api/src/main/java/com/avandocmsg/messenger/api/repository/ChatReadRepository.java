@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import javax.sql.DataSource;
 import java.util.UUID;
 
-import static com.avandocmsg.messenger.api.repository.MessageRepository.SQL_MSG_VISIBILITY_TTL_VISIBLE;
+import static com.avandocmsg.messenger.core.adapter.persistence.MessageJdbcSql.MSG_VISIBILITY_TTL_VISIBLE;
 
 /** Агрегированное «прочитано до» по чату (ТЗ п. 12.2, receipts aggregate). */
 public class ChatReadRepository {
@@ -49,7 +49,7 @@ public class ChatReadRepository {
             SELECT COUNT(*)::int FROM messages m
             WHERE m.chat_id = ?
               AND m.deleted = false
-              AND """ + SQL_MSG_VISIBILITY_TTL_VISIBLE + """
+              AND """ + MSG_VISIBILITY_TTL_VISIBLE + """
               AND m.sender_id <> ?
               AND (
                 NOT EXISTS (SELECT 1 FROM chat_read_state s WHERE s.user_id = ? AND s.chat_id = ?)

@@ -360,7 +360,24 @@
       "noChats": "Нет чатов.",
       "noChatsFilter": "Нет чатов по запросу.",
       "draft": "Черновик: {text}",
-      "membersMeta": "{type} · {count} уч."
+      "membersMeta": "{type} · {count} уч.",
+      "integrations": "Интеграции",
+      "noIntegrations": "Нет интеграций.",
+      "vitrine": "Витрина",
+      "archiveToggle": "Архивировать чат",
+      "archiveFailed": "Не удалось архивировать чат.",
+      "folderWork": "В папку «Работа»",
+      "folderFailed": "Не удалось изменить папку.",
+      "folderAll": "Все",
+      "folderWorkChip": "Работа",
+      "folderPersonal": "Личные",
+      "folderArchive": "Архив",
+      "folder": {
+        "all": "Все",
+        "work": "Работа",
+        "personal": "Личные",
+        "archive": "Архив"
+      }
     },
     "thread": {
       "empty": "Выберите чат слева или создайте группу.",

@@ -360,7 +360,24 @@
       "noChats": "暂无聊天。",
       "noChatsFilter": "没有匹配的聊天。",
       "draft": "草稿：{text}",
-      "membersMeta": "{type} · {count} 人"
+      "membersMeta": "{type} · {count} 人",
+      "integrations": "集成",
+      "noIntegrations": "暂无集成。",
+      "vitrine": "精选",
+      "archiveToggle": "归档聊天",
+      "archiveFailed": "归档聊天失败。",
+      "folderWork": "标记为工作",
+      "folderFailed": "更新文件夹失败。",
+      "folderAll": "全部",
+      "folderWorkChip": "工作",
+      "folderPersonal": "个人",
+      "folderArchive": "归档",
+      "folder": {
+        "all": "全部",
+        "work": "工作",
+        "personal": "个人",
+        "archive": "归档"
+      }
     },
     "thread": {
       "empty": "请在左侧选择聊天或创建群组。",

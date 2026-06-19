@@ -80,6 +80,12 @@ class BotServiceTest {
                 com.avandocmsg.messenger.core.domain.UserId userId) {
                 return java.util.Optional.empty();
             }
+
+            @Override
+            public java.util.List<com.avandocmsg.messenger.core.domain.UserId> listMemberUserIds(
+                com.avandocmsg.messenger.core.domain.ChatId chatId) {
+                return java.util.List.of();
+            }
         };
         var deleteCoordinator = new com.avandocmsg.messenger.core.application.MessageDeleteCoordinator(
             messagePort, com.avandocmsg.messenger.core.port.NatsOutboundPort.noop());
@@ -94,7 +100,6 @@ class BotServiceTest {
         var chatId = UUID.randomUUID();
         var msgId = UUID.randomUUID();
         var botId = UUID.randomUUID();
-        var pinRepo = new PinAttemptMessageRepository();
         var messagePort = new VisibleMessagePort(chatId, msgId, botId);
         var chatRepo = new ChatRepository(null, java.time.Clock.systemUTC(),
             com.avandocmsg.messenger.core.port.UuidGenerator.standard()) {
@@ -134,18 +139,25 @@ class BotServiceTest {
                 com.avandocmsg.messenger.core.domain.UserId userId) {
                 return java.util.Optional.empty();
             }
+
+            @Override
+            public java.util.List<com.avandocmsg.messenger.core.domain.UserId> listMemberUserIds(
+                com.avandocmsg.messenger.core.domain.ChatId chatId) {
+                return java.util.List.of();
+            }
         };
         var pinCoordinator = new com.avandocmsg.messenger.core.application.MessagePinCoordinator(
-            pinRepo, com.avandocmsg.messenger.core.port.NatsOutboundPort.noop());
+            messagePort, com.avandocmsg.messenger.core.port.NatsOutboundPort.noop());
         var messageApp = new MessageApplicationService(
             messagePort, memberChatPort, null, null, null, null, null, pinCoordinator);
         var service = new BotService(null, chatRepo, messageApp, null, null, null);
         assertFalse(service.pinMessage(botId, chatId, msgId));
-        assertFalse(pinRepo.pinned);
+        assertFalse(messagePort.pinAttempted);
     }
 
     private static final class VisibleMessagePort implements com.avandocmsg.messenger.core.port.MessageRepositoryPort {
         private final com.avandocmsg.messenger.core.domain.Message message;
+        boolean pinAttempted;
 
         VisibleMessagePort(UUID chatId, UUID msgId, UUID senderId) {
             message = new com.avandocmsg.messenger.core.domain.Message(
@@ -169,6 +181,13 @@ class BotServiceTest {
         }
 
         @Override
+        public boolean existsClientMsgId(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                         com.avandocmsg.messenger.core.domain.UserId senderId,
+                                         String clientMsgId) {
+            return false;
+        }
+
+        @Override
         public boolean updateContent(com.avandocmsg.messenger.core.domain.MessageId id,
                                      com.avandocmsg.messenger.core.domain.UserId senderId, String content) {
             return false;
@@ -188,6 +207,20 @@ class BotServiceTest {
         @Override
         public boolean removeReaction(com.avandocmsg.messenger.core.domain.MessageId messageId,
                                       com.avandocmsg.messenger.core.domain.UserId userId, String reaction) {
+            return false;
+        }
+
+        @Override
+        public boolean pinMessage(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                  com.avandocmsg.messenger.core.domain.MessageId messageId,
+                                  com.avandocmsg.messenger.core.domain.UserId pinnedBy) {
+            pinAttempted = true;
+            return false;
+        }
+
+        @Override
+        public boolean unpinMessage(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                    com.avandocmsg.messenger.core.domain.MessageId messageId) {
             return false;
         }
     }
@@ -219,6 +252,13 @@ class BotServiceTest {
         }
 
         @Override
+        public boolean existsClientMsgId(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                         com.avandocmsg.messenger.core.domain.UserId senderId,
+                                         String clientMsgId) {
+            return false;
+        }
+
+        @Override
         public boolean updateContent(com.avandocmsg.messenger.core.domain.MessageId id,
                                      com.avandocmsg.messenger.core.domain.UserId senderId, String content) {
             return false;
@@ -241,20 +281,18 @@ class BotServiceTest {
                                       com.avandocmsg.messenger.core.domain.UserId userId, String reaction) {
             return false;
         }
-    }
 
-    private static final class PinAttemptMessageRepository
-        extends com.avandocmsg.messenger.api.repository.MessageRepository {
-        boolean pinned;
-
-        PinAttemptMessageRepository() {
-            super(null, java.time.Clock.systemUTC());
+        @Override
+        public boolean pinMessage(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                  com.avandocmsg.messenger.core.domain.MessageId messageId,
+                                  com.avandocmsg.messenger.core.domain.UserId pinnedBy) {
+            return false;
         }
 
         @Override
-        public boolean pinMessage(UUID chatId, UUID messageId, UUID pinnedBy) {
-            pinned = true;
-            return true;
+        public boolean unpinMessage(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                    com.avandocmsg.messenger.core.domain.MessageId messageId) {
+            return false;
         }
     }
 }

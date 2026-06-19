@@ -360,7 +360,24 @@
       "noChats": "No chats.",
       "noChatsFilter": "No chats match your search.",
       "draft": "Draft: {text}",
-      "membersMeta": "{type} · {count} mem."
+      "membersMeta": "{type} · {count} mem.",
+      "integrations": "Integrations",
+      "noIntegrations": "No integrations.",
+      "vitrine": "Featured",
+      "archiveToggle": "Archive chat",
+      "archiveFailed": "Failed to archive chat.",
+      "folderWork": "Mark as work",
+      "folderFailed": "Failed to update folder.",
+      "folderAll": "All",
+      "folderWorkChip": "Work",
+      "folderPersonal": "Personal",
+      "folderArchive": "Archive",
+      "folder": {
+        "all": "All",
+        "work": "Work",
+        "personal": "Personal",
+        "archive": "Archive"
+      }
     },
     "thread": {
       "empty": "Select a chat on the left or create a group.",

@@ -3,7 +3,8 @@ package com.avandocmsg.messenger.api.search;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.request.SolrQuery;
 import org.apache.solr.client.solrj.response.QueryResponse;
@@ -24,15 +25,15 @@ public class MessageSearchService {
     private static final Logger log = LoggerFactory.getLogger(MessageSearchService.class);
 
     private final AppConfig appConfig;
-    private final MessageRepository messageRepository;
+    private final MessageQueryPort messageQueryPort;
     private final ChatRepository chatRepository;
     private final SolrClient solrClient;
     private final boolean solrCloud;
 
-    public MessageSearchService(AppConfig appConfig, MessageRepository messageRepository,
-                                  ChatRepository chatRepository, SolrClient solrClient, boolean solrCloud) {
+    public MessageSearchService(AppConfig appConfig, MessageQueryPort messageQueryPort,
+                                ChatRepository chatRepository, SolrClient solrClient, boolean solrCloud) {
         this.appConfig = appConfig;
-        this.messageRepository = messageRepository;
+        this.messageQueryPort = messageQueryPort;
         this.chatRepository = chatRepository;
         this.solrClient = solrClient;
         this.solrCloud = solrCloud;
@@ -58,7 +59,7 @@ public class MessageSearchService {
                 log.warn("Solr search failed, falling back to SQL: {}", e.getMessage());
             }
         }
-        return messageRepository.searchPlaintextForUser(userId, chatIds, rawQuery.trim(), lim);
+        return messageQueryPort.searchPlaintextForUser(UserId.of(userId), chatIds, rawQuery.trim(), lim);
     }
 
     private List<MessageResponse> searchSolr(UUID userId, List<UUID> chatIds, String q, int limit) throws Exception {
@@ -99,6 +100,6 @@ public class MessageSearchService {
         if (idOrder.isEmpty()) {
             return List.of();
         }
-        return messageRepository.loadMessagesForSearchResults(userId, idOrder, limit);
+        return messageQueryPort.loadMessagesForSearchResults(UserId.of(userId), idOrder, limit);
     }
 }

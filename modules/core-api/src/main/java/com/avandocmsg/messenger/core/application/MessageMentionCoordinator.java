@@ -1,9 +1,11 @@
 package com.avandocmsg.messenger.core.application;
 
-import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.MessageMentionRepository;
 import com.avandocmsg.messenger.common.dto.MentionEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
+import com.avandocmsg.messenger.core.port.MessageMentionRepositoryPort;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -19,22 +21,22 @@ public final class MessageMentionCoordinator {
     private static final Logger log = LoggerFactory.getLogger(MessageMentionCoordinator.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final ChatRepository chatRepository;
-    private final MessageMentionRepository mentionRepository;
+    private final ChatRepositoryPort chatRepositoryPort;
+    private final MessageMentionRepositoryPort mentionRepositoryPort;
     private final NatsOutboundPort natsOutbound;
 
     public MessageMentionCoordinator(
-        ChatRepository chatRepository,
-        MessageMentionRepository mentionRepository,
+        ChatRepositoryPort chatRepositoryPort,
+        MessageMentionRepositoryPort mentionRepositoryPort,
         NatsOutboundPort natsOutbound
     ) {
-        this.chatRepository = chatRepository;
-        this.mentionRepository = mentionRepository;
+        this.chatRepositoryPort = chatRepositoryPort;
+        this.mentionRepositoryPort = mentionRepositoryPort;
         this.natsOutbound = natsOutbound;
     }
 
     public void afterMessageSent(UUID chatId, UUID messageId, UUID senderId, String plaintextContent, long createdAtEpochMs) {
-        if (mentionRepository == null || plaintextContent == null || plaintextContent.isBlank()) {
+        if (mentionRepositoryPort == null || plaintextContent == null || plaintextContent.isBlank()) {
             return;
         }
         var parsed = MessageMentionParser.parse(plaintextContent);
@@ -45,27 +47,24 @@ public final class MessageMentionCoordinator {
         if (targets.isEmpty()) {
             return;
         }
-        var rows = new ArrayList<MessageMentionRepository.MentionRow>();
+        var rows = new ArrayList<MessageMentionRepositoryPort.MentionRow>();
         for (var userId : targets) {
-            rows.add(new MessageMentionRepository.MentionRow(
+            rows.add(new MessageMentionRepositoryPort.MentionRow(
                 userId,
                 parsed.mentionAll() ? "all" : "user"));
         }
-        mentionRepository.insertMentions(messageId, rows);
+        mentionRepositoryPort.insertMentions(messageId, rows);
         publishMentionEvents(chatId, messageId, senderId, targets, parsed.mentionAll(), createdAtEpochMs);
     }
 
     private Set<UUID> resolveTargets(UUID chatId, UUID senderId, MessageMentionParser.ParsedMentions parsed) {
         Set<UUID> targets = new HashSet<>();
+        var chatIdDomain = ChatId.of(chatId);
+        var senderIdDomain = UserId.of(senderId);
         if (parsed.mentionAll()) {
-            for (var member : chatRepository.listMembers(chatId)) {
-                try {
-                    var memberId = UUID.fromString(member.userId());
-                    if (!memberId.equals(senderId)) {
-                        targets.add(memberId);
-                    }
-                } catch (IllegalArgumentException ignored) {
-                    // skip malformed member id
+            for (var memberId : chatRepositoryPort.listMemberUserIds(chatIdDomain)) {
+                if (!memberId.equals(senderIdDomain)) {
+                    targets.add(memberId.value());
                 }
             }
             return targets;
@@ -74,7 +73,7 @@ public final class MessageMentionCoordinator {
             if (userId.equals(senderId)) {
                 continue;
             }
-            if (chatRepository.getMemberRole(chatId, userId) != null) {
+            if (chatRepositoryPort.memberRole(chatIdDomain, UserId.of(userId)).isPresent()) {
                 targets.add(userId);
             }
         }

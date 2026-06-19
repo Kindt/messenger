@@ -96,7 +96,7 @@ class ChannelPostPermissionH2Test {
         var adapter = new JdbcMessageRepositoryAdapter(messageRepo);
         var sendCoordinator = new MessageSendCoordinator(
             adapter,
-            chatRepository,
+            new JdbcChatRepositoryAdapter(ds),
             null,
             null,
             NatsOutboundPort.noop(),

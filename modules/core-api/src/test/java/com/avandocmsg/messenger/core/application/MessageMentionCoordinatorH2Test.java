@@ -1,11 +1,10 @@
 package com.avandocmsg.messenger.core.application;
 
-import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.MessageMentionRepository;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageMentionRepositoryAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRepositoryAdapter;
 import com.avandocmsg.messenger.common.dto.MentionEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
-import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -14,7 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Statement;
-import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -86,7 +84,7 @@ class MessageMentionCoordinatorH2Test {
             ps.setObject(1, targetId);
             ps.executeUpdate();
         }
-        var chatRepo = new ChatRepository(ds, Clock.systemUTC(), UuidGenerator.standard());
+        var chatRepo = new JdbcChatRepositoryAdapter(ds);
         try (var c = ds.getConnection(); var st = c.createStatement()) {
             st.execute("INSERT INTO chats (id, title, type, owner_id) VALUES ('" + chatId + "', 'mention-test', 'group', '"
                 + senderId + "')");
@@ -96,7 +94,7 @@ class MessageMentionCoordinatorH2Test {
                 + "', 'member')");
         }
         nats = new RecordingMentionNats();
-        coordinator = new MessageMentionCoordinator(chatRepo, new MessageMentionRepository(ds), nats);
+        coordinator = new MessageMentionCoordinator(chatRepo, new JdbcMessageMentionRepositoryAdapter(ds), nats);
     }
 
     @AfterEach

@@ -8,12 +8,15 @@ import com.avandocmsg.messenger.core.domain.Message;
 import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
+import com.avandocmsg.messenger.core.port.MessageQueryPort;
+import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -42,7 +45,8 @@ class MessageApplicationServiceTest {
     @Test
     void listMessages_returnsEmptyWhenNotMember() {
         var legacyRepo = new ReadStubMessageRepository();
-        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, legacyRepo, null);
+        var queryPort = new DelegatingMessageQueryPort(legacyRepo);
+        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, queryPort, null);
         assertTrue(readService.listMessages(chatId, outsiderId, 50, null).isEmpty());
         assertFalse(legacyRepo.listCalled);
     }
@@ -51,7 +55,8 @@ class MessageApplicationServiceTest {
     void listMessages_delegatesWhenMember() {
         chatPort.put(chatId, memberId, "member");
         var legacyRepo = new ReadStubMessageRepository();
-        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, legacyRepo, null);
+        var queryPort = new DelegatingMessageQueryPort(legacyRepo);
+        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, queryPort, null);
         readService.listMessages(chatId, memberId, 25, null);
         assertTrue(legacyRepo.listCalled);
         assertEquals(25, legacyRepo.lastLimit);
@@ -61,7 +66,8 @@ class MessageApplicationServiceTest {
     void getPinnedMessages_delegatesWhenMember() {
         chatPort.put(chatId, memberId, "member");
         var legacyRepo = new ReadStubMessageRepository();
-        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, legacyRepo, null);
+        var queryPort = new DelegatingMessageQueryPort(legacyRepo);
+        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, queryPort, null);
         readService.getPinnedMessages(chatId, memberId);
         assertTrue(legacyRepo.pinnedCalled);
     }
@@ -71,7 +77,8 @@ class MessageApplicationServiceTest {
         chatPort.put(chatId, memberId, "member");
         messagePort.message = sampleMessage();
         var legacyRepo = new ReadStubMessageRepository();
-        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, legacyRepo, null);
+        var queryPort = new DelegatingMessageQueryPort(legacyRepo);
+        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, queryPort, null);
         readService.getReactions(chatId, messageId, memberId);
         assertTrue(legacyRepo.reactionsCalled);
     }
@@ -81,7 +88,8 @@ class MessageApplicationServiceTest {
         chatPort.put(chatId, memberId, "member");
         messagePort.message = sampleMessage();
         var legacyRepo = new ReadStubMessageRepository();
-        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, legacyRepo, null);
+        var queryPort = new DelegatingMessageQueryPort(legacyRepo);
+        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, queryPort, null);
         readService.getMessageVersions(chatId, messageId, memberId);
         assertTrue(legacyRepo.versionsCalled);
     }
@@ -183,11 +191,11 @@ class MessageApplicationServiceTest {
     void pinMessage_delegatesToCoordinatorWhenMember() {
         chatPort.put(chatId, memberId, "member");
         messagePort.message = sampleMessage();
-        var pinRepo = new PinStubMessageRepository();
-        var pinCoordinator = new MessagePinCoordinator(pinRepo, NatsOutboundPort.noop());
+        messagePort.pinned = false;
+        var pinCoordinator = new MessagePinCoordinator(messagePort, NatsOutboundPort.noop());
         var svc = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, pinCoordinator);
         assertTrue(svc.pinMessage(chatId, messageId, memberId));
-        assertTrue(pinRepo.pinned);
+        assertTrue(messagePort.pinned);
     }
 
     private Message sampleMessage() {
@@ -240,6 +248,11 @@ class MessageApplicationServiceTest {
         public Optional<UserId> findOtherP2pMember(ChatId chatId, UserId userId) {
             return Optional.empty();
         }
+
+        @Override
+        public List<UserId> listMemberUserIds(ChatId chatId) {
+            return List.of();
+        }
     }
 
     static final class StubMessagePort implements MessageRepositoryPort {
@@ -253,6 +266,11 @@ class MessageApplicationServiceTest {
         @Override
         public Optional<Message> insert(com.avandocmsg.messenger.core.port.MessageInsert command) {
             return Optional.empty();
+        }
+
+        @Override
+        public boolean existsClientMsgId(ChatId chatId, UserId senderId, String clientMsgId) {
+            return false;
         }
 
         boolean updated;
@@ -279,6 +297,8 @@ class MessageApplicationServiceTest {
 
         boolean reactionAdded;
 
+        boolean pinned;
+
         @Override
         public boolean addReaction(MessageId messageId, UserId userId, String reaction) {
             reactionAdded = true;
@@ -287,6 +307,17 @@ class MessageApplicationServiceTest {
 
         @Override
         public boolean removeReaction(MessageId messageId, UserId userId, String reaction) {
+            return true;
+        }
+
+        @Override
+        public boolean pinMessage(ChatId chatId, MessageId messageId, UserId pinnedBy) {
+            pinned = true;
+            return true;
+        }
+
+        @Override
+        public boolean unpinMessage(ChatId chatId, MessageId messageId) {
             return true;
         }
     }
@@ -335,17 +366,61 @@ class MessageApplicationServiceTest {
         }
     }
 
-    static final class PinStubMessageRepository extends MessageRepository {
-        boolean pinned;
+    static final class DelegatingMessageQueryPort implements MessageQueryPort {
+        private final MessageRepository repo;
 
-        PinStubMessageRepository() {
-            super(null, Clock.systemUTC());
+        DelegatingMessageQueryPort(MessageRepository repo) {
+            this.repo = repo;
         }
 
         @Override
-        public boolean pinMessage(UUID chatId, UUID messageId, UUID pinnedBy) {
-            pinned = true;
-            return true;
+        public List<com.avandocmsg.messenger.api.messages.dto.MessageResponse> findByChatId(
+            UUID chatId, int limit, UUID before, UUID filterUserId, UUID threadId) {
+            return repo.findByChatId(chatId, limit, before, filterUserId, threadId);
+        }
+
+        @Override
+        public List<com.avandocmsg.messenger.api.messages.dto.MessageVersionResponse> findVersions(UUID msgId) {
+            return repo.findVersions(msgId);
+        }
+
+        @Override
+        public List<com.avandocmsg.messenger.api.messages.dto.ReactionResponse> getReactions(UUID messageId) {
+            return repo.getReactions(messageId);
+        }
+
+        @Override
+        public List<com.avandocmsg.messenger.api.messages.dto.PinnedMessageResponse> getPinnedMessages(UUID chatId) {
+            return repo.getPinnedMessages(chatId);
+        }
+
+        @Override
+        public boolean viewerMayAccessFileViaSharedNonE2eeMessage(UUID fileId, UUID viewerId) {
+            return repo.viewerMayAccessFileViaSharedNonE2eeMessage(fileId, viewerId);
+        }
+
+        @Override
+        public Optional<com.avandocmsg.messenger.core.port.FileMessageRef> findLatestMessageRefForViewer(
+            UUID fileId, UUID viewerId) {
+            return repo.findLatestMessageRefForViewer(fileId, viewerId)
+                .map(ref -> new com.avandocmsg.messenger.core.port.FileMessageRef(ref.messageId(), ref.chatId()));
+        }
+
+        @Override
+        public Optional<MessageId> findLatestMessageId(ChatId chatId) {
+            return repo.findLatestMessageId(chatId.value()).map(MessageId::of);
+        }
+
+        @Override
+        public List<com.avandocmsg.messenger.api.messages.dto.MessageResponse> searchPlaintextForUser(
+            UserId userId, List<UUID> chatIds, String queryText, int limit) {
+            return repo.searchPlaintextForUser(userId.value(), chatIds, queryText, limit);
+        }
+
+        @Override
+        public List<com.avandocmsg.messenger.api.messages.dto.MessageResponse> loadMessagesForSearchResults(
+            UserId userId, List<String> messageIdsInOrder, int limit) {
+            return repo.loadMessagesForSearchResults(userId.value(), messageIdsInOrder, limit);
         }
     }
 }

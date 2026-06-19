@@ -360,7 +360,24 @@
       "noChats": "Чаттар жоқ.",
       "noChatsFilter": "Сұраныс бойынша чаттар жоқ.",
       "draft": "Жоба: {text}",
-      "membersMeta": "{type} · {count} қат."
+      "membersMeta": "{type} · {count} қат.",
+      "integrations": "Интеграциялар",
+      "noIntegrations": "Интеграциялар жоқ.",
+      "vitrine": "Витрина",
+      "archiveToggle": "Чатты мұрағаттау",
+      "archiveFailed": "Чатты мұрағаттау сәтсіз аяқталды.",
+      "folderWork": "«Жұмыс» папкасына",
+      "folderFailed": "Папканы өзгерту сәтсіз аяқталды.",
+      "folderAll": "Барлығы",
+      "folderWorkChip": "Жұмыс",
+      "folderPersonal": "Жеке",
+      "folderArchive": "Мұрағат",
+      "folder": {
+        "all": "Барлығы",
+        "work": "Жұмыс",
+        "personal": "Жеке",
+        "archive": "Мұрағат"
+      }
     },
     "thread": {
       "empty": "Сол жақтан чат таңдаңыз немесе топ жасаңыз.",

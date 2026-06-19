@@ -360,7 +360,24 @@
       "noChats": "Няма чатаў.",
       "noChatsFilter": "Няма чатаў па запыце.",
       "draft": "Чарнавік: {text}",
-      "membersMeta": "{type} · {count} удз."
+      "membersMeta": "{type} · {count} удз.",
+      "integrations": "Інтэграцыі",
+      "noIntegrations": "Няма інтэграцый.",
+      "vitrine": "Вітрына",
+      "archiveToggle": "Архіваваць чат",
+      "archiveFailed": "Не ўдалося архіваваць чат.",
+      "folderWork": "У папку «Работа»",
+      "folderFailed": "Не ўдалося змяніць папку.",
+      "folderAll": "Усе",
+      "folderWorkChip": "Работа",
+      "folderPersonal": "Лічныя",
+      "folderArchive": "Архіў",
+      "folder": {
+        "all": "Усе",
+        "work": "Работа",
+        "personal": "Лічныя",
+        "archive": "Архіў"
+      }
     },
     "thread": {
       "empty": "Абярыце чат злева або стварыце групу.",

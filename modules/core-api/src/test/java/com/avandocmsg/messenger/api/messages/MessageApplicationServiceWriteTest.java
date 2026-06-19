@@ -1,6 +1,9 @@
 package com.avandocmsg.messenger.api.messages;
 
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
+import com.avandocmsg.messenger.api.messages.dto.MessageVersionResponse;
+import com.avandocmsg.messenger.api.messages.dto.PinnedMessageResponse;
+import com.avandocmsg.messenger.api.messages.dto.ReactionResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
@@ -19,6 +22,7 @@ import com.avandocmsg.messenger.core.domain.Message;
 import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.MessageInsert;
+import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
@@ -43,36 +47,7 @@ class MessageApplicationServiceWriteTest {
     private final StubMessageRepository msgRepo = new StubMessageRepository();
     private final StubMessageRepositoryPort msgPort = new StubMessageRepositoryPort(msgRepo);
     private final StubChatPort chatPort = new StubChatPort();
-    private final com.avandocmsg.messenger.api.repository.ChatRepository chatRepoForSend =
-        new com.avandocmsg.messenger.api.repository.ChatRepository(
-            null, java.time.Clock.systemUTC(), UuidGenerator.standard()) {
-            @Override
-            public String getMemberRole(UUID chatId, UUID userId) {
-                return "member";
-            }
-
-            @Override
-            public boolean isMemberBanned(UUID chatId, UUID userId) {
-                return chatPort.bannedUsers.contains(userId);
-            }
-
-            @Override
-            public java.util.Optional<String> getChatType(UUID chatId) {
-                if (chatPort.p2pChatId != null && chatPort.p2pChatId.equals(chatId)) {
-                    return java.util.Optional.of("p2p");
-                }
-                return java.util.Optional.empty();
-            }
-
-            @Override
-            public java.util.Optional<UUID> findOtherP2PMember(UUID chatId, UUID userId) {
-                if (chatPort.p2pChatId != null && chatPort.p2pChatId.equals(chatId) && chatPort.p2pPeerId != null) {
-                    return java.util.Optional.of(chatPort.p2pPeerId);
-                }
-                return java.util.Optional.empty();
-            }
-        };
-    private final StubBlockRepository blockRepo = new StubBlockRepository();
+    private final StubBlockPort blockRepo = new StubBlockPort();
     private final StubMlsService mlsService = new StubMlsService();
     private final RecordingNats recordingNats = new RecordingNats();
     private MessageApplicationService messageService;
@@ -101,13 +76,13 @@ class MessageApplicationServiceWriteTest {
     private MessageApplicationService buildApp(BooleanSupplier indexerAvailable) {
         var indexer = new IndexerEventPublisher(recordingNats, indexerAvailable);
         var sendCoord = new MessageSendCoordinator(
-            msgPort, chatRepoForSend, mlsService, null, recordingNats, UuidGenerator.standard(), null);
+            msgPort, chatPort, mlsService, null, recordingNats, UuidGenerator.standard(), null);
         var editCoord = new MessageEditCoordinator(msgPort, indexer);
         var deleteCoord = new MessageDeleteCoordinator(msgPort, recordingNats, indexer);
         var reactionCoord = new MessageReactionCoordinator(msgPort, recordingNats);
-        var pinCoord = new MessagePinCoordinator(msgRepo, recordingNats);
+        var pinCoord = new MessagePinCoordinator(msgPort, recordingNats);
         return new MessageApplicationService(
-            msgPort, chatPort, blockRepo, sendCoord, editCoord, deleteCoord, reactionCoord, pinCoord, msgRepo, mlsService);
+            msgPort, chatPort, blockRepo, sendCoord, editCoord, deleteCoord, reactionCoord, pinCoord, msgPort, mlsService);
     }
 
     @Test
@@ -348,7 +323,7 @@ class MessageApplicationServiceWriteTest {
         }
     }
 
-    static final class StubMessageRepositoryPort implements MessageRepositoryPort {
+    static final class StubMessageRepositoryPort implements MessageRepositoryPort, MessageQueryPort {
         private final StubMessageRepository legacy;
 
         StubMessageRepositoryPort(StubMessageRepository legacy) {
@@ -376,6 +351,11 @@ class MessageApplicationServiceWriteTest {
         }
 
         @Override
+        public boolean existsClientMsgId(ChatId chatId, UserId senderId, String clientMsgId) {
+            return legacy.existsClientMsgId(chatId.value(), senderId.value(), clientMsgId);
+        }
+
+        @Override
         public boolean updateContent(MessageId id, UserId senderId, String content) {
             return legacy.updateContent(id.value(), senderId.value(), content);
         }
@@ -393,6 +373,65 @@ class MessageApplicationServiceWriteTest {
         @Override
         public boolean removeReaction(MessageId messageId, UserId userId, String reaction) {
             return false;
+        }
+
+        @Override
+        public boolean pinMessage(ChatId chatId, MessageId messageId, UserId pinnedBy) {
+            return legacy.pinMessage(chatId.value(), messageId.value(), pinnedBy.value());
+        }
+
+        @Override
+        public boolean unpinMessage(ChatId chatId, MessageId messageId) {
+            return legacy.unpinMessage(chatId.value(), messageId.value());
+        }
+
+        @Override
+        public List<MessageResponse> findByChatId(UUID chatId, int limit, UUID before, UUID filterUserId, UUID threadId) {
+            return legacy.findByChatId(chatId, limit, before, filterUserId, threadId);
+        }
+
+        @Override
+        public List<MessageVersionResponse> findVersions(UUID msgId) {
+            return legacy.findVersions(msgId);
+        }
+
+        @Override
+        public List<ReactionResponse> getReactions(UUID messageId) {
+            return legacy.getReactions(messageId);
+        }
+
+        @Override
+        public List<PinnedMessageResponse> getPinnedMessages(UUID chatId) {
+            return legacy.getPinnedMessages(chatId);
+        }
+
+        @Override
+        public boolean viewerMayAccessFileViaSharedNonE2eeMessage(UUID fileId, UUID viewerId) {
+            return legacy.viewerMayAccessFileViaSharedNonE2eeMessage(fileId, viewerId);
+        }
+
+        @Override
+        public Optional<com.avandocmsg.messenger.core.port.FileMessageRef> findLatestMessageRefForViewer(
+            UUID fileId, UUID viewerId) {
+            return legacy.findLatestMessageRefForViewer(fileId, viewerId)
+                .map(ref -> new com.avandocmsg.messenger.core.port.FileMessageRef(ref.messageId(), ref.chatId()));
+        }
+
+        @Override
+        public Optional<MessageId> findLatestMessageId(ChatId chatId) {
+            return legacy.findLatestMessageId(chatId.value()).map(MessageId::of);
+        }
+
+        @Override
+        public List<MessageResponse> searchPlaintextForUser(
+            UserId userId, List<UUID> chatIds, String queryText, int limit) {
+            return legacy.searchPlaintextForUser(userId.value(), chatIds, queryText, limit);
+        }
+
+        @Override
+        public List<MessageResponse> loadMessagesForSearchResults(
+            UserId userId, List<String> messageIdsInOrder, int limit) {
+            return legacy.loadMessagesForSearchResults(userId.value(), messageIdsInOrder, limit);
         }
 
         private static Message toDomain(MessageResponse resp) {
@@ -506,16 +545,31 @@ class MessageApplicationServiceWriteTest {
         }
     }
 
-    static class StubBlockRepository extends com.avandocmsg.messenger.api.repository.BlockRepository {
+    static class StubBlockPort implements com.avandocmsg.messenger.core.port.BlockRepositoryPort {
         final java.util.Set<String> blockedPairs = new java.util.HashSet<>();
 
-        StubBlockRepository() {
-            super(null);
+        @Override
+        public boolean exists(com.avandocmsg.messenger.core.domain.UserId blockerId,
+                              com.avandocmsg.messenger.core.domain.UserId blockedId) {
+            return blockedPairs.contains(blockerId.value() + ":" + blockedId.value());
         }
 
         @Override
-        public boolean exists(UUID blockerId, UUID blockedId) {
-            return blockedPairs.contains(blockerId + ":" + blockedId);
+        public boolean block(com.avandocmsg.messenger.core.domain.UserId blockerId,
+                             com.avandocmsg.messenger.core.domain.UserId blockedId) {
+            return false;
+        }
+
+        @Override
+        public boolean unblock(com.avandocmsg.messenger.core.domain.UserId blockerId,
+                               com.avandocmsg.messenger.core.domain.UserId blockedId) {
+            return false;
+        }
+
+        @Override
+        public java.util.List<com.avandocmsg.messenger.core.domain.BlockedUser> listBlockedUsers(
+            com.avandocmsg.messenger.core.domain.UserId blockerId) {
+            return java.util.List.of();
         }
     }
 
@@ -554,6 +608,11 @@ class MessageApplicationServiceWriteTest {
                 return Optional.of(UserId.of(p2pPeerId));
             }
             return Optional.empty();
+        }
+
+        @Override
+        public List<UserId> listMemberUserIds(ChatId chatId) {
+            return List.of();
         }
     }
 

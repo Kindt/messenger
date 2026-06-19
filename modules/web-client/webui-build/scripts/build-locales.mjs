@@ -70,6 +70,7 @@ if (failed) process.exit(1);
 const manifest = {
   default: DEFAULT_LOCALE,
   codes: LOCALE_ORDER,
+  keyCount: refKeys.length,
 };
 fs.writeFileSync(
   path.join(outDir, "manifest.json"),

@@ -78,7 +78,7 @@ import com.avandocmsg.messenger.core.application.FileApplicationService;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
 import com.avandocmsg.messenger.core.application.UserApplicationService;
-import com.avandocmsg.messenger.api.repository.BlockRepository;
+import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import com.avandocmsg.messenger.api.repository.ChatBanRepository;
 import com.avandocmsg.messenger.api.admin.PurgeStatusService;
 import com.avandocmsg.messenger.api.repository.LegalHoldRepository;
@@ -86,7 +86,8 @@ import com.avandocmsg.messenger.api.repository.ChatReadRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ContactRepository;
 import com.avandocmsg.messenger.api.repository.FileRepository;
-import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.core.port.MessageQueryPort;
+import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.api.users.MeIntegrationsResource;
 import com.avandocmsg.messenger.api.users.MeSettingsResource;
@@ -126,8 +127,9 @@ public class JerseyConfig extends ResourceConfig {
                         UserApplicationService userApplicationService,
                         FileApplicationService fileApplicationService,
                         OrganizationApplicationService organizationApplicationService,
-                        BlockRepository blockRepository,
-                        MessageRepository messageRepository,
+                        BlockRepositoryPort blockRepositoryPort,
+                        MessageRepositoryPort messageRepositoryPort,
+                        MessageQueryPort messageQueryPort,
                         Connection natsConnection, NatsConnectionOutbound natsOutbound,
                         MinioClient minioClient, FileRepository fileRepository, FileService fileService,
                         ChatBanRepository chatBanRepository, ChatBanService chatBanService,
@@ -189,8 +191,9 @@ public class JerseyConfig extends ResourceConfig {
                 bind(fileApplicationService).to(FileApplicationService.class);
                 bind(organizationApplicationService).to(OrganizationApplicationService.class);
                 bind(chatReadRepository).to(ChatReadRepository.class);
-                bind(blockRepository).to(BlockRepository.class);
-                bind(messageRepository).to(MessageRepository.class);
+                bind(blockRepositoryPort).to(BlockRepositoryPort.class);
+                bind(messageRepositoryPort).to(MessageRepositoryPort.class);
+                bind(messageQueryPort).to(MessageQueryPort.class);
                 bind(natsConnection).to(Connection.class);
                 bind(natsOutbound).to(NatsOutboundPort.class);
                 bind(natsOutbound).to(NatsConnectionStatus.class);

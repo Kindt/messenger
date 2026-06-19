@@ -1,6 +1,8 @@
 package com.avandocmsg.messenger.api.repository;
 
 import com.avandocmsg.messenger.api.admin.MigrationImportProcessor;
+import com.avandocmsg.messenger.core.bootstrap.CoreModule;
+import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -9,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Statement;
+import java.time.Clock;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -105,7 +108,10 @@ class MigrationImportJobRepositoryH2Test {
             {"export_json":{"name":"x","messages":[{"id":1,"type":"message","text":"hi"}]}}
             """;
         var id = repository.insert(orgId, "telegram_export_v1", config, userId);
-        var processor = new MigrationImportProcessor(repository, ds, null, null);
+        var chatRepo = new ChatRepository(ds, Clock.systemUTC(), UuidGenerator.standard());
+        var msgPort = CoreModule.messageRepositoryPort(ds);
+        var processor = new MigrationImportProcessor(
+            repository, chatRepo, msgPort, UuidGenerator.standard());
         var done = processor.process(id);
         assertEquals("completed", done.orElseThrow().status());
         var result = MAPPER.readTree(done.orElseThrow().resultJson());

@@ -1,13 +1,16 @@
 package com.avandocmsg.messenger.api.blocks;
 
 import com.avandocmsg.messenger.api.blocks.dto.BlockUserRequest;
+import com.avandocmsg.messenger.api.blocks.dto.BlockedUserResponse;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
-import com.avandocmsg.messenger.api.repository.BlockRepository;
 import com.avandocmsg.messenger.api.repository.ContactRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+import com.avandocmsg.messenger.core.domain.BlockedUser;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
@@ -31,17 +34,17 @@ import java.util.UUID;
 @Tag(name = "Blocks", description = "Полная блокировка пользователей (раздел 10 ТЗ)")
 public class BlocksResource {
 
-    private final BlockRepository blockRepository;
+    private final BlockRepositoryPort blockRepositoryPort;
     private final UserRepository userRepository;
     private final ContactRepository contactRepository;
     private final UserMessageSource messages;
 
     @Inject
-    public BlocksResource(BlockRepository blockRepository,
+    public BlocksResource(BlockRepositoryPort blockRepositoryPort,
                           UserRepository userRepository,
                           ContactRepository contactRepository,
                           UserMessageSource messages) {
-        this.blockRepository = blockRepository;
+        this.blockRepositoryPort = blockRepositoryPort;
         this.userRepository = userRepository;
         this.contactRepository = contactRepository;
         this.messages = messages;
@@ -51,7 +54,9 @@ public class BlocksResource {
     @Operation(summary = "Список заблокированных текущим пользователем")
     public Response list(@Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var rows = blockRepository.listBlockedUsers(userId);
+        var rows = blockRepositoryPort.listBlockedUsers(UserId.of(userId)).stream()
+            .map(BlocksResource::toResponse)
+            .toList();
         return Response.ok(rows).build();
     }
 
@@ -77,10 +82,12 @@ public class BlocksResource {
                 .entity(new ApiError(404, messages.get("error.blocks.user_not_found")))
                 .build();
         }
-        if (blockRepository.exists(blockerId, targetId)) {
+        var blocker = UserId.of(blockerId);
+        var target = UserId.of(targetId);
+        if (blockRepositoryPort.exists(blocker, target)) {
             return Response.noContent().build();
         }
-        if (!blockRepository.block(blockerId, targetId)) {
+        if (!blockRepositoryPort.block(blocker, target)) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(new ApiError(500, messages.get("error.blocks.block_failed")))
                 .build();
@@ -97,11 +104,19 @@ public class BlocksResource {
                             @Context SecurityContext securityContext) {
         var targetId = UuidParams.required(userIdStr, "user_id");
         var blockerId = CurrentUserId.uuid(securityContext);
-        if (!blockRepository.unblock(blockerId, targetId)) {
+        if (!blockRepositoryPort.unblock(UserId.of(blockerId), UserId.of(targetId))) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.blocks.not_found")))
                 .build();
         }
         return Response.noContent().build();
+    }
+
+    private static BlockedUserResponse toResponse(BlockedUser blockedUser) {
+        return new BlockedUserResponse(
+            blockedUser.userId().value().toString(),
+            blockedUser.username(),
+            blockedUser.displayName(),
+            blockedUser.blockedAt());
     }
 }

@@ -18,8 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class ChatServiceTest {
 
     private final StubChatRepository chatRepo = new StubChatRepository();
-    private final StubBlockRepository blockRepo = new StubBlockRepository();
-    private final ChatService chatService = new ChatService(chatRepo, blockRepo, null, null,
+    private final StubBlockPort blockRepo = new StubBlockPort();
+    private final ChatService chatService = new ChatService(chatRepo, blockRepo, null, null, null,
         NatsOutboundPort.noop(), Clock.fixed(Instant.parse("2020-01-01T00:00:00Z"), ZoneOffset.UTC),
         UuidGenerator.standard(), NoOpReadCacheAdapter.INSTANCE, new AppConfig());
 
@@ -232,16 +232,31 @@ class ChatServiceTest {
         }
     }
 
-    static class StubBlockRepository extends com.avandocmsg.messenger.api.repository.BlockRepository {
+    static class StubBlockPort implements com.avandocmsg.messenger.core.port.BlockRepositoryPort {
         final Set<String> blocks = new HashSet<>();
 
-        StubBlockRepository() {
-            super(null);
+        @Override
+        public boolean exists(com.avandocmsg.messenger.core.domain.UserId blockerId,
+                              com.avandocmsg.messenger.core.domain.UserId blockedId) {
+            return blocks.contains(blockerId.value().toString() + ":" + blockedId.value().toString());
         }
 
         @Override
-        public boolean exists(UUID blockerId, UUID blockedId) {
-            return blocks.contains(blockerId.toString() + ":" + blockedId.toString());
+        public boolean block(com.avandocmsg.messenger.core.domain.UserId blockerId,
+                             com.avandocmsg.messenger.core.domain.UserId blockedId) {
+            return false;
+        }
+
+        @Override
+        public boolean unblock(com.avandocmsg.messenger.core.domain.UserId blockerId,
+                               com.avandocmsg.messenger.core.domain.UserId blockedId) {
+            return false;
+        }
+
+        @Override
+        public java.util.List<com.avandocmsg.messenger.core.domain.BlockedUser> listBlockedUsers(
+            com.avandocmsg.messenger.core.domain.UserId blockerId) {
+            return java.util.List.of();
         }
     }
 }

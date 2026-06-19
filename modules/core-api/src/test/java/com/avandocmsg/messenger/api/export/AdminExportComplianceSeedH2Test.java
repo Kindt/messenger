@@ -4,7 +4,7 @@ import com.avandocmsg.messenger.api.admin.dto.AdminExportCompliancePrepRequest;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.files.FileService;
 import com.avandocmsg.messenger.api.mls.MlsService;
-import com.avandocmsg.messenger.api.repository.BlockRepository;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcBlockRepositoryAdapter;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
@@ -152,19 +152,19 @@ class AdminExportComplianceSeedH2Test {
                 return 10_000_000L;
             }
         };
+        var messagePort = new JdbcMessageRepositoryAdapter(messageRepository);
         var fileApplicationService = new FileApplicationService(
             new JdbcFileMetadataAdapter(ds),
-            messageRepository,
+            messagePort,
             new FileProxyObjectStorageAdapter(fileProxy),
             uuidGen,
             appConfig.mediaMaxUploadBytes(),
             false);
-        var fileService = new FileService(fileApplicationService, messageRepository);
-        var messagePort = new JdbcMessageRepositoryAdapter(messageRepository);
+        var fileService = new FileService(fileApplicationService, messagePort);
         var natsOutbound = mock(NatsOutboundPort.class);
         var messageSendCoordinator = new MessageSendCoordinator(
             messagePort,
-            chatRepository,
+            new JdbcChatRepositoryAdapter(ds),
             mock(MlsService.class),
             null,
             natsOutbound,
@@ -173,7 +173,7 @@ class AdminExportComplianceSeedH2Test {
         var messageApplicationService = new MessageApplicationService(
             messagePort,
             new JdbcChatRepositoryAdapter(ds),
-            new BlockRepository(ds),
+            new JdbcBlockRepositoryAdapter(ds),
             messageSendCoordinator);
         seed = new AdminExportComplianceSeed(
             null,

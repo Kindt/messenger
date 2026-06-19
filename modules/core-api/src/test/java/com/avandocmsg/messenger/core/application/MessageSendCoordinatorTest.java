@@ -1,9 +1,13 @@
 package com.avandocmsg.messenger.core.application;
 
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.MessageRepository;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageRepositoryAdapter;
+import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.Message;
+import com.avandocmsg.messenger.core.domain.MessageId;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.MessageInsert;
+import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
+import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,13 +23,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class MessageSendCoordinatorTest {
 
-    private final StubMessageRepository msgRepo = new StubMessageRepository();
-    private final StubChatRepository chatRepo = new StubChatRepository();
+    private final StubMessagePort msgPort = new StubMessagePort();
+    private final StubChatPort chatPort = new StubChatPort();
     private final RecordingNats nats = new RecordingNats();
     private final StubMlsService mlsService = new StubMlsService();
     private final MessageSendCoordinator coordinator = new MessageSendCoordinator(
-        new JdbcMessageRepositoryAdapter(msgRepo),
-        chatRepo,
+        msgPort,
+        chatPort,
         mlsService,
         null,
         nats,
@@ -37,7 +41,7 @@ class MessageSendCoordinatorTest {
 
     @BeforeEach
     void reset() {
-        msgRepo.messages.clear();
+        msgPort.messages.clear();
         nats.pipelinePayloads.clear();
     }
 
@@ -48,7 +52,7 @@ class MessageSendCoordinatorTest {
 
         assertNotNull(result);
         assertEquals("hello", result.content());
-        assertEquals(1, msgRepo.messages.size());
+        assertEquals(1, msgPort.messages.size());
         assertEquals(1, nats.pipelinePayloads.size());
     }
 
@@ -62,7 +66,7 @@ class MessageSendCoordinatorTest {
         var forwarded = coordinator.forward(chatId, UUID.fromString(sourceMsg.id()), userId, UUID.randomUUID());
         assertNotNull(forwarded);
         assertEquals("original", forwarded.content());
-        assertEquals(2, msgRepo.messages.size());
+        assertEquals(2, msgPort.messages.size());
         assertEquals(1, nats.pipelinePayloads.size());
     }
 
@@ -95,57 +99,140 @@ class MessageSendCoordinatorTest {
         }
     }
 
-    static class StubMessageRepository extends MessageRepository {
+    static class StubMessagePort implements MessageRepositoryPort {
         final List<com.avandocmsg.messenger.api.messages.dto.MessageResponse> messages = new ArrayList<>();
 
-        StubMessageRepository() {
-            super(null, java.time.Clock.systemUTC());
+        @Override
+        public Optional<Message> findById(MessageId id) {
+            return messages.stream()
+                .filter(m -> m.id().equals(id.value().toString()))
+                .findFirst()
+                .map(m -> new Message(
+                    id,
+                    ChatId.of(UUID.fromString(m.chatId())),
+                    UserId.of(UUID.fromString(m.senderId())),
+                    m.type(),
+                    m.content(),
+                    m.replyToMsgId(),
+                    m.threadId(),
+                    m.deleted(),
+                    m.createdAt(),
+                    m.editedAt(),
+                    m.visibilityTtlSeconds(),
+                    m.attachmentFileId()));
         }
 
         @Override
-        public com.avandocmsg.messenger.api.messages.dto.MessageResponse insert(
-            UUID id, UUID chatId, UUID senderId, String type, String content,
-            UUID replyToMsgId, UUID threadId, String clientMsgId, Integer visibilityTtlSeconds,
-            UUID attachmentFileId, Integer voiceDurationMs) {
-            return insert(id, chatId, senderId, type, content, replyToMsgId, threadId, clientMsgId,
-                visibilityTtlSeconds, attachmentFileId);
-        }
-
-        @Override
-        public com.avandocmsg.messenger.api.messages.dto.MessageResponse insert(
-            UUID id, UUID chatId, UUID senderId, String type, String content,
-            UUID replyToMsgId, String clientMsgId, Integer visibilityTtlSeconds, UUID attachmentFileId) {
-            return insert(id, chatId, senderId, type, content, replyToMsgId, null, clientMsgId,
-                visibilityTtlSeconds, attachmentFileId);
-        }
-
-        @Override
-        public com.avandocmsg.messenger.api.messages.dto.MessageResponse insert(
-            UUID id, UUID chatId, UUID senderId, String type, String content,
-            UUID replyToMsgId, UUID threadId, String clientMsgId, Integer visibilityTtlSeconds,
-            UUID attachmentFileId) {
+        public Optional<Message> insert(MessageInsert command) {
             var msg = new com.avandocmsg.messenger.api.messages.dto.MessageResponse(
-                id.toString(), chatId.toString(), senderId.toString(), type, content,
-                replyToMsgId != null ? replyToMsgId.toString() : null, false, Instant.now(), null,
-                visibilityTtlSeconds, attachmentFileId != null ? attachmentFileId.toString() : null,
-                threadId != null ? threadId.toString() : null, null, null, null, null, null, null);
+                command.id().value().toString(),
+                command.chatId().value().toString(),
+                command.senderId().value().toString(),
+                command.type(),
+                command.content(),
+                command.replyToMsgId() != null ? command.replyToMsgId().toString() : null,
+                false,
+                Instant.now(),
+                null,
+                command.visibilityTtlSeconds(),
+                command.attachmentFileId() != null ? command.attachmentFileId().toString() : null,
+                command.threadId() != null ? command.threadId().toString() : null,
+                null,
+                null,
+                null,
+                command.voiceDurationMs(),
+                null,
+                null);
             messages.add(msg);
-            return msg;
+            return Optional.of(new Message(
+                command.id(),
+                command.chatId(),
+                command.senderId(),
+                command.type(),
+                command.content(),
+                command.replyToMsgId() != null ? command.replyToMsgId().toString() : null,
+                command.threadId() != null ? command.threadId().toString() : null,
+                false,
+                msg.createdAt(),
+                null,
+                command.visibilityTtlSeconds(),
+                command.attachmentFileId() != null ? command.attachmentFileId().toString() : null));
         }
 
         @Override
-        public Optional<com.avandocmsg.messenger.api.messages.dto.MessageResponse> findById(UUID id) {
-            return messages.stream().filter(m -> m.id().equals(id.toString())).findFirst();
+        public boolean existsClientMsgId(ChatId chatId, UserId senderId, String clientMsgId) {
+            return false;
+        }
+
+        @Override
+        public boolean updateContent(MessageId id, UserId senderId, String content) {
+            return false;
+        }
+
+        @Override
+        public boolean softDelete(MessageId id) {
+            return false;
+        }
+
+        @Override
+        public boolean addReaction(MessageId messageId, UserId userId, String reaction) {
+            return false;
+        }
+
+        @Override
+        public boolean removeReaction(MessageId messageId, UserId userId, String reaction) {
+            return false;
+        }
+
+        @Override
+        public boolean pinMessage(ChatId chatId, MessageId messageId, UserId pinnedBy) {
+            return false;
+        }
+
+        @Override
+        public boolean unpinMessage(ChatId chatId, MessageId messageId) {
+            return false;
         }
     }
 
-    static class StubChatRepository extends ChatRepository {
-        StubChatRepository() {
-            super(null, java.time.Clock.systemUTC(), UuidGenerator.standard());
+    static class StubChatPort implements ChatRepositoryPort {
+        @Override
+        public java.util.Optional<com.avandocmsg.messenger.core.domain.Chat> findById(
+            com.avandocmsg.messenger.core.domain.ChatId id) {
+            return java.util.Optional.empty();
         }
 
         @Override
-        public List<com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse> listMembers(UUID chatId) {
+        public boolean isMember(
+            com.avandocmsg.messenger.core.domain.ChatId chatId,
+            com.avandocmsg.messenger.core.domain.UserId userId) {
+            return false;
+        }
+
+        @Override
+        public java.util.Optional<String> memberRole(
+            com.avandocmsg.messenger.core.domain.ChatId chatId,
+            com.avandocmsg.messenger.core.domain.UserId userId) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public boolean isMemberBanned(
+            com.avandocmsg.messenger.core.domain.ChatId chatId,
+            com.avandocmsg.messenger.core.domain.UserId userId) {
+            return false;
+        }
+
+        @Override
+        public java.util.Optional<com.avandocmsg.messenger.core.domain.UserId> findOtherP2pMember(
+            com.avandocmsg.messenger.core.domain.ChatId chatId,
+            com.avandocmsg.messenger.core.domain.UserId userId) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public List<com.avandocmsg.messenger.core.domain.UserId> listMemberUserIds(
+            com.avandocmsg.messenger.core.domain.ChatId chatId) {
             return List.of();
         }
     }

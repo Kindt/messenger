@@ -2,14 +2,16 @@ package com.avandocmsg.messenger.api.admin;
 
 import com.avandocmsg.messenger.api.migration.TelegramExportV1Parser;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.api.repository.MigrationImportJobRepository;
+import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.MessageId;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.MessageInsert;
+import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
-import java.time.Clock;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,7 +22,7 @@ public class MigrationImportProcessor {
 
     private final MigrationImportJobRepository jobRepository;
     private final ChatRepository chatRepository;
-    private final MessageRepository messageRepository;
+    private final MessageRepositoryPort messageRepositoryPort;
     private final UuidGenerator uuidGenerator;
 
     public MigrationImportProcessor(MigrationImportJobRepository jobRepository) {
@@ -29,20 +31,14 @@ public class MigrationImportProcessor {
 
     public MigrationImportProcessor(
         MigrationImportJobRepository jobRepository,
-        DataSource dataSource,
-        Clock clock,
+        ChatRepository chatRepository,
+        MessageRepositoryPort messageRepositoryPort,
         UuidGenerator uuidGenerator
     ) {
         this.jobRepository = jobRepository;
-        var effectiveClock = clock != null ? clock : Clock.systemUTC();
+        this.chatRepository = chatRepository;
+        this.messageRepositoryPort = messageRepositoryPort;
         this.uuidGenerator = uuidGenerator != null ? uuidGenerator : UuidGenerator.standard();
-        if (dataSource != null) {
-            this.chatRepository = new ChatRepository(dataSource, effectiveClock, this.uuidGenerator);
-            this.messageRepository = new MessageRepository(dataSource, effectiveClock);
-        } else {
-            this.chatRepository = null;
-            this.messageRepository = null;
-        }
     }
 
     public Optional<MigrationImportJobRepository.JobRow> process(UUID jobId) {
@@ -53,8 +49,8 @@ public class MigrationImportProcessor {
         if (!"pending".equals(job.status()) && !"failed".equals(job.status())) {
             return Optional.of(job);
         }
-        if (chatRepository == null || messageRepository == null) {
-            return fail(jobId, "processor not configured with DataSource");
+        if (chatRepository == null || messageRepositoryPort == null) {
+            return fail(jobId, "processor not configured with repositories");
         }
         jobRepository.updateStatus(jobId, "running", "{\"phase\":\"running\"}");
         try {
@@ -77,26 +73,29 @@ public class MigrationImportProcessor {
                     return fail(jobId, "failed to create import chat");
                 }
             }
+            var chatIdDomain = ChatId.of(chatId);
+            var actorIdDomain = UserId.of(actorId);
             int imported = 0;
             int skipped = 0;
             for (var msg : parsed.messages()) {
                 var clientMsgId = TG_CLIENT_PREFIX + msg.exportId();
-                if (messageRepository.existsClientMsgId(chatId, actorId, clientMsgId)) {
+                if (messageRepositoryPort.existsClientMsgId(chatIdDomain, actorIdDomain, clientMsgId)) {
                     skipped++;
                     continue;
                 }
-                var inserted = messageRepository.insert(
-                    uuidGenerator.randomUuid(),
-                    chatId,
-                    actorId,
+                var inserted = messageRepositoryPort.insert(new MessageInsert(
+                    MessageId.of(uuidGenerator.randomUuid()),
+                    chatIdDomain,
+                    actorIdDomain,
                     "text",
                     msg.text(),
                     null,
                     null,
                     clientMsgId,
                     null,
-                    null);
-                if (inserted != null) {
+                    null,
+                    null));
+                if (inserted.isPresent()) {
                     imported++;
                 } else {
                     skipped++;

@@ -2,9 +2,10 @@ package com.avandocmsg.messenger.api.files;
 
 import com.avandocmsg.messenger.api.files.dto.FileInfoResponse;
 import com.avandocmsg.messenger.api.files.dto.FileUploadResponse;
-import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.core.application.FileApplicationService;
 import com.avandocmsg.messenger.core.application.FileDomainMapper;
+import com.avandocmsg.messenger.core.port.FileMessageRef;
+import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.domain.FileId;
 import com.avandocmsg.messenger.core.domain.UserId;
 
@@ -16,11 +17,11 @@ import java.util.UUID;
 /** Legacy façade delegating file I/O to {@link FileApplicationService}. */
 public class FileService {
     private final FileApplicationService fileApplicationService;
-    private final MessageRepository messageRepository;
+    private final MessageQueryPort messageQueryPort;
 
-    public FileService(FileApplicationService fileApplicationService, MessageRepository messageRepository) {
+    public FileService(FileApplicationService fileApplicationService, MessageQueryPort messageQueryPort) {
         this.fileApplicationService = fileApplicationService;
-        this.messageRepository = messageRepository;
+        this.messageQueryPort = messageQueryPort;
     }
 
     public long maxUploadBytes() {
@@ -64,15 +65,15 @@ public class FileService {
         if (info.uploadedBy().equals(viewerId.toString())) {
             return true;
         }
-        return messageRepository.viewerMayAccessFileViaSharedNonE2eeMessage(fileId, viewerId);
+        return messageQueryPort.viewerMayAccessFileViaSharedNonE2eeMessage(fileId, viewerId);
     }
 
-    public Optional<MessageRepository.FileMessageRef> findMessageRefForViewer(UUID fileId, UUID viewerId) {
+    public Optional<FileMessageRef> findMessageRefForViewer(UUID fileId, UUID viewerId) {
         var info = getInfo(fileId.toString());
         if (info == null || !mayViewFile(info, fileId, viewerId)) {
             return Optional.empty();
         }
-        return messageRepository.findLatestMessageRefForViewer(fileId, viewerId);
+        return messageQueryPort.findLatestMessageRefForViewer(fileId, viewerId);
     }
 
     public boolean delete(String fileId) {

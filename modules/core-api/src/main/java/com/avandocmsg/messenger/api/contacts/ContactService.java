@@ -2,7 +2,8 @@ package com.avandocmsg.messenger.api.contacts;
 
 import com.avandocmsg.messenger.api.contacts.dto.ContactResponse;
 import com.avandocmsg.messenger.api.contacts.dto.ImportContactsResponse;
-import com.avandocmsg.messenger.api.repository.BlockRepository;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import com.avandocmsg.messenger.api.repository.ContactRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
 import org.slf4j.Logger;
@@ -16,13 +17,13 @@ public class ContactService {
 
     private final ContactRepository contactRepository;
     private final UserRepository userRepository;
-    private final BlockRepository blockRepository;
+    private final BlockRepositoryPort blockRepositoryPort;
 
     public ContactService(ContactRepository contactRepository, UserRepository userRepository,
-                          BlockRepository blockRepository) {
+                          BlockRepositoryPort blockRepositoryPort) {
         this.contactRepository = contactRepository;
         this.userRepository = userRepository;
-        this.blockRepository = blockRepository;
+        this.blockRepositoryPort = blockRepositoryPort;
     }
 
     public List<ContactResponse> list(UUID userId) {
@@ -36,7 +37,9 @@ public class ContactService {
         if (userRepository.findById(contactUserId).isEmpty()) {
             return false;
         }
-        if (blockRepository.exists(userId, contactUserId) || blockRepository.exists(contactUserId, userId)) {
+        var user = UserId.of(userId);
+        var contact = UserId.of(contactUserId);
+        if (blockRepositoryPort.exists(user, contact) || blockRepositoryPort.exists(contact, user)) {
             return false;
         }
         return contactRepository.add(userId, contactUserId);

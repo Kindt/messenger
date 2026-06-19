@@ -31,6 +31,8 @@
     "Session expired — please sign in again.": "errors.sessionExpired",
   };
 
+  var localeVersion = 0;
+
   function fetchJson(url) {
     return fetch(url, { credentials: "same-origin" }).then(function (res) {
       if (!res.ok) throw new Error("Locale fetch failed: " + url);
@@ -46,6 +48,9 @@
       if (manifest && manifest.default) {
         DEFAULT_LOCALE = manifest.default;
       }
+      if (manifest && manifest.keyCount) {
+        localeVersion = Number(manifest.keyCount) || 0;
+      }
       return manifest;
     });
   }
@@ -53,7 +58,10 @@
   function loadLocale(code) {
     if (loaded[code]) return Promise.resolve(loaded[code]);
     if (loading[code]) return loading[code];
-    loading[code] = fetchJson("/locales/" + encodeURIComponent(code) + ".json")
+    var url =
+      "/locales/" + encodeURIComponent(code) + ".json" +
+      (localeVersion ? "?v=" + encodeURIComponent(String(localeVersion)) : "");
+    loading[code] = fetchJson(url)
       .then(function (bundle) {
         loaded[code] = bundle;
         delete loading[code];

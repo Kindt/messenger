@@ -538,6 +538,22 @@
     throw new Error("KorusUiMessageContent required — load ui-message-content.js before app.js");
   }
   var uiMessageContent = window.KorusUiMessageContent;
+  if (!window.KorusUiMessageReply) {
+    throw new Error("KorusUiMessageReply required — load ui-message-reply.js before app.js");
+  }
+  var uiMessageReply = window.KorusUiMessageReply;
+  if (!window.KorusUiComposer) {
+    throw new Error("KorusUiComposer required — load ui-composer.js before app.js");
+  }
+  var uiComposer = window.KorusUiComposer;
+  if (!window.KorusUiWsHandler) {
+    throw new Error("KorusUiWsHandler required — load ui-ws-handler.js before app.js");
+  }
+  var uiWsHandler = window.KorusUiWsHandler;
+  if (!window.KorusUiFileAttach) {
+    throw new Error("KorusUiFileAttach required — load ui-file-attach.js before app.js");
+  }
+  var uiFileAttach = window.KorusUiFileAttach;
   var wsEvents = window.KorusUiWsEvents || {
     isMessageSendEvent: function () { return false; },
     isMessageChangeEvent: function () { return false; },
@@ -4442,26 +4458,6 @@
     }, 450);
   }
 
-  function bindComposerDrop(comp) {
-    comp.addEventListener("dragover", function (e) {
-      e.preventDefault();
-      comp.classList.add("composer-dragover");
-    });
-    comp.addEventListener("dragleave", function (e) {
-      if (!comp.contains(e.relatedTarget)) {
-        comp.classList.remove("composer-dragover");
-      }
-    });
-    comp.addEventListener("drop", function (e) {
-      e.preventDefault();
-      comp.classList.remove("composer-dragover");
-      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-      if (f && state.selectedId && !state.busy) {
-        sendFileMessage(f);
-      }
-    });
-  }
-
   function sortMessagesAsc(rows) {
     return uiMessagesUtils.sortMessagesAsc(rows);
   }
@@ -5033,76 +5029,22 @@
     return myId && userId === myId ? L("ui.thread.you") : userId.slice(0, 8);
   }
 
-  function replyPreviewData(m) {
-    if (!m) return null;
-    var preview = m.reply_preview || m.replyPreview;
-    if (preview) {
-      var mid = preview.message_id || preview.messageId || m.reply_to_msg_id;
-      var senderId = preview.sender_id || preview.senderId || null;
-      var deleted = !!preview.deleted;
-      var snippet = deleted ? null : preview.snippet;
-      var encrypted =
-        !deleted && (snippet == null || snippet === "") && !!m.reply_to_msg_id;
-      return {
-        messageId: mid,
-        senderId: senderId,
-        snippet: snippet,
-        deleted: deleted,
-        encrypted: encrypted,
-      };
-    }
-    if (!m.reply_to_msg_id) return null;
-    var parent = findMessageInThread(m.reply_to_msg_id);
+  function getMessageReplyCtx() {
     return {
-      messageId: m.reply_to_msg_id,
-      senderId: parent ? parent.sender_id : null,
-      snippet: replySnippetForId(m.reply_to_msg_id),
-      deleted: !!(parent && parent.deleted),
-      encrypted: !!(parent && isE2eeType(parent.type)),
+      L: L,
+      el: el,
+      findMessageInThread: findMessageInThread,
+      replySnippetForId: replySnippetForId,
+      senderLabelForUserId: senderLabelForUserId,
+      isE2eeType: isE2eeType,
+      scrollToMessageId: function (msgId) {
+        scrollToMessageId(msgId).catch(function () {});
+      },
     };
   }
 
   function appendReplyQuoteBlock(art, m) {
-    var rp = replyPreviewData(m);
-    if (!rp || !rp.messageId) return;
-    var rq = el("button", "msg-reply-quote");
-    rq.type = "button";
-    rq.setAttribute("data-testid", "message-reply-quote");
-    var quoteTitle = L("ui.message.replyQuoteTitle");
-    rq.setAttribute("aria-label", quoteTitle);
-    rq.title = quoteTitle;
-    if (rp.senderId) {
-      rq.appendChild(
-        el("span", "msg-reply-quote-sender", senderLabelForUserId(rp.senderId))
-      );
-    }
-    var sn = el("span", "msg-reply-quote-snippet");
-    if (rp.deleted) {
-      sn.textContent = L("ui.message.deleted");
-      sn.classList.add("msg-reply-quote-deleted");
-    } else if (rp.encrypted) {
-      sn.textContent = L("chat.encryptedE2eePreview");
-    } else {
-      sn.textContent = rp.snippet || L("ui.message.default");
-    }
-    rq.appendChild(sn);
-    rq.onclick = function () {
-      scrollToMessageId(rp.messageId).catch(function () {});
-    };
-    art.appendChild(rq);
-  }
-
-  function highlightMessageElement(msgId) {
-    if (!msgId) return;
-    requestAnimationFrame(function () {
-      var target = document.getElementById("msg-" + msgId);
-      if (!target) return;
-      target.scrollIntoView({ behavior: "smooth", block: "center" });
-      target.classList.add("msg-highlight");
-      setTimeout(function () {
-        target.classList.remove("msg-highlight");
-      }, 1200);
-    });
+    uiMessageReply.appendReplyQuoteBlock(art, m, getMessageReplyCtx());
   }
 
   async function ensureMessageInThread(msgId) {
@@ -5125,7 +5067,7 @@
     if (findMessageInThread(msgId)) {
       state.virtualFocusMessageId = msgId;
       render();
-      highlightMessageElement(msgId);
+      uiMessageReply.highlightMessageElement(msgId);
       return;
     }
     var pages = 0;
@@ -5135,14 +5077,14 @@
       if (findMessageInThread(msgId)) {
         state.virtualFocusMessageId = msgId;
         render();
-        highlightMessageElement(msgId);
+        uiMessageReply.highlightMessageElement(msgId);
         return;
       }
     }
     if (await ensureMessageInThread(msgId)) {
       state.virtualFocusMessageId = msgId;
       render();
-      highlightMessageElement(msgId);
+      uiMessageReply.highlightMessageElement(msgId);
       return;
     }
     throw new Error(L("messages.notFoundInHistory"));
@@ -5440,215 +5382,81 @@
     return parsed;
   }
 
+  function getFileAttachCtx() {
+    return {
+      L: L,
+      state: state,
+      render: render,
+      apiFetch: apiFetch,
+      apiJson: apiJson,
+      openChatById: openChatById,
+      scrollToMessageId: scrollToMessageId,
+    };
+  }
+
   async function fetchFileMetadata(fileId) {
     if (!fileId || !state.tokens) return null;
-    try {
-      return await apiJson("/files/" + fileId, { method: "GET" });
-    } catch (e) {
-      return null;
-    }
+    return uiFileAttach.fetchFileMetadata(fileId, getFileAttachCtx());
   }
 
   async function attachAuthenticatedImage(fileId, imgEl) {
-    try {
-      var meta = await fetchFileMetadata(fileId);
-      if (meta && meta.filename) {
-        imgEl.alt = meta.filename;
-        imgEl.title = meta.filename;
-      }
-      var res = await apiFetch("/files/" + fileId + "/download", {
-        method: "GET",
-        headers: { Accept: "*/*" },
-      });
-      if (!res.ok) return;
-      var blob = await res.blob();
-      var u = URL.createObjectURL(blob);
-      state.blobUrls.push(u);
-      imgEl.src = u;
-      imgEl.style.cursor = "pointer";
-      imgEl.title = L("files.openInNewTab");
-      imgEl.onclick = function () {
-        if (imgEl.src) window.open(imgEl.src, "_blank", "noopener,noreferrer");
-      };
-      imgEl.onerror = function () {
-        imgEl.alt = L("files.imageLoadFailed");
-        imgEl.classList.add("msg-attachment-image-error");
-      };
-    } catch (e) {}
+    return uiFileAttach.attachAuthenticatedImage(fileId, imgEl, getFileAttachCtx());
   }
 
   async function attachAuthenticatedAudio(fileId, audioEl) {
-    try {
-      var res = await apiFetch("/files/" + fileId + "/download", {
-        method: "GET",
-        headers: { Accept: "*/*" },
-      });
-      if (!res.ok) return;
-      var blob = await res.blob();
-      var u = URL.createObjectURL(blob);
-      state.blobUrls.push(u);
-      audioEl.src = u;
-    } catch (e) {}
+    return uiFileAttach.attachAuthenticatedAudio(fileId, audioEl, getFileAttachCtx());
   }
 
   async function openChatMessageForFile(fileId) {
-    if (!fileId || !state.tokens) return;
-    state.busy = true;
-    state.error = null;
-    state.settingsOpen = false;
-    render();
-    try {
-      var ref = await apiJson("/files/" + fileId + "/message-ref", { method: "GET" });
-      if (!ref || !ref.chat_id || !ref.message_id) {
-        throw new Error(L("files.messageForFileNotFound"));
-      }
-      await openChatById(ref.chat_id);
-      await scrollToMessageId(ref.message_id);
-    } catch (e) {
-      state.error = e.message || L("messages.jumpFailed");
-      state.settingsOpen = true;
-    } finally {
-      state.busy = false;
-      render();
-    }
+    return uiFileAttach.openChatMessageForFile(fileId, getFileAttachCtx());
   }
 
   async function downloadChatFile(fileId) {
-    var res = await apiFetch("/files/" + fileId + "/download", {
-      method: "GET",
-      headers: { Accept: "*/*" },
-    });
-    if (!res.ok) {
-      throw new Error(L("files.downloadFailed"));
-    }
-    var cd = res.headers.get("Content-Disposition") || "";
-    var filename = "file";
-    var m = /filename="([^"]+)"/i.exec(cd);
-    if (m) filename = m[1];
-    var blob = await res.blob();
-    var u = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = u;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(u);
+    return uiFileAttach.downloadChatFile(fileId, getFileAttachCtx());
   }
 
   function renderMessageContent(bodyEl, m) {
     uiMessageContent.renderMessageContent(bodyEl, m, getMessageContentCtx());
   }
 
+  function getWsHandlerCtx() {
+    return {
+      state: state,
+      L: L,
+      jwtSub: jwtSub,
+      sendHeartbeatThrottled: sendHeartbeatThrottled,
+      handleRtcEnvelope: handleRtcEnvelope,
+      isTypingEvent: isTypingEvent,
+      noteTyping: noteTyping,
+      scheduleTypingSidebarRefresh: scheduleTypingSidebarRefresh,
+      isPresenceEvent: isPresenceEvent,
+      applyPresenceEvent: applyPresenceEvent,
+      isReadReceiptEvent: isReadReceiptEvent,
+      applyReadReceiptEvent: applyReadReceiptEvent,
+      isMessageChangeEvent: isMessageChangeEvent,
+      applyMessageChangeEvent: applyMessageChangeEvent,
+      isReactionChangeEvent: isReactionChangeEvent,
+      applyReactionChangeEvent: applyReactionChangeEvent,
+      isPinChangeEvent: isPinChangeEvent,
+      applyPinChangeEvent: applyPinChangeEvent,
+      isMentionEvent: isMentionEvent,
+      maybeNotifyMention: maybeNotifyMention,
+      bumpUnread: bumpUnread,
+      scheduleRender: scheduleRender,
+      isConferenceChangeEvent: isConferenceChangeEvent,
+      applyConferenceChangeEvent: applyConferenceChangeEvent,
+      isMessageSendEvent: isMessageSendEvent,
+      setChatPreviewFromSendEvent: setChatPreviewFromSendEvent,
+      maybeNotifyMessage: maybeNotifyMessage,
+      ingestIncomingMessage: ingestIncomingMessage,
+      markChatRead: markChatRead,
+      loadThread: loadThread,
+      THREAD_SOFT_RELOAD: THREAD_SOFT_RELOAD,
+    };
+  }
+
   function handleWsIncoming(ev) {
-    try {
-      var data = JSON.parse(String(ev.data));
-      if (data && data.type === "rtc_signal") {
-        sendHeartbeatThrottled();
-        handleRtcEnvelope(data);
-        return;
-      }
-      if (isTypingEvent(data)) {
-        sendHeartbeatThrottled();
-        noteTyping(data.chat_id, data.user_id);
-        scheduleTypingSidebarRefresh();
-        return;
-      }
-      if (isPresenceEvent(data)) {
-        sendHeartbeatThrottled();
-        applyPresenceEvent(data);
-        scheduleRender();
-        return;
-      }
-      if (isReadReceiptEvent(data)) {
-        sendHeartbeatThrottled();
-        applyReadReceiptEvent(data);
-        scheduleRender();
-        return;
-      }
-      if (isMessageChangeEvent(data)) {
-        sendHeartbeatThrottled();
-        applyMessageChangeEvent(data);
-        scheduleRender();
-        return;
-      }
-      if (isReactionChangeEvent(data)) {
-        sendHeartbeatThrottled();
-        applyReactionChangeEvent(data);
-        scheduleRender();
-        return;
-      }
-      if (isPinChangeEvent(data)) {
-        sendHeartbeatThrottled();
-        applyPinChangeEvent(data);
-        return;
-      }
-      if (isMentionEvent(data)) {
-        sendHeartbeatThrottled();
-        var myId = jwtSub(state.tokens.access_token);
-        if (myId && data.mentioned_user_id === myId) {
-          maybeNotifyMention(data);
-          if (data.chat_id === state.selectedId) {
-            scheduleRender();
-          } else {
-            bumpUnread(data.chat_id);
-            scheduleRender();
-          }
-        }
-        return;
-      }
-      if (isConferenceChangeEvent(data)) {
-        sendHeartbeatThrottled();
-        applyConferenceChangeEvent(data);
-        scheduleRender();
-        return;
-      }
-      if (window.KorusUiLiveSession && KorusUiLiveSession.isLiveSessionChangeEvent(data)) {
-        sendHeartbeatThrottled();
-        KorusUiLiveSession.applyLiveSessionChangeEvent(state, data, {
-          onCreated: function (evt) {
-            state.statusMessage = evt.title
-              ? L("live.createdNamed", { title: evt.title })
-              : L("live.createdDefault");
-          },
-          onEnded: function () {
-            state.statusMessage = L("live.ended");
-          },
-        });
-        scheduleRender();
-        return;
-      }
-      if (!isMessageSendEvent(data)) return;
-      sendHeartbeatThrottled();
-      setChatPreviewFromSendEvent(data);
-      if (data.chatId !== state.selectedId) {
-        maybeNotifyMessage(data);
-        var myId = jwtSub(state.tokens.access_token);
-        if (!myId || data.senderId !== myId) bumpUnread(data.chatId);
-        scheduleRender();
-        return;
-      }
-      if (document.hidden) {
-        maybeNotifyMessage(data);
-      }
-      ingestIncomingMessage(data.chatId, data.messageId, data)
-        .then(function () {
-          return markChatRead(data.chatId);
-        })
-        .then(function () {
-          state.shouldScrollThread = true;
-          scheduleRender();
-        })
-        .catch(function () {
-          loadThread(data.chatId, THREAD_SOFT_RELOAD)
-            .then(function () {
-              return markChatRead(data.chatId);
-            })
-            .then(function () {
-              state.shouldScrollThread = true;
-              scheduleRender();
-            })
-            .catch(function () {});
-        });
-    } catch (e) {}
+    uiWsHandler.handleWsIncoming(ev, getWsHandlerCtx());
   }
 
   var wsClient = window.KorusUiWsClient
@@ -5809,6 +5617,33 @@
     if (na < nb) return -1;
     if (na > nb) return 1;
     return 0;
+  }
+
+  var SIDEBAR_FOLDER_I18N = {
+    all: "ui.sidebar.folderAll",
+    work: "ui.sidebar.folderWorkChip",
+    personal: "ui.sidebar.folderPersonal",
+    archive: "ui.sidebar.folderArchive",
+  };
+
+  var SIDEBAR_FOLDER_ICONS = {
+    all: "📋",
+    work: "💼",
+    personal: "👤",
+    archive: "🗄",
+  };
+
+  function sidebarFolderLabel(fid) {
+    var flatKey = SIDEBAR_FOLDER_I18N[fid];
+    if (flatKey) {
+      var flat = L(flatKey);
+      if (flat !== flatKey) return flat;
+    }
+    var nestedKey = "ui.sidebar.folder." + fid;
+    var nested = L(nestedKey);
+    if (nested !== nestedKey) return nested;
+    var fb = { all: "Все", work: "Работа", personal: "Личные", archive: "Архив" };
+    return fb[fid] || fid;
   }
 
   function filteredChats() {
@@ -6218,19 +6053,9 @@
   }
 
   function wrapComposerSelection(before, after) {
-    var ta = document.getElementById("msgdraft");
-    if (!ta) return;
-    var s = ta.selectionStart;
-    var e = ta.selectionEnd;
-    var val = ta.value;
-    var sel = val.slice(s, e);
-    ta.value = val.slice(0, s) + before + sel + after + val.slice(e);
-    ta.focus();
-    ta.selectionStart = s + before.length;
-    ta.selectionEnd = s + before.length + sel.length;
+    uiComposer.wrapComposerSelection(before, after);
   }
 
-  var VOICE_MAX_MS = 120000;
   var REACTION_PICKER_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "🎉", "👀", "✅"];
 
   async function sendVoiceMessage(blob, durationMs) {
@@ -7831,18 +7656,19 @@
     } else {
     var folderBar = el("div", "sidebar-folder-bar");
     ["all", "work", "personal", "archive"].forEach(function (fid) {
-      var fb = el(
-        "button",
-        "sidebar-folder-chip" + (state.sidebarFolder === fid ? " active" : ""),
-        L("ui.sidebar.folder." + fid)
+      var tip = sidebarFolderLabel(fid);
+      folderBar.appendChild(
+        iconBtn(SIDEBAR_FOLDER_ICONS[fid], tip, {
+          cls:
+            "sidebar-folder-chip sidebar-folder-icon" +
+            (state.sidebarFolder === fid ? " active" : ""),
+          testId: "sidebar-folder-" + fid,
+          onClick: function () {
+            state.sidebarFolder = fid;
+            render();
+          },
+        })
       );
-      fb.type = "button";
-      fb.setAttribute("data-testid", "sidebar-folder-" + fid);
-      fb.onclick = function () {
-        state.sidebarFolder = fid;
-        render();
-      };
-      folderBar.appendChild(fb);
     });
     side.appendChild(folderBar);
     var list = el("div", "chat-list");
@@ -8219,185 +8045,23 @@
         state.virtualFocusMessageId = null;
       }
       thread.appendChild(msgs);
-      var comp = el("form", "composer");
-      comp.onsubmit = function (e) {
-        e.preventDefault();
-        sendMessage();
-      };
-      if (state.replyTo) {
-        var rbar = el("div", "composer-reply-bar");
-        rbar.setAttribute("data-testid", "composer-reply-bar");
-        var rInner = el("div", "composer-reply-inner");
-        if (state.replyTo.senderLabel) {
-          rInner.appendChild(
-            el("span", "composer-reply-sender", state.replyTo.senderLabel + ":")
-          );
-        }
-        rInner.appendChild(
-          el("span", "composer-reply-text", state.replyTo.snippet || L("ui.message.default"))
-        );
-        rbar.appendChild(rInner);
-        var rCancel = el("button", "btn btn-ghost btn-sm", "✕");
-        rCancel.type = "button";
-        rCancel.title = L("ui.thread.cancelReply");
-        rCancel.onclick = function () {
-          clearReplyTo();
-          render();
-        };
-        rbar.appendChild(rCancel);
-        comp.appendChild(rbar);
-      }
-      var fmt = el("div", "composer-format");
-      var bBold = el("button", "btn btn-ghost btn-icon", "B");
-      bBold.type = "button";
-      bBold.title = L("ui.thread.bold");
-      bBold.onclick = function () {
-        wrapComposerSelection("**", "**");
-      };
-      var bIt = el("button", "btn btn-ghost btn-icon", "I");
-      bIt.type = "button";
-      bIt.title = L("ui.thread.italic");
-      bIt.onclick = function () {
-        wrapComposerSelection("*", "*");
-      };
-      var bCode = el("button", "btn btn-ghost btn-icon", "</>");
-      bCode.type = "button";
-      bCode.title = L("ui.thread.code");
-      bCode.onclick = function () {
-        wrapComposerSelection("`", "`");
-      };
-      fmt.appendChild(bBold);
-      fmt.appendChild(bIt);
-      fmt.appendChild(bCode);
-      var filePick = document.createElement("input");
-      filePick.type = "file";
-      filePick.id = "msgFilePick";
-      filePick.setAttribute("data-testid", "file-attach-input");
-      filePick.style.display = "none";
-      filePick.accept = "image/*,video/*,*/*";
-      var maxHint =
-        state.mediaCaps && state.mediaCaps.max_upload_bytes
-          ? " до " + Math.round(state.mediaCaps.max_upload_bytes / (1024 * 1024)) + " МБ"
-          : "";
-      var bFile = iconBtn("📎", maxHint
-        ? L("ui.thread.attachFileMax", {
-            mb: Math.round(state.mediaCaps.max_upload_bytes / (1024 * 1024)),
-          })
-        : L("ui.thread.attachFile"), {
-        testId: "file-attach",
-        disabled: state.busy,
-        onClick: function () {
-          filePick.click();
-        },
-      });
-      filePick.onchange = function () {
-        if (filePick.files && filePick.files[0]) {
-          sendFileMessage(filePick.files[0]);
-        }
-        filePick.value = "";
-      };
-      fmt.appendChild(bFile);
-      var voiceState = { recorder: null, chunks: [], startedAt: 0 };
-      var bVoice = iconBtn("🎙", L("ui.thread.voiceRecord"), {
-        testId: "voice-record-btn",
-        disabled: state.busy || !window.MediaRecorder,
-        onClick: function () {
-          if (voiceState.recorder) {
-            voiceState.recorder.stop();
-            return;
-          }
-          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            state.error = L("messages.voiceNotSupported");
-            render();
-            return;
-          }
-          navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
-            voiceState.chunks = [];
-            voiceState.startedAt = Date.now();
-            var rec = new MediaRecorder(stream);
-            voiceState.recorder = rec;
-            bVoice.classList.add("active");
-            rec.ondataavailable = function (ev) {
-              if (ev.data && ev.data.size) voiceState.chunks.push(ev.data);
-            };
-            rec.onstop = function () {
-              stream.getTracks().forEach(function (t) {
-                t.stop();
-              });
-              voiceState.recorder = null;
-              bVoice.classList.remove("active");
-              var durationMs = Date.now() - voiceState.startedAt;
-              if (durationMs > VOICE_MAX_MS) durationMs = VOICE_MAX_MS;
-              var blob = new Blob(voiceState.chunks, { type: "audio/webm" });
-              if (blob.size > 0) {
-                sendVoiceMessage(blob, durationMs).catch(function (err) {
-                  state.error = err.message || L("messages.sendVoiceFailed");
-                  render();
-                });
-              }
-            };
-            rec.start();
-            setTimeout(function () {
-              if (voiceState.recorder) voiceState.recorder.stop();
-            }, VOICE_MAX_MS);
-          }).catch(function () {
-            state.error = L("messages.voiceMicDenied");
-            render();
-          });
-        },
-      });
-      fmt.appendChild(bVoice);
-      fmt.appendChild(filePick);
-      fmt.appendChild(el("span", "composer-md-hint", L("ui.thread.markdownHint")));
-      comp.appendChild(fmt);
-      var ttlRow = el("div", "composer-ttl-row");
-      ttlRow.appendChild(el("label", "composer-ttl-label", L("ui.thread.autoDelete")));
-      var ttlSel = document.createElement("select");
-      ttlSel.id = "composerTtl";
-      ttlSel.className = "composer-ttl-select";
-      [
-        { v: "", l: L("ui.thread.ttlNone") },
-        { v: "60", l: L("ui.thread.ttl1min") },
-        { v: "3600", l: L("ui.thread.ttl1hour") },
-        { v: "86400", l: L("ui.thread.ttl24h") },
-      ].forEach(function (opt) {
-        var o = document.createElement("option");
-        o.value = opt.v;
-        o.textContent = opt.l;
-        if (state.composerTtl === opt.v) o.selected = true;
-        ttlSel.appendChild(o);
-      });
-      ttlSel.onchange = function () {
-        state.composerTtl = ttlSel.value;
-      };
-      ttlRow.appendChild(ttlSel);
-      comp.appendChild(ttlRow);
-      var ta = el("textarea");
-      ta.id = "msgdraft";
-      ta.setAttribute("data-testid", "message-composer");
-      ta.rows = 3;
-      ta.placeholder = L("ui.thread.composerPlaceholder");
-      ta.value = loadComposerDraftForChat(state.selectedId);
-      ta.oninput = function () {
-        scheduleSaveComposerDraft();
-        scheduleTypingNotify();
-      };
-      ta.onkeydown = function (e) {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          sendMessage();
-        }
-      };
-      comp.appendChild(ta);
-      var sb = iconBtn("➤", L("ui.thread.send"), {
-        primary: true,
-        cls: "composer-send-btn",
-        submit: true,
-        disabled: state.busy,
-      });
-      comp.appendChild(sb);
-      bindComposerDrop(comp);
-      thread.appendChild(comp);
+      thread.appendChild(
+        uiComposer.mountComposer({
+          el: el,
+          iconBtn: iconBtn,
+          L: L,
+          state: state,
+          replyTo: state.replyTo,
+          clearReplyTo: clearReplyTo,
+          render: render,
+          sendMessage: sendMessage,
+          sendFileMessage: sendFileMessage,
+          sendVoiceMessage: sendVoiceMessage,
+          loadComposerDraftForChat: loadComposerDraftForChat,
+          scheduleSaveComposerDraft: scheduleSaveComposerDraft,
+          scheduleTypingNotify: scheduleTypingNotify,
+        })
+      );
     }
     main.appendChild(thread);
     shell.appendChild(main);
