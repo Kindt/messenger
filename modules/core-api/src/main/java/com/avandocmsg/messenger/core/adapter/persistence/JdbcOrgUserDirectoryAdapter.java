@@ -18,13 +18,15 @@ public final class JdbcOrgUserDirectoryAdapter implements OrgUserDirectoryPort {
     }
 
     @Override
-    public Optional<UserProfile> findById(UUID id) {
-        return userRepository.findById(id);
+    public Optional<OrgDirectoryUser> findById(UUID id) {
+        return userRepository.findById(id).map(JdbcOrgUserDirectoryAdapter::toDirectoryUser);
     }
 
     @Override
-    public List<UserProfile> listByOrg(UUID orgId, int offset, int limit) {
-        return userRepository.listByOrg(orgId, offset, limit);
+    public List<OrgDirectoryUser> listByOrg(UUID orgId, int offset, int limit) {
+        return userRepository.listByOrg(orgId, offset, limit).stream()
+            .map(JdbcOrgUserDirectoryAdapter::toDirectoryUser)
+            .toList();
     }
 
     @Override
@@ -47,5 +49,16 @@ public final class JdbcOrgUserDirectoryAdapter implements OrgUserDirectoryPort {
     @Override
     public boolean setActive(UUID id, boolean active) {
         return userRepository.setActive(id, active);
+    }
+
+    private static OrgDirectoryUser toDirectoryUser(UserProfile profile) {
+        return new OrgDirectoryUser(
+            UUID.fromString(profile.id()),
+            profile.username(),
+            profile.displayName(),
+            profile.email(),
+            profile.externalId(),
+            profile.hidden(),
+            profile.orgId() != null ? UUID.fromString(profile.orgId()) : null);
     }
 }

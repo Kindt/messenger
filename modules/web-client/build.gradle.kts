@@ -46,6 +46,22 @@ tasks.register<Exec>("buildLocales") {
     outputs.dir(layout.projectDirectory.dir("src/main/resources/webui/locales"))
 }
 
+tasks.register<Exec>("testMessageListUi") {
+    group = "webui"
+    description = "Node smoke for ui-message-list virtual window"
+    workingDir = layout.projectDirectory.dir("webui-build").asFile
+    val npm = if (System.getProperty("os.name").lowercase().contains("windows")) "npm.cmd" else "npm"
+    commandLine(npm, "run", "test:webui")
+    inputs.file(layout.projectDirectory.file("webui-build/scripts/test-message-list.mjs"))
+    inputs.file(layout.projectDirectory.file("webui-build/scripts/test-ws-events.mjs"))
+    inputs.file(layout.projectDirectory.file("webui-build/scripts/test-deep-link-utils.mjs"))
+    inputs.file(layout.projectDirectory.file("webui-build/scripts/test-markdown-utils.mjs"))
+    inputs.file(layout.projectDirectory.file("src/main/resources/webui/ui-message-list.js"))
+    inputs.file(layout.projectDirectory.file("src/main/resources/webui/ui-ws-events.js"))
+    inputs.file(layout.projectDirectory.file("src/main/resources/webui/ui-deep-link-utils.js"))
+    inputs.file(layout.projectDirectory.file("src/main/resources/webui/ui-markdown-utils.js"))
+}
+
 tasks.named("processResources") {
-    dependsOn("buildTailwindCss", "buildLocales")
+    dependsOn("buildTailwindCss", "buildLocales", "testMessageListUi")
 }

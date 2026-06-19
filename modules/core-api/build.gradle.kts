@@ -8,6 +8,8 @@ val swaggerVersion = "2.2.49"
 
 dependencies {
     implementation(project(":modules:common"))
+    implementation(project(":modules:core-domain"))
+    implementation(project(":modules:core-port"))
 
     // Tomcat embedded
     implementation("org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion")

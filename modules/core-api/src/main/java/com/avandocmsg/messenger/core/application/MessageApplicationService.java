@@ -7,12 +7,13 @@ import com.avandocmsg.messenger.api.messages.dto.ReactionResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.api.repository.BlockRepository;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.ChatType;
 import com.avandocmsg.messenger.core.domain.Message;
 import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 
 import java.util.List;
@@ -22,7 +23,7 @@ import java.util.UUID;
 /** Hexagonal application service for message reads and write-path (Phase 2b+). */
 public final class MessageApplicationService {
     private final MessageRepositoryPort messageRepositoryPort;
-    private final ChatRepository chatRepository;
+    private final ChatRepositoryPort chatRepositoryPort;
     private final BlockRepository blockRepository;
     private final MessageSendCoordinator sendCoordinator;
     private final MessageEditCoordinator editCoordinator;
@@ -32,44 +33,44 @@ public final class MessageApplicationService {
     private final MessageRepository legacyMessageRepository;
     private final MlsService mlsService;
 
-    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository) {
-        this(messageRepositoryPort, chatRepository, null, null, null, null, null, null, null, null);
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort) {
+        this(messageRepositoryPort, chatRepositoryPort, null, null, null, null, null, null, null, null);
     }
 
-    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
                                      BlockRepository blockRepository) {
-        this(messageRepositoryPort, chatRepository, blockRepository, null, null, null, null, null, null, null);
+        this(messageRepositoryPort, chatRepositoryPort, blockRepository, null, null, null, null, null, null, null);
     }
 
-    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
                                      BlockRepository blockRepository, MessageSendCoordinator sendCoordinator) {
-        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, null, null, null, null, null, null);
+        this(messageRepositoryPort, chatRepositoryPort, blockRepository, sendCoordinator, null, null, null, null, null, null);
     }
 
-    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
                                      BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator) {
-        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, editCoordinator, null, null, null, null, null);
+        this(messageRepositoryPort, chatRepositoryPort, blockRepository, sendCoordinator, editCoordinator, null, null, null, null, null);
     }
 
-    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
                                      BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
                                      MessageReactionCoordinator reactionCoordinator) {
-        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, editCoordinator,
+        this(messageRepositoryPort, chatRepositoryPort, blockRepository, sendCoordinator, editCoordinator,
             deleteCoordinator, reactionCoordinator, null, null, null);
     }
 
-    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
                                      BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
                                      MessageReactionCoordinator reactionCoordinator,
                                      MessagePinCoordinator pinCoordinator) {
-        this(messageRepositoryPort, chatRepository, blockRepository, sendCoordinator, editCoordinator,
+        this(messageRepositoryPort, chatRepositoryPort, blockRepository, sendCoordinator, editCoordinator,
             deleteCoordinator, reactionCoordinator, pinCoordinator, null, null);
     }
 
-    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepository chatRepository,
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
                                      BlockRepository blockRepository, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
                                      MessageReactionCoordinator reactionCoordinator,
@@ -77,7 +78,7 @@ public final class MessageApplicationService {
                                      MessageRepository legacyMessageRepository,
                                      MlsService mlsService) {
         this.messageRepositoryPort = messageRepositoryPort;
-        this.chatRepository = chatRepository;
+        this.chatRepositoryPort = chatRepositoryPort;
         this.blockRepository = blockRepository;
         this.sendCoordinator = sendCoordinator;
         this.editCoordinator = editCoordinator;
@@ -89,7 +90,7 @@ public final class MessageApplicationService {
     }
 
     public Optional<Message> getMessageForMember(ChatId chatId, MessageId messageId, UserId viewerId) {
-        if (chatRepository.getMemberRole(chatId.value(), viewerId.value()) == null) {
+        if (chatRepositoryPort.memberRole(chatId, viewerId).isEmpty()) {
             return Optional.empty();
         }
         return messageRepositoryPort.findById(messageId)
@@ -97,15 +98,17 @@ public final class MessageApplicationService {
     }
 
     public boolean isChatMember(ChatId chatId, UserId userId) {
-        return chatRepository.getMemberRole(chatId.value(), userId.value()) != null;
+        return chatRepositoryPort.memberRole(chatId, userId).isPresent();
     }
 
     /** Reader is a chat member and not banned. */
     public boolean canAccessChat(UUID chatId, UUID readerId) {
-        if (chatRepository.getMemberRole(chatId, readerId) == null) {
+        var chat = ChatId.of(chatId);
+        var reader = UserId.of(readerId);
+        if (chatRepositoryPort.memberRole(chat, reader).isEmpty()) {
             return false;
         }
-        return !chatRepository.isMemberBanned(chatId, readerId);
+        return !chatRepositoryPort.isMemberBanned(chat, reader);
     }
 
     public List<MessageResponse> listMessages(UUID chatId, UUID userId, int limit, UUID before) {
@@ -195,10 +198,12 @@ public final class MessageApplicationService {
      * Bundle keys {@code error.message.send_denied.*} for {@link com.avandocmsg.messenger.common.i18n.UserMessageSource}.
      */
     public Optional<String> sendBlockedReason(UUID chatId, UUID senderId) {
-        if (chatRepository.getMemberRole(chatId, senderId) == null) {
+        var chat = ChatId.of(chatId);
+        var sender = UserId.of(senderId);
+        if (chatRepositoryPort.memberRole(chat, sender).isEmpty()) {
             return Optional.of("error.message.send_denied.not_member");
         }
-        if (chatRepository.isMemberBanned(chatId, senderId)) {
+        if (chatRepositoryPort.isMemberBanned(chat, sender)) {
             return Optional.of("error.message.send_denied.banned");
         }
         if (isP2PMessagingBlocked(chatId, senderId)) {
@@ -211,11 +216,10 @@ public final class MessageApplicationService {
     }
 
     private boolean isChannelMemberPostDenied(UUID chatId, UUID senderId) {
-        var type = chatRepository.getChatType(chatId).orElse(null);
-        if (!"channel".equals(type)) {
+        if (!chatTypeWire(ChatId.of(chatId)).filter("channel"::equals).isPresent()) {
             return false;
         }
-        var role = chatRepository.getMemberRole(chatId, senderId);
+        var role = chatRepositoryPort.memberRole(ChatId.of(chatId), UserId.of(senderId)).orElse(null);
         return "member".equals(role);
     }
 
@@ -244,10 +248,12 @@ public final class MessageApplicationService {
         if (editCoordinator == null || newContent == null || newContent.isBlank()) {
             return null;
         }
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        var chat = ChatId.of(chatId);
+        var editor = UserId.of(userId);
+        if (chatRepositoryPort.memberRole(chat, editor).isEmpty()) {
             return null;
         }
-        if (chatRepository.getChatType(chatId).filter("saved"::equals).isPresent()) {
+        if (chatTypeWire(chat).filter("saved"::equals).isPresent()) {
             return null;
         }
         var messageId = MessageId.of(msgId);
@@ -265,7 +271,7 @@ public final class MessageApplicationService {
         if (deleteCoordinator == null) {
             return false;
         }
-        if (chatRepository.getMemberRole(chatId, userId) == null) {
+        if (chatRepositoryPort.memberRole(ChatId.of(chatId), UserId.of(userId)).isEmpty()) {
             return false;
         }
         var messageId = MessageId.of(msgId);
@@ -341,9 +347,22 @@ public final class MessageApplicationService {
         if (blockRepository == null) {
             return false;
         }
-        return chatRepository.getChatType(chatId).filter("p2p"::equals).isPresent()
-            && chatRepository.findOtherP2PMember(chatId, senderId)
-            .map(peer -> blockRepository.exists(senderId, peer) || blockRepository.exists(peer, senderId))
+        var chat = ChatId.of(chatId);
+        var sender = UserId.of(senderId);
+        if (!chatTypeWire(chat).filter("p2p"::equals).isPresent()) {
+            return false;
+        }
+        return chatRepositoryPort.findOtherP2pMember(chat, sender)
+            .map(peer -> blockRepository.exists(senderId, peer.value())
+                || blockRepository.exists(peer.value(), senderId))
             .orElse(false);
+    }
+
+    private Optional<String> chatTypeWire(ChatId chatId) {
+        return chatRepositoryPort.findById(chatId).map(c -> wireChatType(c.type()));
+    }
+
+    private static String wireChatType(ChatType type) {
+        return type.name().toLowerCase();
     }
 }

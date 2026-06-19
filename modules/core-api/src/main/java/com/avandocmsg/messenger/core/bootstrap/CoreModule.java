@@ -68,8 +68,8 @@ public final class CoreModule {
         return new JdbcChatRepositoryAdapter(dataSource);
     }
 
-    public static ChatApplicationService chatApplicationService(DataSource dataSource, ChatRepository legacy) {
-        return new ChatApplicationService(chatRepositoryPort(dataSource), legacy);
+    public static ChatApplicationService chatApplicationService(DataSource dataSource) {
+        return new ChatApplicationService(chatRepositoryPort(dataSource));
     }
 
     public static MessageRepositoryPort messageRepositoryPort(DataSource dataSource) {
@@ -95,7 +95,7 @@ public final class CoreModule {
     }
 
     public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository) {
-        return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepository);
+        return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepositoryPort(dataSource));
     }
 
     public static MessageEditCoordinator messageEditCoordinator(DataSource dataSource, NatsOutboundPort natsOutbound) {
@@ -169,7 +169,7 @@ public final class CoreModule {
                                                                       MessagePinCoordinator pinCoordinator,
                                                                       MessageRepository legacyMessageRepository,
                                                                       com.avandocmsg.messenger.api.mls.MlsService mlsService) {
-        return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepository, blockRepository,
+        return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepositoryPort(dataSource), blockRepository,
             sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator,
             legacyMessageRepository, mlsService);
     }

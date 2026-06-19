@@ -33,11 +33,6 @@
     };
   }
 
-  /**
-   * Renders a windowed message list into {@code container}.
-   *
-   * @returns {boolean} true when virtual mode applied
-   */
   function renderVirtualMessages(container, opts) {
     var messages = opts && opts.messages ? opts.messages : [];
     if (!shouldVirtualize(messages.length)) {
@@ -86,11 +81,62 @@
     return true;
   }
 
+  /**
+   * Mount message list with optional virtualization (PS-3.2).
+   *
+   * @returns {boolean} true when virtual mode applied
+   */
+  function mountMessageList(container, opts) {
+    opts = opts || {};
+    var messages = opts.messages || [];
+    var loadMoreEl = opts.loadMoreEl || null;
+    if (!shouldVirtualize(messages.length)) {
+      container.innerHTML = "";
+      if (loadMoreEl) {
+        container.appendChild(loadMoreEl);
+      }
+      messages.forEach(function (m, idx) {
+        container.appendChild(opts.renderMessage(m, idx));
+      });
+      container.onscroll = function () {
+        if (typeof opts.onScrollNearTop === "function" && container.scrollTop < 64) {
+          opts.onScrollNearTop();
+        }
+      };
+      return false;
+    }
+    var virtualScrollRaf = null;
+    var renderWindow = function () {
+      renderVirtualMessages(container, {
+        messages: messages,
+        renderMessage: opts.renderMessage,
+        focusIndex: opts.focusIndex,
+        scrollTop: container.scrollTop,
+        rowHeight: opts.rowHeight,
+        buffer: opts.buffer,
+        loadMoreEl: loadMoreEl,
+        onScrollNearTop: opts.onScrollNearTop,
+        onScroll: function () {
+          if (virtualScrollRaf) {
+            return;
+          }
+          virtualScrollRaf = requestAnimationFrame(function () {
+            virtualScrollRaf = null;
+            renderWindow();
+          });
+        },
+      });
+    };
+    renderWindow();
+    return true;
+  }
+
   global.KorusUiMessageList = {
     VIRTUAL_THRESHOLD: VIRTUAL_THRESHOLD,
     DEFAULT_ROW_HEIGHT: DEFAULT_ROW_HEIGHT,
     shouldVirtualize: shouldVirtualize,
     computeWindow: computeWindow,
     renderVirtualMessages: renderVirtualMessages,
+    mountMessageList: mountMessageList,
   };
 })(typeof window !== "undefined" ? window : globalThis);

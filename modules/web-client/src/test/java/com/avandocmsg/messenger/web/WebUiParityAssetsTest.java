@@ -28,8 +28,15 @@ class WebUiParityAssetsTest {
             "ui-i18n.js",
             "ui-shell-utils.js",
             "ui-transport-utils.js",
+            "ui-ws-client.js",
+            "ui-ws-events.js",
             "ui-format-utils.js",
             "ui-messages-utils.js",
+            "ui-deep-link-utils.js",
+            "ui-clipboard-utils.js",
+            "ui-markdown-utils.js",
+            "ui-message-content.js",
+            "ui-message-article.js",
             "ui-message-list.js",
             "ui-rtc-utils.js",
             "ui-live-session.js",
@@ -68,11 +75,12 @@ class WebUiParityAssetsTest {
         assertTrue(app.contains("KorusUiExportUtils"), "export utils delegation");
         assertTrue(app.contains("KorusUiE2eeMls"), "e2ee mls utils delegation");
         assertTrue(app.contains("KorusUiE2eeUtils"), "e2ee utils delegation");
-        assertTrue(app.contains("message-reply-button"), "reply button testid");
-        assertTrue(app.contains("message-forward-button"), "forward button testid");
-        assertTrue(app.contains("message-delete-button"), "delete button testid");
-        assertTrue(app.contains("message-edit-button"), "edit button testid");
-        assertTrue(app.contains("message-link-button"), "link button testid");
+        var messageArticle = readResource("webui/ui-message-article.js");
+        assertTrue(messageArticle.contains("message-reply-button"), "reply button testid");
+        assertTrue(messageArticle.contains("message-forward-button"), "forward button testid");
+        assertTrue(messageArticle.contains("message-delete-button"), "delete button testid");
+        assertTrue(messageArticle.contains("message-edit-button"), "edit button testid");
+        assertTrue(messageArticle.contains("message-link-button"), "link button testid");
         assertTrue(app.contains("message-reply-quote"), "reply quote testid");
         assertTrue(app.contains("reply_preview"), "reply_preview from API");
         assertTrue(app.contains("mesh-webrtc-button"), "mesh webrtc testid");
@@ -85,11 +93,19 @@ class WebUiParityAssetsTest {
         assertTrue(exportUtils.contains("/attachments"), "export attachments path");
         assertTrue(app.contains("/read-receipts"), "read receipts REST path");
         assertTrue(app.contains("createConferenceInChat"), "in-chat conference path");
-        assertTrue(app.contains("scheduleWsReconnect"), "ws reconnect scheduler");
+        assertTrue(app.contains("KorusUiWsClient"), "ws client module delegation");
+        assertTrue(app.contains("wsClient"), "ws client instance");
         assertTrue(app.contains("KorusUiRtcUtils"), "rtc utils delegation");
         assertTrue(app.contains("KorusUiTransportUtils"), "transport utils delegation");
-        assertTrue(app.contains("KorusUiMessageList"), "virtual message list delegation");
+        assertTrue(app.contains("mountMessageList"), "virtual message list mount");
+        assertTrue(app.contains("KorusUiMessageArticle"), "message article module delegation");
         assertTrue(app.contains("buildMessageArticle"), "message article builder");
+        assertTrue(app.contains("KorusUiDeepLinkUtils"), "deep link utils delegation");
+        assertTrue(app.contains("KorusUiClipboardUtils"), "clipboard utils delegation");
+        assertTrue(app.contains("KorusUiMarkdownUtils"), "markdown utils delegation");
+        assertTrue(app.contains("KorusUiMessageContent"), "message content module delegation");
+        var messageContent = readResource("webui/ui-message-content.js");
+        assertTrue(messageContent.contains("message-voice-player"), "voice player testid");
         assertTrue(app.contains("KorusI18n") || app.contains("localErr"), "i18n error localization");
         assertTrue(app.contains("/conferences") && app.contains("createConference"), "standalone conference flow");
     }

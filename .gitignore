@@ -30,7 +30,8 @@ scripts/__pycache__/
 .specify/
 .opencode/
 specs/
-docs/
+docs/*
+!docs/index.html
 tests/e2e-web/
 AGENTS.md
 CHANGELOG.md

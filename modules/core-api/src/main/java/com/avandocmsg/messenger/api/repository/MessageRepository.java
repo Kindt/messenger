@@ -293,6 +293,26 @@ public class MessageRepository {
         }
     }
 
+    public boolean existsClientMsgId(UUID chatId, UUID senderId, String clientMsgId) {
+        if (clientMsgId == null || clientMsgId.isBlank()) {
+            return false;
+        }
+        var sql = "SELECT 1 FROM messages WHERE chat_id = ? AND sender_id = ? AND client_msg_id = ?";
+        try (var conn = read().getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            applyQueryTimeout(stmt);
+            stmt.setObject(1, chatId);
+            stmt.setObject(2, senderId);
+            stmt.setString(3, clientMsgId);
+            try (var rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            log.error("existsClientMsgId failed chatId={}", chatId, e);
+            return false;
+        }
+    }
+
     public Optional<UUID> findLatestMessageId(UUID chatId) {
         var sql = """
             SELECT m.id FROM messages m

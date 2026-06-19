@@ -105,7 +105,7 @@ public class ScimUsersResource {
         var userName = patch.userName() != null ? patch.userName() : existing.username();
         var displayName = patch.displayName() != null ? patch.displayName() : existing.displayName();
         var active = patch.active() != null ? patch.active() : !existing.hidden();
-        var orgId = existing.orgId() != null ? UUID.fromString(existing.orgId()) : ScimUserMapper.defaultOrgId(appConfig);
+        var orgId = existing.orgId() != null ? existing.orgId() : ScimUserMapper.defaultOrgId(appConfig);
         userDirectory.upsertFromScim(userId, orgId, userName, patch.email(), patch.externalId(), displayName, active);
         var updated = userDirectory.findById(userId).orElseThrow(NotFoundException::new);
         return Response.ok(ScimUserMapper.toResource(updated, baseLocation(uriInfo))).build();

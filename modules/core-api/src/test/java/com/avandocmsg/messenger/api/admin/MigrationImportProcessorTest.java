@@ -12,7 +12,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MigrationImportProcessorTest {
 
     @Test
-    void process_completesPendingJob() {
+    void process_skipsAlreadyCompletedJob() {
+        var jobId = UUID.randomUUID();
+        var orgId = UUID.randomUUID();
+        var statusHolder = new String[] { "completed" };
+        var repo = new MigrationImportJobRepository(null) {
+            @Override
+            public Optional<JobRow> findById(UUID id) {
+                if (!id.equals(jobId)) {
+                    return Optional.empty();
+                }
+                return Optional.of(
+                    new JobRow(jobId, orgId, "telegram_export_v1", statusHolder[0], "{}", null, UUID.randomUUID())
+                );
+            }
+
+            @Override
+            public boolean updateStatus(UUID id, String newStatus, String resultJson) {
+                statusHolder[0] = newStatus;
+                return true;
+            }
+        };
+        var processor = new MigrationImportProcessor(repo);
+        var out = processor.process(jobId);
+        assertTrue(out.isPresent());
+        assertEquals("completed", out.get().status());
+        assertEquals("completed", statusHolder[0]);
+    }
+
+    @Test
+    void process_withoutDataSourceMarksFailed() {
         var jobId = UUID.randomUUID();
         var orgId = UUID.randomUUID();
         var statusHolder = new String[] { "pending" };
@@ -23,7 +52,7 @@ class MigrationImportProcessorTest {
                     return Optional.empty();
                 }
                 return Optional.of(
-                    new JobRow(jobId, orgId, "telegram_export_v1", statusHolder[0], "{}", null)
+                    new JobRow(jobId, orgId, "telegram_export_v1", statusHolder[0], "{}", null, UUID.randomUUID())
                 );
             }
 
@@ -39,6 +68,6 @@ class MigrationImportProcessorTest {
         var processor = new MigrationImportProcessor(repo);
         var out = processor.process(jobId);
         assertTrue(out.isPresent());
-        assertEquals("completed", out.get().status());
+        assertEquals("failed", out.get().status());
     }
 }

@@ -11,7 +11,10 @@ import com.avandocmsg.messenger.core.application.MessageEditCoordinator;
 import com.avandocmsg.messenger.core.application.MessagePinCoordinator;
 import com.avandocmsg.messenger.core.application.MessageReactionCoordinator;
 import com.avandocmsg.messenger.core.application.MessageSendCoordinator;
+import com.avandocmsg.messenger.core.domain.Chat;
 import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.ChatType;
+import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 import com.avandocmsg.messenger.core.domain.Message;
 import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
@@ -39,7 +42,36 @@ class MessageApplicationServiceWriteTest {
 
     private final StubMessageRepository msgRepo = new StubMessageRepository();
     private final StubMessageRepositoryPort msgPort = new StubMessageRepositoryPort(msgRepo);
-    private final StubChatRepository chatRepo = new StubChatRepository();
+    private final StubChatPort chatPort = new StubChatPort();
+    private final com.avandocmsg.messenger.api.repository.ChatRepository chatRepoForSend =
+        new com.avandocmsg.messenger.api.repository.ChatRepository(
+            null, java.time.Clock.systemUTC(), UuidGenerator.standard()) {
+            @Override
+            public String getMemberRole(UUID chatId, UUID userId) {
+                return "member";
+            }
+
+            @Override
+            public boolean isMemberBanned(UUID chatId, UUID userId) {
+                return chatPort.bannedUsers.contains(userId);
+            }
+
+            @Override
+            public java.util.Optional<String> getChatType(UUID chatId) {
+                if (chatPort.p2pChatId != null && chatPort.p2pChatId.equals(chatId)) {
+                    return java.util.Optional.of("p2p");
+                }
+                return java.util.Optional.empty();
+            }
+
+            @Override
+            public java.util.Optional<UUID> findOtherP2PMember(UUID chatId, UUID userId) {
+                if (chatPort.p2pChatId != null && chatPort.p2pChatId.equals(chatId) && chatPort.p2pPeerId != null) {
+                    return java.util.Optional.of(chatPort.p2pPeerId);
+                }
+                return java.util.Optional.empty();
+            }
+        };
     private final StubBlockRepository blockRepo = new StubBlockRepository();
     private final StubMlsService mlsService = new StubMlsService();
     private final RecordingNats recordingNats = new RecordingNats();
@@ -56,9 +88,9 @@ class MessageApplicationServiceWriteTest {
         msgRepo.messages.clear();
         msgRepo.lastFilterUserId = null;
         blockRepo.blockedPairs.clear();
-        chatRepo.bannedUsers.clear();
-        chatRepo.p2pChatId = null;
-        chatRepo.p2pPeerId = null;
+        chatPort.bannedUsers.clear();
+        chatPort.p2pChatId = null;
+        chatPort.p2pPeerId = null;
         mlsService.encryptResult = null;
         msgRepo.lastInsertVisibilityTtl = null;
         msgRepo.lastInsertReplyTo = null;
@@ -69,18 +101,18 @@ class MessageApplicationServiceWriteTest {
     private MessageApplicationService buildApp(BooleanSupplier indexerAvailable) {
         var indexer = new IndexerEventPublisher(recordingNats, indexerAvailable);
         var sendCoord = new MessageSendCoordinator(
-            msgPort, chatRepo, mlsService, null, recordingNats, UuidGenerator.standard(), null);
+            msgPort, chatRepoForSend, mlsService, null, recordingNats, UuidGenerator.standard(), null);
         var editCoord = new MessageEditCoordinator(msgPort, indexer);
         var deleteCoord = new MessageDeleteCoordinator(msgPort, recordingNats, indexer);
         var reactionCoord = new MessageReactionCoordinator(msgPort, recordingNats);
         var pinCoord = new MessagePinCoordinator(msgRepo, recordingNats);
         return new MessageApplicationService(
-            msgPort, chatRepo, blockRepo, sendCoord, editCoord, deleteCoord, reactionCoord, pinCoord, msgRepo, mlsService);
+            msgPort, chatPort, blockRepo, sendCoord, editCoord, deleteCoord, reactionCoord, pinCoord, msgRepo, mlsService);
     }
 
     @Test
     void sendMessage_rejectsBannedUser() {
-        chatRepo.bannedUsers.add(bannedUserId);
+        chatPort.bannedUsers.add(bannedUserId);
 
         var result = messageService.sendMessage(chatId, bannedUserId,
             new SendMessageRequest("text", "hello", null, null, null, null, null, null, null), null);
@@ -100,8 +132,8 @@ class MessageApplicationServiceWriteTest {
     @Test
     void sendMessage_rejectsP2PWhenMutuallyBlocked() {
         var peer = UUID.randomUUID();
-        chatRepo.p2pChatId = chatId;
-        chatRepo.p2pPeerId = peer;
+        chatPort.p2pChatId = chatId;
+        chatPort.p2pPeerId = peer;
         blockRepo.blockedPairs.add(userId.toString() + ":" + peer);
 
         var result = messageService.sendMessage(chatId, userId,
@@ -487,39 +519,41 @@ class MessageApplicationServiceWriteTest {
         }
     }
 
-    static class StubChatRepository extends com.avandocmsg.messenger.api.repository.ChatRepository {
+    static class StubChatPort implements ChatRepositoryPort {
         final List<UUID> bannedUsers = new ArrayList<>();
         UUID p2pChatId;
         UUID p2pPeerId;
 
-        StubChatRepository() {
-            super(null, java.time.Clock.systemUTC(), UuidGenerator.standard());
-        }
-
         @Override
-        public String getMemberRole(UUID chatId, UUID userId) {
-            return "member";
-        }
-
-        @Override
-        public boolean isMemberBanned(UUID chatId, UUID userId) {
-            return bannedUsers.contains(userId);
-        }
-
-        @Override
-        public java.util.Optional<String> getChatType(UUID chatId) {
-            if (p2pChatId != null && p2pChatId.equals(chatId)) {
-                return java.util.Optional.of("p2p");
+        public Optional<Chat> findById(ChatId chatId) {
+            var at = Instant.parse("2026-01-01T00:00:00Z");
+            if (p2pChatId != null && p2pChatId.equals(chatId.value())) {
+                return Optional.of(new Chat(chatId, "", ChatType.P2P, at));
             }
-            return java.util.Optional.empty();
+            return Optional.of(new Chat(chatId, "", ChatType.GROUP, at));
         }
 
         @Override
-        public java.util.Optional<UUID> findOtherP2PMember(UUID chatId, UUID userId) {
-            if (p2pChatId != null && p2pChatId.equals(chatId) && p2pPeerId != null) {
-                return java.util.Optional.of(p2pPeerId);
+        public boolean isMember(ChatId chatId, UserId userId) {
+            return memberRole(chatId, userId).isPresent();
+        }
+
+        @Override
+        public Optional<String> memberRole(ChatId chatId, UserId userId) {
+            return Optional.of("member");
+        }
+
+        @Override
+        public boolean isMemberBanned(ChatId chatId, UserId userId) {
+            return bannedUsers.contains(userId.value());
+        }
+
+        @Override
+        public Optional<UserId> findOtherP2pMember(ChatId chatId, UserId userId) {
+            if (p2pChatId != null && p2pChatId.equals(chatId.value()) && p2pPeerId != null) {
+                return Optional.of(UserId.of(p2pPeerId));
             }
-            return java.util.Optional.empty();
+            return Optional.empty();
         }
     }
 

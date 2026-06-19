@@ -3,6 +3,7 @@ package com.avandocmsg.messenger.core.application;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageRepositoryAdapter;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
@@ -44,7 +45,8 @@ class ChannelPostPermissionH2Test {
                   title VARCHAR(256) NOT NULL DEFAULT '',
                   type VARCHAR(16) NOT NULL DEFAULT 'group',
                   owner_id UUID REFERENCES users(id),
-                  channel_post_policy VARCHAR(16) NOT NULL DEFAULT 'admins_only'
+                  channel_post_policy VARCHAR(16) NOT NULL DEFAULT 'admins_only',
+                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """);
             st.execute("""
@@ -83,8 +85,8 @@ class ChannelPostPermissionH2Test {
         }
         chatRepository = new ChatRepository(ds, Clock.systemUTC(), UuidGenerator.standard());
         try (var c = ds.getConnection(); var st = c.createStatement()) {
-            st.execute("INSERT INTO chats (id, title, type, owner_id, channel_post_policy) VALUES ('"
-                + channelId + "', 'news', 'channel', '" + ownerId + "', 'admins_only')");
+            st.execute("INSERT INTO chats (id, title, type, owner_id, channel_post_policy, created_at) VALUES ('"
+                + channelId + "', 'news', 'channel', '" + ownerId + "', 'admins_only', CURRENT_TIMESTAMP)");
             st.execute("INSERT INTO chat_members (chat_id, user_id, role) VALUES ('" + channelId + "', '" + ownerId
                 + "', 'owner')");
             st.execute("INSERT INTO chat_members (chat_id, user_id, role) VALUES ('" + channelId + "', '" + memberId
@@ -101,7 +103,7 @@ class ChannelPostPermissionH2Test {
             UuidGenerator.standard(),
             null,
             null);
-        messageService = new MessageApplicationService(adapter, chatRepository, null, sendCoordinator);
+        messageService = new MessageApplicationService(adapter, new JdbcChatRepositoryAdapter(ds), null, sendCoordinator);
     }
 
     @AfterEach

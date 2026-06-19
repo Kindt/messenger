@@ -3,6 +3,8 @@ rootProject.name = "avandocmsg-messenger"
 include(
     "services:indexer",
     "modules:common",
+    "modules:core-domain",
+    "modules:core-port",
     "modules:core-api",
     "modules:web-client",
     "modules:ws-gateway",

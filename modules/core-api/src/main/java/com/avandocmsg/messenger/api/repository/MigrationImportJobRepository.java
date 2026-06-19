@@ -24,14 +24,15 @@ public class MigrationImportJobRepository {
         String source,
         String status,
         String configJson,
-        String resultJson
+        String resultJson,
+        UUID createdBy
     ) {}
 
     public UUID insert(UUID orgId, String source, String configJson, UUID createdBy) {
         var id = UUID.randomUUID();
         var sql = """
             INSERT INTO migration_import_jobs (id, org_id, source, status, config_json, created_by, created_at, updated_at)
-            VALUES (?, ?, ?, 'pending', ?::jsonb, ?, now(), now())
+            VALUES (?, ?, ?, 'pending', ?, ?, now(), now())
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
@@ -50,8 +51,7 @@ public class MigrationImportJobRepository {
 
     public Optional<JobRow> findById(UUID id) {
         var sql = """
-            SELECT id, org_id, source, status,
-                   config_json::text AS config_json, result_json::text AS result_json
+            SELECT id, org_id, source, status, config_json, result_json, created_by
             FROM migration_import_jobs WHERE id = ?
             """;
         try (var conn = dataSource.getConnection();
@@ -70,8 +70,7 @@ public class MigrationImportJobRepository {
 
     public List<JobRow> listForOrg(UUID orgId, int limit) {
         var sql = """
-            SELECT id, org_id, source, status,
-                   config_json::text AS config_json, result_json::text AS result_json
+            SELECT id, org_id, source, status, config_json, result_json, created_by
             FROM migration_import_jobs
             WHERE org_id = ?
             ORDER BY created_at DESC
@@ -97,7 +96,7 @@ public class MigrationImportJobRepository {
     public boolean updateStatus(UUID id, String status, String resultJson) {
         var sql = """
             UPDATE migration_import_jobs
-            SET status = ?, result_json = ?::jsonb, updated_at = now()
+            SET status = ?, result_json = ?, updated_at = now()
             WHERE id = ?
             """;
         try (var conn = dataSource.getConnection();
@@ -119,6 +118,7 @@ public class MigrationImportJobRepository {
             rs.getString("source"),
             rs.getString("status"),
             rs.getString("config_json"),
-            rs.getString("result_json"));
+            rs.getString("result_json"),
+            rs.getObject("created_by", UUID.class));
     }
 }

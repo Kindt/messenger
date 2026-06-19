@@ -9,6 +9,7 @@ import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcFileMetadataAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.storage.FileProxyObjectStorageAdapter;
 import com.avandocmsg.messenger.core.application.FileApplicationService;
@@ -171,7 +172,7 @@ class AdminExportComplianceSeedH2Test {
             null);
         var messageApplicationService = new MessageApplicationService(
             messagePort,
-            chatRepository,
+            new JdbcChatRepositoryAdapter(ds),
             new BlockRepository(ds),
             messageSendCoordinator);
         seed = new AdminExportComplianceSeed(

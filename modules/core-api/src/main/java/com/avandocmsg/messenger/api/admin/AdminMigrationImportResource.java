@@ -37,7 +37,7 @@ public class AdminMigrationImportResource {
     @Inject
     public AdminMigrationImportResource(DataSource dataSource, UserRepository userRepository) {
         this.jobRepository = new MigrationImportJobRepository(dataSource);
-        this.processor = new MigrationImportProcessor(jobRepository);
+        this.processor = new MigrationImportProcessor(jobRepository, dataSource, null, null);
         this.userRepository = userRepository;
     }
 

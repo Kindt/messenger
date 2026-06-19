@@ -1,11 +1,13 @@
 package com.avandocmsg.messenger.core.application;
 
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
+import com.avandocmsg.messenger.core.domain.Chat;
 import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.ChatType;
 import com.avandocmsg.messenger.core.domain.Message;
 import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import org.junit.jupiter.api.Test;
@@ -24,32 +26,32 @@ class MessageApplicationServiceTest {
     private final UUID memberId = UUID.randomUUID();
     private final UUID outsiderId = UUID.randomUUID();
 
-    private final StubChatRepository chatRepo = new StubChatRepository();
+    private final StubChatPort chatPort = new StubChatPort();
     private final StubMessagePort messagePort = new StubMessagePort();
-    private final MessageApplicationService service = new MessageApplicationService(messagePort, chatRepo);
+    private final MessageApplicationService service = new MessageApplicationService(messagePort, chatPort);
 
     @Test
     void canAccessChat_deniesNonMemberAndBanned() {
-        chatRepo.put(chatId, memberId, "member");
+        chatPort.put(chatId, memberId, "member");
         assertFalse(service.canAccessChat(chatId, outsiderId));
         assertTrue(service.canAccessChat(chatId, memberId));
-        chatRepo.banned.add(chatId + ":" + memberId);
+        chatPort.banned.add(chatId + ":" + memberId);
         assertFalse(service.canAccessChat(chatId, memberId));
     }
 
     @Test
     void listMessages_returnsEmptyWhenNotMember() {
         var legacyRepo = new ReadStubMessageRepository();
-        var readService = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, null, null, legacyRepo, null);
+        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, legacyRepo, null);
         assertTrue(readService.listMessages(chatId, outsiderId, 50, null).isEmpty());
         assertFalse(legacyRepo.listCalled);
     }
 
     @Test
     void listMessages_delegatesWhenMember() {
-        chatRepo.put(chatId, memberId, "member");
+        chatPort.put(chatId, memberId, "member");
         var legacyRepo = new ReadStubMessageRepository();
-        var readService = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, null, null, legacyRepo, null);
+        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, legacyRepo, null);
         readService.listMessages(chatId, memberId, 25, null);
         assertTrue(legacyRepo.listCalled);
         assertEquals(25, legacyRepo.lastLimit);
@@ -57,36 +59,36 @@ class MessageApplicationServiceTest {
 
     @Test
     void getPinnedMessages_delegatesWhenMember() {
-        chatRepo.put(chatId, memberId, "member");
+        chatPort.put(chatId, memberId, "member");
         var legacyRepo = new ReadStubMessageRepository();
-        var readService = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, null, null, legacyRepo, null);
+        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, legacyRepo, null);
         readService.getPinnedMessages(chatId, memberId);
         assertTrue(legacyRepo.pinnedCalled);
     }
 
     @Test
     void getReactions_requiresVisibleMessage() {
-        chatRepo.put(chatId, memberId, "member");
+        chatPort.put(chatId, memberId, "member");
         messagePort.message = sampleMessage();
         var legacyRepo = new ReadStubMessageRepository();
-        var readService = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, null, null, legacyRepo, null);
+        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, legacyRepo, null);
         readService.getReactions(chatId, messageId, memberId);
         assertTrue(legacyRepo.reactionsCalled);
     }
 
     @Test
     void getMessageVersions_requiresVisibleMessage() {
-        chatRepo.put(chatId, memberId, "member");
+        chatPort.put(chatId, memberId, "member");
         messagePort.message = sampleMessage();
         var legacyRepo = new ReadStubMessageRepository();
-        var readService = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, null, null, legacyRepo, null);
+        var readService = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, null, legacyRepo, null);
         readService.getMessageVersions(chatId, messageId, memberId);
         assertTrue(legacyRepo.versionsCalled);
     }
 
     @Test
     void getMessageForMember_returnsMessageForMember() {
-        chatRepo.put(chatId, memberId, "member");
+        chatPort.put(chatId, memberId, "member");
         messagePort.message = sampleMessage();
 
         var result = service.getMessageForMember(ChatId.of(chatId), MessageId.of(messageId), UserId.of(memberId));
@@ -103,7 +105,7 @@ class MessageApplicationServiceTest {
 
     @Test
     void getMessageForMember_rejectsWrongChat() {
-        chatRepo.put(chatId, memberId, "member");
+        chatPort.put(chatId, memberId, "member");
         messagePort.message = new Message(
             MessageId.of(messageId),
             ChatId.of(UUID.randomUUID()),
@@ -123,7 +125,7 @@ class MessageApplicationServiceTest {
 
     @Test
     void isChatMember_reflectsRepositoryRole() {
-        chatRepo.put(chatId, memberId, "member");
+        chatPort.put(chatId, memberId, "member");
         assertTrue(service.isChatMember(ChatId.of(chatId), UserId.of(memberId)));
         assertFalse(service.isChatMember(ChatId.of(chatId), UserId.of(outsiderId)));
     }
@@ -137,9 +139,9 @@ class MessageApplicationServiceTest {
 
     @Test
     void sendBlockedReason_deniesBannedMember() {
-        chatRepo.put(chatId, memberId, "member");
-        chatRepo.banned.add(chatId + ":" + memberId);
-        var serviceWithBan = new MessageApplicationService(messagePort, chatRepo);
+        chatPort.put(chatId, memberId, "member");
+        chatPort.banned.add(chatId + ":" + memberId);
+        var serviceWithBan = new MessageApplicationService(messagePort, chatPort);
         assertEquals(
             Optional.of("error.message.send_denied.banned"),
             serviceWithBan.sendBlockedReason(chatId, memberId));
@@ -147,10 +149,10 @@ class MessageApplicationServiceTest {
 
     @Test
     void editMessage_updatesWhenSender() {
-        chatRepo.put(chatId, memberId, "member");
+        chatPort.put(chatId, memberId, "member");
         messagePort.message = sampleMessage();
         var editCoordinator = new MessageEditCoordinator(messagePort, NatsOutboundPort.noop());
-        var editService = new MessageApplicationService(messagePort, chatRepo, null, null, editCoordinator);
+        var editService = new MessageApplicationService(messagePort, chatPort, null, null, editCoordinator);
         var edited = editService.editMessage(chatId, messageId, memberId, "updated");
         assertNotNull(edited);
         assertEquals("updated", edited.content());
@@ -159,31 +161,31 @@ class MessageApplicationServiceTest {
 
     @Test
     void deleteMessage_softDeletesWhenSender() {
-        chatRepo.put(chatId, memberId, "member");
+        chatPort.put(chatId, memberId, "member");
         messagePort.message = sampleMessage();
         var deleteCoordinator = new MessageDeleteCoordinator(messagePort, NatsOutboundPort.noop());
-        var svc = new MessageApplicationService(messagePort, chatRepo, null, null, null, deleteCoordinator, null);
+        var svc = new MessageApplicationService(messagePort, chatPort, null, null, null, deleteCoordinator, null);
         assertTrue(svc.deleteMessage(chatId, messageId, memberId));
         assertTrue(messagePort.deleted);
     }
 
     @Test
     void addReaction_publishesWhenMember() {
-        chatRepo.put(chatId, memberId, "member");
+        chatPort.put(chatId, memberId, "member");
         messagePort.message = sampleMessage();
         var reactionCoordinator = new MessageReactionCoordinator(messagePort, NatsOutboundPort.noop());
-        var svc = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, reactionCoordinator);
+        var svc = new MessageApplicationService(messagePort, chatPort, null, null, null, null, reactionCoordinator);
         assertTrue(svc.addReaction(chatId, messageId, memberId, "👍"));
         assertTrue(messagePort.reactionAdded);
     }
 
     @Test
     void pinMessage_delegatesToCoordinatorWhenMember() {
-        chatRepo.put(chatId, memberId, "member");
+        chatPort.put(chatId, memberId, "member");
         messagePort.message = sampleMessage();
         var pinRepo = new PinStubMessageRepository();
         var pinCoordinator = new MessagePinCoordinator(pinRepo, NatsOutboundPort.noop());
-        var svc = new MessageApplicationService(messagePort, chatRepo, null, null, null, null, null, pinCoordinator);
+        var svc = new MessageApplicationService(messagePort, chatPort, null, null, null, null, null, pinCoordinator);
         assertTrue(svc.pinMessage(chatId, messageId, memberId));
         assertTrue(pinRepo.pinned);
     }
@@ -204,27 +206,39 @@ class MessageApplicationServiceTest {
             null);
     }
 
-    static final class StubChatRepository extends ChatRepository {
+    static final class StubChatPort implements ChatRepositoryPort {
         final java.util.Map<String, String> roles = new java.util.HashMap<>();
-
-        StubChatRepository() {
-            super(null, java.time.Clock.systemUTC(), com.avandocmsg.messenger.core.port.UuidGenerator.standard());
-        }
+        final java.util.Map<UUID, ChatType> types = new java.util.HashMap<>();
+        final java.util.Set<String> banned = new java.util.HashSet<>();
 
         void put(UUID chatId, UUID userId, String role) {
             roles.put(chatId + ":" + userId, role);
         }
 
         @Override
-        public String getMemberRole(UUID chatId, UUID userId) {
-            return roles.get(chatId + ":" + userId);
+        public Optional<Chat> findById(ChatId id) {
+            var type = types.getOrDefault(id.value(), ChatType.GROUP);
+            return Optional.of(new Chat(id, "", type, Instant.parse("2026-01-01T00:00:00Z")));
         }
 
-        final java.util.Set<String> banned = new java.util.HashSet<>();
+        @Override
+        public boolean isMember(ChatId chatId, UserId userId) {
+            return memberRole(chatId, userId).isPresent();
+        }
 
         @Override
-        public boolean isMemberBanned(UUID chatId, UUID userId) {
-            return banned.contains(chatId + ":" + userId);
+        public Optional<String> memberRole(ChatId chatId, UserId userId) {
+            return Optional.ofNullable(roles.get(chatId.value() + ":" + userId.value()));
+        }
+
+        @Override
+        public boolean isMemberBanned(ChatId chatId, UserId userId) {
+            return banned.contains(chatId.value() + ":" + userId.value());
+        }
+
+        @Override
+        public Optional<UserId> findOtherP2pMember(ChatId chatId, UserId userId) {
+            return Optional.empty();
         }
     }
 

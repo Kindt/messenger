@@ -1,7 +1,5 @@
 package com.avandocmsg.messenger.core.port;
 
-import com.avandocmsg.messenger.api.users.dto.UserProfile;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -9,9 +7,20 @@ import java.util.UUID;
 /** Org-scoped user directory writes for SCIM and LDAP sync (hex Phase 2c). */
 public interface OrgUserDirectoryPort {
 
-    Optional<UserProfile> findById(UUID id);
+    /** Directory-facing user row (no JAX-RS / JSON DTO coupling). */
+    record OrgDirectoryUser(
+        UUID id,
+        String username,
+        String displayName,
+        String email,
+        String externalId,
+        boolean hidden,
+        UUID orgId
+    ) {}
 
-    List<UserProfile> listByOrg(UUID orgId, int offset, int limit);
+    Optional<OrgDirectoryUser> findById(UUID id);
+
+    List<OrgDirectoryUser> listByOrg(UUID orgId, int offset, int limit);
 
     int countByOrg(UUID orgId);
 

@@ -6,10 +6,9 @@ import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.api.filter.UserPrincipal;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
 import com.avandocmsg.messenger.api.params.InvalidUuidParameterException;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
-import com.avandocmsg.messenger.core.port.UuidGenerator;
 import jakarta.ws.rs.core.SecurityContext;
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +41,7 @@ class MessageResourceTest {
 
     @Test
     void list_invalidBeforeQuery_throwsInvalidUuidParameterException() {
-        var appService = new MessageApplicationService(new NoopMessagePort(), memberChatRepository());
+        var appService = new MessageApplicationService(new NoopMessagePort(), memberChatPort());
         var resource = new MessageResource(appService, new AppConfig(), I18nTestFixtures.messagesEn());
         var chatId = UUID.randomUUID().toString();
         assertThrows(InvalidUuidParameterException.class,
@@ -67,17 +66,37 @@ class MessageResourceTest {
                 userSecurityContext()));
     }
 
-    /** Lets list() reach query-param validation for {@code before}. */
-    private static ChatRepository memberChatRepository() {
-        return new ChatRepository(null, java.time.Clock.systemUTC(), UuidGenerator.standard()) {
+    private static ChatRepositoryPort memberChatPort() {
+        return new ChatRepositoryPort() {
             @Override
-            public String getMemberRole(java.util.UUID chatId, java.util.UUID userId) {
-                return "member";
+            public java.util.Optional<com.avandocmsg.messenger.core.domain.Chat> findById(
+                com.avandocmsg.messenger.core.domain.ChatId id) {
+                return java.util.Optional.empty();
             }
 
             @Override
-            public boolean isMemberBanned(java.util.UUID chatId, java.util.UUID userId) {
+            public boolean isMember(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                    com.avandocmsg.messenger.core.domain.UserId userId) {
+                return true;
+            }
+
+            @Override
+            public java.util.Optional<String> memberRole(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                                           com.avandocmsg.messenger.core.domain.UserId userId) {
+                return java.util.Optional.of("member");
+            }
+
+            @Override
+            public boolean isMemberBanned(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                          com.avandocmsg.messenger.core.domain.UserId userId) {
                 return false;
+            }
+
+            @Override
+            public java.util.Optional<com.avandocmsg.messenger.core.domain.UserId> findOtherP2pMember(
+                com.avandocmsg.messenger.core.domain.ChatId chatId,
+                com.avandocmsg.messenger.core.domain.UserId userId) {
+                return java.util.Optional.empty();
             }
         };
     }

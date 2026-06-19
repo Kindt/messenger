@@ -49,9 +49,41 @@ class BotServiceTest {
                 return "member";
             }
         };
+        var memberChatPort = new com.avandocmsg.messenger.core.port.ChatRepositoryPort() {
+            @Override
+            public java.util.Optional<com.avandocmsg.messenger.core.domain.Chat> findById(
+                com.avandocmsg.messenger.core.domain.ChatId id) {
+                return java.util.Optional.empty();
+            }
+
+            @Override
+            public boolean isMember(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                    com.avandocmsg.messenger.core.domain.UserId userId) {
+                return true;
+            }
+
+            @Override
+            public java.util.Optional<String> memberRole(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                                           com.avandocmsg.messenger.core.domain.UserId userId) {
+                return java.util.Optional.of("member");
+            }
+
+            @Override
+            public boolean isMemberBanned(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                          com.avandocmsg.messenger.core.domain.UserId userId) {
+                return false;
+            }
+
+            @Override
+            public java.util.Optional<com.avandocmsg.messenger.core.domain.UserId> findOtherP2pMember(
+                com.avandocmsg.messenger.core.domain.ChatId chatId,
+                com.avandocmsg.messenger.core.domain.UserId userId) {
+                return java.util.Optional.empty();
+            }
+        };
         var deleteCoordinator = new com.avandocmsg.messenger.core.application.MessageDeleteCoordinator(
             messagePort, com.avandocmsg.messenger.core.port.NatsOutboundPort.noop());
-        var messageApp = new MessageApplicationService(messagePort, chatRepo, null, null, null, deleteCoordinator, null);
+        var messageApp = new MessageApplicationService(messagePort, memberChatPort, null, null, null, deleteCoordinator, null);
         var service = new BotService(null, chatRepo, messageApp, null, null, null);
         assertTrue(service.deleteMessage(botId, chatId, msgId));
         assertTrue(messagePort.deleted);
@@ -71,10 +103,42 @@ class BotServiceTest {
                 return "member";
             }
         };
+        var memberChatPort = new com.avandocmsg.messenger.core.port.ChatRepositoryPort() {
+            @Override
+            public java.util.Optional<com.avandocmsg.messenger.core.domain.Chat> findById(
+                com.avandocmsg.messenger.core.domain.ChatId id) {
+                return java.util.Optional.empty();
+            }
+
+            @Override
+            public boolean isMember(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                    com.avandocmsg.messenger.core.domain.UserId userId) {
+                return true;
+            }
+
+            @Override
+            public java.util.Optional<String> memberRole(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                                           com.avandocmsg.messenger.core.domain.UserId userId) {
+                return java.util.Optional.of("member");
+            }
+
+            @Override
+            public boolean isMemberBanned(com.avandocmsg.messenger.core.domain.ChatId chatId,
+                                          com.avandocmsg.messenger.core.domain.UserId userId) {
+                return false;
+            }
+
+            @Override
+            public java.util.Optional<com.avandocmsg.messenger.core.domain.UserId> findOtherP2pMember(
+                com.avandocmsg.messenger.core.domain.ChatId chatId,
+                com.avandocmsg.messenger.core.domain.UserId userId) {
+                return java.util.Optional.empty();
+            }
+        };
         var pinCoordinator = new com.avandocmsg.messenger.core.application.MessagePinCoordinator(
             pinRepo, com.avandocmsg.messenger.core.port.NatsOutboundPort.noop());
         var messageApp = new MessageApplicationService(
-            messagePort, chatRepo, null, null, null, null, null, pinCoordinator);
+            messagePort, memberChatPort, null, null, null, null, null, pinCoordinator);
         var service = new BotService(null, chatRepo, messageApp, null, null, null);
         assertFalse(service.pinMessage(botId, chatId, msgId));
         assertFalse(pinRepo.pinned);

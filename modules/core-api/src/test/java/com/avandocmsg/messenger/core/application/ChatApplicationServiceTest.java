@@ -1,6 +1,5 @@
 package com.avandocmsg.messenger.core.application;
 
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.core.domain.Chat;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.ChatType;
@@ -12,7 +11,8 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ChatApplicationServiceTest {
 
@@ -20,14 +20,7 @@ class ChatApplicationServiceTest {
     void getChatForMember_returnsEmptyWhenNotMember() {
         var chatId = UUID.randomUUID();
         var viewerId = UUID.randomUUID();
-        var service = new ChatApplicationService(
-            (ChatRepositoryPort) id -> Optional.of(sampleChat(id)),
-            new ChatRepository(null, java.time.Clock.systemUTC(), com.avandocmsg.messenger.core.port.UuidGenerator.standard()) {
-                @Override
-                public String getMemberRole(UUID c, UUID u) {
-                    return null;
-                }
-            });
+        var service = new ChatApplicationService(port(chatId, false));
         assertTrue(service.getChatForMember(ChatId.of(chatId), UserId.of(viewerId)).isEmpty());
     }
 
@@ -35,17 +28,39 @@ class ChatApplicationServiceTest {
     void getChatForMember_returnsChatWhenMember() {
         var chatId = UUID.randomUUID();
         var viewerId = UUID.randomUUID();
-        var service = new ChatApplicationService(
-            (ChatRepositoryPort) id -> Optional.of(sampleChat(id)),
-            new ChatRepository(null, java.time.Clock.systemUTC(), com.avandocmsg.messenger.core.port.UuidGenerator.standard()) {
-                @Override
-                public String getMemberRole(UUID c, UUID u) {
-                    return "member";
-                }
-            });
+        var service = new ChatApplicationService(port(chatId, true));
         var chat = service.getChatForMember(ChatId.of(chatId), UserId.of(viewerId));
         assertTrue(chat.isPresent());
         assertEquals(chatId, chat.get().id().value());
+    }
+
+    private static ChatRepositoryPort port(UUID chatId, boolean member) {
+        return new ChatRepositoryPort() {
+            @Override
+            public Optional<Chat> findById(ChatId id) {
+                return Optional.of(sampleChat(id));
+            }
+
+            @Override
+            public boolean isMember(ChatId c, UserId u) {
+                return member && c.value().equals(chatId);
+            }
+
+            @Override
+            public Optional<String> memberRole(ChatId c, UserId u) {
+                return isMember(c, u) ? Optional.of("member") : Optional.empty();
+            }
+
+            @Override
+            public boolean isMemberBanned(ChatId c, UserId u) {
+                return false;
+            }
+
+            @Override
+            public Optional<UserId> findOtherP2pMember(ChatId c, UserId u) {
+                return Optional.empty();
+            }
+        };
     }
 
     private static Chat sampleChat(ChatId id) {

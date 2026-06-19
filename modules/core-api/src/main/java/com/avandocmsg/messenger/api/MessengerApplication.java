@@ -361,7 +361,7 @@ public class MessengerApplication {
             this.uuidGenerator, this.clock, mlsWirePublisher);
         var mlsMigrationService = new MlsMigrationService(dataSource, mlsGroupManager, chatRepository);
         var openMlsBindingPort = OpenMlsBindingFactory.create(appConfig, mlsService);
-        var chatApplicationService = CoreModule.chatApplicationService(dataSource, chatRepository);
+        var chatApplicationService = CoreModule.chatApplicationService(dataSource);
         var userApplicationService = CoreModule.userApplicationService(
             dataSource, this.uuidGenerator, readCachePort, appConfig, natsOutbound);
         var objectStoragePort = CoreModule.objectStoragePort(appConfig, minioClient, fileProxy);

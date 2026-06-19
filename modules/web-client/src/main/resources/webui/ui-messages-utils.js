@@ -1,33 +1,37 @@
 (function (global) {
   "use strict";
 
-  function formatPreviewText(type, content, isE2eeType, e2eePlainType) {
+  function formatPreviewText(type, content, isE2eeType, e2eePlainType, L) {
     var t = type || "text";
+    var translate = L || function (key) {
+      return key;
+    };
     if (isE2eeType(t)) {
       var base = e2eePlainType(t);
-      if (base === "image") return "🔒 Изображение";
-      if (base === "video") return "🔒 Видео";
-      if (base === "file") return "🔒 Файл";
-      return "🔒 Зашифровано";
+      if (base === "image") return translate("ui.message.e2eeImage");
+      if (base === "video") return translate("ui.message.e2eeVideo");
+      if (base === "file") return translate("ui.message.e2eeFile");
+      return translate("ui.message.e2eeEncrypted");
     }
-    if (t === "image") return "Изображение";
-    if (t === "video") return "Видео";
-    if (t === "file") return "Файл";
+    if (t === "image") return translate("ui.message.image");
+    if (t === "video") return translate("ui.message.video");
+    if (t === "file") return translate("ui.message.file");
     var text = String(content || "")
       .replace(/[*_`#[\]]/g, "")
       .replace(/\s+/g, " ")
       .trim();
     if (text.length > 72) text = text.slice(0, 72) + "…";
-    return text || "Сообщение";
+    return text || translate("ui.message.default");
   }
 
   function formatPreviewForMessage(
     message,
     messageAttachmentKind,
     messageAttachmentFileId,
-    formatPreviewTextFn
+    formatPreviewTextFn,
+    defaultLabel
   ) {
-    if (!message) return "Сообщение";
+    if (!message) return defaultLabel || "Message";
     if (messageAttachmentKind(message) && messageAttachmentFileId(message)) {
       return formatPreviewTextFn(message.type, "");
     }

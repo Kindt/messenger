@@ -1,6 +1,5 @@
 package com.avandocmsg.messenger.core.benchmark;
 
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
@@ -40,15 +39,33 @@ class CoreApiBenchmarkTest {
     void getChatForMember_1000Calls_underBudget() {
         var chatId = UUID.randomUUID();
         var viewerId = UUID.randomUUID();
-        var port = (java.util.function.Function<ChatId, Optional<Chat>>) id ->
-            Optional.of(new Chat(id, "Bench", ChatType.P2P, Instant.parse("2026-01-01T00:00:00Z")));
-        var legacy = new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard()) {
+        var port = new com.avandocmsg.messenger.core.port.ChatRepositoryPort() {
             @Override
-            public String getMemberRole(UUID c, UUID u) {
-                return "member";
+            public Optional<Chat> findById(ChatId id) {
+                return Optional.of(new Chat(id, "Bench", ChatType.P2P, Instant.parse("2026-01-01T00:00:00Z")));
+            }
+
+            @Override
+            public boolean isMember(ChatId c, UserId u) {
+                return true;
+            }
+
+            @Override
+            public Optional<String> memberRole(ChatId c, UserId u) {
+                return Optional.of("member");
+            }
+
+            @Override
+            public boolean isMemberBanned(ChatId c, UserId u) {
+                return false;
+            }
+
+            @Override
+            public Optional<UserId> findOtherP2pMember(ChatId c, UserId u) {
+                return Optional.empty();
             }
         };
-        var service = new ChatApplicationService(port::apply, legacy);
+        var service = new ChatApplicationService(port);
 
         var start = System.nanoTime();
         for (int i = 0; i < 1000; i++) {

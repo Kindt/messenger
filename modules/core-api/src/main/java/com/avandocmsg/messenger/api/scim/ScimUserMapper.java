@@ -1,7 +1,7 @@
 package com.avandocmsg.messenger.api.scim;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.api.users.dto.UserProfile;
+import com.avandocmsg.messenger.core.port.OrgUserDirectoryPort;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -16,13 +16,13 @@ public class ScimUserMapper {
 
     private ScimUserMapper() {}
 
-    static ScimUserResource toResource(UserProfile profile, String baseLocation) {
+    static ScimUserResource toResource(OrgUserDirectoryPort.OrgDirectoryUser profile, String baseLocation) {
         var emails = profile.email() != null && !profile.email().isBlank()
             ? List.of(new ScimEmail(profile.email(), true))
             : List.<ScimEmail>of();
         return new ScimUserResource(
             USER_SCHEMA,
-            profile.id(),
+            profile.id().toString(),
             profile.externalId(),
             profile.username(),
             profile.displayName(),
@@ -31,7 +31,7 @@ public class ScimUserMapper {
             new ScimMeta("User", baseLocation + profile.id()));
     }
 
-    static ScimListResponse toList(List<UserProfile> profiles, int total, int startIndex, String baseLocation) {
+    static ScimListResponse toList(List<OrgUserDirectoryPort.OrgDirectoryUser> profiles, int total, int startIndex, String baseLocation) {
         var resources = new ArrayList<ScimUserResource>();
         for (var p : profiles) {
             resources.add(toResource(p, baseLocation));

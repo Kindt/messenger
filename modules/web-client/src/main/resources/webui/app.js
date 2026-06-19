@@ -509,6 +509,46 @@
   }
   var uiMessagesUtils = window.KorusUiMessagesUtils;
   var uiMessageList = window.KorusUiMessageList || null;
+  var uiDeepLinkUtils = window.KorusUiDeepLinkUtils || {
+    stripDeepLinkFromUrl: function () {
+      return { chatId: null, msgId: null, meet: null, conf: null };
+    },
+    buildChatUrl: function () {
+      return "";
+    },
+    buildMessageUrl: function () {
+      return "";
+    },
+  };
+  var uiClipboardUtils = window.KorusUiClipboardUtils || {
+    copyText: function (text, onSuccess, onFallback) {
+      if (onFallback) onFallback(text);
+    },
+  };
+  if (!window.KorusUiMessageArticle) {
+    throw new Error("KorusUiMessageArticle required — load ui-message-article.js before app.js");
+  }
+  var uiMessageArticle = window.KorusUiMessageArticle;
+  var uiMarkdownUtils = window.KorusUiMarkdownUtils || {
+    safeMarkdown: function (s) {
+      return s || "";
+    },
+  };
+  if (!window.KorusUiMessageContent) {
+    throw new Error("KorusUiMessageContent required — load ui-message-content.js before app.js");
+  }
+  var uiMessageContent = window.KorusUiMessageContent;
+  var wsEvents = window.KorusUiWsEvents || {
+    isMessageSendEvent: function () { return false; },
+    isMessageChangeEvent: function () { return false; },
+    isReactionChangeEvent: function () { return false; },
+    isMentionEvent: function () { return false; },
+    isPinChangeEvent: function () { return false; },
+    isConferenceChangeEvent: function () { return false; },
+    isTypingEvent: function () { return false; },
+    isPresenceEvent: function () { return false; },
+    isReadReceiptEvent: function () { return false; },
+  };
   var uiRtcUtils = window.KorusUiRtcUtils || {
     sendRtcSignal: function (ws, chatId, payload) {
       if (!ws || ws.readyState !== WebSocket.OPEN || !chatId || !payload) return false;
@@ -878,7 +918,7 @@
   }
 
   function maybeNotifyMessage(data) {
-    if (!notificationsAllowed() || !isMessageSendEvent(data)) return;
+    if (!notificationsAllowed() || !wsEvents.isMessageSendEvent(data)) return;
     var myId = jwtSub(state.tokens.access_token);
     if (myId && data.senderId === myId) return;
     if (data.chatId === state.selectedId && !document.hidden) return;
@@ -3170,45 +3210,8 @@
     await pc.addIceCandidate(candidateInit);
   }
 
-  function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
-  /**
-   * Subset of Markdown (bold, italic, inline code, links, fenced code, line breaks).
-   * HTML in source is escaped; only safe link schemes.
-   */
   function safeMarkdown(src) {
-    if (!src) return "";
-    var text = String(src);
-    var parts = text.split(/```/);
-    var out = [];
-    for (var i = 0; i < parts.length; i++) {
-      var seg = parts[i];
-      if (i % 2 === 1) {
-        out.push("<pre><code>" + escapeHtml(seg.replace(/^\w*\r?\n/, "")) + "</code></pre>");
-      } else {
-        out.push(inlineMarkdown(escapeHtml(seg)));
-      }
-    }
-    return out.join("");
-  }
-
-  function inlineMarkdown(escaped) {
-    var s = escaped.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-    s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
-    s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-    s = s.replace(/(^|\W)\*([^*\n]+)\*(?=\W|$)/g, "$1<em>$2</em>");
-    s = s.replace(
-      /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
-    );
-    s = s.replace(/\n/g, "<br>");
-    return s;
+    return uiMarkdownUtils.safeMarkdown(src);
   }
 
   function sendRtcHangups() {
@@ -3382,44 +3385,33 @@
   }
 
   function copyTextToClipboardOrShow(text, okMessage) {
-    if (!text) return;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard
-        .writeText(text)
-        .then(function () {
-          state.statusMessage = okMessage;
-          render();
-        })
-        .catch(function () {
-          state.statusMessage = okMessage + ": " + text;
-          render();
-        });
-    } else {
-      state.statusMessage = okMessage + ": " + text;
-      render();
-    }
+    uiClipboardUtils.copyText(
+      text,
+      function () {
+        state.statusMessage = okMessage;
+        render();
+      },
+      function (fallback) {
+        state.statusMessage = okMessage + ": " + fallback;
+        render();
+      }
+    );
   }
 
   function copyChatDeepLink() {
     if (!state.selectedId) return;
-    var url =
-      window.location.origin +
-      window.location.pathname +
-      "?chat=" +
-      encodeURIComponent(state.selectedId);
-    copyTextToClipboardOrShow(url, L("chat.chatLinkCopied"));
+    copyTextToClipboardOrShow(
+      uiDeepLinkUtils.buildChatUrl(state.selectedId),
+      L("chat.chatLinkCopied")
+    );
   }
 
   function copyMessageDeepLink(m) {
     if (!m || !m.id || !state.selectedId) return;
-    var url =
-      window.location.origin +
-      window.location.pathname +
-      "?chat=" +
-      encodeURIComponent(state.selectedId) +
-      "&msg=" +
-      encodeURIComponent(m.id);
-    copyTextToClipboardOrShow(url, L("chat.messageLinkCopied"));
+    copyTextToClipboardOrShow(
+      uiDeepLinkUtils.buildMessageUrl(state.selectedId, m.id),
+      L("chat.messageLinkCopied")
+    );
   }
 
   async function createPublicLinkForFile(fileId) {
@@ -4002,39 +3994,39 @@
   }
 
   function isMessageSendEvent(o) {
-    return (
-      o &&
-      typeof o === "object" &&
-      typeof o.messageId === "string" &&
-      typeof o.chatId === "string" &&
-      !o.change
-    );
+    return wsEvents.isMessageSendEvent(o);
   }
 
   function isMessageChangeEvent(o) {
-    return (
-      o &&
-      typeof o === "object" &&
-      (o.change === "update" || o.change === "delete") &&
-      typeof o.messageId === "string" &&
-      typeof o.chatId === "string" &&
-      !o.reaction
-    );
+    return wsEvents.isMessageChangeEvent(o);
   }
 
   function isReactionChangeEvent(o) {
-    return (
-      o &&
-      typeof o === "object" &&
-      (o.change === "add" || o.change === "remove") &&
-      typeof o.messageId === "string" &&
-      typeof o.chatId === "string" &&
-      typeof o.reaction === "string"
-    );
+    return wsEvents.isReactionChangeEvent(o);
   }
 
   function isMentionEvent(o) {
-    return o && typeof o === "object" && o.type === "mention" && typeof o.message_id === "string";
+    return wsEvents.isMentionEvent(o);
+  }
+
+  function isPinChangeEvent(o) {
+    return wsEvents.isPinChangeEvent(o);
+  }
+
+  function isConferenceChangeEvent(o) {
+    return wsEvents.isConferenceChangeEvent(o);
+  }
+
+  function isTypingEvent(o) {
+    return wsEvents.isTypingEvent(o);
+  }
+
+  function isPresenceEvent(o) {
+    return wsEvents.isPresenceEvent(o);
+  }
+
+  function isReadReceiptEvent(o) {
+    return wsEvents.isReadReceiptEvent(o);
   }
 
   function messageMentionsMe(m) {
@@ -4059,26 +4051,6 @@
     if (state.selectedId) {
       loadThread(state.selectedId).then(render).catch(function () {});
     }
-  }
-
-  function isPinChangeEvent(o) {
-    return (
-      o &&
-      typeof o === "object" &&
-      (o.change === "pin" || o.change === "unpin") &&
-      typeof o.chat_id === "string" &&
-      typeof o.message_id === "string"
-    );
-  }
-
-  function isConferenceChangeEvent(o) {
-    return (
-      o &&
-      typeof o === "object" &&
-      (o.change === "created" || o.change === "ended" || o.change === "updated") &&
-      typeof o.chat_id === "string" &&
-      typeof o.conference_id === "string"
-    );
   }
 
   function applyPinChangeEvent(data) {
@@ -4245,23 +4217,6 @@
     }
   }
 
-  function isTypingEvent(o) {
-    return (
-      o &&
-      typeof o === "object" &&
-      typeof o.chat_id === "string" &&
-      typeof o.user_id === "string" &&
-      typeof o.ts === "number" &&
-      !o.messageId &&
-      o.type !== "read_receipt" &&
-      o.type !== "presence"
-    );
-  }
-
-  function isPresenceEvent(o) {
-    return o && o.type === "presence" && o.user_id;
-  }
-
   function applyPresenceEvent(ev) {
     if (!ev || !ev.user_id) return;
     var myId = jwtSub(state.tokens && state.tokens.access_token);
@@ -4270,10 +4225,6 @@
       if (ev.custom_status_text) state.myCustomStatus = ev.custom_status_text;
       if (ev.dnd_until !== undefined) state.myDndUntil = ev.dnd_until != null ? ev.dnd_until : null;
     }
-  }
-
-  function isReadReceiptEvent(o) {
-    return o && o.type === "read_receipt" && o.chat_id && o.user_id;
   }
 
   function applyReadReceiptEvent(ev) {
@@ -4348,39 +4299,27 @@
     return null;
   }
 
+  function getMessageContentCtx() {
+    return {
+      L: L,
+      el: el,
+      iconBtn: iconBtn,
+      state: state,
+      render: render,
+      messageAttachmentKind: messageAttachmentKind,
+      messageAttachmentFileId: messageAttachmentFileId,
+      attachAuthenticatedImage: attachAuthenticatedImage,
+      attachAuthenticatedAudio: attachAuthenticatedAudio,
+      downloadChatFile: downloadChatFile,
+      isE2eeType: isE2eeType,
+      isMlsCapabilitiesActive: isMlsCapabilitiesActive,
+      loadE2eePlaintext: loadE2eePlaintext,
+      safeMarkdown: safeMarkdown,
+    };
+  }
+
   function appendMessageAttachment(bodyEl, kind, fileId, durationMs) {
-    if (kind === "image") {
-      var img = document.createElement("img");
-      img.className = "msg-attachment-image";
-      img.alt = L("ui.message.image");
-      bodyEl.appendChild(img);
-      attachAuthenticatedImage(fileId, img);
-      return;
-    }
-    if (kind === "voice" || kind === "audio") {
-      var audio = document.createElement("audio");
-      audio.className = "msg-voice-player";
-      audio.controls = true;
-      audio.setAttribute("data-testid", "message-voice-player");
-      if (durationMs) {
-        audio.title = Math.round(durationMs / 1000) + "s";
-      }
-      bodyEl.appendChild(audio);
-      attachAuthenticatedAudio(fileId, audio);
-      return;
-    }
-    var label = kind === "video" ? L("ui.message.video") : L("ui.message.file");
-    var btn = iconBtn("⬇", label, {
-      cls: "msg-attachment-dl",
-      testId: "message-file-download",
-      onClick: function () {
-        downloadChatFile(fileId).catch(function (err) {
-          state.error = err.message || L("files.downloadFailedShort");
-          render();
-        });
-      },
-    });
-    bodyEl.appendChild(btn);
+    uiMessageContent.appendMessageAttachment(bodyEl, kind, fileId, durationMs, getMessageContentCtx());
   }
 
   function chatTitleById(chatId) {
@@ -4395,7 +4334,8 @@
       type,
       content,
       isE2eeType,
-      e2eePlainType
+      e2eePlainType,
+      L
     );
   }
 
@@ -5076,7 +5016,8 @@
       m,
       messageAttachmentKind,
       messageAttachmentFileId,
-      formatPreviewText
+      formatPreviewText,
+      L("ui.message.default")
     );
   }
 
@@ -5594,240 +5535,165 @@
   }
 
   function renderMessageContent(bodyEl, m) {
-    var t = m.type;
-    var attachKind = messageAttachmentKind(m);
-    var fileId = messageAttachmentFileId(m);
-    if (attachKind && fileId) {
-      appendMessageAttachment(bodyEl, attachKind, fileId, m.duration_ms);
-      return;
-    }
-    if (m.link_preview && m.link_preview.url) {
-      var lp = el("div", "msg-link-preview");
-      var lpTitle = m.link_preview.title || m.link_preview.url;
-      lp.appendChild(el("div", "msg-link-preview-title", lpTitle));
-      lp.appendChild(el("div", "msg-link-preview-url", m.link_preview.url));
-      bodyEl.appendChild(lp);
-    }
-    if (isE2eeType(t)) {
-      var chatId = m.chat_id || state.selectedId;
-      var p = el(
-        "p",
-        "msg-e2ee-body",
-        isMlsCapabilitiesActive() ? L("e2ee.decryptingMls") : L("e2ee.decrypting")
-      );
-      bodyEl.appendChild(p);
-      loadE2eePlaintext(chatId, m.id).then(function (text) {
-        if (text) {
-          p.textContent = text;
-          p.className = "msg-e2ee-body msg-e2ee-decrypted";
-        } else if (isMlsCapabilitiesActive()) {
-          p.textContent =
-            L("e2ee.encryptedMlsPreview");
-        } else {
-          p.textContent =
-            L("e2ee.encryptedE2eePreview");
-        }
-      });
-      return;
-    }
-    bodyEl.innerHTML = safeMarkdown(m.content || "");
+    uiMessageContent.renderMessageContent(bodyEl, m, getMessageContentCtx());
   }
+
+  function handleWsIncoming(ev) {
+    try {
+      var data = JSON.parse(String(ev.data));
+      if (data && data.type === "rtc_signal") {
+        sendHeartbeatThrottled();
+        handleRtcEnvelope(data);
+        return;
+      }
+      if (isTypingEvent(data)) {
+        sendHeartbeatThrottled();
+        noteTyping(data.chat_id, data.user_id);
+        scheduleTypingSidebarRefresh();
+        return;
+      }
+      if (isPresenceEvent(data)) {
+        sendHeartbeatThrottled();
+        applyPresenceEvent(data);
+        scheduleRender();
+        return;
+      }
+      if (isReadReceiptEvent(data)) {
+        sendHeartbeatThrottled();
+        applyReadReceiptEvent(data);
+        scheduleRender();
+        return;
+      }
+      if (isMessageChangeEvent(data)) {
+        sendHeartbeatThrottled();
+        applyMessageChangeEvent(data);
+        scheduleRender();
+        return;
+      }
+      if (isReactionChangeEvent(data)) {
+        sendHeartbeatThrottled();
+        applyReactionChangeEvent(data);
+        scheduleRender();
+        return;
+      }
+      if (isPinChangeEvent(data)) {
+        sendHeartbeatThrottled();
+        applyPinChangeEvent(data);
+        return;
+      }
+      if (isMentionEvent(data)) {
+        sendHeartbeatThrottled();
+        var myId = jwtSub(state.tokens.access_token);
+        if (myId && data.mentioned_user_id === myId) {
+          maybeNotifyMention(data);
+          if (data.chat_id === state.selectedId) {
+            scheduleRender();
+          } else {
+            bumpUnread(data.chat_id);
+            scheduleRender();
+          }
+        }
+        return;
+      }
+      if (isConferenceChangeEvent(data)) {
+        sendHeartbeatThrottled();
+        applyConferenceChangeEvent(data);
+        scheduleRender();
+        return;
+      }
+      if (window.KorusUiLiveSession && KorusUiLiveSession.isLiveSessionChangeEvent(data)) {
+        sendHeartbeatThrottled();
+        KorusUiLiveSession.applyLiveSessionChangeEvent(state, data, {
+          onCreated: function (evt) {
+            state.statusMessage = evt.title
+              ? L("live.createdNamed", { title: evt.title })
+              : L("live.createdDefault");
+          },
+          onEnded: function () {
+            state.statusMessage = L("live.ended");
+          },
+        });
+        scheduleRender();
+        return;
+      }
+      if (!isMessageSendEvent(data)) return;
+      sendHeartbeatThrottled();
+      setChatPreviewFromSendEvent(data);
+      if (data.chatId !== state.selectedId) {
+        maybeNotifyMessage(data);
+        var myId = jwtSub(state.tokens.access_token);
+        if (!myId || data.senderId !== myId) bumpUnread(data.chatId);
+        scheduleRender();
+        return;
+      }
+      if (document.hidden) {
+        maybeNotifyMessage(data);
+      }
+      ingestIncomingMessage(data.chatId, data.messageId, data)
+        .then(function () {
+          return markChatRead(data.chatId);
+        })
+        .then(function () {
+          state.shouldScrollThread = true;
+          scheduleRender();
+        })
+        .catch(function () {
+          loadThread(data.chatId, THREAD_SOFT_RELOAD)
+            .then(function () {
+              return markChatRead(data.chatId);
+            })
+            .then(function () {
+              state.shouldScrollThread = true;
+              scheduleRender();
+            })
+            .catch(function () {});
+        });
+    } catch (e) {}
+  }
+
+  var wsClient = window.KorusUiWsClient
+    ? KorusUiWsClient.createWsClient({
+        getState: function () {
+          return state;
+        },
+        getAccessToken: function () {
+          return state.tokens && state.tokens.access_token;
+        },
+        hasSession: function () {
+          return state.tokens && state.tokens.access_token;
+        },
+        buildWsUrl: function (token) {
+          return uiTransportUtils.buildWsUrl(wsBaseUrl(), token);
+        },
+        onOpen: function () {
+          sendHeartbeat();
+        },
+        onStateChange: function () {
+          render();
+        },
+        onBeforeClose: function () {
+          rtcHangupAll();
+        },
+        onMessage: handleWsIncoming,
+      })
+    : null;
 
   function clearWsReconnect() {
-    if (state.wsReconnectTimer) {
-      clearTimeout(state.wsReconnectTimer);
-      state.wsReconnectTimer = null;
+    if (wsClient) {
+      wsClient.clearReconnect();
     }
-  }
-
-  function scheduleWsReconnect() {
-    clearWsReconnect();
-    if (state.wsManualClose || !state.tokens || !state.tokens.access_token) return;
-    state.wsState = "offline";
-    render();
-    var delay = uiTransportUtils.nextWsReconnectDelay(state.wsReconnectAttempt);
-    state.wsReconnectAttempt += 1;
-    state.wsReconnectTimer = setTimeout(function () {
-      state.wsReconnectTimer = null;
-      if (state.wsManualClose || !state.tokens) return;
-      openWs();
-    }, delay);
   }
 
   function closeWs() {
-    state.wsManualClose = true;
-    clearWsReconnect();
-    state.wsReconnectAttempt = 0;
-    rtcHangupAll();
-    if (state.ws) {
-      state.wsReplacing = true;
-      try {
-        state.ws.close();
-      } catch (e) {}
-      state.ws = null;
-      state.wsReplacing = false;
+    if (wsClient) {
+      wsClient.close();
     }
-    state.wsState = "off";
   }
 
   function openWs(opts) {
-    opts = opts || {};
-    if (
-      !opts.force &&
-      state.ws &&
-      (state.ws.readyState === WebSocket.OPEN ||
-        state.ws.readyState === WebSocket.CONNECTING)
-    ) {
-      return;
+    if (wsClient) {
+      wsClient.open(opts);
     }
-    clearWsReconnect();
-    if (state.ws) {
-      state.wsReplacing = true;
-      try {
-        state.ws.close();
-      } catch (e) {}
-      state.ws = null;
-      state.wsReplacing = false;
-    }
-    if (!state.tokens || !state.tokens.access_token) return;
-    state.wsManualClose = false;
-    var url = uiTransportUtils.buildWsUrl(wsBaseUrl(), state.tokens.access_token);
-    state.wsState = "connecting";
-    render();
-    var ws = new WebSocket(url);
-    state.ws = ws;
-    ws.onopen = function () {
-      state.wsReconnectAttempt = 0;
-      state.wsState = "open";
-      sendHeartbeat();
-      render();
-    };
-    ws.onerror = function () {
-      state.wsState = "error";
-      render();
-    };
-    ws.onclose = function () {
-      if (state.wsReplacing) return;
-      state.ws = null;
-      if (state.wsManualClose || !state.tokens) {
-        state.wsState = "off";
-      } else {
-        scheduleWsReconnect();
-      }
-      render();
-    };
-    ws.onmessage = function (ev) {
-      try {
-        var data = JSON.parse(String(ev.data));
-        if (data && data.type === "rtc_signal") {
-          sendHeartbeatThrottled();
-          handleRtcEnvelope(data);
-          return;
-        }
-        if (isTypingEvent(data)) {
-          sendHeartbeatThrottled();
-          noteTyping(data.chat_id, data.user_id);
-          scheduleTypingSidebarRefresh();
-          return;
-        }
-        if (isPresenceEvent(data)) {
-          sendHeartbeatThrottled();
-          applyPresenceEvent(data);
-          scheduleRender();
-          return;
-        }
-        if (isReadReceiptEvent(data)) {
-          sendHeartbeatThrottled();
-          applyReadReceiptEvent(data);
-          scheduleRender();
-          return;
-        }
-        if (isMessageChangeEvent(data)) {
-          sendHeartbeatThrottled();
-          applyMessageChangeEvent(data);
-          scheduleRender();
-          return;
-        }
-        if (isReactionChangeEvent(data)) {
-          sendHeartbeatThrottled();
-          applyReactionChangeEvent(data);
-          scheduleRender();
-          return;
-        }
-        if (isPinChangeEvent(data)) {
-          sendHeartbeatThrottled();
-          applyPinChangeEvent(data);
-          return;
-        }
-        if (isMentionEvent(data)) {
-          sendHeartbeatThrottled();
-          var myId = jwtSub(state.tokens.access_token);
-          if (myId && data.mentioned_user_id === myId) {
-            maybeNotifyMention(data);
-            if (data.chat_id === state.selectedId) {
-              scheduleRender();
-            } else {
-              bumpUnread(data.chat_id);
-              scheduleRender();
-            }
-          }
-          return;
-        }
-        if (isConferenceChangeEvent(data)) {
-          sendHeartbeatThrottled();
-          applyConferenceChangeEvent(data);
-          scheduleRender();
-          return;
-        }
-        if (window.KorusUiLiveSession && KorusUiLiveSession.isLiveSessionChangeEvent(data)) {
-          sendHeartbeatThrottled();
-          KorusUiLiveSession.applyLiveSessionChangeEvent(state, data, {
-            onCreated: function (evt) {
-              state.statusMessage = evt.title
-                ? L("live.createdNamed", { title: evt.title })
-                : L("live.createdDefault");
-            },
-            onEnded: function () {
-              state.statusMessage = L("live.ended");
-            },
-          });
-          scheduleRender();
-          return;
-        }
-        if (!isMessageSendEvent(data)) return;
-        sendHeartbeatThrottled();
-        setChatPreviewFromSendEvent(data);
-        if (data.chatId !== state.selectedId) {
-          maybeNotifyMessage(data);
-          var myId = jwtSub(state.tokens.access_token);
-          if (!myId || data.senderId !== myId) bumpUnread(data.chatId);
-          scheduleRender();
-          return;
-        }
-        if (document.hidden) {
-          maybeNotifyMessage(data);
-        }
-        ingestIncomingMessage(data.chatId, data.messageId, data)
-          .then(function () {
-            return markChatRead(data.chatId);
-          })
-          .then(function () {
-            state.shouldScrollThread = true;
-            scheduleRender();
-          })
-          .catch(function () {
-            loadThread(data.chatId, THREAD_SOFT_RELOAD)
-              .then(function () {
-                return markChatRead(data.chatId);
-              })
-              .then(function () {
-                state.shouldScrollThread = true;
-                scheduleRender();
-              })
-              .catch(function () {});
-          });
-      } catch (e) {}
-    };
   }
 
   function el(tag, cls, text) {
@@ -5898,9 +5764,13 @@
       span.setAttribute("aria-label", span.title);
       span.onclick = function () {
         if (state.wsState === "open") return;
-        clearWsReconnect();
-        state.wsReconnectAttempt = 0;
-        openWs();
+        if (wsClient) {
+          wsClient.reconnectNow();
+        } else {
+          clearWsReconnect();
+          state.wsReconnectAttempt = 0;
+          openWs({ force: true });
+        }
       };
     }
     return span;
@@ -8280,282 +8150,45 @@
         });
       }
       var myId = jwtSub(state.tokens.access_token);
+      var messageArticleCtx = {
+        el: el,
+        iconBtn: iconBtn,
+        L: L,
+        myId: myId,
+        state: state,
+        render: render,
+        isMessagePinned: isMessagePinned,
+        messageMentionsMe: messageMentionsMe,
+        openDiscussionThread: openDiscussionThread,
+        openMessageVersions: openMessageVersions,
+        showReadReceiptPopup: showReadReceiptPopup,
+        messageVisibilityTtlSeconds: messageVisibilityTtlSeconds,
+        messageExpiryEpochMs: messageExpiryEpochMs,
+        formatTimeLeft: formatTimeLeft,
+        appendReplyQuoteBlock: appendReplyQuoteBlock,
+        isE2eeType: isE2eeType,
+        e2eePlainType: e2eePlainType,
+        renderMessageContent: renderMessageContent,
+        aggregateReactions: aggregateReactions,
+        toggleReaction: toggleReaction,
+        reactionPickerEmojis: REACTION_PICKER_EMOJIS,
+        setReplyTo: setReplyTo,
+        copyMessageText: copyMessageText,
+        copyMessageDeepLink: copyMessageDeepLink,
+        messageAttachmentFileId: messageAttachmentFileId,
+        downloadChatFile: downloadChatFile,
+        togglePinMessage: togglePinMessage,
+        openForwardPicker: openForwardPicker,
+        createPublicLinkForFile: createPublicLinkForFile,
+        openFilePublicLinksModal: openFilePublicLinksModal,
+        deleteOwnFile: deleteOwnFile,
+        saveMessageToVault: saveMessageToVault,
+        editMessagePrompt: editMessagePrompt,
+        deleteMessageConfirm: deleteMessageConfirm,
+        quickReactions: QUICK_REACTIONS,
+      };
       function buildMessageArticle(m) {
-        var art = el(
-          "article",
-          "msg" +
-            (myId && m.sender_id === myId ? " own" : "") +
-            (isMessagePinned(m.id) ? " pinned" : "") +
-            (m.deleted ? " deleted" : "") +
-            (messageMentionsMe(m) ? " msg-mention-me" : "")
-        );
-        art.id = "msg-" + m.id;
-        var meta = el("div", "msg-meta");
-        meta.appendChild(document.createTextNode(myId && m.sender_id === myId ? L("ui.thread.you") : m.sender_id.slice(0, 8)));
-        var ts = el("span");
-        ts.className = "msg-ts";
-        ts.textContent = new Date(m.created_at).toLocaleString();
-        meta.appendChild(ts);
-        if (m.thread_reply_count && m.thread_reply_count > 0 && !state.discussionThreadRootId) {
-          var tBadge = el("button", "msg-thread-badge", m.thread_reply_count + " ↩");
-          tBadge.type = "button";
-          tBadge.title = L("ui.thread.openDiscussion");
-          tBadge.onclick = function (ev) {
-            ev.stopPropagation();
-            openDiscussionThread(m.id);
-          };
-          meta.appendChild(tBadge);
-        }
-        if (m.edited_at) {
-          var ed = el("button", "msg-edited");
-          ed.type = "button";
-          ed.textContent = L("ui.message.editedShort");
-          ed.title = L("ui.message.editHistoryTitle");
-          ed.onclick = function () {
-            openMessageVersions(m);
-          };
-          meta.appendChild(ed);
-        }
-        if (myId && m.sender_id === myId) {
-          var rr = state.readReceiptsByMessage[m.id];
-          var rrCount = rr ? Object.keys(rr).length : 0;
-          if (rrCount > 0) {
-            var rrEl = el("span", "msg-read-receipt-double-check", " ✓✓");
-            rrEl.title = L("readReceipts.title") + ": " + rrCount;
-            rrEl.style.cursor = "pointer";
-            rrEl.onclick = function (ev) {
-              ev.stopPropagation();
-              showReadReceiptPopup(m.id);
-            };
-            meta.appendChild(rrEl);
-          }
-        }
-        var ttlSeconds = messageVisibilityTtlSeconds(m);
-        var expiresAt = messageExpiryEpochMs(m);
-        var isExpired = expiresAt != null && Date.now() >= expiresAt;
-        if (ttlSeconds) {
-          var ttlLbl = el("span");
-          ttlLbl.className = "msg-ttl msg-ttl-indicator" + (isExpired ? " msg-ttl-expired" : "");
-          if (isExpired) {
-            ttlLbl.textContent = L("ui.message.ttlExpiredLabel");
-            ttlLbl.title = L("ui.message.ttlExpiredTitle");
-          } else {
-            var leftSeconds = Math.max(1, Math.ceil((expiresAt - Date.now()) / 1000));
-            ttlLbl.textContent = " · ⏱ " + formatTimeLeft(leftSeconds);
-            ttlLbl.title = L("ui.message.ttlExpiresIn", { time: formatTimeLeft(leftSeconds) });
-          }
-          meta.appendChild(ttlLbl);
-        }
-        art.appendChild(meta);
-        if (m.reply_to_msg_id) {
-          appendReplyQuoteBlock(art, m);
-        }
-        if (!m.deleted && (m.type !== "text" || isE2eeType(m.type))) {
-          var typeLbl = isE2eeType(m.type)
-            ? "e2ee · " + e2eePlainType(m.type)
-            : m.type;
-          art.appendChild(el("div", "msg-type" + (isE2eeType(m.type) ? " msg-type-e2ee" : ""), typeLbl));
-        }
-        var body = el("div", "msg-body md");
-        if (m.deleted || isExpired) {
-          body.className = "msg-body msg-deleted-body";
-          body.textContent = isExpired ? L("ui.message.unavailableTtl") : L("ui.message.deleted");
-        } else {
-          renderMessageContent(body, m);
-        }
-        art.appendChild(body);
-        var agg = aggregateReactions(m.id, myId);
-        var emojis = Object.keys(agg);
-        if (emojis.length) {
-          var reactBar = el("div", "msg-reactions");
-          emojis.forEach(function (em) {
-            var chip = el(
-              "button",
-              "msg-reaction-chip" + (agg[em].mine ? " mine" : ""),
-              em + " " + agg[em].count
-            );
-            chip.type = "button";
-            chip.onclick = function () {
-              toggleReaction(m.id, em).catch(function (err) {
-                state.error = err.message || L("messages.reactionFailed");
-                render();
-              });
-            };
-            reactBar.appendChild(chip);
-          });
-          art.appendChild(reactBar);
-        }
-        if (!m.deleted) {
-          var addReact = iconBtn("+", L("ui.message.addReaction"), {
-            testId: "message-reaction-picker-btn",
-            onClick: function (ev) {
-              ev.stopPropagation();
-              var pop = el("div", "msg-reaction-picker");
-              REACTION_PICKER_EMOJIS.forEach(function (em) {
-                var b = el("button", "msg-reaction-picker-item", em);
-                b.type = "button";
-                b.onclick = function () {
-                  toggleReaction(m.id, em).catch(function (err) {
-                    state.error = err.message || L("messages.reactionFailed");
-                    render();
-                  });
-                  if (pop.parentNode) pop.parentNode.removeChild(pop);
-                };
-                pop.appendChild(b);
-              });
-              document.body.appendChild(pop);
-              var rect = ev.target.getBoundingClientRect();
-              pop.style.position = "fixed";
-              pop.style.left = Math.max(8, rect.left) + "px";
-              pop.style.top = (rect.bottom + 4) + "px";
-              setTimeout(function () {
-                document.addEventListener(
-                  "click",
-                  function closePop() {
-                    if (pop.parentNode) pop.parentNode.removeChild(pop);
-                  },
-                  { once: true }
-                );
-              }, 0);
-            },
-          });
-          var actions = el("div", "msg-actions");
-          actions.appendChild(addReact);
-          actions.appendChild(
-            iconBtn("↩", L("ui.actions.reply"), {
-              testId: "message-reply-button",
-              onClick: function () {
-                setReplyTo(m);
-              },
-            })
-          );
-          if (m.type === "text" || isE2eeType(m.type) || (m.content && m.content.trim())) {
-            actions.appendChild(
-              iconBtn("📋", L("ui.actions.copy"), {
-                onClick: function () {
-                  copyMessageText(m);
-                },
-              })
-            );
-          }
-          actions.appendChild(
-            iconBtn("🔗", L("ui.message.messageLinkTitle"), {
-              testId: "message-link-button",
-              onClick: function () {
-                copyMessageDeepLink(m);
-              },
-            })
-          );
-          var attachId = messageAttachmentFileId(m);
-          if (attachId) {
-            actions.appendChild(
-              iconBtn("⬇", L("ui.common.download"), {
-                onClick: function () {
-                  downloadChatFile(attachId).catch(function (err) {
-                    state.error = err.message || L("files.downloadFailedShort");
-                    render();
-                  });
-                },
-              })
-            );
-          }
-          actions.appendChild(
-            iconBtn(
-              isMessagePinned(m.id) ? "📍" : "📌",
-              isMessagePinned(m.id) ? L("ui.message.unpin") : L("ui.message.pin"),
-              {
-                onClick: function () {
-                  togglePinMessage(m).catch(function (err) {
-                    state.error = err.message || L("messages.pinFailed");
-                    render();
-                  });
-                },
-              }
-            )
-          );
-          actions.appendChild(
-            iconBtn("↪", L("ui.actions.forward"), {
-              testId: "message-forward-button",
-              onClick: function () {
-                openForwardPicker(m);
-              },
-            })
-          );
-          if (myId && m.sender_id === myId && messageAttachmentFileId(m)) {
-            var fileId = messageAttachmentFileId(m);
-            actions.appendChild(
-              iconBtn("🌐", L("ui.message.pubLinkTitle"), {
-                onClick: function () {
-                  createPublicLinkForFile(fileId);
-                },
-              })
-            );
-            actions.appendChild(
-              iconBtn("🔗", L("ui.message.linksTitle"), {
-                onClick: function () {
-                  openFilePublicLinksModal(fileId);
-                },
-              })
-            );
-            actions.appendChild(
-              iconBtn("🗑", L("ui.actions.deleteFile"), {
-                onClick: function () {
-                  deleteOwnFile(fileId);
-                },
-              })
-            );
-          }
-          if (state.savedChatId && state.selectedId !== state.savedChatId) {
-            actions.appendChild(
-              iconBtn("🔒", L("ui.actions.toVault"), {
-                onClick: function () {
-                  saveMessageToVault(m).catch(function (err) {
-                    state.error = err.message || L("saved.saveFailed");
-                    render();
-                  });
-                },
-              })
-            );
-          }
-          if (myId && m.sender_id === myId && m.type === "text") {
-            actions.appendChild(
-              iconBtn("✎", L("ui.actions.edit"), {
-                testId: "message-edit-button",
-                onClick: function () {
-                  editMessagePrompt(m).catch(function (err) {
-                    state.error = err.message || L("messages.editFailed");
-                    render();
-                  });
-                },
-              })
-            );
-            actions.appendChild(
-              iconBtn("🗑", L("ui.actions.delete"), {
-                testId: "message-delete-button",
-                onClick: function () {
-                  deleteMessageConfirm(m).catch(function (err) {
-                    state.error = err.message || L("messages.deleteFailed");
-                    render();
-                  });
-                },
-              })
-            );
-          }
-          QUICK_REACTIONS.forEach(function (em) {
-            var br = el("button", "btn btn-ghost btn-sm msg-react-btn", em);
-            br.type = "button";
-            br.title = L("ui.message.reactionTitle", { emoji: em });
-            br.onclick = function () {
-              toggleReaction(m.id, em).catch(function (err) {
-                state.error = err.message || L("messages.reactionAddFailed");
-                render();
-              });
-            };
-            actions.appendChild(br);
-          });
-          art.appendChild(actions);
-        }
-        return art;
+        return uiMessageArticle.buildMessageArticle(m, messageArticleCtx);
       }
       var focusIdx = null;
       if (state.virtualFocusMessageId) {
@@ -8567,48 +8200,23 @@
         }
       }
       var virtualMounted = false;
-      if (uiMessageList && uiMessageList.shouldVirtualize(state.messages.length)) {
-        var virtualScrollRaf = null;
-        var renderVirtualMessages = function () {
-          var scrollTop = msgs.scrollTop;
-          uiMessageList.renderVirtualMessages(msgs, {
-            messages: state.messages,
-            renderMessage: function (m) {
-              return buildMessageArticle(m);
-            },
-            focusIndex: focusIdx,
-            scrollTop: scrollTop,
-            loadMoreEl: loadOlder,
-            onScrollNearTop: function () {
-              if (state.threadHasMore && !state.threadLoadingMore) {
-                loadOlderMessages();
-              }
-            },
-            onScroll: function () {
-              if (virtualScrollRaf) return;
-              virtualScrollRaf = requestAnimationFrame(function () {
-                virtualScrollRaf = null;
-                renderVirtualMessages();
-              });
-            },
-          });
-        };
-        renderVirtualMessages();
-        virtualMounted = true;
-        state.virtualFocusMessageId = null;
-      }
-      if (!virtualMounted) {
-        if (loadOlder) {
-          msgs.appendChild(loadOlder);
-        }
-        state.messages.forEach(function (m) {
-          msgs.appendChild(buildMessageArticle(m));
+      if (uiMessageList) {
+        virtualMounted = uiMessageList.mountMessageList(msgs, {
+          messages: state.messages,
+          renderMessage: function (m) {
+            return buildMessageArticle(m);
+          },
+          focusIndex: focusIdx,
+          loadMoreEl: loadOlder,
+          onScrollNearTop: function () {
+            if (state.threadHasMore && !state.threadLoadingMore) {
+              loadOlderMessages();
+            }
+          },
         });
-        msgs.onscroll = function () {
-          if (msgs.scrollTop < 64 && state.threadHasMore && !state.threadLoadingMore) {
-            loadOlderMessages();
-          }
-        };
+      }
+      if (virtualMounted) {
+        state.virtualFocusMessageId = null;
       }
       thread.appendChild(msgs);
       var comp = el("form", "composer");
@@ -9086,26 +8694,7 @@
   }
 
   function stripDeepLinkFromUrl() {
-    try {
-      var params = new URLSearchParams(window.location.search);
-      var chatId = params.has("chat") ? params.get("chat") : null;
-      var msgId = params.has("msg") ? params.get("msg") : null;
-      var meet = params.has("meet") ? params.get("meet") : null;
-      var conf = params.has("conf") ? params.get("conf") : null;
-      var changed = params.has("chat") || params.has("msg") || params.has("meet") || params.has("conf");
-      if (params.has("chat")) params.delete("chat");
-      if (params.has("msg")) params.delete("msg");
-      if (params.has("meet")) params.delete("meet");
-      if (params.has("conf")) params.delete("conf");
-      if (changed && window.history && window.history.replaceState) {
-        var q = params.toString();
-        var path = window.location.pathname + (q ? "?" + q : "");
-        window.history.replaceState(null, "", path);
-      }
-      return { chatId: chatId, msgId: msgId, meet: meet, conf: conf };
-    } catch (e) {
-      return { chatId: null, msgId: null, meet: null, conf: null };
-    }
+    return uiDeepLinkUtils.stripDeepLinkFromUrl();
   }
 
   function stashPendingDeepLink(chatId, msgId) {
