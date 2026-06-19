@@ -9,142 +9,154 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Delegates {@link ChatPersistencePort} to legacy {@link ChatRepository}. */
+/** JDBC adapter for {@link ChatPersistencePort}. */
 public final class JdbcChatPersistenceAdapter implements ChatPersistencePort {
-    private final ChatRepository delegate;
+    private final JdbcChatJdbcRepository jdbc;
+    private final ChatRepository legacy;
+
+    public JdbcChatPersistenceAdapter(JdbcChatJdbcRepository jdbc) {
+        this.jdbc = jdbc;
+        this.legacy = null;
+    }
 
     public JdbcChatPersistenceAdapter(ChatRepository delegate) {
-        this.delegate = delegate;
+        this.jdbc = null;
+        this.legacy = delegate;
     }
 
     public JdbcChatPersistenceAdapter(DataSource dataSource, DataSource readDataSource, Clock clock,
                                       com.avandocmsg.messenger.core.port.UuidGenerator uuidGenerator,
                                       int queryTimeoutSeconds) {
-        this.delegate = new ChatRepository(dataSource, readDataSource, clock, uuidGenerator, queryTimeoutSeconds);
+        this.jdbc = new JdbcChatJdbcRepository(dataSource, readDataSource, clock, uuidGenerator, queryTimeoutSeconds);
+        this.legacy = null;
     }
 
     @Override
     public boolean chatExists(UUID chatId) {
-        return delegate.chatExists(chatId);
+        return useLegacy() ? legacy.chatExists(chatId) : jdbc.chatExists(chatId);
     }
 
     @Override
     public Optional<UUID> findOrgIdForRetentionOverlay(UUID chatId) {
-        return delegate.findOrgIdForRetentionOverlay(chatId);
+        return useLegacy() ? legacy.findOrgIdForRetentionOverlay(chatId) : jdbc.findOrgIdForRetentionOverlay(chatId);
     }
 
     @Override
     public com.avandocmsg.messenger.api.chats.dto.ChatResponse createGroup(UUID chatId, String title, UUID ownerId) {
-        return delegate.createGroup(chatId, title, ownerId);
+        return useLegacy() ? legacy.createGroup(chatId, title, ownerId) : jdbc.createGroup(chatId, title, ownerId);
     }
 
     @Override
     public com.avandocmsg.messenger.api.chats.dto.ChatResponse createChannel(UUID chatId, String title, UUID ownerId) {
-        return delegate.createChannel(chatId, title, ownerId);
+        return useLegacy() ? legacy.createChannel(chatId, title, ownerId) : jdbc.createChannel(chatId, title, ownerId);
     }
 
     @Override
     public Optional<String> getChatType(UUID chatId) {
-        return delegate.getChatType(chatId);
+        return useLegacy() ? legacy.getChatType(chatId) : jdbc.getChatType(chatId);
     }
 
     @Override
     public com.avandocmsg.messenger.api.chats.dto.ChatResponse createP2P(UUID chatId, UUID user1Id, UUID user2Id) {
-        return delegate.createP2P(chatId, user1Id, user2Id);
+        return useLegacy() ? legacy.createP2P(chatId, user1Id, user2Id) : jdbc.createP2P(chatId, user1Id, user2Id);
     }
 
     @Override
     public Optional<UUID> findP2PChat(UUID user1Id, UUID user2Id) {
-        return delegate.findP2PChat(user1Id, user2Id);
+        return useLegacy() ? legacy.findP2PChat(user1Id, user2Id) : jdbc.findP2PChat(user1Id, user2Id);
     }
 
     @Override
     public List<com.avandocmsg.messenger.api.chats.dto.ChatResponse> listByUser(UUID userId) {
-        return delegate.listByUser(userId);
+        return useLegacy() ? legacy.listByUser(userId) : jdbc.listByUser(userId);
     }
 
     @Override
     public Optional<UUID> findOtherP2PMember(UUID chatId, UUID userId) {
-        return delegate.findOtherP2PMember(chatId, userId);
+        return useLegacy() ? legacy.findOtherP2PMember(chatId, userId) : jdbc.findOtherP2PMember(chatId, userId);
     }
 
     @Override
     public Optional<com.avandocmsg.messenger.api.chats.dto.ChatResponse> findById(UUID chatId, UUID userId) {
-        return delegate.findById(chatId, userId);
+        return useLegacy() ? legacy.findById(chatId, userId) : jdbc.findById(chatId, userId);
     }
 
     @Override
     public boolean updateTitle(UUID chatId, String title) {
-        return delegate.updateTitle(chatId, title);
+        return useLegacy() ? legacy.updateTitle(chatId, title) : jdbc.updateTitle(chatId, title);
     }
 
     @Override
     public boolean setMuted(UUID chatId, UUID userId, boolean muted) {
-        return delegate.setMuted(chatId, userId, muted);
+        return useLegacy() ? legacy.setMuted(chatId, userId, muted) : jdbc.setMuted(chatId, userId, muted);
     }
 
     @Override
     public boolean setArchived(UUID chatId, UUID userId, boolean archived) {
-        return delegate.setArchived(chatId, userId, archived);
+        return useLegacy() ? legacy.setArchived(chatId, userId, archived) : jdbc.setArchived(chatId, userId, archived);
     }
 
     @Override
     public boolean setFolderTag(UUID chatId, UUID userId, String folderTag) {
-        return delegate.setFolderTag(chatId, userId, folderTag);
+        return useLegacy() ? legacy.setFolderTag(chatId, userId, folderTag) : jdbc.setFolderTag(chatId, userId, folderTag);
     }
 
     @Override
     public boolean addMember(UUID chatId, UUID userId, String role) {
-        return delegate.addMember(chatId, userId, role);
+        return useLegacy() ? legacy.addMember(chatId, userId, role) : jdbc.addMember(chatId, userId, role);
     }
 
     @Override
     public boolean removeMember(UUID chatId, UUID userId) {
-        return delegate.removeMember(chatId, userId);
+        return useLegacy() ? legacy.removeMember(chatId, userId) : jdbc.removeMember(chatId, userId);
     }
 
     @Override
     public boolean setRole(UUID chatId, UUID userId, String role) {
-        return delegate.setRole(chatId, userId, role);
+        return useLegacy() ? legacy.setRole(chatId, userId, role) : jdbc.setRole(chatId, userId, role);
     }
 
     @Override
     public List<com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse> listMembers(UUID chatId) {
-        return delegate.listMembers(chatId);
+        return useLegacy() ? legacy.listMembers(chatId) : jdbc.listMembers(chatId);
     }
 
     @Override
     public Optional<UUID> findOwnerId(UUID chatId) {
-        return delegate.findOwnerId(chatId);
+        return useLegacy() ? legacy.findOwnerId(chatId) : jdbc.findOwnerId(chatId);
     }
 
     @Override
     public String getMemberRole(UUID chatId, UUID userId) {
-        return delegate.getMemberRole(chatId, userId);
+        return useLegacy() ? legacy.getMemberRole(chatId, userId) : jdbc.getMemberRole(chatId, userId);
     }
 
     @Override
     public boolean isMemberBanned(UUID chatId, UUID userId) {
-        return delegate.isMemberBanned(chatId, userId);
+        return useLegacy() ? legacy.isMemberBanned(chatId, userId) : jdbc.isMemberBanned(chatId, userId);
     }
 
     @Override
     public boolean setPersonalFilterActive(UUID chatId, UUID userId, boolean active) {
-        return delegate.setPersonalFilterActive(chatId, userId, active);
+        return useLegacy() ? legacy.setPersonalFilterActive(chatId, userId, active) : jdbc.setPersonalFilterActive(chatId, userId, active);
     }
 
     @Override
     public boolean isPersonalFilterActive(UUID chatId, UUID userId) {
-        return delegate.isPersonalFilterActive(chatId, userId);
+        return useLegacy() ? legacy.isPersonalFilterActive(chatId, userId) : jdbc.isPersonalFilterActive(chatId, userId);
     }
 
     @Override
     public boolean setBanned(UUID chatId, UUID userId, boolean banned) {
-        return delegate.setBanned(chatId, userId, banned);
+        return useLegacy() ? legacy.setBanned(chatId, userId, banned) : jdbc.setBanned(chatId, userId, banned);
     }
 
     @Override
     public List<UUID> listChatIdsForUser(UUID userId) {
-        return delegate.listChatIdsForUser(userId);
+        return useLegacy() ? legacy.listChatIdsForUser(userId) : jdbc.listChatIdsForUser(userId);
+    }
+
+    private boolean useLegacy() {
+        return legacy != null;
     }
 }

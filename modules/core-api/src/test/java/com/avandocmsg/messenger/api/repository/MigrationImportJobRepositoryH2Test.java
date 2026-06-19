@@ -113,7 +113,7 @@ class MigrationImportJobRepositoryH2Test {
         var chatRepo = new ChatRepository(ds, Clock.systemUTC(), UuidGenerator.standard());
         var msgPort = CoreModule.messageRepositoryPort(ds);
         var processor = new MigrationImportProcessor(
-            new JdbcMigrationImportJobAdapter(repository),
+            new JdbcMigrationImportJobAdapter(ds),
             new JdbcChatPersistenceAdapter(chatRepo),
             msgPort,
             UuidGenerator.standard());

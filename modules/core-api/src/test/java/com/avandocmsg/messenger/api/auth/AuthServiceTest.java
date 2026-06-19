@@ -107,7 +107,7 @@ class AuthServiceTest {
         boolean failOnCreate = false;
 
         StubUserRepository() {
-            super(null);
+            super((javax.sql.DataSource) null);
         }
 
         @Override

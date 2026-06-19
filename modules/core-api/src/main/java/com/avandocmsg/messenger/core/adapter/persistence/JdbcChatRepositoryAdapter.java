@@ -7,39 +7,29 @@ import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 
 import javax.sql.DataSource;
-import java.util.ArrayList;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /** JDBC adapter for {@link ChatRepositoryPort} (reads {@code chats} without membership filter). */
 public final class JdbcChatRepositoryAdapter implements ChatRepositoryPort {
-    private final DataSource dataSource;
+    private final JdbcChatJdbcRepository jdbc;
 
     public JdbcChatRepositoryAdapter(DataSource dataSource) {
-        this.dataSource = dataSource;
+        this(new JdbcChatJdbcRepository(dataSource, null, Clock.systemUTC(),
+            com.avandocmsg.messenger.core.port.UuidGenerator.standard(), 0));
+    }
+
+    public JdbcChatRepositoryAdapter(JdbcChatJdbcRepository jdbc) {
+        this.jdbc = jdbc;
     }
 
     @Override
     public Optional<Chat> findById(ChatId id) {
-        if (dataSource == null) {
+        if (id == null) {
             return Optional.empty();
         }
-        var sql = """
-            SELECT id, title, type, created_at FROM chats WHERE id = ?
-            """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, id.value());
-            try (var rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.of(mapRow(rs));
-                }
-            }
-        } catch (Exception e) {
-            return Optional.empty();
-        }
-        return Optional.empty();
+        return jdbc.findByIdBasic(id.value()).map(JdbcChatRepositoryAdapter::mapRow);
     }
 
     @Override
@@ -49,99 +39,43 @@ public final class JdbcChatRepositoryAdapter implements ChatRepositoryPort {
 
     @Override
     public Optional<String> memberRole(ChatId chatId, UserId userId) {
-        if (dataSource == null || chatId == null || userId == null) {
+        if (chatId == null || userId == null) {
             return Optional.empty();
         }
-        var sql = "SELECT role FROM chat_members WHERE chat_id = ? AND user_id = ?";
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, chatId.value());
-            stmt.setObject(2, userId.value());
-            try (var rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.ofNullable(rs.getString("role"));
-                }
-            }
-        } catch (Exception e) {
-            return Optional.empty();
-        }
-        return Optional.empty();
+        var role = jdbc.getMemberRole(chatId.value(), userId.value());
+        return role != null ? Optional.of(role) : Optional.empty();
     }
 
     @Override
     public boolean isMemberBanned(ChatId chatId, UserId userId) {
-        if (dataSource == null || chatId == null || userId == null) {
+        if (chatId == null || userId == null) {
             return false;
         }
-        var sql = "SELECT banned FROM chat_members WHERE chat_id = ? AND user_id = ?";
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, chatId.value());
-            stmt.setObject(2, userId.value());
-            try (var rs = stmt.executeQuery()) {
-                return rs.next() && rs.getBoolean("banned");
-            }
-        } catch (Exception e) {
-            return false;
-        }
+        return jdbc.isMemberBanned(chatId.value(), userId.value());
     }
 
     @Override
     public List<UserId> listMemberUserIds(ChatId chatId) {
-        if (dataSource == null || chatId == null) {
+        if (chatId == null) {
             return List.of();
         }
-        var sql = "SELECT user_id FROM chat_members WHERE chat_id = ?";
-        var result = new ArrayList<UserId>();
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, chatId.value());
-            try (var rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    result.add(UserId.of(rs.getObject("user_id", UUID.class)));
-                }
-            }
-        } catch (Exception e) {
-            return List.of();
-        }
-        return result;
+        return jdbc.listMemberUserIds(chatId.value()).stream().map(UserId::of).toList();
     }
 
     @Override
     public Optional<UserId> findOtherP2pMember(ChatId chatId, UserId userId) {
-        if (dataSource == null || chatId == null || userId == null) {
+        if (chatId == null || userId == null) {
             return Optional.empty();
         }
-        var sql = """
-            SELECT cm.user_id
-            FROM chat_members cm
-            INNER JOIN chats c ON c.id = cm.chat_id AND c.type = 'p2p'
-            WHERE cm.chat_id = ? AND cm.user_id <> ?
-            LIMIT 1
-            """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, chatId.value());
-            stmt.setObject(2, userId.value());
-            try (var rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.of(UserId.of(rs.getObject("user_id", UUID.class)));
-                }
-            }
-        } catch (Exception e) {
-            return Optional.empty();
-        }
-        return Optional.empty();
+        return jdbc.findOtherP2PMember(chatId.value(), userId.value()).map(UserId::of);
     }
 
-    private static Chat mapRow(java.sql.ResultSet rs) throws Exception {
-        var typeRaw = rs.getString("type");
-        var type = mapChatType(typeRaw);
+    private static Chat mapRow(JdbcChatJdbcRepository.BasicChatRow row) {
         return new Chat(
-            ChatId.of(rs.getObject("id", UUID.class)),
-            rs.getString("title"),
-            type,
-            rs.getTimestamp("created_at").toInstant());
+            ChatId.of(row.id()),
+            row.title(),
+            mapChatType(row.type()),
+            row.createdAt());
     }
 
     private static ChatType mapChatType(String typeRaw) {

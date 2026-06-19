@@ -138,7 +138,7 @@ class ContactServiceTest {
     static class StubUserRepository extends com.avandocmsg.messenger.api.repository.UserRepository {
         final Map<UUID, UserProfile> users = new HashMap<>();
 
-        StubUserRepository() { super(null); }
+        StubUserRepository() { super((javax.sql.DataSource) null); }
 
         @Override
         public Optional<UserProfile> findById(UUID id) {

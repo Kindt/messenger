@@ -9,10 +9,7 @@ import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRetentionPolicyAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcRetentionPolicyAdapter;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
-import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.api.export.AdminExportComplianceSeed;
 import com.avandocmsg.messenger.api.export.ExportFileAccess;
 import com.avandocmsg.messenger.api.export.ExportJobEnqueuer;
@@ -43,13 +40,13 @@ class AdminResourceTest {
                 return "9.9.9-test";
             }
         };
-        var audit = new JdbcAuditAdapter(new AuditRepository(null));
+        var audit = new JdbcAuditAdapter((javax.sql.DataSource) null);
         var chatRepo = new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard());
         var resource = new AdminResource(cfg, audit,
             CoreModule.organizationApplicationService(null, UuidGenerator.standard()),
-            new JdbcRetentionPolicyAdapter(new RetentionPolicyRepository(null)),
+            new JdbcRetentionPolicyAdapter((javax.sql.DataSource) null),
             new JdbcChatPersistenceAdapter(chatRepo),
-            new JdbcChatRetentionPolicyAdapter(new ChatRetentionPolicyRepository(null)),
+            new JdbcChatRetentionPolicyAdapter((javax.sql.DataSource) null),
             new ExportSuggestedHandler(audit),
             mock(AdminExportComplianceSeed.class),
             new ExportJobEnqueuer(null, audit, mock(NatsOutboundPort.class), UuidGenerator.standard()),
@@ -173,12 +170,12 @@ class AdminResourceTest {
                 return "0-test";
             }
         };
-        var audit = new JdbcAuditAdapter(new AuditRepository(null));
+        var audit = new JdbcAuditAdapter((javax.sql.DataSource) null);
         return new AdminResource(cfg, audit,
             CoreModule.organizationApplicationService(null, UuidGenerator.standard()),
-            new JdbcRetentionPolicyAdapter(new RetentionPolicyRepository(null)),
+            new JdbcRetentionPolicyAdapter((javax.sql.DataSource) null),
             new JdbcChatPersistenceAdapter(new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard())),
-            new JdbcChatRetentionPolicyAdapter(new ChatRetentionPolicyRepository(null)),
+            new JdbcChatRetentionPolicyAdapter((javax.sql.DataSource) null),
             new ExportSuggestedHandler(audit),
             mock(AdminExportComplianceSeed.class),
             new ExportJobEnqueuer(null, audit, mock(NatsOutboundPort.class), UuidGenerator.standard()),

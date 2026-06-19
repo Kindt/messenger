@@ -6,43 +6,29 @@ import com.avandocmsg.messenger.core.port.UserRepositoryPort;
 
 import javax.sql.DataSource;
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.Optional;
-import java.util.UUID;
 
 /** JDBC adapter for {@link UserRepositoryPort}. */
 public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
-    private static final String SELECT_USER = """
-        SELECT id, username, display_name, phone, hidden, created_at,
-               presence_status, last_seen_at, org_id, privacy_disable_read_receipts, ui_locale,
-               custom_status_text, dnd_until
-        FROM users
-        WHERE id = ?
-        """;
-
+    private final JdbcUserJdbcRepository jdbc;
     private final DataSource dataSource;
 
     public JdbcUserRepositoryAdapter(DataSource dataSource) {
         this.dataSource = dataSource;
+        this.jdbc = new JdbcUserJdbcRepository(dataSource);
+    }
+
+    public JdbcUserRepositoryAdapter(JdbcUserJdbcRepository jdbc) {
+        this.jdbc = jdbc;
+        this.dataSource = null;
     }
 
     @Override
     public Optional<UserProfile> findById(UserId id) {
-        if (dataSource == null) {
+        if (id == null) {
             return Optional.empty();
         }
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(SELECT_USER)) {
-            stmt.setObject(1, id.value());
-            try (var rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.of(mapRow(rs));
-                }
-            }
-        } catch (Exception e) {
-            return Optional.empty();
-        }
-        return Optional.empty();
+        return jdbc.findById(id.value()).map(JdbcUserRepositoryAdapter::toDomain);
     }
 
     @Override
@@ -168,73 +154,34 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
 
     @Override
     public void upsertFromKeycloak(UserId id, String username, String displayName) {
-        if (dataSource == null) {
+        if (id == null) {
             return;
         }
-        var un = username != null && !username.isBlank() ? username : "user";
-        var dn = displayName != null && !displayName.isBlank() ? displayName : un;
-        var sql = """
-            INSERT INTO users (id, username, display_name, created_at, updated_at)
-            VALUES (?, ?, ?, now(), now())
-            ON CONFLICT (id) DO UPDATE SET
-              username = EXCLUDED.username,
-              display_name = EXCLUDED.display_name,
-              updated_at = now()
-            """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, id.value());
-            stmt.setString(2, un);
-            stmt.setString(3, dn);
-            stmt.executeUpdate();
-        } catch (Exception e) {
-            org.slf4j.LoggerFactory.getLogger(JdbcUserRepositoryAdapter.class)
-                .warn("upsertFromKeycloak failed for {}: {}", id, e.getMessage());
-        }
+        jdbc.upsertFromKeycloak(id.value(), username, displayName);
     }
 
     @Override
     public boolean createLocalUser(UserId id, String username, String displayName) {
-        if (dataSource == null) {
+        if (id == null) {
             return false;
         }
-        var sql = """
-            INSERT INTO users (id, username, display_name, created_at, updated_at)
-            VALUES (?, ?, ?, now(), now())
-            """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, id.value());
-            stmt.setString(2, username);
-            stmt.setString(3, displayName != null ? displayName : username);
-            stmt.executeUpdate();
-            return true;
-        } catch (Exception e) {
-            org.slf4j.LoggerFactory.getLogger(JdbcUserRepositoryAdapter.class)
-                .error("Failed to create user: {}", username, e);
-            return false;
-        }
+        return jdbc.create(id.value(), username, displayName);
     }
 
-    private static UserProfile mapRow(java.sql.ResultSet rs) throws Exception {
-        var lastSeenTs = rs.getTimestamp("last_seen_at");
-        Instant lastSeen = lastSeenTs != null ? lastSeenTs.toInstant() : null;
-        var org = rs.getObject("org_id", UUID.class);
-        var dndTs = rs.getTimestamp("dnd_until");
-        Instant dndUntil = dndTs != null ? dndTs.toInstant() : null;
+    private static UserProfile toDomain(com.avandocmsg.messenger.api.users.dto.UserProfile profile) {
         return new UserProfile(
-            UserId.of(rs.getObject("id", UUID.class)),
-            rs.getString("username"),
-            rs.getString("display_name"),
-            rs.getString("phone"),
-            rs.getBoolean("hidden"),
-            rs.getTimestamp("created_at").toInstant(),
-            rs.getString("presence_status"),
-            lastSeen,
-            org != null ? org.toString() : null,
-            rs.getBoolean("privacy_disable_read_receipts"),
-            rs.getString("ui_locale"),
-            rs.getString("custom_status_text"),
-            dndUntil);
+            UserId.of(java.util.UUID.fromString(profile.id())),
+            profile.username(),
+            profile.displayName(),
+            profile.phone(),
+            profile.hidden(),
+            profile.createdAt(),
+            profile.presenceStatus(),
+            profile.lastSeenAt(),
+            profile.orgId(),
+            profile.privacyDisableReadReceipts(),
+            profile.uiLocale(),
+            profile.customStatusText(),
+            profile.dndUntil());
     }
 }

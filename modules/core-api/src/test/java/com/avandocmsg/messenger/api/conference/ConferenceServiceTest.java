@@ -6,11 +6,11 @@ import com.avandocmsg.messenger.api.conference.dto.ConferenceResponse;
 import com.avandocmsg.messenger.api.conference.dto.CreateConferenceRequest;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.ConferenceRepository;
+import com.avandocmsg.messenger.api.conference.dto.ConferenceParticipantResponse;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcConferenceAdapter;
+import com.avandocmsg.messenger.core.port.ConferencePort;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.junit.jupiter.api.Test;
@@ -25,11 +25,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ConferenceServiceTest {
 
-    private final StubConferenceRepository conferenceRepo = new StubConferenceRepository();
+    private final StubConferencePort conferenceRepo = new StubConferencePort();
     private final StubChatRepository chatRepo = new StubChatRepository();
     private final RecordingChatService chatService = new RecordingChatService(chatRepo);
     private final ConferenceService service = new ConferenceService(
-        new JdbcConferenceAdapter(conferenceRepo), new JdbcChatPersistenceAdapter(chatRepo), chatService, NatsOutboundPort.noop(), I18nTestFixtures.messagesEn());
+        conferenceRepo, new JdbcChatPersistenceAdapter(chatRepo), chatService, NatsOutboundPort.noop(), I18nTestFixtures.messagesEn());
 
     private final UUID userId = UUID.randomUUID();
     private final UUID chatId = UUID.randomUUID();
@@ -90,12 +90,11 @@ class ConferenceServiceTest {
             0);
     }
 
-    static final class StubConferenceRepository extends ConferenceRepository {
+    static final class StubConferencePort implements ConferencePort {
         ConferenceResponse nextInsert;
         ConferenceResponse bySlug;
 
-        StubConferenceRepository() {
-            super(null, null, UuidGenerator.standard());
+        StubConferencePort() {
         }
 
         @Override
@@ -111,6 +110,51 @@ class ConferenceServiceTest {
         @Override
         public Optional<ConferenceResponse> findActiveByRoomSlug(String roomSlug) {
             return Optional.ofNullable(bySlug);
+        }
+
+        @Override
+        public List<ConferenceParticipantResponse> listActiveParticipants(UUID conferenceId) {
+            return List.of();
+        }
+
+        @Override
+        public int countActiveParticipants(UUID conferenceId) {
+            return 0;
+        }
+
+        @Override
+        public Optional<ConferenceResponse> findById(UUID conferenceId) {
+            return Optional.empty();
+        }
+
+        @Override
+        public List<ConferenceResponse> listActiveForUser(UUID userId) {
+            return List.of();
+        }
+
+        @Override
+        public List<ConferenceResponse> listForChat(UUID chatId, boolean activeOnly) {
+            return List.of();
+        }
+
+        @Override
+        public boolean join(UUID conferenceId, UUID userId) {
+            return false;
+        }
+
+        @Override
+        public boolean leave(UUID conferenceId, UUID userId) {
+            return false;
+        }
+
+        @Override
+        public Optional<UUID> findCreatorId(UUID conferenceId) {
+            return Optional.empty();
+        }
+
+        @Override
+        public boolean endConference(UUID conferenceId) {
+            return false;
         }
     }
 

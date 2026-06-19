@@ -3,7 +3,6 @@ package com.avandocmsg.messenger.api.export;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
@@ -29,8 +28,7 @@ class ExportAutoQueueOnSuggestedTest {
         var ownerId = UUID.randomUUID();
         var jobs = new ExportResourceTest.InMemoryExportJobs();
         var nats = new RecordingNats();
-        var audit = new AuditRepository(null);
-        var auditPort = new JdbcAuditAdapter(audit);
+        var auditPort = new JdbcAuditAdapter(null);
         var exportJobPort = new JdbcExportJobAdapter(jobs);
         var enqueuer = new ExportJobEnqueuer(exportJobPort, auditPort, nats, UuidGenerator.standard());
         var auto = new ExportAutoQueueOnSuggested(
@@ -58,8 +56,7 @@ class ExportAutoQueueOnSuggestedTest {
         var jobs = new ExportResourceTest.InMemoryExportJobs();
         jobs.put(UUID.randomUUID(), chatId, ownerId, "queued", null);
         var nats = new RecordingNats();
-        var audit = new AuditRepository(null);
-        var auditPort = new JdbcAuditAdapter(audit);
+        var auditPort = new JdbcAuditAdapter(null);
         var exportJobPort = new JdbcExportJobAdapter(jobs);
         var enqueuer = new ExportJobEnqueuer(exportJobPort, auditPort, nats, UuidGenerator.standard());
         var auto = new ExportAutoQueueOnSuggested(

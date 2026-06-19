@@ -1,7 +1,7 @@
 package com.avandocmsg.messenger.api.auth.policy;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrganizationLookupAdapter;
+import com.avandocmsg.messenger.core.port.OrganizationLookupPort;
 import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,7 +46,7 @@ class AuthPolicyServiceTest {
                 return Optional.empty();
             }
         };
-        service = new AuthPolicyService(appConfig, policyRepo, new JdbcOrganizationLookupAdapter(orgRepo), new KeycloakAuthSyncClient(appConfig) {
+        service = new AuthPolicyService(appConfig, policyRepo, orgLookupFrom(orgRepo), new KeycloakAuthSyncClient(appConfig) {
             @Override
             public ApplyResult upsertLdap(String name, java.util.Map<String, String> settings) {
                 return new ApplyResult(true, "kc-ldap-id", null);
@@ -121,6 +121,39 @@ class AuthPolicyServiceTest {
         var result = service.testPolicy(orgId, null).orElseThrow();
         assertFalse(result.ok());
         assertTrue(result.message().startsWith("tcp_connect_failed"));
+    }
+
+    private static OrganizationLookupPort orgLookupFrom(InMemoryOrgRepository orgRepo) {
+        return new OrganizationLookupPort() {
+            @Override
+            public boolean exists(UUID orgId) {
+                return orgRepo.exists(orgId);
+            }
+
+            @Override
+            public Optional<OrganizationLookupPort.OrgSummary> findById(UUID orgId) {
+                return orgRepo.findById(orgId).map(AuthPolicyServiceTest::toSummary);
+            }
+
+            @Override
+            public Optional<OrganizationLookupPort.OrgSummary> findBySlug(String slug) {
+                return orgRepo.findBySlug(slug).map(AuthPolicyServiceTest::toSummary);
+            }
+
+            @Override
+            public Optional<OrganizationLookupPort.OrgSummary> findSingle() {
+                return orgRepo.findSingle().map(AuthPolicyServiceTest::toSummary);
+            }
+
+            @Override
+            public java.util.List<OrganizationLookupPort.OrgSummary> listAll() {
+                return orgRepo.listAll().stream().map(AuthPolicyServiceTest::toSummary).toList();
+            }
+        };
+    }
+
+    private static OrganizationLookupPort.OrgSummary toSummary(OrganizationRepository.OrgRow row) {
+        return new OrganizationLookupPort.OrgSummary(row.id(), row.name(), row.slug(), row.createdAt());
     }
 
     static final class InMemoryAuthPolicyRepository extends AuthPolicyRepository {

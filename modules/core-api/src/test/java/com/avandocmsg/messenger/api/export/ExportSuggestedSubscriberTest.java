@@ -1,8 +1,7 @@
 package com.avandocmsg.messenger.api.export;
 
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
+import com.avandocmsg.messenger.core.port.AuditPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.nats.client.Connection;
 import io.nats.client.Dispatcher;
@@ -29,8 +28,8 @@ class ExportSuggestedSubscriberTest {
     @Test
     void onMessage_recordsAudit() throws Exception {
         var chatId = UUID.randomUUID();
-        var audit = mock(AuditRepository.class);
-        var handler = new ExportSuggestedHandler(new JdbcAuditAdapter(audit));
+        var audit = mock(AuditPort.class);
+        var handler = new ExportSuggestedHandler(audit);
         var connection = mock(Connection.class);
         var dispatcher = mock(Dispatcher.class);
         var handlerCaptor = ArgumentCaptor.forClass(MessageHandler.class);
@@ -63,9 +62,9 @@ class ExportSuggestedSubscriberTest {
     @Test
     void onMessage_invokesAutoQueueWhenConfigured() throws Exception {
         var chatId = UUID.randomUUID();
-        var audit = mock(AuditRepository.class);
+        var audit = mock(AuditPort.class);
         var autoQueue = mock(ExportAutoQueueOnSuggested.class);
-        var handler = new ExportSuggestedHandler(new JdbcAuditAdapter(audit), Optional.of(autoQueue));
+        var handler = new ExportSuggestedHandler(audit, Optional.of(autoQueue));
         var connection = mock(Connection.class);
         var dispatcher = mock(Dispatcher.class);
         var handlerCaptor = ArgumentCaptor.forClass(MessageHandler.class);
@@ -83,9 +82,9 @@ class ExportSuggestedSubscriberTest {
 
     @Test
     void onMessage_skipsAutoQueueWhenAbsent() throws Exception {
-        var audit = mock(AuditRepository.class);
+        var audit = mock(AuditPort.class);
         var autoQueue = mock(ExportAutoQueueOnSuggested.class);
-        var handler = new ExportSuggestedHandler(new JdbcAuditAdapter(audit));
+        var handler = new ExportSuggestedHandler(audit);
         var connection = mock(Connection.class);
         var dispatcher = mock(Dispatcher.class);
         var handlerCaptor = ArgumentCaptor.forClass(MessageHandler.class);

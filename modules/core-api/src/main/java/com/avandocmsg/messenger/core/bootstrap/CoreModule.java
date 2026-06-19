@@ -27,17 +27,10 @@ import com.avandocmsg.messenger.core.adapter.persistence.JdbcRetentionPolicyAdap
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcUserLookupAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcBlockRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcContactRepositoryAdapter;
-import com.avandocmsg.messenger.api.repository.BlockRepository;
-import com.avandocmsg.messenger.api.repository.ChatBanRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
 import com.avandocmsg.messenger.api.repository.ExportJobRepository;
-import com.avandocmsg.messenger.api.repository.FilePublicLinkRepository;
-import com.avandocmsg.messenger.api.repository.LegalHoldRepository;
 import com.avandocmsg.messenger.api.repository.OrganizationRepository;
-import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.FilePublicLinkPortAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcFileMetadataAdapter;
@@ -127,8 +120,59 @@ public final class CoreModule {
             readCachePort);
     }
 
-    public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository) {
+    public static MessageApplicationService messageApplicationService(DataSource dataSource) {
         return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepositoryPort(dataSource));
+    }
+
+    public static MessageApplicationService messageApplicationService(DataSource dataSource,
+                                                                      BlockRepositoryPort blockRepositoryPort,
+                                                                      MessageSendCoordinator sendCoordinator,
+                                                                      MessageEditCoordinator editCoordinator) {
+        return messageApplicationService(dataSource, blockRepositoryPort, sendCoordinator,
+            editCoordinator, null, null, null);
+    }
+
+    public static MessageApplicationService messageApplicationService(DataSource dataSource,
+                                                                      BlockRepositoryPort blockRepositoryPort,
+                                                                      MessageSendCoordinator sendCoordinator,
+                                                                      MessageEditCoordinator editCoordinator,
+                                                                      MessageDeleteCoordinator deleteCoordinator,
+                                                                      MessageReactionCoordinator reactionCoordinator) {
+        return messageApplicationService(dataSource, blockRepositoryPort, sendCoordinator,
+            editCoordinator, deleteCoordinator, reactionCoordinator, null);
+    }
+
+    public static MessageApplicationService messageApplicationService(DataSource dataSource,
+                                                                      BlockRepositoryPort blockRepositoryPort,
+                                                                      MessageSendCoordinator sendCoordinator,
+                                                                      MessageEditCoordinator editCoordinator,
+                                                                      MessageDeleteCoordinator deleteCoordinator,
+                                                                      MessageReactionCoordinator reactionCoordinator,
+                                                                      MessagePinCoordinator pinCoordinator,
+                                                                      MessageQueryPort messageQueryPort,
+                                                                      com.avandocmsg.messenger.api.mls.MlsService mlsService) {
+        return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepositoryPort(dataSource),
+            blockRepositoryPort,
+            sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator,
+            messageQueryPort, mlsService);
+    }
+
+    public static MessageApplicationService messageApplicationService(DataSource dataSource,
+                                                                      BlockRepositoryPort blockRepositoryPort,
+                                                                      MessageSendCoordinator sendCoordinator,
+                                                                      MessageEditCoordinator editCoordinator,
+                                                                      MessageDeleteCoordinator deleteCoordinator,
+                                                                      MessageReactionCoordinator reactionCoordinator,
+                                                                      MessagePinCoordinator pinCoordinator) {
+        return messageApplicationService(dataSource, blockRepositoryPort, sendCoordinator,
+            editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator,
+            messageQueryPort(dataSource), null);
+    }
+
+    public static MessageApplicationService messageApplicationService(DataSource dataSource,
+                                                                      BlockRepositoryPort blockRepositoryPort,
+                                                                      MessageSendCoordinator sendCoordinator) {
+        return messageApplicationService(dataSource, blockRepositoryPort, sendCoordinator, null);
     }
 
     public static MessageEditCoordinator messageEditCoordinator(DataSource dataSource, NatsOutboundPort natsOutbound) {
@@ -158,6 +202,10 @@ public final class CoreModule {
         return new JdbcScimGroupRepositoryAdapter(dataSource);
     }
 
+    public static OrgUserDirectoryPort orgUserDirectoryPort(DataSource dataSource) {
+        return new JdbcOrgUserDirectoryAdapter(dataSource);
+    }
+
     public static OrgUserDirectoryPort orgUserDirectoryPort(UserRepository userRepository) {
         return new JdbcOrgUserDirectoryAdapter(userRepository);
     }
@@ -175,67 +223,12 @@ public final class CoreModule {
         return new JdbcBlockRepositoryAdapter(dataSource);
     }
 
-    public static BlockRepositoryPort blockRepositoryPort(BlockRepository blockRepository) {
-        return new JdbcBlockRepositoryAdapter(blockRepository);
-    }
-
     public static ContactRepositoryPort contactRepositoryPort(DataSource dataSource) {
         return new JdbcContactRepositoryAdapter(dataSource);
     }
 
     public static MessagePinCoordinator messagePinCoordinator(DataSource dataSource, NatsOutboundPort natsOutbound) {
         return new MessagePinCoordinator(messageRepositoryPort(dataSource), natsOutbound);
-    }
-
-    public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
-                                                                      BlockRepositoryPort blockRepositoryPort,
-                                                                      MessageSendCoordinator sendCoordinator,
-                                                                      MessageEditCoordinator editCoordinator) {
-        return messageApplicationService(dataSource, chatRepository, blockRepositoryPort, sendCoordinator,
-            editCoordinator, null, null, null);
-    }
-
-    public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
-                                                                      BlockRepositoryPort blockRepositoryPort,
-                                                                      MessageSendCoordinator sendCoordinator,
-                                                                      MessageEditCoordinator editCoordinator,
-                                                                      MessageDeleteCoordinator deleteCoordinator,
-                                                                      MessageReactionCoordinator reactionCoordinator) {
-        return messageApplicationService(dataSource, chatRepository, blockRepositoryPort, sendCoordinator,
-            editCoordinator, deleteCoordinator, reactionCoordinator, null);
-    }
-
-    public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
-                                                                      BlockRepositoryPort blockRepositoryPort,
-                                                                      MessageSendCoordinator sendCoordinator,
-                                                                      MessageEditCoordinator editCoordinator,
-                                                                      MessageDeleteCoordinator deleteCoordinator,
-                                                                      MessageReactionCoordinator reactionCoordinator,
-                                                                      MessagePinCoordinator pinCoordinator,
-                                                                      MessageQueryPort messageQueryPort,
-                                                                      com.avandocmsg.messenger.api.mls.MlsService mlsService) {
-        return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepositoryPort(dataSource),
-            blockRepositoryPort,
-            sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator,
-            messageQueryPort, mlsService);
-    }
-
-    public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
-                                                                      BlockRepositoryPort blockRepositoryPort,
-                                                                      MessageSendCoordinator sendCoordinator,
-                                                                      MessageEditCoordinator editCoordinator,
-                                                                      MessageDeleteCoordinator deleteCoordinator,
-                                                                      MessageReactionCoordinator reactionCoordinator,
-                                                                      MessagePinCoordinator pinCoordinator) {
-        return messageApplicationService(dataSource, chatRepository, blockRepositoryPort, sendCoordinator,
-            editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator,
-            messageQueryPort(dataSource), null);
-    }
-
-    public static MessageApplicationService messageApplicationService(DataSource dataSource, ChatRepository chatRepository,
-                                                                      BlockRepositoryPort blockRepositoryPort,
-                                                                      MessageSendCoordinator sendCoordinator) {
-        return messageApplicationService(dataSource, chatRepository, blockRepositoryPort, sendCoordinator, null);
     }
 
     public static UserRepositoryPort userRepositoryPort(DataSource dataSource) {
@@ -259,8 +252,8 @@ public final class CoreModule {
             new com.avandocmsg.messenger.core.application.UserPresencePublisher(natsOutbound));
     }
 
-    public static PublicLinkPort publicLinkPort(FilePublicLinkRepository legacy) {
-        return new FilePublicLinkPortAdapter(legacy);
+    public static PublicLinkPort publicLinkPort(DataSource dataSource, UuidGenerator uuidGenerator) {
+        return new FilePublicLinkPortAdapter(dataSource, uuidGenerator);
     }
 
     public static FileMetadataPort fileMetadataPort(DataSource dataSource) {
@@ -306,6 +299,14 @@ public final class CoreModule {
         return new RedisReadCacheAdapter(redis, appConfig);
     }
 
+    public static com.avandocmsg.messenger.core.port.ChatPersistencePort chatPersistencePort(DataSource dataSource,
+                                                                                              DataSource readDataSource,
+                                                                                              Clock clock,
+                                                                                              UuidGenerator uuidGenerator,
+                                                                                              int queryTimeoutSeconds) {
+        return new JdbcChatPersistenceAdapter(dataSource, readDataSource, clock, uuidGenerator, queryTimeoutSeconds);
+    }
+
     public static com.avandocmsg.messenger.core.port.ChatPersistencePort chatPersistencePort(ChatRepository chatRepository) {
         return new JdbcChatPersistenceAdapter(chatRepository);
     }
@@ -314,43 +315,51 @@ public final class CoreModule {
         return new JdbcChatReadStateAdapter(dataSource);
     }
 
-    public static com.avandocmsg.messenger.core.port.ChatReadStatePort chatReadStatePort(
-        com.avandocmsg.messenger.api.repository.ChatReadRepository legacy) {
-        return new JdbcChatReadStateAdapter(legacy);
-    }
-
     public static com.avandocmsg.messenger.core.port.MessageReadReceiptPort messageReadReceiptPort(DataSource dataSource) {
         return new JdbcMessageReadReceiptAdapter(dataSource);
+    }
+
+    public static com.avandocmsg.messenger.core.port.UserLookupPort userLookupPort(DataSource dataSource) {
+        return new JdbcUserLookupAdapter(dataSource);
     }
 
     public static com.avandocmsg.messenger.core.port.UserLookupPort userLookupPort(UserRepository userRepository) {
         return new JdbcUserLookupAdapter(userRepository);
     }
 
-    public static com.avandocmsg.messenger.core.port.ChatBanPort chatBanPort(ChatBanRepository chatBanRepository) {
-        return new JdbcChatBanAdapter(chatBanRepository);
+    public static com.avandocmsg.messenger.core.port.ChatBanPort chatBanPort(DataSource dataSource, Clock clock,
+                                                                             UuidGenerator uuidGenerator) {
+        return new JdbcChatBanAdapter(dataSource, clock, uuidGenerator);
     }
 
-    public static com.avandocmsg.messenger.core.port.AuditPort auditPort(AuditRepository auditRepository) {
-        return new JdbcAuditAdapter(auditRepository);
+    public static com.avandocmsg.messenger.core.port.AuditPort auditPort(DataSource dataSource) {
+        return new JdbcAuditAdapter(dataSource);
+    }
+
+    public static com.avandocmsg.messenger.core.port.ExportJobPort exportJobPort(DataSource dataSource) {
+        return new JdbcExportJobAdapter(dataSource);
     }
 
     public static com.avandocmsg.messenger.core.port.ExportJobPort exportJobPort(ExportJobRepository exportJobRepository) {
-        return new JdbcExportJobAdapter(exportJobRepository);
+        return new JdbcExportJobAdapter(exportJobRepository.jdbcRepository());
     }
 
-    public static com.avandocmsg.messenger.core.port.RetentionPolicyPort retentionPolicyPort(
-        RetentionPolicyRepository retentionPolicyRepository) {
-        return new JdbcRetentionPolicyAdapter(retentionPolicyRepository);
+    public static com.avandocmsg.messenger.core.port.RetentionPolicyPort retentionPolicyPort(DataSource dataSource) {
+        return new JdbcRetentionPolicyAdapter(dataSource);
     }
 
     public static com.avandocmsg.messenger.core.port.ChatRetentionPolicyPort chatRetentionPolicyPort(
-        ChatRetentionPolicyRepository chatRetentionPolicyRepository) {
-        return new JdbcChatRetentionPolicyAdapter(chatRetentionPolicyRepository);
+        DataSource dataSource) {
+        return new JdbcChatRetentionPolicyAdapter(dataSource);
     }
 
-    public static com.avandocmsg.messenger.core.port.LegalHoldPort legalHoldPort(LegalHoldRepository legalHoldRepository) {
-        return new JdbcLegalHoldAdapter(legalHoldRepository);
+    public static com.avandocmsg.messenger.core.port.LegalHoldPort legalHoldPort(DataSource dataSource) {
+        return new JdbcLegalHoldAdapter(dataSource);
+    }
+
+    public static com.avandocmsg.messenger.core.port.OrganizationLookupPort organizationLookupPort(
+        DataSource dataSource, Clock clock, UuidGenerator uuidGenerator) {
+        return new JdbcOrganizationLookupAdapter(dataSource, clock, uuidGenerator);
     }
 
     public static com.avandocmsg.messenger.core.port.OrganizationLookupPort organizationLookupPort(
@@ -363,13 +372,18 @@ public final class CoreModule {
     }
 
     public static com.avandocmsg.messenger.core.port.ConferencePort conferencePort(
-        com.avandocmsg.messenger.api.repository.ConferenceRepository conferenceRepository) {
-        return new JdbcConferenceAdapter(conferenceRepository);
+        DataSource dataSource, AppConfig appConfig, UuidGenerator uuidGenerator) {
+        return new JdbcConferenceAdapter(dataSource, appConfig, uuidGenerator);
+    }
+
+    public static com.avandocmsg.messenger.core.port.LiveSessionPort liveSessionPort(
+        DataSource dataSource, AppConfig appConfig, UuidGenerator uuidGenerator) {
+        return new JdbcLiveSessionAdapter(dataSource, appConfig, uuidGenerator);
     }
 
     public static com.avandocmsg.messenger.core.port.LiveSessionPort liveSessionPort(
         com.avandocmsg.messenger.api.repository.LiveSessionRepository liveSessionRepository) {
-        return new JdbcLiveSessionAdapter(liveSessionRepository);
+        return new JdbcLiveSessionAdapter(liveSessionRepository.jdbcRepository());
     }
 
     public static com.avandocmsg.messenger.core.port.DevicePort devicePort(DataSource dataSource, Clock clock,

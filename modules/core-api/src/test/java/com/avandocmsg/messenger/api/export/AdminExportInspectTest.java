@@ -11,10 +11,7 @@ import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdap
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRetentionPolicyAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcRetentionPolicyAdapter;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
-import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.common.export.ExportOutputRef;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
@@ -96,16 +93,16 @@ class AdminExportInspectTest {
                 return java.util.Optional.of(exportDir);
             }
         };
-        var audit = new JdbcAuditAdapter(new AuditRepository(null));
+        var audit = new JdbcAuditAdapter((javax.sql.DataSource) null);
         var nats = mock(NatsOutboundPort.class);
         var exportJobPort = new JdbcExportJobAdapter(jobs);
         var enqueuer = new ExportJobEnqueuer(exportJobPort, audit, nats, UuidGenerator.standard());
         return new AdminResource(cfg, audit,
             com.avandocmsg.messenger.core.bootstrap.CoreModule.organizationApplicationService(
                 null, UuidGenerator.standard()),
-            new JdbcRetentionPolicyAdapter(new RetentionPolicyRepository(null)),
+            new JdbcRetentionPolicyAdapter((javax.sql.DataSource) null),
             new JdbcChatPersistenceAdapter(new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard())),
-            new JdbcChatRetentionPolicyAdapter(new ChatRetentionPolicyRepository(null)),
+            new JdbcChatRetentionPolicyAdapter((javax.sql.DataSource) null),
             new ExportSuggestedHandler(audit),
             mock(AdminExportComplianceSeed.class),
             enqueuer,

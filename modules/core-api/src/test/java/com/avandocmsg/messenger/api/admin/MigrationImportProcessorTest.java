@@ -1,9 +1,9 @@
 package com.avandocmsg.messenger.api.admin;
 
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcMigrationImportJobAdapter;
-import com.avandocmsg.messenger.api.repository.MigrationImportJobRepository;
+import com.avandocmsg.messenger.core.port.MigrationImportJobPort;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,7 +17,12 @@ class MigrationImportProcessorTest {
         var jobId = UUID.randomUUID();
         var orgId = UUID.randomUUID();
         var statusHolder = new String[] { "completed" };
-        var repo = new MigrationImportJobRepository(null) {
+        MigrationImportJobPort port = new MigrationImportJobPort() {
+            @Override
+            public UUID insert(UUID orgId, String source, String configJson, UUID createdBy) {
+                return null;
+            }
+
             @Override
             public Optional<JobRow> findById(UUID id) {
                 if (!id.equals(jobId)) {
@@ -29,12 +34,17 @@ class MigrationImportProcessorTest {
             }
 
             @Override
+            public List<JobRow> listForOrg(UUID orgId, int limit) {
+                return List.of();
+            }
+
+            @Override
             public boolean updateStatus(UUID id, String newStatus, String resultJson) {
                 statusHolder[0] = newStatus;
                 return true;
             }
         };
-        var processor = new MigrationImportProcessor(new JdbcMigrationImportJobAdapter(repo));
+        var processor = new MigrationImportProcessor(port);
         var out = processor.process(jobId);
         assertTrue(out.isPresent());
         assertEquals("completed", out.get().status());
@@ -46,7 +56,12 @@ class MigrationImportProcessorTest {
         var jobId = UUID.randomUUID();
         var orgId = UUID.randomUUID();
         var statusHolder = new String[] { "pending" };
-        var repo = new MigrationImportJobRepository(null) {
+        MigrationImportJobPort port = new MigrationImportJobPort() {
+            @Override
+            public UUID insert(UUID orgId, String source, String configJson, UUID createdBy) {
+                return null;
+            }
+
             @Override
             public Optional<JobRow> findById(UUID id) {
                 if (!id.equals(jobId)) {
@@ -58,6 +73,11 @@ class MigrationImportProcessorTest {
             }
 
             @Override
+            public List<JobRow> listForOrg(UUID orgId, int limit) {
+                return List.of();
+            }
+
+            @Override
             public boolean updateStatus(UUID id, String newStatus, String resultJson) {
                 if (id.equals(jobId)) {
                     statusHolder[0] = newStatus;
@@ -66,7 +86,7 @@ class MigrationImportProcessorTest {
                 return false;
             }
         };
-        var processor = new MigrationImportProcessor(new JdbcMigrationImportJobAdapter(repo));
+        var processor = new MigrationImportProcessor(port);
         var out = processor.process(jobId);
         assertTrue(out.isPresent());
         assertEquals("failed", out.get().status());

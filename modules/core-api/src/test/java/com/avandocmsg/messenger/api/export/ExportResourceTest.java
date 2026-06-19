@@ -6,7 +6,7 @@ import com.avandocmsg.messenger.api.export.dto.ExportAcceptedResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportAttachmentsListResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportJobStatusResponse;
 import com.avandocmsg.messenger.api.params.InvalidUuidParameterException;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ExportJobRepository;
 import com.avandocmsg.messenger.common.dto.ExportReplayJob;
@@ -246,10 +246,9 @@ class ExportResourceTest {
         assertEquals("{\"ok\":true}", baos.toString(java.nio.charset.StandardCharsets.UTF_8));
     }
 
-    private ExportResource resource(ChatRepository chats, ExportJobRepository jobs, AuditRepository audit,
+    private ExportResource resource(ChatRepository chats, ExportJobRepository jobs, AuditPort auditPort,
                                     NatsOutboundPort nats, ExportFileAccess exportFiles) {
         var exportJobPort = new JdbcExportJobAdapter(jobs);
-        var auditPort = new JdbcAuditAdapter(audit);
         var enqueuer = new ExportJobEnqueuer(exportJobPort, auditPort, nats, UuidGenerator.standard());
         return new ExportResource(new JdbcChatPersistenceAdapter(chats), exportJobPort, enqueuer, auditPort,
             I18nTestFixtures.messagesEn(), exportFiles, nats);
@@ -287,8 +286,8 @@ class ExportResourceTest {
         return new RecordingOutbound();
     }
 
-    private static AuditRepository noopAudit() {
-        return new AuditRepository(null);
+    private static AuditPort noopAudit() {
+        return new JdbcAuditAdapter(null);
     }
 
     static final class RecordingOutbound implements NatsOutboundPort {
@@ -310,7 +309,7 @@ class ExportResourceTest {
         }
     }
 
-    static final class RecordingAudit extends AuditRepository {
+    static final class RecordingAudit implements AuditPort {
         record DownloadAudit(String action, String resourceId) {
         }
 
@@ -321,7 +320,6 @@ class ExportResourceTest {
         final java.util.List<CancelAudit> cancellations = new java.util.ArrayList<>();
 
         RecordingAudit() {
-            super(null);
         }
 
         @Override
@@ -333,13 +331,44 @@ class ExportResourceTest {
                 cancellations.add(new CancelAudit(action, resourceType, resourceId));
             }
         }
+
+        @Override
+        public java.util.List<AuditPort.AuditRow> listRecent(int limit) {
+            return java.util.List.of();
+        }
+
+        @Override
+        public java.util.List<AuditPort.AuditRow> listRecent(int limit, String actionEquals) {
+            return java.util.List.of();
+        }
+
+        @Override
+        public java.util.List<AuditPort.AuditRow> listRecent(int limit, String actionEquals, String resourceTypeEquals) {
+            return java.util.List.of();
+        }
+
+        @Override
+        public java.util.List<AuditPort.AuditRow> listRecent(int limit, String actionEquals, String resourceTypeEquals,
+                                                               String resourceIdEquals) {
+            return java.util.List.of();
+        }
+
+        @Override
+        public long countByAction(String action) {
+            return 0L;
+        }
+
+        @Override
+        public java.util.Optional<Instant> latestOccurredAtByAction(String action) {
+            return java.util.Optional.empty();
+        }
     }
 
     static final class InMemoryExportJobs extends ExportJobRepository {
         private final ConcurrentHashMap<UUID, ExportJobRow> rows = new ConcurrentHashMap<>();
 
         InMemoryExportJobs() {
-            super(null);
+            super((javax.sql.DataSource) null);
         }
 
         void put(UUID jobId, UUID chatId, UUID requestedBy, String status, String outputPath) {
@@ -398,6 +427,23 @@ class ExportResourceTest {
                 .sorted(java.util.Comparator.comparing(ExportJobRow::createdAt).reversed())
                 .limit(Math.max(1, limit))
                 .toList();
+        }
+
+        @Override
+        public boolean hasBlockingJobForChat(UUID chatId, int cooldownMinutes) {
+            var latest = findLatestForChat(chatId);
+            if (latest.isEmpty()) {
+                return false;
+            }
+            var row = latest.get();
+            if ("queued".equals(row.status()) || "processing".equals(row.status())) {
+                return true;
+            }
+            if ("export_failed".equals(row.status()) || "export_cancelled".equals(row.status()) || cooldownMinutes <= 0) {
+                return false;
+            }
+            var cutoff = Instant.now().minusSeconds(cooldownMinutes * 60L);
+            return row.createdAt() != null && row.createdAt().isAfter(cutoff);
         }
 
         @Override

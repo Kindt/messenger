@@ -1,12 +1,11 @@
 package com.avandocmsg.messenger.api.export;
 
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.junit.jupiter.api.Test;
@@ -27,7 +26,7 @@ class ExportSuggestedHandlerTest {
     void handle_recordsSuggestedAudit_onlyWhenAutoQueueDisabled() throws Exception {
         var chatId = UUID.randomUUID();
         var audit = new RecordingAudit();
-        var handler = new ExportSuggestedHandler(new JdbcAuditAdapter(audit));
+        var handler = new ExportSuggestedHandler(audit);
         var event = new ExportSuggestedEvent(
             chatId.toString(),
             ExportSuggestedEvent.REASON_HOT_BODY_CANDIDATES,
@@ -45,16 +44,16 @@ class ExportSuggestedHandlerTest {
         var jobs = new ExportResourceTest.InMemoryExportJobs();
         var nats = new RecordingNats();
         var audit = new RecordingAudit();
-        var enqueuer = new ExportJobEnqueuer(new JdbcExportJobAdapter(jobs), new JdbcAuditAdapter(audit), nats, UuidGenerator.standard());
+        var enqueuer = new ExportJobEnqueuer(new JdbcExportJobAdapter(jobs), audit, nats, UuidGenerator.standard());
         var auto = new ExportAutoQueueOnSuggested(
             enqueuer,
             new JdbcExportJobAdapter(jobs),
             new JdbcChatPersistenceAdapter(ownerRepo(chatId, ownerId)),
-            new JdbcAuditAdapter(audit),
+            audit,
             Optional.of(ownerId),
             1440
         );
-        var handler = new ExportSuggestedHandler(new JdbcAuditAdapter(audit), Optional.of(auto));
+        var handler = new ExportSuggestedHandler(audit, Optional.of(auto));
         var event = new ExportSuggestedEvent(
             chatId.toString(),
             ExportSuggestedEvent.REASON_HOT_BODY_CANDIDATES,
@@ -78,16 +77,42 @@ class ExportSuggestedHandlerTest {
         };
     }
 
-    static final class RecordingAudit extends AuditRepository {
+    static final class RecordingAudit implements AuditPort {
         final List<String> actions = new ArrayList<>();
-
-        RecordingAudit() {
-            super(null);
-        }
 
         @Override
         public void record(UUID actorUserId, String action, String resourceType, String resourceId, String detailsJson) {
             actions.add(action);
+        }
+
+        @Override
+        public List<AuditRow> listRecent(int limit) {
+            return List.of();
+        }
+
+        @Override
+        public List<AuditRow> listRecent(int limit, String actionEquals) {
+            return List.of();
+        }
+
+        @Override
+        public List<AuditRow> listRecent(int limit, String actionEquals, String resourceTypeEquals) {
+            return List.of();
+        }
+
+        @Override
+        public List<AuditRow> listRecent(int limit, String actionEquals, String resourceTypeEquals, String resourceIdEquals) {
+            return List.of();
+        }
+
+        @Override
+        public long countByAction(String action) {
+            return 0L;
+        }
+
+        @Override
+        public Optional<Instant> latestOccurredAtByAction(String action) {
+            return Optional.empty();
         }
     }
 

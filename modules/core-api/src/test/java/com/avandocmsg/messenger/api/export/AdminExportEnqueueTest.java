@@ -5,15 +5,12 @@ import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.export.dto.ExportAcceptedResponse;
 import com.avandocmsg.messenger.api.filter.UserPrincipal;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRetentionPolicyAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcRetentionPolicyAdapter;
-import com.avandocmsg.messenger.api.repository.AuditRepository;
+import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.api.repository.ChatRetentionPolicyRepository;
-import com.avandocmsg.messenger.api.repository.RetentionPolicyRepository;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
@@ -135,7 +132,7 @@ class AdminExportEnqueueTest {
         ExportResourceTest.InMemoryExportJobs jobs,
         NatsOutboundPort nats
     ) {
-        return adminResource(chats, cfg, jobs, nats, new AuditRepository(null));
+        return adminResource(chats, cfg, jobs, nats, new ExportResourceTest.RecordingAudit());
     }
 
     private static AdminResource adminResource(
@@ -143,17 +140,17 @@ class AdminExportEnqueueTest {
         AppConfig cfg,
         ExportResourceTest.InMemoryExportJobs jobs,
         NatsOutboundPort nats,
-        AuditRepository audit
+        AuditPort audit
     ) {
-        var auditPort = new JdbcAuditAdapter(audit);
+        var auditPort = audit;
         var exportJobPort = new JdbcExportJobAdapter(jobs);
         var enqueuer = new ExportJobEnqueuer(exportJobPort, auditPort, nats, UuidGenerator.standard());
         return new AdminResource(cfg, auditPort,
             com.avandocmsg.messenger.core.bootstrap.CoreModule.organizationApplicationService(
                 null, UuidGenerator.standard()),
-            new JdbcRetentionPolicyAdapter(new RetentionPolicyRepository(null)),
+            new JdbcRetentionPolicyAdapter((javax.sql.DataSource) null),
             new JdbcChatPersistenceAdapter(chats),
-            new JdbcChatRetentionPolicyAdapter(new ChatRetentionPolicyRepository(null)),
+            new JdbcChatRetentionPolicyAdapter((javax.sql.DataSource) null),
             new ExportSuggestedHandler(auditPort),
             mock(AdminExportComplianceSeed.class),
             enqueuer,

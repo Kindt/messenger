@@ -11,33 +11,45 @@ import java.util.Optional;
 import java.util.UUID;
 
 public final class JdbcUserLookupAdapter implements UserLookupPort {
-    private final UserRepository delegate;
+    private final JdbcUserJdbcRepository jdbc;
+    private final UserRepository legacy;
+
+    public JdbcUserLookupAdapter(JdbcUserJdbcRepository jdbc) {
+        this.jdbc = jdbc;
+        this.legacy = null;
+    }
 
     public JdbcUserLookupAdapter(UserRepository delegate) {
-        this.delegate = delegate;
+        this.jdbc = null;
+        this.legacy = delegate;
     }
 
     public JdbcUserLookupAdapter(DataSource dataSource) {
-        this.delegate = new UserRepository(dataSource);
+        this.jdbc = new JdbcUserJdbcRepository(dataSource);
+        this.legacy = null;
     }
 
     @Override
     public Optional<UserProfile> findById(UUID id) {
-        return delegate.findById(id);
+        return useLegacy() ? legacy.findById(id) : jdbc.findById(id);
     }
 
     @Override
     public Optional<UserProfile> findByUsername(String username) {
-        return delegate.findByUsername(username);
+        return useLegacy() ? legacy.findByUsername(username) : jdbc.findByUsername(username);
     }
 
     @Override
     public boolean isReadReceiptsDisabled(UUID id) {
-        return delegate.isReadReceiptsDisabled(id);
+        return useLegacy() ? legacy.isReadReceiptsDisabled(id) : jdbc.isReadReceiptsDisabled(id);
     }
 
     @Override
     public List<UserSearchHit> searchForViewer(UUID viewerId, String query, int limit) {
-        return delegate.searchForViewer(viewerId, query, limit);
+        return useLegacy() ? legacy.searchForViewer(viewerId, query, limit) : jdbc.searchForViewer(viewerId, query, limit);
+    }
+
+    private boolean useLegacy() {
+        return legacy != null;
     }
 }

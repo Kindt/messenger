@@ -1,7 +1,7 @@
 package com.avandocmsg.messenger.api.chats.bans;
 
 import com.avandocmsg.messenger.api.chats.bans.dto.ChatBanResponse;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatBanAdapter;
+import com.avandocmsg.messenger.core.port.ChatBanPort;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.junit.jupiter.api.Test;
@@ -14,9 +14,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ChatBanServiceTest {
 
-    private final StubChatBanRepository banRepo = new StubChatBanRepository();
+    private final StubChatBanPort banRepo = new StubChatBanPort();
     private final StubChatRepository chatRepo = new StubChatRepository();
-    private final ChatBanService banService = new ChatBanService(new JdbcChatBanAdapter(banRepo), new JdbcChatPersistenceAdapter(chatRepo));
+    private final ChatBanService banService = new ChatBanService(banRepo, new JdbcChatPersistenceAdapter(chatRepo));
 
     final UUID chatId = UUID.randomUUID();
     final UUID ownerId = UUID.randomUUID();
@@ -124,12 +124,11 @@ class ChatBanServiceTest {
         assertFalse(banService.isBanned(chatId, targetId));
     }
 
-    static class StubChatBanRepository extends com.avandocmsg.messenger.api.repository.ChatBanRepository {
+    static class StubChatBanPort implements ChatBanPort {
         final List<ChatBanResponse> bans = new ArrayList<>();
         final Map<String, Boolean> banned = new HashMap<>();
 
-        StubChatBanRepository() {
-            super(null, Clock.systemUTC(), UuidGenerator.standard());
+        StubChatBanPort() {
         }
 
         @Override
@@ -138,6 +137,11 @@ class ChatBanServiceTest {
                 userId.toString(), bannedBy.toString(), reason, Instant.now());
             bans.add(resp);
             return resp;
+        }
+
+        @Override
+        public Optional<ChatBanResponse> findById(UUID id) {
+            return Optional.empty();
         }
 
         @Override

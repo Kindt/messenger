@@ -34,6 +34,8 @@ class JdbcUserRepositoryAdapterH2Test {
                   username VARCHAR(32) NOT NULL,
                   display_name VARCHAR(128) NOT NULL,
                   phone VARCHAR(20),
+                  email VARCHAR(256),
+                  external_id VARCHAR(128),
                   hidden BOOLEAN NOT NULL DEFAULT false,
                   created_at TIMESTAMP NOT NULL,
                   updated_at TIMESTAMP,

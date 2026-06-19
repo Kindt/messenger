@@ -1,70 +1,36 @@
 package com.avandocmsg.messenger.api.repository;
 
 import com.avandocmsg.messenger.api.files.dto.FileInfoResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcFileJdbcRepository;
 
 import javax.sql.DataSource;
-import java.sql.Timestamp;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Legacy façade for file metadata JDBC (tests and gradual migration).
+ * SQL lives in {@link JdbcFileJdbcRepository}.
+ */
 public class FileRepository {
-    private static final Logger log = LoggerFactory.getLogger(FileRepository.class);
-    private final DataSource dataSource;
+    private final JdbcFileJdbcRepository jdbc;
 
     public FileRepository(DataSource dataSource) {
-        this.dataSource = dataSource;
+        this.jdbc = new JdbcFileJdbcRepository(dataSource);
+    }
+
+    public JdbcFileJdbcRepository jdbcRepository() {
+        return jdbc;
     }
 
     public FileInfoResponse insert(UUID id, String filename, String mimeType, long size, UUID uploadedBy) {
-        var sql = "INSERT INTO file_metadata (id, filename, mime_type, size, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?, now())";
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, id);
-            stmt.setString(2, filename);
-            stmt.setString(3, mimeType);
-            stmt.setLong(4, size);
-            stmt.setObject(5, uploadedBy);
-            stmt.executeUpdate();
-            return new FileInfoResponse(id.toString(), filename, mimeType, size, uploadedBy.toString(), null);
-        } catch (Exception e) {
-            log.error("Failed to insert file metadata", e);
-            return null;
-        }
+        return jdbc.insert(id, filename, mimeType, size, uploadedBy);
     }
 
     public Optional<FileInfoResponse> findById(UUID id) {
-        var sql = "SELECT id, filename, mime_type, size, uploaded_by, created_at FROM file_metadata WHERE id = ?";
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, id);
-            try (var rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.of(new FileInfoResponse(
-                        rs.getObject("id", UUID.class).toString(),
-                        rs.getString("filename"),
-                        rs.getString("mime_type"),
-                        rs.getLong("size"),
-                        rs.getObject("uploaded_by", UUID.class).toString(),
-                        null));
-                }
-            }
-        } catch (Exception e) {
-            log.error("Failed to find file {}", id, e);
-        }
-        return Optional.empty();
+        return jdbc.findById(id);
     }
 
     public boolean delete(UUID id) {
-        var sql = "DELETE FROM file_metadata WHERE id = ?";
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, id);
-            return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
-            log.error("Failed to delete file {}", id, e);
-            return false;
-        }
+        return jdbc.delete(id);
     }
 }
