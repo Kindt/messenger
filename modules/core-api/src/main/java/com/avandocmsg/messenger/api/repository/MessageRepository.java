@@ -26,9 +26,9 @@ public class MessageRepository {
         "(m.visibility_ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - m.created_at)) < m.visibility_ttl_seconds)";
     /** List reads: omit E2EE ciphertext (web client uses preview/decrypt paths). */
     private static final String SQL_LIST_CONTENT_PROJECTION =
-        "CASE WHEN m.type LIKE 'e2ee-%' THEN NULL ELSE m.content END AS content";
+        "CASE WHEN m.type NOT LIKE 'e2ee-%' THEN m.content END AS content";
     private static final String SQL_LIST_REPLY_PREVIEW_CONTENT =
-        "CASE WHEN p.type LIKE 'e2ee-%' THEN NULL ELSE p.content END AS reply_preview_content";
+        "CASE WHEN p.type NOT LIKE 'e2ee-%' THEN p.content END AS reply_preview_content";
     private static final String SQL_MESSAGE_COLUMNS =
         "m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.thread_id, m.deleted, m.created_at, "
             + "m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id, m.voice_duration_ms";
@@ -37,11 +37,6 @@ public class MessageRepository {
             + SQL_LIST_CONTENT_PROJECTION
             + ", m.reply_to_msg_id, m.thread_id, m.deleted, m.created_at, "
             + "m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id, m.voice_duration_ms";
-    private static final String SQL_THREAD_VISIBILITY_VISIBLE =
-        "(tr.visibility_ttl_seconds IS NULL OR EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - tr.created_at)) < tr.visibility_ttl_seconds)";
-    private static final String SQL_THREAD_REPLY_COUNT =
-        ", (SELECT COUNT(*) FROM messages tr WHERE tr.thread_id = m.id AND tr.deleted = false AND "
-            + SQL_THREAD_VISIBILITY_VISIBLE + ") AS thread_reply_count";
     private static final String SQL_REPLY_PREVIEW_COLUMNS =
         ", p.id AS reply_preview_id, p.sender_id AS reply_preview_sender_id, "
             + "p.type AS reply_preview_type, p.content AS reply_preview_content, p.deleted AS reply_preview_deleted";
@@ -180,6 +175,67 @@ public class MessageRepository {
         }
     }
 
+    /** Main timeline only: batch-load reply counts (keeps list SQL short for PG prepared statements). */
+    private void attachThreadReplyCounts(List<MessageResponse> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+        var rootIds = new ArrayList<UUID>(messages.size());
+        for (var m : messages) {
+            try {
+                rootIds.add(UUID.fromString(m.id()));
+            } catch (IllegalArgumentException ignored) {
+                // skip
+            }
+        }
+        if (rootIds.isEmpty()) {
+            return;
+        }
+        var sql = new StringBuilder(
+            "SELECT thread_id, COUNT(*) AS cnt FROM messages WHERE deleted = false AND thread_id IN (");
+        for (int i = 0; i < rootIds.size(); i++) {
+            sql.append(i == 0 ? "?" : ", ?");
+        }
+        sql.append(") GROUP BY thread_id");
+        var counts = new HashMap<UUID, Integer>();
+        try (var conn = read().getConnection();
+             var stmt = conn.prepareStatement(sql.toString())) {
+            int idx = 1;
+            for (var id : rootIds) {
+                stmt.setObject(idx++, id);
+            }
+            try (var rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    var rootId = rs.getObject("thread_id", UUID.class);
+                    var cnt = rs.getObject("cnt");
+                    if (rootId != null && cnt instanceof Number n) {
+                        counts.put(rootId, n.intValue());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("attachThreadReplyCounts skipped: {}", e.getMessage());
+            return;
+        }
+        for (int i = 0; i < messages.size(); i++) {
+            var m = messages.get(i);
+            try {
+                var count = counts.get(UUID.fromString(m.id()));
+                if (count == null) {
+                    continue;
+                }
+                messages.set(i, new MessageResponse(
+                    m.id(), m.chatId(), m.senderId(), m.type(), m.content(), m.replyToMsgId(),
+                    m.deleted(), m.createdAt(), m.editedAt(), m.visibilityTtlSeconds(), m.attachmentFileId(),
+                    m.threadId(), count,
+                    m.mentionUserIds(), m.mentionAll(),
+                    m.durationMs(), m.linkPreview(), m.replyPreview()));
+            } catch (IllegalArgumentException ignored) {
+                // skip
+            }
+        }
+    }
+
     public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
                                   UUID replyToMsgId, String clientMsgId, Integer visibilityTtlSeconds) {
         return insert(id, chatId, senderId, type, content, replyToMsgId, null, clientMsgId, visibilityTtlSeconds, null);
@@ -289,16 +345,12 @@ public class MessageRepository {
     }
 
     public List<MessageResponse> findByChatId(UUID chatId, int limit, UUID before, UUID filterUserId, UUID threadId) {
-        var listColumns = SQL_LIST_MESSAGE_COLUMNS;
-        if (threadId == null) {
-            listColumns = listColumns + SQL_THREAD_REPLY_COUNT;
-        }
         var sql = new StringBuilder(
-            "SELECT " + listColumns + SQL_LIST_REPLY_PREVIEW_COLUMNS
+            "SELECT " + SQL_LIST_MESSAGE_COLUMNS + SQL_LIST_REPLY_PREVIEW_COLUMNS
                 + " FROM messages m" + SQL_REPLY_PREVIEW_JOIN + " WHERE m.chat_id = ? AND "
                 + SQL_MSG_VISIBILITY_TTL_VISIBLE);
         if (threadId == null) {
-            sql.append(" AND m.thread_id IS NULL");
+            sql.append(" AND (m.thread_id IS NOT DISTINCT FROM NULL)");
         } else {
             sql.append(" AND (m.thread_id = ? OR m.id = ?)");
         }
@@ -340,6 +392,9 @@ public class MessageRepository {
                 JdbcQueryMetrics.queryTimeout();
             }
             log.error("Failed to find messages for chat {}", chatId, e);
+        }
+        if (threadId == null) {
+            attachThreadReplyCounts(result);
         }
         attachMentions(result);
         attachLinkPreviews(result);

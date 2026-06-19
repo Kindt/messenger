@@ -72,6 +72,7 @@ public class DatabaseConfig {
         hikari.addDataSourceProperty("cachePrepStmts", "true");
         hikari.addDataSourceProperty("prepStmtCacheSize", "250");
         hikari.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        hikari.addDataSourceProperty("prepareThreshold", "0");
         var ds = new HikariDataSource(hikari);
         log.info("Database pool configured: {} (max={})", jdbcUrl, maxPoolSize);
         return ds;
