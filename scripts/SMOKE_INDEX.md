@@ -27,6 +27,8 @@
 | Export observability | `scripts/smoke-export-observability.sh` | `export-compliance-smoke.yml` | `.ps1` |
 | OpenAPI export compliance | `scripts/smoke-openapi-export-compliance.sh` | `export-compliance-smoke.yml` | `.ps1` |
 | Korus web basic smoke | `scripts/smoke-korus-web.sh` | manual (runtime) | `.ps1`; optional — parity smokes cover API/WS |
+| **Container portability WAR (021)** | `scripts/smoke-container-portability-guest.ps1` | manual (QEMU server guest); poll `qemu-guest-job.ps1 -Job container-portability-smoke -Loop` | `smoke-core-api-war-guest.sh` + `smoke-ws-gateway-war-guest.sh` on compose network |
+| **core-api WAR Tomcat (host lab only)** | `scripts/smoke-core-api-jetty.ps1` | optional host Docker (not QEMU policy) | Isolated Tomcat; prefer guest script above |
 | **Deploy acceptance (spec 003)** | `scripts/smoke-deploy-acceptance.sh` | `deploy-messaging-smoke.yml` | orchestrates ready, auth, messaging-e2e, parity-api |
 | **Platform W2 guest (optional)** | `scripts/guest-smoke-platform-w2.sh` | manual (QEMU server guest) | `verify-nats-queue-group`; `KORUS_RUN_EXPORT_PURGE_SMOKE=1` for export-replay |
 | **QEMU wsUrl probe (host)** | `scripts/test-korus-wsurl.ps1` | manual; outer gate preflight | expects `host-lan-ip.txt` + `:19088/web-client-env.js` |
@@ -37,7 +39,7 @@
 | **QEMU load gate wrapper** | `scripts/load-ws-soak-qemu.ps1` | manual | sync-api + upload + fanout + WS soak on guests |
 | **API upload load (PS-4.1)** | `scripts/load-api-upload.ps1` | manual (host `:18080`) | parallel streaming uploads |
 | **Fan-out synthetic (PS-4.1)** | `scripts/load-fanout-synthetic.sh` | manual (server guest) | burst DM + pipeline metrics |
-| **Pilot stack (spec 006 FR-OPT-01)** | `scripts/smoke-pilot-stack.sh` | manual (QEMU server guest) | `scripts/pilot-stack-up.sh`; no Solr/ZK; SQL search |
+| **Lean stack (spec 006 FR-OPT-01)** | `scripts/smoke-lean-stack.sh` | manual (QEMU server guest) | `scripts/lean-stack-up.sh` (legacy: `pilot-stack-up.sh`); no Solr/ZK; SQL search |
 | **Scale stack (spec 006 FR-OPT-04)** | `scripts/smoke-messaging-e2e.sh --load-rounds N` | manual (guest) | `scripts/scale-stack-up.sh`; `scripts/verify-nats-queue-group.sh`; `scripts/profiling/load-message-pipeline.sh` |
 | **Enterprise stack (spec 006 FR-OPT-04/05)** | `scripts/smoke-messaging-e2e.sh --load-rounds N` | manual (guest) | `scripts/enterprise-stack-up.sh`; optional `KORUS_ENABLE_READ_REPLICA=1` + `replica-stack-up.sh` |
 | **Multi-user messaging E2E** | `scripts/smoke-messaging-e2e.sh` | `deploy-messaging-smoke.yml` | `.ps1`; lib `SmokeMessaging.sh`; `--load-rounds` for Wave 2 load |

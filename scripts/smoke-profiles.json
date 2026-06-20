@@ -1,0 +1,64 @@
+{
+  "profiles": {
+    "base-only": {
+      "korus_product_addons": [],
+      "description": "Base only — minimal install",
+      "smoke_scripts": ["scripts/smoke-ready.sh"]
+    },
+    "base+engage": {
+      "korus_product_addons": ["addon-engage"],
+      "description": "Base + push/preview",
+      "smoke_scripts": [
+        "scripts/smoke-ready.sh",
+        "scripts/smoke-preview-worker.ps1"
+      ]
+    },
+    "base+search": {
+      "korus_product_addons": ["addon-search"],
+      "description": "Base + Solr indexer",
+      "smoke_scripts": ["scripts/smoke-hotplug-indexer.sh"]
+    },
+    "base+compliance-export": {
+      "korus_product_addons": ["addon-export"],
+      "description": "Base + compliance export worker",
+      "smoke_scripts": ["scripts/smoke-export-compliance.sh"]
+    },
+    "base+compliance-retention": {
+      "korus_product_addons": ["addon-retention"],
+      "description": "Base + retention worker",
+      "smoke_scripts": ["scripts/smoke-retention.sh"]
+    },
+    "base+integrations": {
+      "korus_product_addons": ["addon-integrations"],
+      "description": "Base + plugin platform",
+      "smoke_scripts": ["scripts/smoke-integrations-gate.sh"]
+    },
+    "base+live": {
+      "korus_product_addons": ["addon-live"],
+      "description": "Base + LiveKit SFU/live",
+      "smoke_scripts": ["scripts/smoke-live-session.sh"]
+    },
+    "base+e2ee": {
+      "korus_product_addons": ["addon-e2ee"],
+      "description": "Base + MLS wire",
+      "smoke_scripts": []
+    },
+    "reference-all": {
+      "korus_product_addons": [
+        "addon-engage",
+        "addon-search",
+        "addon-retention",
+        "addon-archive",
+        "addon-deep-archive",
+        "addon-export",
+        "addon-live",
+        "addon-bots",
+        "addon-integrations",
+        "addon-e2ee",
+        "addon-directory"
+      ],
+      "description": "Manual presales / lab full — not nightly CI",
+      "smoke_scripts": ["scripts/smoke-deploy-acceptance.sh"]
+    }
+  }
+}

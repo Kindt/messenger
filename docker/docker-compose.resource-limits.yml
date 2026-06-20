@@ -1,5 +1,5 @@
 # Optional overlay: cgroup memory/cpu caps for full-server and pilot stacks (PS-0.1).
-# Merge after base compose, e.g. pilot-stack-up.sh adds this file automatically.
+# Merge after base compose, e.g. lean-stack-up.sh adds this file automatically.
 #
 #   docker compose -f docker/docker-compose.full-server.yml \
 #     -f docker/docker-compose.resource-limits.yml up -d

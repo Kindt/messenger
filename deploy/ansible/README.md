@@ -51,6 +51,40 @@ Windows dev: use QEMU only — `.\scripts\qemu-dev-mode.ps1` (see [`deploy/qemu/
 5. Confirm `roles/korus_server` rendered `docker/.env.korus-server` on the server host (mode `0600`).
 6. Map is documented in `group_vars/korus_server.yml` and `roles/korus_server/templates/korus-server.env.j2`.
 
+### Conditional vault per product add-on (spec 021 T021-051)
+
+When using **`korus_product_addons`**, include vault keys only for installed add-ons (see [`docs/product-modules.yaml`](../../docs/product-modules.yaml) `secrets[]`):
+
+| Add-on | Vault keys (example) | Env mapping |
+|--------|----------------------|-------------|
+| `addon-engage` | `korus_vapid_*` | `PUSH_VAPID_*` |
+| `addon-live` | `korus_livekit_*` | `LIVEKIT_*` |
+| `addon-directory` | LDAP bind (org policy) | per org |
+
+Base secrets (DB, MinIO, JWT, Keycloak) remain required. Template comments: `group_vars/vault.example.yml`.
+
+### Conditional vault per product add-on (spec 021 T021-051)
+
+Secrets in `group_vars/vault.example.yml` are grouped by **add-on id** from [`docs/product-modules.yaml`](../../docs/product-modules.yaml). Include keys only when the add-on is in `korus_product_addons`:
+
+| Add-on | Vault keys (example) | Env mapping |
+|--------|----------------------|-------------|
+| `addon-engage` | `korus_vapid_*` | `PUSH_VAPID_*` |
+| `addon-live` | `korus_livekit_*` | `LIVEKIT_*` |
+| `addon-directory` | `korus_ldap_bind_password` | org auth policy |
+
+Runtime probe: `PlatformModuleRegistry` → `secrets_missing` degradation if env absent. Dev/CI omits vault file — templating skipped.
+
+### core-api deploy mode (spec 021 T021-112)
+
+`group_vars/korus_server.yml`:
+
+```yaml
+korus_core_api_deploy_mode: embedded  # embedded | war
+```
+
+Rendered to `docker/.env.korus-server` as `CORE_API_DEPLOY_MODE`. **`embedded`** — текущий full-stack (embedded Tomcat в compose). **`war`** — placeholder до bootstrap T021-100: собрать `docker/Dockerfile.core-api.war`, smoke `scripts/smoke-core-api-jetty.ps1` (QEMU guest).
+
 ### TLS checklist (stage / prod)
 
 1. Use `inventory/stage/` or `inventory/prod/`, or set in your inventory `group_vars/all.yml`:

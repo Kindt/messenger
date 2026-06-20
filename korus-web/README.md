@@ -1,6 +1,18 @@
 # Korus Web — развёртывание веб-клиента (Docker)
 
-Автономный стек: **две реплики** приложения **`modules/web-client`** (Java 25 + встроенный Tomcat, образ из **`../docker/Dockerfile.web-client`**) и **nginx** как **балансировщик** поверх HTTP.
+Автономный стек: **две реплики** **`modules/web-client`** (Java + Tomcat) и **nginx** LB — **legacy path** (Phase 7.4 cutover → nginx-only).
+
+### nginx-only overlay (spec 021 Phase 7.4, recommended for prod)
+
+Static `webui/` from nginx; `/api` proxy; `/web-client-env.js` via [`scripts/generate_web_client_env.py`](../scripts/generate_web_client_env.py):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.nginx-only.yml up --build -d
+```
+
+Java replicas **web-a** / **web-b** отключены (profile `legacy-java-replicas`). Admin UI — только на server `:8080/admin`, не через этот lb.
+
+## Legacy: Java replicas + nginx LB
 
 Балансировщик:
 
@@ -9,13 +21,29 @@
 
 ## Запуск
 
-Из **этого каталога** (родитель репозитория — в **`context: ..`** для сборки образа клиента):
+**Рекомендуемый путь (nginx-only, default):** из корня репозитория:
 
-```bash
-docker compose up --build -d
+```powershell
+.\scripts\korus-web-up.ps1 -Build
 ```
 
-Из корня репозитория на Linux/macOS: **`./scripts/korus-web-up.sh --build`** (при необходимости **`chmod +x scripts/korus-web-up.sh`**).
+```bash
+./scripts/korus-web-up.sh --build
+```
+
+Скрипты подключают `docker-compose.nginx-only.yml` автоматически. **Legacy Java replicas:** `-LegacyJavaReplicas` / `--legacy-java-replicas` (profile + `Dockerfile.web-client.legacy`).
+
+Вручную из **этого каталога**:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.nginx-only.yml up --build -d
+```
+
+Legacy:
+
+```bash
+docker compose --profile legacy-java-replicas up --build -d
+```
 
 ## Остановка
 

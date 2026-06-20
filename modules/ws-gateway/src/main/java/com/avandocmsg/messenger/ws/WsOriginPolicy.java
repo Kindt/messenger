@@ -2,15 +2,14 @@ package com.avandocmsg.messenger.ws;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 
 /** Parses {@code WS_ALLOWED_ORIGINS} (comma-separated, {@code *} = allow all). */
-final class WsOriginPolicy {
+public final class WsOriginPolicy {
 
     private WsOriginPolicy() {
     }
 
-    static List<String> parseAllowedOrigins(String raw) {
+    public static List<String> parseAllowedOrigins(String raw) {
         if (raw == null || raw.isBlank()) {
             return List.of("*");
         }

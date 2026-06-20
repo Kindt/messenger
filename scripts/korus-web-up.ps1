@@ -1,18 +1,20 @@
-# korus-web stack (docker compose in korus-web/). -Attach: docker-compose.attach.yml (network korus_messenger_dev_min).
-# -Turn: docker-compose.turn.yml (coturn + WEB_CLIENT_RTC_ICE_SERVERS для браузера на 127.0.0.1:3478).
-# Skip tooling: -SkipEnsure or env SKIP_KORUS_ENSURE=1 (same as korus-web-up.sh --skip-ensure).
+# korus-web stack (docker compose in korus-web/). Default: nginx-only overlay (spec 021).
+# -LegacyJavaReplicas: Java web-a/web-b profile instead of nginx-only static lb.
+# -Attach: docker-compose.attach.yml (network korus_messenger_dev_min).
 # Help: .\scripts\korus-web-up.ps1 -Help
 param(
     [switch]$Attach,
     [switch]$Turn,
     [switch]$Build,
     [switch]$SkipEnsure,
+    [switch]$LegacyJavaReplicas,
     [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 if ($Help) {
-    Write-Host "Usage: .\scripts\korus-web-up.ps1 [-Attach] [-Turn] [-Build] [-SkipEnsure]"
+    Write-Host "Usage: .\scripts\korus-web-up.ps1 [-Attach] [-Turn] [-Build] [-SkipEnsure] [-LegacyJavaReplicas]"
+    Write-Host "  Default: docker-compose.nginx-only.yml (static webui). Legacy: -LegacyJavaReplicas."
     Write-Host "  Env SKIP_KORUS_ENSURE=1 skips tooling. Linux/macOS: ./scripts/korus-web-up.sh --help"
     exit 0
 }
@@ -51,6 +53,14 @@ if (Test-Path $envFile) {
     $dockerArgs += @("--env-file", ".env")
 }
 $dockerArgs += @("-f", "docker-compose.yml")
+if ($LegacyJavaReplicas) {
+    Write-Host "Legacy Java replicas (profile legacy-java-replicas)." -ForegroundColor Yellow
+    $dockerArgs += @("--profile", "legacy-java-replicas")
+} else {
+    $nginxOnly = Join-Path $Kw "docker-compose.nginx-only.yml"
+    if (-not (Test-Path $nginxOnly)) { Write-Error "Not found: $nginxOnly" }
+    $dockerArgs += @("-f", "docker-compose.nginx-only.yml")
+}
 if ($Attach) {
     $null = docker network inspect korus_messenger_dev_min 2>$null
     if ($LASTEXITCODE -ne 0) {

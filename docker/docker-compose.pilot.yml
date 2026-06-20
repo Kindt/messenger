@@ -1,5 +1,5 @@
 # Pilot profile (FR-OPT-01): DEPRECATED standalone file — use full-server + pilot-overrides.
-# Canonical: ./scripts/pilot-stack-up.sh
+# Canonical: ./scripts/lean-stack-up.sh (legacy: pilot-stack-up.sh)
 #   docker compose -f docker/docker-compose.full-server.yml -f docker/docker-compose.pilot-overrides.yml ...
 
 version: "3.8"

@@ -1,0 +1,27 @@
+# nginx-only web-lb overlay (spec 021 Phase 7.4).
+# Usage from repo root (QEMU web guest):
+#   docker compose -f korus-web/docker-compose.yml -f korus-web/docker-compose.nginx-only.yml up -d
+#
+# Java web-client replicas are disabled; nginx serves static webui + proxies /api and /ws.
+
+services:
+  web-a:
+    profiles: ["legacy-java-replicas"]
+
+  web-b:
+    profiles: ["legacy-java-replicas"]
+
+  lb:
+    environment:
+      NGINX_CONF_TEMPLATE: /etc/nginx/nginx.conf.static.template
+      WEB_CLIENT_API_UPSTREAM: ${WEB_CLIENT_API_UPSTREAM:-http://host.docker.internal:8080}
+      WEB_CLIENT_WS_PUBLIC_URL: ${WEB_CLIENT_WS_PUBLIC_URL:-ws://localhost:9088/ws}
+      WEB_CLIENT_RTC_ICE_SERVERS: ${WEB_CLIENT_RTC_ICE_SERVERS:-}
+      WEB_CLIENT_VAPID_PUBLIC_KEY: ${WEB_CLIENT_VAPID_PUBLIC_KEY:-}
+      WEB_CLIENT_DISABLE_SW: ${WEB_CLIENT_DISABLE_SW:-}
+    volumes:
+      - ../modules/web-client/src/main/resources/webui:/usr/share/nginx/html:ro
+      - ../scripts/generate_web_client_env.py:/opt/korus/generate-web-client-env.py:ro
+    entrypoint: ["/docker-entrypoint-static.sh"]
+    command: ["nginx", "-g", "daemon off;"]
+    depends_on: []

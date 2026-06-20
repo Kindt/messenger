@@ -1,3 +1,7 @@
+# DEPRECATED (spec 021 T021-134): prod path is nginx-only web-lb (korus-web/docker-compose.nginx-only.yml).
+# Legacy Java replicas: docker/Dockerfile.web-client.legacy + compose profile legacy-java-replicas.
+# Removal target: one release cycle after nginx-only cutover default.
+#
 # Tailwind CSS requires Node/npm; gradle:jdk25-noble has no npm (buildTailwindCss fails without this stage).
 FROM node:20-bookworm-slim AS tailwind
 WORKDIR /app

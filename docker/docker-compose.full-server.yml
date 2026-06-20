@@ -1,6 +1,6 @@
 # Полный сервер: hot-path + optional profiles (full | pilot-*).
 # Full stack:  docker compose -f docker/docker-compose.full-server.yml --profile full up -d --build
-# Pilot stack: ./scripts/pilot-stack-up.sh (same file + pilot-overrides, без --profile full/solr)
+# Lean stack: ./scripts/lean-stack-up.sh (same file + pilot-overrides, without --profile full/solr)
 #
 # Админка: http://localhost:8080/admin/  (realm-роль admin: csadmin / csadmin или admin / admin)
 # Keycloak (realm avandocmsg): http://localhost:8081/

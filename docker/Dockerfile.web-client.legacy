@@ -1,0 +1,38 @@
+# Legacy Java web-client image (spec 021 T021-134).
+# Canonical copy of docker/Dockerfile.web-client for profile legacy-java-replicas.
+# Prod default: korus-web/docker-compose.nginx-only.yml (static nginx, no Java replicas).
+#
+# Build from repo root:
+#   docker build -f docker/Dockerfile.web-client.legacy -t korus-messenger-web-client:local .
+#
+# Tailwind CSS requires Node/npm; gradle:jdk25-noble has no npm (buildTailwindCss fails without this stage).
+FROM node:20-bookworm-slim AS tailwind
+WORKDIR /app
+COPY modules/web-client/webui-build/package.json modules/web-client/webui-build/package-lock.json modules/web-client/webui-build/
+WORKDIR /app/modules/web-client/webui-build
+RUN npm ci
+WORKDIR /app
+COPY modules/web-client/webui-build/src modules/web-client/webui-build/src
+COPY modules/web-client/webui-build/locales modules/web-client/webui-build/locales
+COPY modules/web-client/webui-build/scripts modules/web-client/webui-build/scripts
+COPY modules/web-client/src/main/resources/webui modules/web-client/src/main/resources/webui
+WORKDIR /app/modules/web-client/webui-build
+RUN npm run build:assets
+
+FROM gradle:jdk25-noble AS builder
+WORKDIR /app
+COPY . .
+COPY --from=tailwind /app/modules/web-client/src/main/resources/webui/tailwind.css modules/web-client/src/main/resources/webui/tailwind.css
+COPY --from=tailwind /app/modules/web-client/src/main/resources/webui/locales modules/web-client/src/main/resources/webui/locales
+RUN gradle --console=plain :modules:web-client:distTar --no-daemon -x test -x buildTailwindCss -x buildLocales
+
+FROM eclipse-temurin:25-jre
+WORKDIR /app
+COPY --from=builder /app/modules/web-client/build/distributions/web-client.tar .
+RUN tar xf web-client.tar && rm web-client.tar
+EXPOSE 9080
+ENV APP_HOME=/app/web-client
+ENV WEB_CLIENT_PORT=9080
+ENV WEB_CLIENT_API_UPSTREAM=http://host.docker.internal:8080
+ENV WEB_CLIENT_WS_PUBLIC_URL=ws://127.0.0.1:8081/ws
+ENTRYPOINT ["/app/web-client/bin/web-client"]

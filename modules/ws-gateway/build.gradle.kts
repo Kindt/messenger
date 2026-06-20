@@ -1,5 +1,6 @@
 plugins {
     id("application")
+    war
 }
 
 val tomcatVersion = "11.0.22"
@@ -11,9 +12,9 @@ dependencies {
     implementation("org.apache.tomcat.embed:tomcat-embed-websocket:$tomcatVersion")
     runtimeOnly("org.apache.tomcat.embed:tomcat-embed-jasper:$tomcatVersion")
 
-    implementation("jakarta.servlet:jakarta.servlet-api:6.0.0")
-    implementation("jakarta.websocket:jakarta.websocket-api:2.2.0")
-    implementation("jakarta.websocket:jakarta.websocket-client-api:2.2.0")
+    compileOnly("jakarta.servlet:jakarta.servlet-api:6.0.0")
+    compileOnly("jakarta.websocket:jakarta.websocket-api:2.2.0")
+    compileOnly("jakarta.websocket:jakarta.websocket-client-api:2.2.0")
 
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0")
@@ -30,4 +31,15 @@ dependencies {
 application {
     mainClass = "com.avandocmsg.messenger.ws.WsGatewayApplication"
     applicationDefaultJvmArgs = listOf("-Dapp.home=\$APP_HOME")
+}
+
+tasks.named<War>("war") {
+    archiveBaseName.set("ws-gateway")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    setClasspath(
+        sourceSets.main.get().runtimeClasspath.filter { file ->
+            val name = file.name
+            !name.startsWith("tomcat-embed-")
+        }
+    )
 }

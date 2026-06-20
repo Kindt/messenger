@@ -1,5 +1,6 @@
 plugins {
     id("application")
+    war
 }
 
 val tomcatVersion = "11.0.22"
@@ -38,9 +39,10 @@ dependencies {
     implementation("io.lettuce:lettuce-core:6.3.2.RELEASE")
     implementation("io.nats:jnats:2.17.4")
 
-    // JSON
+    // JSON + YAML catalog
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.17.0")
 
     // Logging
     implementation("ch.qos.logback:logback-classic:1.5.3")
@@ -78,6 +80,17 @@ application {
             into("conf")
         }
     }
+}
+
+tasks.named<War>("war") {
+    archiveBaseName.set("core-api")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    setClasspath(
+        sourceSets.main.get().runtimeClasspath.filter { file ->
+            val name = file.name
+            !name.startsWith("tomcat-embed")
+        }
+    )
 }
 
 tasks.register<Test>("benchmark") {

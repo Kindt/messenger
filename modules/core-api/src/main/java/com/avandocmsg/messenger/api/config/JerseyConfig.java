@@ -45,6 +45,11 @@ import com.avandocmsg.messenger.api.files.FileProxy;
 import com.avandocmsg.messenger.api.files.FileResource;
 import com.avandocmsg.messenger.api.files.FileService;
 import com.avandocmsg.messenger.api.media.MediaCapabilitiesResource;
+import com.avandocmsg.messenger.api.platform.AdminProductModulesResource;
+import com.avandocmsg.messenger.api.platform.PlatformCapabilitiesResource;
+import com.avandocmsg.messenger.api.platform.PlatformModuleOverrideRepository;
+import com.avandocmsg.messenger.api.platform.PlatformModuleRegistry;
+import com.avandocmsg.messenger.api.platform.PlatformAddonGateFilter;
 import com.avandocmsg.messenger.api.metrics.PrometheusMetricsResource;
 import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.core.port.ChatPersistencePort;
@@ -166,7 +171,9 @@ public class JerseyConfig extends ResourceConfig {
                         DirectorySyncService directorySyncService,
                         MigrationImportJobPort migrationImportJobPort,
                         DevicePort devicePort,
-                        OrgUserDirectoryPort orgUserDirectoryPort) {
+                        OrgUserDirectoryPort orgUserDirectoryPort,
+                        PlatformModuleRegistry platformModuleRegistry,
+                        PlatformModuleOverrideRepository platformModuleOverrideRepository) {
         register(new AbstractBinder() {
             @Override
             protected void configure() {
@@ -239,6 +246,8 @@ public class JerseyConfig extends ResourceConfig {
                 bind(migrationImportJobPort).to(MigrationImportJobPort.class);
                 bind(devicePort).to(DevicePort.class);
                 bind(orgUserDirectoryPort).to(OrgUserDirectoryPort.class);
+                bind(platformModuleRegistry).to(PlatformModuleRegistry.class);
+                bind(platformModuleOverrideRepository).to(PlatformModuleOverrideRepository.class);
                 bind(CoreModule.scimGroupRepositoryPort(dataSource)).to(ScimGroupRepositoryPort.class);
                 bind(BotRateLimiter.fromEnv()).to(BotRateLimiter.class);
                 bind(new com.avandocmsg.messenger.api.security.OrgIpAllowlistService(
@@ -279,6 +288,8 @@ public class JerseyConfig extends ResourceConfig {
         register(ChatLiveSessionResource.class);
         register(com.avandocmsg.messenger.api.live.ChatCallLiveKitResource.class);
         register(MediaCapabilitiesResource.class);
+        register(PlatformCapabilitiesResource.class);
+        register(AdminProductModulesResource.class);
         register(BotResource.class);
         register(com.avandocmsg.messenger.api.plugins.PluginAdminResource.class);
         register(com.avandocmsg.messenger.api.plugins.PluginOutboundResource.class);
@@ -287,6 +298,7 @@ public class JerseyConfig extends ResourceConfig {
         register(OpenApiConfig.create(appConfig.version()).getClass());
 
         register(BotTokenAuthFilter.class);
+        register(PlatformAddonGateFilter.class);
         register(ScimBearerAuthFilter.class);
         register(BotRateLimitFilter.class);
         register(JwtAuthFilter.class);

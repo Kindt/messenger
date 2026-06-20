@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# korus-web stack. From repo root: ./scripts/korus-web-up.sh [--attach|-a] [--turn|-t] [--turn-prod] [--build|-b] [--skip-ensure|-S]
+# korus-web stack. Default: nginx-only overlay (spec 021). --legacy-java-replicas for Java web-a/web-b.
+# From repo root: ./scripts/korus-web-up.sh [--attach|-a] [--turn|-t] [--turn-prod] [--build|-b] [--legacy-java-replicas] ...
 set -euo pipefail
 
 ATTACH=false
@@ -7,6 +8,7 @@ TURN=false
 TURN_PROD=false
 BUILD=false
 FORCE_RECREATE=false
+LEGACY_JAVA=false
 SKIP_KORUS_ENSURE="${SKIP_KORUS_ENSURE:-0}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -15,9 +17,11 @@ while [[ $# -gt 0 ]]; do
     --turn-prod) TURN_PROD=true ;;
     --build|-b) BUILD=true ;;
     --force-recreate|-r) FORCE_RECREATE=true ;;
+    --legacy-java-replicas) LEGACY_JAVA=true ;;
     --skip-ensure|-S) SKIP_KORUS_ENSURE=1 ;;
     -h|--help)
-      echo "Usage: $0 [--attach|-a] [--turn|-t] [--turn-prod] [--build|-b] [--force-recreate|-r] [--skip-ensure|-S]"
+      echo "Usage: $0 [--attach|-a] [--turn|-t] [--turn-prod] [--build|-b] [--legacy-java-replicas] [--force-recreate|-r] [--skip-ensure|-S]"
+      echo "  Default: docker-compose.nginx-only.yml. Legacy Java replicas: --legacy-java-replicas."
       echo "  Env SKIP_KORUS_ENSURE=1 also skips install-environment."
       exit 0
       ;;
@@ -70,6 +74,12 @@ if [[ -f "$KW/.env" ]]; then
   args+=(--env-file .env)
 fi
 args+=(-f docker-compose.yml)
+if "$LEGACY_JAVA"; then
+  echo "Legacy Java replicas (profile legacy-java-replicas)" >&2
+  args+=(--profile legacy-java-replicas)
+else
+  args+=(-f docker-compose.nginx-only.yml)
+fi
 if "$ATTACH"; then
   args+=(-f docker-compose.attach.yml)
 fi

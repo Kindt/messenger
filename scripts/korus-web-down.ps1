@@ -5,12 +5,13 @@ param(
     [switch]$Turn,
     [switch]$Volumes,
     [switch]$SkipEnsure,
+    [switch]$LegacyJavaReplicas,
     [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 if ($Help) {
-    Write-Host "Usage: .\scripts\korus-web-down.ps1 [-Attach] [-Turn] [-Volumes] [-SkipEnsure]"
+    Write-Host "Usage: .\scripts\korus-web-down.ps1 [-Attach] [-Turn] [-Volumes] [-SkipEnsure] [-LegacyJavaReplicas]"
     Write-Host "  -Volumes: docker compose down -v (удаляет анонимные тома проекта)."
     Write-Host "  Флаги -Attach / -Turn должны совпадать с теми, с которыми поднимали стек."
     Write-Host "  Только ws-gateway из dev-min (--profile web), без korus-web: .\scripts\dev-web-stack-down.ps1"
@@ -52,6 +53,11 @@ if (Test-Path $envFile) {
     $dockerArgs += @("--env-file", ".env")
 }
 $dockerArgs += @("-f", "docker-compose.yml")
+if ($LegacyJavaReplicas) {
+    $dockerArgs += @("--profile", "legacy-java-replicas")
+} else {
+    $dockerArgs += @("-f", "docker-compose.nginx-only.yml")
+}
 if ($Attach) {
     $dockerArgs += @("-f", "docker-compose.attach.yml")
 }

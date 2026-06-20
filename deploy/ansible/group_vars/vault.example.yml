@@ -16,3 +16,20 @@
 # korus_vapid_public_key: "CHANGE_ME"
 # korus_vapid_private_key: "CHANGE_ME"
 # korus_vapid_subject: "mailto:notify@example.com"
+#
+# --- Product add-on secrets (spec 021, conditional vault T021-051) ---
+# Include only when matching add-on is in korus_product_addons (see docs/product-modules.yaml).
+#
+# addon-engage (push):
+# korus_vapid_public_key: "..."      # -> PUSH_VAPID_PUBLIC_KEY
+# korus_vapid_private_key: "..."     # -> PUSH_VAPID_PRIVATE_KEY
+#
+# addon-live (SFU / live broadcast):
+# korus_livekit_api_key: "..."       # -> LIVEKIT_API_KEY
+# korus_livekit_api_secret: "..."    # -> LIVEKIT_API_SECRET
+# korus_livekit_url: "wss://..."     # -> LIVEKIT_URL
+#
+# addon-directory (LDAP sync):
+# korus_ldap_bind_password: "..."    # org-specific; see org_auth_policy
+#
+# addon-e2ee / addon-search / addon-export: no extra vault keys beyond base DB/JWT/MinIO.

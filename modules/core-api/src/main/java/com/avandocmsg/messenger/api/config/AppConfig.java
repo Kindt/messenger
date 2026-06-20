@@ -125,6 +125,7 @@ public class AppConfig {
         override("REDIS_READ_CACHE_TTL_USER_PRESENCE_SECONDS", "redis.read.cache.ttl.user_presence.seconds");
         override("API_JDBC_QUERY_TIMEOUT_SECONDS", "api.jdbc.query.timeout.seconds");
         override("KORUS_DEPLOY_PROFILE", "korus.deploy.profile");
+        override("KORUS_PRODUCT_ADDONS", "korus.product.addons");
         override("DIRECTORY_SYNC_INTERVAL_MINUTES", "directory.sync.interval.minutes");
         override("SCIM_BEARER_TOKEN", "scim.bearer.token");
     }
@@ -404,6 +405,21 @@ public class AppConfig {
     /** Deploy profile: dev (default), pilot, standard, enterprise. Env: {@code KORUS_DEPLOY_PROFILE}. */
     public String deployProfile() {
         return props.getProperty("korus.deploy.profile", "dev").trim().toLowerCase(Locale.ROOT);
+    }
+
+    /** Alias for product module registry. */
+    public String korusDeployProfile() {
+        return deployProfile();
+    }
+
+    /** Comma-separated add-on ids; empty = resolve from deploy profile or Base-only. Env: {@code KORUS_PRODUCT_ADDONS}. */
+    public String korusProductAddons() {
+        return props.getProperty("korus.product.addons", "").trim();
+    }
+
+    /** Platform core availability for add-on reason {@code core_unavailable}. */
+    public boolean coreAvailable() {
+        return true;
     }
 
     /**

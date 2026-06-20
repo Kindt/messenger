@@ -6,15 +6,17 @@ set -euo pipefail
 ATTACH=false
 TURN=false
 VOLUMES=false
+LEGACY_JAVA=false
 SKIP_KORUS_ENSURE="${SKIP_KORUS_ENSURE:-0}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --attach|-a) ATTACH=true ;;
     --turn|-t) TURN=true ;;
     --volumes|-V) VOLUMES=true ;;
+    --legacy-java-replicas) LEGACY_JAVA=true ;;
     --skip-ensure|-S) SKIP_KORUS_ENSURE=1 ;;
     -h|--help)
-      echo "Usage: $0 [--attach|-a] [--turn|-t] [--volumes|-V] [--skip-ensure|-S]"
+      echo "Usage: $0 [--attach|-a] [--turn|-t] [--volumes|-V] [--legacy-java-replicas] [--skip-ensure|-S]"
       echo "  --volumes: docker compose down -v"
       echo "  Use the same --attach/--turn as for korus-web-up.sh."
       echo "  Only ws-gateway from dev-min (--profile web), no korus-web: ./scripts/dev-web-stack-down.sh"
@@ -58,6 +60,11 @@ if [[ -f "$KW/.env" ]]; then
   args+=(--env-file .env)
 fi
 args+=(-f docker-compose.yml)
+if "$LEGACY_JAVA"; then
+  args+=(--profile legacy-java-replicas)
+else
+  args+=(-f docker-compose.nginx-only.yml)
+fi
 if "$ATTACH"; then
   args+=(-f docker-compose.attach.yml)
 fi

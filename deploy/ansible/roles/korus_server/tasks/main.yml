@@ -2,6 +2,13 @@
 - name: LiveKit env file for compose (QEMU host browser URL)
   ansible.builtin.import_tasks: livekit-env.yml
 
+- name: Note core-api WAR deploy mode (spec 021 T021-112)
+  ansible.builtin.debug:
+    msg: >-
+      CORE_API_DEPLOY_MODE=war: build docker/Dockerfile.core-api.war after T021-100;
+      full-stack compose still uses embedded core-api until war profile is wired.
+  when: (korus_core_api_deploy_mode | default('embedded')) == 'war'
+
 - name: Template server secrets env from vault
   ansible.builtin.template:
     src: korus-server.env.j2
@@ -19,6 +26,9 @@
     or korus_cors_allowed_origins is defined
     or korus_keycloak_issuer is defined
     or korus_keycloak_jwks_url is defined
+    or korus_product_addons is defined
+    or korus_deploy_profile is defined
+    or korus_core_api_deploy_mode is defined
 
 - name: Log QEMU build phase (skips above are expected on localhost)
   ansible.builtin.shell: |
@@ -62,7 +72,7 @@
     profile="{{ korus_deploy_profile | default('standard') }}"
     args=( --skip-ensure )
     if [[ "$profile" == "pilot" ]]; then
-      script="scripts/pilot-stack-up.sh"
+      script="scripts/lean-stack-up.sh"
       args+=( --down-full-first )
     elif [[ "$profile" == "enterprise" || "{{ korus_enable_scale | default(false) | lower }}" == "true" ]]; then
       script="scripts/enterprise-stack-up.sh"

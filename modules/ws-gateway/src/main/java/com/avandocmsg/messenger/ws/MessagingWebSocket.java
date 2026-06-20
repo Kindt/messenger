@@ -34,9 +34,25 @@ public class MessagingWebSocket {
     static WsNatsDeliveryHub deliveryHub;
     static WsChatMembershipLoader chatMembershipLoader;
     static WsTokenValidator tokenValidator;
-    /** Set in {@link WsGatewayApplication#main} before accepting connections. */
+    /** Set in {@link com.avandocmsg.messenger.ws.bootstrap.WsGatewayComposition#start()} before accepting connections. */
     static UserMessageSource messages;
     static List<String> allowedOrigins = List.of("*");
+
+    /** Called from {@link com.avandocmsg.messenger.ws.bootstrap.WsGatewayComposition} before accepting connections. */
+    public static void configureStaticContext(
+            WsTokenValidator validator,
+            UserMessageSource messageSource,
+            Connection nats,
+            WsChatMembershipLoader membershipLoader,
+            WsNatsDeliveryHub hub,
+            List<String> origins) {
+        tokenValidator = validator;
+        messages = messageSource;
+        natsConnection = nats;
+        chatMembershipLoader = membershipLoader;
+        deliveryHub = hub;
+        allowedOrigins = origins;
+    }
 
     public static final class OriginHandshakeConfigurator extends ServerEndpointConfig.Configurator {
         @Override

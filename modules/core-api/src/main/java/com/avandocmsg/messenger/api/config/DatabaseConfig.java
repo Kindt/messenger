@@ -60,6 +60,9 @@ public class DatabaseConfig {
     private HikariDataSource buildPool(String jdbcUrl, String poolName, int maxPoolSize) {
         var hikari = new HikariConfig();
         hikari.setJdbcUrl(jdbcUrl);
+        if (jdbcUrl.startsWith("jdbc:postgresql:")) {
+            hikari.setDriverClassName("org.postgresql.Driver");
+        }
         hikari.setUsername(appConfig.dbUser());
         hikari.setPassword(appConfig.dbPassword());
         hikari.setMaximumPoolSize(maxPoolSize);

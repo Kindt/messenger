@@ -1,10 +1,22 @@
 ---
 # Deploy profile: pilot (lite hot-path), standard (full-server), enterprise (future scale overlays).
+# **Deprecated product SKU** — prefer korus_product_addons (spec 021). Profile still selects stack-up script.
 korus_deploy_profile: standard
+
+# core-api container mode (spec 021 Phase 7.2): embedded (default) | war (Tomcat/Jetty WAR image).
+# war requires CoreApiComposition bootstrap (T021-100) and docker/Dockerfile.core-api.war build.
+korus_core_api_deploy_mode: embedded
+# korus_core_api_war_container_image: korus-messenger-core-api-war:local
+
+# Product add-ons (spec 021). When unset/empty env, core-api resolves from legacy_deploy_profile_map.
+# Example Base-only: korus_product_addons: []
+# korus_product_addons:
+#   - addon-engage
+#   - addon-search
 korus_compose_full_server: "{{ korus_repo_root }}/docker/docker-compose.full-server.yml"
 korus_compose_pilot: "{{ korus_repo_root }}/docker/docker-compose.full-server.yml"
 korus_compose_pilot_overrides: "{{ korus_repo_root }}/docker/docker-compose.pilot-overrides.yml"
-# Legacy standalone file (deprecated): docker/docker-compose.pilot.yml — use full-server + pilot-overrides via scripts/pilot-stack-up.sh
+# Legacy standalone file (deprecated): docker/docker-compose.pilot.yml — use full-server + pilot-overrides via scripts/lean-stack-up.sh
 korus_compose_keycloak_prod: "{{ korus_repo_root }}/docker/docker-compose.keycloak-prod.yml"
 korus_compose_scale: "{{ korus_repo_root }}/docker/docker-compose.scale.yml"
 korus_compose_replica: "{{ korus_repo_root }}/docker/docker-compose.replica.yml"

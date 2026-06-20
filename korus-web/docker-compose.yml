@@ -1,15 +1,20 @@
-# Автономный стек развёртывания веб-клиента (Java + Tomcat из modules/web-client).
-# Сборка образа — из корня репозитория (docker/Dockerfile.web-client).
+# Korus Web stack (spec 021 Phase 7.4).
 #
-# UI за балансировщиком: http://localhost:${KORUS_WEB_LB_PORT:-9088}
+# Recommended default (prod / QEMU): nginx-only static webui + /api proxy:
+#   docker compose -f docker-compose.yml -f docker-compose.nginx-only.yml up --build -d
 #
-# Переменные для реплик web-client см. korus-web/README.md и .env.example
+# Legacy Java replicas (web-a / web-b): profile legacy-java-replicas
+#   docker compose --profile legacy-java-replicas up --build -d
+#   Image: docker/Dockerfile.web-client.legacy (docker/Dockerfile.web-client deprecated).
+#
+# UI behind lb: http://localhost:${KORUS_WEB_LB_PORT:-9088}
 
 services:
   web-a:
+    profiles: ["legacy-java-replicas"]
     build:
       context: ..
-      dockerfile: docker/Dockerfile.web-client
+      dockerfile: docker/Dockerfile.web-client.legacy
     image: korus-messenger-web-client:local
     environment:
       WEB_CLIENT_PORT: "9080"
@@ -24,6 +29,7 @@ services:
     restart: unless-stopped
 
   web-b:
+    profiles: ["legacy-java-replicas"]
     image: korus-messenger-web-client:local
     depends_on:
       web-a:

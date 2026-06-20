@@ -23,6 +23,9 @@ public final class HikariDataSources {
         }
         var config = new HikariConfig();
         config.setJdbcUrl(jdbcUrl.trim());
+        if (jdbcUrl.trim().startsWith("jdbc:postgresql:")) {
+            config.setDriverClassName("org.postgresql.Driver");
+        }
         config.setUsername(user != null ? user : "");
         config.setPassword(password != null ? password : "");
         config.setMaximumPoolSize(Math.max(1, maxPoolSize));

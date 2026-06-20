@@ -1,0 +1,305 @@
+# Product module catalog — source of truth (spec 021)
+# Base + composable add-ons; no Pilot/Standard/Enterprise SKU.
+
+schema_version: 1
+
+base:
+  id: korus-messenger-base
+  label: "Korus Messenger Base"
+  state: required
+  core_infra:
+    - postgres-hot
+    - redis
+    - nats
+    - minio
+    - keycloak
+    - core-api
+    - ws-gateway
+    - web-lb
+    - worker-message-pipeline
+  capabilities:
+    - chat
+    - files
+    - websocket
+    - sql_search
+    - mesh_webrtc
+    - jitsi_conference
+
+addons:
+  - id: addon-engage
+    label: "Уведомления и превью"
+    internal_infra:
+      - worker-push
+      - worker-preview
+    compose_profiles:
+      - push
+    degradation_mode: hide
+    api_behavior:
+      http_code: null
+      message_key: null
+    ui_behavior: hide_push_controls
+    nats_behavior: drop_events
+    secrets:
+      - name: vapid
+        env_public: PUSH_VAPID_PUBLIC_KEY
+        env_private: PUSH_VAPID_PRIVATE_KEY
+    network_profile: internal_mesh
+    lifecycle_status: active
+    drain_timeout_seconds: 120
+    backup_scope:
+      - pg_hot
+    operational_limits:
+      - name: auth_rate_limit
+        env: RATE_LIMIT_AUTH_ENABLED
+        default: "false"
+        scope: base
+    commercial:
+      runbook_ref: scripts/SMOKE_INDEX.md
+      sla_tier_hint: standard_support
+
+  - id: addon-search
+    label: "Полнотекстовый поиск"
+    internal_infra:
+      - solr
+      - zookeeper
+      - worker-indexer
+    compose_profiles:
+      - solr
+    degradation_mode: fallback
+    api_behavior:
+      http_code: 200
+      message_key: module.search.fallback_sql
+    ui_behavior: badge_basic_search
+    nats_behavior: drop_index_events
+    env_flags:
+      search_mode: solr
+    network_profile: internal_mesh
+    lifecycle_status: active
+    drain_timeout_seconds: 120
+    backup_scope:
+      - pg_hot
+    operational_limits: []
+
+  - id: addon-retention
+    label: "Ретенция и TTL"
+    internal_infra:
+      - worker-retention
+    compose_profiles:
+      - compliance
+    degradation_mode: queue
+    api_behavior:
+      http_code: 200
+      message_key: module.retention.readonly_warning
+    ui_behavior: dim_retention_panels
+    nats_behavior: skip_purge_jobs
+    network_profile: internal_mesh
+    lifecycle_status: active
+    drain_timeout_seconds: 120
+    backup_scope:
+      - pg_hot
+      - minio
+
+  - id: addon-archive
+    label: "Archive DB + перенос"
+    internal_infra:
+      - postgres-archive
+      - worker-archiver
+    compose_profiles:
+      - archive
+    degradation_mode: hide
+    api_behavior:
+      http_code: 503
+      message_key: module.archive.disabled
+    ui_behavior: hide
+    nats_behavior: drop
+    network_profile: internal_mesh
+    lifecycle_status: active
+    drain_timeout_seconds: 300
+    backup_scope:
+      - pg_hot
+      - pg_archive
+
+  - id: addon-deep-archive
+    label: "Cold storage"
+    internal_infra:
+      - worker-deep-archiver
+    compose_profiles:
+      - compliance
+    degradation_mode: queue
+    api_behavior:
+      http_code: 503
+      message_key: module.deep_archive.disabled
+    ui_behavior: hide
+    nats_behavior: skip_deep_purge
+    network_profile: internal_mesh
+    lifecycle_status: active
+    drain_timeout_seconds: 300
+    backup_scope:
+      - minio
+
+  - id: addon-export
+    label: "Compliance export"
+    internal_infra:
+      - worker-export-replay
+    compose_profiles:
+      - compliance
+    degradation_mode: reject
+    api_behavior:
+      http_code: 503
+      message_key: module.export.disabled
+    ui_behavior: hide_export_panels
+    nats_behavior: subscribers_off
+    network_profile: internal_mesh
+    lifecycle_status: active
+    drain_timeout_seconds: 600
+    backup_scope:
+      - pg_hot
+      - export_artifacts
+    operational_limits:
+      - name: export_max_messages
+        env: EXPORT_MAX_MESSAGES
+        default: "100000"
+        scope: addon-export
+
+  - id: addon-live
+    label: "Групповые SFU-звонки и прямые эфиры"
+    internal_infra:
+      - livekit
+    compose_profiles:
+      - full
+    degradation_mode: hide
+    api_behavior:
+      http_code: 503
+      message_key: module.live.disabled
+    ui_behavior: hide_live_controls
+    nats_behavior: drop
+    secrets:
+      - name: livekit
+        env_key: LIVEKIT_API_KEY
+        env_secret: LIVEKIT_API_SECRET
+        env_url: LIVEKIT_URL
+    network_profile: edge_media
+    lifecycle_status: active
+    drain_timeout_seconds: 120
+    backup_scope: []
+    capabilities:
+      - group_call_sfu
+      - live_broadcast
+
+  - id: addon-bots
+    label: "Bot API"
+    internal_infra:
+      - worker-bot-delivery
+    compose_profiles:
+      - full
+    degradation_mode: reject
+    api_behavior:
+      http_code: 503
+      message_key: module.bots.disabled
+    ui_behavior: hide
+    nats_behavior: drop_bot_events
+    network_profile: internal_mesh
+    lifecycle_status: active
+    drain_timeout_seconds: 120
+    backup_scope:
+      - pg_hot
+    operational_limits:
+      - name: bot_rate_limit
+        env: BOT_RATE_LIMIT_PER_MIN
+        default: "30"
+        scope: addon-bots
+
+  - id: addon-integrations
+    label: "Плагины L0–L3"
+    internal_infra:
+      - worker-bot-delivery
+      - integrations
+    compose_profiles:
+      - full
+    degradation_mode: reject
+    api_behavior:
+      http_code: 503
+      message_key: module.integrations.disabled
+    ui_behavior: hide_integrations_tab
+    nats_behavior: drop
+    network_profile: integrations_egress
+    lifecycle_status: active
+    drain_timeout_seconds: 120
+    backup_scope:
+      - pg_hot
+    validator_warnings:
+      - both_with_addon_bots: "worker-bot-delivery deduplicated; integrations includes bot-delivery"
+
+  - id: addon-e2ee
+    label: "E2EE / MLS"
+    internal_infra: []
+    compose_profiles: []
+    degradation_mode: hide
+    api_behavior:
+      http_code: 200
+      message_key: module.e2ee.disabled
+    ui_behavior: hide_mls_ui
+    nats_behavior: mls_subscriber_off
+    env_flags:
+      mls_wire_enabled: "true"
+    network_profile: internal_mesh
+    lifecycle_status: active
+    drain_timeout_seconds: 60
+    backup_scope:
+      - pg_hot
+
+  - id: addon-directory
+    label: "LDAP/AD sync"
+    internal_infra: []
+    compose_profiles: []
+    degradation_mode: hide
+    api_behavior:
+      http_code: 503
+      message_key: module.directory.disabled
+    ui_behavior: hide_directory_sync
+    nats_behavior: drop
+    secrets:
+      - name: ldap_bind
+        secret_ref: org_auth_policy
+    network_profile: ldap_egress
+    lifecycle_status: active
+    drain_timeout_seconds: 120
+    backup_scope:
+      - pg_hot
+
+# Legacy deploy profile shim (Phase 5b — remove after migration)
+legacy_deploy_profile_map:
+  pilot:
+    addons: []
+    scale:
+      ha_enabled: false
+  standard:
+    addons:
+      - addon-engage
+      - addon-search
+      - addon-retention
+      - addon-export
+      - addon-archive
+      - addon-deep-archive
+      - addon-live
+      - addon-bots
+      - addon-integrations
+      - addon-e2ee
+      - addon-directory
+    scale:
+      ha_enabled: false
+  enterprise:
+    addons:
+      - addon-engage
+      - addon-search
+      - addon-retention
+      - addon-export
+      - addon-archive
+      - addon-deep-archive
+      - addon-live
+      - addon-bots
+      - addon-integrations
+      - addon-e2ee
+      - addon-directory
+    scale:
+      ha_enabled: true
