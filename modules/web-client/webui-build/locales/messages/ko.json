@@ -415,7 +415,56 @@
       "ttlNone": "없음",
       "ttl1min": "1분",
       "ttl1hour": "1시간",
-      "ttl24h": "24시간"
+      "ttl24h": "24시간",
+      "sendLocation": "위치 보내기",
+      "createPoll": "투표 만들기",
+      "scheduleSend": "예약 전송",
+      "shareContact": "연락처 공유"
+    },
+    "polls": {
+      "title": "투표",
+      "create": "투표 만들기",
+      "question": "질문",
+      "optionsHint": "선택지 (한 줄에 하나)",
+      "allowMultiple": "복수 선택",
+      "submit": "게시",
+      "vote": "투표",
+      "closed": "마감",
+      "optionMeta": "{count} · {pct}%",
+      "totalVotes": "총 투표: {count}",
+      "empty": "이 채팅에 투표가 없습니다.",
+      "createFailed": "투표를 만들 수 없습니다.",
+      "voteFailed": "투표할 수 없습니다.",
+      "pickOption": "하나 이상 선택하세요."
+    },
+    "schedule": {
+      "title": "예약 전송",
+      "when": "전송 시각",
+      "submit": "예약",
+      "failed": "메시지를 예약할 수 없습니다.",
+      "ok": "메시지가 예약되었습니다.",
+      "emptyDraft": "먼저 메시지 입력란에 텍스트를 입력하세요.",
+      "whenRequired": "날짜와 시간을 선택하세요."
+    },
+    "reminders": {
+      "title": "메시지 알림",
+      "action": "알림",
+      "submit": "저장",
+      "ok": "알림이 설정되었습니다.",
+      "failed": "알림을 만들 수 없습니다.",
+      "listTitle": "대기 중인 알림",
+      "preset1h": "1시간 후",
+      "preset3h": "3시간 후",
+      "presetTomorrow": "내일"
+    },
+    "contactShare": {
+      "title": "연락처 공유",
+      "shareSelf": "내 프로필",
+      "noContacts": "연락처 없음 — 연락처 탭에서 추가하세요.",
+      "failed": "연락처를 보낼 수 없습니다."
+    },
+    "offline": {
+      "cachedThread": "오프라인 — 캐시된 메시지 표시"
     },
     "message": {
       "image": "이미지",
@@ -438,7 +487,9 @@
       "replyQuoteTitle": "인용 메시지로 이동",
       "reactionTitle": "반응 {emoji}",
       "pubLinkTitle": "파일 공개 링크 만들기(A/B/C)",
-      "linksTitle": "공개 링크 목록 및 취소"
+      "linksTitle": "공개 링크 목록 및 취소",
+      "locationLabel": "내 위치",
+      "locationOpen": "지도에서 열기"
     },
     "actions": {
       "reply": "답장",

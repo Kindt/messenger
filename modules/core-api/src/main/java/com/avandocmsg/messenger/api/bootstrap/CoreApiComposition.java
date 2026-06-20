@@ -125,6 +125,12 @@ public class CoreApiComposition {
     private IndexerHotPlugMonitor indexerHotPlugMonitor;
     private com.avandocmsg.messenger.api.directory.DirectorySyncScheduler directorySyncScheduler;
     private com.avandocmsg.messenger.api.directory.DirectorySyncService directorySyncService;
+    private com.avandocmsg.messenger.api.admin.MigrationImportScheduler migrationImportScheduler;
+    private MessageSendCoordinator messageSendCoordinator;
+    private com.avandocmsg.messenger.api.messages.ScheduledMessageScheduler scheduledMessageScheduler;
+    private com.avandocmsg.messenger.api.messages.MessageReminderScheduler messageReminderScheduler;
+    private com.avandocmsg.messenger.core.port.ScheduledMessagePort scheduledMessagePort;
+    private com.avandocmsg.messenger.core.port.MessageReminderPort messageReminderPort;
 
     public CoreApiComposition() {
         this.appConfig = new AppConfig();
@@ -216,6 +222,11 @@ public class CoreApiComposition {
         var legalHoldPort = CoreModule.legalHoldPort(dataSource);
         var organizationLookupPort = CoreModule.organizationLookupPort(dataSource, this.clock, this.uuidGenerator);
         var migrationImportJobPort = CoreModule.migrationImportJobPort(dataSource);
+        var federationTrustPort = CoreModule.federationTrustPort(dataSource);
+        var federationMemberGuard = new com.avandocmsg.messenger.api.federation.FederationMemberGuard(
+            federationTrustPort, userLookupPort);
+        var federationStatusService = new com.avandocmsg.messenger.api.platform.FederationStatusService(
+            federationTrustPort);
         var devicePort = CoreModule.devicePort(dataSource, this.clock, this.uuidGenerator);
         var messageRepoPort = messagePersistence;
         var messageQueryPort = messagePersistence;
@@ -246,7 +257,8 @@ public class CoreApiComposition {
             appConfig.hotplugHeartbeatTtlMs()
         );
         var chatService = new ChatService(chatPersistencePort, blockRepositoryPort, chatReadStatePort,
-            messageRepoPort, messageQueryPort, natsOutbound, this.clock, this.uuidGenerator, readCachePort, appConfig);
+            messageRepoPort, messageQueryPort, natsOutbound, this.clock, this.uuidGenerator, readCachePort, appConfig,
+            federationMemberGuard);
         var readReceiptService = new ReadReceiptService(messageReadReceiptPort, chatPersistencePort,
             messageRepoPort, chatReadStatePort, userLookupPort, auditPort, natsOutbound,
             appConfig, this.clock, readCachePort);
@@ -277,15 +289,29 @@ public class CoreApiComposition {
                 CoreModule.chatRepositoryPort(dataSource),
                 new JdbcMessageMentionRepositoryAdapter(dataSource),
                 natsOutbound));
+        this.messageSendCoordinator = messageSendCoordinator;
         var messageEditCoordinator = CoreModule.messageEditCoordinator(dataSource, indexerEventPublisher);
         var messageDeleteCoordinator = CoreModule.messageDeleteCoordinator(
             dataSource, natsOutbound, indexerEventPublisher);
         var messageReactionCoordinator = CoreModule.messageReactionCoordinator(dataSource, natsOutbound);
         var messagePinCoordinator = CoreModule.messagePinCoordinator(dataSource, natsOutbound);
+        var pluginRepository = new com.avandocmsg.messenger.api.plugins.PluginRepository(dataSource);
+        var integrationRouterClient = new com.avandocmsg.messenger.api.plugins.IntegrationRouterClient(
+            appConfig.integrationsBaseUrl());
+        UserMessageSource userMessagesEarly = new CompositeMessageSource(appConfig.locale(),
+            CoreApiComposition.class.getClassLoader(),
+            List.of(
+                "com.avandocmsg.messenger.i18n.messages_core_api",
+                "com.avandocmsg.messenger.i18n.messages_common"));
+        var pluginPolicyService = new com.avandocmsg.messenger.api.plugins.PluginPolicyService(pluginRepository);
+        var pluginPlatformService = new com.avandocmsg.messenger.api.plugins.PluginPlatformService(
+            pluginRepository, integrationRouterClient, pluginPolicyService, userMessagesEarly);
+        var dlpBridgeGate = new com.avandocmsg.messenger.api.compliance.DlpBridgeGate(
+            pluginRepository, pluginPlatformService, userLookupPort);
         var messageApplicationService = CoreModule.messageApplicationService(
             dataSource, blockRepositoryPort, messageSendCoordinator, messageEditCoordinator,
             messageDeleteCoordinator, messageReactionCoordinator, messagePinCoordinator,
-            messageQueryPort, mlsService);
+            messageQueryPort, mlsService, dlpBridgeGate);
         var fileService = new FileService(fileApplicationService, messageQueryPort);
         var exportComplianceSeed = new AdminExportComplianceSeed(
             chatService, messageApplicationService, fileService, chatPersistencePort, chatRetentionPolicyPort);
@@ -313,14 +339,8 @@ public class CoreApiComposition {
         var botService = new BotService(botRepository, chatPersistencePort, messageApplicationService,
             chatBanService, auditPort, this.uuidGenerator);
 
-        var pluginRepository = new com.avandocmsg.messenger.api.plugins.PluginRepository(dataSource);
-        var integrationRouterClient = new com.avandocmsg.messenger.api.plugins.IntegrationRouterClient(
-            appConfig.integrationsBaseUrl());
-        var pluginPolicyService = new com.avandocmsg.messenger.api.plugins.PluginPolicyService(pluginRepository);
-        var pluginPlatformService = new com.avandocmsg.messenger.api.plugins.PluginPlatformService(
-            pluginRepository, integrationRouterClient, pluginPolicyService, userMessages);
         var pluginOutboundService = new com.avandocmsg.messenger.api.plugins.PluginOutboundService(
-            pluginRepository, messageApplicationService, userMessages);
+            pluginRepository, messageApplicationService, userMessagesEarly);
 
         var authPolicyRepository = new com.avandocmsg.messenger.api.auth.policy.AuthPolicyRepository(dataSource);
         var keycloakAuthSyncClient = new com.avandocmsg.messenger.api.auth.policy.KeycloakAuthSyncClient(appConfig);
@@ -338,6 +358,12 @@ public class CoreApiComposition {
             new com.avandocmsg.messenger.api.platform.PlatformModuleOverrideRepository(dataSource);
         var platformModuleRegistry = com.avandocmsg.messenger.api.platform.PlatformModuleRegistry.create(
             appConfig, platformModuleOverrideRepository);
+
+        var chatPollPort = CoreModule.chatPollPort(dataSource);
+        this.scheduledMessagePort = CoreModule.scheduledMessagePort(dataSource);
+        this.messageReminderPort = CoreModule.messageReminderPort(dataSource);
+        var chatPollService = new com.avandocmsg.messenger.api.polls.ChatPollService(
+            chatPollPort, chatPersistencePort, this.clock);
 
         var jerseyServlet = new ServletContainer(
             new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
@@ -359,7 +385,9 @@ public class CoreApiComposition {
                 readCachePort, legalHoldPort, purgeStatusService, botRepository, botService,
                 pluginRepository, pluginPlatformService, pluginPolicyService, pluginOutboundService,
                 authPolicyService, directorySyncService, migrationImportJobPort, devicePort, orgUserDirectory,
-                platformModuleRegistry, platformModuleOverrideRepository));
+                platformModuleRegistry, platformModuleOverrideRepository,
+                federationTrustPort, federationStatusService, dlpBridgeGate,
+                chatPollPort, chatPollService, scheduledMessagePort, messageReminderPort));
 
         var jerseyReg = servletContext.addServlet(SERVLET_NAME, jerseyServlet);
         if (jerseyReg != null) {
@@ -427,6 +455,17 @@ public class CoreApiComposition {
 
         directorySyncScheduler = new com.avandocmsg.messenger.api.directory.DirectorySyncScheduler(
             appConfig, directorySyncService);
+
+        migrationImportScheduler = new com.avandocmsg.messenger.api.admin.MigrationImportScheduler(
+            appConfig,
+            CoreModule.migrationImportJobPort(dataSource),
+            chatPersistencePort,
+            messagePersistence);
+
+        scheduledMessageScheduler = new com.avandocmsg.messenger.api.messages.ScheduledMessageScheduler(
+            appConfig, scheduledMessagePort, messageSendCoordinator, clock);
+        messageReminderScheduler = new com.avandocmsg.messenger.api.messages.MessageReminderScheduler(
+            appConfig, messageReminderPort, clock);
     }
 
     public void stopBackgroundServices() throws Exception {
@@ -453,6 +492,18 @@ public class CoreApiComposition {
         if (directorySyncScheduler != null) {
             directorySyncScheduler.close();
             directorySyncScheduler = null;
+        }
+        if (migrationImportScheduler != null) {
+            migrationImportScheduler.close();
+            migrationImportScheduler = null;
+        }
+        if (scheduledMessageScheduler != null) {
+            scheduledMessageScheduler.close();
+            scheduledMessageScheduler = null;
+        }
+        if (messageReminderScheduler != null) {
+            messageReminderScheduler.close();
+            messageReminderScheduler = null;
         }
         if (redisConfig != null) {
             redisConfig.shutdown();

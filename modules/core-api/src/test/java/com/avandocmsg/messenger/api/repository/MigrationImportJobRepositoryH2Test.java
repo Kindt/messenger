@@ -125,4 +125,14 @@ class MigrationImportJobRepositoryH2Test {
         assertTrue(result.path("imported_messages").asInt() >= 0);
         assertEquals("completed", repository.findById(id).orElseThrow().status());
     }
+
+    @Test
+    void listPendingReturnsOldestFirst() {
+        var id1 = repository.insert(orgId, "telegram_export_v1", "{}", userId);
+        var id2 = repository.insert(orgId, "telegram_export_v1", "{}", userId);
+        var pending = repository.listPending(10);
+        assertEquals(2, pending.size());
+        assertEquals(id1, pending.get(0).id());
+        assertEquals(id2, pending.get(1).id());
+    }
 }

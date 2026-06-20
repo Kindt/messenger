@@ -88,6 +88,31 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
     }
 
     @Override
+    public List<JobRow> listPending(int limit) {
+        var sql = """
+            SELECT id, org_id, source, status, config_json, result_json, created_by
+            FROM migration_import_jobs
+            WHERE status IN ('pending', 'failed')
+            ORDER BY created_at ASC
+            LIMIT ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, Math.max(1, Math.min(limit, 50)));
+            try (var rs = stmt.executeQuery()) {
+                var out = new ArrayList<JobRow>();
+                while (rs.next()) {
+                    out.add(mapRow(rs));
+                }
+                return out;
+            }
+        } catch (Exception e) {
+            log.error("migration import listPending failed", e);
+            return List.of();
+        }
+    }
+
+    @Override
     public boolean updateStatus(UUID id, String status, String resultJson) {
         var sql = """
             UPDATE migration_import_jobs

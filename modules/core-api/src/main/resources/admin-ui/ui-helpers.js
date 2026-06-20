@@ -24,7 +24,8 @@
         s.id === "core-organizations" ||
         s.id === "core-user-organization" ||
         s.id === "core-auth-policy" ||
-        s.id === "core-directory-sync",
+        s.id === "core-directory-sync" ||
+        s.id === "core-federation-trust",
     },
     {
       id: "compliance",
@@ -80,6 +81,10 @@
     },
     "core-migration-import": {
       desc: "Migration import jobs (Telegram export scaffold): create, list, process.",
+    },
+    "core-federation-trust": {
+      desc: "Cross-org federation trust registry: list and create partner org trust (spec 022 T02308).",
+      orgScoped: true,
     },
     "core-user-organization": {
       desc: "Привязка пользователя к организации (PATCH).",

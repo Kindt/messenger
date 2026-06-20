@@ -17,6 +17,7 @@ class AdminUiManifestLoadTest {
         assertTrue(manifest.sections().stream().anyMatch(s -> "core-fleet-stats".equals(s.id())
             && s.kind() == AdminUiSectionKind.FLEET_GRID));
         assertTrue(manifest.sections().stream().anyMatch(s -> "core-migration-import".equals(s.id())));
+        assertTrue(manifest.sections().stream().anyMatch(s -> "core-federation-trust".equals(s.id())));
         assertTrue(manifest.sections().stream().anyMatch(s -> "core-ip-allowlist".equals(s.id())));
         assertTrue(manifest.sections().stream().anyMatch(s -> "core-organizations".equals(s.id())
             && s.kind() == AdminUiSectionKind.JSON_PANEL));

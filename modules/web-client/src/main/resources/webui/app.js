@@ -284,9 +284,15 @@
     discussionThreadRootId: null,
     integrations: null,
     integrationsVitrine: null,
+    integrationsMarketplace: null,
+    integrationsMarketplaceCategories: null,
+    integrationsSearch: "",
+    integrationsCategory: "all",
     contacts: null,
     contactsBusy: false,
     myDisplayName: "",
+    myProfilePhone: "",
+    myProfileEmail: "",
     exportBusy: false,
     exportJobId: null,
     exportJobChatId: null,
@@ -307,6 +313,15 @@
     fileLinksBusy: false,
     myPublicLinks: null,
     myPublicLinksBusy: false,
+    chatPolls: [],
+    chatPollsBusy: false,
+    pollCreateOpen: false,
+    scheduleSendOpen: false,
+    reminderPick: null,
+    contactShareOpen: false,
+    myReminders: [],
+    myRemindersBusy: false,
+    threadOfflineCached: false,
   };
 
   var WEB_DEVICE_NAME = "web-client";
@@ -550,6 +565,10 @@
     throw new Error("KorusUiComposer required — load ui-composer.js before app.js");
   }
   var uiComposer = window.KorusUiComposer;
+  if (!window.KorusUiPolls) {
+    throw new Error("KorusUiPolls required — load ui-polls.js before app.js");
+  }
+  var uiPolls = window.KorusUiPolls;
   if (!window.KorusUiWsHandler) {
     throw new Error("KorusUiWsHandler required — load ui-ws-handler.js before app.js");
   }
@@ -1058,6 +1077,8 @@
         if (p.custom_status_text) state.myCustomStatus = p.custom_status_text;
         state.myDndUntil = p.dnd_until != null ? p.dnd_until : null;
         state.myDisplayName = p.display_name || p.username || "";
+        state.myProfilePhone = p.phone || "";
+        state.myProfileEmail = p.email || "";
         if (opts.applyLocale) {
           await applyProfileLocale(p);
         }
@@ -1100,8 +1121,13 @@
       var res = await apiJson("/me/integrations", { method: "GET" });
       state.integrations = res && res.items ? res.items : [];
       state.integrationsVitrine = res && res.vitrine_tiles ? res.vitrine_tiles : [];
+      var market = await apiJson("/me/integrations/marketplace", { method: "GET" });
+      state.integrationsMarketplace = market && market.items ? market.items : [];
+      state.integrationsMarketplaceCategories =
+        market && market.categories ? market.categories : [];
     } catch (e) {
       state.integrations = [];
+      state.integrationsMarketplace = [];
     }
   }
 
@@ -2537,6 +2563,12 @@
     clearReplyTo();
     state.threadSearch = "";
     state.threadSearchHits = null;
+    state.chatPolls = [];
+    state.pollCreateOpen = false;
+    state.scheduleSendOpen = false;
+    state.reminderPick = null;
+    state.contactShareOpen = false;
+    state.threadOfflineCached = false;
     if (sameChat && !options.forceReload) {
       return markChatRead(chatId)
         .then(function () {
@@ -2687,6 +2719,7 @@
         loadMyProfile(),
         loadBlockedUsers(),
         loadMyPublicLinks(),
+        loadMyReminders(),
       ])
         .then(render)
         .catch(function () {
@@ -4728,6 +4761,22 @@
     if (!state.tokens) return;
     if (!options.preserveBlobs) revokeBlobUrls();
     if (!options.preserveE2eeCache) state.e2eePlaintextCache = {};
+    var offline =
+      typeof navigator.onLine === "boolean" && !navigator.onLine && window.KorusOfflineCache;
+    if (offline) {
+      var cached = await window.KorusOfflineCache.getMessages(chatId);
+      if (cached && cached.length) {
+        state.messages = sortMessagesAsc(cached);
+        state.threadHasMore = false;
+        state.threadOfflineCached = true;
+        syncPreviewFromThread(chatId);
+        if (!options.keepScroll) {
+          state.shouldScrollThread = true;
+        }
+        return;
+      }
+    }
+    state.threadOfflineCached = false;
     var q = new URLSearchParams({ limit: String(THREAD_PAGE) });
     if (state.discussionThreadRootId) {
       q.set("thread_id", state.discussionThreadRootId);
@@ -4735,9 +4784,13 @@
     var rows = await apiJson("/chats/" + chatId + "/messages?" + q, { method: "GET" });
     state.messages = sortMessagesAsc(rows);
     state.threadHasMore = rows.length >= THREAD_PAGE;
+    if (window.KorusOfflineCache) {
+      window.KorusOfflineCache.putMessages(chatId, state.messages).catch(function () {});
+    }
     syncPreviewFromThread(chatId);
     await loadReactionsForThread(chatId);
     await loadPinnedMessages(chatId);
+    await loadChatPolls(chatId);
     await hydrateReadReceiptsForThread(chatId);
     var liveConf = activeConferenceInChat(chatId);
     if (liveConf && liveConf.conference_id) {
@@ -4748,6 +4801,261 @@
     if (!options.keepScroll) {
       state.shouldScrollThread = true;
     }
+  }
+
+  async function loadChatPolls(chatId) {
+    if (!state.tokens || !chatId) {
+      state.chatPolls = [];
+      return;
+    }
+    state.chatPollsBusy = true;
+    try {
+      var rows = await apiJson("/chats/" + chatId + "/polls?limit=20", { method: "GET" });
+      state.chatPolls = Array.isArray(rows) ? rows : [];
+    } catch (e) {
+      state.chatPolls = [];
+    } finally {
+      state.chatPollsBusy = false;
+    }
+  }
+
+  function openPollCreate() {
+    state.pollCreateOpen = true;
+    render();
+  }
+
+  function closePollCreate() {
+    state.pollCreateOpen = false;
+    render();
+  }
+
+  function openScheduleSend() {
+    state.scheduleSendOpen = true;
+    render();
+  }
+
+  function closeScheduleSend() {
+    state.scheduleSendOpen = false;
+    render();
+  }
+
+  async function createChatPoll(question, options, allowMultiple) {
+    if (!state.selectedId || !question || !options || !options.length) {
+      state.error = L("ui.polls.createFailed");
+      render();
+      return;
+    }
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      await apiJson("/chats/" + state.selectedId + "/polls", {
+        method: "POST",
+        jsonBody: {
+          question: question,
+          options: options,
+          allow_multiple: !!allowMultiple,
+        },
+      });
+      state.pollCreateOpen = false;
+      await loadChatPolls(state.selectedId);
+    } catch (err) {
+      state.error = err.message || L("ui.polls.createFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function voteChatPoll(pollId, optionIndexes) {
+    if (!state.selectedId || !pollId) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      await apiJson(
+        "/chats/" + state.selectedId + "/polls/" + pollId + "/vote",
+        {
+          method: "POST",
+          jsonBody: { option_indexes: optionIndexes },
+        }
+      );
+      await loadChatPolls(state.selectedId);
+    } catch (err) {
+      state.error = err.message || L("ui.polls.voteFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function scheduleComposerMessage(text, scheduledAtIso) {
+    if (!state.selectedId || !text || !scheduledAtIso) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      var body = {
+        type: "text",
+        content: text,
+        scheduled_at: scheduledAtIso,
+        reply_to_msg_id: currentReplyToId(),
+        client_msg_id: null,
+      };
+      if (state.discussionThreadRootId) {
+        body.thread_id = state.discussionThreadRootId;
+      }
+      await apiJson("/chats/" + state.selectedId + "/messages/scheduled", {
+        method: "POST",
+        jsonBody: body,
+      });
+      var ta = document.getElementById("msgdraft");
+      if (ta) ta.value = "";
+      clearComposerDraftForChat(state.selectedId);
+      clearReplyTo();
+      state.scheduleSendOpen = false;
+      state.statusMessage = L("ui.schedule.ok");
+    } catch (err) {
+      state.error = err.message || L("ui.schedule.failed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  function getPollsUiCtx() {
+    return {
+      el: el,
+      iconBtn: iconBtn,
+      L: L,
+      state: state,
+      render: render,
+      openPollCreate: openPollCreate,
+      closePollCreate: closePollCreate,
+      closeScheduleSend: closeScheduleSend,
+      createPoll: createChatPoll,
+      votePoll: voteChatPoll,
+      scheduleMessage: scheduleComposerMessage,
+      closeMessageReminder: closeMessageReminder,
+      createMessageReminder: createMessageReminder,
+      closeContactShare: closeContactShare,
+      shareSelfContact: shareSelfContact,
+      sendContactCard: sendContactCard,
+    };
+  }
+
+  async function loadMyReminders() {
+    if (!state.tokens) {
+      state.myReminders = [];
+      return;
+    }
+    state.myRemindersBusy = true;
+    try {
+      var rows = await apiJson("/me/reminders?limit=20", { method: "GET" });
+      state.myReminders = Array.isArray(rows) ? rows : [];
+    } catch (e) {
+      state.myReminders = [];
+    } finally {
+      state.myRemindersBusy = false;
+    }
+  }
+
+  function openMessageReminder(m) {
+    if (!m || !m.id || !state.selectedId) return;
+    state.reminderPick = { chatId: state.selectedId, messageId: m.id };
+    render();
+  }
+
+  function closeMessageReminder() {
+    state.reminderPick = null;
+    render();
+  }
+
+  async function createMessageReminder(remindAtIso) {
+    if (!state.reminderPick || !remindAtIso) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      await apiJson("/me/reminders", {
+        method: "POST",
+        jsonBody: {
+          chat_id: state.reminderPick.chatId,
+          message_id: state.reminderPick.messageId,
+          remind_at: remindAtIso,
+        },
+      });
+      state.reminderPick = null;
+      state.statusMessage = L("ui.reminders.ok");
+      await loadMyReminders();
+    } catch (err) {
+      state.error = err.message || L("ui.reminders.failed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  function openContactShare() {
+    state.contactShareOpen = true;
+    if (!state.contacts && !state.contactsBusy) {
+      loadContacts().then(render).catch(function () {
+        render();
+      });
+    } else {
+      render();
+    }
+  }
+
+  function closeContactShare() {
+    state.contactShareOpen = false;
+    render();
+  }
+
+  async function sendContactMessage(payload) {
+    if (!state.tokens || !state.selectedId || !payload) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      var body = {
+        type: "contact",
+        content: JSON.stringify(payload),
+        reply_to_msg_id: currentReplyToId(),
+        client_msg_id: null,
+        visibility_ttl_seconds: getComposerTtlSeconds(),
+      };
+      if (state.discussionThreadRootId) {
+        body.thread_id = state.discussionThreadRootId;
+      }
+      var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
+        method: "POST",
+        jsonBody: body,
+      });
+      state.contactShareOpen = false;
+      clearReplyTo();
+      await afterLocalSend(state.selectedId, sent);
+    } catch (err) {
+      state.error = err.message || L("ui.contactShare.failed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  function sendContactCard(card) {
+    sendContactMessage(card);
+  }
+
+  async function shareSelfContact() {
+    var profile = await loadMyProfile();
+    var payload = {
+      display_name: state.myDisplayName || (profile && profile.username) || "",
+      phone: state.myProfilePhone || (profile && profile.phone) || null,
+      email: state.myProfileEmail || (profile && profile.email) || null,
+      username: profile && profile.username ? profile.username : null,
+    };
+    sendContactCard(payload);
   }
 
   async function loadPinnedMessages(chatId) {
@@ -5004,6 +5312,9 @@
         method: "GET",
       });
       mergeMessageIntoThread(full);
+      if (window.KorusOfflineCache) {
+        window.KorusOfflineCache.appendMessage(chatId, full).catch(function () {});
+      }
       await reloadMessageReactions(chatId, messageId);
     } catch (e) {
       if (previewData) appendMessageFromSendEvent(previewData);
@@ -5016,6 +5327,9 @@
   async function afterLocalSend(chatId, sent) {
     if (sent && sent.id) {
       mergeMessageIntoThread(sent);
+      if (window.KorusOfflineCache) {
+        window.KorusOfflineCache.appendMessage(chatId, sent).catch(function () {});
+      }
       await reloadMessageReactions(chatId, sent.id);
       syncPreviewFromThread(chatId);
       state.shouldScrollThread = true;
@@ -6242,6 +6556,58 @@
     }
   }
 
+  function callWatermarkText() {
+    var env = window.__WEB_CLIENT__ || {};
+    if (env.watermarkText) return String(env.watermarkText);
+    return state.myDisplayName || jwtSub(state.tokens && state.tokens.access_token) || "";
+  }
+
+  async function sendLocationMessage() {
+    if (!state.tokens || !state.selectedId || !navigator.geolocation) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      var pos = await new Promise(function (resolve, reject) {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 60000,
+        });
+      });
+      var payload = JSON.stringify({
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+        label: L("ui.message.locationLabel"),
+      });
+      var body = {
+        type: "location",
+        content: payload,
+        reply_to_msg_id: currentReplyToId(),
+        client_msg_id: null,
+        visibility_ttl_seconds: getComposerTtlSeconds(),
+      };
+      if (state.discussionThreadRootId) {
+        body.thread_id = state.discussionThreadRootId;
+      }
+      var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
+        method: "POST",
+        jsonBody: body,
+      });
+      clearReplyTo();
+      await afterLocalSend(state.selectedId, sent);
+    } catch (err) {
+      if (err && err.code === 1) {
+        state.error = L("messages.locationDenied");
+      } else {
+        state.error = (err && err.message) || L("messages.sendLocationFailed");
+      }
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
   function safeConferenceDisplayTitle(c) {
     if (!c) return "";
     var t = c.title;
@@ -6616,6 +6982,11 @@
       sv.playsInline = true;
       sv.srcObject = state.callScreenStream;
       sw.appendChild(sv);
+      var wm = el("div", "call-screen-watermark");
+      wm.setAttribute("data-testid", "call-screen-watermark");
+      var wmText = el("div", "call-screen-watermark-text", callWatermarkText());
+      wm.appendChild(wmText);
+      sw.appendChild(wm);
       stage.appendChild(sw);
     }
     panel.appendChild(stage);
@@ -6819,6 +7190,21 @@
 
     if ("serviceWorker" in navigator) {
       panel.appendChild(el("p", "settings-hint", L("ui.settings.offlineHint")));
+    }
+    if (state.myRemindersBusy) {
+      panel.appendChild(el("p", "settings-hint", L("ui.common.loading")));
+    } else if (state.myReminders && state.myReminders.length) {
+      var remBox = el("div", "settings-reminders");
+      remBox.setAttribute("data-testid", "settings-reminders");
+      remBox.appendChild(el("h3", "settings-subtitle", L("ui.reminders.listTitle")));
+      state.myReminders.forEach(function (r) {
+        if (r.status && r.status !== "pending") return;
+        var row = el("div", "settings-reminder-row");
+        var label = chatTitleById(r.chat_id) + " · " + (r.remind_at || "");
+        row.textContent = label;
+        remBox.appendChild(row);
+      });
+      panel.appendChild(remBox);
     }
   }
 
@@ -7339,7 +7725,10 @@
     );
     if (state.networkOnline === false) {
       var netBanner = el("div", "network-banner");
-      netBanner.textContent = L("errors.networkOffline");
+      netBanner.setAttribute("data-testid", "network-offline-banner");
+      netBanner.textContent = state.threadOfflineCached
+        ? L("ui.offline.cachedThread")
+        : L("errors.networkOffline");
       shell.appendChild(netBanner);
     }
     if (state.swUpdateReady) {
@@ -7729,6 +8118,38 @@
       side.appendChild(impBlock);
     } else if (state.sidebarMode === "integrations") {
       var iList = el("div", "chat-list integrations-list");
+      var searchRow = el("div", "integrations-market-search");
+      var searchInput = el("input", "integrations-search-input");
+      searchInput.type = "search";
+      searchInput.placeholder = L("ui.sidebar.marketplaceSearch");
+      searchInput.value = state.integrationsSearch || "";
+      searchInput.setAttribute("data-testid", "integrations-marketplace-search");
+      searchInput.oninput = function () {
+        state.integrationsSearch = searchInput.value || "";
+        render();
+      };
+      searchRow.appendChild(searchInput);
+      iList.appendChild(searchRow);
+      var categories = state.integrationsMarketplaceCategories || [];
+      if (categories.length) {
+        var catBar = el("div", "integrations-category-bar");
+        ["all"].concat(categories).forEach(function (cat) {
+          var label = cat === "all" ? L("ui.sidebar.marketplaceAll") : cat;
+          catBar.appendChild(
+            iconBtn(label, label, {
+              cls:
+                "integrations-category-chip" +
+                ((state.integrationsCategory || "all") === cat ? " active" : ""),
+              testId: "integrations-cat-" + cat,
+              onClick: function () {
+                state.integrationsCategory = cat;
+                render();
+              },
+            })
+          );
+        });
+        iList.appendChild(catBar);
+      }
       var vitrine = state.integrationsVitrine || [];
       if (vitrine.length) {
         var vitBlock = el("div", "integrations-vitrine");
@@ -7747,14 +8168,38 @@
         });
         iList.appendChild(vitBlock);
       }
-      var items = state.integrations || [];
+      var items = state.integrationsMarketplace && state.integrationsMarketplace.length
+        ? state.integrationsMarketplace
+        : state.integrations || [];
+      var q = (state.integrationsSearch || "").trim().toLowerCase();
+      var cat = state.integrationsCategory || "all";
+      items = items.filter(function (it) {
+        if (cat !== "all" && (it.category || "general") !== cat) return false;
+        if (!q) return true;
+        var hay = (
+          (it.label || "") +
+          " " +
+          (it.description || "") +
+          " " +
+          (it.bot_name || "") +
+          " " +
+          (it.category || "")
+        ).toLowerCase();
+        return hay.indexOf(q) >= 0;
+      });
       if (!items.length) {
         iList.appendChild(el("div", "chat-list-empty", L("ui.sidebar.noIntegrations")));
       } else {
         items.forEach(function (it) {
           var btn = el("button", "chat-item integration-item");
           btn.type = "button";
-          btn.textContent = it.label || it.bot_name || it.id;
+          var label = it.label || it.bot_name || it.id;
+          if (it.description) {
+            btn.appendChild(el("span", "integration-item-label", label));
+            btn.appendChild(el("span", "integration-item-desc", it.description));
+          } else {
+            btn.textContent = label;
+          }
           btn.setAttribute("data-testid", "integration-open-" + (it.bot_name || it.id));
           btn.onclick = function () {
             openIntegration(it);
@@ -8112,6 +8557,10 @@
         });
         thread.appendChild(pinsBar);
       }
+      var pollsSection = uiPolls.mountPollsSection(getPollsUiCtx());
+      if (pollsSection) {
+        thread.appendChild(pollsSection);
+      }
       var msgs = el("div", "messages");
       var loadOlder = null;
       if (state.threadHasMore) {
@@ -8153,6 +8602,7 @@
         downloadChatFile: downloadChatFile,
         togglePinMessage: togglePinMessage,
         openForwardPicker: openForwardPicker,
+        openMessageReminder: openMessageReminder,
         createPublicLinkForFile: createPublicLinkForFile,
         openFilePublicLinksModal: openFilePublicLinksModal,
         deleteOwnFile: deleteOwnFile,
@@ -8203,8 +8653,12 @@
           clearReplyTo: clearReplyTo,
           render: render,
           sendMessage: sendMessage,
+          sendLocationMessage: sendLocationMessage,
           sendFileMessage: sendFileMessage,
           sendVoiceMessage: sendVoiceMessage,
+          openPollCreate: openPollCreate,
+          openScheduleSend: openScheduleSend,
+          openContactShare: openContactShare,
           loadComposerDraftForChat: loadComposerDraftForChat,
           scheduleSaveComposerDraft: scheduleSaveComposerDraft,
           scheduleTypingNotify: scheduleTypingNotify,
@@ -8262,6 +8716,14 @@
       };
       shell.appendChild(fOv);
     }
+    var pollOv = uiPolls.mountPollCreateOverlay(getPollsUiCtx());
+    if (pollOv) shell.appendChild(pollOv);
+    var schedOv = uiPolls.mountScheduleOverlay(getPollsUiCtx());
+    if (schedOv) shell.appendChild(schedOv);
+    var remOv = uiPolls.mountReminderOverlay(getPollsUiCtx());
+    if (remOv) shell.appendChild(remOv);
+    var contactOv = uiPolls.mountContactShareOverlay(getPollsUiCtx());
+    if (contactOv) shell.appendChild(contactOv);
     if (state.membersModalOpen) {
       var mOv = el("div", "settings-overlay");
       mOv.setAttribute("data-testid", "members-overlay");

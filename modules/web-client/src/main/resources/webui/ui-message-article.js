@@ -226,6 +226,16 @@
           },
         })
       );
+      if (ctx.openMessageReminder) {
+        actions.appendChild(
+          ctx.iconBtn("⏰", ctx.L("ui.reminders.action"), {
+            testId: "message-reminder-button",
+            onClick: function () {
+              ctx.openMessageReminder(m);
+            },
+          })
+        );
+      }
       if (ctx.myId && m.sender_id === ctx.myId && ctx.messageAttachmentFileId(m)) {
         var fileId = ctx.messageAttachmentFileId(m);
         actions.appendChild(

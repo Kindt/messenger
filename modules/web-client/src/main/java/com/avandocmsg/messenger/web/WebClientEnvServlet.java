@@ -25,6 +25,8 @@ final class WebClientEnvServlet extends HttpServlet {
         String iceJs = iceRaw.isEmpty() ? "null" : jsonQuote(iceRaw);
         String vapidRaw = envOrDefault(getenv, "WEB_CLIENT_VAPID_PUBLIC_KEY", "");
         String vapidJs = vapidRaw.isEmpty() ? "null" : jsonQuote(vapidRaw);
+        String watermarkRaw = envOrDefault(getenv, "APP_WATERMARK_TEXT", "");
+        String watermarkJs = watermarkRaw.isEmpty() ? "null" : jsonQuote(watermarkRaw);
         boolean disableServiceWorker = envFlag(getenv, "WEB_CLIENT_DISABLE_SW");
         return "window.__WEB_CLIENT__ = { wsUrl: "
             + jsonQuote(wsUrl)
@@ -32,6 +34,8 @@ final class WebClientEnvServlet extends HttpServlet {
             + iceJs
             + ", vapidPublicKey: "
             + vapidJs
+            + ", watermarkText: "
+            + watermarkJs
             + ", disableServiceWorker: "
             + disableServiceWorker
             + " };\n";

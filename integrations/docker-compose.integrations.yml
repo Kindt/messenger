@@ -175,6 +175,21 @@ services:
       timeout: 5s
       retries: 5
 
+  dlp-mock:
+    build:
+      context: ./demos
+      dockerfile: dlp-mock/Dockerfile
+    image: korus/dlp-mock:local
+    environment:
+      DLP_MOCK_PORT: "8098"
+    ports:
+      - "8098:8098"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8098/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
   ai-bridge:
     build:
       context: ./demos

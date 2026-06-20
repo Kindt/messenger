@@ -45,6 +45,10 @@ public class MigrationImportJobRepository {
         return port.listForOrg(orgId, limit).stream().map(MigrationImportJobRepository::map).toList();
     }
 
+    public List<JobRow> listPending(int limit) {
+        return port.listPending(limit).stream().map(MigrationImportJobRepository::map).toList();
+    }
+
     public boolean updateStatus(UUID id, String status, String resultJson) {
         return port.updateStatus(id, status, resultJson);
     }

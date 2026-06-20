@@ -39,12 +39,89 @@
     bodyEl.appendChild(btn);
   }
 
+  function parseJsonContent(raw) {
+    if (!raw || typeof raw !== "string") return null;
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function renderLocationMessage(bodyEl, m, ctx) {
+    var loc = parseJsonContent(m.content);
+    if (!loc || loc.lat == null || loc.lon == null) {
+      bodyEl.appendChild(ctx.el("span", "msg-location-invalid", m.content || ""));
+      return;
+    }
+    var lat = Number(loc.lat);
+    var lon = Number(loc.lon);
+    var href =
+      "https://www.openstreetmap.org/?mlat=" +
+      encodeURIComponent(lat) +
+      "&mlon=" +
+      encodeURIComponent(lon) +
+      "#map=16/" +
+      lat +
+      "/" +
+      lon;
+    var link = document.createElement("a");
+    link.className = "msg-location-link";
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.setAttribute("data-testid", "message-location-link");
+    link.textContent = loc.label || ctx.L("ui.message.locationOpen");
+    bodyEl.appendChild(link);
+  }
+
+  function renderContactMessage(bodyEl, m, ctx) {
+    var contact = parseJsonContent(m.content);
+    if (!contact) {
+      bodyEl.appendChild(ctx.el("span", "msg-contact-invalid", m.content || ""));
+      return;
+    }
+    var card = ctx.el("div", "msg-contact-card");
+    card.setAttribute("data-testid", "message-contact-card");
+    if (contact.display_name) {
+      card.appendChild(ctx.el("div", "msg-contact-name", contact.display_name));
+    }
+    if (contact.phone) {
+      var phone = document.createElement("a");
+      phone.className = "msg-contact-phone";
+      phone.href = "tel:" + String(contact.phone).replace(/\s/g, "");
+      phone.textContent = contact.phone;
+      phone.setAttribute("data-testid", "message-contact-phone");
+      card.appendChild(phone);
+    }
+    if (contact.email) {
+      var email = document.createElement("a");
+      email.className = "msg-contact-email";
+      email.href = "mailto:" + contact.email;
+      email.textContent = contact.email;
+      email.setAttribute("data-testid", "message-contact-email");
+      card.appendChild(email);
+    }
+    if (!card.childNodes.length) {
+      card.appendChild(ctx.el("span", "msg-contact-empty", m.content || ""));
+    }
+    bodyEl.appendChild(card);
+  }
+
   function renderMessageContent(bodyEl, m, ctx) {
     var t = m.type;
     var attachKind = ctx.messageAttachmentKind(m);
     var fileId = ctx.messageAttachmentFileId(m);
     if (attachKind && fileId) {
       appendMessageAttachment(bodyEl, attachKind, fileId, m.duration_ms, ctx);
+      return;
+    }
+    if (t === "location") {
+      renderLocationMessage(bodyEl, m, ctx);
+      return;
+    }
+    if (t === "contact") {
+      renderContactMessage(bodyEl, m, ctx);
       return;
     }
     if (m.link_preview && m.link_preview.url) {

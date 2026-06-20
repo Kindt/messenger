@@ -931,6 +931,66 @@ public class AppConfig {
         }
     }
 
+    /** Migration import poll interval in seconds; 0 disables scheduler. Default 60. */
+    public long migrationImportPollSeconds() {
+        var raw = props.getProperty("migration.import.poll.seconds", "60").trim();
+        try {
+            return Math.max(0, Long.parseLong(raw));
+        } catch (NumberFormatException e) {
+            return 60L;
+        }
+    }
+
+    /** Max pending jobs processed per scheduler tick. Default 5. */
+    public int migrationImportBatchSize() {
+        var raw = props.getProperty("migration.import.batch.size", "5").trim();
+        try {
+            return Math.max(1, Math.min(Integer.parseInt(raw), 50));
+        } catch (NumberFormatException e) {
+            return 5;
+        }
+    }
+
+    /** Scheduled message poll interval in seconds; 0 disables scheduler. Default 30. */
+    public long scheduledMessagePollSeconds() {
+        var raw = props.getProperty("scheduled.message.poll.seconds", "30").trim();
+        try {
+            return Math.max(0, Long.parseLong(raw));
+        } catch (NumberFormatException e) {
+            return 30L;
+        }
+    }
+
+    /** Max due scheduled messages processed per tick. Default 20. */
+    public int scheduledMessageBatchSize() {
+        var raw = props.getProperty("scheduled.message.batch.size", "20").trim();
+        try {
+            return Math.max(1, Math.min(Integer.parseInt(raw), 100));
+        } catch (NumberFormatException e) {
+            return 20;
+        }
+    }
+
+    /** Message reminder poll interval in seconds; 0 disables scheduler. Default 60. */
+    public long messageReminderPollSeconds() {
+        var raw = props.getProperty("message.reminder.poll.seconds", "60").trim();
+        try {
+            return Math.max(0, Long.parseLong(raw));
+        } catch (NumberFormatException e) {
+            return 60L;
+        }
+    }
+
+    /** Max due reminders processed per tick. Default 50. */
+    public int messageReminderBatchSize() {
+        var raw = props.getProperty("message.reminder.batch.size", "50").trim();
+        try {
+            return Math.max(1, Math.min(Integer.parseInt(raw), 200));
+        } catch (NumberFormatException e) {
+            return 50;
+        }
+    }
+
     /** Optional bearer token for SCIM provisioning without admin JWT. */
     public Optional<String> scimBearerToken() {
         var raw = props.getProperty("scim.bearer.token", "").trim();

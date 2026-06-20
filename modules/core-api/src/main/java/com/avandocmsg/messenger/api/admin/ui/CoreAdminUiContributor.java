@@ -85,9 +85,16 @@ public final class CoreAdminUiContributor implements AdminUiContributor {
                 null
             ),
             new AdminUiSectionDescriptor(
+                "core-federation-trust",
+                "Federation trust",
+                25,
+                AdminUiSectionKind.JSON_PANEL,
+                null
+            ),
+            new AdminUiSectionDescriptor(
                 "core-user-organization",
                 "Пользователь → организация",
-                25,
+                26,
                 AdminUiSectionKind.JSON_PANEL,
                 null
             ),

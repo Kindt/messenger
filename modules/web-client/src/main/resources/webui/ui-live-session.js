@@ -179,9 +179,30 @@
     }
   }
 
+  function loadChatLiveReplays(state, apiJson) {
+    if (!state.selectedId || !state.tokens) {
+      state.chatLiveReplays = [];
+      return Promise.resolve([]);
+    }
+    return apiJson("/chats/" + state.selectedId + "/live-sessions?active_only=false", {
+      method: "GET",
+    })
+      .then(function (rows) {
+        state.chatLiveReplays = (Array.isArray(rows) ? rows : []).filter(function (s) {
+          return s && s.dvr_playlist_url && s.status === "ended";
+        });
+        return state.chatLiveReplays;
+      })
+      .catch(function () {
+        state.chatLiveReplays = [];
+        return [];
+      });
+  }
+
   function loadChatLiveSessions(state, apiJson) {
     if (!state.selectedId || !state.tokens) {
       state.chatLiveSessions = null;
+      state.chatLiveReplays = [];
       return Promise.resolve([]);
     }
     return apiJson("/chats/" + state.selectedId + "/live-sessions?active_only=true", {
@@ -191,7 +212,7 @@
         state.chatLiveSessions = Array.isArray(rows) ? rows : [];
         var live = state.chatLiveSessions.length ? state.chatLiveSessions[0] : null;
         setActiveLiveForChat(state, state.selectedId, live);
-        return state.chatLiveSessions;
+        return loadChatLiveReplays(state, apiJson);
       })
       .catch(function () {
         state.chatLiveSessions = [];
@@ -388,17 +409,51 @@
       sec.appendChild(el("p", "call-conf-empty", L("live.noneActive")));
     }
 
-    var dvrUrl = dvrPlaylistForSession(state, live);
+    var dvrUrl = state.liveReplayUrl || dvrPlaylistForSession(state, live);
     if (dvrUrl) {
       var hlsStage = el("div", "call-live-stage call-live-hls-stage");
       hlsStage.setAttribute("data-testid", "live-hls-stage");
       hlsStage.appendChild(el("p", "call-hint", L("live.hlsReplay")));
+      if (state.liveReplayUrl) {
+        hlsStage.appendChild(
+          iconBtn("✕", L("live.leave"), {
+            testId: "live-replay-close",
+            onClick: function () {
+              state.liveReplayUrl = null;
+              render();
+            },
+          })
+        );
+      }
       var hlsVideos = el("div", "call-live-videos");
       hlsStage.appendChild(hlsVideos);
       sec.appendChild(hlsStage);
       setTimeout(function () {
         attachHlsPlayer(hlsVideos, dvrUrl);
       }, 0);
+    }
+
+    var replays = state.chatLiveReplays || [];
+    if (replays.length && !state.liveReplayUrl) {
+      var repBlock = el("div", "call-live-replays");
+      repBlock.appendChild(el("div", "call-conferences-title", L("live.replaySection")));
+      replays.forEach(function (session) {
+        var row = el("div", "call-conf-row");
+        row.appendChild(
+          el("span", "call-conf-label", liveDisplayTitle(session) || session.live_session_id)
+        );
+        row.appendChild(
+          iconBtn("▶", L("live.watchReplay"), {
+            testId: "live-replay-open-" + session.live_session_id,
+            onClick: function () {
+              state.liveReplayUrl = session.dvr_playlist_url;
+              render();
+            },
+          })
+        );
+        repBlock.appendChild(row);
+      });
+      sec.appendChild(repBlock);
     }
 
     if (state.activeLiveSession && state.liveKitRoom) {
@@ -478,6 +533,7 @@
     liveSessionRowFromEvent: liveSessionRowFromEvent,
     applyLiveSessionChangeEvent: applyLiveSessionChangeEvent,
     loadChatLiveSessions: loadChatLiveSessions,
+    loadChatLiveReplays: loadChatLiveReplays,
     renderLiveSection: renderLiveSection,
     disconnectLiveKitRoom: disconnectLiveKitRoom,
     liveStreamingEnabled: liveStreamingEnabled,

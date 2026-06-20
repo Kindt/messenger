@@ -105,7 +105,7 @@ public class MessageResource {
         }
         var msg = messageApplicationService.sendMessage(chatId, userId, request, replyToMsgId);
         if (msg == null) {
-            var denied = messageApplicationService.sendBlockedReason(chatId, userId);
+            var denied = messageApplicationService.sendDeniedReason(chatId, userId, request);
             if (denied.isPresent()) {
                 ApiDeniedMetrics.messageSendDenied();
                 return Response.status(Response.Status.FORBIDDEN)

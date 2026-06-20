@@ -72,6 +72,10 @@
 | **TURN relay ICE config** | `scripts/smoke-turn-relay.ps1` | manual | Extends smoke-turn; credential in env.js |
 | **TURN (QEMU)** | `scripts/smoke-turn-qemu.ps1` | manual | inner gate: `-GuestOnly`; full probe needs web VM hostfwd `:3478` |
 | **Cell multi-org (spec 011)** | `scripts/smoke-cell-multi-org-qemu.ps1` | manual | host `:18080`; creates 2 orgs via admin API |
+| **Migration import (spec 022 US9)** | `scripts/smoke-migration-import.ps1` | manual | host `:18080`; create + process telegram fixture |
+| **DLP mock bridge (spec 022 US7)** | `scripts/smoke-dlp-mock.ps1` | manual | `:8098` or `DLP_MOCK_URL`; block verdict |
+| **Federation trust (spec 022 T02308)** | `scripts/smoke-federation-trust.ps1` | manual | host `:18080`; admin trust + platform status |
+| **Phase 5 messaging (spec 022 T02301/03/06)** | `scripts/smoke-phase5-messaging.ps1` | manual | host `:18080`; poll + scheduled + reminder API |
 | **GDPR export completeness (P1-6)** | `scripts/smoke-export-gdpr-fulfillment.ps1` | manual | admin export-compliance-guide + parity API |
 | **File image resize (P1-4)** | `scripts/smoke-file-resize.ps1` | manual | host `:18080`; upload PNG → `/resize?w=32&h=32` |
 | **Export-replay non-stub (P2-4)** | `scripts/smoke-export-replay-non-stub.ps1` | manual | export_v1 gate via `smoke-export-replay-before-purge` |

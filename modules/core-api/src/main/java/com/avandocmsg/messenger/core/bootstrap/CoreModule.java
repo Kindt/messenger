@@ -149,10 +149,40 @@ public final class CoreModule {
                                                                       MessagePinCoordinator pinCoordinator,
                                                                       MessageQueryPort messageQueryPort,
                                                                       com.avandocmsg.messenger.api.mls.MlsService mlsService) {
+        return messageApplicationService(dataSource, blockRepositoryPort, sendCoordinator, editCoordinator,
+            deleteCoordinator, reactionCoordinator, pinCoordinator, messageQueryPort, mlsService, null);
+    }
+
+    public static MessageApplicationService messageApplicationService(DataSource dataSource,
+                                                                      BlockRepositoryPort blockRepositoryPort,
+                                                                      MessageSendCoordinator sendCoordinator,
+                                                                      MessageEditCoordinator editCoordinator,
+                                                                      MessageDeleteCoordinator deleteCoordinator,
+                                                                      MessageReactionCoordinator reactionCoordinator,
+                                                                      MessagePinCoordinator pinCoordinator,
+                                                                      MessageQueryPort messageQueryPort,
+                                                                      com.avandocmsg.messenger.api.mls.MlsService mlsService,
+                                                                      com.avandocmsg.messenger.api.compliance.DlpBridgeGate dlpBridgeGate) {
         return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepositoryPort(dataSource),
             blockRepositoryPort,
             sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator,
-            messageQueryPort, mlsService);
+            messageQueryPort, mlsService, dlpBridgeGate);
+    }
+
+    public static com.avandocmsg.messenger.core.port.FederationTrustPort federationTrustPort(DataSource dataSource) {
+        return new com.avandocmsg.messenger.core.adapter.persistence.JdbcFederationTrustAdapter(dataSource);
+    }
+
+    public static com.avandocmsg.messenger.core.port.ChatPollPort chatPollPort(DataSource dataSource) {
+        return new com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPollAdapter(dataSource);
+    }
+
+    public static com.avandocmsg.messenger.core.port.ScheduledMessagePort scheduledMessagePort(DataSource dataSource) {
+        return new com.avandocmsg.messenger.core.adapter.persistence.JdbcScheduledMessageAdapter(dataSource);
+    }
+
+    public static com.avandocmsg.messenger.core.port.MessageReminderPort messageReminderPort(DataSource dataSource) {
+        return new com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageReminderAdapter(dataSource);
     }
 
     public static MessageApplicationService messageApplicationService(DataSource dataSource,

@@ -47,12 +47,23 @@ public class ChatService {
     private final UuidGenerator uuidGenerator;
     private final ReadCachePort readCachePort;
     private final AppConfig appConfig;
+    private final com.avandocmsg.messenger.api.federation.FederationMemberGuard federationMemberGuard;
 
     public ChatService(ChatPersistencePort chatPersistencePort, BlockRepositoryPort blockRepositoryPort,
                        ChatReadStatePort chatReadStatePort, MessageRepositoryPort messageRepositoryPort,
                        MessageQueryPort messageQueryPort,
                        NatsOutboundPort natsOutbound, Clock clock, UuidGenerator uuidGenerator,
                        ReadCachePort readCachePort, AppConfig appConfig) {
+        this(chatPersistencePort, blockRepositoryPort, chatReadStatePort, messageRepositoryPort, messageQueryPort,
+            natsOutbound, clock, uuidGenerator, readCachePort, appConfig, null);
+    }
+
+    public ChatService(ChatPersistencePort chatPersistencePort, BlockRepositoryPort blockRepositoryPort,
+                       ChatReadStatePort chatReadStatePort, MessageRepositoryPort messageRepositoryPort,
+                       MessageQueryPort messageQueryPort,
+                       NatsOutboundPort natsOutbound, Clock clock, UuidGenerator uuidGenerator,
+                       ReadCachePort readCachePort, AppConfig appConfig,
+                       com.avandocmsg.messenger.api.federation.FederationMemberGuard federationMemberGuard) {
         this.chatPersistencePort = chatPersistencePort;
         this.blockRepositoryPort = blockRepositoryPort;
         this.chatReadStatePort = chatReadStatePort;
@@ -63,6 +74,7 @@ public class ChatService {
         this.uuidGenerator = uuidGenerator;
         this.readCachePort = readCachePort;
         this.appConfig = appConfig;
+        this.federationMemberGuard = federationMemberGuard;
     }
 
     public ChatResponse createGroup(String title, UUID ownerId, List<String> memberIds) {
@@ -195,18 +207,30 @@ public class ChatService {
     }
 
     public boolean addMember(UUID chatId, UUID actorId, UUID targetUserId) {
+        return addMemberWithReason(chatId, actorId, targetUserId).isEmpty();
+    }
+
+    /** Empty when member added; otherwise i18n key for {@link com.avandocmsg.messenger.api.errors.ApiError}. */
+    public Optional<String> addMemberWithReason(UUID chatId, UUID actorId, UUID targetUserId) {
         var role = chatPersistencePort.getMemberRole(chatId, actorId);
         if (role == null || (!role.equals("owner") && !role.equals("admin"))) {
-            return false;
+            return Optional.of("error.chat.cannot_add_member");
         }
         if (blockRepositoryPort.exists(UserId.of(targetUserId), UserId.of(actorId))) {
-            return false;
+            return Optional.of("error.chat.cannot_add_member");
+        }
+        if (federationMemberGuard != null) {
+            var fed = federationMemberGuard.denyReason(actorId, targetUserId);
+            if (fed.isPresent()) {
+                return fed;
+            }
         }
         var ok = chatPersistencePort.addMember(chatId, targetUserId, "member");
         if (ok) {
             ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, actorId, targetUserId);
+            return Optional.empty();
         }
-        return ok;
+        return Optional.of("error.chat.cannot_add_member");
     }
 
     public boolean removeMember(UUID chatId, UUID actorId, UUID targetUserId) {

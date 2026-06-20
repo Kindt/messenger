@@ -12,6 +12,9 @@ public interface MigrationImportJobPort {
 
     List<JobRow> listForOrg(UUID orgId, int limit);
 
+    /** Pending (and retryable failed) jobs for background processor, oldest first. */
+    List<JobRow> listPending(int limit);
+
     boolean updateStatus(UUID id, String status, String resultJson);
 
     record JobRow(

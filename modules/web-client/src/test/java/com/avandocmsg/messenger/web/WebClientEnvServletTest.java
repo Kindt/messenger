@@ -14,7 +14,7 @@ class WebClientEnvServletTest {
     void defaultWs_andNullIce_whenUnset() {
         String body = WebClientEnvServlet.buildEnvScriptBody(k -> null);
         assertEquals(
-            "window.__WEB_CLIENT__ = { wsUrl: \"ws://127.0.0.1:8081/ws\", iceServersJson: null, vapidPublicKey: null, disableServiceWorker: false };\n",
+            "window.__WEB_CLIENT__ = { wsUrl: \"ws://127.0.0.1:8081/ws\", iceServersJson: null, vapidPublicKey: null, watermarkText: null, disableServiceWorker: false };\n",
             body);
     }
 

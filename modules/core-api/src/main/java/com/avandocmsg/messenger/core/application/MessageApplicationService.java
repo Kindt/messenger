@@ -32,6 +32,7 @@ public final class MessageApplicationService {
     private final MessagePinCoordinator pinCoordinator;
     private final MessageQueryPort messageQueryPort;
     private final MlsService mlsService;
+    private final com.avandocmsg.messenger.api.compliance.DlpBridgeGate dlpBridgeGate;
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort) {
         this(messageRepositoryPort, chatRepositoryPort, null, null, null, null, null, null, null, null);
@@ -77,6 +78,18 @@ public final class MessageApplicationService {
                                      MessagePinCoordinator pinCoordinator,
                                      MessageQueryPort messageQueryPort,
                                      MlsService mlsService) {
+        this(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, sendCoordinator, editCoordinator,
+            deleteCoordinator, reactionCoordinator, pinCoordinator, messageQueryPort, mlsService, null);
+    }
+
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
+                                     BlockRepositoryPort blockRepositoryPort, MessageSendCoordinator sendCoordinator,
+                                     MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
+                                     MessageReactionCoordinator reactionCoordinator,
+                                     MessagePinCoordinator pinCoordinator,
+                                     MessageQueryPort messageQueryPort,
+                                     MlsService mlsService,
+                                     com.avandocmsg.messenger.api.compliance.DlpBridgeGate dlpBridgeGate) {
         this.messageRepositoryPort = messageRepositoryPort;
         this.chatRepositoryPort = chatRepositoryPort;
         this.blockRepositoryPort = blockRepositoryPort;
@@ -87,6 +100,7 @@ public final class MessageApplicationService {
         this.pinCoordinator = pinCoordinator;
         this.messageQueryPort = messageQueryPort;
         this.mlsService = mlsService;
+        this.dlpBridgeGate = dlpBridgeGate;
     }
 
     public Optional<Message> getMessageForMember(ChatId chatId, MessageId messageId, UserId viewerId) {
@@ -215,6 +229,17 @@ public final class MessageApplicationService {
         return Optional.empty();
     }
 
+    public Optional<String> sendDeniedReason(UUID chatId, UUID senderId, SendMessageRequest request) {
+        var acl = sendBlockedReason(chatId, senderId);
+        if (acl.isPresent()) {
+            return acl;
+        }
+        if (dlpBridgeGate != null && request != null) {
+            return dlpBridgeGate.blockReason(senderId, chatId, request);
+        }
+        return Optional.empty();
+    }
+
     private boolean isChannelMemberPostDenied(UUID chatId, UUID senderId) {
         if (!chatTypeWire(ChatId.of(chatId)).filter("channel"::equals).isPresent()) {
             return false;
@@ -228,6 +253,9 @@ public final class MessageApplicationService {
             throw new IllegalStateException("message write-path not wired");
         }
         if (sendBlockedReason(chatId, senderId).isPresent()) {
+            return null;
+        }
+        if (dlpBridgeGate != null && request != null && dlpBridgeGate.blockReason(senderId, chatId, request).isPresent()) {
             return null;
         }
         return sendCoordinator.send(chatId, senderId, request, replyToMsgId);

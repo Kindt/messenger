@@ -200,11 +200,11 @@ public class ChatResource {
                               AddMemberRequest request,
                               @Context SecurityContext securityContext) {
         var actorId = CurrentUserId.uuid(securityContext);
-        var ok = chatService.addMember(UuidParams.required(chatIdStr, "chat_id"), actorId,
+        var err = chatService.addMemberWithReason(UuidParams.required(chatIdStr, "chat_id"), actorId,
             UuidParams.required(request.userId(), "user_id"));
-        if (!ok) {
+        if (err.isPresent()) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.chat.cannot_add_member")))
+                .entity(new ApiError(403, messages.get(err.get())))
                 .build();
         }
         return Response.status(Response.Status.CREATED).build();

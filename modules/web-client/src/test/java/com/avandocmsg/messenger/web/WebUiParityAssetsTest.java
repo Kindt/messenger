@@ -50,6 +50,7 @@ class WebUiParityAssetsTest {
             "ui-export-utils.js",
             "ui-e2ee-mls.js",
             "ui-e2ee-utils.js",
+            "ui-offline-cache.js",
             "app.js"
         );
         var last = -1;

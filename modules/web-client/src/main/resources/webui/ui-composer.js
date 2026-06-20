@@ -174,6 +174,50 @@
       },
     });
     fmt.appendChild(bVoice);
+    if (navigator.geolocation && ctx.sendLocationMessage) {
+      fmt.appendChild(
+        ctx.iconBtn("📍", ctx.L("ui.thread.sendLocation"), {
+          testId: "composer-send-location",
+          disabled: ctx.state.busy,
+          onClick: function () {
+            ctx.sendLocationMessage();
+          },
+        })
+      );
+    }
+    if (ctx.openPollCreate) {
+      fmt.appendChild(
+        ctx.iconBtn("📊", ctx.L("ui.thread.createPoll"), {
+          testId: "composer-create-poll",
+          disabled: ctx.state.busy,
+          onClick: function () {
+            ctx.openPollCreate();
+          },
+        })
+      );
+    }
+    if (ctx.openScheduleSend) {
+      fmt.appendChild(
+        ctx.iconBtn("🕐", ctx.L("ui.thread.scheduleSend"), {
+          testId: "composer-schedule-send",
+          disabled: ctx.state.busy,
+          onClick: function () {
+            ctx.openScheduleSend();
+          },
+        })
+      );
+    }
+    if (ctx.openContactShare) {
+      fmt.appendChild(
+        ctx.iconBtn("👤", ctx.L("ui.thread.shareContact"), {
+          testId: "composer-share-contact",
+          disabled: ctx.state.busy,
+          onClick: function () {
+            ctx.openContactShare();
+          },
+        })
+      );
+    }
     fmt.appendChild(filePick);
     fmt.appendChild(ctx.el("span", "composer-md-hint", ctx.L("ui.thread.markdownHint")));
     comp.appendChild(fmt);

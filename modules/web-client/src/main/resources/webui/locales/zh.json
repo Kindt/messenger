@@ -415,7 +415,56 @@
       "ttlNone": "无",
       "ttl1min": "1 分钟",
       "ttl1hour": "1 小时",
-      "ttl24h": "24 小时"
+      "ttl24h": "24 小时",
+      "sendLocation": "发送位置",
+      "createPoll": "创建投票",
+      "scheduleSend": "定时发送",
+      "shareContact": "分享联系人"
+    },
+    "polls": {
+      "title": "投票",
+      "create": "创建投票",
+      "question": "问题",
+      "optionsHint": "选项（每行一个）",
+      "allowMultiple": "多选",
+      "submit": "发布",
+      "vote": "投票",
+      "closed": "已关闭",
+      "optionMeta": "{count} · {pct}%",
+      "totalVotes": "总票数：{count}",
+      "empty": "此聊天中没有投票。",
+      "createFailed": "无法创建投票。",
+      "voteFailed": "无法投票。",
+      "pickOption": "请至少选择一个选项。"
+    },
+    "schedule": {
+      "title": "定时发送",
+      "when": "发送时间",
+      "submit": "安排",
+      "failed": "无法安排消息。",
+      "ok": "消息已安排。",
+      "emptyDraft": "请先在输入框中输入消息文本。",
+      "whenRequired": "请选择日期和时间。"
+    },
+    "reminders": {
+      "title": "消息提醒",
+      "action": "提醒我",
+      "submit": "保存",
+      "ok": "提醒已设置。",
+      "failed": "无法创建提醒。",
+      "listTitle": "待处理提醒",
+      "preset1h": "1 小时后",
+      "preset3h": "3 小时后",
+      "presetTomorrow": "明天"
+    },
+    "contactShare": {
+      "title": "分享联系人",
+      "shareSelf": "我的资料",
+      "noContacts": "暂无联系人 — 请在「联系人」标签中添加。",
+      "failed": "无法发送联系人。"
+    },
+    "offline": {
+      "cachedThread": "离线 — 显示缓存的消息"
     },
     "message": {
       "image": "图片",
@@ -438,7 +487,9 @@
       "replyQuoteTitle": "跳转到引用消息",
       "reactionTitle": "反应 {emoji}",
       "pubLinkTitle": "创建文件公开链接（A/B/C）",
-      "linksTitle": "公开链接列表与撤销"
+      "linksTitle": "公开链接列表与撤销",
+      "locationLabel": "我的位置",
+      "locationOpen": "在地图上打开"
     },
     "actions": {
       "reply": "回复",

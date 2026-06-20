@@ -1133,6 +1133,33 @@
     cfgInp.placeholder = "{}";
     cfgInp.value = "{}";
     cfgLbl.appendChild(cfgInp);
+    const fileLbl = document.createElement("label");
+    fileLbl.className = "small";
+    fileLbl.textContent = "telegram export JSON";
+    const fileInp = document.createElement("input");
+    fileInp.type = "file";
+    fileInp.accept = "application/json,.json";
+    fileInp.setAttribute("data-testid", "admin-migration-import-file");
+    fileInp.addEventListener("change", () => {
+      const f = fileInp.files && fileInp.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const txt = String(reader.result || "");
+          JSON.parse(txt);
+          cfgInp.value = txt;
+          createMsg.textContent = "JSON loaded: " + f.name;
+        } catch (e) {
+          createMsg.textContent = "Invalid JSON: " + (e.message || String(e));
+        }
+      };
+      reader.onerror = () => {
+        createMsg.textContent = "Could not read file";
+      };
+      reader.readAsText(f);
+    });
+    fileLbl.appendChild(fileInp);
     const createBtn = document.createElement("button");
     createBtn.type = "button";
     createBtn.className = "btn btn-primary";
@@ -1160,6 +1187,7 @@
     });
     createRow.appendChild(srcLbl);
     createRow.appendChild(cfgLbl);
+    createRow.appendChild(fileLbl);
     createRow.appendChild(createBtn);
     createRow.appendChild(createMsg);
     box.appendChild(createRow);
@@ -1251,12 +1279,141 @@
     }
   }
 
+  function mountFederationTrust(summary, pre, ctx) {
+    summary.innerHTML = "";
+    summary.hidden = false;
+    pre.textContent = "Управление доверием между организациями (federation trust).";
+
+    const box = document.createElement("div");
+    box.className = "panel-form federation-trust-form";
+    box.setAttribute("data-testid", "admin-federation-trust-form");
+    const hint = document.createElement("p");
+    hint.className = "muted small";
+    hint.textContent =
+      "GET/POST /api/v1/admin/federation/trust — partner org UUID, status active|suspended|revoked.";
+    box.appendChild(hint);
+
+    const createRow = document.createElement("div");
+    createRow.className = "admin-toolbar";
+    createRow.appendChild(mkField("federationPartnerOrgId", "partner_org_id", "UUID partner org"));
+    const statusSel = document.createElement("select");
+    statusSel.id = "federationTrustStatus";
+    ["active", "suspended", "revoked"].forEach((st) => {
+      const opt = document.createElement("option");
+      opt.value = st;
+      opt.textContent = st;
+      statusSel.appendChild(opt);
+    });
+    const statusLbl = document.createElement("label");
+    statusLbl.className = "field";
+    statusLbl.appendChild(document.createTextNode("status "));
+    statusLbl.appendChild(statusSel);
+    createRow.appendChild(statusLbl);
+    const createBtn = document.createElement("button");
+    createBtn.type = "button";
+    createBtn.className = "btn btn-primary";
+    createBtn.setAttribute("data-testid", "admin-federation-trust-create");
+    createBtn.textContent = "Создать trust";
+    const createMsg = document.createElement("span");
+    createMsg.className = "muted small";
+    createBtn.addEventListener("click", async () => {
+      createMsg.textContent = "";
+      const partner = document.getElementById("federationPartnerOrgId")?.value.trim();
+      if (!partner) {
+        createMsg.textContent = "partner_org_id required";
+        return;
+      }
+      try {
+        const data = await ctx.apiFetch("/admin/federation/trust", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            partner_org_id: partner,
+            status: statusSel.value || "active",
+          }),
+        });
+        createMsg.textContent = "trust " + (data.id || "?");
+        showResult(pre, data, null);
+        await reloadTrusts();
+      } catch (e) {
+        createMsg.textContent = e.message || String(e);
+      }
+    });
+    createRow.appendChild(createBtn);
+    createRow.appendChild(createMsg);
+    box.appendChild(createRow);
+
+    const listRow = document.createElement("div");
+    listRow.className = "admin-toolbar";
+    const reloadBtn = document.createElement("button");
+    reloadBtn.type = "button";
+    reloadBtn.className = "btn btn-secondary";
+    reloadBtn.textContent = "Обновить список";
+    const listMsg = document.createElement("span");
+    listMsg.className = "muted small";
+    listRow.appendChild(reloadBtn);
+    listRow.appendChild(listMsg);
+    box.appendChild(listRow);
+
+    const trustsWrap = document.createElement("div");
+    trustsWrap.className = "json-table-wrap";
+    trustsWrap.setAttribute("data-testid", "admin-federation-trust-list");
+    box.appendChild(trustsWrap);
+
+    async function reloadTrusts() {
+      listMsg.textContent = "";
+      try {
+        const rows = await ctx.apiFetch("/admin/federation/trust");
+        trustsWrap.innerHTML = "";
+        if (!Array.isArray(rows) || rows.length === 0) {
+          trustsWrap.textContent = "Нет trust записей.";
+          return;
+        }
+        const table = document.createElement("table");
+        table.className = "json-panel-table";
+        const head = document.createElement("thead");
+        const hr = document.createElement("tr");
+        ["id", "partner_org_id", "status", "expires_at"].forEach((h) => {
+          const th = document.createElement("th");
+          th.textContent = h;
+          hr.appendChild(th);
+        });
+        head.appendChild(hr);
+        table.appendChild(head);
+        const body = document.createElement("tbody");
+        rows.forEach((r) => {
+          const tr = document.createElement("tr");
+          ["id", "partner_org_id", "status", "expires_at"].forEach((k) => {
+            const td = document.createElement("td");
+            td.textContent = r[k] != null ? String(r[k]) : "";
+            tr.appendChild(td);
+          });
+          body.appendChild(tr);
+        });
+        table.appendChild(body);
+        trustsWrap.appendChild(table);
+        listMsg.textContent = rows.length + " trust(s)";
+      } catch (e) {
+        listMsg.textContent = e.message || String(e);
+      }
+    }
+
+    reloadBtn.addEventListener("click", () => reloadTrusts().catch(() => {}));
+    reloadTrusts().catch(() => {});
+
+    summary.appendChild(box);
+    if (global.AdminUi) {
+      AdminUi.showJsonBlock(true);
+    }
+  }
+
   const HANDLERS = {
     "plugins-l0-wizard": mountL0Wizard,
     "core-legal-hold": mountLegalHold,
     "core-directory-sync": mountDirectorySync,
     "core-ip-allowlist": mountIpAllowlist,
     "core-migration-import": mountMigrationImport,
+    "core-federation-trust": mountFederationTrust,
   };
 
   function tryMount(section, ctx) {

@@ -11,9 +11,14 @@ import java.util.List;
 public record PluginResponse(
     List<PluginMessage> messages,
     List<PluginCard> cards,
-    PluginDefer defer
+    PluginDefer defer,
+    String dlpVerdict
 ) {
     public static PluginResponse text(String markdown) {
-        return new PluginResponse(List.of(PluginMessage.markdown(markdown)), null, null);
+        return new PluginResponse(List.of(PluginMessage.markdown(markdown)), null, null, null);
+    }
+
+    public PluginResponse(List<PluginMessage> messages, List<PluginCard> cards, PluginDefer defer) {
+        this(messages, cards, defer, null);
     }
 }

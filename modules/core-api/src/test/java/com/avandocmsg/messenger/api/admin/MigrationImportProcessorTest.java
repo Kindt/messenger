@@ -39,6 +39,11 @@ class MigrationImportProcessorTest {
             }
 
             @Override
+            public List<JobRow> listPending(int limit) {
+                return List.of();
+            }
+
+            @Override
             public boolean updateStatus(UUID id, String newStatus, String resultJson) {
                 statusHolder[0] = newStatus;
                 return true;
@@ -74,6 +79,11 @@ class MigrationImportProcessorTest {
 
             @Override
             public List<JobRow> listForOrg(UUID orgId, int limit) {
+                return List.of();
+            }
+
+            @Override
+            public List<JobRow> listPending(int limit) {
                 return List.of();
             }
 
