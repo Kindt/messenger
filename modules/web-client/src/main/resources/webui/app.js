@@ -230,6 +230,7 @@
     rtcPendingCandidates: {},
     callPanelToggleBusy: false,
     mediaCaps: null,
+    platformCaps: null,
     blobUrls: [],
     unreadByChat: {},
     userSearchHits: null,
@@ -2505,6 +2506,13 @@
     }
   }
 
+  function closeMobileThread() {
+    persistCurrentComposerDraft();
+    state.selectedId = null;
+    state.discussionThreadRootId = null;
+    render();
+  }
+
   function openChatById(chatId, options) {
     options = options || {};
     state.discussionThreadRootId = null;
@@ -4470,6 +4478,20 @@
     }
   }
 
+  async function loadPlatformCaps() {
+    try {
+      state.platformCaps = await apiJson("/platform/capabilities", { method: "GET", noAuth: true });
+    } catch (e) {
+      state.platformCaps = null;
+    }
+  }
+
+  function isPlatformAddonEnabled(addonId) {
+    if (!addonId || !state.platformCaps || !state.platformCaps.modules) return false;
+    var mod = state.platformCaps.modules[addonId];
+    return !!(mod && mod.state === "enabled");
+  }
+
   async function loadChats() {
     if (!state.tokens) return;
     var list = await apiJson("/chats", { method: "GET" });
@@ -5524,6 +5546,7 @@
       if (opts && opts.disabled) btn.disabled = true;
       if (opts && opts.onClick) btn.onclick = opts.onClick;
       if (opts && opts.submit) btn.type = "submit";
+      if (opts && opts.cls) btn.className += " " + opts.cls;
       return btn;
     }
     return ib(
@@ -5586,7 +5609,7 @@
 
   function shellE2eeStatusIcon(count) {
     var tip = L("ui.shell.e2eeStatusTip", { count: count });
-    var cls = "e2ee-status";
+    var cls = "e2ee-status hdr-btn-optional";
     if (!count) cls += " count-zero";
     var span = shellStatusIcon("🔐", tip, cls);
     span.setAttribute("data-testid", "e2ee-status");
@@ -5947,6 +5970,7 @@
     state.chats = [];
     state.messages = [];
     state.mediaCaps = null;
+    state.platformCaps = null;
     state.unreadByChat = {};
     state.userSearchHits = null;
     state.userSearchBusy = false;
@@ -7224,7 +7248,12 @@
   function renderMain() {
     var root = document.getElementById("root");
     root.innerHTML = "";
-    var shell = el("div", "app-shell messenger-shell" + (state.callPanelOpen ? " call-open" : ""));
+    var shell = el(
+      "div",
+      "app-shell messenger-shell" +
+        (state.callPanelOpen ? " call-open" : "") +
+        (state.selectedId ? " thread-focus" : "")
+    );
     if (state.networkOnline === false) {
       var netBanner = el("div", "network-banner");
       netBanner.textContent = L("errors.networkOffline");
@@ -7294,7 +7323,7 @@
     }
     var themeBtn = el(
       "button",
-      "btn btn-ghost btn-icon",
+      "btn btn-ghost btn-icon hdr-btn-optional",
       state.appearance === "light" ? "🌙" : "☀️"
     );
     themeBtn.type = "button";
@@ -7304,7 +7333,7 @@
       toggleAppearance();
     };
     hdrR.appendChild(themeBtn);
-    var notifBtn = el("button", "btn btn-ghost btn-icon", notificationsAllowed() ? "🔔" : "🔕");
+    var notifBtn = el("button", "btn btn-ghost btn-icon hdr-btn-optional", notificationsAllowed() ? "🔔" : "🔕");
     notifBtn.type = "button";
     notifBtn.title = notificationsAllowed()
       ? L("ui.shell.notifDisable")
@@ -7408,7 +7437,10 @@
       wrap.appendChild(el("div", "error-banner", state.error));
       shell.appendChild(wrap);
     }
-    var main = el("div", "messenger");
+    var main = el(
+      "div",
+      "messenger" + (state.selectedId ? " has-selection" : "")
+    );
     var side = el("aside", "sidebar");
     var sh = el("div", "sidebar-header");
     var search = el("input");
@@ -7758,6 +7790,17 @@
         return x.id === state.selectedId;
       });
       var th = el("div", "thread-header");
+      if (state.selectedId) {
+        th.appendChild(
+          iconBtn("←", L("ui.shell.backToChats"), {
+            cls: "thread-back-btn",
+            testId: "thread-back",
+            onClick: function () {
+              closeMobileThread();
+            },
+          })
+        );
+      }
       var thMain = el("div", "thread-header-main");
       thMain.appendChild(el("div", "thread-title", (sel && sel.title) || state.selectedId));
       if (state.discussionThreadRootId) {
@@ -7833,6 +7876,7 @@
         if (sel.type === "group") {
           thActs.appendChild(
             iconBtn("👥", L("ui.common.members"), {
+              testId: "chat-members-button",
               disabled: state.busy,
               onClick: function () {
                 openMembersModal();
@@ -8077,6 +8121,7 @@
     }
     if (state.forwardPick) {
       var fOv = el("div", "forward-overlay");
+      fOv.setAttribute("data-testid", "forward-overlay");
       var fCard = el("div", "forward-card");
       fCard.appendChild(el("h2", "forward-title", L("ui.forward.title")));
       fCard.appendChild(el("p", "forward-snippet", state.forwardPick.snippet));
@@ -8100,6 +8145,7 @@
         });
       fCard.appendChild(fList);
       var fCancel = iconBtn("✕", L("ui.common.cancel"), {
+        testId: "forward-cancel",
         onClick: function () {
           closeForwardPicker();
         },
@@ -8113,6 +8159,7 @@
     }
     if (state.membersModalOpen) {
       var mOv = el("div", "settings-overlay");
+      mOv.setAttribute("data-testid", "members-overlay");
       var mCard = el("div", "settings-card members-card");
       var selChat = currentChat();
       var mTitle = el("h2", "settings-title");
@@ -8225,6 +8272,7 @@
       }
       mCard.appendChild(mBody);
       var mClose = iconBtn("✕", L("ui.common.close"), {
+        testId: "members-close",
         primary: true,
         onClick: function () {
           closeMembersModal();
@@ -8443,6 +8491,7 @@
       var pendingMsgId = openChatFromUrlParam();
       await loadMyProfile({ applyLocale: true });
       await loadMediaCaps();
+      await loadPlatformCaps();
       await loadServerVersion();
       await loadE2eeStatus();
       await loadLocalKeyPackageMeta();

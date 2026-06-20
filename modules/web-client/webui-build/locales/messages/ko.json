@@ -335,7 +335,8 @@
       "incomingCall": "수신 통화 · {chat} · {user}",
       "accept": "수락",
       "decline": "거절",
-      "exportBanner": "「{chat}」 내보내기{bg}: {status}"
+      "exportBanner": "「{chat}」 내보내기{bg}: {status}",
+      "backToChats": "채팅 목록으로"
     },
     "sidebar": {
       "searchPlaceholder": "채팅 또는 사용자(2자 이상)…",
@@ -380,7 +381,9 @@
       }
     },
     "thread": {
-      "empty": "왼쪽에서 채팅을 선택하거나 그룹을 만드세요.",
+      "empty": "채팅을 선택하거나 그룹을 만드세요.",
+      "backToChat": "채팅으로",
+      "discussion": "토론",
       "messageTtl": "채팅 메시지 TTL: {ttl}",
       "unmute": "소리 켜기",
       "mute": "음소거",

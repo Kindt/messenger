@@ -31,7 +31,10 @@
   }
 
   function liveStreamingEnabled(state) {
-    return !!(state.mediaCaps && state.mediaCaps.live_streaming_enabled);
+    if (state.mediaCaps && state.mediaCaps.live_streaming_enabled) return true;
+    return !!(state.platformCaps && state.platformCaps.modules
+      && state.platformCaps.modules["addon-live"]
+      && state.platformCaps.modules["addon-live"].state === "enabled");
   }
 
   function activeLiveInChat(state, chatId) {

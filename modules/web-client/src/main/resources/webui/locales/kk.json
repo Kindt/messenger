@@ -335,7 +335,8 @@
       "incomingCall": "Кіріс қоңырау · {chat} · {user}",
       "accept": "Қабылдау",
       "decline": "Қабылдамау",
-      "exportBanner": "«{chat}» экспорты{bg}: {status}"
+      "exportBanner": "«{chat}» экспорты{bg}: {status}",
+      "backToChats": "Чаттар тізіміне"
     },
     "sidebar": {
       "searchPlaceholder": "Чаттар немесе пайдаланушылар (2 таңбадан)…",
@@ -380,7 +381,9 @@
       }
     },
     "thread": {
-      "empty": "Сол жақтан чат таңдаңыз немесе топ жасаңыз.",
+      "empty": "Чат таңдаңыз немесе топ жасаңыз.",
+      "backToChat": "Чатқа",
+      "discussion": "Талқылау",
       "messageTtl": "Чаттағы хабарлама TTL: {ttl}",
       "unmute": "Дыбысты қосу",
       "mute": "Дыбыссыз",

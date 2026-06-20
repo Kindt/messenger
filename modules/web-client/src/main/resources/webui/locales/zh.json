@@ -335,7 +335,8 @@
       "incomingCall": "来电 · {chat} · {user}",
       "accept": "接听",
       "decline": "拒绝",
-      "exportBanner": "导出「{chat}」{bg}：{status}"
+      "exportBanner": "导出「{chat}」{bg}：{status}",
+      "backToChats": "返回聊天列表"
     },
     "sidebar": {
       "searchPlaceholder": "聊天或用户（至少 2 个字符）…",
@@ -380,7 +381,9 @@
       }
     },
     "thread": {
-      "empty": "请在左侧选择聊天或创建群组。",
+      "empty": "请选择聊天或创建群组。",
+      "backToChat": "返回聊天",
+      "discussion": "讨论",
       "messageTtl": "聊天消息 TTL：{ttl}",
       "unmute": "开启声音",
       "mute": "静音",

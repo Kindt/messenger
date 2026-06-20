@@ -335,7 +335,8 @@
       "incomingCall": "Входящий звонок · {chat} · {user}",
       "accept": "Принять",
       "decline": "Отклонить",
-      "exportBanner": "Экспорт «{chat}»{bg}: {status}"
+      "exportBanner": "Экспорт «{chat}»{bg}: {status}",
+      "backToChats": "К списку чатов"
     },
     "sidebar": {
       "searchPlaceholder": "Чаты или пользователи (от 2 симв.)…",
@@ -380,7 +381,9 @@
       }
     },
     "thread": {
-      "empty": "Выберите чат слева или создайте группу.",
+      "empty": "Выберите чат или создайте группу.",
+      "backToChat": "К чату",
+      "discussion": "Обсуждение",
       "messageTtl": "TTL сообщений в чате: {ttl}",
       "unmute": "Вкл. звук",
       "mute": "Без звука",

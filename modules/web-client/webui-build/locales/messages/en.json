@@ -335,7 +335,8 @@
       "incomingCall": "Incoming call · {chat} · {user}",
       "accept": "Accept",
       "decline": "Decline",
-      "exportBanner": "Export \"{chat}\"{bg}: {status}"
+      "exportBanner": "Export \"{chat}\"{bg}: {status}",
+      "backToChats": "Back to chats"
     },
     "sidebar": {
       "searchPlaceholder": "Chats or users (2+ chars)…",
@@ -380,7 +381,9 @@
       }
     },
     "thread": {
-      "empty": "Select a chat on the left or create a group.",
+      "empty": "Select a chat or create a group.",
+      "backToChat": "Back to chat",
+      "discussion": "Discussion",
       "messageTtl": "Message TTL in chat: {ttl}",
       "unmute": "Unmute",
       "mute": "Mute",

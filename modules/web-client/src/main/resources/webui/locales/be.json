@@ -335,7 +335,8 @@
       "incomingCall": "Уваходны званок · {chat} · {user}",
       "accept": "Прыняць",
       "decline": "Адхіліць",
-      "exportBanner": "Экспарт «{chat}»{bg}: {status}"
+      "exportBanner": "Экспарт «{chat}»{bg}: {status}",
+      "backToChats": "Да спісу чатаў"
     },
     "sidebar": {
       "searchPlaceholder": "Чаты або карыстальнікі (ад 2 сімв.)…",
@@ -380,7 +381,9 @@
       }
     },
     "thread": {
-      "empty": "Абярыце чат злева або стварыце групу.",
+      "empty": "Абярыце чат або стварыце групу.",
+      "backToChat": "Да чата",
+      "discussion": "Абмеркаванне",
       "messageTtl": "TTL паведамленняў у чаце: {ttl}",
       "unmute": "Укл. гук",
       "mute": "Без гуку",

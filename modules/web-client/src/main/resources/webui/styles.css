@@ -10,8 +10,15 @@
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   color: var(--text);
+  overflow-x: hidden;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 button,
@@ -28,23 +35,358 @@ button {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
-.messenger-shell.call-open .messenger {
-  grid-template-columns: 280px minmax(0, 1fr) minmax(260px, 320px);
+.messenger-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.messenger-shell > .messenger {
+  flex: 1;
+  min-height: 0;
+}
+
+.messenger-shell.call-open {
+  flex-direction: row;
+  min-height: 0;
+}
+
+.messenger-shell.call-open > .messenger {
+  flex: 1;
+  min-width: 0;
+}
+
+.messenger-shell.call-open > .call-panel {
+  width: min(320px, 36vw);
+  flex-shrink: 0;
+  max-height: none;
+}
+
+.thread-back-btn {
+  display: none !important;
 }
 
 @media (max-width: 960px) {
-  .messenger-shell.call-open .messenger {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(200px, 40vh) minmax(0, 1fr);
+  .messenger-shell.call-open {
+    flex-direction: column;
   }
 
-  .messenger-shell.call-open .call-panel {
+  .messenger-shell.call-open > .call-panel {
+    width: 100%;
+    max-height: 42vh;
     border-left: none;
     border-bottom: 1px solid var(--border);
-    max-height: 40vh;
     overflow-y: auto;
+    order: 0;
+  }
+
+  .messenger-shell.call-open > .messenger {
+    order: 1;
+    min-height: 0;
+  }
+
+  .messenger {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .messenger:not(.has-selection) .thread {
+    display: none;
+  }
+
+  .messenger.has-selection .sidebar {
+    display: none;
+  }
+
+  .messenger.has-selection .empty-thread {
+    display: none;
+  }
+
+  .thread-back-btn {
+    display: inline-flex !important;
+    flex-shrink: 0;
+  }
+
+  .thread-header {
+    align-items: center;
+    padding-left: max(8px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
+
+  .sidebar {
+    border-right: none;
+  }
+
+  .global-search-wrap {
+    display: none;
+  }
+
+  .msg-actions {
+    opacity: 1;
+  }
+
+  .msg {
+    max-width: 92%;
+  }
+
+  .thread-header-actions .btn-icon,
+  .msg-actions .btn-icon {
+    min-width: 2rem;
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .sidebar-search,
+  .thread-search-input,
+  .composer textarea,
+  .auth-form .auth-field input {
+    font-size: 16px;
+  }
+
+  .messenger-shell.thread-focus .app-header-left,
+  .messenger-shell.thread-focus .global-search-panel {
+    display: none;
+  }
+
+  .messenger-shell.thread-focus .app-header {
+    padding: 6px max(10px, env(safe-area-inset-right, 0px)) 6px
+      max(10px, env(safe-area-inset-left, 0px));
+  }
+
+  .messenger-shell.thread-focus .hdr-btn-optional {
+    display: none !important;
+  }
+
+  .messenger-shell.thread-focus .app-header-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .chat-item-row {
+    min-height: 44px;
+  }
+
+  .thread-header {
+    flex-wrap: wrap;
+  }
+
+  .thread-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .messages {
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
+
+  .settings-overlay,
+  .forward-overlay {
+    padding: max(12px, env(safe-area-inset-top, 0px))
+      max(12px, env(safe-area-inset-right, 0px))
+      max(12px, env(safe-area-inset-bottom, 0px))
+      max(12px, env(safe-area-inset-left, 0px));
+  }
+
+  .forward-card,
+  .members-card,
+  .settings-card {
+    max-height: min(88vh, calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
+  }
+
+  .forward-chat-item {
+    min-height: 44px;
+    padding: 12px;
+  }
+
+  .composer {
+    gap: 8px;
+  }
+
+  .composer-md-hint {
+    display: none;
+  }
+
+  .composer-format .btn-icon {
+    min-width: 2.25rem;
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .composer-ttl-row {
+    flex-wrap: wrap;
+  }
+
+  .composer-send-btn {
+    min-width: 2.75rem;
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .composer-reply-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .call-panel-head {
+    padding-left: max(10px, env(safe-area-inset-left, 0px));
+    padding-right: max(10px, env(safe-area-inset-right, 0px));
+  }
+
+  .call-mode-bar {
+    flex-wrap: wrap;
+  }
+
+  .call-toolbar {
+    flex-wrap: wrap;
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .auth-shell {
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: max(16px, env(safe-area-inset-top, 0px))
+      max(12px, env(safe-area-inset-right, 0px))
+      max(16px, env(safe-area-inset-bottom, 0px))
+      max(12px, env(safe-area-inset-left, 0px));
+  }
+
+  .auth-card {
+    max-width: 100%;
+    margin: auto 0;
+  }
+
+  .auth-tab {
+    min-height: 44px;
+  }
+
+  .auth-submit {
+    min-height: 44px;
+  }
+
+  .auth-error,
+  .auth-foot,
+  .error-banner {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .auth-sso-btn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .export-progress-banner,
+  .sw-update-banner,
+  .network-banner {
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+    line-height: 1.35;
+    text-align: center;
+  }
+
+  .export-progress-banner .btn-icon,
+  .sw-update-banner .btn-icon {
+    min-width: 2.25rem;
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .incoming-call-banner {
+    margin: 0 max(8px, env(safe-area-inset-left, 0px)) 8px
+      max(8px, env(safe-area-inset-right, 0px));
+    padding: 10px max(12px, env(safe-area-inset-right, 0px)) 10px
+      max(12px, env(safe-area-inset-left, 0px));
+  }
+
+  .incoming-call-text {
+    flex: 1 1 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .incoming-call-actions {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+  }
+
+  .incoming-call-actions .btn-icon {
+    min-width: 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .banner-wrap {
+    margin-left: max(8px, env(safe-area-inset-left, 0px));
+    margin-right: max(8px, env(safe-area-inset-right, 0px));
+  }
+
+  .banner-wrap .error-banner,
+  .banner-wrap .info-banner {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .conference-live-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
+
+  .conference-live-banner-text {
+    white-space: normal;
+  }
+
+  .sidebar-folder-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar-folder-chip {
+    flex-shrink: 0;
+  }
+
+  .sidebar-tab {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 520px) {
+  .auth-shell-glow-a,
+  .auth-shell-glow-b {
+    opacity: 0.35;
+  }
+
+  .auth-card-brand-tag {
+    font-size: 0.72rem;
+  }
+
+  .app-header {
+    padding: 8px max(10px, env(safe-area-inset-right, 0px)) 8px
+      max(10px, env(safe-area-inset-left, 0px));
+  }
+
+  .app-header-left h1 {
+    display: none;
+  }
+
+  .hdr-btn-optional {
+    display: none !important;
+  }
+
+  .app-header-right {
+    gap: 2px;
   }
 }
 
@@ -52,9 +394,11 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px
+    max(16px, env(safe-area-inset-left, 0px));
   border-bottom: 1px solid var(--border);
   background: linear-gradient(180deg, var(--panel2), var(--panel));
+  flex-shrink: 0;
 }
 
 .app-header-left {
@@ -335,6 +679,8 @@ button {
   align-items: center;
   justify-content: center;
   padding: 16px;
+  overscroll-behavior: contain;
+  touch-action: manipulation;
 }
 
 .forward-card {
@@ -840,6 +1186,25 @@ button {
 
 .thread-title {
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thread-discussion-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  min-width: 0;
+}
+
+.thread-discussion-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .thread-typing {
@@ -1379,9 +1744,12 @@ button {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 16px 12px;
+  padding: 10px max(16px, env(safe-area-inset-right, 0px))
+    max(12px, calc(12px + env(safe-area-inset-bottom, 0px))) 10px
+    max(16px, env(safe-area-inset-left, 0px));
   border-top: 1px solid var(--border);
   background: var(--panel);
+  flex-shrink: 0;
 }
 
 .composer-format {

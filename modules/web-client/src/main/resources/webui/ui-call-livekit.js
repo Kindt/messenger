@@ -2,7 +2,10 @@
   "use strict";
 
   function groupCallSfuEnabled(state) {
-    return !!(state.mediaCaps && state.mediaCaps.group_call_sfu_enabled);
+    if (state.mediaCaps && state.mediaCaps.group_call_sfu_enabled) return true;
+    return !!(state.platformCaps && state.platformCaps.modules
+      && state.platformCaps.modules["addon-live"]
+      && state.platformCaps.modules["addon-live"].state === "enabled");
   }
 
   function ensureLiveKitClient() {
