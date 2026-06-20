@@ -6,10 +6,9 @@ import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.filter.UserPrincipal;
 import com.avandocmsg.messenger.api.params.InvalidUuidParameterException;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.testsupport.EmptyChatPersistencePort;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRetentionPolicyAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcRetentionPolicyAdapter;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.export.AdminExportComplianceSeed;
 import com.avandocmsg.messenger.api.export.ExportFileAccess;
 import com.avandocmsg.messenger.api.export.ExportJobEnqueuer;
@@ -21,7 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.core.SecurityContext;
 import org.junit.jupiter.api.Test;
 
-import java.time.Clock;
 import java.security.Principal;
 import java.util.Set;
 import java.util.UUID;
@@ -41,11 +39,11 @@ class AdminResourceTest {
             }
         };
         var audit = new JdbcAuditAdapter((javax.sql.DataSource) null);
-        var chatRepo = new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard());
+        var chatRepo = new EmptyChatPersistencePort();
         var resource = new AdminResource(cfg, audit,
             CoreModule.organizationApplicationService(null, UuidGenerator.standard()),
             new JdbcRetentionPolicyAdapter((javax.sql.DataSource) null),
-            new JdbcChatPersistenceAdapter(chatRepo),
+            chatRepo,
             new JdbcChatRetentionPolicyAdapter((javax.sql.DataSource) null),
             new ExportSuggestedHandler(audit),
             mock(AdminExportComplianceSeed.class),
@@ -174,7 +172,7 @@ class AdminResourceTest {
         return new AdminResource(cfg, audit,
             CoreModule.organizationApplicationService(null, UuidGenerator.standard()),
             new JdbcRetentionPolicyAdapter((javax.sql.DataSource) null),
-            new JdbcChatPersistenceAdapter(new ChatRepository(null, Clock.systemUTC(), UuidGenerator.standard())),
+            new EmptyChatPersistencePort(),
             new JdbcChatRetentionPolicyAdapter((javax.sql.DataSource) null),
             new ExportSuggestedHandler(audit),
             mock(AdminExportComplianceSeed.class),

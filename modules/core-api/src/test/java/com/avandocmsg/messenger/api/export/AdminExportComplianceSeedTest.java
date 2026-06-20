@@ -8,8 +8,7 @@ import com.avandocmsg.messenger.api.files.dto.FileUploadResponse;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.mls.MlsMessageTypes;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.core.port.ChatRetentionPolicyPort;
 import org.junit.jupiter.api.Test;
 
@@ -36,7 +35,7 @@ class AdminExportComplianceSeedTest {
         var chatId = UUID.randomUUID();
         var chatService = mock(ChatService.class);
         var messageApplicationService = mock(MessageApplicationService.class);
-        var chatRepository = mock(ChatRepository.class);
+        var chatRepository = mock(ChatPersistencePort.class);
         var retentionRepo = mock(ChatRetentionPolicyPort.class);
 
         when(chatService.createGroup(eq("export-compliance-smoke"), eq(actor), eq(List.of())))
@@ -55,7 +54,7 @@ class AdminExportComplianceSeedTest {
 
         var seed = new AdminExportComplianceSeed(
             chatService, messageApplicationService, mock(FileService.class),
-            new JdbcChatPersistenceAdapter(chatRepository), retentionRepo);
+            chatRepository, retentionRepo);
         var result = seed.prepare(actor, new AdminExportCompliancePrepRequest(null, true, 3, false, null));
 
         assertEquals(chatId.toString(), result.response().chatId());
@@ -71,7 +70,7 @@ class AdminExportComplianceSeedTest {
         var chatService = mock(ChatService.class);
         var messageApplicationService = mock(MessageApplicationService.class);
         var fileService = mock(FileService.class);
-        var chatRepository = mock(ChatRepository.class);
+        var chatRepository = mock(ChatPersistencePort.class);
         var retentionRepo = mock(ChatRetentionPolicyPort.class);
 
         when(chatService.createGroup(eq("export-compliance-smoke"), eq(actor), eq(List.of())))
@@ -89,7 +88,7 @@ class AdminExportComplianceSeedTest {
             .thenReturn(new FileUploadResponse(fileId, "smoke.txt", "text/plain", 12, "/api/v1/files/" + fileId + "/download"));
 
         var seed = new AdminExportComplianceSeed(chatService, messageApplicationService, fileService,
-            new JdbcChatPersistenceAdapter(chatRepository), retentionRepo);
+            chatRepository, retentionRepo);
         var result = seed.prepare(actor, new AdminExportCompliancePrepRequest(null, true, 1, true, "smoke.txt"));
 
         assertEquals(fileId, result.response().fileId());
@@ -101,14 +100,14 @@ class AdminExportComplianceSeedTest {
     void prepare_existingChat_requiresExists() {
         var actor = UUID.randomUUID();
         var chatId = UUID.randomUUID();
-        var chatRepository = mock(ChatRepository.class);
+        var chatRepository = mock(ChatPersistencePort.class);
         when(chatRepository.chatExists(chatId)).thenReturn(false);
 
         var seed = new AdminExportComplianceSeed(
             mock(ChatService.class),
             mock(MessageApplicationService.class),
             mock(FileService.class),
-            new JdbcChatPersistenceAdapter(chatRepository),
+            chatRepository,
             mock(ChatRetentionPolicyPort.class));
 
         assertThrows(IllegalArgumentException.class,
@@ -121,7 +120,7 @@ class AdminExportComplianceSeedTest {
             mock(ChatService.class),
             mock(MessageApplicationService.class),
             mock(FileService.class),
-            new JdbcChatPersistenceAdapter(mock(ChatRepository.class)),
+            mock(ChatPersistencePort.class),
             mock(ChatRetentionPolicyPort.class));
 
         assertThrows(IllegalArgumentException.class,

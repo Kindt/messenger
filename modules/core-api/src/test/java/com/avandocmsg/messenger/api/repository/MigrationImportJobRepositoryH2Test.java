@@ -110,11 +110,13 @@ class MigrationImportJobRepositoryH2Test {
             {"export_json":{"name":"x","messages":[{"id":1,"type":"message","text":"hi"}]}}
             """;
         var id = repository.insert(orgId, "telegram_export_v1", config, userId);
-        var chatRepo = new ChatRepository(ds, Clock.systemUTC(), UuidGenerator.standard());
+        var clock = Clock.systemUTC();
+        var uuidGen = UuidGenerator.standard();
+        var chatPersistence = new JdbcChatPersistenceAdapter(ds, null, clock, uuidGen, 0);
         var msgPort = CoreModule.messageRepositoryPort(ds);
         var processor = new MigrationImportProcessor(
             new JdbcMigrationImportJobAdapter(ds),
-            new JdbcChatPersistenceAdapter(chatRepo),
+            chatPersistence,
             msgPort,
             UuidGenerator.standard());
         var done = processor.process(id);

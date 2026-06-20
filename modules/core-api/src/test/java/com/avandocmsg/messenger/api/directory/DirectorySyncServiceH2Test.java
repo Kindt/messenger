@@ -4,7 +4,6 @@ import com.avandocmsg.messenger.api.auth.policy.AuthPolicyRepository;
 import com.avandocmsg.messenger.api.auth.policy.AuthProviderEntry;
 import com.avandocmsg.messenger.api.auth.policy.OrgAuthPolicyRow;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrganizationLookupAdapter;
-import com.avandocmsg.messenger.api.repository.OrganizationRepository;
 import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcDirectorySyncRunJdbcRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcDirectorySyncRunRepositoryAdapter;
@@ -94,12 +93,11 @@ class DirectorySyncServiceH2Test {
         }
 
         var authPolicyRepository = new AuthPolicyRepository(ds);
-        var orgRepo = new OrganizationRepository(ds, java.time.Clock.systemUTC(), UuidGenerator.standard());
         var runRepo = new JdbcDirectorySyncRunRepositoryAdapter(new JdbcDirectorySyncRunJdbcRepository(ds));
-        var userRepo = new JdbcOrgUserDirectoryAdapter(new UserRepository(ds));
+        var userRepo = new JdbcOrgUserDirectoryAdapter(ds);
         ldapClient = new StubLdapClient();
         service = new DirectorySyncService(
-            authPolicyRepository, new JdbcOrganizationLookupAdapter(orgRepo), runRepo, userRepo, ldapClient, UuidGenerator.standard());
+            authPolicyRepository, new JdbcOrganizationLookupAdapter(ds, java.time.Clock.systemUTC(), UuidGenerator.standard()), runRepo, userRepo, ldapClient, UuidGenerator.standard());
 
         var ldapProvider = new AuthProviderEntry(
             "ldap1", "ldap", "corp", "Corp LDAP", 0, true, null, "applied", null,

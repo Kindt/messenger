@@ -1,8 +1,7 @@
 package com.avandocmsg.messenger.api.export;
 
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.port.AuditPort;
@@ -48,7 +47,7 @@ class ExportSuggestedHandlerTest {
         var auto = new ExportAutoQueueOnSuggested(
             enqueuer,
             new JdbcExportJobAdapter(jobs),
-            new JdbcChatPersistenceAdapter(ownerRepo(chatId, ownerId)),
+            ownerRepo(chatId, ownerId),
             audit,
             Optional.of(ownerId),
             1440
@@ -68,7 +67,7 @@ class ExportSuggestedHandlerTest {
         assertTrue(audit.actions.contains(ExportAutoQueueOnSuggested.AUDIT_AUTO_QUEUED));
     }
 
-    private static ChatRepository ownerRepo(UUID chatId, UUID ownerId) {
+    private static ChatPersistencePort ownerRepo(UUID chatId, UUID ownerId) {
         return new ExportResourceTest.TestChatRepository(chatId, ownerId, "owner") {
             @Override
             public Optional<UUID> findOwnerId(UUID id) {

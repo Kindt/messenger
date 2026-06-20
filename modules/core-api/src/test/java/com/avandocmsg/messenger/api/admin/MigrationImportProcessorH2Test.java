@@ -2,7 +2,6 @@ package com.avandocmsg.messenger.api.admin;
 
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcMigrationImportJobAdapter;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MigrationImportJobRepository;
 import com.avandocmsg.messenger.core.bootstrap.CoreModule;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
@@ -109,11 +108,13 @@ class MigrationImportProcessorH2Test {
     void process_importsTelegramMessagesWithIdempotency() throws Exception {
         var config = "{\"export_json\":{\"name\":\"TG history\",\"messages\":[{\"id\":1,\"type\":\"message\",\"text\":\"one\"},{\"id\":2,\"type\":\"message\",\"text\":\"two\"}]}}";
         var jobId = jobRepository.insert(orgId, "telegram_export_v1", config, userId);
-        var chatRepo = new ChatRepository(ds, Clock.systemUTC(), UuidGenerator.standard());
+        var clock = Clock.systemUTC();
+        var uuidGen = UuidGenerator.standard();
+        var chatPersistence = new JdbcChatPersistenceAdapter(ds, null, clock, uuidGen, 0);
         var msgPort = CoreModule.messageRepositoryPort(ds);
         var processor = new MigrationImportProcessor(
             new JdbcMigrationImportJobAdapter(ds),
-            new JdbcChatPersistenceAdapter(chatRepo),
+            chatPersistence,
             msgPort,
             UuidGenerator.standard());
 

@@ -5,12 +5,11 @@ import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.export.dto.ExportAcceptedResponse;
 import com.avandocmsg.messenger.api.filter.UserPrincipal;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRetentionPolicyAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcRetentionPolicyAdapter;
 import com.avandocmsg.messenger.core.port.AuditPort;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
@@ -31,7 +30,7 @@ class AdminExportEnqueueTest {
     @Test
     void requestExport_disabled_returns404() {
         var chatId = UUID.randomUUID();
-        var chats = mock(ChatRepository.class);
+        var chats = mock(ChatPersistencePort.class);
         var resource = adminResource(chats, new AppConfig(), new ExportResourceTest.InMemoryExportJobs(),
             new ExportResourceTest.RecordingOutbound());
         var res = resource.requestExport(chatId.toString(), adminSecurityContext());
@@ -42,7 +41,7 @@ class AdminExportEnqueueTest {
     void requestExport_enqueuesWhenEnabled() throws Exception {
         var chatId = UUID.randomUUID();
         var actorId = UUID.randomUUID();
-        var chats = mock(ChatRepository.class);
+        var chats = mock(ChatPersistencePort.class);
         when(chats.chatExists(chatId)).thenReturn(true);
         var jobs = new ExportResourceTest.InMemoryExportJobs();
         var nats = new ExportResourceTest.RecordingOutbound();
@@ -66,7 +65,7 @@ class AdminExportEnqueueTest {
     void cancelExport_queued_admin() {
         var chatId = UUID.randomUUID();
         var jobId = UUID.randomUUID();
-        var chats = mock(ChatRepository.class);
+        var chats = mock(ChatPersistencePort.class);
         when(chats.chatExists(chatId)).thenReturn(true);
         var jobs = new ExportResourceTest.InMemoryExportJobs();
         jobs.put(jobId, chatId, UUID.randomUUID(), "queued", null);
@@ -91,7 +90,7 @@ class AdminExportEnqueueTest {
     void cancelExport_processing_admin() {
         var chatId = UUID.randomUUID();
         var jobId = UUID.randomUUID();
-        var chats = mock(ChatRepository.class);
+        var chats = mock(ChatPersistencePort.class);
         when(chats.chatExists(chatId)).thenReturn(true);
         var jobs = new ExportResourceTest.InMemoryExportJobs();
         jobs.put(jobId, chatId, UUID.randomUUID(), "processing", null);
@@ -112,7 +111,7 @@ class AdminExportEnqueueTest {
     @Test
     void requestExport_unknownChat_returns404() {
         var chatId = UUID.randomUUID();
-        var chats = mock(ChatRepository.class);
+        var chats = mock(ChatPersistencePort.class);
         when(chats.chatExists(chatId)).thenReturn(false);
         var cfg = new AppConfig() {
             @Override
@@ -127,7 +126,7 @@ class AdminExportEnqueueTest {
     }
 
     private static AdminResource adminResource(
-        ChatRepository chats,
+        ChatPersistencePort chats,
         AppConfig cfg,
         ExportResourceTest.InMemoryExportJobs jobs,
         NatsOutboundPort nats
@@ -136,7 +135,7 @@ class AdminExportEnqueueTest {
     }
 
     private static AdminResource adminResource(
-        ChatRepository chats,
+        ChatPersistencePort chats,
         AppConfig cfg,
         ExportResourceTest.InMemoryExportJobs jobs,
         NatsOutboundPort nats,
@@ -149,7 +148,7 @@ class AdminExportEnqueueTest {
             com.avandocmsg.messenger.core.bootstrap.CoreModule.organizationApplicationService(
                 null, UuidGenerator.standard()),
             new JdbcRetentionPolicyAdapter((javax.sql.DataSource) null),
-            new JdbcChatPersistenceAdapter(chats),
+            chats,
             new JdbcChatRetentionPolicyAdapter((javax.sql.DataSource) null),
             new ExportSuggestedHandler(auditPort),
             mock(AdminExportComplianceSeed.class),

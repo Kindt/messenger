@@ -11,7 +11,7 @@ if ($Help) {
     Write-Host @"
 Usage: .\scripts\audit-timing.ps1 [-BaseUrl url] [-Iterations N] [-MaxDeltaRatio 0.05]
 
-Probes: GET chat exist/miss, GET user me/miss, GET message exist/miss, POST login bad-user vs bad-password (fewer iterations).
+Probes: GET chat exist/miss, GET user me/miss, GET user by id exist/miss, GET message exist/miss, GET file exist/miss, POST login bad-user vs bad-password (fewer iterations).
 Writes docs/SECURITY_AUDIT.md. On noisy dev stacks set SECURITY_TIMING_NORMALIZATION_MIN_MS (220 for QEMU).
 "@
     exit 0
@@ -111,6 +111,17 @@ if (-not $existChat) {
 $missingChat = "00000000-0000-4000-8000-000000000000"
 $missingUser = "00000000-0000-4000-8000-000000000001"
 $missingMessage = "00000000-0000-4000-8000-000000000002"
+$missingFile = "00000000-0000-4000-8000-000000000003"
+$existUserId = $null
+try {
+    $me = Invoke-RestMethod -Uri "$BaseUrl/api/v1/users/me" -Headers $headers
+    if ($me) {
+        $existUserId = $me.id
+        if (-not $existUserId) { $existUserId = $me.user_id }
+    }
+} catch {
+    $existUserId = $null
+}
 $existMessage = $null
 try {
     $msgList = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$existChat/messages?limit=1" -Headers $headers
@@ -136,6 +147,32 @@ if (-not $existMessage) {
     }
 }
 
+$existFile = $null
+try {
+    $uploadBytes = [System.Text.Encoding]::UTF8.GetBytes("timing-audit-file-probe")
+    $uploadUri = "$BaseUrl/api/v1/files/upload?filename=timing-probe.txt&mime_type=text/plain"
+    $request = [System.Net.HttpWebRequest]::Create($uploadUri)
+    $request.Method = "POST"
+    $request.Headers["Authorization"] = $headers.Authorization
+    $request.ContentType = "text/plain"
+    $request.ContentLength = $uploadBytes.Length
+    $stream = $request.GetRequestStream()
+    $stream.Write($uploadBytes, 0, $uploadBytes.Length)
+    $stream.Close()
+    $response = $request.GetResponse()
+    $reader = New-Object System.IO.StreamReader($response.GetResponseStream())
+    $uploadJson = $reader.ReadToEnd()
+    $reader.Close()
+    $response.Close()
+    $upload = $uploadJson | ConvertFrom-Json
+    if ($upload) {
+        $existFile = $upload.id
+        if (-not $existFile) { $existFile = $upload.file_id }
+    }
+} catch {
+    $existFile = $null
+}
+
 $rows = @(
     (Test-TimingPair -Name "GET chat" -ExistCall {
         Invoke-TimingGet -Uri "$BaseUrl/api/v1/chats/$existChat" -Headers $headers
@@ -147,12 +184,26 @@ $rows = @(
     } -MissingCall {
         Invoke-TimingGet -Uri "$BaseUrl/api/v1/users/$missingUser" -Headers $headers
     }),
+    (Test-TimingPair -Name "GET user by id" -ExistCall {
+        if ($existUserId) {
+            Invoke-TimingGet -Uri "$BaseUrl/api/v1/users/$existUserId" -Headers $headers
+        }
+    } -MissingCall {
+        Invoke-TimingGet -Uri "$BaseUrl/api/v1/users/$missingUser" -Headers $headers
+    }),
     (Test-TimingPair -Name "GET message" -ExistCall {
         if ($existMessage) {
             Invoke-TimingGet -Uri "$BaseUrl/api/v1/chats/$existChat/messages/$existMessage" -Headers $headers
         }
     } -MissingCall {
         Invoke-TimingGet -Uri "$BaseUrl/api/v1/chats/$existChat/messages/$missingMessage" -Headers $headers
+    }),
+    (Test-TimingPair -Name "GET file" -ExistCall {
+        if ($existFile) {
+            Invoke-TimingGet -Uri "$BaseUrl/api/v1/files/$existFile" -Headers $headers
+        }
+    } -MissingCall {
+        Invoke-TimingGet -Uri "$BaseUrl/api/v1/files/$missingFile" -Headers $headers
     }),
     (Test-TimingPair -Name "POST login" -Count $AuthIterations -ExistCall {
         $body = (@{ username = "csadmin"; password = "wrong-pass-timing" } | ConvertTo-Json)

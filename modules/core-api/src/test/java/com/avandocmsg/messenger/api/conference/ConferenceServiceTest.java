@@ -5,11 +5,11 @@ import com.avandocmsg.messenger.api.chats.dto.ChatResponse;
 import com.avandocmsg.messenger.api.conference.dto.ConferenceResponse;
 import com.avandocmsg.messenger.api.conference.dto.CreateConferenceRequest;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.conference.dto.ConferenceParticipantResponse;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
+import com.avandocmsg.messenger.testsupport.EmptyChatPersistencePort;
 import com.avandocmsg.messenger.core.port.ConferencePort;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
@@ -29,7 +29,7 @@ class ConferenceServiceTest {
     private final StubChatRepository chatRepo = new StubChatRepository();
     private final RecordingChatService chatService = new RecordingChatService(chatRepo);
     private final ConferenceService service = new ConferenceService(
-        conferenceRepo, new JdbcChatPersistenceAdapter(chatRepo), chatService, NatsOutboundPort.noop(), I18nTestFixtures.messagesEn());
+        conferenceRepo, chatRepo, chatService, NatsOutboundPort.noop(), I18nTestFixtures.messagesEn());
 
     private final UUID userId = UUID.randomUUID();
     private final UUID chatId = UUID.randomUUID();
@@ -158,14 +158,10 @@ class ConferenceServiceTest {
         }
     }
 
-    static final class StubChatRepository extends ChatRepository {
+    static final class StubChatRepository extends EmptyChatPersistencePort {
         final java.util.Map<RoleKey, String> roles = new java.util.HashMap<>();
 
         record RoleKey(UUID chatId, UUID userId) {}
-
-        StubChatRepository() {
-            super(null, Clock.systemUTC(), UuidGenerator.standard());
-        }
 
         @Override
         public String getMemberRole(UUID chatId, UUID userId) {
@@ -177,8 +173,8 @@ class ConferenceServiceTest {
         ChatResponse nextGroup;
         String lastGroupTitle;
 
-        RecordingChatService(ChatRepository chatRepository) {
-            super(new JdbcChatPersistenceAdapter(chatRepository), null, null, null, null, NatsOutboundPort.noop(), Clock.systemUTC(),
+        RecordingChatService(ChatPersistencePort chatPersistence) {
+            super(chatPersistence, null, null, null, null, NatsOutboundPort.noop(), Clock.systemUTC(),
                 UuidGenerator.standard(), NoOpReadCacheAdapter.INSTANCE, new AppConfig());
         }
 

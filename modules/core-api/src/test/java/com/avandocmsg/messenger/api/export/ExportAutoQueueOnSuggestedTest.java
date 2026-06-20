@@ -1,9 +1,8 @@
 package com.avandocmsg.messenger.api.export;
 
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
@@ -34,7 +33,7 @@ class ExportAutoQueueOnSuggestedTest {
         var auto = new ExportAutoQueueOnSuggested(
             enqueuer,
             exportJobPort,
-            new JdbcChatPersistenceAdapter(ownerRepo(chatId, ownerId)),
+            ownerRepo(chatId, ownerId),
             auditPort,
             Optional.of(ownerId),
             1440
@@ -62,7 +61,7 @@ class ExportAutoQueueOnSuggestedTest {
         var auto = new ExportAutoQueueOnSuggested(
             enqueuer,
             exportJobPort,
-            new JdbcChatPersistenceAdapter(ownerRepo(chatId, ownerId)),
+            ownerRepo(chatId, ownerId),
             auditPort,
             Optional.of(ownerId),
             1440
@@ -74,7 +73,7 @@ class ExportAutoQueueOnSuggestedTest {
         assertTrue(nats.subjects.isEmpty());
     }
 
-    private static ChatRepository ownerRepo(UUID chatId, UUID ownerId) {
+    private static ChatPersistencePort ownerRepo(UUID chatId, UUID ownerId) {
         return new ExportResourceTest.TestChatRepository(chatId, ownerId, "owner") {
             @Override
             public Optional<UUID> findOwnerId(UUID id) {

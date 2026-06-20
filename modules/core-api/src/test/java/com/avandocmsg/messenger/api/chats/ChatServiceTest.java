@@ -4,9 +4,9 @@ import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
 import com.avandocmsg.messenger.api.chats.dto.ChatResponse;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
+import com.avandocmsg.messenger.testsupport.EmptyChatPersistencePort;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -20,7 +20,7 @@ class ChatServiceTest {
 
     private final StubChatRepository chatRepo = new StubChatRepository();
     private final StubBlockPort blockRepo = new StubBlockPort();
-    private final ChatService chatService = new ChatService(new JdbcChatPersistenceAdapter(chatRepo), blockRepo, null, null, null,
+    private final ChatService chatService = new ChatService(chatRepo, blockRepo, null, null, null,
         NatsOutboundPort.noop(), Clock.fixed(Instant.parse("2020-01-01T00:00:00Z"), ZoneOffset.UTC),
         UuidGenerator.standard(), NoOpReadCacheAdapter.INSTANCE, new AppConfig());
 
@@ -148,7 +148,7 @@ class ChatServiceTest {
 
     // --- Stub implementations ---
 
-    static class StubChatRepository extends com.avandocmsg.messenger.api.repository.ChatRepository {
+    static class StubChatRepository extends EmptyChatPersistencePort {
         final Map<P2PKey, UUID> p2pChats = new HashMap<>();
         final Map<UUID, ChatResponse> chats = new HashMap<>();
         final Map<RoleKey, String> roles = new HashMap<>();
@@ -158,10 +158,6 @@ class ChatServiceTest {
 
         record P2PKey(UUID a, UUID b) {}
         record RoleKey(UUID chatId, UUID userId) {}
-
-        StubChatRepository() {
-            super(null, Clock.systemUTC(), UuidGenerator.standard());
-        }
 
         @Override
         public Optional<UUID> findP2PChat(UUID u1, UUID u2) {

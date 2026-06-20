@@ -7,16 +7,16 @@ import com.avandocmsg.messenger.api.export.dto.ExportAttachmentsListResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportJobStatusResponse;
 import com.avandocmsg.messenger.api.params.InvalidUuidParameterException;
 import com.avandocmsg.messenger.core.port.AuditPort;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.api.repository.ExportJobRepository;
 import com.avandocmsg.messenger.common.dto.ExportReplayJob;
 import com.avandocmsg.messenger.common.export.ExportOutputRef;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcAuditAdapter;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcExportJobAdapter;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
+import com.avandocmsg.messenger.testsupport.EmptyChatPersistencePort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
@@ -246,11 +246,11 @@ class ExportResourceTest {
         assertEquals("{\"ok\":true}", baos.toString(java.nio.charset.StandardCharsets.UTF_8));
     }
 
-    private ExportResource resource(ChatRepository chats, ExportJobRepository jobs, AuditPort auditPort,
+    private ExportResource resource(ChatPersistencePort chats, ExportJobRepository jobs, AuditPort auditPort,
                                     NatsOutboundPort nats, ExportFileAccess exportFiles) {
         var exportJobPort = new JdbcExportJobAdapter(jobs);
         var enqueuer = new ExportJobEnqueuer(exportJobPort, auditPort, nats, UuidGenerator.standard());
-        return new ExportResource(new JdbcChatPersistenceAdapter(chats), exportJobPort, enqueuer, auditPort,
+        return new ExportResource(chats, exportJobPort, enqueuer, auditPort,
             I18nTestFixtures.messagesEn(), exportFiles, nats);
     }
 
@@ -472,13 +472,12 @@ class ExportResourceTest {
         }
     }
 
-    static class TestChatRepository extends ChatRepository {
+    static class TestChatRepository extends EmptyChatPersistencePort {
         private final UUID cid;
         private final UUID uid;
         private final String role;
 
         TestChatRepository(UUID cid, UUID uid, String role) {
-            super(null, java.time.Clock.systemUTC(), UuidGenerator.standard());
             this.cid = cid;
             this.uid = uid;
             this.role = role;

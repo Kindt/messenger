@@ -1,7 +1,6 @@
 package com.avandocmsg.messenger.api.bots;
 
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.testsupport.EmptyChatPersistencePort;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import org.junit.jupiter.api.Test;
 
@@ -43,8 +42,7 @@ class BotServiceTest {
         var msgId = UUID.randomUUID();
         var botId = UUID.randomUUID();
         var messagePort = new DeleteStubMessagePort(chatId, msgId, botId);
-        var chatRepo = new ChatRepository(null, java.time.Clock.systemUTC(),
-            com.avandocmsg.messenger.core.port.UuidGenerator.standard()) {
+        var chatRepo = new EmptyChatPersistencePort() {
             @Override
             public String getMemberRole(UUID c, UUID u) {
                 return "member";
@@ -91,7 +89,7 @@ class BotServiceTest {
         var deleteCoordinator = new com.avandocmsg.messenger.core.application.MessageDeleteCoordinator(
             messagePort, com.avandocmsg.messenger.core.port.NatsOutboundPort.noop());
         var messageApp = new MessageApplicationService(messagePort, memberChatPort, null, null, null, deleteCoordinator, null);
-        var service = new BotService(null, new JdbcChatPersistenceAdapter(chatRepo), messageApp, null, null, null);
+        var service = new BotService(null, chatRepo, messageApp, null, null, null);
         assertTrue(service.deleteMessage(botId, chatId, msgId));
         assertTrue(messagePort.deleted);
     }
@@ -102,8 +100,7 @@ class BotServiceTest {
         var msgId = UUID.randomUUID();
         var botId = UUID.randomUUID();
         var messagePort = new VisibleMessagePort(chatId, msgId, botId);
-        var chatRepo = new ChatRepository(null, java.time.Clock.systemUTC(),
-            com.avandocmsg.messenger.core.port.UuidGenerator.standard()) {
+        var chatRepo = new EmptyChatPersistencePort() {
             @Override
             public String getMemberRole(UUID c, UUID u) {
                 return "member";
@@ -151,7 +148,7 @@ class BotServiceTest {
             messagePort, com.avandocmsg.messenger.core.port.NatsOutboundPort.noop());
         var messageApp = new MessageApplicationService(
             messagePort, memberChatPort, null, null, null, null, null, pinCoordinator);
-        var service = new BotService(null, new JdbcChatPersistenceAdapter(chatRepo), messageApp, null, null, null);
+        var service = new BotService(null, chatRepo, messageApp, null, null, null);
         assertFalse(service.pinMessage(botId, chatId, msgId));
         assertFalse(messagePort.pinAttempted);
     }

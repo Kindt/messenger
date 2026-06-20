@@ -56,7 +56,7 @@ class ScimUsersResourceTest {
                 """);
         }
         userRepository = new UserRepository(ds);
-        userDirectory = new JdbcOrgUserDirectoryAdapter(userRepository);
+        userDirectory = new JdbcOrgUserDirectoryAdapter(ds);
         resource = new ScimUsersResource(userDirectory, new AppConfig(), UuidGenerator.standard());
         uriInfo = mock(UriInfo.class);
         when(uriInfo.getAbsolutePathBuilder()).thenReturn(UriBuilder.fromPath("http://localhost/api/scim/v2/Users"));

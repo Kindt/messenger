@@ -5,12 +5,11 @@ import com.avandocmsg.messenger.api.crypto.E2EEService;
 import com.avandocmsg.messenger.api.mls.MlsGroupManager;
 import com.avandocmsg.messenger.api.mls.MlsGroupState;
 import com.avandocmsg.messenger.api.mls.MlsGroupStateRepository;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
+import com.avandocmsg.messenger.testsupport.EmptyChatPersistencePort;
 import com.avandocmsg.messenger.api.mls.MlsMigrationService;
 import com.avandocmsg.messenger.api.mls.MlsService;
-import com.avandocmsg.messenger.api.mls.SessionRepository.MlsSession;
 import com.avandocmsg.messenger.api.mls.SessionRepository;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.api.mls.SessionRepository.MlsSession;
 import com.avandocmsg.messenger.core.application.MessageSendSupport;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -100,7 +99,7 @@ class OpenMlsInteropTest {
         var chatRepo = new StubChatRepository();
         chatRepo.members.put(chatId, List.of(new ChatMemberResponse(
             member.toString(), "alice", "Alice", "member", false, false, Instant.now())));
-        var migration = new MlsMigrationService(null, groupManager, new JdbcChatPersistenceAdapter(chatRepo));
+        var migration = new MlsMigrationService(null, groupManager, chatRepo);
 
         var first = migration.migrateToOpenMlsGroup(chatId).orElseThrow();
         var second = migration.migrateToOpenMlsGroup(chatId).orElseThrow();
@@ -214,12 +213,8 @@ class OpenMlsInteropTest {
         }
     }
 
-    static final class StubChatRepository extends ChatRepository {
+    static final class StubChatRepository extends EmptyChatPersistencePort {
         final Map<UUID, List<ChatMemberResponse>> members = new HashMap<>();
-
-        StubChatRepository() {
-            super(null, Clock.systemUTC(), UuidGenerator.standard());
-        }
 
         @Override
         public List<ChatMemberResponse> listMembers(UUID chatId) {

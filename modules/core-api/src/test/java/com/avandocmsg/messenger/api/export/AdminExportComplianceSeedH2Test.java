@@ -180,7 +180,7 @@ class AdminExportComplianceSeedH2Test {
             null,
             messageApplicationService,
             fileService,
-            new JdbcChatPersistenceAdapter(chatRepository),
+            new JdbcChatPersistenceAdapter(ds, null, clock, uuidGen, 0),
             new JdbcChatRetentionPolicyAdapter(ds)
         );
     }

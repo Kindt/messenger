@@ -2,11 +2,9 @@ package com.avandocmsg.messenger.api.chats.bans;
 
 import com.avandocmsg.messenger.api.chats.bans.dto.ChatBanResponse;
 import com.avandocmsg.messenger.core.port.ChatBanPort;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
-import com.avandocmsg.messenger.core.port.UuidGenerator;
+import com.avandocmsg.messenger.testsupport.EmptyChatPersistencePort;
 import org.junit.jupiter.api.Test;
 
-import java.time.Clock;
 import java.time.Instant;
 import java.util.*;
 
@@ -16,7 +14,7 @@ class ChatBanServiceTest {
 
     private final StubChatBanPort banRepo = new StubChatBanPort();
     private final StubChatRepository chatRepo = new StubChatRepository();
-    private final ChatBanService banService = new ChatBanService(banRepo, new JdbcChatPersistenceAdapter(chatRepo));
+    private final ChatBanService banService = new ChatBanService(banRepo, chatRepo);
 
     final UUID chatId = UUID.randomUUID();
     final UUID ownerId = UUID.randomUUID();
@@ -161,13 +159,9 @@ class ChatBanServiceTest {
         }
     }
 
-    static class StubChatRepository extends com.avandocmsg.messenger.api.repository.ChatRepository {
+    static class StubChatRepository extends EmptyChatPersistencePort {
         final Map<String, String> roles = new HashMap<>();
         final Map<String, Boolean> banned = new HashMap<>();
-
-        StubChatRepository() {
-            super(null, Clock.systemUTC(), UuidGenerator.standard());
-        }
 
         @Override
         public String getMemberRole(UUID chatId, UUID userId) {

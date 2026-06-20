@@ -1,10 +1,9 @@
 package com.avandocmsg.messenger.api.mls;
 
 import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.api.crypto.E2EEService;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
+import com.avandocmsg.messenger.testsupport.EmptyChatPersistencePort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +32,7 @@ class MlsMigrationServiceTest {
         var mlsService = new MlsService(sessionRepository, new E2EEService());
         var clock = Clock.fixed(Instant.parse("2026-06-09T12:00:00Z"), ZoneOffset.UTC);
         groupManager = new MlsGroupManager(groupStateRepository, mlsService, UuidGenerator.standard(), clock);
-        migrationService = new MlsMigrationService(null, groupManager, new JdbcChatPersistenceAdapter(chatRepository));
+        migrationService = new MlsMigrationService(null, groupManager, chatRepository);
     }
 
     @Test
@@ -56,7 +55,7 @@ class MlsMigrationServiceTest {
             member.toString(), "alice", "Alice", "member", false, false, Instant.now())));
         chatRepository.members.put(chat2, List.of(new ChatMemberResponse(
             member.toString(), "bob", "Bob", "member", false, false, Instant.now())));
-        var batchService = new MlsMigrationService(null, groupManager, new JdbcChatPersistenceAdapter(chatRepository)) {
+        var batchService = new MlsMigrationService(null, groupManager, chatRepository) {
             @Override
             List<UUID> listPendingChatIds(int limit) {
                 return List.of(chatId, chat2);
@@ -82,12 +81,8 @@ class MlsMigrationServiceTest {
         assertEquals(1, groupManager.groupCount());
     }
 
-    static final class StubChatRepository extends ChatRepository {
+    static final class StubChatRepository extends EmptyChatPersistencePort {
         final java.util.Map<UUID, List<ChatMemberResponse>> members = new java.util.HashMap<>();
-
-        StubChatRepository() {
-            super(null, Clock.systemUTC(), UuidGenerator.standard());
-        }
 
         @Override
         public List<ChatMemberResponse> listMembers(UUID chatId) {

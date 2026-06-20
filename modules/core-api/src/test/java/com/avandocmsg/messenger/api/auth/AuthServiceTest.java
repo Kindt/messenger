@@ -2,7 +2,7 @@ package com.avandocmsg.messenger.api.auth;
 
 import com.avandocmsg.messenger.api.auth.dto.RegisterRequest;
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcUserLookupAdapter;
+import com.avandocmsg.messenger.testsupport.EmptyUserLookupPort;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.SavedChatPort;
@@ -83,13 +83,13 @@ class AuthServiceTest {
         }
 
         TestingAuthService(UUID provisionedId, StubUserRepositoryPort userPort) {
-            super(new StubAppConfig(), new JdbcUserLookupAdapter(new StubUserRepository()), userPort, new StubSavedChatPort());
+            super(new StubAppConfig(), new EmptyUserLookupPort(), userPort, new StubSavedChatPort());
             this.provisionedId = provisionedId;
             this.usernameExists = false;
         }
 
         TestingAuthService(UUID provisionedId, boolean usernameExists) {
-            super(new StubAppConfig(), new JdbcUserLookupAdapter(new StubUserRepository()), new StubUserRepositoryPort(), new StubSavedChatPort());
+            super(new StubAppConfig(), new EmptyUserLookupPort(), new StubUserRepositoryPort(), new StubSavedChatPort());
             this.provisionedId = provisionedId;
             this.usernameExists = usernameExists;
         }

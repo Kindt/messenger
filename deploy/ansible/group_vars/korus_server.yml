@@ -20,6 +20,8 @@ korus_api_base_url: "http://127.0.0.1:{{ korus_api_port }}"
 korus_ws_url: "ws://127.0.0.1:{{ korus_ws_port }}/ws"
 # CORS for web origin (override in two-host / stage TLS)
 korus_cors_allowed_origins: "http://127.0.0.1:9088"
+# CSP enforce (spec 014 S2); QEMU + stage/prod inventories use this default
+korus_csp_policy: "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
 # Prod secrets from ansible-vault (group_vars/vault.yml); templated to korus_server_env_path.
 # korus_db_password          -> DB_PASSWORD, POSTGRES_PASSWORD, KC_DB_PASSWORD
 # korus_minio_secret_key     -> MINIO_SECRET_KEY, MINIO_ROOT_PASSWORD

@@ -1,8 +1,7 @@
 package com.avandocmsg.messenger.api.live;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
+import com.avandocmsg.messenger.testsupport.EmptyChatPersistencePort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -24,7 +23,7 @@ class ChatCallLiveKitServiceTest {
         var appConfig = new AppConfig();
         var tokenService = new LiveKitTokenService(appConfig);
         chatRepo = new StubChatRepository();
-        service = new ChatCallLiveKitService(new JdbcChatPersistenceAdapter(chatRepo), tokenService);
+        service = new ChatCallLiveKitService(chatRepo, tokenService);
     }
 
     @Test
@@ -36,7 +35,7 @@ class ChatCallLiveKitServiceTest {
     @Test
     void join_returnsEmptyWhenLiveKitDisabled() {
         chatRepo.role = "member";
-        var disabled = new ChatCallLiveKitService(new JdbcChatPersistenceAdapter(chatRepo), new LiveKitTokenService(new AppConfig()) {
+        var disabled = new ChatCallLiveKitService(chatRepo, new LiveKitTokenService(new AppConfig()) {
             @Override
             public boolean enabled() {
                 return false;
@@ -50,12 +49,8 @@ class ChatCallLiveKitServiceTest {
         assertFalse(service.groupCallSfuEnabled());
     }
 
-    static final class StubChatRepository extends ChatRepository {
+    static final class StubChatRepository extends EmptyChatPersistencePort {
         String role;
-
-        StubChatRepository() {
-            super(null, java.time.Clock.systemUTC(), com.avandocmsg.messenger.core.port.UuidGenerator.standard());
-        }
 
         @Override
         public String getMemberRole(UUID chatId, UUID userId) {
