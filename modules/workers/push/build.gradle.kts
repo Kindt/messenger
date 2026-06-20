@@ -9,7 +9,7 @@ application {
 dependencies {
     implementation(project(":modules:common"))
     implementation("io.nats:jnats:2.17.4")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.0")
     implementation("nl.martijndwars:web-push:5.1.1")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
     implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
