@@ -52,6 +52,7 @@
         var myId = ctx.jwtSub(ctx.state.tokens.access_token);
         if (myId && data.mentioned_user_id === myId) {
           ctx.maybeNotifyMention(data);
+          ctx.markMentionPending(data.chat_id);
           if (data.chat_id === ctx.state.selectedId) {
             ctx.scheduleRender();
           } else {

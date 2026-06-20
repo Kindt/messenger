@@ -69,4 +69,14 @@ class MlsWireCodecTest {
     void decodeWelcome_rejectsBadMagic() {
         assertThrows(IllegalArgumentException.class, () -> MlsWireCodec.decodeWelcome(new byte[]{1, 2, 3}));
     }
+
+    @Test
+    void decodeCommit_rejectsEmptyPayload() {
+        assertThrows(IllegalArgumentException.class, () -> MlsWireCodec.decodeCommit(new byte[0]));
+    }
+
+    @Test
+    void decodeEpoch_rejectsTruncatedPayload() {
+        assertThrows(IllegalArgumentException.class, () -> MlsWireCodec.decodeEpoch(new byte[]{0x4d, 0x4c, 0x53}));
+    }
 }

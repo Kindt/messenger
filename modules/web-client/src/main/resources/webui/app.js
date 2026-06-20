@@ -278,6 +278,9 @@
     blockedUsers: null,
     sidebarMode: "chats",
     sidebarFolder: "all",
+    sidebarChatFilter: "all",
+    mentionPendingChats: {},
+    integrationPanel: null,
     discussionThreadRootId: null,
     integrations: null,
     integrationsVitrine: null,
@@ -2530,6 +2533,7 @@
     if (!sameChat) clearConferenceParticipants();
     state.selectedId = chatId;
     state.error = null;
+    clearMentionPending(chatId);
     clearReplyTo();
     state.threadSearch = "";
     state.threadSearchHits = null;
@@ -5029,6 +5033,35 @@
     updateDocumentTitle();
   }
 
+  function markMentionPending(chatId) {
+    if (!chatId) return;
+    if (!state.mentionPendingChats) state.mentionPendingChats = {};
+    state.mentionPendingChats[chatId] = true;
+  }
+
+  function clearMentionPending(chatId) {
+    if (!chatId || !state.mentionPendingChats) return;
+    delete state.mentionPendingChats[chatId];
+  }
+
+  function openIntegration(it) {
+    if (!it || !it.launch_url) return;
+    if (it.open_mode === "tab") {
+      window.open(it.launch_url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    state.integrationPanel = {
+      url: it.launch_url,
+      label: it.label || it.bot_name || it.id,
+    };
+    render();
+  }
+
+  function closeIntegrationPanel() {
+    state.integrationPanel = null;
+    render();
+  }
+
   function formatPreviewForMessage(m) {
     return uiMessagesUtils.formatPreviewForMessage(
       m,
@@ -5463,6 +5496,7 @@
       applyPinChangeEvent: applyPinChangeEvent,
       isMentionEvent: isMentionEvent,
       maybeNotifyMention: maybeNotifyMention,
+      markMentionPending: markMentionPending,
       bumpUnread: bumpUnread,
       scheduleRender: scheduleRender,
       isConferenceChangeEvent: isConferenceChangeEvent,
@@ -5698,6 +5732,15 @@
           return t.indexOf(q) !== -1;
         })
       : base;
+    if (state.sidebarChatFilter === "unread") {
+      list = list.filter(function (c) {
+        return (state.unreadByChat[c.id] || 0) > 0;
+      });
+    } else if (state.sidebarChatFilter === "mentions") {
+      list = list.filter(function (c) {
+        return state.mentionPendingChats && state.mentionPendingChats[c.id];
+      });
+    }
     return list.slice().sort(compareChatsForSidebar);
   }
 
@@ -6208,6 +6251,12 @@
     return "";
   }
 
+  function sidebarFilterLabel(fid) {
+    var key = "ui.sidebar.filter." + fid;
+    var t = L(key);
+    return t !== key ? t : fid;
+  }
+
   function appendMinimalCallPanel(shell) {
     if (!state.callPanelOpen) return;
     var panel = el("aside", "call-panel");
@@ -6216,6 +6265,39 @@
     titleSpan.setAttribute("data-testid", "call-panel-title");
     ph.appendChild(titleSpan);
     panel.appendChild(ph);
+    shell.appendChild(panel);
+  }
+
+  function renderIntegrationPanel(shell) {
+    if (!state.integrationPanel) return;
+    var panel = el("aside", "integration-panel");
+    panel.setAttribute("data-testid", "integration-panel");
+    var ph = el("div", "integration-panel-head");
+    var titleSpan = el("span", "integration-panel-title", state.integrationPanel.label || L("ui.sidebar.integrations"));
+    titleSpan.setAttribute("data-testid", "integration-panel-title");
+    ph.appendChild(titleSpan);
+    ph.appendChild(
+      iconBtn("✕", L("ui.integration.close"), {
+        testId: "integration-panel-close",
+        onClick: function () {
+          closeIntegrationPanel();
+        },
+      })
+    );
+    panel.appendChild(ph);
+    var frameWrap = el("div", "integration-panel-frame");
+    var iframe = document.createElement("iframe");
+    iframe.className = "integration-panel-iframe";
+    iframe.title = state.integrationPanel.label || L("ui.sidebar.integrations");
+    iframe.setAttribute("data-testid", "integration-panel-iframe");
+    iframe.setAttribute(
+      "sandbox",
+      "allow-scripts allow-same-origin allow-forms allow-popups"
+    );
+    iframe.referrerPolicy = "no-referrer-when-downgrade";
+    iframe.src = state.integrationPanel.url;
+    frameWrap.appendChild(iframe);
+    panel.appendChild(frameWrap);
     shell.appendChild(panel);
   }
 
@@ -7252,6 +7334,7 @@
       "div",
       "app-shell messenger-shell" +
         (state.callPanelOpen ? " call-open" : "") +
+        (state.integrationPanel ? " integration-open" : "") +
         (state.selectedId ? " thread-focus" : "")
     );
     if (state.networkOnline === false) {
@@ -7674,12 +7757,7 @@
           btn.textContent = it.label || it.bot_name || it.id;
           btn.setAttribute("data-testid", "integration-open-" + (it.bot_name || it.id));
           btn.onclick = function () {
-            if (!it.launch_url) return;
-            if (it.open_mode === "tab") {
-              window.open(it.launch_url, "_blank", "noopener,noreferrer");
-            } else {
-              window.open(it.launch_url, "korus-integration", "noopener,noreferrer");
-            }
+            openIntegration(it);
           };
           iList.appendChild(btn);
         });
@@ -7703,6 +7781,24 @@
       );
     });
     side.appendChild(folderBar);
+    var filterBar = el("div", "sidebar-filter-bar");
+    var filterIcons = { all: "≡", unread: "●", mentions: "@" };
+    ["all", "unread", "mentions"].forEach(function (fid) {
+      var flabel = sidebarFilterLabel(fid);
+      filterBar.appendChild(
+        iconBtn(filterIcons[fid] || "·", flabel, {
+          cls:
+            "sidebar-filter-chip" +
+            (state.sidebarChatFilter === fid ? " active" : ""),
+          testId: "sidebar-filter-" + fid,
+          onClick: function () {
+            state.sidebarChatFilter = fid;
+            render();
+          },
+        })
+      );
+    });
+    side.appendChild(filterBar);
     var list = el("div", "chat-list");
     list.addEventListener("scroll", function () {
       if (list.scrollTop + list.clientHeight >= list.scrollHeight - 48) {
@@ -7711,7 +7807,15 @@
     });
     var fc = filteredChats();
     if (fc.length === 0) {
-      list.appendChild(el("div", "chat-list-empty", state.chats.length ? L("ui.sidebar.noChatsFilter") : L("ui.sidebar.noChats")));
+      var emptyKey =
+        state.sidebarChatFilter === "unread"
+          ? "ui.sidebar.noChatsUnread"
+          : state.sidebarChatFilter === "mentions"
+            ? "ui.sidebar.noChatsMentions"
+            : state.chats.length
+              ? "ui.sidebar.noChatsFilter"
+              : "ui.sidebar.noChats";
+      list.appendChild(el("div", "chat-list-empty", L(emptyKey)));
     }
     fc.forEach(function (c) {
       var b = el("button", "chat-item" + (c.id === state.selectedId ? " active" : ""));
@@ -8109,6 +8213,7 @@
     }
     main.appendChild(thread);
     shell.appendChild(main);
+    renderIntegrationPanel(shell);
     try {
       renderCallPanel(shell);
     } catch (err) {

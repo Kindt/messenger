@@ -85,6 +85,11 @@ class WebUiParityAssetsTest {
         assertTrue(messageArticle.contains("message-delete-button"), "delete button testid");
         assertTrue(messageArticle.contains("message-edit-button"), "edit button testid");
         assertTrue(messageArticle.contains("message-link-button"), "link button testid");
+        assertTrue(app.contains("integration-panel"), "integration iframe panel testid");
+        assertTrue(app.contains("sidebar-filter-bar"), "sidebar filter bar");
+        assertTrue(app.contains("sidebar-filter-"), "sidebar filter testid prefix");
+        assertTrue(app.contains("sidebarChatFilter"), "sidebar chat filter state");
+        assertTrue(app.contains("openIntegration"), "integration launcher");
         assertTrue(app.contains("getMessageReplyCtx"), "reply ctx builder in app");
         assertTrue(app.contains("reply_preview"), "reply_preview from API");
         assertTrue(app.contains("mesh-webrtc-button"), "mesh webrtc testid");

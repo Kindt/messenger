@@ -46,6 +46,7 @@ import com.avandocmsg.messenger.api.files.FileResource;
 import com.avandocmsg.messenger.api.files.FileService;
 import com.avandocmsg.messenger.api.media.MediaCapabilitiesResource;
 import com.avandocmsg.messenger.api.platform.AdminProductModulesResource;
+import com.avandocmsg.messenger.api.platform.FederationStatusResource;
 import com.avandocmsg.messenger.api.platform.PlatformCapabilitiesResource;
 import com.avandocmsg.messenger.api.platform.PlatformModuleOverrideRepository;
 import com.avandocmsg.messenger.api.platform.PlatformModuleRegistry;
@@ -289,6 +290,7 @@ public class JerseyConfig extends ResourceConfig {
         register(com.avandocmsg.messenger.api.live.ChatCallLiveKitResource.class);
         register(MediaCapabilitiesResource.class);
         register(PlatformCapabilitiesResource.class);
+        register(FederationStatusResource.class);
         register(AdminProductModulesResource.class);
         register(BotResource.class);
         register(com.avandocmsg.messenger.api.plugins.PluginAdminResource.class);

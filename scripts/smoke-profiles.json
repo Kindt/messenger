@@ -7,7 +7,7 @@
     },
     "base+engage": {
       "korus_product_addons": ["addon-engage"],
-      "description": "Base + push/preview",
+      "description": "Base + push/preview (see docs/runbooks/engage-lab-vapid.md)",
       "smoke_scripts": [
         "scripts/smoke-ready.sh",
         "scripts/smoke-preview-worker.ps1"
@@ -35,12 +35,22 @@
     },
     "base+live": {
       "korus_product_addons": ["addon-live"],
-      "description": "Base + LiveKit SFU/live",
-      "smoke_scripts": ["scripts/smoke-live-session.sh"]
+      "description": "Base + LiveKit SFU/live (Playwright ui-live L2-L5; L6 soak LSO-040)",
+      "smoke_scripts": [
+        "scripts/smoke-live-session.sh"
+      ]
+    },
+    "base+live+turn": {
+      "korus_product_addons": ["addon-live"],
+      "description": "Live + coturn lab (docs/runbooks/media-turn-lab.md)",
+      "smoke_scripts": [
+        "scripts/smoke-live-session.sh",
+        "scripts/smoke-turn-relay.ps1"
+      ]
     },
     "base+e2ee": {
       "korus_product_addons": ["addon-e2ee"],
-      "description": "Base + MLS wire",
+      "description": "Base + MLS wire (buildIntegrity *Mls*)",
       "smoke_scripts": []
     },
     "reference-all": {
