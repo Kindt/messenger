@@ -13,65 +13,65 @@ import java.util.UUID;
 public final class JdbcOrgUserDirectoryAdapter implements OrgUserDirectoryPort {
 
     private final JdbcUserJdbcRepository jdbc;
-    private final UserRepository legacy;
+    private final UserRepository testFacade;
 
     public JdbcOrgUserDirectoryAdapter(JdbcUserJdbcRepository jdbc) {
         this.jdbc = jdbc;
-        this.legacy = null;
+        this.testFacade = null;
     }
 
     public JdbcOrgUserDirectoryAdapter(UserRepository userRepository) {
         this.jdbc = null;
-        this.legacy = userRepository;
+        this.testFacade = userRepository;
     }
 
     public JdbcOrgUserDirectoryAdapter(DataSource dataSource) {
         this.jdbc = new JdbcUserJdbcRepository(dataSource);
-        this.legacy = null;
+        this.testFacade = null;
     }
 
     @Override
     public Optional<OrgDirectoryUser> findById(UUID id) {
-        return useLegacy()
-            ? legacy.findById(id).map(JdbcOrgUserDirectoryAdapter::toDirectoryUser)
+        return usesTestFacade()
+            ? testFacade.findById(id).map(JdbcOrgUserDirectoryAdapter::toDirectoryUser)
             : jdbc.findById(id).map(JdbcOrgUserDirectoryAdapter::toDirectoryUser);
     }
 
     @Override
     public List<OrgDirectoryUser> listByOrg(UUID orgId, int offset, int limit) {
-        return useLegacy()
-            ? legacy.listByOrg(orgId, offset, limit).stream().map(JdbcOrgUserDirectoryAdapter::toDirectoryUser).toList()
+        return usesTestFacade()
+            ? testFacade.listByOrg(orgId, offset, limit).stream().map(JdbcOrgUserDirectoryAdapter::toDirectoryUser).toList()
             : jdbc.listByOrg(orgId, offset, limit).stream().map(JdbcOrgUserDirectoryAdapter::toDirectoryUser).toList();
     }
 
     @Override
     public int countByOrg(UUID orgId) {
-        return useLegacy() ? legacy.countByOrg(orgId) : jdbc.countByOrg(orgId);
+        return usesTestFacade() ? testFacade.countByOrg(orgId) : jdbc.countByOrg(orgId);
     }
 
     @Override
     public boolean upsertFromDirectory(UUID id, UUID orgId, String externalId, String username,
                                        String email, String displayName) {
-        return useLegacy()
-            ? legacy.upsertFromDirectory(id, orgId, externalId, username, email, displayName)
+        return usesTestFacade()
+            ? testFacade.upsertFromDirectory(id, orgId, externalId, username, email, displayName)
             : jdbc.upsertFromDirectory(id, orgId, externalId, username, email, displayName);
     }
 
     @Override
     public boolean upsertFromScim(UUID id, UUID orgId, String username, String email,
                                   String externalId, String displayName, boolean active) {
-        return useLegacy()
-            ? legacy.upsertFromScim(id, orgId, username, email, externalId, displayName, active)
+        return usesTestFacade()
+            ? testFacade.upsertFromScim(id, orgId, username, email, externalId, displayName, active)
             : jdbc.upsertFromScim(id, orgId, username, email, externalId, displayName, active);
     }
 
     @Override
     public boolean setActive(UUID id, boolean active) {
-        return useLegacy() ? legacy.setActive(id, active) : jdbc.setActive(id, active);
+        return usesTestFacade() ? testFacade.setActive(id, active) : jdbc.setActive(id, active);
     }
 
-    private boolean useLegacy() {
-        return legacy != null;
+    private boolean usesTestFacade() {
+        return testFacade != null;
     }
 
     private static OrgDirectoryUser toDirectoryUser(UserProfile profile) {

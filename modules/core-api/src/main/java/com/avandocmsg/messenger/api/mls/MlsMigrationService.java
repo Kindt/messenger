@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.mls;
 
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAdminStatsJdbcRepository;
 import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.api.mls.openmls.OpenMlsWireLayout;
 import org.slf4j.Logger;
@@ -31,22 +32,7 @@ public class MlsMigrationService {
         if (dataSource == null) {
             return 0L;
         }
-        var sql = """
-            SELECT COUNT(DISTINCT s.chat_id) AS c
-            FROM e2ee_sessions s
-            LEFT JOIN mls_group_state g ON g.chat_id = s.chat_id
-            WHERE g.chat_id IS NULL
-            """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql);
-             var rs = stmt.executeQuery()) {
-            if (rs.next()) {
-                return rs.getLong("c");
-            }
-        } catch (Exception e) {
-            log.error("pendingMigrationCount failed", e);
-        }
-        return 0L;
+        return new JdbcAdminStatsJdbcRepository(dataSource).countPendingMlsMigrations();
     }
 
     public Optional<UUID> migrateToMls(UUID chatId) {

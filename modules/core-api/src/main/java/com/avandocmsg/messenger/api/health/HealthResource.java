@@ -19,6 +19,8 @@ import jakarta.ws.rs.core.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAdminStatsJdbcRepository;
+
 import javax.sql.DataSource;
 
 @Path("/v1/health")
@@ -62,15 +64,7 @@ public class HealthResource {
     @ApiResponse(responseCode = "503", description = "БД недоступна",
         content = @Content(schema = @Schema(implementation = HealthReadyResponse.class)))
     public Response ready() {
-        boolean dbOk = false;
-        try (var conn = dataSource.getConnection();
-             var st = conn.prepareStatement("SELECT 1");
-             var rs = st.executeQuery()) {
-            dbOk = rs.next();
-        } catch (Exception e) {
-            log.warn("readiness DB probe failed: {}", e.getMessage());
-            dbOk = false;
-        }
+        boolean dbOk = new JdbcAdminStatsJdbcRepository(dataSource).ping();
         boolean redisOk = redisProbe.ping();
         boolean natsOk = natsConnectionStatus.natsClientConnected();
         var body = new HealthReadyResponse(dbOk ? "ready" : "not_ready", appConfig.version(), dbOk, redisOk, natsOk);

@@ -12,44 +12,44 @@ import java.util.UUID;
 
 public final class JdbcUserLookupAdapter implements UserLookupPort {
     private final JdbcUserJdbcRepository jdbc;
-    private final UserRepository legacy;
+    private final UserRepository testFacade;
 
     public JdbcUserLookupAdapter(JdbcUserJdbcRepository jdbc) {
         this.jdbc = jdbc;
-        this.legacy = null;
+        this.testFacade = null;
     }
 
     public JdbcUserLookupAdapter(UserRepository delegate) {
         this.jdbc = null;
-        this.legacy = delegate;
+        this.testFacade = delegate;
     }
 
     public JdbcUserLookupAdapter(DataSource dataSource) {
         this.jdbc = new JdbcUserJdbcRepository(dataSource);
-        this.legacy = null;
+        this.testFacade = null;
     }
 
     @Override
     public Optional<UserProfile> findById(UUID id) {
-        return useLegacy() ? legacy.findById(id) : jdbc.findById(id);
+        return usesTestFacade() ? testFacade.findById(id) : jdbc.findById(id);
     }
 
     @Override
     public Optional<UserProfile> findByUsername(String username) {
-        return useLegacy() ? legacy.findByUsername(username) : jdbc.findByUsername(username);
+        return usesTestFacade() ? testFacade.findByUsername(username) : jdbc.findByUsername(username);
     }
 
     @Override
     public boolean isReadReceiptsDisabled(UUID id) {
-        return useLegacy() ? legacy.isReadReceiptsDisabled(id) : jdbc.isReadReceiptsDisabled(id);
+        return usesTestFacade() ? testFacade.isReadReceiptsDisabled(id) : jdbc.isReadReceiptsDisabled(id);
     }
 
     @Override
     public List<UserSearchHit> searchForViewer(UUID viewerId, String query, int limit) {
-        return useLegacy() ? legacy.searchForViewer(viewerId, query, limit) : jdbc.searchForViewer(viewerId, query, limit);
+        return usesTestFacade() ? testFacade.searchForViewer(viewerId, query, limit) : jdbc.searchForViewer(viewerId, query, limit);
     }
 
-    private boolean useLegacy() {
-        return legacy != null;
+    private boolean usesTestFacade() {
+        return testFacade != null;
     }
 }

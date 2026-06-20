@@ -27,10 +27,7 @@ import com.avandocmsg.messenger.core.adapter.persistence.JdbcRetentionPolicyAdap
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcUserLookupAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcBlockRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcContactRepositoryAdapter;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.ExportJobRepository;
-import com.avandocmsg.messenger.api.repository.OrganizationRepository;
-import com.avandocmsg.messenger.api.repository.UserRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.FilePublicLinkPortAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcFileMetadataAdapter;
@@ -207,10 +204,6 @@ public final class CoreModule {
         return new JdbcOrgUserDirectoryAdapter(dataSource);
     }
 
-    public static OrgUserDirectoryPort orgUserDirectoryPort(UserRepository userRepository) {
-        return new JdbcOrgUserDirectoryAdapter(userRepository);
-    }
-
     public static DirectorySyncRunRepositoryPort directorySyncRunRepositoryPort(DataSource dataSource) {
         return new JdbcDirectorySyncRunRepositoryAdapter(
             new JdbcDirectorySyncRunJdbcRepository(dataSource));
@@ -308,10 +301,6 @@ public final class CoreModule {
         return new JdbcChatPersistenceAdapter(dataSource, readDataSource, clock, uuidGenerator, queryTimeoutSeconds);
     }
 
-    public static com.avandocmsg.messenger.core.port.ChatPersistencePort chatPersistencePort(ChatRepository chatRepository) {
-        return new JdbcChatPersistenceAdapter(chatRepository);
-    }
-
     public static com.avandocmsg.messenger.core.port.ChatReadStatePort chatReadStatePort(DataSource dataSource) {
         return new JdbcChatReadStateAdapter(dataSource);
     }
@@ -322,10 +311,6 @@ public final class CoreModule {
 
     public static com.avandocmsg.messenger.core.port.UserLookupPort userLookupPort(DataSource dataSource) {
         return new JdbcUserLookupAdapter(dataSource);
-    }
-
-    public static com.avandocmsg.messenger.core.port.UserLookupPort userLookupPort(UserRepository userRepository) {
-        return new JdbcUserLookupAdapter(userRepository);
     }
 
     public static com.avandocmsg.messenger.core.port.ChatBanPort chatBanPort(DataSource dataSource, Clock clock,
@@ -361,11 +346,6 @@ public final class CoreModule {
     public static com.avandocmsg.messenger.core.port.OrganizationLookupPort organizationLookupPort(
         DataSource dataSource, Clock clock, UuidGenerator uuidGenerator) {
         return new JdbcOrganizationLookupAdapter(dataSource, clock, uuidGenerator);
-    }
-
-    public static com.avandocmsg.messenger.core.port.OrganizationLookupPort organizationLookupPort(
-        OrganizationRepository organizationRepository) {
-        return new JdbcOrganizationLookupAdapter(organizationRepository);
     }
 
     public static com.avandocmsg.messenger.core.port.MigrationImportJobPort migrationImportJobPort(DataSource dataSource) {

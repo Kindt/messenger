@@ -11,63 +11,63 @@ import java.util.UUID;
 
 public final class JdbcOrganizationLookupAdapter implements OrganizationLookupPort {
     private final JdbcOrganizationJdbcRepository jdbc;
-    private final OrganizationRepository legacy;
+    private final OrganizationRepository testFacade;
 
     public JdbcOrganizationLookupAdapter(JdbcOrganizationJdbcRepository jdbc) {
         this.jdbc = jdbc;
-        this.legacy = null;
+        this.testFacade = null;
     }
 
     public JdbcOrganizationLookupAdapter(OrganizationRepository delegate) {
         this.jdbc = null;
-        this.legacy = delegate;
+        this.testFacade = delegate;
     }
 
     public JdbcOrganizationLookupAdapter(DataSource dataSource, Clock clock,
                                          com.avandocmsg.messenger.core.port.UuidGenerator uuidGenerator) {
         this.jdbc = new JdbcOrganizationJdbcRepository(dataSource, clock, uuidGenerator);
-        this.legacy = null;
+        this.testFacade = null;
     }
 
     @Override
     public boolean exists(UUID orgId) {
-        return useLegacy() ? legacy.exists(orgId) : jdbc.exists(orgId);
+        return usesTestFacade() ? testFacade.exists(orgId) : jdbc.exists(orgId);
     }
 
     @Override
     public Optional<OrgSummary> findById(UUID orgId) {
-        if (useLegacy()) {
-            return legacy.findById(orgId).map(JdbcOrganizationLookupAdapter::mapLegacy);
+        if (usesTestFacade()) {
+            return testFacade.findById(orgId).map(JdbcOrganizationLookupAdapter::mapLegacy);
         }
         return jdbc.findById(orgId).map(JdbcOrganizationLookupAdapter::map);
     }
 
     @Override
     public Optional<OrgSummary> findBySlug(String slug) {
-        if (useLegacy()) {
-            return legacy.findBySlug(slug).map(JdbcOrganizationLookupAdapter::mapLegacy);
+        if (usesTestFacade()) {
+            return testFacade.findBySlug(slug).map(JdbcOrganizationLookupAdapter::mapLegacy);
         }
         return jdbc.findBySlug(slug).map(JdbcOrganizationLookupAdapter::map);
     }
 
     @Override
     public Optional<OrgSummary> findSingle() {
-        if (useLegacy()) {
-            return legacy.findSingle().map(JdbcOrganizationLookupAdapter::mapLegacy);
+        if (usesTestFacade()) {
+            return testFacade.findSingle().map(JdbcOrganizationLookupAdapter::mapLegacy);
         }
         return jdbc.findSingle().map(JdbcOrganizationLookupAdapter::map);
     }
 
     @Override
     public List<OrgSummary> listAll() {
-        if (useLegacy()) {
-            return legacy.listAll().stream().map(JdbcOrganizationLookupAdapter::mapLegacy).toList();
+        if (usesTestFacade()) {
+            return testFacade.listAll().stream().map(JdbcOrganizationLookupAdapter::mapLegacy).toList();
         }
         return jdbc.listAll().stream().map(JdbcOrganizationLookupAdapter::map).toList();
     }
 
-    private boolean useLegacy() {
-        return legacy != null;
+    private boolean usesTestFacade() {
+        return testFacade != null;
     }
 
     private static OrgSummary map(JdbcOrganizationJdbcRepository.OrgRow row) {
