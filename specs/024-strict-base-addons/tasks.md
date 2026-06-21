@@ -63,8 +63,8 @@
 - [x] T030 Run focused tests for Product Modules, gates, migration bundles and web UI assets.
 - [x] T031 Update `specs/024-strict-base-addons/spec.md` status and out-of-scope notes to match implementation.
 - [x] T032 Update `specs/024-strict-base-addons/checklists/requirements.md` with final implementation evidence.
-- [ ] T033 Run `./gradlew buildIntegrity` and fix failures.
-- [ ] T034 Commit final green state and push branch.
+- [x] T033 Run `./gradlew buildIntegrity` and fix failures.
+- [x] T034 Commit final green state and push branch.
 
 ## Dependencies
 

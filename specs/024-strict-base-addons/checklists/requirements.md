@@ -34,4 +34,4 @@
 - Product decisions from brainstorming are encoded in `spec.md`: lean Base, Russian feature labels, atomic feature keys, add-on taxonomy, hot installation, admin disablement, optional migrations and declarative gates.
 - Live-server operations are intentionally out of scope and remain deferred outside this feature.
 - Implementation evidence: catalog v2 is in `modules/core-api/src/main/resources/product-modules.yaml`; runtime lifecycle/features/gates are covered by `ProductModuleCatalogConformanceTest`, `ProductModuleMigrationBundleTest`, `PlatformAddonGateFilterTest` and `PlatformModuleRegistryTest`; UI feature gates are covered by `WebUiParityAssetsTest`.
-- Final readiness requires `./gradlew buildIntegrity` green before completion.
+- Final readiness evidence: `./gradlew buildIntegrity` green after fixing the DLP external-stack profile reference.

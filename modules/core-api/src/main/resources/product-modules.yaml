@@ -565,7 +565,7 @@ addons:
     lifecycle_status: active
     internal_infra: []
     external_stack_components: [dlp, messaging]
-    external_stack_profiles: [dlp-external, nats-2.10-bundled]
+    external_stack_profiles: [infowatch, nats-2.10-bundled]
     migration_bundle: {id: addon-dlp, owner: addon-dlp, location: db/migration/addons/dlp, history_table: flyway_schema_history_addon_dlp, schema_objects: [dlp_policies, dlp_decision_audit]}
     runtime: {services: [], workers: [], required_secrets: [], health_checks: [dlp_policy], job_policy: stop, hook_policy: skip}
     features:
