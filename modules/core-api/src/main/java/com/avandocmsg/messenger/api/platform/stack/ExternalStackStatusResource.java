@@ -2,6 +2,9 @@ package com.avandocmsg.messenger.api.platform.stack;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.config.RedisProbe;
+import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
+import io.minio.BucketExistsArgs;
+import io.minio.MinioClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
@@ -29,10 +32,22 @@ public class ExternalStackStatusResource {
     }
 
     @Inject
-    public ExternalStackStatusResource(AppConfig appConfig, DataSource dataSource, RedisProbe redisProbe) {
+    public ExternalStackStatusResource(
+        AppConfig appConfig,
+        DataSource dataSource,
+        RedisProbe redisProbe,
+        MinioClient minioClient,
+        NatsConnectionStatus natsConnectionStatus
+    ) {
         this(new ExternalStackStatusService(), new ExternalStackRuntimeManifestProvider(
             appConfig,
-            ExternalStackActiveProbeService.bounded(appConfig, dataSource, redisProbe::ping)
+            ExternalStackActiveProbeService.bounded(
+                appConfig,
+                dataSource,
+                redisProbe::ping,
+                () -> minioBucketExists(minioClient, appConfig.minioBucket()),
+                natsConnectionStatus::natsClientConnected
+            )
         ));
     }
 
@@ -89,4 +104,13 @@ public class ExternalStackStatusResource {
     public record ConnectorCompatibilityPackCatalogResponse(
         @com.fasterxml.jackson.annotation.JsonProperty("packs") Map<String, ConnectorCompatibilityPack> packs
     ) {}
+
+    private static boolean minioBucketExists(MinioClient minioClient, String bucket) {
+        try {
+            return minioClient != null
+                && minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build());
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }

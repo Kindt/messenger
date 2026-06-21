@@ -31,13 +31,27 @@ public final class ExternalStackActiveProbeService {
         DataSource dataSource,
         BooleanSupplier redisPing
     ) {
+        return bounded(appConfig, dataSource, redisPing, null, null);
+    }
+
+    public static ExternalStackActiveProbeService bounded(
+        AppConfig appConfig,
+        DataSource dataSource,
+        BooleanSupplier redisPing,
+        BooleanSupplier s3Ping,
+        BooleanSupplier natsPing
+    ) {
         return of(Map.of(
             "relational-db-hot", manifest -> jdbcMetadataProbe(dataSource),
             "cache", manifest -> redisProbe(redisPing),
             "idp", manifest -> oidcShapeProbe(appConfig.keycloakIssuer()),
             "web-edge", manifest -> urlShapeProbe(appConfig.webPublicBaseUrl(), "web-edge"),
-            "object-storage", manifest -> configuredEndpointProbe(appConfig.minioEndpoint(), "object-storage", "s3 client not attached"),
-            "messaging", manifest -> configuredEndpointProbe(appConfig.natsUrl(), "messaging", "nats client not attached")
+            "object-storage", manifest -> s3Ping != null
+                ? booleanProbe(s3Ping, "s3 bucket reachable", "s3 bucket probe failed")
+                : configuredEndpointProbe(appConfig.minioEndpoint(), "object-storage", "s3 client not attached"),
+            "messaging", manifest -> natsPing != null
+                ? booleanProbe(natsPing, "nats client connected", "nats client disconnected")
+                : configuredEndpointProbe(appConfig.natsUrl(), "messaging", "nats client not attached")
         ));
     }
 
@@ -72,12 +86,20 @@ public final class ExternalStackActiveProbeService {
         if (redisPing == null) {
             return ExternalStackProbeResult.degraded("redis probe not attached");
         }
+        return booleanProbe(redisPing, "redis ping ok", "redis ping failed");
+    }
+
+    private static ExternalStackProbeResult booleanProbe(
+        BooleanSupplier probe,
+        String successWarning,
+        String failureReason
+    ) {
         try {
-            return redisPing.getAsBoolean()
-                ? ExternalStackProbeResult.ok()
-                : ExternalStackProbeResult.degraded("redis ping failed");
+            return probe.getAsBoolean()
+                ? ExternalStackProbeResult.ok(Map.of(), successWarning)
+                : ExternalStackProbeResult.degraded(failureReason);
         } catch (Exception e) {
-            return ExternalStackProbeResult.degraded("redis ping failed: " + e.getMessage());
+            return ExternalStackProbeResult.degraded(failureReason + ": " + e.getMessage());
         }
     }
 

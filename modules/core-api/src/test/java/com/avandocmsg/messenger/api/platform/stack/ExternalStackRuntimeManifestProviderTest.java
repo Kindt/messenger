@@ -182,6 +182,23 @@ class ExternalStackRuntimeManifestProviderTest {
         assertEquals("healthy", web.healthStatus());
     }
 
+    @Test
+    void boundedActiveProbesUseAttachedS3AndNatsSuppliersWhenProvided() {
+        var ds = new JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:external_stack_probe_attached;DB_CLOSE_DELAY=-1");
+        var provider = new ExternalStackRuntimeManifestProvider(
+            new TestConfig(),
+            ExternalStackActiveProbeService.bounded(new TestConfig(), ds, () -> true, () -> true, () -> false)
+        );
+
+        var storage = observation(provider.observations(), "object-storage");
+        var messaging = observation(provider.observations(), "messaging");
+
+        assertEquals("healthy", storage.healthStatus());
+        assertEquals("degraded", messaging.healthStatus());
+        assertEquals("nats client disconnected", messaging.degradedReason());
+    }
+
     private static ManifestObservation observation(
         java.util.List<ManifestObservation> observations,
         String component
