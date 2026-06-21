@@ -1,13 +1,10 @@
 package com.avandocmsg.messenger.api.phase5;
 
 import com.avandocmsg.messenger.api.params.CurrentUserId;
-import com.avandocmsg.messenger.api.phase5.dto.AiAssistRequest;
-import com.avandocmsg.messenger.api.phase5.dto.AiAssistResponse;
 import com.avandocmsg.messenger.api.phase5.dto.PasskeyRegisterRequest;
 import com.avandocmsg.messenger.api.phase5.dto.PasskeyResponse;
 import com.avandocmsg.messenger.api.phase5.dto.SipGatewayRequest;
 import com.avandocmsg.messenger.api.phase5.dto.SipGatewayResponse;
-import com.avandocmsg.messenger.api.params.UuidParams;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,7 +15,6 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
@@ -82,21 +78,6 @@ public class PlatformAdrResource {
         var pk = request != null ? request.publicKey() : null;
         return service.registerPasskeyScaffold(userId, cred, pk)
             .map(id -> Response.status(Response.Status.CREATED).entity(PasskeyResponse.created(id.toString(), cred)).build())
-            .orElse(forbidden());
-    }
-
-    @POST
-    @Path("chats/{chatId}/ai/assist")
-    @Tag(name = "AI gateway", description = "On-prem AI chat assist (T02312)")
-    @Operation(summary = "AI assist via L2 bridge preset")
-    public Response aiAssist(@PathParam("chatId") String chatId,
-                             AiAssistRequest request,
-                             @Context SecurityContext securityContext) {
-        var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var prompt = request != null ? request.prompt() : null;
-        return service.aiAssist(cid, userId, prompt)
-            .map(r -> Response.ok(new AiAssistResponse(r.status(), r.reply())).build())
             .orElse(forbidden());
     }
 

@@ -75,7 +75,9 @@
 | **Migration import (spec 022 US9)** | `scripts/smoke-migration-import.ps1` | manual | host `:18080`; create + process telegram fixture |
 | **DLP mock bridge (spec 022 US7)** | `scripts/smoke-dlp-mock.ps1` | manual | `:8098` or `DLP_MOCK_URL`; block verdict |
 | **Federation trust (spec 022 T02308)** | `scripts/smoke-federation-trust.ps1` | manual | host `:18080`; admin trust + platform status |
+| **Federation cross-org member gate** | `scripts/smoke-federation-cross-org.ps1` | manual | host `:18080`; 403 without trust, 201 with trust |
 | **Phase 5 messaging (spec 022 T02301/03/06)** | `scripts/smoke-phase5-messaging.ps1` | manual | host `:18080`; poll + scheduled + reminder API |
+| **Phase 5 ADR depth (spec 022 T02307+)** | `scripts/smoke-phase5-adr-scaffolds.ps1` | manual | host `:18080`; stickers/SIP/passkeys/kanban/conf ADR |
 | **GDPR export completeness (P1-6)** | `scripts/smoke-export-gdpr-fulfillment.ps1` | manual | admin export-compliance-guide + parity API |
 | **File image resize (P1-4)** | `scripts/smoke-file-resize.ps1` | manual | host `:18080`; upload PNG → `/resize?w=32&h=32` |
 | **Export-replay non-stub (P2-4)** | `scripts/smoke-export-replay-non-stub.ps1` | manual | export_v1 gate via `smoke-export-replay-before-purge` |

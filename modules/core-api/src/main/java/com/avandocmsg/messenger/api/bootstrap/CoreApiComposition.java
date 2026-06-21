@@ -276,7 +276,8 @@ public class CoreApiComposition {
         var contactService = new ContactService(contactRepositoryPort, userLookupPort, blockRepositoryPort);
         var natsOutbound = new NatsConnectionOutbound(natsConnection, jetStreamOptional());
         var adminManifest = AdminUiManifest.load(CoreApiComposition.class.getClassLoader());
-        var adminServerStatsService = new AdminServerStatsService(dataSource, appConfig, natsOutbound, redisProbe);
+        var adminStatsJdbc = new com.avandocmsg.messenger.core.adapter.persistence.JdbcAdminStatsJdbcRepository(dataSource);
+        var adminServerStatsService = new AdminServerStatsService(adminStatsJdbc, appConfig, natsOutbound, redisProbe);
         var fleetTargetRegistry = FleetTargetRegistry.fromJson(appConfig.fleetTargetsJson());
         var fleetHotPlugRegistry = indexerHotPlugMonitor != null ? indexerHotPlugMonitor.registry() : null;
         var fleetSnapshotService = new FleetSnapshotService(
@@ -296,7 +297,7 @@ public class CoreApiComposition {
         var mlsWirePublisher = new MlsWirePublisher(natsOutbound, appConfig);
         var mlsGroupManager = new MlsGroupManager(mlsGroupStateRepository, mlsService,
             this.uuidGenerator, this.clock, mlsWirePublisher);
-        var mlsMigrationService = new MlsMigrationService(dataSource, mlsGroupManager, chatPersistencePort);
+        var mlsMigrationService = new MlsMigrationService(adminStatsJdbc, mlsGroupManager, chatPersistencePort);
         var openMlsBindingPort = OpenMlsBindingFactory.create(appConfig, mlsService);
         var chatApplicationService = CoreModule.chatApplicationService(dataSource);
         var userApplicationService = CoreModule.userApplicationService(

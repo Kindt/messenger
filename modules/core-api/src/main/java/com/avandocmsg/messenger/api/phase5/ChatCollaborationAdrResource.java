@@ -6,6 +6,8 @@ import com.avandocmsg.messenger.api.phase5.dto.CreateKanbanTaskRequest;
 import com.avandocmsg.messenger.api.phase5.dto.KanbanTaskResponse;
 import com.avandocmsg.messenger.api.phase5.dto.WhiteboardResponse;
 import com.avandocmsg.messenger.api.phase5.dto.WhiteboardSaveRequest;
+import com.avandocmsg.messenger.api.phase5.dto.AiAssistRequest;
+import com.avandocmsg.messenger.api.phase5.dto.AiAssistResponse;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.swagger.v3.oas.annotations.Operation;
@@ -89,6 +91,20 @@ public class ChatCollaborationAdrResource {
         return service.createKanbanTask(cid, userId, column, title)
             .map(id -> Response.status(Response.Status.CREATED)
                 .entity(KanbanTaskResponse.created(id.toString(), column, title)).build())
+            .orElse(forbidden());
+    }
+
+    @POST
+    @Path("ai/assist")
+    @Operation(summary = "AI assist via L2 bridge preset")
+    public Response aiAssist(@PathParam("chatId") String chatId,
+                             AiAssistRequest request,
+                             @Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        var cid = UuidParams.required(chatId, "chat_id");
+        var prompt = request != null ? request.prompt() : null;
+        return service.aiAssist(cid, userId, prompt)
+            .map(r -> Response.ok(new AiAssistResponse(r.status(), r.reply())).build())
             .orElse(forbidden());
     }
 

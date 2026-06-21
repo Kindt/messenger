@@ -54,6 +54,7 @@ import com.avandocmsg.messenger.api.platform.PlatformAddonGateFilter;
 import com.avandocmsg.messenger.api.platform.stack.ExternalStackStatusResource;
 import com.avandocmsg.messenger.api.metrics.PrometheusMetricsResource;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcAdminStatsJdbcRepository;
+import com.avandocmsg.messenger.core.port.AdminMetricsQueryPort;
 import com.avandocmsg.messenger.core.port.DatabaseHealthPort;
 import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.core.port.ChatPersistencePort;
@@ -197,7 +198,9 @@ public class JerseyConfig extends ResourceConfig {
             @Override
             protected void configure() {
                 bind(dataSource).to(DataSource.class);
-                bind(new JdbcAdminStatsJdbcRepository(dataSource)).to(DatabaseHealthPort.class);
+                var adminStatsJdbc = new JdbcAdminStatsJdbcRepository(dataSource);
+                bind(adminStatsJdbc).to(DatabaseHealthPort.class);
+                bind(adminStatsJdbc).to(AdminMetricsQueryPort.class);
                 bind(appConfig).to(AppConfig.class);
                 bind(redisProbe).to(RedisProbe.class);
                 bind(readCachePort).to(ReadCachePort.class);
