@@ -123,6 +123,16 @@ def test_role_decision_board_avoids_orphan_card_layout():
     assert "repeat(auto-fit, minmax(190px, 1fr))" not in css
 
 
+def test_deck_uses_korus_consulting_brand_palette():
+    css = _deck_css()
+    assert "--brand: #0b2347" in css
+    assert "--accent: #e31e24" in css
+    assert "--korus-purple: #6d3fd1" in css
+    assert "--korus-yellow: #ffd33d" in css
+    assert "linear-gradient(135deg, #081a38 0%, #0b2347" in css
+    assert "background: var(--accent); color: #fff" in css
+
+
 def test_competitor_list_explains_public_price_rows():
     html = render_competitor_list()
     assert "Публичных тарифов в расчёте" in html
