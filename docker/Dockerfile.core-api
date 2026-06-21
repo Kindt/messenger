@@ -7,6 +7,7 @@ FROM eclipse-temurin:25-jre
 WORKDIR /app
 COPY --from=builder /app/modules/core-api/build/distributions/core-api.tar .
 RUN tar xf core-api.tar && rm core-api.tar
+COPY --from=builder /app/docs/external-stack-profiles.yaml /app/core-api/conf/external-stack-profiles.yaml
 EXPOSE 8080
 ENV APP_HOME=/app/core-api
 ENV HOT_RELOAD=false
