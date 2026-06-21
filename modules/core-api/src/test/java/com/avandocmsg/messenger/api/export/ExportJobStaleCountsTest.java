@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.export;
 
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAdminStatsJdbcRepository;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.AfterEach;
@@ -17,12 +18,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ExportJobStaleCountsTest {
 
     private HikariDataSource ds;
+    private JdbcAdminStatsJdbcRepository metrics;
 
     @BeforeEach
     void init() throws Exception {
         var cfg = new HikariConfig();
         cfg.setJdbcUrl("jdbc:h2:mem:stale_" + UUID.randomUUID().toString().replace("-", "") + ";DB_CLOSE_DELAY=-1");
         ds = new HikariDataSource(cfg);
+        metrics = new JdbcAdminStatsJdbcRepository(ds);
         try (var c = ds.getConnection(); Statement st = c.createStatement()) {
             st.execute("""
                 CREATE TABLE export_jobs (
@@ -61,8 +64,8 @@ class ExportJobStaleCountsTest {
     }
 
     @Test
-    void countProcessingStale_ignoresFreshAndNonProcessing() throws Exception {
-        assertEquals(1, ExportJobStaleCounts.countProcessingStale(ds, 30));
-        assertEquals(0, ExportJobStaleCounts.countProcessingStale(ds, 180));
+    void countProcessingStale_ignoresFreshAndNonProcessing() {
+        assertEquals(1, metrics.countProcessingStaleExportJobs(30));
+        assertEquals(0, metrics.countProcessingStaleExportJobs(180));
     }
 }

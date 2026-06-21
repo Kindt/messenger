@@ -73,28 +73,36 @@ public final class ExternalStackManifestValidator {
             var activeCount = (int) componentManifests.stream()
                 .filter(m -> m.role() == ExternalStackRole.active)
                 .count();
+            var failures = validation.failures().stream()
+                .filter(failure -> failure.startsWith(componentPrefix))
+                .toList();
+            var warnings = validation.warnings().stream()
+                .filter(warning -> warning.startsWith(componentPrefix))
+                .toList();
+            var missingRequiredChecks = missingRequiredChecks(component, componentManifests);
             components.put(component, new ExternalStackManifestPreflightReport.ComponentSummary(
                 componentManifests.size(),
                 activeCount,
-                validation.failures().stream()
-                    .filter(failure -> failure.startsWith(componentPrefix))
-                    .toList(),
-                validation.warnings().stream()
-                    .filter(warning -> warning.startsWith(componentPrefix))
-                    .toList(),
-                missingRequiredChecks(component, componentManifests),
+                failures,
+                warnings,
+                missingRequiredChecks,
+                remediationActions(component, failures, warnings, missingRequiredChecks),
                 validation.metadata().get(component + ".endpoint")
             ));
         }
         var missingRequiredCheckCount = components.values().stream()
             .mapToInt(component -> component.missingRequiredChecks().size())
             .sum();
+        var remediationActions = components.values().stream()
+            .flatMap(component -> component.remediationActions().stream())
+            .toList();
         return new ExternalStackManifestPreflightReport(
             validation.passed(),
             severity(validation, missingRequiredCheckCount),
             validation.failures().size(),
             validation.warnings().size(),
             missingRequiredCheckCount,
+            remediationActions,
             validation,
             Map.copyOf(components)
         );
@@ -219,6 +227,39 @@ public final class ExternalStackManifestValidator {
         return contract.requiredChecks().stream()
             .filter(check -> !provided.contains(check))
             .toList();
+    }
+
+    private static List<String> remediationActions(
+        String component,
+        List<String> failures,
+        List<String> warnings,
+        List<String> missingRequiredChecks
+    ) {
+        var actions = new ArrayList<String>();
+        for (var failure : failures) {
+            if (failure.contains("has no active manifest") || failure.contains(" active manifests")) {
+                actions.add(component + ": keep exactly one active manifest");
+            } else if (failure.contains("cannot serve active traffic")) {
+                actions.add("disable serve_traffic for non-active role");
+            } else if (failure.contains("references unknown compatibility profile")) {
+                actions.add(component + ": choose a profile from /compatibility-packs");
+            } else if (failure.contains("belongs to component")) {
+                actions.add(component + ": use a compatibility profile matching the component");
+            } else if (failure.contains("is not production-supported")) {
+                actions.add(component + ": switch active manifest to supported profile or keep candidate as migration_target");
+            } else if (failure.contains("ambiguous production auto profile")) {
+                actions.add(component + ": replace auto with an explicit compatibility_profile");
+            }
+        }
+        for (var warning : warnings) {
+            if (warning.contains("requires customer support boundary evidence")) {
+                actions.add(component + ": attach customer support boundary evidence");
+            } else if (warning.contains("unsupported mode:")) {
+                actions.add(component + ": remove unsupported mode before production promotion");
+            }
+        }
+        missingRequiredChecks.forEach(check -> actions.add("provide evidence for required check " + check));
+        return actions.stream().distinct().toList();
     }
 
     private static String redactEndpoint(String endpoint) {

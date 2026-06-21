@@ -190,7 +190,6 @@ public class CoreApiComposition {
                 appConfig, exportJobEnqueuer, exportJobPort, chatPersistencePort, auditPort))
             : Optional.<ExportAutoQueueOnSuggested>empty();
         this.exportSuggestedHandler = new ExportSuggestedHandler(auditPort, exportAutoQueue);
-        ExportJobsDbCollector.registerDefault(dataSource, appConfig.exportProcessingStaleMinutes());
         ExportMetrics.ensureRegistered();
         ReadCacheMetrics.ensureRegistered();
         if (appConfig.rateLimitAuthEnabled() || appConfig.redisReadCacheEnabled()) {
@@ -277,6 +276,7 @@ public class CoreApiComposition {
         var natsOutbound = new NatsConnectionOutbound(natsConnection, jetStreamOptional());
         var adminManifest = AdminUiManifest.load(CoreApiComposition.class.getClassLoader());
         var adminStatsJdbc = new com.avandocmsg.messenger.core.adapter.persistence.JdbcAdminStatsJdbcRepository(dataSource);
+        ExportJobsDbCollector.registerDefault(adminStatsJdbc, appConfig.exportProcessingStaleMinutes());
         var adminServerStatsService = new AdminServerStatsService(adminStatsJdbc, appConfig, natsOutbound, redisProbe);
         var fleetTargetRegistry = FleetTargetRegistry.fromJson(appConfig.fleetTargetsJson());
         var fleetHotPlugRegistry = indexerHotPlugMonitor != null ? indexerHotPlugMonitor.registry() : null;
@@ -307,7 +307,7 @@ public class CoreApiComposition {
             dataSource, messageQueryPort, objectStoragePort, this.uuidGenerator, appConfig);
         var organizationApplicationService = CoreModule.organizationApplicationService(dataSource, this.uuidGenerator);
         var publicLinkPort = CoreModule.publicLinkPort(dataSource, this.uuidGenerator);
-        var purgeStatusService = new PurgeStatusService(dataSource, auditPort);
+        var purgeStatusService = new PurgeStatusService(adminStatsJdbc, auditPort);
         java.util.function.BooleanSupplier indexerAvailable =
             () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent();
         var indexerEventPublisher = CoreModule.indexerEventPublisher(natsOutbound, indexerAvailable);

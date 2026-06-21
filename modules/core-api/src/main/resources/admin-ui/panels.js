@@ -802,7 +802,7 @@
     download.type = "button";
     download.id = "externalStackDownloadReport";
     download.className = "btn btn-secondary";
-    download.textContent = "Download JSON report";
+    download.textContent = "Скачать JSON-отчёт";
     download.addEventListener("click", () =>
       externalStackDownloadReport("external-stack-report.json", summary._externalStackLastReport || {})
     );
@@ -876,14 +876,14 @@
     sample.type = "button";
     sample.id = "externalStackSampleCheckpoint";
     sample.className = "btn btn-ghost";
-    sample.textContent = "Sample checkpoint JSON";
+    sample.textContent = "Пример checkpoint JSON";
     sample.addEventListener("click", () => {
       ta.value = JSON.stringify(externalStackSampleCheckpoint(), null, 2);
     });
     const validate = document.createElement("button");
     validate.type = "button";
     validate.className = "btn btn-secondary";
-    validate.textContent = "Validate checkpoint";
+    validate.textContent = "Проверить checkpoint";
     const result = document.createElement("span");
     result.className = "muted small";
     validate.addEventListener("click", async () => {
@@ -927,7 +927,7 @@
     box.id = "externalStackProfilePreflight";
     const title = document.createElement("p");
     title.className = "form-section-label";
-    title.textContent = "Profile preflight (repo-local)";
+    title.textContent = "Profile preflight (локально)";
     box.appendChild(title);
     const hint = document.createElement("p");
     hint.className = "muted small external-stack-schema-help";
@@ -947,7 +947,7 @@
     const validate = document.createElement("button");
     validate.type = "button";
     validate.className = "btn btn-secondary";
-    validate.textContent = "Validate profile";
+    validate.textContent = "Проверить профиль";
     const result = document.createElement("span");
     result.className = "muted small";
     const bodyText = () => JSON.stringify({
@@ -966,9 +966,11 @@
           " · severity=" +
           (validation.severity || "?") +
           " · missing evidence=" +
-          ((validation.missing_promotion_evidence || []).length) +
+          (validation.missing_promotion_evidence_count || (validation.missing_promotion_evidence || []).length) +
           " · unsupported=" +
-          ((validation.unsupported_modes || []).length);
+          (validation.unsupported_mode_count || (validation.unsupported_modes || []).length) +
+          " · remediation=" +
+          ((validation.remediation_actions || []).length);
         pre.textContent = JSON.stringify(validation, null, 2);
         if (global.AdminUi) {
           AdminUi.showJsonBlock(true);
@@ -992,7 +994,7 @@
     box.className = "panel-form external-stack-preflight";
     const title = document.createElement("p");
     title.className = "form-section-label";
-    title.textContent = "Manifest preflight (repo-local)";
+    title.textContent = "Manifest preflight (локально)";
     box.appendChild(title);
     const hint = document.createElement("p");
     hint.className = "muted small";
@@ -1010,14 +1012,14 @@
     sample.type = "button";
     sample.id = "externalStackSampleManifest";
     sample.className = "btn btn-ghost";
-    sample.textContent = "Sample manifest JSON";
+    sample.textContent = "Пример manifest JSON";
     sample.addEventListener("click", () => {
       ta.value = JSON.stringify(externalStackSampleManifest(), null, 2);
     });
     const validate = document.createElement("button");
     validate.type = "button";
     validate.className = "btn btn-secondary";
-    validate.textContent = "Validate manifests";
+    validate.textContent = "Проверить manifests";
     const result = document.createElement("span");
     result.className = "muted small";
     validate.addEventListener("click", async () => {
@@ -1038,6 +1040,8 @@
           (validation.warning_count || 0) +
           " · missing checks=" +
           (validation.missing_required_check_count || externalStackMissingRequiredChecksCount(validation)) +
+          " · remediation=" +
+          ((validation.remediation_actions || []).length) +
           " · redacted=" +
           (validation.validation && validation.validation.redacted === true);
         pre.textContent = JSON.stringify(validation, null, 2);

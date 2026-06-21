@@ -10,14 +10,20 @@ public record ExternalStackProfilePreflightReport(
     @JsonProperty("profile_id") String profileId,
     @JsonProperty("component") String component,
     @JsonProperty("lifecycle_status") String lifecycleStatus,
+    @JsonProperty("missing_promotion_evidence_count") int missingPromotionEvidenceCount,
+    @JsonProperty("unsupported_mode_count") int unsupportedModeCount,
     @JsonProperty("failures") List<String> failures,
     @JsonProperty("missing_promotion_evidence") List<String> missingPromotionEvidence,
-    @JsonProperty("unsupported_modes") List<String> unsupportedModes
+    @JsonProperty("unsupported_modes") List<String> unsupportedModes,
+    @JsonProperty("remediation_actions") List<String> remediationActions
 ) {
     public ExternalStackProfilePreflightReport {
         failures = failures == null ? List.of() : List.copyOf(failures);
         missingPromotionEvidence = missingPromotionEvidence == null ? List.of() : List.copyOf(missingPromotionEvidence);
         unsupportedModes = unsupportedModes == null ? List.of() : List.copyOf(unsupportedModes);
+        remediationActions = remediationActions == null ? List.of() : List.copyOf(remediationActions);
+        missingPromotionEvidenceCount = missingPromotionEvidence.size();
+        unsupportedModeCount = unsupportedModes.size();
         passed = failures.isEmpty();
     }
 }

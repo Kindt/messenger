@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.api.mls;
 
 import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
 import com.avandocmsg.messenger.api.crypto.E2EEService;
+import com.avandocmsg.messenger.core.port.AdminMetricsQueryPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import com.avandocmsg.messenger.testsupport.EmptyChatPersistencePort;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,7 @@ class MlsMigrationServiceTest {
 
     private MlsGroupManagerTest.InMemoryGroupStateRepository groupStateRepository;
     private StubChatRepository chatRepository;
+    private StubAdminMetricsQueryPort adminMetricsQueryPort;
     private MlsGroupManager groupManager;
     private MlsMigrationService migrationService;
     private UUID chatId;
@@ -28,11 +30,12 @@ class MlsMigrationServiceTest {
         chatId = UUID.randomUUID();
         groupStateRepository = new MlsGroupManagerTest.InMemoryGroupStateRepository();
         chatRepository = new StubChatRepository();
+        adminMetricsQueryPort = new StubAdminMetricsQueryPort();
         var sessionRepository = new MlsGroupManagerTest.StubSessionRepository();
         var mlsService = new MlsService(sessionRepository, new E2EEService());
         var clock = Clock.fixed(Instant.parse("2026-06-09T12:00:00Z"), ZoneOffset.UTC);
         groupManager = new MlsGroupManager(groupStateRepository, mlsService, UuidGenerator.standard(), clock);
-        migrationService = new MlsMigrationService(null, groupManager, chatRepository);
+        migrationService = new MlsMigrationService(adminMetricsQueryPort, groupManager, chatRepository);
     }
 
     @Test
@@ -55,7 +58,7 @@ class MlsMigrationServiceTest {
             member.toString(), "alice", "Alice", "member", false, false, Instant.now())));
         chatRepository.members.put(chat2, List.of(new ChatMemberResponse(
             member.toString(), "bob", "Bob", "member", false, false, Instant.now())));
-        var batchService = new MlsMigrationService(null, groupManager, chatRepository) {
+        var batchService = new MlsMigrationService(adminMetricsQueryPort, groupManager, chatRepository) {
             @Override
             List<UUID> listPendingChatIds(int limit) {
                 return List.of(chatId, chat2);
@@ -87,6 +90,53 @@ class MlsMigrationServiceTest {
         @Override
         public List<ChatMemberResponse> listMembers(UUID chatId) {
             return members.getOrDefault(chatId, List.of());
+        }
+    }
+
+    static final class StubAdminMetricsQueryPort implements AdminMetricsQueryPort {
+        @Override
+        public boolean ping() {
+            return true;
+        }
+
+        @Override
+        public TableCounts countMessagingTables() {
+            return new TableCounts(0, 0, 0, true);
+        }
+
+        @Override
+        public ExportJobStatusScan scanExportJobStatuses() {
+            return ExportJobStatusScan.unavailable();
+        }
+
+        @Override
+        public long countAuditExportSince(Instant since) {
+            return 0;
+        }
+
+        @Override
+        public long countAuditExportCancelledSince(Instant since) {
+            return 0;
+        }
+
+        @Override
+        public long countPendingMlsMigrations() {
+            return 0;
+        }
+
+        @Override
+        public List<UUID> listPendingMlsMigrationChatIds(int limit) {
+            return List.of();
+        }
+
+        @Override
+        public long countProcessingStaleExportJobs(int staleMinutes) {
+            return 0;
+        }
+
+        @Override
+        public long countPendingHotRowCandidates() {
+            return 0;
         }
     }
 }

@@ -96,7 +96,7 @@ Repo-local API:
   - Constraint: validates desired state only; no deploy, no secret exposure, no runtime endpoint switch. Unknown profile ids, component/profile mismatch and active candidate profiles fail validation.
 - `POST /api/v1/platform/external-stack/preflight/manifests/report`
   - Input: `{ "manifests": [ComponentBackendManifest...] }`
-  - Output: manifest explain report with severity (`ok`, `warning`, `blocked`), totals and per-component summaries including `missing_required_checks`.
+  - Output: manifest explain report with severity (`ok`, `warning`, `blocked`), totals, `remediation_actions` and per-component summaries including `missing_required_checks`.
   - Constraint: uses redacted metadata only; no endpoint switch.
 - `POST /api/v1/platform/external-stack/preflight/checkpoint`
   - Input: `MigrationCheckpoint`
@@ -106,6 +106,10 @@ Repo-local API:
   - Input: `{ "profile_id": "..." }`
   - Output: redacted `ValidationResult`
   - Constraint: candidate/integration candidate profiles fail production preflight until explicitly promoted.
+- `POST /api/v1/platform/external-stack/preflight/profile/report`
+  - Input: `{ "profile_id": "...", "evidence": [...] }`
+  - Output: profile evidence readiness report with severity, missing promotion evidence/unsupported-mode counts, remediation actions and unsupported modes.
+  - Constraint: supported profiles may pass with `warning` severity when evidence is incomplete; candidate profiles remain blocked.
 
 ## Acceptance
 
@@ -124,3 +128,6 @@ Validation is accepted when:
 11. Active external/BYO manifests warn about customer support-boundary evidence and unsupported modes even when validation passes.
 12. Active manifests warn when they do not provide evidence for all component contract required checks.
 13. Preflight report severity is `blocked` for failures, `warning` for warning-only evidence gaps and `ok` only when no failures/warnings remain.
+14. Profile evidence preflight must expose missing promotion evidence and unsupported modes without promoting candidate profiles.
+15. Manifest preflight report must expose deterministic `remediation_actions` for single-active, serve-traffic, profile mismatch/support and missing evidence failures.
+16. Profile evidence preflight report must expose deterministic `remediation_actions` for unsupported profiles, missing promotion evidence and unsupported modes.

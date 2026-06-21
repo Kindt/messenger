@@ -94,7 +94,11 @@ class ClasspathAdminStaticServletTest {
         assertTrue(panels.contains("missing checks="));
         assertTrue(panels.contains("/platform/external-stack/preflight/profile/report"));
         assertTrue(panels.contains("missing_promotion_evidence"));
+        assertTrue(panels.contains("missing_promotion_evidence_count"));
+        assertTrue(panels.contains("unsupported_mode_count"));
         assertTrue(panels.contains("missing evidence="));
+        assertTrue(panels.contains("remediation_actions"));
+        assertTrue(panels.contains("remediation="));
     }
 
     private static String resourceText(String path) throws IOException {

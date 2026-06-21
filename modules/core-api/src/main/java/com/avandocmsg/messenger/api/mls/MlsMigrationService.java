@@ -31,9 +31,6 @@ public class MlsMigrationService {
     }
 
     public long pendingMigrationCount() {
-        if (adminMetricsQueryPort == null) {
-            return 0L;
-        }
         return adminMetricsQueryPort.countPendingMlsMigrations();
     }
 
@@ -108,7 +105,7 @@ public class MlsMigrationService {
     }
 
     List<UUID> listPendingChatIds(int limit) {
-        if (adminMetricsQueryPort == null || limit <= 0) {
+        if (limit <= 0) {
             return List.of();
         }
         return adminMetricsQueryPort.listPendingMlsMigrationChatIds(limit);

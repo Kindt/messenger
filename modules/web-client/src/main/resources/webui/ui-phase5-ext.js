@@ -191,7 +191,15 @@
       var btn = ctx.el("button", "stickers-pack-item");
       btn.type = "button";
       btn.setAttribute("data-testid", "sticker-pack-" + idx);
-      btn.textContent = p.name || p.pack_id || "?";
+      var preview = p.preview_url || p.cover_url || p.icon_url;
+      if (preview) {
+        var img = document.createElement("img");
+        img.className = "stickers-pack-preview";
+        img.src = preview;
+        img.alt = p.name || p.pack_id || "";
+        btn.appendChild(img);
+      }
+      btn.appendChild(ctx.el("span", "stickers-pack-label", p.name || p.pack_id || "?"));
       btn.onclick = function () {
         ctx.insertStickerMessage(p);
       };
@@ -222,7 +230,16 @@
       var btn = ctx.el("button", "stickers-gif-item");
       btn.type = "button";
       btn.setAttribute("data-testid", "gif-item-" + idx);
-      btn.textContent = g.query_key || g.gif_url || "?";
+      var gifUrl = g.preview_url || g.gif_url || g.thumbnail_url;
+      if (gifUrl) {
+        var img = document.createElement("img");
+        img.className = "stickers-gif-preview";
+        img.src = gifUrl;
+        img.alt = g.query_key || "";
+        btn.appendChild(img);
+      } else {
+        btn.textContent = g.query_key || g.gif_url || "?";
+      }
       btn.onclick = function () {
         ctx.insertGifMessage(g);
       };
@@ -297,8 +314,15 @@
 
   function mountFederationDirectory(ctx, panel) {
     if (!panel) return;
+    var wrap = ctx.el("div", "federation-settings-panel");
+    wrap.setAttribute("data-testid", "federation-settings-panel");
     var head = ctx.el("div", "settings-row");
     head.appendChild(ctx.el("h3", "settings-subtitle", ctx.L("ui.phase5.federationTitle")));
+    if ((ctx.state.federationDirectory || []).length) {
+      head.appendChild(
+        ctx.el("span", "federation-trust-badge", ctx.L("ui.federation.trustActive"))
+      );
+    }
     head.appendChild(
       ctx.el("p", "phase5-hint federation-directory-hint", ctx.L("ui.federation.directoryHint"))
     );
@@ -311,7 +335,7 @@
         },
       })
     );
-    panel.appendChild(head);
+    wrap.appendChild(head);
     var list = ctx.el("div", "federation-directory-list");
     list.setAttribute("data-testid", "federation-directory-list");
     (ctx.state.federationDirectory || []).forEach(function (p) {
@@ -326,7 +350,8 @@
     if (!(ctx.state.federationDirectory || []).length) {
       list.appendChild(ctx.el("p", "phase5-hint", ctx.L("ui.phase5.federationEmpty")));
     }
-    panel.appendChild(list);
+    wrap.appendChild(list);
+    panel.appendChild(wrap);
   }
 
   function mountPasskeysSection(ctx, panel) {

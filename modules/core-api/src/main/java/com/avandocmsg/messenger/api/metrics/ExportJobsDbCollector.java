@@ -1,34 +1,33 @@
 package com.avandocmsg.messenger.api.metrics;
 
-import com.avandocmsg.messenger.api.export.ExportJobStaleCounts;
+import com.avandocmsg.messenger.core.port.AdminMetricsQueryPort;
 import io.prometheus.client.Collector;
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.GaugeMetricFamily;
 
-import javax.sql.DataSource;
 import java.util.List;
 
 /** Gauges derived from {@code export_jobs} (refreshed on each Prometheus scrape). */
 public final class ExportJobsDbCollector extends Collector {
 
-    private final DataSource dataSource;
+    private final AdminMetricsQueryPort adminMetricsQueryPort;
     private final int processingStaleMinutes;
 
-    public ExportJobsDbCollector(DataSource dataSource, int processingStaleMinutes) {
-        this.dataSource = dataSource;
+    public ExportJobsDbCollector(AdminMetricsQueryPort adminMetricsQueryPort, int processingStaleMinutes) {
+        this.adminMetricsQueryPort = adminMetricsQueryPort;
         this.processingStaleMinutes = processingStaleMinutes;
     }
 
-    public static void registerDefault(DataSource dataSource, int processingStaleMinutes) {
+    public static void registerDefault(AdminMetricsQueryPort adminMetricsQueryPort, int processingStaleMinutes) {
         CollectorRegistry.defaultRegistry.register(
-            new ExportJobsDbCollector(dataSource, processingStaleMinutes));
+            new ExportJobsDbCollector(adminMetricsQueryPort, processingStaleMinutes));
     }
 
     @Override
     public List<MetricFamilySamples> collect() {
         long stale;
         try {
-            stale = ExportJobStaleCounts.countProcessingStale(dataSource, processingStaleMinutes);
+            stale = adminMetricsQueryPort.countProcessingStaleExportJobs(processingStaleMinutes);
         } catch (Exception e) {
             stale = 0;
         }

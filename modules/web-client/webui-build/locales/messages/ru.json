@@ -516,7 +516,9 @@
       "stickerPackCreated": "Пак стикеров создан.",
       "stickerPackFailed": "Не удалось создать пак.",
       "recordStop": "Остановить запись",
-      "modalCopy": "Копировать"
+      "modalCopy": "Копировать",
+      "guestAdmitHint": "Ожидание в зале: отправьте гостю ссылку с токеном после проверки.",
+      "guestAdmitBtn": "Зал ожидания"
     },
     "polls": {
       "title": "Опросы",
@@ -749,7 +751,8 @@
     },
     "mobile": {
       "back": "Назад к списку",
-      "chatsTitle": "Чаты"
+      "chatsTitle": "Чаты",
+      "settingsTitle": "Настройки"
     },
     "marketplace": {
       "open": "Открыть",
@@ -764,7 +767,9 @@
       "directoryHint": "Доверенные организации для кросс-org чатов (MVP).",
       "trustActive": "Активно",
       "trustPending": "Ожидает",
-      "partnerLabel": "Партнёр"
+      "partnerLabel": "Партнёр",
+      "badgeThread": "Федерация",
+      "joinCopied": "Комната скопирована в буфер обмена."
     },
     "whiteboard": {
       "toolPen": "Карандаш",
@@ -775,10 +780,17 @@
       "canvasHint": "Рисуйте на полотне — сохранится в snapshot JSON.",
       "tabCanvas": "Полотно",
       "tabJson": "JSON"
+    },
+    "edit": {
+      "title": "Изменить сообщение",
+      "save": "Сохранить",
+      "failed": "Не удалось изменить сообщение."
     }
   },
   "push": {
     "title": "Korus Messenger",
-    "body": "Новое сообщение"
+    "body": "Новое сообщение",
+    "defaultTitle": "Korus Messenger",
+    "defaultBody": "Новое сообщение"
   }
 }

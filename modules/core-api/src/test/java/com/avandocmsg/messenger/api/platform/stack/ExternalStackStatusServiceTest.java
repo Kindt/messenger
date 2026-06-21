@@ -181,6 +181,11 @@ class ExternalStackStatusServiceTest {
         assertTrue(report.failureCount() >= 2);
         assertTrue(report.warningCount() >= 1);
         assertTrue(report.missingRequiredCheckCount() >= 1);
+        assertTrue(report.remediationActions().contains("object-storage: keep exactly one active manifest"));
+        assertTrue(report.components().get("object-storage").remediationActions()
+            .contains("provide evidence for required check bucket_policy"));
+        assertTrue(report.components().get("search").remediationActions()
+            .contains("disable serve_traffic for non-active role"));
     }
 
     @Test
@@ -241,13 +246,19 @@ class ExternalStackStatusServiceTest {
 
         assertTrue(supported.passed());
         assertEquals("warning", supported.severity());
+        assertEquals(1, supported.missingPromotionEvidenceCount());
+        assertEquals(1, supported.unsupportedModeCount());
         assertTrue(supported.missingPromotionEvidence().contains("customer_profile_evidence"));
         assertTrue(supported.unsupportedModes().contains("silent_fallback"));
+        assertTrue(supported.remediationActions().contains("postgres-16-external: attach promotion evidence customer_profile_evidence"));
+        assertTrue(supported.remediationActions().contains("postgres-16-external: remove unsupported mode silent_fallback"));
 
         assertFalse(candidate.passed());
         assertEquals("blocked", candidate.severity());
+        assertEquals(1, candidate.missingPromotionEvidenceCount());
         assertTrue(candidate.failures().contains("profile opensearch-candidate is not production-supported"));
         assertTrue(candidate.missingPromotionEvidence().contains("vendor_certification_required"));
+        assertTrue(candidate.remediationActions().contains("opensearch-candidate: use a supported production profile"));
     }
 
     @Test
@@ -283,7 +294,11 @@ class ExternalStackStatusServiceTest {
         assertTrue(health.componentCount() >= 10);
         assertTrue(health.profileCount() >= 25);
         assertTrue(health.failures().isEmpty());
+        assertEquals(0, health.failureCount());
+        assertEquals(1, health.warningCount());
         assertTrue(health.warnings().contains("candidate profiles require explicit promotion before production use"));
+        assertTrue(health.remediationActions()
+            .contains("promote, keep migration-only, or reject candidate profiles before production use"));
     }
 
     @Test

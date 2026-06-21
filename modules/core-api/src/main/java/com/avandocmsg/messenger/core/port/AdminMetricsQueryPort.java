@@ -23,6 +23,8 @@ public interface AdminMetricsQueryPort {
 
     long countProcessingStaleExportJobs(int staleMinutes);
 
+    long countPendingHotRowCandidates();
+
     record TableCounts(long users, long chats, long messages, boolean ok) {}
 
     record ExportJobStatusScan(

@@ -5034,6 +5034,7 @@
       registerPasskeyScaffold: registerPasskeyScaffold,
       saveSipGateway: saveSipGateway,
       createStickerPack: createStickerPack,
+      saveEditedMessage: saveEditedMessage,
     };
   }
 
@@ -5652,24 +5653,45 @@
 
   async function editMessagePrompt(m) {
     if (!state.selectedId || !m || m.deleted || m.type !== "text") return;
-    var text = window.prompt(L("messages.editPrompt"), m.content || "");
-    if (text === null) return;
-    text = text.trim();
-    if (!text || text === (m.content || "").trim()) return;
-    var updated = await apiJson("/chats/" + state.selectedId + "/messages/" + m.id, {
-      method: "PATCH",
-      jsonBody: { content: text },
-    });
-    if (updated && updated.id) {
-      mergeMessageIntoThread(updated);
-      if (isE2eeType(updated.type) && state.e2eePlaintextCache) {
-        delete state.e2eePlaintextCache[updated.id];
-      }
-      syncPreviewIfLastMessage(state.selectedId, updated.id);
-    } else {
-      await loadThread(state.selectedId, THREAD_SOFT_RELOAD);
-    }
+    state.phase5Modal = {
+      mode: "edit",
+      messageId: m.id,
+      title: L("ui.edit.title"),
+      body: m.content || "",
+    };
     render();
+  }
+
+  async function saveEditedMessage(modal) {
+    if (!state.selectedId || !modal || modal.mode !== "edit" || !modal.messageId) return;
+    var text = (modal.body || "").trim();
+    if (!text) return;
+    state.busy = true;
+    render();
+    try {
+      var updated = await apiJson(
+        "/chats/" + state.selectedId + "/messages/" + modal.messageId,
+        {
+          method: "PATCH",
+          jsonBody: { content: text },
+        }
+      );
+      state.phase5Modal = null;
+      if (updated && updated.id) {
+        mergeMessageIntoThread(updated);
+        if (isE2eeType(updated.type) && state.e2eePlaintextCache) {
+          delete state.e2eePlaintextCache[updated.id];
+        }
+        syncPreviewIfLastMessage(state.selectedId, updated.id);
+      } else {
+        await loadThread(state.selectedId, THREAD_SOFT_RELOAD);
+      }
+    } catch (e) {
+      state.error = e.message || L("ui.edit.failed");
+    } finally {
+      state.busy = false;
+      render();
+    }
   }
 
   async function deleteMessageConfirm(m) {
@@ -8862,9 +8884,16 @@
         return hay.indexOf(q) >= 0;
       });
       if (!items.length) {
-        iList.appendChild(el("div", "chat-list-empty", L("ui.sidebar.noIntegrations")));
+        iList.appendChild(
+          el(
+            "div",
+            "chat-list-empty",
+            q ? L("ui.marketplace.noResults") : L("ui.sidebar.noIntegrations")
+          )
+        );
       } else {
         items.forEach(function (it) {
+          var row = el("div", "integration-item-row");
           var btn = el("button", "chat-item integration-item");
           btn.type = "button";
           var label = it.label || it.bot_name || it.id;
@@ -8878,7 +8907,17 @@
           btn.onclick = function () {
             openIntegration(it);
           };
-          iList.appendChild(btn);
+          row.appendChild(btn);
+          row.appendChild(
+            iconBtn(L("ui.marketplace.open"), L("ui.marketplace.open"), {
+              cls: "integration-open-btn",
+              testId: "marketplace-open-" + (it.instance_id || it.id || it.bot_name),
+              onClick: function () {
+                openIntegration(it);
+              },
+            })
+          );
+          iList.appendChild(row);
         });
       }
       side.appendChild(iList);
@@ -9026,6 +9065,11 @@
       }
       var thMain = el("div", "thread-header-main");
       thMain.appendChild(el("div", "thread-title", (sel && sel.title) || state.selectedId));
+      if ((state.federationDirectory || []).length) {
+        thMain.appendChild(
+          el("span", "thread-federation-badge", L("ui.federation.badgeThread"))
+        );
+      }
       if (state.discussionThreadRootId) {
         var discBar = el("div", "thread-discussion-bar");
         discBar.appendChild(

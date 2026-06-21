@@ -1,7 +1,24 @@
 /* Korus web-client: cache static assets; do NOT show login shell when server is down. */
 "use strict";
 
-var CACHE_NAME = "korus-web-static-v8";
+var CACHE_NAME = "korus-web-static-v9";
+
+function pushDefaultsFromCache() {
+  return caches.match("/locales/ru.json").then(function (cached) {
+    if (!cached) {
+      return { title: "Korus Messenger", body: "New message" };
+    }
+    return cached.json().then(function (bundle) {
+      var push = bundle && bundle.push ? bundle.push : {};
+      return {
+        title: push.defaultTitle || "Korus Messenger",
+        body: push.defaultBody || "New message",
+      };
+    });
+  }).catch(function () {
+    return { title: "Korus Messenger", body: "New message" };
+  });
+}
 
 var PRECACHE = [
   "/tailwind.css",
@@ -130,29 +147,35 @@ self.addEventListener("message", function (event) {
 });
 
 self.addEventListener("push", function (event) {
-  var payload = { title: "Korus Messenger", body: "Новое сообщение", url: "/" };
-  if (event.data) {
-    try {
-      var j = event.data.json();
-      if (j.title) payload.title = j.title;
-      if (j.body) payload.body = j.body;
-      if (j.url) payload.url = j.url;
-    } catch (e) {}
-  }
   event.waitUntil(
-    Promise.all([
-      self.registration.showNotification(payload.title, {
-        body: payload.body,
-        icon: "/icon.svg",
-        tag: "korus-push",
-        data: payload,
-      }),
-      clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (list) {
-        list.forEach(function (client) {
-          client.postMessage({ type: "korus-push", payload: payload });
-        });
-      }),
-    ])
+    pushDefaultsFromCache().then(function (defaults) {
+      var payload = {
+        title: defaults.title,
+        body: defaults.body,
+        url: "/",
+      };
+      if (event.data) {
+        try {
+          var j = event.data.json();
+          if (j.title) payload.title = j.title;
+          if (j.body) payload.body = j.body;
+          if (j.url) payload.url = j.url;
+        } catch (e) {}
+      }
+      return Promise.all([
+        self.registration.showNotification(payload.title, {
+          body: payload.body,
+          icon: "/icon.svg",
+          tag: "korus-push",
+          data: payload,
+        }),
+        clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (list) {
+          list.forEach(function (client) {
+            client.postMessage({ type: "korus-push", payload: payload });
+          });
+        }),
+      ]);
+    })
   );
 });
 

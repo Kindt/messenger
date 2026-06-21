@@ -516,7 +516,9 @@
       "stickerPackCreated": "Sticker pack created.",
       "stickerPackFailed": "Could not create pack.",
       "recordStop": "Stop recording",
-      "modalCopy": "Copy"
+      "modalCopy": "Copy",
+      "guestAdmitHint": "Waiting room: share the guest link after host approval.",
+      "guestAdmitBtn": "Waiting room"
     },
     "polls": {
       "title": "投票",
@@ -749,7 +751,8 @@
     },
     "mobile": {
       "back": "Back to list",
-      "chatsTitle": "Chats"
+      "chatsTitle": "Chats",
+      "settingsTitle": "Settings"
     },
     "marketplace": {
       "open": "Open",
@@ -764,7 +767,9 @@
       "directoryHint": "Trusted orgs for cross-org chats (MVP).",
       "trustActive": "Active",
       "trustPending": "Pending",
-      "partnerLabel": "Partner"
+      "partnerLabel": "Partner",
+      "badgeThread": "Federation",
+      "joinCopied": "Room copied to clipboard."
     },
     "whiteboard": {
       "toolPen": "Pen",
@@ -775,10 +780,17 @@
       "canvasHint": "Draw on canvas — saved in snapshot JSON.",
       "tabCanvas": "Canvas",
       "tabJson": "JSON"
+    },
+    "edit": {
+      "title": "Edit message",
+      "save": "Save",
+      "failed": "Could not edit message."
     }
   },
   "push": {
     "title": "Korus Messenger",
-    "body": "New message"
+    "body": "New message",
+    "defaultTitle": "Korus Messenger",
+    "defaultBody": "New message"
   }
 }

@@ -113,6 +113,7 @@ public final class JdbcAdminStatsJdbcRepository implements DatabaseHealthPort, A
         }
     }
 
+    @Override
     public long countPendingHotRowCandidates() {
         var sql = """
             SELECT COUNT(*) AS c

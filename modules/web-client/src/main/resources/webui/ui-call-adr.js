@@ -91,6 +91,21 @@
       })
     );
     bar.appendChild(
+      ctx.iconBtn("👥", ctx.L("ui.phase5.guestAdmitBtn"), {
+        testId: "conf-guest-admit",
+        disabled: ctx.state.busy,
+        onClick: function () {
+          showTokenModal(
+            ctx,
+            ctx.L("ui.phase5.guestAdmitBtn"),
+            ctx.L("ui.phase5.guestAdmitHint") +
+              "\n\n" +
+              ctx.L("ui.phase5.guestWaiting")
+          );
+        },
+      })
+    );
+    bar.appendChild(
       ctx.iconBtn("🚪", ctx.L("ui.phase5.breakout"), {
         testId: "conf-breakout-create",
         disabled: ctx.state.busy,
@@ -122,10 +137,14 @@
               var body =
                 rows && rows.length
                   ? formatList(rows, function (r) {
-                      return (r.name || "?") + " · " + (r.livekit_room || "");
+                      var room = r.livekit_room || r.room_id || "";
+                      return (r.name || "?") + " · " + room + " — " + ctx.L("ui.phase5.breakoutJoin");
                     })
                   : ctx.L("ui.phase5.breakoutListEmpty");
               showTokenModal(ctx, ctx.L("ui.phase5.breakoutList"), body);
+              if (rows && rows.length && rows[0].livekit_room && global.KorusUiClipboardUtils) {
+                ctx.state.phase5ModalJoinRoom = rows[0].livekit_room;
+              }
             })
             .catch(function (err) {
               ctx.state.error = err.message || ctx.L("ui.phase5.breakoutFailed");
@@ -181,10 +200,33 @@
     var ov = ctx.el("div", "phase5-overlay");
     ov.setAttribute("data-testid", "phase5-info-modal");
     var card = ctx.el("div", "phase5-overlay-card");
-    card.appendChild(ctx.el("h3", "phase5-overlay-title", ctx.state.phase5Modal.title || ""));
-    card.appendChild(ctx.el("pre", "phase5-modal-body", ctx.state.phase5Modal.body || ""));
+    card.appendChild(
+      ctx.el("h3", "phase5-overlay-title", ctx.state.phase5Modal.title || "")
+    );
+    if (ctx.state.phase5Modal.mode === "edit") {
+      var inp = document.createElement("textarea");
+      inp.className = "phase5-modal-edit-input";
+      inp.setAttribute("data-testid", "message-edit-input");
+      inp.value = ctx.state.phase5Modal.body || "";
+      inp.oninput = function () {
+        ctx.state.phase5Modal.body = inp.value;
+      };
+      card.appendChild(inp);
+    } else {
+      card.appendChild(ctx.el("pre", "phase5-modal-body", ctx.state.phase5Modal.body || ""));
+    }
     var actions = ctx.el("div", "phase5-modal-actions");
-    if (ctx.state.phase5Modal.body && global.KorusUiClipboardUtils) {
+    if (ctx.state.phase5Modal.mode === "edit" && ctx.saveEditedMessage) {
+      actions.appendChild(
+        ctx.iconBtn("✓", ctx.L("ui.edit.save"), {
+          testId: "message-edit-save",
+          disabled: ctx.state.busy,
+          onClick: function () {
+            ctx.saveEditedMessage(ctx.state.phase5Modal);
+          },
+        })
+      );
+    } else if (ctx.state.phase5Modal.body && global.KorusUiClipboardUtils) {
       actions.appendChild(
         ctx.iconBtn("📋", ctx.L("ui.phase5.modalCopy"), {
           testId: "phase5-modal-copy",
@@ -196,12 +238,26 @@
           },
         })
       );
+      if (ctx.state.phase5ModalJoinRoom) {
+        actions.appendChild(
+          ctx.iconBtn("🚪", ctx.L("ui.phase5.breakoutJoin"), {
+            testId: "phase5-modal-breakout-join",
+            onClick: function () {
+              global.KorusUiClipboardUtils.copyText(ctx.state.phase5ModalJoinRoom, function () {
+                ctx.state.phase5Toast = ctx.L("ui.federation.joinCopied");
+                ctx.render();
+              });
+            },
+          })
+        );
+      }
     }
     actions.appendChild(
       ctx.iconBtn("✕", ctx.L("ui.common.close"), {
         testId: "phase5-modal-close",
         onClick: function () {
           ctx.state.phase5Modal = null;
+          ctx.state.phase5ModalJoinRoom = null;
           ctx.render();
         },
       })

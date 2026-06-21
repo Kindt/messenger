@@ -207,7 +207,10 @@ public class ExternalStackStatusResource {
                 null,
                 null,
                 null,
+                0,
+                0,
                 List.of("profile_id is required"),
+                List.of(),
                 List.of(),
                 List.of()
             );
@@ -226,10 +229,30 @@ public class ExternalStackStatusResource {
             profileId,
             pack.component(),
             pack.lifecycleStatus().name(),
+            missingEvidence.size(),
+            pack.unsupportedModes().size(),
             failures,
             missingEvidence,
-            pack.unsupportedModes()
+            pack.unsupportedModes(),
+            profileRemediationActions(profileId, failures, missingEvidence, pack.unsupportedModes())
         );
+    }
+
+    private static List<String> profileRemediationActions(
+        String profileId,
+        List<String> failures,
+        List<String> missingEvidence,
+        List<String> unsupportedModes
+    ) {
+        var actions = new java.util.ArrayList<String>();
+        if (!failures.isEmpty()) {
+            actions.add(profileId + ": use a supported production profile");
+        }
+        missingEvidence.forEach(evidence ->
+            actions.add(profileId + ": attach promotion evidence " + evidence));
+        unsupportedModes.forEach(mode ->
+            actions.add(profileId + ": remove unsupported mode " + mode));
+        return actions.stream().distinct().toList();
     }
 
     private static String severityForProfile(
