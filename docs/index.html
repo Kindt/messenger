@@ -675,8 +675,7 @@ body {
     <a href="#pm" data-tab-link="pm"><strong>Руководителю и аналитику</strong><span>статус, риски и решение о пилоте</span></a>
     <a href="#sales" data-tab-link="sales"><strong>Продажам</strong><span>ценность, бюджет и аргументы для первой встречи</span></a>
     <a href="#tech" data-tab-link="tech"><strong>IT и ИБ</strong><span>архитектура, стек, мощность и ограничения</span></a>
-    <a href="#user" data-tab-link="user"><strong>Сотруднику</strong><span>как выглядит работа в мессенджере</span></a>
-    <a href="#user" data-tab-link="user"><strong>HR и внедрению</strong><span>как объяснить пилот сотрудникам и собрать обратную связь</span></a>
+    <a href="#user" data-tab-link="user"><strong>Сотруднику и HR</strong><span>как выглядит работа, как объяснить пилот и собрать обратную связь</span></a>
   </div>
 </div>
 
@@ -992,7 +991,7 @@ body {
 </div><p class='small'>Полная матрица 18×11 — для архитекторов. Заголовки сокращены; полный текст — при наведении.</p><div class='matrix-scroll'><table class='matrix-table matrix-full'><thead><tr><th scope='col'>Продукт</th><th scope='col' title='В контуре заказчика / изолированный контур'>В контуре заказчик</th><th scope='col' title='Экспорт / legal hold / dual-TTL'>Экспорт / legal ho</th><th scope='col' title='Журнал аудита / комплаенс-ядро'>Журнал аудита / ко</th><th scope='col' title='Полнотекстовый поиск'>Полнотекстовый пои</th><th scope='col' title='Сквозное шифрование (E2EE) / MLS'>Сквозное шифровани</th><th scope='col' title='ВКС / голос'>ВКС / голос</th><th scope='col' title='Мобильные клиенты'>Мобильные клиенты</th><th scope='col' title='Суперапп / SmartApps'>Суперапп / SmartAp</th><th scope='col' title='ФСТЭК / реестр РФ'>ФСТЭК / реестр РФ</th><th scope='col' title='Публичный sizing от 10 тыс. рег.'>Публичный sizing о</th><th scope='col' title='Публичный прайс лицензии'>Публичный прайс ли</th><th scope='col' title='SLA / отказоустойчивость (док.)'>SLA / отказоустойч</th><th scope='col' title='Единый вход (SSO) / LDAP / Keycloak'>Единый вход (SSO) </th><th scope='col' title='Боты / API / интеграции'>Боты / API / интег</th><th scope='col' title='Ретенция / архив (политики)'>Ретенция / архив (</th><th scope='col' title='Мультитenant / шардирование организаций'>Мультитenant / шар</th><th scope='col' title='Федерация / внешние домены'>Федерация / внешни</th><th scope='col' title='Прозрачность эксплуатационного стека'>Прозрачность экспл</th></tr></thead><tbody><tr><th scope='row'>Korus</th><td>✓</td><td>✓ ядро</td><td>✓</td><td>Solr / SQL</td><td>MLS (приёмка)</td><td>WebRTC</td><td>отдельный проект</td><td>◐ M365/Exchange bridges + launcher</td><td>в процессе</td><td>✓ gate + профили</td><td>КП</td><td>HA ref-arch</td><td>Keycloak</td><td>✓ L0–L3 platform</td><td>dual-TTL</td><td>org-shard ADR</td><td>◐ scaffold ADR</td><td>Java monolith + workers</td></tr><tr><th scope='row'>eXpress</th><td>✓</td><td>DLP / политики</td><td>✓</td><td>✓</td><td>✓ E2EE</td><td>до 500</td><td>iOS/Android/Аврора</td><td>✓ SmartApps</td><td>✓ №4997</td><td>частично</td><td>✓</td><td>HA + media</td><td>✓</td><td>✓</td><td>политики</td><td>✓</td><td>✓</td><td>Kafka, etcd, Redis</td></tr><tr><th scope='row'>Пачка</th><td>—</td><td>API экспорта</td><td>◐</td><td>✓</td><td>—</td><td>до 10</td><td>✓</td><td>боты/API</td><td>✓</td><td>—</td><td>✓</td><td>99,9%</td><td>◐</td><td>✓</td><td>облако</td><td>◐</td><td>—</td><td>SaaS</td></tr><tr><th scope='row'>VK SaaS</th><td>—</td><td>зависит</td><td>◐</td><td>✓</td><td>—</td><td>✓</td><td>✓</td><td>workspace</td><td>✓</td><td>—</td><td>✓ SaaS</td><td>SaaS</td><td>✓</td><td>◐</td><td>облако</td><td>◐</td><td>—</td><td>SaaS</td></tr><tr><th scope='row'>Loop</th><td>✓ (Корп.)</td><td>плагины</td><td>◐</td><td>✓</td><td>опционально</td><td>звонки</td><td>✓</td><td>плагины</td><td>✓ реестр</td><td>до ~2k док.</td><td>◐ облако</td><td>◐</td><td>◐</td><td>✓</td><td>настраивается</td><td>◐</td><td>—</td><td>Mattermost-fork</td></tr><tr><th scope='row'>Rocket.Chat</th><td>✓</td><td>плагины</td><td>◐</td><td>✓</td><td>E2EE opt</td><td>интеграции</td><td>✓</td><td>marketplace</td><td>◐</td><td>concurrent</td><td>КП EE</td><td>◐</td><td>✓</td><td>✓</td><td>MongoDB</td><td>◐</td><td>◐</td><td>MongoDB replica</td></tr><tr><th scope='row'>Mattermost</th><td>✓</td><td>плагины</td><td>◐</td><td>Elasticsearch</td><td>опционально</td><td>интеграции</td><td>✓</td><td>apps</td><td>◐</td><td>concurrent ref</td><td>КП EE</td><td>ref-arch</td><td>✓</td><td>✓</td><td>настраивается</td><td>◐</td><td>—</td><td>Go + PostgreSQL</td></tr><tr><th scope='row'>VK Superapp</th><td>✓</td><td>◐</td><td>◐</td><td>✓</td><td>—</td><td>✓</td><td>✓</td><td>почта+календарь</td><td>✓</td><td>док. @2k</td><td>КП</td><td>◐</td><td>✓</td><td>◐</td><td>◐</td><td>◐</td><td>—</td><td>Superapp bundle</td></tr><tr><th scope='row'>МТС Линк</th><td>✓</td><td>◐</td><td>◐</td><td>✓</td><td>—</td><td>✓ из чата</td><td>✓</td><td>команды, ИИ</td><td>✓ реестр</td><td>—</td><td>по КП</td><td>◐</td><td>AD (док.)</td><td>◐</td><td>◐</td><td>◐</td><td>—</td><td>МТС</td></tr><tr><th scope='row'>Compass</th><td>✓</td><td>◐</td><td>◐</td><td>✓</td><td>—</td><td>✓</td><td>✓</td><td>◐</td><td>◐</td><td>до 100k заявл.</td><td>✓ от 390/490</td><td>◐</td><td>◐</td><td>✓</td><td>◐</td><td>◐</td><td>—</td><td>SaaS / on-prem</td></tr><tr><th scope='row'>TrueConf</th><td>✓</td><td>◐</td><td>◐</td><td>◐</td><td>—</td><td>✓ ядро UC</td><td>✓</td><td>чат + ВКС</td><td>✓ реестр</td><td>PRO/online</td><td>от 23k/год</td><td>◐</td><td>LDAP/AD</td><td>◐</td><td>◐</td><td>◐</td><td>SIP/H.323</td><td>UC-платформа</td></tr></tbody></table></div></article><article id="tech-s4" class="subsection"><section class="section-wrap section-tech-s4"><h3 class="section-headline">Расчёт серверов</h3><div class="section-body">
 <p>Калькулятор помогает быстро оценить два вопроса: какой масштаб пользователей выдерживает выбранный состав и какие серверные ресурсы нужны под заданную нагрузку.</p>
 <p class="footnote">Расчёт относится к полному промышленному составу (<code>docker-compose.full-server.yml</code>). Лабораторный контур для разработки не используется как расчёт мощности.</p>
-</div></section><p class="calc-intro">Расчёт для полного промышленного состава. Лабораторный контур разработки не используется для оценки мощности.</p><div class="calc-dual">
+</div></section><p class="calc-intro">Оценочная модель для полного промышленного состава: показывает порядок серверных ресурсов и бюджета, но не заменяет детальное проектирование. Лабораторный контур разработки не используется для оценки мощности.</p><div class="calc-dual">
 <div class="calc-shell calc-shell-emerald" id="calc-tech-cap">
   <div class="calc-shell-head">
     <h4 class="calc-shell-title">Сколько пользователей выдержит</h4>
@@ -1388,7 +1387,8 @@ body {
   }
   function vmTier(ram){
     for(const t of data.vm_tiers) if(ram<=t) return t;
-    return data.vm_tiers[data.vm_tiers.length-1];
+    const max=data.vm_tiers[data.vm_tiers.length-1];
+    return Math.ceil(ram/max)*max;
   }
   function activityRate(ru){
     if(ru<=10000) return 0.5;
@@ -1709,6 +1709,24 @@ body {
     const monthly=lines.reduce((s,x)=>s+x[1],0);
     return {provider:p, monthly, yearly:monthly*12, lines, load:le, ramBilled, ramCost, vcpuCost};
   }
+  function quoteProviderFixedResources(resource, p){
+    const ramBilled=vmTier(resource.totalRam);
+    const ramCost=ramBilled*p.ram_rub_gb;
+    const vcpuCost=resource.totalVcpu*p.vcpu_rub;
+    const vmCompute=ramCost+vcpuCost;
+    const disk=Math.round(resource.ssdTb*p.ssd_tb_rub + resource.hddTb*p.hdd_tb_rub);
+    const channel= resource.channel<=200?p.channel_200:p.channel_1g;
+    const opsMult=(resource.backupParams&&resource.backupParams.ops_mult)||1;
+    const ops=Math.round(p.ops_base*(resource.ru<50000?1:2)*opsMult);
+    const lines=[
+      ['Серверы', vmCompute],
+      ['Диски (+ бэкап)', disk],
+      ['Канал', channel],
+      ['Backup / мониторинг', ops]
+    ];
+    const monthly=lines.reduce((s,x)=>s+x[1],0);
+    return {provider:p, monthly, yearly:monthly*12, lines, load:resource, ramBilled, ramCost, vcpuCost};
+  }
   function customProviderFromForm(prefix){
     if(!document.getElementById(prefix+'-custom-enabled')?.checked) return null;
     const val=(id, fallback)=>+document.getElementById(prefix+'-'+id)?.value||fallback;
@@ -1735,6 +1753,9 @@ body {
   }
   function quotesForPrefix(prefix, inp){
     return providersForPrefix(prefix).map(p=>quoteProviderLoad(inp,p));
+  }
+  function quotesForFixedResources(prefix, resource){
+    return providersForPrefix(prefix).map(p=>quoteProviderFixedResources(resource,p));
   }
   function renderModuleTable(mods){
     const rows=mods.map(m=>'<tr><td>'+m.label+'</td><td>'+m.count+'</td><td>'+m.ramGb+'</td><td>'+m.vcpu+'</td><td>'+(m.mode||'')+'</td></tr>').join('');
@@ -1778,6 +1799,10 @@ body {
     const s=[...vals].sort((a,b)=>a-b);
     const m=Math.floor(s.length/2);
     return s.length%2?s[m]:Math.round((s[m-1]+s[m])/2);
+  }
+  function publicQuotes(quotes){
+    const pub=quotes.filter(q=>!q.provider.custom);
+    return pub.length?pub:quotes;
   }
   function renderProviderCards(quotes){
     const minM=Math.min(...quotes.map(q=>q.monthly));
@@ -1831,15 +1856,16 @@ body {
   }
 
   function renderCostRail(quotes){
-    const med=median(quotes.map(q=>q.monthly));
+    const publicOnly=publicQuotes(quotes);
+    const med=median(publicOnly.map(q=>q.monthly));
     const minM=Math.min(...quotes.map(q=>q.monthly));
     const q0=quotes[0];
-    const ramMed=Math.round(quotes.reduce((s,q)=>s+q.ramCost,0)/quotes.length);
-    const vcpuMed=Math.round(quotes.reduce((s,q)=>s+q.vcpuCost,0)/quotes.length);
+    const ramMed=Math.round(publicOnly.reduce((s,q)=>s+q.ramCost,0)/publicOnly.length);
+    const vcpuMed=Math.round(publicOnly.reduce((s,q)=>s+q.vcpuCost,0)/publicOnly.length);
     let list=quotes.map(q=>'<li'+(q.monthly===minM?' class="is-min"':'')+'><span>'+q.provider.label+
       '</span><strong>'+fmt(q.monthly)+'</strong></li>').join('');
     return '<aside class="calc-cost-rail"><h5>Сколько стоит выбранный состав</h5>'+
-      '<div class="calc-cost-median">'+fmt(med)+'<span>медиана / мес · '+fmt(med*12)+'/год</span></div>'+
+      '<div class="calc-cost-median">'+fmt(med)+'<span>публичная медиана / мес · '+fmt(med*12)+'/год</span></div>'+
       '<p class="small">Серверы: RAM ~'+fmt(ramMed)+' + vCPU ~'+fmt(vcpuMed)+'</p>'+
       '<ul class="calc-cost-list">'+list+'</ul>'+
       '<p class="small">Без лицензии продукта, TURN/VKS и НДС. <a href="#price-sources">Прайсы</a>.</p></aside>';
@@ -1848,7 +1874,7 @@ body {
   function runInfraLoad(prefix, showProviderCards){
     const inp=loadInpFromForm(prefix);
     const quotes=quotesForPrefix(prefix, inp);
-    const med=median(quotes.map(q=>q.monthly));
+    const med=median(publicQuotes(quotes).map(q=>q.monthly));
     const le=quotes[0].load;
     const heroStats= showProviderCards ? [
       {val:le.ru.toLocaleString('ru-RU'), label:'пользователей'},
@@ -1880,11 +1906,16 @@ body {
     const cap=estimateCapacityFromModules(ctx.enabled, ctx.plugins, ctx.ssdTb, ctx.hddTb, ctx.backupParams, ctx.replicas, ctx.ha);
     const quoteRu=+document.getElementById(ctx.prefix+'-cap-quote-ru')?.value||0;
     const ruForQuote= quoteRu>0 ? quoteRu : cap.maxRu;
-    const loadInp={
-      ru: ruForQuote, peakOnline:0, peakMsgS:0, msgsDay:40, gbUser:0.5, retention:3,
-      ha: ctx.ha, plugins: ctx.plugins, enabled: ctx.enabled, replicas: ctx.replicas, backupParams: ctx.backupParams
+    const fixedResource={
+      ru: ruForQuote,
+      totalRam: cap.totalRam,
+      totalVcpu: cap.totalVcpu,
+      ssdTb: cap.ssdTb,
+      hddTb: ctx.hddTb,
+      channel: cap.maxPo<8000?200:1000,
+      backupParams: ctx.backupParams
     };
-    const quotes=quotesForPrefix(prefix, loadInp);
+    const quotes=quotesForFixedResources(prefix, fixedResource);
     const modRows=cap.modules.map(m=>'<tr><td>'+m.label+'</td><td>'+m.count+'</td><td>'+m.ramGb+'</td><td>'+m.vcpu+'</td><td>'+(m.mode||'')+'</td></tr>').join('');
     const modTable='<div class="table-wrap"><table class="feature-table"><thead><tr><th>Модуль</th><th>×</th><th>RAM ГБ</th><th>vCPU</th><th>Тип</th></tr></thead><tbody>'+modRows+'</tbody></table></div>'+
       '<p class="small calc-mod-hint">× — число VM/узлов; RAM и vCPU — суммарно по строке.</p>';
@@ -1974,7 +2005,7 @@ body {
       '<tr><td>Модель команды</td><td>×'+r.teamMult+'</td></tr>'+
       (r.overhead?'<tr><td>Надбавка НДС/командировки</td><td>+'+(r.overhead*100)+'%</td></tr>':'')+
       '</tbody></table>'+
-      '<p class="small">Полная модель сопровождения; не заменяет детальное коммерческое предложение.</p>';
+      '<p class="small">Оценка занятости команды; не заменяет SLA-модель, штатное расписание и детальное коммерческое предложение.</p>';
   }
 
   ['calc-tech','calc-sales'].forEach(initInfraCalc);
