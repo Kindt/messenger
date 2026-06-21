@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+      - name: Install test deps
+        run: pip install pytest pyyaml
       - name: Presentation tests
         run: python -m pytest scripts/presentation/ -q
       - name: smoke_deck
