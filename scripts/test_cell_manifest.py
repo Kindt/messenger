@@ -82,7 +82,11 @@ class TestCellManifest(unittest.TestCase):
         self.assertIn("EXTERNAL_STACK_MANIFEST_FILE=", env_text)
         self.assertIn("EXTERNAL_STACK_MANIFEST_PATH=/config/", env_text)
         self.assertIn("EXTERNAL_STACK_MANIFEST_PATH: /config/", compose_text)
-        self.assertIn("${EXTERNAL_STACK_MANIFEST_DIR:-.}:/config:ro", compose_text)
+        self.assertIn(
+            "${EXTERNAL_STACK_MANIFEST_DIR:-./docker}/${EXTERNAL_STACK_MANIFEST_FILE:-external-stack-manifest.yaml}"
+            ":/config/${EXTERNAL_STACK_MANIFEST_FILE:-external-stack-manifest.yaml}:ro",
+            compose_text,
+        )
 
     def test_external_stack_profile_catalog_aliases_and_evidence_are_valid(self) -> None:
         data = load_manifest(EXTERNAL_STACK_PROFILES)

@@ -59,7 +59,7 @@ When using **`korus_product_addons`**, include vault keys only for installed add
 |--------|----------------------|-------------|
 | `addon-engage` | `korus_vapid_*` | `PUSH_VAPID_*` |
 | `addon-live` | `korus_livekit_*` | `LIVEKIT_*` |
-| `addon-directory` | LDAP bind (org policy) | per org |
+| `addon-enterprise-auth` | LDAP bind (org policy) | per org |
 
 Base secrets (DB, MinIO, JWT, Keycloak) remain required. Template comments: `group_vars/vault.example.yml`.
 
@@ -71,7 +71,7 @@ Secrets in `group_vars/vault.example.yml` are grouped by **add-on id** from [`do
 |--------|----------------------|-------------|
 | `addon-engage` | `korus_vapid_*` | `PUSH_VAPID_*` |
 | `addon-live` | `korus_livekit_*` | `LIVEKIT_*` |
-| `addon-directory` | `korus_ldap_bind_password` | org auth policy |
+| `addon-enterprise-auth` | `korus_ldap_bind_password` | org auth policy |
 
 Runtime probe: `PlatformModuleRegistry` → `secrets_missing` degradation if env absent. Dev/CI omits vault file — templating skipped.
 
