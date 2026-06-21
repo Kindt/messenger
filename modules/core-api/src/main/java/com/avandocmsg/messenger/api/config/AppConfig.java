@@ -84,6 +84,7 @@ public class AppConfig {
         override("LIVESTREAM_MAX_WEBRTC_VIEWERS", "livestream.max.webrtc.viewers");
         override("INTEGRATIONS_BASE_URL", "integrations.base.url");
         override("WEBRTC_STUN_URIS", "webrtc.stun.uris");
+        override("EXTERNAL_STACK_MANIFEST_PATH", "external.stack.manifest.path");
         override("SOLR_ZK", "solr.zk.hosts");
         override("SOLR_URL", "solr.http.url");
         override("SOLR_COLLECTION", "solr.collection");
@@ -882,6 +883,11 @@ public class AppConfig {
     /** Spec 014: default connector-runtime on korus-integrations VM. */
     public String integrationsBaseUrl() {
         return props.getProperty("integrations.base.url", "http://192.168.76.30:8091").trim();
+    }
+
+    /** Optional desired external-stack manifest rendered by deploy tooling (spec 023). */
+    public String externalStackManifestPath() {
+        return props.getProperty("external.stack.manifest.path", "").trim();
     }
 
     /** Web Push VAPID public key for browser subscription (optional until ops configures). */

@@ -365,6 +365,7 @@
       "integrations": "Интеграции",
       "noIntegrations": "Нет интеграций.",
       "vitrine": "Витрина",
+      "externalStackSummary": "External stack: {passed}/{total} OK",
       "archiveToggle": "Архивировать чат",
       "archiveFailed": "Не удалось архивировать чат.",
       "folderWork": "В папку «Работа»",

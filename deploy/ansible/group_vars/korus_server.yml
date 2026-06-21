@@ -47,6 +47,10 @@ korus_csp_policy: "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
 # korus_keycloak_issuer      -> KEYCLOAK_ISSUER (optional when Keycloak published at HTTPS)
 # korus_keycloak_jwks_url    -> KEYCLOAK_JWKS_URL (optional override)
 korus_server_env_path: "{{ korus_repo_root }}/docker/.env.korus-server"
+# Spec 023: desired external-stack manifest rendered by deploy tooling.
+# Runtime reads it via EXTERNAL_STACK_MANIFEST_PATH and exposes desired/observed status.
+korus_external_stack_manifest_path: "{{ korus_repo_root }}/docker/external-stack-manifest.yaml"
+korus_external_stack_manifest_enabled: true
 # L2 live streaming: browser on Windows host uses forwarded port 17880 (see deploy/qemu/README.md)
 korus_livekit_url: "ws://127.0.0.1:17880"
 korus_livekit_api_key: devkey

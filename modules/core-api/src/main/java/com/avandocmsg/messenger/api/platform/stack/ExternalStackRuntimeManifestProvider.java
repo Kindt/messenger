@@ -1,11 +1,19 @@
 package com.avandocmsg.messenger.api.platform.stack;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
 public class ExternalStackRuntimeManifestProvider {
+
+    private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory()).findAndRegisterModules();
 
     private final AppConfig appConfig;
 
@@ -14,6 +22,10 @@ public class ExternalStackRuntimeManifestProvider {
     }
 
     public List<ManifestObservation> observations() {
+        var configured = loadConfiguredManifests();
+        if (!configured.isEmpty()) {
+            return configured.stream().map(this::observation).toList();
+        }
         return List.of(
             observation(manifest(
                 "relational-db-hot",
@@ -139,6 +151,23 @@ public class ExternalStackRuntimeManifestProvider {
         );
     }
 
+    private List<ComponentBackendManifest> loadConfiguredManifests() {
+        var path = appConfig.externalStackManifestPath();
+        if (path == null || path.isBlank()) {
+            return List.of();
+        }
+        var manifestPath = Path.of(path);
+        if (!Files.isRegularFile(manifestPath)) {
+            return List.of();
+        }
+        try {
+            var loaded = YAML.readValue(manifestPath.toFile(), ManifestFile.class);
+            return loaded.manifests() == null ? List.of() : loaded.manifests();
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot read external stack manifest: " + manifestPath, e);
+        }
+    }
+
     public List<ConnectorProfile> profiles() {
         return List.of(
             supportedBundled("postgres-16-bundled", "postgres", "postgres-16", "pg"),
@@ -255,4 +284,8 @@ public class ExternalStackRuntimeManifestProvider {
             new ImpactModel("unknown", "unknown", "unknown", "customer-tco", "separate-integration-runbook")
         );
     }
+
+    private record ManifestFile(
+        @JsonProperty("manifests") List<ComponentBackendManifest> manifests
+    ) {}
 }

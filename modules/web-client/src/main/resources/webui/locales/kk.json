@@ -365,6 +365,7 @@
       "integrations": "Интеграциялар",
       "noIntegrations": "Интеграциялар жоқ.",
       "vitrine": "Витрина",
+      "externalStackSummary": "External stack: {passed}/{total} OK",
       "archiveToggle": "Чатты мұрағаттау",
       "archiveFailed": "Чатты мұрағаттау сәтсіз аяқталды.",
       "folderWork": "«Жұмыс» папкасына",

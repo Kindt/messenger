@@ -365,6 +365,7 @@
       "integrations": "Integrations",
       "noIntegrations": "No integrations.",
       "vitrine": "Featured",
+      "externalStackSummary": "External stack: {passed}/{total} OK",
       "archiveToggle": "Archive chat",
       "archiveFailed": "Failed to archive chat.",
       "folderWork": "Mark as work",

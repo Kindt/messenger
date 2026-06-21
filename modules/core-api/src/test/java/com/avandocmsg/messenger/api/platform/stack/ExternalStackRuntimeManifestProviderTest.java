@@ -3,6 +3,7 @@ package com.avandocmsg.messenger.api.platform.stack;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Files;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -94,6 +95,51 @@ class ExternalStackRuntimeManifestProviderTest {
         assertFalse(vks.supported());
     }
 
+    @Test
+    void loadsDesiredManifestsFromConfiguredYamlPath() throws Exception {
+        var manifest = Files.createTempFile("external-stack-manifest", ".yaml");
+        Files.writeString(manifest, """
+            manifests:
+              - component: relational-db-hot
+                backend_family: postgres
+                connector: postgres-16-external
+                version: "16"
+                role: active
+                endpoint: jdbc:postgresql://user:secret@db.example.test:5432/avandocmsg_hot
+                resource_name_or_alias: avandocmsg_hot
+                schema_or_protocol_version: flyway-current
+                compatibility_profile: postgres-16-external
+                topology: external_byo
+                config_revision: ansible-test
+                capabilities: [jdbc_connectivity, flyway_privileges]
+                data_classification: hot-personal-data
+                support_boundary:
+                  deployment_owner: customer
+                  backup_owner: customer
+                  ha_owner: customer
+                  upgrade_owner: customer
+                  incident_owner: customer
+                  vendor_support_required: true
+                  korus_support_scope: connector-validation
+                metadata:
+                  serve_traffic: "true"
+            """);
+
+        var provider = new ExternalStackRuntimeManifestProvider(new TestConfig() {
+            @Override
+            public String externalStackManifestPath() {
+                return manifest.toString();
+            }
+        });
+
+        var status = new ExternalStackStatusService().status(provider.observations());
+        var db = status.components().get("relational-db-hot");
+
+        assertEquals("postgres-16-external", db.desiredConnector());
+        assertEquals("connector-validation", db.supportBoundary());
+        assertFalse(db.observedEndpoint().contains("secret"));
+    }
+
     private static ManifestObservation observation(
         java.util.List<ManifestObservation> observations,
         String component
@@ -104,7 +150,7 @@ class ExternalStackRuntimeManifestProviderTest {
             .orElseThrow();
     }
 
-    private static final class TestConfig extends AppConfig {
+    private static class TestConfig extends AppConfig {
         @Override
         public String dbJdbcUrl() {
             return "jdbc:postgresql://user:secret@db.example.test:5432/avandocmsg_hot";

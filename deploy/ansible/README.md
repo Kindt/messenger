@@ -85,6 +85,22 @@ korus_core_api_deploy_mode: embedded  # embedded | war
 
 Rendered to `docker/.env.korus-server` as `CORE_API_DEPLOY_MODE`. **`embedded`** — текущий full-stack (embedded Tomcat в compose). **`war`** — placeholder до bootstrap T021-100: собрать `docker/Dockerfile.core-api.war`, smoke `scripts/smoke-core-api-jetty.ps1` (QEMU guest).
 
+### External stack desired manifest (spec 023)
+
+`roles/korus_server` renders `docker/external-stack-manifest.yaml` and exports `EXTERNAL_STACK_MANIFEST_PATH` into `docker/.env.korus-server`. The manifest is a desired-state snapshot for `/api/v1/platform/external-stack/status`; it contains endpoints/resource aliases and support boundaries, not secrets.
+
+Override in inventory/group vars when using external/BYO profiles:
+
+```yaml
+korus_external_stack_manifest_enabled: true
+korus_external_stack_manifest_path: "{{ korus_repo_root }}/docker/external-stack-manifest.yaml"
+korus_db_jdbc_url: "jdbc:postgresql://pg.example.internal:5432/avandocmsg_hot"
+korus_minio_endpoint: "https://s3.example.internal"
+korus_nats_url: "nats://nats.example.internal:4222"
+```
+
+Production cutover, vendor sign-off and live credentials remain deferred to spec 015 until a live server exists.
+
 ### TLS checklist (stage / prod)
 
 1. Use `inventory/stage/` or `inventory/prod/`, or set in your inventory `group_vars/all.yml`:
