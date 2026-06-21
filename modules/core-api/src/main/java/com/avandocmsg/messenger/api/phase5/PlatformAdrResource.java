@@ -64,7 +64,7 @@ public class PlatformAdrResource {
     }
 
     @GET
-    @Path("auth/passkeys")
+    @Path("platform/passkeys")
     @Tag(name = "Passkeys", description = "WebAuthn scaffold (T02316)")
     @Operation(summary = "List registered passkey credentials")
     public Response listPasskeys(@Context SecurityContext securityContext) {
@@ -74,7 +74,7 @@ public class PlatformAdrResource {
     }
 
     @POST
-    @Path("auth/passkeys")
+    @Path("platform/passkeys")
     @Operation(summary = "Register passkey credential scaffold")
     public Response registerPasskey(PasskeyRegisterRequest request, @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);

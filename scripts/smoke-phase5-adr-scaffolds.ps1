@@ -25,6 +25,7 @@ Write-Host "[3] sip gateway"
 Invoke-RestMethod -Uri "$ApiBase/v1/platform/sip" -Method Put -Headers $h -Body (@{ enabled = $true; gateway_uri = "sip:gw.lab.local"; h323_enabled = $false } | ConvertTo-Json) -ContentType "application/json" | Out-Null
 
 Write-Host "[4] passkeys scaffold"
-Invoke-RestMethod -Uri "$ApiBase/v1/auth/passkeys" -Method Post -Headers $h -Body (@{ credential_id = "cred-smoke-1"; public_key = "pk-scaffold" } | ConvertTo-Json) -ContentType "application/json" | Out-Null
+$cred = "cred-smoke-" + [guid]::NewGuid().ToString("N").Substring(0, 8)
+Invoke-RestMethod -Uri "$ApiBase/v1/platform/passkeys" -Method Post -Headers $h -Body (@{ credential_id = $cred; public_key = "pk-scaffold" } | ConvertTo-Json) -ContentType "application/json" | Out-Null
 
 Write-Host "[OK] smoke-phase5-adr-scaffolds"

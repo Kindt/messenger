@@ -13,6 +13,9 @@ public interface UserLookupPort {
 
     Optional<UserProfile> findByUsername(String username);
 
+    /** Keycloak / SCIM subject mapped to {@code users.external_id}. */
+    Optional<UserProfile> findByExternalId(String externalId);
+
     boolean isReadReceiptsDisabled(UUID id);
 
     List<UserSearchHit> searchForViewer(UUID viewerId, String query, int limit);

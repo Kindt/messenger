@@ -60,6 +60,11 @@ class FederationMemberGuardTest {
             }
 
             @Override
+            public Optional<UserProfile> findByExternalId(String externalId) {
+                return Optional.empty();
+            }
+
+            @Override
             public boolean isReadReceiptsDisabled(UUID id) {
                 return false;
             }
@@ -81,6 +86,11 @@ class FederationMemberGuardTest {
 
             @Override
             public Optional<UserProfile> findByUsername(String username) {
+                return Optional.empty();
+            }
+
+            @Override
+            public Optional<UserProfile> findByExternalId(String externalId) {
                 return Optional.empty();
             }
 

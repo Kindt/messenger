@@ -22,6 +22,11 @@ public class EmptyUserLookupPort implements UserLookupPort {
     }
 
     @Override
+    public Optional<UserProfile> findByExternalId(String externalId) {
+        return Optional.empty();
+    }
+
+    @Override
     public boolean isReadReceiptsDisabled(UUID id) {
         return false;
     }
