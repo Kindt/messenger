@@ -1,14 +1,19 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.core.port.AdminMetricsQueryPort;
+import com.avandocmsg.messenger.core.port.DatabaseHealthPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /** JDBC reads for admin server stats, purge estimates, and MLS migration counters. */
-public final class JdbcAdminStatsJdbcRepository {
+public final class JdbcAdminStatsJdbcRepository implements DatabaseHealthPort, AdminMetricsQueryPort {
 
     private static final Logger log = LoggerFactory.getLogger(JdbcAdminStatsJdbcRepository.class);
 
@@ -18,6 +23,7 @@ public final class JdbcAdminStatsJdbcRepository {
         this.dataSource = dataSource;
     }
 
+    @Override
     public boolean ping() {
         try (var conn = dataSource.getConnection();
              var st = conn.prepareStatement("SELECT 1");
@@ -28,19 +34,21 @@ public final class JdbcAdminStatsJdbcRepository {
         }
     }
 
-    public TableCounts countMessagingTables() {
+    @Override
+    public AdminMetricsQueryPort.TableCounts countMessagingTables() {
         try (var conn = dataSource.getConnection()) {
             long users = count(conn, "SELECT COUNT(*) FROM users");
             long chats = count(conn, "SELECT COUNT(*) FROM chats");
             long messages = count(conn, "SELECT COUNT(*) FROM messages");
-            return new TableCounts(users, chats, messages, true);
+            return new AdminMetricsQueryPort.TableCounts(users, chats, messages, true);
         } catch (Exception e) {
             log.warn("countMessagingTables failed: {}", e.getMessage());
-            return new TableCounts(0, 0, 0, false);
+            return new AdminMetricsQueryPort.TableCounts(0, 0, 0, false);
         }
     }
 
-    public ExportJobStatusScan scanExportJobStatuses() {
+    @Override
+    public AdminMetricsQueryPort.ExportJobStatusScan scanExportJobStatuses() {
         long total = 0;
         long queued = 0;
         long processing = 0;
@@ -63,13 +71,14 @@ public final class JdbcAdminStatsJdbcRepository {
                     default -> { /* ignore unknown status values */ }
                 }
             }
-            return new ExportJobStatusScan(total, queued, processing, completed, failed, cancelled, true);
+            return new AdminMetricsQueryPort.ExportJobStatusScan(total, queued, processing, completed, failed, cancelled, true);
         } catch (Exception e) {
             log.warn("scanExportJobStatuses failed: {}", e.getMessage());
-            return ExportJobStatusScan.unavailable();
+            return AdminMetricsQueryPort.ExportJobStatusScan.unavailable();
         }
     }
 
+    @Override
     public long countAuditExportSince(Instant since) {
         var auditSince = Timestamp.from(since);
         try (var conn = dataSource.getConnection();
@@ -85,6 +94,7 @@ public final class JdbcAdminStatsJdbcRepository {
         }
     }
 
+    @Override
     public long countAuditExportCancelledSince(Instant since) {
         var auditSince = Timestamp.from(since);
         try (var conn = dataSource.getConnection();
@@ -103,6 +113,7 @@ public final class JdbcAdminStatsJdbcRepository {
         }
     }
 
+    @Override
     public long countPendingHotRowCandidates() {
         var sql = """
             SELECT COUNT(*) AS c
@@ -122,6 +133,7 @@ public final class JdbcAdminStatsJdbcRepository {
         return 0L;
     }
 
+    @Override
     public long countPendingMlsMigrations() {
         var sql = """
             SELECT COUNT(DISTINCT s.chat_id) AS c
@@ -141,6 +153,45 @@ public final class JdbcAdminStatsJdbcRepository {
         return 0L;
     }
 
+    @Override
+    public List<UUID> listPendingMlsMigrationChatIds(int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        var sql = """
+            SELECT s.chat_id
+            FROM e2ee_sessions s
+            LEFT JOIN mls_group_state g ON g.chat_id = s.chat_id
+            WHERE g.chat_id IS NULL
+            GROUP BY s.chat_id
+            ORDER BY MIN(s.updated_at) ASC
+            LIMIT ?
+            """;
+        var out = new ArrayList<UUID>();
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, limit);
+            try (var rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    out.add(rs.getObject("chat_id", UUID.class));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("listPendingMlsMigrationChatIds failed: {}", e.getMessage());
+        }
+        return out;
+    }
+
+    @Override
+    public long countProcessingStaleExportJobs(int staleMinutes) {
+        try {
+            return new JdbcExportJobJdbcRepository(dataSource).countProcessingStale(staleMinutes);
+        } catch (Exception e) {
+            log.warn("countProcessingStaleExportJobs failed (staleMinutes={}): {}", staleMinutes, e.getMessage());
+            return 0L;
+        }
+    }
+
     private static long count(java.sql.Connection conn, String sql) throws Exception {
         try (var st = conn.prepareStatement(sql);
              var rs = st.executeQuery()) {
@@ -148,22 +199,6 @@ public final class JdbcAdminStatsJdbcRepository {
                 return rs.getLong(1);
             }
             return 0L;
-        }
-    }
-
-    public record TableCounts(long users, long chats, long messages, boolean ok) {}
-
-    public record ExportJobStatusScan(
-        long total,
-        long queued,
-        long processing,
-        long completed,
-        long failed,
-        long cancelled,
-        boolean ok
-    ) {
-        static ExportJobStatusScan unavailable() {
-            return new ExportJobStatusScan(0, 0, 0, 0, 0, 0, false);
         }
     }
 }

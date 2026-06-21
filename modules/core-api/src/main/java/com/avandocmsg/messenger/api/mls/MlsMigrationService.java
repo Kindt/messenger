@@ -1,38 +1,37 @@
 package com.avandocmsg.messenger.api.mls;
 
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcAdminStatsJdbcRepository;
+import com.avandocmsg.messenger.core.port.AdminMetricsQueryPort;
 import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.api.mls.openmls.OpenMlsWireLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /** Migrates legacy E2EE chats to MLS group state ({@code migrateToMls}, batch job). */
 public class MlsMigrationService {
 
     private static final Logger log = LoggerFactory.getLogger(MlsMigrationService.class);
 
-    private final DataSource dataSource;
+    private final AdminMetricsQueryPort adminMetricsQueryPort;
     private final MlsGroupManager groupManager;
     private final ChatPersistencePort chatPersistencePort;
 
-    public MlsMigrationService(DataSource dataSource, MlsGroupManager groupManager, ChatPersistencePort chatPersistencePort) {
-        this.dataSource = dataSource;
+    public MlsMigrationService(
+        AdminMetricsQueryPort adminMetricsQueryPort,
+        MlsGroupManager groupManager,
+        ChatPersistencePort chatPersistencePort
+    ) {
+        this.adminMetricsQueryPort = adminMetricsQueryPort;
         this.groupManager = groupManager;
         this.chatPersistencePort = chatPersistencePort;
     }
 
     public long pendingMigrationCount() {
-        if (dataSource == null) {
-            return 0L;
-        }
-        return new JdbcAdminStatsJdbcRepository(dataSource).countPendingMlsMigrations();
+        return adminMetricsQueryPort.countPendingMlsMigrations();
     }
 
     public Optional<UUID> migrateToMls(UUID chatId) {
@@ -45,7 +44,7 @@ public class MlsMigrationService {
         }
         var members = chatPersistencePort.listMembers(chatId).stream()
             .map(m -> UUID.fromString(m.userId()))
-            .collect(Collectors.toList());
+            .toList();
         if (members.isEmpty()) {
             log.warn("migrateToMls: no members for chat {}", chatId);
             return Optional.empty();
@@ -106,31 +105,10 @@ public class MlsMigrationService {
     }
 
     List<UUID> listPendingChatIds(int limit) {
-        if (dataSource == null || limit <= 0) {
+        if (limit <= 0) {
             return List.of();
         }
-        var sql = """
-            SELECT s.chat_id
-            FROM e2ee_sessions s
-            LEFT JOIN mls_group_state g ON g.chat_id = s.chat_id
-            WHERE g.chat_id IS NULL
-            GROUP BY s.chat_id
-            ORDER BY MIN(s.updated_at) ASC
-            LIMIT ?
-            """;
-        var out = new ArrayList<UUID>();
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, limit);
-            try (var rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    out.add(rs.getObject("chat_id", UUID.class));
-                }
-            }
-        } catch (Exception e) {
-            log.error("listPendingChatIds failed", e);
-        }
-        return out;
+        return adminMetricsQueryPort.listPendingMlsMigrationChatIds(limit);
     }
 
     public record BatchMigrationResult(

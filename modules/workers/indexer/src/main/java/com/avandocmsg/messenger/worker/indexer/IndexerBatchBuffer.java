@@ -2,7 +2,6 @@ package com.avandocmsg.messenger.worker.indexer;
 
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import org.apache.solr.client.solrj.SolrClient;
-import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,22 +21,22 @@ final class IndexerBatchBuffer implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(IndexerBatchBuffer.class);
 
-    private final SolrClient solrClient;
-    private final boolean cloudMode;
-    private final String solrCollection;
+    private final MessageIndexBackend indexBackend;
     private final int batchSize;
     private final long flushMs;
     private final UserMessageSource workerMessages;
     private final ReentrantLock lock = new ReentrantLock();
-    private final Map<String, SolrInputDocument> pendingAdds = new LinkedHashMap<>();
+    private final Map<String, SearchDocument> pendingAdds = new LinkedHashMap<>();
     private final List<String> pendingDeletes = new ArrayList<>();
     private final ScheduledExecutorService scheduler;
 
     IndexerBatchBuffer(SolrClient solrClient, boolean cloudMode, String solrCollection, int batchSize, long flushMs,
                        UserMessageSource workerMessages) {
-        this.solrClient = solrClient;
-        this.cloudMode = cloudMode;
-        this.solrCollection = solrCollection;
+        this(new SolrMessageIndexBackend(solrClient, cloudMode, solrCollection), batchSize, flushMs, workerMessages);
+    }
+
+    IndexerBatchBuffer(MessageIndexBackend indexBackend, int batchSize, long flushMs, UserMessageSource workerMessages) {
+        this.indexBackend = indexBackend;
         this.batchSize = Math.max(1, batchSize);
         this.flushMs = Math.max(50L, flushMs);
         this.workerMessages = workerMessages;
@@ -65,8 +64,8 @@ final class IndexerBatchBuffer implements AutoCloseable {
         }
     }
 
-    void offerAdd(SolrInputDocument doc) {
-        var id = (String) doc.getFieldValue("id");
+    void offerAdd(SearchDocument doc) {
+        var id = doc.messageId();
         if (id == null || id.isBlank()) {
             return;
         }
@@ -118,22 +117,11 @@ final class IndexerBatchBuffer implements AutoCloseable {
         pendingDeletes.clear();
         pendingAdds.clear();
         if (!deletes.isEmpty()) {
-            for (var id : deletes) {
-                if (cloudMode) {
-                    solrClient.deleteById(solrCollection, id);
-                } else {
-                    solrClient.deleteById(id);
-                }
-            }
+            indexBackend.deleteBatch(deletes);
         }
         if (!adds.isEmpty()) {
-            if (cloudMode) {
-                solrClient.add(solrCollection, adds);
-            } else {
-                solrClient.add(adds);
-            }
+            indexBackend.upsertBatch(adds);
         }
-        solrClient.commit(cloudMode ? solrCollection : null);
         IndexerSolrMetrics.batchFlushed(adds.size(), deletes.size());
     }
 

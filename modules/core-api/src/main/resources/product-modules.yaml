@@ -1,305 +1,612 @@
-# Product module catalog — source of truth (spec 021)
-# Base + composable add-ons; no Pilot/Standard/Enterprise SKU.
+# Product module catalog v2 — strict Base + add-ons (spec 024)
 
-schema_version: 1
+schema_version: 2
 
 base:
   id: korus-messenger-base
   label: "Korus Messenger Base"
   state: required
-  core_infra:
-    - postgres-hot
-    - redis
-    - nats
-    - minio
-    - keycloak
-    - core-api
-    - ws-gateway
-    - web-lb
-    - worker-message-pipeline
-  capabilities:
-    - chat
-    - files
-    - websocket
-    - sql_search
-    - mesh_webrtc
-    - jitsi_conference
+  core_infra: [postgres-hot, redis, nats, minio, keycloak, core-api, ws-gateway, web-lb, worker-message-pipeline]
+  external_stack_components: [relational-db-hot, cache, messaging, object-storage, idp, web-edge]
+  external_stack_profiles: [postgres-16-bundled, redis-7-bundled, nats-2.10-bundled, s3-minio-bundled, keycloak-24-bundled, nginx-bundled]
+  features:
+    - {key: identity.users, label: "Пользователи", owner: base, ui_behavior: show}
+    - {key: identity.user_profiles, label: "Профили пользователей", owner: base, ui_behavior: show}
+    - {key: identity.organizations, label: "Организации", owner: base, ui_behavior: show}
+    - {key: identity.organization_routing, label: "Маршрутизация по организации", owner: base, ui_behavior: show}
+    - {key: auth.sessions, label: "Сессии", owner: base, ui_behavior: show}
+    - {key: auth.jwt_validation, label: "Проверка JWT", owner: base, ui_behavior: show}
+    - {key: auth.basic_login, label: "Базовый вход", owner: base, ui_behavior: show}
+    - {key: contacts.list, label: "Список контактов", owner: base, ui_behavior: show}
+    - {key: contacts.add, label: "Добавление контакта", owner: base, ui_behavior: show}
+    - {key: contacts.remove, label: "Удаление контакта", owner: base, ui_behavior: show}
+    - {key: contacts.search, label: "Поиск пользователей", owner: base, ui_behavior: show}
+    - {key: blocks.user_block, label: "Блокировка пользователя", owner: base, ui_behavior: show}
+    - {key: blocks.user_unblock, label: "Разблокировка пользователя", owner: base, ui_behavior: show}
+    - {key: blocks.list, label: "Список блокировок", owner: base, ui_behavior: show}
+    - {key: chat.create, label: "Создание чата", owner: base, ui_behavior: show}
+    - {key: chat.list, label: "Список чатов", owner: base, ui_behavior: show}
+    - {key: chat.read, label: "Просмотр чата", owner: base, ui_behavior: show}
+    - {key: chat.update, label: "Обновление чата", owner: base, ui_behavior: show}
+    - {key: chat.members.list, label: "Список участников", owner: base, ui_behavior: show}
+    - {key: chat.members.add, label: "Добавление участника", owner: base, ui_behavior: show}
+    - {key: chat.members.remove, label: "Удаление участника", owner: base, ui_behavior: show}
+    - {key: chat.members.roles, label: "Роли участников", owner: base, ui_behavior: show}
+    - {key: chat.mute, label: "Отключение уведомлений чата", owner: base, ui_behavior: show}
+    - {key: chat.archive, label: "Архивирование чата", owner: base, ui_behavior: show}
+    - {key: chat.folders, label: "Папки чатов", owner: base, ui_behavior: show}
+    - {key: chat.channels, label: "Каналы", owner: base, ui_behavior: show}
+    - {key: chat.typing, label: "Индикатор набора текста", owner: base, ui_behavior: show}
+    - {key: message.send, label: "Отправка сообщения", owner: base, ui_behavior: show}
+    - {key: message.read, label: "Чтение сообщений", owner: base, ui_behavior: show}
+    - {key: message.edit, label: "Редактирование сообщения", owner: base, ui_behavior: show}
+    - {key: message.delete, label: "Удаление сообщения", owner: base, ui_behavior: show}
+    - {key: message.forward, label: "Пересылка сообщения", owner: base, ui_behavior: show}
+    - {key: message.versions, label: "Версии сообщения", owner: base, ui_behavior: show}
+    - {key: message.reactions, label: "Реакции", owner: base, ui_behavior: show}
+    - {key: message.pins, label: "Закрепления", owner: base, ui_behavior: show}
+    - {key: message.threads, label: "Треды", owner: base, ui_behavior: show}
+    - {key: message.mentions, label: "Упоминания", owner: base, ui_behavior: show}
+    - {key: message.read_receipts, label: "Статусы прочтения", owner: base, ui_behavior: show}
+    - {key: message.voice_metadata, label: "Метаданные голосового сообщения", owner: base, ui_behavior: show}
+    - {key: file.upload, label: "Загрузка файла", owner: base, ui_behavior: show}
+    - {key: file.download, label: "Скачивание файла", owner: base, ui_behavior: show}
+    - {key: file.metadata, label: "Метаданные файла", owner: base, ui_behavior: show}
+    - {key: file.message_attachment, label: "Вложение к сообщению", owner: base, ui_behavior: show}
+    - {key: file.image_resize, label: "Изменение размера изображения", owner: base, ui_behavior: show}
+    - {key: file.public_links, label: "Публичные ссылки на файлы", owner: base, ui_behavior: show}
+    - {key: file.public_link_auth, label: "Авторизованные ссылки на файлы", owner: base, ui_behavior: show}
+    - {key: realtime.websocket, label: "WebSocket", owner: base, ui_behavior: show}
+    - {key: realtime.message_events, label: "События сообщений", owner: base, ui_behavior: show}
+    - {key: realtime.typing_events, label: "События набора текста", owner: base, ui_behavior: show}
+    - {key: realtime.read_events, label: "События прочтения", owner: base, ui_behavior: show}
+    - {key: realtime.presence, label: "Присутствие", owner: base, ui_behavior: show}
+    - {key: search.sql.users, label: "SQL-поиск пользователей", owner: base, ui_behavior: show, api_behavior: {mode: allow}}
+    - {key: search.sql.messages, label: "SQL-поиск сообщений", owner: base, ui_behavior: show, api_behavior: {mode: allow}}
+    - {key: conference.basic_link, label: "Базовая ссылка на конференцию", owner: base, ui_behavior: show}
+    - {key: conference.mesh_hook, label: "Mesh hook", owner: base, ui_behavior: show}
+    - {key: conference.jitsi_link, label: "Jitsi-ссылка", owner: base, ui_behavior: show}
+    - {key: conference.participants_basic, label: "Базовый список участников", owner: base, ui_behavior: show}
+    - {key: settings.locale, label: "Язык пользователя", owner: base, ui_behavior: show}
+    - {key: settings.privacy, label: "Базовые настройки приватности", owner: base, ui_behavior: show}
+    - {key: settings.read_receipts_privacy, label: "Приватность статусов прочтения", owner: base, ui_behavior: show}
+    - {key: settings.custom_status, label: "Пользовательский статус", owner: base, ui_behavior: show}
+    - {key: settings.do_not_disturb, label: "Не беспокоить", owner: base, ui_behavior: show}
+    - {key: admin.basic, label: "Базовая админка", owner: base, ui_behavior: show}
+    - {key: admin.organizations, label: "Управление организациями", owner: base, ui_behavior: show}
+    - {key: admin.users, label: "Управление пользователями", owner: base, ui_behavior: show}
+    - {key: admin.product_modules_view, label: "Просмотр модулей продукта", owner: base, ui_behavior: show}
+    - {key: observability.health, label: "Health", owner: base, ui_behavior: show}
+    - {key: observability.ready, label: "Ready", owner: base, ui_behavior: show}
+    - {key: observability.metrics, label: "Метрики", owner: base, ui_behavior: show}
+    - {key: platform.capabilities, label: "Capabilities", owner: base, ui_behavior: show}
+    - {key: platform.external_stack_status, label: "Статус внешнего стека", owner: base, ui_behavior: show}
+
+substrates:
+  - id: substrate-product-modules
+    label: "Product modules runtime substrate"
+    features:
+      - {key: substrate.product_modules.catalog, label: "Каталог модулей", owner: substrate-product-modules, ui_behavior: internal}
+      - {key: substrate.product_modules.install_requests, label: "Install requests", owner: substrate-product-modules, ui_behavior: internal}
+    migration_bundle:
+      id: substrate-product-modules
+      owner: substrate-product-modules
+      location: db/migration/substrate/product_modules
+      history_table: flyway_schema_history_substrate_product_modules
+      schema_objects: [platform_module_overrides, platform_module_install_requests, platform_module_schema_state]
+    db_objects: [platform_module_overrides, platform_module_install_requests, platform_module_schema_state]
+  - id: substrate-plugin-platform
+    label: "Plugin platform substrate"
+    features:
+      - {key: substrate.plugin_platform.presets, label: "Plugin presets", owner: substrate-plugin-platform, ui_behavior: internal}
+      - {key: substrate.plugin_platform.invocation, label: "Plugin invocation", owner: substrate-plugin-platform, ui_behavior: internal}
+    migration_bundle:
+      id: substrate-plugin-platform
+      owner: substrate-plugin-platform
+      location: db/migration/substrate/plugin_platform
+      history_table: flyway_schema_history_substrate_plugin_platform
+      schema_objects: [plugin_presets, plugin_instances, org_plugin_policies, plugin_outbound_events, plugin_invocation_audit]
+    db_objects: [plugin_presets, plugin_instances, org_plugin_policies, plugin_outbound_events, plugin_invocation_audit]
 
 addons:
-  - id: addon-engage
-    label: "Уведомления и превью"
-    internal_infra:
-      - worker-push
-      - worker-preview
-    compose_profiles:
-      - push
+  - id: addon-productivity
+    label: "Продуктивность"
     degradation_mode: hide
-    api_behavior:
-      http_code: null
-      message_key: null
-    ui_behavior: hide_push_controls
-    nats_behavior: drop_events
-    secrets:
-      - name: vapid
-        env_public: PUSH_VAPID_PUBLIC_KEY
-        env_private: PUSH_VAPID_PRIVATE_KEY
+    disabled_behavior: reject
+    degraded_behavior: controlled_unavailable
+    installing_behavior: controlled_unavailable
+    ui_behavior: hide
     network_profile: internal_mesh
     lifecycle_status: active
-    drain_timeout_seconds: 120
-    backup_scope:
-      - pg_hot
-    operational_limits:
-      - name: auth_rate_limit
-        env: RATE_LIMIT_AUTH_ENABLED
-        default: "false"
-        scope: base
-    commercial:
-      runbook_ref: scripts/SMOKE_INDEX.md
-      sla_tier_hint: standard_support
+    internal_infra: [worker-scheduled-messages, worker-reminders]
+    external_stack_components: [relational-db-hot, messaging]
+    external_stack_profiles: [postgres-16-bundled, nats-2.10-bundled]
+    migration_bundle: {id: addon-productivity, owner: addon-productivity, location: db/migration/addons/productivity, history_table: flyway_schema_history_addon_productivity, schema_objects: [chat_polls, chat_poll_votes, scheduled_messages, message_reminders, sticker_packs, stickers, gif_catalog_entries]}
+    runtime: {services: [], workers: [worker-scheduled-messages, worker-reminders], required_secrets: [], health_checks: [scheduler_lag], job_policy: pause, hook_policy: skip}
+    features:
+      - {key: productivity.polls.create, label: "Создание опросов", owner: addon-productivity, ui_behavior: hide, api_behavior: {mode: reject, http_code: 503, message_key: module.productivity.disabled}}
+      - {key: productivity.polls.list, label: "Список опросов", owner: addon-productivity, ui_behavior: hide}
+      - {key: productivity.polls.vote, label: "Голосование", owner: addon-productivity, ui_behavior: hide}
+      - {key: productivity.polls.close, label: "Закрытие опроса", owner: addon-productivity, ui_behavior: hide}
+      - {key: productivity.scheduled_messages.create, label: "Запланировать сообщение", owner: addon-productivity, ui_behavior: hide}
+      - {key: productivity.scheduled_messages.list, label: "Список запланированных сообщений", owner: addon-productivity, ui_behavior: hide}
+      - {key: productivity.scheduled_messages.cancel, label: "Отмена запланированного сообщения", owner: addon-productivity, ui_behavior: hide}
+      - {key: productivity.scheduled_messages.send_due, label: "Отправка due сообщений", owner: addon-productivity, ui_behavior: internal}
+      - {key: productivity.reminders.create, label: "Создание напоминаний", owner: addon-productivity, ui_behavior: hide}
+      - {key: productivity.reminders.list, label: "Список напоминаний", owner: addon-productivity, ui_behavior: hide}
+      - {key: productivity.reminders.cancel, label: "Отмена напоминаний", owner: addon-productivity, ui_behavior: hide}
+      - {key: productivity.reminders.fire_due, label: "Срабатывание напоминаний", owner: addon-productivity, ui_behavior: internal}
+      - {key: productivity.stickers.packs_list, label: "Список стикерпаков", owner: addon-productivity, ui_behavior: hide}
+      - {key: productivity.stickers.packs_create, label: "Создание стикерпака", owner: addon-productivity, ui_behavior: hide}
+      - {key: productivity.stickers.use, label: "Использование стикера", owner: addon-productivity, ui_behavior: hide}
+      - {key: productivity.gifs.search, label: "Поиск GIF", owner: addon-productivity, ui_behavior: hide}
+      - {key: productivity.gifs.use, label: "Использование GIF", owner: addon-productivity, ui_behavior: hide}
+    gates:
+      api: [{path: /v1/productivity/**, methods: [GET, POST, PUT, DELETE], feature: productivity.polls.create, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.productivity.disabled}]
+      ui: [{feature: productivity.polls.create, control: chat-productivity-actions, behavior: hide}]
+      jobs: [{job: scheduled-message-scheduler, feature: productivity.scheduled_messages.send_due, disabled_behavior: pause, degraded_behavior: pause}, {job: reminder-scheduler, feature: productivity.reminders.fire_due, disabled_behavior: pause, degraded_behavior: pause}]
+      hooks: []
+    acceptance: {positive: [productivity-positive], disabled: [productivity-disabled], degraded: [productivity-degraded]}
+
+  - id: addon-engage
+    label: "Уведомления и превью"
+    degradation_mode: hide
+    disabled_behavior: drop
+    degraded_behavior: controlled_unavailable
+    installing_behavior: controlled_unavailable
+    ui_behavior: hide_push_controls
+    network_profile: internal_mesh
+    lifecycle_status: active
+    internal_infra: [worker-push, worker-preview]
+    secrets: [{name: vapid, env_public: PUSH_VAPID_PUBLIC_KEY, env_private: PUSH_VAPID_PRIVATE_KEY}]
+    external_stack_components: [notifications, messaging]
+    external_stack_profiles: [webpush-vapid-bundled-config, nats-2.10-bundled]
+    migration_bundle: {id: addon-engage, owner: addon-engage, location: db/migration/addons/engage, history_table: flyway_schema_history_addon_engage, schema_objects: [device_push_subscriptions, message_link_previews]}
+    runtime: {services: [], workers: [worker-push, worker-preview], required_secrets: [PUSH_VAPID_PUBLIC_KEY, PUSH_VAPID_PRIVATE_KEY], health_checks: [vapid_config, preview_fetch], job_policy: drop, hook_policy: skip}
+    features:
+      - {key: engage.push.subscribe, label: "Подписка push", owner: addon-engage, ui_behavior: hide_push_controls, api_behavior: {mode: reject, http_code: 503, message_key: module.engage.disabled}}
+      - {key: engage.push.unsubscribe, label: "Отписка push", owner: addon-engage, ui_behavior: hide_push_controls}
+      - {key: engage.push.deliver, label: "Доставка push", owner: addon-engage, ui_behavior: internal}
+      - {key: engage.push.device_state, label: "Состояние устройства", owner: addon-engage, ui_behavior: hide_push_controls}
+      - {key: engage.link_preview.extract, label: "Извлечение превью", owner: addon-engage, ui_behavior: hide}
+      - {key: engage.link_preview.fetch, label: "Загрузка превью", owner: addon-engage, ui_behavior: internal}
+      - {key: engage.link_preview.store, label: "Хранение превью", owner: addon-engage, ui_behavior: internal}
+      - {key: engage.link_preview.render, label: "Показ превью", owner: addon-engage, ui_behavior: hide}
+    gates:
+      api: [{path: /v1/me/devices/push/**, methods: [POST, DELETE], feature: engage.push.subscribe, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.engage.disabled}]
+      ui: [{feature: engage.push.subscribe, control: settings-web-push, behavior: hide}]
+      jobs: [{job: push-delivery, feature: engage.push.deliver, disabled_behavior: drop, degraded_behavior: drop}]
+      hooks: [{hook: message-link-preview, feature: engage.link_preview.extract, disabled_behavior: skip, degraded_behavior: skip}]
+    acceptance: {positive: [engage-positive], disabled: [engage-disabled], degraded: [engage-secrets-missing]}
 
   - id: addon-search
     label: "Полнотекстовый поиск"
-    internal_infra:
-      - solr
-      - zookeeper
-      - worker-indexer
-    compose_profiles:
-      - solr
     degradation_mode: fallback
-    api_behavior:
-      http_code: 200
-      message_key: module.search.fallback_sql
+    disabled_behavior: fallback
+    degraded_behavior: fallback
+    installing_behavior: fallback
     ui_behavior: badge_basic_search
-    nats_behavior: drop_index_events
-    env_flags:
-      search_mode: solr
     network_profile: internal_mesh
     lifecycle_status: active
-    drain_timeout_seconds: 120
-    backup_scope:
-      - pg_hot
-    operational_limits: []
+    internal_infra: [solr, zookeeper, worker-indexer]
+    env_flags: {search_mode: solr}
+    external_stack_components: [search, messaging]
+    external_stack_profiles: [solr-bundled, nats-2.10-bundled]
+    migration_bundle: {id: addon-search, owner: addon-search, location: db/migration/addons/search, history_table: flyway_schema_history_addon_search, schema_objects: [search_index_state, search_reindex_jobs, search_backend_status]}
+    runtime: {services: [solr, zookeeper], workers: [worker-indexer], required_secrets: [], health_checks: [solr_query, indexer_cursor], job_policy: drop, hook_policy: skip}
+    features:
+      - {key: search.fulltext.messages, label: "Полнотекстовый поиск сообщений", owner: addon-search, ui_behavior: fallback_badge, api_behavior: {mode: fallback, http_code: 200, message_key: module.search.fallback_sql}}
+      - {key: search.fulltext.index, label: "Индексация сообщений", owner: addon-search, ui_behavior: internal}
+      - {key: search.fulltext.reindex, label: "Переиндексация", owner: addon-search, ui_behavior: disable}
+      - {key: search.fulltext.health, label: "Здоровье поиска", owner: addon-search, ui_behavior: badge_degraded}
+      - {key: search.fulltext.fallback_sql, label: "Fallback на SQL", owner: addon-search, ui_behavior: fallback_badge}
+    gates:
+      api: [{path: /v1/search/messages/fulltext, methods: [GET], feature: search.fulltext.messages, disabled_behavior: fallback, degraded_behavior: fallback, installing_behavior: fallback, http_code: 200, message_key: module.search.fallback_sql}]
+      ui: [{feature: search.fulltext.messages, control: global-search-mode, behavior: fallback_badge}]
+      jobs: [{job: search-indexer, feature: search.fulltext.index, disabled_behavior: drop, degraded_behavior: drop}]
+      hooks: [{hook: message-indexing, feature: search.fulltext.index, disabled_behavior: skip, degraded_behavior: skip}]
+    acceptance: {positive: [search-positive], disabled: [search-sql-fallback], degraded: [search-degraded-fallback]}
+
+  - id: addon-collaboration
+    label: "Совместная работа"
+    degradation_mode: hide
+    disabled_behavior: reject
+    degraded_behavior: controlled_unavailable
+    installing_behavior: controlled_unavailable
+    ui_behavior: hide
+    network_profile: internal_mesh
+    lifecycle_status: active
+    internal_infra: []
+    external_stack_components: [relational-db-hot]
+    external_stack_profiles: [postgres-16-bundled]
+    migration_bundle: {id: addon-collaboration, owner: addon-collaboration, location: db/migration/addons/collaboration, history_table: flyway_schema_history_addon_collaboration, schema_objects: [chat_kanban_tasks, chat_whiteboards]}
+    runtime: {services: [], workers: [], required_secrets: [], health_checks: [], job_policy: stop, hook_policy: skip}
+    features:
+      - {key: collaboration.kanban.list, label: "Список kanban", owner: addon-collaboration, ui_behavior: hide}
+      - {key: collaboration.kanban.create, label: "Создание kanban", owner: addon-collaboration, ui_behavior: hide}
+      - {key: collaboration.kanban.update, label: "Обновление kanban", owner: addon-collaboration, ui_behavior: hide}
+      - {key: collaboration.kanban.move, label: "Перемещение kanban", owner: addon-collaboration, ui_behavior: hide}
+      - {key: collaboration.kanban.delete, label: "Удаление kanban", owner: addon-collaboration, ui_behavior: hide}
+      - {key: collaboration.whiteboard.open, label: "Открыть whiteboard", owner: addon-collaboration, ui_behavior: hide}
+      - {key: collaboration.whiteboard.save, label: "Сохранить whiteboard", owner: addon-collaboration, ui_behavior: hide}
+      - {key: collaboration.whiteboard.snapshot, label: "Снимок whiteboard", owner: addon-collaboration, ui_behavior: hide}
+    gates: {api: [{path: /v1/collaboration/**, methods: [GET, POST, PUT, DELETE], feature: collaboration.kanban.list, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.collaboration.disabled}], ui: [{feature: collaboration.kanban.list, control: collaboration-panel, behavior: hide}], jobs: [], hooks: []}
+    acceptance: {positive: [collaboration-positive], disabled: [collaboration-disabled], degraded: [collaboration-schema-missing]}
+
+  - id: addon-ai
+    label: "AI и распознавание"
+    degradation_mode: hide
+    disabled_behavior: reject
+    degraded_behavior: controlled_unavailable
+    installing_behavior: controlled_unavailable
+    ui_behavior: hide
+    network_profile: integrations_egress
+    lifecycle_status: active
+    internal_infra: [ai-chat-gateway, stt-mock]
+    external_stack_components: [integrations]
+    external_stack_profiles: [http-webhook-generic]
+    migration_bundle: {id: addon-ai, owner: addon-ai, location: db/migration/addons/ai, history_table: flyway_schema_history_addon_ai, schema_objects: [live_caption_sessions, ai_assist_sessions, speech_transcripts]}
+    runtime: {services: [ai-chat-gateway, stt-mock], workers: [], required_secrets: [], health_checks: [plugin_bridge], job_policy: stop, hook_policy: skip}
+    features:
+      - {key: ai.assist.request, label: "AI assist request", owner: addon-ai, ui_behavior: hide}
+      - {key: ai.assist.response, label: "AI assist response", owner: addon-ai, ui_behavior: hide}
+      - {key: ai.assist.plugin_bridge, label: "AI plugin bridge", owner: addon-ai, ui_behavior: internal, dependencies: [substrate.plugin_platform.invocation]}
+      - {key: ai.speech_to_text.start, label: "Start STT", owner: addon-ai, ui_behavior: hide}
+      - {key: ai.speech_to_text.stop, label: "Stop STT", owner: addon-ai, ui_behavior: hide}
+      - {key: ai.speech_to_text.transcript, label: "STT transcript", owner: addon-ai, ui_behavior: hide}
+      - {key: ai.captions.start, label: "Start captions", owner: addon-ai, ui_behavior: hide, dependencies: [live.session.create]}
+      - {key: ai.captions.view, label: "View captions", owner: addon-ai, ui_behavior: hide}
+      - {key: ai.captions.append, label: "Append captions", owner: addon-ai, ui_behavior: internal}
+    gates: {api: [{path: /v1/ai/**, methods: [GET, POST], feature: ai.assist.request, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.ai.disabled}], ui: [{feature: ai.assist.request, control: ai-assist, behavior: hide}, {feature: ai.captions.start, control: live-captions, behavior: hide}], jobs: [], hooks: [{hook: ai-assist-enrichment, feature: ai.assist.plugin_bridge, disabled_behavior: skip, degraded_behavior: skip}]}
+    acceptance: {positive: [ai-positive], disabled: [ai-disabled], degraded: [ai-plugin-degraded]}
+
+  - id: addon-live
+    label: "Групповые звонки и эфиры"
+    degradation_mode: hide
+    disabled_behavior: reject
+    degraded_behavior: controlled_unavailable
+    installing_behavior: controlled_unavailable
+    ui_behavior: hide_live_controls
+    network_profile: edge_media
+    lifecycle_status: active
+    internal_infra: [livekit]
+    secrets: [{name: livekit, env_key: LIVEKIT_API_KEY, env_secret: LIVEKIT_API_SECRET, env_url: LIVEKIT_URL}]
+    external_stack_components: [media, turn]
+    external_stack_profiles: [livekit-1.8-bundled, coturn-external]
+    migration_bundle: {id: addon-live, owner: addon-live, location: db/migration/addons/live, history_table: flyway_schema_history_addon_live, schema_objects: [live_sessions, live_session_viewers, live_session_moderation_events, call_recordings, conference_guest_links, conference_breakout_rooms, org_sip_gateway]}
+    runtime: {services: [livekit], workers: [], required_secrets: [LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_URL], health_checks: [livekit_token_issue, room_join], job_policy: drain, hook_policy: skip}
+    features:
+      - {key: live.sfu_join, label: "SFU join", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.sfu_leave, label: "SFU leave", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.room_token, label: "Room token", owner: addon-live, ui_behavior: internal}
+      - {key: live.session.create, label: "Создание live session", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.session.list, label: "Список live sessions", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.session.end, label: "Завершение live session", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.broadcast.start, label: "Старт эфира", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.broadcast.stop, label: "Стоп эфира", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.ingress.create, label: "Ingress", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.dvr.enable, label: "DVR enable", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.dvr.disable, label: "DVR disable", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.moderation.update, label: "Moderation", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.recordings.start, label: "Start recording", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.recordings.list, label: "List recordings", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.recordings.download, label: "Download recording", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.guest_links.create, label: "Guest links create", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.guest_links.list, label: "Guest links list", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.guest_links.redeem, label: "Guest links redeem", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.waiting_room.admit, label: "Waiting room admit", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.breakout_rooms.create, label: "Breakout create", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.breakout_rooms.list, label: "Breakout list", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.breakout_rooms.close, label: "Breakout close", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.sip.status, label: "SIP status", owner: addon-live, ui_behavior: hide_live_controls}
+      - {key: live.sip.configure, label: "SIP configure", owner: addon-live, ui_behavior: hide_live_controls}
+    gates:
+      api: [{path: /v1/chats/**/live-sessions, methods: [GET, POST, DELETE], feature: live.session.create, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.live.disabled}, {path: /v1/chats/**/calls/livekit, methods: [GET, POST], feature: live.sfu_join, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.live.disabled}]
+      ui: [{feature: live.sfu_join, control: livekit-sfu-button, behavior: hide}]
+      jobs: [{job: live-session-drain, feature: live.session.end, disabled_behavior: drain, degraded_behavior: drain}]
+      hooks: []
+    acceptance: {positive: [live-positive], disabled: [live-disabled], degraded: [live-secrets-missing]}
 
   - id: addon-retention
     label: "Ретенция и TTL"
-    internal_infra:
-      - worker-retention
-    compose_profiles:
-      - compliance
     degradation_mode: queue
-    api_behavior:
-      http_code: 200
-      message_key: module.retention.readonly_warning
+    disabled_behavior: queue
+    degraded_behavior: pause
+    installing_behavior: pause
     ui_behavior: dim_retention_panels
-    nats_behavior: skip_purge_jobs
     network_profile: internal_mesh
     lifecycle_status: active
-    drain_timeout_seconds: 120
-    backup_scope:
-      - pg_hot
-      - minio
+    internal_infra: [worker-retention]
+    external_stack_components: [relational-db-hot, object-storage, messaging]
+    external_stack_profiles: [postgres-16-bundled, s3-minio-bundled, nats-2.10-bundled]
+    migration_bundle: {id: addon-retention, owner: addon-retention, location: db/migration/addons/retention, history_table: flyway_schema_history_addon_retention, schema_objects: [org_retention_policy, chat_retention_policy, legal_hold_targets, purge_runs, purge_items]}
+    runtime: {services: [], workers: [worker-retention], required_secrets: [], health_checks: [purge_safety], job_policy: pause, hook_policy: skip}
+    features:
+      - {key: retention.org_policy.read, label: "Read org policy", owner: addon-retention, ui_behavior: readonly}
+      - {key: retention.org_policy.update, label: "Update org policy", owner: addon-retention, ui_behavior: disable}
+      - {key: retention.chat_policy.read, label: "Read chat policy", owner: addon-retention, ui_behavior: readonly}
+      - {key: retention.chat_policy.update, label: "Update chat policy", owner: addon-retention, ui_behavior: disable}
+      - {key: retention.legal_hold.enable, label: "Enable legal hold", owner: addon-retention, ui_behavior: disable}
+      - {key: retention.legal_hold.disable, label: "Disable legal hold", owner: addon-retention, ui_behavior: disable}
+      - {key: retention.legal_hold.status, label: "Legal hold status", owner: addon-retention, ui_behavior: readonly}
+      - {key: retention.purge.scan, label: "Purge scan", owner: addon-retention, ui_behavior: disable}
+      - {key: retention.purge.execute, label: "Purge execute", owner: addon-retention, ui_behavior: disable}
+      - {key: retention.purge.status, label: "Purge status", owner: addon-retention, ui_behavior: readonly}
+      - {key: retention.worker.run, label: "Retention worker", owner: addon-retention, ui_behavior: internal}
+    gates: {api: [{path: /v1/admin/retention/**, methods: [GET, POST, PUT], feature: retention.org_policy.read, disabled_behavior: reject, degraded_behavior: readonly, installing_behavior: reject, http_code: 503, message_key: module.retention.disabled}], ui: [{feature: retention.org_policy.read, control: retention-panels, behavior: dim_retention_panels}], jobs: [{job: retention-purge, feature: retention.worker.run, disabled_behavior: pause, degraded_behavior: pause}], hooks: [{hook: retention-purge-safety, feature: retention.purge.execute, disabled_behavior: skip, degraded_behavior: skip}]}
+    acceptance: {positive: [retention-positive], disabled: [retention-disabled], degraded: [retention-safety-degraded]}
 
   - id: addon-archive
-    label: "Archive DB + перенос"
-    internal_infra:
-      - postgres-archive
-      - worker-archiver
-    compose_profiles:
-      - archive
+    label: "Архив сообщений"
     degradation_mode: hide
-    api_behavior:
-      http_code: 503
-      message_key: module.archive.disabled
+    disabled_behavior: drop
+    degraded_behavior: pause
+    installing_behavior: controlled_unavailable
     ui_behavior: hide
-    nats_behavior: drop
     network_profile: internal_mesh
     lifecycle_status: active
-    drain_timeout_seconds: 300
-    backup_scope:
-      - pg_hot
-      - pg_archive
+    internal_infra: [postgres-archive, worker-archiver]
+    external_stack_components: [relational-db-archive, messaging]
+    external_stack_profiles: [postgres-16-bundled, nats-2.10-bundled]
+    migration_bundle: {id: addon-archive, owner: addon-archive, location: db/migration/addons/archive, history_table: flyway_schema_history_addon_archive, schema_objects: [archive_sync_state, archive_failures, archive_message_pointers]}
+    runtime: {services: [postgres-archive], workers: [worker-archiver], required_secrets: [], health_checks: [archive_db], job_policy: pause, hook_policy: skip}
+    features:
+      - {key: archive.message_archive, label: "Archive message", owner: addon-archive, ui_behavior: internal}
+      - {key: archive.message_read, label: "Read archive", owner: addon-archive, ui_behavior: hide}
+      - {key: archive.sync_state, label: "Archive sync state", owner: addon-archive, ui_behavior: readonly}
+      - {key: archive.worker.run, label: "Archive worker", owner: addon-archive, ui_behavior: internal}
+      - {key: archive.health, label: "Archive health", owner: addon-archive, ui_behavior: badge_degraded}
+    gates: {api: [{path: /v1/archive/**, methods: [GET], feature: archive.message_read, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.archive.disabled}], ui: [{feature: archive.message_read, control: archive-reader, behavior: hide}], jobs: [{job: archive-worker, feature: archive.worker.run, disabled_behavior: pause, degraded_behavior: pause}], hooks: [{hook: message-archive, feature: archive.message_archive, disabled_behavior: skip, degraded_behavior: skip}]}
+    acceptance: {positive: [archive-positive], disabled: [archive-disabled], degraded: [archive-db-degraded]}
 
   - id: addon-deep-archive
-    label: "Cold storage"
-    internal_infra:
-      - worker-deep-archiver
-    compose_profiles:
-      - compliance
+    label: "Долгосрочное хранение"
     degradation_mode: queue
-    api_behavior:
-      http_code: 503
-      message_key: module.deep_archive.disabled
+    disabled_behavior: queue
+    degraded_behavior: pause
+    installing_behavior: pause
     ui_behavior: hide
-    nats_behavior: skip_deep_purge
     network_profile: internal_mesh
     lifecycle_status: active
-    drain_timeout_seconds: 300
-    backup_scope:
-      - minio
+    internal_infra: [worker-deep-archiver]
+    external_stack_components: [object-storage, messaging]
+    external_stack_profiles: [s3-minio-bundled, nats-2.10-bundled]
+    migration_bundle: {id: addon-deep-archive, owner: addon-deep-archive, location: db/migration/addons/deep_archive, history_table: flyway_schema_history_addon_deep_archive, schema_objects: [deep_archive_snapshots, object_inventory, deep_purge_state]}
+    runtime: {services: [], workers: [worker-deep-archiver], required_secrets: [], health_checks: [snapshot_store], job_policy: pause, hook_policy: skip}
+    features:
+      - {key: deep_archive.snapshot_create, label: "Create snapshot", owner: addon-deep-archive, ui_behavior: hide}
+      - {key: deep_archive.snapshot_store, label: "Store snapshot", owner: addon-deep-archive, ui_behavior: internal}
+      - {key: deep_archive.snapshot_read, label: "Read snapshot", owner: addon-deep-archive, ui_behavior: hide}
+      - {key: deep_archive.inventory_build, label: "Build inventory", owner: addon-deep-archive, ui_behavior: internal}
+      - {key: deep_archive.purge_after_snapshot, label: "Purge after snapshot", owner: addon-deep-archive, ui_behavior: disable}
+      - {key: deep_archive.worker.run, label: "Deep archive worker", owner: addon-deep-archive, ui_behavior: internal}
+    gates: {api: [{path: /v1/deep-archive/**, methods: [GET, POST], feature: deep_archive.snapshot_read, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.deep_archive.disabled}], ui: [{feature: deep_archive.snapshot_read, control: deep-archive-panel, behavior: hide}], jobs: [{job: deep-archive-worker, feature: deep_archive.worker.run, disabled_behavior: pause, degraded_behavior: pause}], hooks: [{hook: deep-archive-purge-safety, feature: deep_archive.purge_after_snapshot, disabled_behavior: skip, degraded_behavior: skip}]}
+    acceptance: {positive: [deep-archive-positive], disabled: [deep-archive-disabled], degraded: [deep-archive-storage-degraded]}
 
   - id: addon-export
-    label: "Compliance export"
-    internal_infra:
-      - worker-export-replay
-    compose_profiles:
-      - compliance
+    label: "Комплаенс-экспорт"
     degradation_mode: reject
-    api_behavior:
-      http_code: 503
-      message_key: module.export.disabled
+    disabled_behavior: reject
+    degraded_behavior: reject
+    installing_behavior: reject
     ui_behavior: hide_export_panels
-    nats_behavior: subscribers_off
     network_profile: internal_mesh
     lifecycle_status: active
-    drain_timeout_seconds: 600
-    backup_scope:
-      - pg_hot
-      - export_artifacts
-    operational_limits:
-      - name: export_max_messages
-        env: EXPORT_MAX_MESSAGES
-        default: "100000"
-        scope: addon-export
+    internal_infra: [worker-export-replay]
+    external_stack_components: [relational-db-hot, object-storage, messaging]
+    external_stack_profiles: [postgres-16-bundled, s3-minio-bundled, nats-2.10-bundled]
+    migration_bundle: {id: addon-export, owner: addon-export, location: db/migration/addons/export, history_table: flyway_schema_history_addon_export, schema_objects: [export_jobs, export_job_files, export_audit, export_suggested_jobs]}
+    runtime: {services: [], workers: [worker-export-replay], required_secrets: [], health_checks: [export_queue], job_policy: drain, hook_policy: skip}
+    features:
+      - {key: export.job.create, label: "Create export job", owner: addon-export, ui_behavior: hide_export_panels}
+      - {key: export.job.list, label: "List export jobs", owner: addon-export, ui_behavior: hide_export_panels}
+      - {key: export.job.status, label: "Export status", owner: addon-export, ui_behavior: hide_export_panels}
+      - {key: export.job.cancel, label: "Cancel export", owner: addon-export, ui_behavior: hide_export_panels}
+      - {key: export.bundle.build, label: "Build bundle", owner: addon-export, ui_behavior: internal}
+      - {key: export.bundle.download, label: "Download bundle", owner: addon-export, ui_behavior: hide_export_panels}
+      - {key: export.attachments.include, label: "Include attachments", owner: addon-export, ui_behavior: hide_export_panels}
+      - {key: export.admin.suggest, label: "Suggest export", owner: addon-export, ui_behavior: hide_export_panels}
+      - {key: export.worker.run, label: "Export worker", owner: addon-export, ui_behavior: internal}
+    gates: {api: [{path: /v1/export/**, methods: [GET, POST, DELETE], feature: export.job.create, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.export.disabled}, {path: /v1/admin/export/**, methods: [GET, POST], feature: export.admin.suggest, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.export.disabled}], ui: [{feature: export.job.create, control: export-panels, behavior: hide_export_panels}], jobs: [{job: export-replay, feature: export.worker.run, disabled_behavior: drain, degraded_behavior: pause}], hooks: []}
+    acceptance: {positive: [export-positive], disabled: [export-disabled], degraded: [export-storage-degraded]}
 
-  - id: addon-live
-    label: "Групповые SFU-звонки и прямые эфиры"
-    internal_infra:
-      - livekit
-    compose_profiles:
-      - full
+  - id: addon-enterprise-auth
+    label: "Enterprise-аутентификация"
     degradation_mode: hide
-    api_behavior:
-      http_code: 503
-      message_key: module.live.disabled
-    ui_behavior: hide_live_controls
-    nats_behavior: drop
-    secrets:
-      - name: livekit
-        env_key: LIVEKIT_API_KEY
-        env_secret: LIVEKIT_API_SECRET
-        env_url: LIVEKIT_URL
-    network_profile: edge_media
-    lifecycle_status: active
-    drain_timeout_seconds: 120
-    backup_scope: []
-    capabilities:
-      - group_call_sfu
-      - live_broadcast
-
-  - id: addon-bots
-    label: "Bot API"
-    internal_infra:
-      - worker-bot-delivery
-    compose_profiles:
-      - full
-    degradation_mode: reject
-    api_behavior:
-      http_code: 503
-      message_key: module.bots.disabled
-    ui_behavior: hide
-    nats_behavior: drop_bot_events
-    network_profile: internal_mesh
-    lifecycle_status: active
-    drain_timeout_seconds: 120
-    backup_scope:
-      - pg_hot
-    operational_limits:
-      - name: bot_rate_limit
-        env: BOT_RATE_LIMIT_PER_MIN
-        default: "30"
-        scope: addon-bots
-
-  - id: addon-integrations
-    label: "Плагины L0–L3"
-    internal_infra:
-      - worker-bot-delivery
-      - integrations
-    compose_profiles:
-      - full
-    degradation_mode: reject
-    api_behavior:
-      http_code: 503
-      message_key: module.integrations.disabled
-    ui_behavior: hide_integrations_tab
-    nats_behavior: drop
-    network_profile: integrations_egress
-    lifecycle_status: active
-    drain_timeout_seconds: 120
-    backup_scope:
-      - pg_hot
-    validator_warnings:
-      - both_with_addon_bots: "worker-bot-delivery deduplicated; integrations includes bot-delivery"
-
-  - id: addon-e2ee
-    label: "E2EE / MLS"
-    internal_infra: []
-    compose_profiles: []
-    degradation_mode: hide
-    api_behavior:
-      http_code: 200
-      message_key: module.e2ee.disabled
-    ui_behavior: hide_mls_ui
-    nats_behavior: mls_subscriber_off
-    env_flags:
-      mls_wire_enabled: "true"
-    network_profile: internal_mesh
-    lifecycle_status: active
-    drain_timeout_seconds: 60
-    backup_scope:
-      - pg_hot
-
-  - id: addon-directory
-    label: "LDAP/AD sync"
-    internal_infra: []
-    compose_profiles: []
-    degradation_mode: hide
-    api_behavior:
-      http_code: 503
-      message_key: module.directory.disabled
+    disabled_behavior: reject
+    degraded_behavior: controlled_unavailable
+    installing_behavior: controlled_unavailable
     ui_behavior: hide_directory_sync
-    nats_behavior: drop
-    secrets:
-      - name: ldap_bind
-        secret_ref: org_auth_policy
     network_profile: ldap_egress
     lifecycle_status: active
-    drain_timeout_seconds: 120
-    backup_scope:
-      - pg_hot
+    internal_infra: []
+    secrets: [{name: ldap_bind, secret_ref: org_auth_policy}]
+    external_stack_components: [idp, relational-db-hot]
+    external_stack_profiles: [oidc-generic, postgres-16-bundled]
+    migration_bundle: {id: addon-enterprise-auth, owner: addon-enterprise-auth, location: db/migration/addons/enterprise_auth, history_table: flyway_schema_history_addon_enterprise_auth, schema_objects: [auth_policy, directory_sync_runs, scim_groups, ip_allowlist, passkey_credentials, external_user_links]}
+    runtime: {services: [], workers: [], required_secrets: [org_auth_policy.ldap_bind], health_checks: [idp_policy], job_policy: stop, hook_policy: skip}
+    features:
+      - {key: enterprise.auth_policy.read, label: "Read auth policy", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.auth_policy.update, label: "Update auth policy", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.auth_policy.test, label: "Test auth policy", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.directory_sync.status, label: "Directory sync status", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.directory_sync.run, label: "Run directory sync", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.scim_users.list, label: "SCIM users list", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.scim_users.create, label: "SCIM users create", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.scim_users.update, label: "SCIM users update", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.scim_users.delete, label: "SCIM users delete", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.scim_groups.list, label: "SCIM groups list", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.scim_groups.create, label: "SCIM groups create", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.scim_groups.update, label: "SCIM groups update", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.scim_groups.delete, label: "SCIM groups delete", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.ip_allowlist.read, label: "IP allowlist read", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.ip_allowlist.update, label: "IP allowlist update", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.passkeys.list, label: "Passkeys list", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+      - {key: enterprise.passkeys.register, label: "Passkey register", owner: addon-enterprise-auth, ui_behavior: hide_directory_sync}
+    gates: {api: [{path: /v1/admin/enterprise-auth/**, methods: [GET, POST, PUT, DELETE], feature: enterprise.auth_policy.read, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.enterprise_auth.disabled}], ui: [{feature: enterprise.directory_sync.status, control: directory-sync, behavior: hide_directory_sync}], jobs: [{job: directory-sync, feature: enterprise.directory_sync.run, disabled_behavior: stop, degraded_behavior: pause}], hooks: [{hook: enterprise-member-policy, feature: enterprise.auth_policy.read, disabled_behavior: skip, degraded_behavior: skip}]}
+    acceptance: {positive: [enterprise-auth-positive], disabled: [enterprise-auth-disabled], degraded: [enterprise-auth-secret-missing]}
 
-# Legacy deploy profile shim (Phase 5b — remove after migration)
+  - id: addon-e2ee
+    label: "Сквозное шифрование"
+    degradation_mode: hide
+    disabled_behavior: controlled_unavailable
+    degraded_behavior: controlled_unavailable
+    installing_behavior: controlled_unavailable
+    ui_behavior: hide_mls_ui
+    network_profile: internal_mesh
+    lifecycle_status: active
+    internal_infra: []
+    env_flags: {mls_wire_enabled: "true"}
+    external_stack_components: [relational-db-hot, messaging]
+    external_stack_profiles: [postgres-16-bundled, nats-2.10-bundled]
+    migration_bundle: {id: addon-e2ee, owner: addon-e2ee, location: db/migration/addons/e2ee, history_table: flyway_schema_history_addon_e2ee, schema_objects: [mls_key_packages, mls_sessions, mls_group_state, mls_migration_state]}
+    runtime: {services: [], workers: [], required_secrets: [], health_checks: [mls_wire], job_policy: stop, hook_policy: skip}
+    features:
+      - {key: e2ee.key_packages.upload, label: "Upload key package", owner: addon-e2ee, ui_behavior: hide_mls_ui}
+      - {key: e2ee.key_packages.list, label: "List key packages", owner: addon-e2ee, ui_behavior: hide_mls_ui}
+      - {key: e2ee.key_packages.delete, label: "Delete key package", owner: addon-e2ee, ui_behavior: hide_mls_ui}
+      - {key: e2ee.session.create, label: "Create MLS session", owner: addon-e2ee, ui_behavior: hide_mls_ui}
+      - {key: e2ee.session.read, label: "Read MLS session", owner: addon-e2ee, ui_behavior: hide_mls_ui}
+      - {key: e2ee.message_encrypt, label: "Encrypt message", owner: addon-e2ee, ui_behavior: hide_mls_ui}
+      - {key: e2ee.message_decrypt, label: "Decrypt message", owner: addon-e2ee, ui_behavior: hide_mls_ui}
+      - {key: e2ee.admin_status, label: "E2EE admin status", owner: addon-e2ee, ui_behavior: hide_mls_ui}
+      - {key: e2ee.migration_run, label: "E2EE migration", owner: addon-e2ee, ui_behavior: hide_mls_ui}
+    gates: {api: [{path: /v1/mls/**, methods: [GET, POST, DELETE], feature: e2ee.session.read, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.e2ee.disabled}], ui: [{feature: e2ee.message_encrypt, control: e2ee-controls, behavior: hide_mls_ui}], jobs: [{job: mls-migration, feature: e2ee.migration_run, disabled_behavior: stop, degraded_behavior: pause}], hooks: [{hook: message-e2ee-encrypt, feature: e2ee.message_encrypt, disabled_behavior: skip, degraded_behavior: skip}]}
+    acceptance: {positive: [e2ee-positive], disabled: [e2ee-disabled], degraded: [e2ee-wire-degraded]}
+
+  - id: addon-bots
+    label: "Боты"
+    degradation_mode: reject
+    disabled_behavior: reject
+    degraded_behavior: reject
+    installing_behavior: reject
+    ui_behavior: hide
+    network_profile: internal_mesh
+    lifecycle_status: active
+    internal_infra: [worker-bot-delivery]
+    external_stack_components: [bots, messaging]
+    external_stack_profiles: [bot-api-internal, nats-2.10-bundled]
+    migration_bundle: {id: addon-bots, owner: addon-bots, location: db/migration/addons/bots, history_table: flyway_schema_history_addon_bots, schema_objects: [bots, bot_tokens, bot_chat_subscriptions, bot_webhook_outbox, bot_updates]}
+    runtime: {services: [], workers: [worker-bot-delivery], required_secrets: [], health_checks: [bot_delivery], job_policy: drop, hook_policy: skip}
+    features:
+      - {key: bots.create, label: "Create bot", owner: addon-bots, ui_behavior: hide}
+      - {key: bots.list, label: "List bots", owner: addon-bots, ui_behavior: hide}
+      - {key: bots.read, label: "Read bot", owner: addon-bots, ui_behavior: hide}
+      - {key: bots.webhook.configure, label: "Configure webhook", owner: addon-bots, ui_behavior: hide}
+      - {key: bots.token.rotate, label: "Rotate token", owner: addon-bots, ui_behavior: hide}
+      - {key: bots.chat_subscribe, label: "Subscribe bot", owner: addon-bots, ui_behavior: hide}
+      - {key: bots.chat_unsubscribe, label: "Unsubscribe bot", owner: addon-bots, ui_behavior: hide}
+      - {key: bots.send_message, label: "Bot send message", owner: addon-bots, ui_behavior: hide}
+      - {key: bots.receive_updates, label: "Bot receive updates", owner: addon-bots, ui_behavior: internal}
+      - {key: bots.delivery_worker, label: "Bot delivery worker", owner: addon-bots, ui_behavior: internal}
+    gates: {api: [{path: /v1/bot/**, methods: [GET, POST, PUT, DELETE], feature: bots.create, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.bots.disabled}], ui: [{feature: bots.create, control: bot-controls, behavior: hide}], jobs: [{job: bot-delivery, feature: bots.delivery_worker, disabled_behavior: drop, degraded_behavior: drop}], hooks: [{hook: bot-delivery, feature: bots.receive_updates, disabled_behavior: skip, degraded_behavior: skip}]}
+    acceptance: {positive: [bots-positive], disabled: [bots-disabled], degraded: [bots-worker-degraded]}
+
+  - id: addon-integrations
+    label: "Интеграции"
+    degradation_mode: reject
+    disabled_behavior: reject
+    degraded_behavior: reject
+    installing_behavior: reject
+    ui_behavior: hide_integrations_tab
+    network_profile: integrations_egress
+    lifecycle_status: active
+    internal_infra: [worker-bot-delivery, integrations]
+    external_stack_components: [integrations, messaging]
+    external_stack_profiles: [http-webhook-generic, nats-2.10-bundled]
+    migration_bundle: {id: addon-integrations, owner: addon-integrations, location: db/migration/addons/integrations, history_table: flyway_schema_history_addon_integrations, schema_objects: [user_integration_connections, marketplace_entries, connector_install_state, integration_outbound_state]}
+    runtime: {services: [integrations], workers: [worker-bot-delivery], required_secrets: [], health_checks: [integrations_endpoint], job_policy: drop, hook_policy: skip}
+    features:
+      - {key: integrations.sidebar.open, label: "Open sidebar", owner: addon-integrations, ui_behavior: hide_integrations_tab}
+      - {key: integrations.marketplace.list, label: "Marketplace list", owner: addon-integrations, ui_behavior: hide_integrations_tab}
+      - {key: integrations.marketplace.search, label: "Marketplace search", owner: addon-integrations, ui_behavior: hide_integrations_tab}
+      - {key: integrations.connection.create, label: "Create connection", owner: addon-integrations, ui_behavior: hide_integrations_tab}
+      - {key: integrations.connection.list, label: "List connections", owner: addon-integrations, ui_behavior: hide_integrations_tab}
+      - {key: integrations.connection.delete, label: "Delete connection", owner: addon-integrations, ui_behavior: hide_integrations_tab}
+      - {key: integrations.outbound.send, label: "Send outbound", owner: addon-integrations, ui_behavior: internal}
+      - {key: integrations.bridge.exchange, label: "Bridge exchange", owner: addon-integrations, ui_behavior: internal}
+      - {key: integrations.bridge.storage, label: "Bridge storage", owner: addon-integrations, ui_behavior: internal}
+      - {key: integrations.bridge.one_c, label: "1C bridge", owner: addon-integrations, ui_behavior: hide_integrations_tab}
+    gates: {api: [{path: /v1/me/integrations/**, methods: [GET, POST, DELETE], feature: integrations.connection.list, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.integrations.disabled}, {path: /v1/plugins/**, methods: [GET, POST, PUT, DELETE], feature: integrations.bridge.exchange, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.integrations.disabled}], ui: [{feature: integrations.sidebar.open, control: integrations-tab, behavior: hide_integrations_tab}], jobs: [{job: integration-outbound, feature: integrations.outbound.send, disabled_behavior: drop, degraded_behavior: drop}], hooks: [{hook: integration-bridge, feature: integrations.bridge.exchange, disabled_behavior: skip, degraded_behavior: skip}]}
+    acceptance: {positive: [integrations-positive], disabled: [integrations-disabled], degraded: [integrations-endpoint-degraded]}
+
+  - id: addon-federation
+    label: "Федерация"
+    degradation_mode: hide
+    disabled_behavior: reject
+    degraded_behavior: controlled_unavailable
+    installing_behavior: controlled_unavailable
+    ui_behavior: hide
+    network_profile: federation_egress
+    lifecycle_status: active
+    internal_infra: []
+    external_stack_components: [relational-db-hot, messaging]
+    external_stack_profiles: [postgres-16-bundled, nats-2.10-bundled]
+    migration_bundle: {id: addon-federation, owner: addon-federation, location: db/migration/addons/federation, history_table: flyway_schema_history_addon_federation, schema_objects: [federation_trust, federation_directory_cache]}
+    runtime: {services: [], workers: [], required_secrets: [], health_checks: [federation_status], job_policy: stop, hook_policy: skip}
+    features:
+      - {key: federation.trust.create, label: "Create trust", owner: addon-federation, ui_behavior: hide}
+      - {key: federation.trust.list, label: "List trust", owner: addon-federation, ui_behavior: hide}
+      - {key: federation.trust.delete, label: "Delete trust", owner: addon-federation, ui_behavior: hide}
+      - {key: federation.status.read, label: "Federation status", owner: addon-federation, ui_behavior: hide}
+      - {key: federation.directory.read, label: "Federation directory", owner: addon-federation, ui_behavior: hide}
+      - {key: federation.member_guard, label: "Federation member guard", owner: addon-federation, ui_behavior: internal}
+    gates: {api: [{path: /v1/federation/**, methods: [GET, POST, DELETE], feature: federation.trust.list, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.federation.disabled}], ui: [{feature: federation.trust.list, control: federation-panel, behavior: hide}], jobs: [], hooks: [{hook: federation-member-guard, feature: federation.member_guard, disabled_behavior: skip, degraded_behavior: skip}]}
+    acceptance: {positive: [federation-positive], disabled: [federation-disabled], degraded: [federation-status-degraded]}
+
+  - id: addon-dlp
+    label: "DLP и контроль отправки"
+    degradation_mode: reject
+    disabled_behavior: skip
+    degraded_behavior: controlled_unavailable
+    installing_behavior: controlled_unavailable
+    ui_behavior: hide
+    network_profile: integrations_egress
+    lifecycle_status: active
+    internal_infra: []
+    external_stack_components: [dlp, messaging]
+    external_stack_profiles: [infowatch, nats-2.10-bundled]
+    migration_bundle: {id: addon-dlp, owner: addon-dlp, location: db/migration/addons/dlp, history_table: flyway_schema_history_addon_dlp, schema_objects: [dlp_policies, dlp_decision_audit]}
+    runtime: {services: [], workers: [], required_secrets: [], health_checks: [dlp_policy], job_policy: stop, hook_policy: skip}
+    features:
+      - {key: dlp.message_check, label: "Message DLP check", owner: addon-dlp, ui_behavior: internal}
+      - {key: dlp.attachment_check, label: "Attachment DLP check", owner: addon-dlp, ui_behavior: internal}
+      - {key: dlp.policy.read, label: "Read DLP policy", owner: addon-dlp, ui_behavior: hide}
+      - {key: dlp.policy.update, label: "Update DLP policy", owner: addon-dlp, ui_behavior: hide}
+      - {key: dlp.decision_audit, label: "DLP decision audit", owner: addon-dlp, ui_behavior: hide}
+      - {key: dlp.bridge.invoke, label: "DLP bridge", owner: addon-dlp, ui_behavior: internal, dependencies: [substrate.plugin_platform.invocation]}
+    gates: {api: [{path: /v1/admin/dlp/**, methods: [GET, POST, PUT], feature: dlp.policy.read, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.dlp.disabled}], ui: [{feature: dlp.policy.read, control: dlp-panel, behavior: hide}], jobs: [], hooks: [{hook: message-send-dlp, feature: dlp.message_check, disabled_behavior: skip, degraded_behavior: skip}, {hook: attachment-dlp, feature: dlp.attachment_check, disabled_behavior: skip, degraded_behavior: skip}]}
+    acceptance: {positive: [dlp-positive], disabled: [dlp-disabled], degraded: [dlp-policy-degraded]}
+
+  - id: addon-migration-import
+    label: "Миграция и импорт"
+    degradation_mode: reject
+    disabled_behavior: reject
+    degraded_behavior: reject
+    installing_behavior: reject
+    ui_behavior: hide
+    network_profile: internal_mesh
+    lifecycle_status: active
+    internal_infra: []
+    external_stack_components: [relational-db-hot, object-storage]
+    external_stack_profiles: [postgres-16-bundled, s3-minio-bundled]
+    migration_bundle: {id: addon-migration-import, owner: addon-migration-import, location: db/migration/addons/migration_import, history_table: flyway_schema_history_addon_migration_import, schema_objects: [migration_import_jobs, migration_import_artifacts]}
+    runtime: {services: [], workers: [], required_secrets: [], health_checks: [import_queue], job_policy: pause, hook_policy: skip}
+    features:
+      - {key: migration_import.job.create, label: "Create import job", owner: addon-migration-import, ui_behavior: hide}
+      - {key: migration_import.job.status, label: "Import job status", owner: addon-migration-import, ui_behavior: hide}
+      - {key: migration_import.job.process, label: "Process import job", owner: addon-migration-import, ui_behavior: internal}
+      - {key: migration_import.result.read, label: "Read import result", owner: addon-migration-import, ui_behavior: hide}
+    gates: {api: [{path: /v1/admin/migration-import/**, methods: [GET, POST], feature: migration_import.job.create, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.migration_import.disabled}], ui: [{feature: migration_import.job.create, control: migration-import-panel, behavior: hide}], jobs: [{job: migration-import-processor, feature: migration_import.job.process, disabled_behavior: pause, degraded_behavior: pause}], hooks: []}
+    acceptance: {positive: [migration-import-positive], disabled: [migration-import-disabled], degraded: [migration-import-storage-degraded]}
+
 legacy_deploy_profile_map:
   pilot:
     addons: []
-    scale:
-      ha_enabled: false
+    scale: {ha_enabled: false}
   standard:
-    addons:
-      - addon-engage
-      - addon-search
-      - addon-retention
-      - addon-export
-      - addon-archive
-      - addon-deep-archive
-      - addon-live
-      - addon-bots
-      - addon-integrations
-      - addon-e2ee
-      - addon-directory
-    scale:
-      ha_enabled: false
+    addons: [addon-engage, addon-search, addon-retention, addon-export, addon-archive, addon-deep-archive, addon-live, addon-bots, addon-integrations, addon-e2ee, addon-enterprise-auth]
+    scale: {ha_enabled: false}
   enterprise:
-    addons:
-      - addon-engage
-      - addon-search
-      - addon-retention
-      - addon-export
-      - addon-archive
-      - addon-deep-archive
-      - addon-live
-      - addon-bots
-      - addon-integrations
-      - addon-e2ee
-      - addon-directory
-    scale:
-      ha_enabled: true
+    addons: [addon-productivity, addon-engage, addon-search, addon-collaboration, addon-ai, addon-live, addon-retention, addon-archive, addon-deep-archive, addon-export, addon-enterprise-auth, addon-e2ee, addon-bots, addon-integrations, addon-federation, addon-dlp, addon-migration-import]
+    scale: {ha_enabled: true}

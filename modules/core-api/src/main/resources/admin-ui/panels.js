@@ -743,6 +743,901 @@
     container.appendChild(wrap);
   }
 
+  function mountExternalStackStatus(summary, pre, ctx) {
+    summary.innerHTML = "";
+    summary.hidden = false;
+
+    async function reload() {
+      pre.textContent = "Загрузка…";
+      try {
+        const data = await ctx.apiFetch("/platform/external-stack/status");
+        const profiles = await ctx.apiFetch("/platform/external-stack/profiles");
+        const compatibilityPacks = await ctx.apiFetch("/platform/external-stack/compatibility-packs");
+        const componentContracts = await ctx.apiFetch("/platform/external-stack/component-contracts");
+        const catalogHealth = await ctx.apiFetch("/platform/external-stack/catalog-health");
+        const cutoverReadiness = await ctx.apiFetch("/platform/external-stack/cutover/readiness");
+        const componentProfileSummary = await ctx.apiFetch("/platform/external-stack/component-profile-summary");
+        summary._externalStackCompatibilityPacks = compatibilityPacks;
+        summary._externalStackComponentContracts = componentContracts;
+        summary._externalStackCatalogHealth = catalogHealth;
+        summary._externalStackCutoverReadiness = cutoverReadiness;
+        summary._externalStackComponentProfileSummary = componentProfileSummary;
+        renderExternalStackTable(data, summary, profiles);
+        renderExternalStackCutoverReadiness(cutoverReadiness, summary);
+        renderExternalStackCatalogHealth(catalogHealth, summary);
+        renderExternalStackComponentProfileSummary(componentProfileSummary, summary);
+        renderExternalStackDesiredObservedDiff(data, summary);
+        renderExternalStackCompatibilityPacks(compatibilityPacks, summary);
+        renderExternalStackComponentContracts(componentContracts, summary);
+        const report = {
+          status: data,
+          profiles: profiles,
+          compatibility_packs: compatibilityPacks,
+          catalog_health: catalogHealth,
+          cutover_readiness: cutoverReadiness,
+          component_profile_summary: componentProfileSummary,
+        };
+        summary._externalStackLastReport = report;
+        pre.textContent = JSON.stringify(report, null, 2);
+        if (global.AdminUi) {
+          AdminUi.showJsonBlock(true);
+        }
+      } catch (e) {
+        pre.textContent = "Ошибка: " + e.message;
+      }
+    }
+
+    const hint = document.createElement("p");
+    hint.className = "muted small";
+    hint.textContent =
+      "Read-only статус spec 023: desired/observed manifest, health, validation и support boundary без секретов.";
+    summary.appendChild(hint);
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "admin-toolbar";
+    toolbar.id = "externalStackFilters";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn-secondary";
+    btn.textContent = "Обновить external stack";
+    btn.addEventListener("click", () => reload().catch(() => {}));
+    toolbar.appendChild(btn);
+    const download = document.createElement("button");
+    download.type = "button";
+    download.id = "externalStackDownloadReport";
+    download.className = "btn btn-secondary";
+    download.textContent = "Скачать JSON-отчёт";
+    download.addEventListener("click", () =>
+      externalStackDownloadReport("external-stack-report.json", summary._externalStackLastReport || {})
+    );
+    toolbar.appendChild(download);
+    [
+      ["validation", "validation", ["all", "passed", "failed"]],
+      ["health", "health", ["all", "healthy", "degraded", "configured"]],
+      ["mismatch", "mismatch", ["all", "yes", "no"]],
+      ["group", "group", ["all", "core", "add-ons", "candidates"]],
+      [
+        "lifecycle",
+        "lifecycle",
+        ["all", "supported_bundled", "supported_external_byo", "candidate", "integration_candidate", "rejected"],
+      ],
+    ].forEach(([id, label, values]) => {
+      const select = document.createElement("select");
+      select.id = "externalStackFilter-" + id;
+      if (id === "lifecycle") {
+        select.id = "externalStackLifecycleFilter";
+      } else if (id === "group") {
+        select.id = "externalStackGroupFilter";
+      }
+      select.dataset.filter = id;
+      values.forEach((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label + ": " + value;
+        select.appendChild(option);
+      });
+      select.addEventListener("change", () => {
+        const data = summary._externalStackData;
+        if (data) {
+          renderExternalStackTable(data, summary);
+          renderExternalStackCompatibilityPacks(summary._externalStackCompatibilityPacks, summary);
+          renderExternalStackComponentContracts(summary._externalStackComponentContracts, summary);
+          renderExternalStackCutoverReadiness(summary._externalStackCutoverReadiness, summary);
+          renderExternalStackCatalogHealth(summary._externalStackCatalogHealth, summary);
+          renderExternalStackComponentProfileSummary(summary._externalStackComponentProfileSummary, summary);
+        }
+      });
+      toolbar.appendChild(select);
+    });
+    summary.appendChild(toolbar);
+    mountExternalStackPreflight(summary, pre, ctx);
+
+    reload().catch(() => {});
+  }
+
+  function mountExternalStackPreflight(summary, pre, ctx) {
+    if (summary.querySelector("#externalStackCheckpointJson")) {
+      return;
+    }
+    const box = document.createElement("div");
+    box.className = "panel-form external-stack-preflight";
+    const title = document.createElement("p");
+    title.className = "form-section-label";
+    title.textContent = "Checkpoint preflight (repo-local)";
+    box.appendChild(title);
+    const hint = document.createElement("p");
+    hint.className = "muted small";
+    hint.textContent = "POST /platform/external-stack/preflight/checkpoint — проверка marker groups без live cutover.";
+    box.appendChild(hint);
+    const ta = document.createElement("textarea");
+    ta.id = "externalStackCheckpointJson";
+    ta.rows = 8;
+    ta.spellcheck = false;
+    ta.value = JSON.stringify(externalStackSampleCheckpoint(), null, 2);
+    box.appendChild(ta);
+    const row = document.createElement("div");
+    row.className = "admin-toolbar";
+    const sample = document.createElement("button");
+    sample.type = "button";
+    sample.id = "externalStackSampleCheckpoint";
+    sample.className = "btn btn-ghost";
+    sample.textContent = "Пример checkpoint JSON";
+    sample.addEventListener("click", () => {
+      ta.value = JSON.stringify(externalStackSampleCheckpoint(), null, 2);
+    });
+    const validate = document.createElement("button");
+    validate.type = "button";
+    validate.className = "btn btn-secondary";
+    validate.textContent = "Проверить checkpoint";
+    const result = document.createElement("span");
+    result.className = "muted small";
+    validate.addEventListener("click", async () => {
+      result.textContent = "Проверка…";
+      try {
+        const body = JSON.parse(ta.value);
+        const report = await ctx.apiFetch("/platform/external-stack/preflight/checkpoint", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        result.textContent =
+          (report.passed ? "OK" : "BLOCKED") +
+          " · severity=" +
+          (report.severity || "?") +
+          " · missing=" +
+          ((report.missing_markers || []).join(", ") || "—");
+        pre.textContent = JSON.stringify(report, null, 2);
+        if (global.AdminUi) {
+          AdminUi.showJsonBlock(true);
+        }
+      } catch (e) {
+        result.textContent = "Ошибка: " + e.message;
+      }
+    });
+    row.appendChild(sample);
+    row.appendChild(externalStackCopyCurl("/platform/external-stack/preflight/checkpoint", () => ta.value));
+    row.appendChild(validate);
+    row.appendChild(result);
+    box.appendChild(row);
+    summary.appendChild(box);
+    mountExternalStackManifestPreflight(summary, pre, ctx);
+    mountExternalStackProfilePreflight(summary, pre, ctx);
+  }
+
+  function mountExternalStackProfilePreflight(summary, pre, ctx) {
+    if (summary.querySelector("#externalStackProfilePreflight")) {
+      return;
+    }
+    const box = document.createElement("div");
+    box.className = "panel-form external-stack-preflight";
+    box.id = "externalStackProfilePreflight";
+    const title = document.createElement("p");
+    title.className = "form-section-label";
+    title.textContent = "Profile preflight (локально)";
+    box.appendChild(title);
+    const hint = document.createElement("p");
+    hint.className = "muted small external-stack-schema-help";
+    hint.textContent = "POST /platform/external-stack/preflight/profile/report — evidence readiness для одного profile_id.";
+    box.appendChild(hint);
+    const selector = document.createElement("select");
+    selector.id = "externalStackSampleSelector";
+    ["postgres-16-bundled", "postgres-16-external", "opensearch-candidate"].forEach((profileId) => {
+      const option = document.createElement("option");
+      option.value = profileId;
+      option.textContent = profileId;
+      selector.appendChild(option);
+    });
+    box.appendChild(selector);
+    const row = document.createElement("div");
+    row.className = "admin-toolbar";
+    const validate = document.createElement("button");
+    validate.type = "button";
+    validate.className = "btn btn-secondary";
+    validate.textContent = "Проверить профиль";
+    const result = document.createElement("span");
+    result.className = "muted small";
+    const bodyText = () => JSON.stringify({
+      profile_id: selector.value,
+      evidence: selector.value === "postgres-16-external" ? ["h2_or_lab_migration_green"] : [],
+    }, null, 2);
+    validate.addEventListener("click", async () => {
+      result.textContent = "Проверка…";
+      try {
+        const validation = await ctx.apiFetch("/platform/external-stack/preflight/profile/report", {
+          method: "POST",
+          body: bodyText(),
+        });
+        result.textContent =
+          (validation.passed ? "OK" : "FAILED") +
+          " · severity=" +
+          (validation.severity || "?") +
+          " · missing evidence=" +
+          (validation.missing_promotion_evidence_count || (validation.missing_promotion_evidence || []).length) +
+          " · unsupported=" +
+          (validation.unsupported_mode_count || (validation.unsupported_modes || []).length) +
+          " · remediation=" +
+          ((validation.remediation_actions || []).length);
+        pre.textContent = JSON.stringify(validation, null, 2);
+        if (global.AdminUi) {
+          AdminUi.showJsonBlock(true);
+        }
+      } catch (e) {
+        result.textContent = "Ошибка: " + e.message;
+      }
+    });
+    row.appendChild(externalStackCopyCurl("/platform/external-stack/preflight/profile/report", bodyText));
+    row.appendChild(validate);
+    row.appendChild(result);
+    box.appendChild(row);
+    summary.appendChild(box);
+  }
+
+  function mountExternalStackManifestPreflight(summary, pre, ctx) {
+    if (summary.querySelector("#externalStackManifestsJson")) {
+      return;
+    }
+    const box = document.createElement("div");
+    box.className = "panel-form external-stack-preflight";
+    const title = document.createElement("p");
+    title.className = "form-section-label";
+    title.textContent = "Manifest preflight (локально)";
+    box.appendChild(title);
+    const hint = document.createElement("p");
+    hint.className = "muted small";
+    hint.textContent = "POST /platform/external-stack/preflight/manifests/report — manifest report по desired manifests без deploy.";
+    box.appendChild(hint);
+    const ta = document.createElement("textarea");
+    ta.id = "externalStackManifestsJson";
+    ta.rows = 10;
+    ta.spellcheck = false;
+    ta.value = JSON.stringify(externalStackSampleManifest(), null, 2);
+    box.appendChild(ta);
+    const row = document.createElement("div");
+    row.className = "admin-toolbar";
+    const sample = document.createElement("button");
+    sample.type = "button";
+    sample.id = "externalStackSampleManifest";
+    sample.className = "btn btn-ghost";
+    sample.textContent = "Пример manifest JSON";
+    sample.addEventListener("click", () => {
+      ta.value = JSON.stringify(externalStackSampleManifest(), null, 2);
+    });
+    const validate = document.createElement("button");
+    validate.type = "button";
+    validate.className = "btn btn-secondary";
+    validate.textContent = "Проверить manifests";
+    const result = document.createElement("span");
+    result.className = "muted small";
+    validate.addEventListener("click", async () => {
+      result.textContent = "Проверка…";
+      try {
+        const body = JSON.parse(ta.value);
+        const validation = await ctx.apiFetch("/platform/external-stack/preflight/manifests/report", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        result.textContent =
+          (validation.passed ? "OK" : "FAILED") +
+          " · severity=" +
+          (validation.severity || "?") +
+          " · failures=" +
+          (validation.failure_count || 0) +
+          " · warnings=" +
+          (validation.warning_count || 0) +
+          " · missing checks=" +
+          (validation.missing_required_check_count || externalStackMissingRequiredChecksCount(validation)) +
+          " · remediation=" +
+          ((validation.remediation_actions || []).length) +
+          " · redacted=" +
+          (validation.validation && validation.validation.redacted === true);
+        pre.textContent = JSON.stringify(validation, null, 2);
+        if (global.AdminUi) {
+          AdminUi.showJsonBlock(true);
+        }
+      } catch (e) {
+        result.textContent = "Ошибка: " + e.message;
+      }
+    });
+    row.appendChild(sample);
+    row.appendChild(externalStackCopyCurl("/platform/external-stack/preflight/manifests", () => ta.value));
+    row.appendChild(validate);
+    row.appendChild(result);
+    box.appendChild(row);
+    summary.appendChild(box);
+  }
+
+  function externalStackSampleCheckpoint() {
+    return {
+      component: "search",
+      source_profile: "sql-search",
+      target_profile: "solr-bundled",
+      checkpoint_type: "reindex",
+      markers: {
+        reindex_cursor: "messages:42",
+        index_schema_version: "v1",
+        shadow_target: "solr-shadow",
+      },
+      rollback_profile: "sql-search",
+      watch_window: "PT4H",
+    };
+  }
+
+  function externalStackSampleManifest() {
+    return {
+      manifests: [
+        {
+          component: "object-storage",
+          backend_family: "s3-compatible",
+          connector: "minio-s3",
+          version: "configured",
+          role: "active",
+          endpoint: "https://minio.example.test",
+          resource_name_or_alias: "avandocmsg",
+          schema_or_protocol_version: "s3",
+          compatibility_profile: "s3-minio-bundled",
+          topology: "configured",
+          config_revision: "manual-preflight",
+          capabilities: ["put_get_head_delete_list", "multipart", "checksum"],
+          data_classification: "file-content",
+          support_boundary: {
+            deployment_owner: "korus",
+            backup_owner: "korus",
+            ha_owner: "korus",
+            upgrade_owner: "korus",
+            incident_owner: "korus",
+            vendor_support_required: false,
+            korus_support_scope: "full-stack",
+          },
+          metadata: { serve_traffic: "true" },
+        },
+      ],
+    };
+  }
+
+  function externalStackMissingRequiredChecksCount(report) {
+    if (!report || !report.components) {
+      return 0;
+    }
+    return Object.values(report.components)
+      .map((component) => (component.missing_required_checks || []).length)
+      .reduce((sum, count) => sum + count, 0);
+  }
+
+  function externalStackDownloadReport(filename, data) {
+    const blob = new Blob([JSON.stringify(data || {}, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function externalStackCopyCurl(path, bodyText) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn-ghost";
+    btn.textContent = "Copy curl";
+    btn.id = "externalStackCopyCurl";
+    btn.addEventListener("click", () => {
+      const payload = typeof bodyText === "function" ? bodyText() : "{}";
+      const cmd =
+        "curl -sS -X POST http://127.0.0.1:18080/api/v1" +
+        path +
+        " -H 'Content-Type: application/json' --data '" +
+        payload.replace(/'/g, "'\\''") +
+        "'";
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(cmd).catch(() => {});
+      }
+      btn.textContent = "Copied curl";
+      setTimeout(() => {
+        btn.textContent = "Copy curl";
+      }, 1200);
+    });
+    return btn;
+  }
+
+  function renderExternalStackTable(data, container, profiles) {
+    container.querySelectorAll(".external-stack-table-wrap").forEach((n) => n.remove());
+    if (!data || !data.components) {
+      return;
+    }
+    container._externalStackData = data;
+    if (profiles) {
+      container._externalStackProfiles = profiles;
+    }
+    const filters = externalStackFilters(container);
+    const entries = Object.entries(data.components)
+      .filter(([component, c]) => externalStackMatches(c, filters, externalStackProfileFor(container._externalStackProfiles, c), component))
+      .sort((a, b) => externalStackGroup(a[0]).localeCompare(externalStackGroup(b[0])) || a[0].localeCompare(b[0]));
+    const wrap = document.createElement("div");
+    wrap.className = "json-table-wrap external-stack-table-wrap";
+    wrap.setAttribute("data-testid", "admin-external-stack-table");
+    const table = document.createElement("table");
+    table.className = "json-panel-table";
+    const head = document.createElement("thead");
+    const hr = document.createElement("tr");
+    [
+      "component",
+      "group",
+      "desired",
+      "observed",
+      "health",
+      "validation",
+      "support",
+      "degraded / mismatch",
+    ].forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    head.appendChild(hr);
+    table.appendChild(head);
+    const body = document.createElement("tbody");
+    const badge = global.AdminUi && AdminUi.statusBadge;
+    entries.forEach(([component, c]) => {
+      const tr = document.createElement("tr");
+      if (c.validation_status !== "passed" || c.health_status === "degraded" || c.mismatch === true) {
+        tr.classList.add("fleet-row-bad");
+      }
+      const validation =
+        c.validation_status === "passed" && badge
+          ? badge(true, "passed")
+          : c.validation_status && badge
+            ? badge(false, c.validation_status)
+            : c.validation_status || "—";
+      const health =
+        c.health_status === "healthy" && badge
+          ? badge(true, "healthy")
+          : c.health_status && badge
+            ? badge(false, c.health_status)
+            : c.health_status || "—";
+      const mismatch = c.mismatch ? "mismatch" : "";
+      const supportBadge = externalStackSupportBadge(c);
+      const profile = externalStackProfileFor(container._externalStackProfiles, c);
+      const drilldown = externalStackDrilldown(c, profile);
+      [
+        component,
+        externalStackGroup(component),
+        c.desired_connector || "—",
+        c.observed_connector || "—",
+        health,
+        validation,
+        supportBadge,
+        drilldown || [c.degraded_reason, mismatch].filter(Boolean).join(" · ") || "—",
+      ].forEach((val) => {
+        const td = document.createElement("td");
+        if (val instanceof Node) {
+          td.appendChild(val);
+        } else {
+          td.textContent = val != null ? String(val) : "";
+        }
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    const meta = document.createElement("p");
+    meta.className = "muted small json-panel-note";
+    const passed = entries.filter(([, c]) => c.validation_status === "passed").length;
+    meta.textContent =
+      "External stack components: " + passed + "/" + entries.length + " validation passed. Badges: supported/candidate/deferred.";
+    wrap.appendChild(meta);
+    container.appendChild(wrap);
+  }
+
+  function renderExternalStackDesiredObservedDiff(data, container) {
+    container.querySelectorAll(".external-stack-diff-wrap").forEach((n) => n.remove());
+    if (!data || !data.components) {
+      return;
+    }
+    const rows = Object.entries(data.components)
+      .filter(([, c]) => c.mismatch === true || c.desired_connector !== c.observed_connector)
+      .sort((a, b) => a[0].localeCompare(b[0]));
+    const wrap = document.createElement("div");
+    wrap.className = "json-table-wrap external-stack-diff-wrap";
+    wrap.setAttribute("data-testid", "admin-external-stack-diff");
+    const title = document.createElement("p");
+    title.className = "form-section-label";
+    title.textContent = "Desired vs observed diff";
+    wrap.appendChild(title);
+    if (!rows.length) {
+      const ok = document.createElement("p");
+      ok.className = "muted small";
+      ok.textContent = "No desired/observed connector mismatches.";
+      wrap.appendChild(ok);
+      container.appendChild(wrap);
+      return;
+    }
+    const table = document.createElement("table");
+    table.className = "json-panel-table";
+    const head = document.createElement("thead");
+    const hr = document.createElement("tr");
+    ["component", "desired", "observed", "reason"].forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    head.appendChild(hr);
+    table.appendChild(head);
+    const body = document.createElement("tbody");
+    rows.forEach(([component, c]) => {
+      const tr = document.createElement("tr");
+      tr.classList.add("fleet-row-bad");
+      [component, c.desired_connector || "—", c.observed_connector || "—", c.degraded_reason || "mismatch"].forEach((val) => {
+        const td = document.createElement("td");
+        td.textContent = val;
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    container.appendChild(wrap);
+  }
+
+  function renderExternalStackCatalogHealth(data, container) {
+    container.querySelectorAll(".external-stack-catalog-health").forEach((n) => n.remove());
+    if (!data) {
+      return;
+    }
+    const box = document.createElement("div");
+    box.className = "panel-form external-stack-catalog-health";
+    const badge = global.AdminUi && AdminUi.statusBadge
+      ? AdminUi.statusBadge(data.passed === true, data.passed ? "catalog OK" : "catalog drift")
+      : document.createTextNode(data.passed ? "catalog OK" : "catalog drift");
+    const title = document.createElement("p");
+    title.className = "form-section-label";
+    title.textContent = "Catalog health";
+    box.appendChild(title);
+    const line = document.createElement("p");
+    line.className = "muted small";
+    line.appendChild(badge);
+    line.appendChild(document.createTextNode(
+      " components=" + (data.component_count || 0) +
+      " profiles=" + (data.profile_count || 0) +
+      " candidates=" + (data.candidate_profile_count || 0) +
+      " failures=" + (data.failure_count || (data.failures || []).length) +
+      " warnings=" + (data.warning_count || (data.warnings || []).length) +
+      " catalog remediation=" + ((data.remediation_actions || []).length)
+    ));
+    box.appendChild(line);
+    const details = document.createElement("details");
+    details.className = "external-stack-drilldown";
+    const summary = document.createElement("summary");
+    summary.textContent = "catalog drift details";
+    details.appendChild(summary);
+    const pre = document.createElement("pre");
+    pre.textContent = []
+      .concat(data.failures || [])
+      .concat(data.warnings || ["candidate profiles require explicit promotion before production use"])
+      .concat(data.remediation_actions || [])
+      .join("\n") || "No catalog drift.";
+    details.appendChild(pre);
+    box.appendChild(details);
+    container.appendChild(box);
+  }
+
+  function renderExternalStackCutoverReadiness(data, container) {
+    container.querySelectorAll(".external-stack-cutover-readiness").forEach((n) => n.remove());
+    if (!data) {
+      return;
+    }
+    const box = document.createElement("div");
+    box.className = "panel-form external-stack-cutover-readiness";
+    const badge = global.AdminUi && AdminUi.statusBadge
+      ? AdminUi.statusBadge(data.ready === true, data.ready ? "cutover ready" : "cutover blocked")
+      : document.createTextNode(data.ready ? "cutover ready" : "cutover blocked");
+    const title = document.createElement("p");
+    title.className = "form-section-label";
+    title.textContent = "Lab cutover readiness";
+    box.appendChild(title);
+    const line = document.createElement("p");
+    line.className = "muted small";
+    line.appendChild(badge);
+    line.appendChild(document.createTextNode(
+      " severity=" + (data.severity || "?") +
+      " blockers=" + (data.blocker_count || 0) +
+      " warnings=" + (data.warning_count || 0) +
+      " remediation=" + ((data.remediation_actions || []).length)
+    ));
+    box.appendChild(line);
+    const code = document.createElement("code");
+    code.textContent = data.smoke_command || ".\\scripts\\smoke-external-stack-lab-cutover.ps1";
+    box.appendChild(code);
+    const details = document.createElement("details");
+    details.className = "external-stack-drilldown";
+    const summary = document.createElement("summary");
+    summary.textContent = "cutover readiness details";
+    details.appendChild(summary);
+    const pre = document.createElement("pre");
+    pre.textContent = []
+      .concat(data.blockers || [])
+      .concat(data.warnings || [])
+      .concat(data.remediation_actions || [])
+      .join("\n") || "No cutover readiness issues.";
+    details.appendChild(pre);
+    box.appendChild(details);
+    container.appendChild(box);
+  }
+
+  function renderExternalStackComponentProfileSummary(data, container) {
+    container.querySelectorAll(".external-stack-profile-summary-wrap").forEach((n) => n.remove());
+    if (!data || !data.components) {
+      return;
+    }
+    const filters = externalStackFilters(container);
+    const entries = Object.values(data.components)
+      .filter((item) => filters.group === "all" || externalStackGroup(item.component) === filters.group)
+      .sort((a, b) => externalStackGroup(a.component).localeCompare(externalStackGroup(b.component)) ||
+        String(a.component || "").localeCompare(String(b.component || "")));
+    const wrap = document.createElement("div");
+    wrap.className = "json-table-wrap external-stack-profile-summary-wrap";
+    wrap.setAttribute("data-testid", "admin-external-stack-profile-readiness");
+    const heading = document.createElement("p");
+    heading.className = "form-section-label";
+    heading.textContent = "Component profile readiness";
+    wrap.appendChild(heading);
+    const table = document.createElement("table");
+    table.className = "json-panel-table";
+    const head = document.createElement("thead");
+    const hr = document.createElement("tr");
+    ["component", "group", "profiles", "supported", "candidates", "rejected", "severity", "component remediation", "warning"].forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    head.appendChild(hr);
+    table.appendChild(head);
+    const body = document.createElement("tbody");
+    entries.forEach((item) => {
+      const tr = document.createElement("tr");
+      if (item.candidate_count > 0 || item.supported_count === 0) {
+        tr.classList.add("fleet-row-bad");
+      }
+      [
+        item.component,
+        externalStackGroup(item.component),
+        item.profile_count,
+        item.supported_count,
+        item.candidate_count,
+        item.rejected_count,
+        item.readiness_severity || "ok",
+        (item.remediation_actions || []).length,
+        item.readiness_warning || "—",
+      ].forEach((val) => {
+        const td = document.createElement("td");
+        td.textContent = val != null ? String(val) : "—";
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    container.appendChild(wrap);
+  }
+
+  function renderExternalStackCompatibilityPacks(data, container) {
+    container.querySelectorAll(".external-stack-pack-wrap").forEach((n) => n.remove());
+    if (!data || !data.packs) {
+      return;
+    }
+    const filters = externalStackFilters(container);
+    const entries = Object.values(data.packs)
+      .filter((pack) => filters.lifecycle === "all" || pack.lifecycle_status === filters.lifecycle)
+      .sort((a, b) =>
+        String(a.component || "").localeCompare(String(b.component || "")) ||
+        String(a.profile_id || "").localeCompare(String(b.profile_id || ""))
+      );
+    const wrap = document.createElement("div");
+    wrap.className = "json-table-wrap external-stack-pack-wrap";
+    wrap.setAttribute("data-testid", "admin-external-stack-packs");
+    const heading = document.createElement("p");
+    heading.className = "form-section-label";
+    heading.textContent = "Compatibility pack catalog";
+    wrap.appendChild(heading);
+    const table = document.createElement("table");
+    table.className = "json-panel-table";
+    const head = document.createElement("thead");
+    const hr = document.createElement("tr");
+    ["profile", "component", "lifecycle", "checks", "evidence", "unsupported"].forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    head.appendChild(hr);
+    table.appendChild(head);
+    const body = document.createElement("tbody");
+    entries.forEach((pack) => {
+      const tr = document.createElement("tr");
+      if (String(pack.lifecycle_status || "").includes("candidate")) {
+        tr.classList.add("fleet-row-bad");
+      }
+      [
+        pack.profile_id,
+        pack.component,
+        pack.lifecycle_status,
+        (pack.required_checks || []).slice(0, 3).join(", "),
+        (pack.promotion_evidence || []).join(", "),
+        (pack.unsupported_modes || []).join(", ") || "—",
+      ].forEach((val) => {
+        const td = document.createElement("td");
+        td.textContent = val != null ? String(val) : "—";
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    const note = document.createElement("p");
+    note.className = "muted small json-panel-note";
+    note.textContent = "Full catalog includes supported, external/BYO and candidate packs; candidate rows are not production support claims.";
+    wrap.appendChild(note);
+    container.appendChild(wrap);
+  }
+
+  function renderExternalStackComponentContracts(data, container) {
+    container.querySelectorAll(".external-stack-contract-wrap").forEach((n) => n.remove());
+    if (!data || !data.contracts) {
+      return;
+    }
+    const filters = externalStackFilters(container);
+    const entries = Object.values(data.contracts)
+      .filter((contract) => filters.group === "all" || externalStackGroup(contract.component) === filters.group)
+      .sort((a, b) => externalStackGroup(a.component).localeCompare(externalStackGroup(b.component)) ||
+        String(a.component || "").localeCompare(String(b.component || "")));
+    const wrap = document.createElement("div");
+    wrap.className = "json-table-wrap external-stack-contract-wrap";
+    wrap.setAttribute("data-testid", "admin-external-stack-component-contracts");
+    const heading = document.createElement("p");
+    heading.className = "form-section-label";
+    heading.textContent = "Component validation contracts";
+    wrap.appendChild(heading);
+    const table = document.createElement("table");
+    table.className = "json-panel-table";
+    const head = document.createElement("thead");
+    const hr = document.createElement("tr");
+    ["component", "group", "checks", "failure policy"].forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    head.appendChild(hr);
+    table.appendChild(head);
+    const body = document.createElement("tbody");
+    entries.forEach((contract) => {
+      const tr = document.createElement("tr");
+      [
+        contract.component,
+        externalStackGroup(contract.component),
+        (contract.required_checks || []).join(", "),
+        contract.failure_policy,
+      ].forEach((val) => {
+        const td = document.createElement("td");
+        td.textContent = val != null ? String(val) : "—";
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    container.appendChild(wrap);
+  }
+
+  function externalStackFilters(container) {
+    const toolbar = container.querySelector("#externalStackFilters");
+    if (!toolbar) {
+      return { validation: "all", health: "all", mismatch: "all", group: "all", lifecycle: "all" };
+    }
+    const read = (name) => {
+      const el = toolbar.querySelector('[data-filter="' + name + '"]');
+      return el ? el.value : "all";
+    };
+    return {
+      validation: read("validation"),
+      health: read("health"),
+      mismatch: read("mismatch"),
+      group: read("group"),
+      lifecycle: read("lifecycle"),
+    };
+  }
+
+  function externalStackMatches(component, filters, profile, componentId) {
+    if (filters.validation !== "all" && component.validation_status !== filters.validation) {
+      return false;
+    }
+    if (filters.health !== "all" && component.health_status !== filters.health) {
+      return false;
+    }
+    if (filters.mismatch === "yes" && component.mismatch !== true) {
+      return false;
+    }
+    if (filters.mismatch === "no" && component.mismatch === true) {
+      return false;
+    }
+    if (filters.group !== "all" && externalStackGroup(componentId) !== filters.group) {
+      return false;
+    }
+    if (filters.lifecycle !== "all" && (!profile || profile.lifecycle_status !== filters.lifecycle)) {
+      return false;
+    }
+    return true;
+  }
+
+  function externalStackGroup(component) {
+    if (["media", "turn", "notifications", "dlp", "integrations"].includes(component)) {
+      return "add-ons";
+    }
+    if (["search"].includes(component)) {
+      return "candidates";
+    }
+    return "core";
+  }
+
+  function externalStackSupportBadge(component) {
+    const span = document.createElement("span");
+    span.className = "support-badge";
+    const boundary = component.support_boundary || "—";
+    const connector = (component.desired_connector || "").toLowerCase();
+    if (connector.includes("candidate") || boundary.includes("vendor")) {
+      span.textContent = "candidate";
+    } else if (boundary.includes("deferred")) {
+      span.textContent = "deferred";
+    } else {
+      span.textContent = boundary.includes("customer") ? "external/BYO" : "supported";
+    }
+    span.title = boundary;
+    return span;
+  }
+
+  function externalStackProfileFor(profiles, component) {
+    if (!profiles || !profiles.profiles) {
+      return null;
+    }
+    return profiles.profiles[component.desired_connector] || profiles.profiles[component.observed_connector] || null;
+  }
+
+  function externalStackDrilldown(component, profile) {
+    const details = document.createElement("details");
+    details.className = "external-stack-drilldown";
+    const summary = document.createElement("summary");
+    summary.textContent = [component.degraded_reason, component.mismatch ? "mismatch" : ""].filter(Boolean).join(" · ") || "details";
+    details.appendChild(summary);
+    const lines = []
+      .concat(component.validation_failures || [])
+      .concat(component.validation_warnings || []);
+    if (profile) {
+      lines.push("required_checks: " + (profile.required_checks || []).join(", "));
+      lines.push("promotion_evidence: " + (profile.promotion_evidence || []).join(", "));
+      lines.push("unsupported_modes: " + (profile.unsupported_modes || []).join(", "));
+    }
+    const pre = document.createElement("pre");
+    pre.textContent = lines.length ? lines.join("\n") : "No validation failures/warnings.";
+    details.appendChild(pre);
+    return details;
+  }
+
   function enhancePluginInstances(summary, pre, ctx) {
     if (document.getElementById("pluginInstanceTools")) {
       return;
@@ -1414,6 +2309,7 @@
     "core-ip-allowlist": mountIpAllowlist,
     "core-migration-import": mountMigrationImport,
     "core-federation-trust": mountFederationTrust,
+    "core-external-stack": mountExternalStackStatus,
   };
 
   function tryMount(section, ctx) {

@@ -1,0 +1,115 @@
+# Ansible-managed desired external stack manifest (spec 023).
+# No secrets: endpoints/resource aliases only. Runtime publishes observed status separately.
+{% if korus_tls_enabled | default(false) | bool and korus_tls_domain is defined %}
+{% set web_edge_endpoint = 'https://' ~ korus_tls_domain ~ '/' %}
+{% elif korus_web_base_url is defined %}
+{% set web_edge_endpoint = korus_web_base_url %}
+{% else %}
+{% set web_edge_endpoint = 'http://' ~ (korus_web_lan_ip | default('127.0.0.1')) ~ ':' ~ ((korus_web_port | default(9088)) | string) ~ '/' %}
+{% endif %}
+schema_version: 1
+config_revision: ansible
+manifests:
+  - component: relational-db-hot
+    backend_family: postgres
+    connector: postgres-16
+    version: "16"
+    role: active
+    endpoint: "{{ korus_db_jdbc_url | default('jdbc:postgresql://postgres:5432/avandocmsg_hot') }}"
+    resource_name_or_alias: avandocmsg_hot
+    schema_or_protocol_version: flyway-current
+    compatibility_profile: postgres-16-bundled
+    topology: bundled
+    config_revision: ansible
+    capabilities: [jdbc_connectivity, flyway_privileges, pool_sizing]
+    data_classification: hot-personal-data
+    support_boundary: &korus_bundled
+      deployment_owner: korus
+      backup_owner: korus
+      ha_owner: korus
+      upgrade_owner: korus
+      incident_owner: korus
+      vendor_support_required: false
+      korus_support_scope: bundled
+    metadata:
+      serve_traffic: "true"
+  - component: object-storage
+    backend_family: s3-compatible
+    connector: minio-s3
+    version: configured
+    role: active
+    endpoint: "{{ korus_minio_endpoint | default('http://minio:9000') }}"
+    resource_name_or_alias: "{{ korus_minio_bucket | default('avandocmsg') }}"
+    schema_or_protocol_version: s3
+    compatibility_profile: s3-minio-bundled
+    topology: bundled
+    config_revision: ansible
+    capabilities: [put_get_head_delete_list, multipart, checksum]
+    data_classification: file-content
+    support_boundary: *korus_bundled
+    metadata:
+      serve_traffic: "true"
+  - component: messaging
+    backend_family: nats
+    connector: nats-2.10
+    version: "2.10"
+    role: active
+    endpoint: "{{ korus_nats_url | default('nats://nats:4222') }}"
+    resource_name_or_alias: "{{ 'jetstream' if korus_nats_jetstream | default(false) | bool else 'core-nats' }}"
+    schema_or_protocol_version: "{{ 'jetstream' if korus_nats_jetstream | default(false) | bool else 'core' }}"
+    compatibility_profile: nats-2.10-bundled
+    topology: bundled
+    config_revision: ansible
+    capabilities: [publish_subscribe_subject_prefixes, queue_groups, drain_behavior]
+    data_classification: event-metadata
+    support_boundary: *korus_bundled
+    metadata:
+      serve_traffic: "true"
+  - component: idp
+    backend_family: oidc
+    connector: keycloak-24
+    version: "24"
+    role: active
+    endpoint: "{{ korus_keycloak_issuer | default(korus_keycloak_url ~ '/realms/avandocmsg') }}"
+    resource_name_or_alias: avandocmsg
+    schema_or_protocol_version: oidc
+    compatibility_profile: keycloak-24-bundled
+    topology: bundled
+    config_revision: ansible
+    capabilities: [issuer_jwks_tls, token_signature_audience_issuer, required_claims_user_org_roles]
+    data_classification: identity-security
+    support_boundary: *korus_bundled
+    metadata:
+      serve_traffic: "true"
+  - component: cache
+    backend_family: redis-compatible
+    connector: redis-7
+    version: "7"
+    role: active
+    endpoint: "{{ korus_redis_uri | default('redis://redis:6379') }}"
+    resource_name_or_alias: default
+    schema_or_protocol_version: redis
+    compatibility_profile: redis-7-bundled
+    topology: bundled
+    config_revision: ansible
+    capabilities: [command_subset_get_set_del_expire_counters_ttl, key_prefix_isolation]
+    data_classification: cache-security-adjacent
+    support_boundary: *korus_bundled
+    metadata:
+      serve_traffic: "true"
+  - component: web-edge
+    backend_family: http-reverse-proxy
+    connector: "{{ 'nginx-tls' if korus_tls_enabled | default(false) | bool else 'tomcat-11' }}"
+    version: configured
+    role: active
+    endpoint: "{{ web_edge_endpoint }}"
+    resource_name_or_alias: public-web
+    schema_or_protocol_version: http
+    compatibility_profile: web-edge
+    topology: bundled
+    config_revision: ansible
+    capabilities: [health_routing, forwarded_headers, security_headers]
+    data_classification: public-edge
+    support_boundary: *korus_bundled
+    metadata:
+      serve_traffic: "true"

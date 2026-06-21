@@ -14,7 +14,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /** Microsoft Graph calendarView (live token or mock fixture). */
 public final class GraphCalendarClient {
@@ -65,6 +64,16 @@ public final class GraphCalendarClient {
             lines.add("- **" + e.subject() + "** (" + e.startDateTime() + ")");
         }
         return String.join("\n", lines);
+    }
+
+    /** L2 scaffold: mock meeting proposal; live Graph write — LSO-030. */
+    public static String proposeMeeting(String subject) {
+        var title = subject == null || subject.isBlank() ? "Sync" : subject.trim();
+        var start = Instant.now().plus(1, ChronoUnit.HOURS).truncatedTo(ChronoUnit.MINUTES);
+        if (IntegrationEnv.useMock(graphLiveConfigured())) {
+            return "Встреча создана (mock): **" + title + "** @ " + start;
+        }
+        throw new IllegalStateException("Live meeting create requires Graph Calendars.ReadWrite");
     }
 
     private static boolean graphLiveConfigured() {

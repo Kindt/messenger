@@ -79,6 +79,18 @@
         },
       });
       card.appendChild(voteBtn);
+      if (ctx.closePoll && poll.created_by && ctx.currentUserId && poll.created_by === ctx.currentUserId()) {
+        card.appendChild(
+          ctx.iconBtn("⏹", ctx.L("ui.polls.close"), {
+            cls: "poll-close-btn",
+            testId: "poll-close-" + poll.id,
+            disabled: ctx.state.busy,
+            onClick: function () {
+              ctx.closePoll(poll.id);
+            },
+          })
+        );
+      }
     } else {
       card.appendChild(
         ctx.el("div", "poll-total", ctx.L("ui.polls.totalVotes", { count: total }))
@@ -93,6 +105,16 @@
     wrap.setAttribute("data-testid", "thread-polls");
     var head = ctx.el("div", "thread-polls-head");
     head.appendChild(ctx.el("span", "thread-polls-title", ctx.L("ui.polls.title")));
+    head.appendChild(
+      ctx.iconBtn("↻", ctx.L("ui.polls.refreshResults"), {
+        cls: "thread-polls-refresh",
+        testId: "poll-refresh",
+        disabled: ctx.state.busy,
+        onClick: function () {
+          if (ctx.reloadChatPolls) ctx.reloadChatPolls();
+        },
+      })
+    );
     head.appendChild(
       ctx.iconBtn("+", ctx.L("ui.polls.create"), {
         cls: "thread-polls-add",

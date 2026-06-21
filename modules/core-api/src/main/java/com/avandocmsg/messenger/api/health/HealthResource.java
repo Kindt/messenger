@@ -4,6 +4,7 @@ import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.config.RedisProbe;
 import com.avandocmsg.messenger.common.dto.HealthReadyResponse;
 import com.avandocmsg.messenger.common.dto.HealthResponse;
+import com.avandocmsg.messenger.core.port.DatabaseHealthPort;
 import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -19,10 +20,6 @@ import jakarta.ws.rs.core.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcAdminStatsJdbcRepository;
-
-import javax.sql.DataSource;
-
 @Path("/v1/health")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Health", description = "Health check endpoints")
@@ -31,19 +28,19 @@ public class HealthResource {
     private static final Logger log = LoggerFactory.getLogger(HealthResource.class);
 
     private final AppConfig appConfig;
-    private final DataSource dataSource;
+    private final DatabaseHealthPort databaseHealthPort;
     private final NatsConnectionStatus natsConnectionStatus;
     private final RedisProbe redisProbe;
 
     @Inject
     public HealthResource(
         AppConfig appConfig,
-        DataSource dataSource,
+        DatabaseHealthPort databaseHealthPort,
         NatsConnectionStatus natsConnectionStatus,
         RedisProbe redisProbe
     ) {
         this.appConfig = appConfig;
-        this.dataSource = dataSource;
+        this.databaseHealthPort = databaseHealthPort;
         this.natsConnectionStatus = natsConnectionStatus;
         this.redisProbe = redisProbe;
     }
@@ -64,7 +61,7 @@ public class HealthResource {
     @ApiResponse(responseCode = "503", description = "БД недоступна",
         content = @Content(schema = @Schema(implementation = HealthReadyResponse.class)))
     public Response ready() {
-        boolean dbOk = new JdbcAdminStatsJdbcRepository(dataSource).ping();
+        boolean dbOk = databaseHealthPort.ping();
         boolean redisOk = redisProbe.ping();
         boolean natsOk = natsConnectionStatus.natsClientConnected();
         var body = new HealthReadyResponse(dbOk ? "ready" : "not_ready", appConfig.version(), dbOk, redisOk, natsOk);

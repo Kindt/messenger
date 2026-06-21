@@ -178,6 +178,7 @@
   const PENDING_CHAT_KEY = "korus_pending_chat";
   const PENDING_MSG_KEY = "korus_pending_msg";
   const PENDING_MEET_KEY = "korus_pending_meet";
+  const PENDING_GUEST_KEY = "korus_pending_guest";
   const PENDING_CONF_KEY = "korus_pending_conf";
   const LAST_PUBLIC_LINK_KEY = "korus_last_public_link";
   const DRAFT_KEY_PREFIX = "korus_draft_";
@@ -321,7 +322,24 @@
     contactShareOpen: false,
     myReminders: [],
     myRemindersBusy: false,
+    myScheduledMessages: [],
+    myScheduledMessagesBusy: false,
     threadOfflineCached: false,
+    chatKanbanTasks: [],
+    chatWhiteboard: null,
+    stickerGifs: [],
+    stickerPacks: [],
+    sipGateway: null,
+    phase5KanbanOpen: false,
+    phase5WhiteboardOpen: false,
+    phase5StickersOpen: false,
+    phase5AiOpen: false,
+    phase5AiReply: null,
+    phase5Modal: null,
+    phase5Toast: null,
+    federationDirectory: [],
+    myPasskeys: [],
+    passkeysBusy: false,
   };
 
   var WEB_DEVICE_NAME = "web-client";
@@ -530,7 +548,7 @@
   var uiMessageList = window.KorusUiMessageList || null;
   var uiDeepLinkUtils = window.KorusUiDeepLinkUtils || {
     stripDeepLinkFromUrl: function () {
-      return { chatId: null, msgId: null, meet: null, conf: null };
+      return { chatId: null, msgId: null, meet: null, conf: null, guest: null };
     },
     buildChatUrl: function () {
       return "";
@@ -538,6 +556,7 @@
     buildMessageUrl: function () {
       return "";
     },
+    syncChatUrl: function () {},
   };
   var uiClipboardUtils = window.KorusUiClipboardUtils || {
     copyText: function (text, onSuccess, onFallback) {
@@ -569,6 +588,14 @@
     throw new Error("KorusUiPolls required — load ui-polls.js before app.js");
   }
   var uiPolls = window.KorusUiPolls;
+  if (!window.KorusUiPhase5Ext) {
+    throw new Error("KorusUiPhase5Ext required — load ui-phase5-ext.js before app.js");
+  }
+  var uiPhase5Ext = window.KorusUiPhase5Ext;
+  if (!window.KorusUiCallAdr) {
+    throw new Error("KorusUiCallAdr required — load ui-call-adr.js before app.js");
+  }
+  var uiCallAdr = window.KorusUiCallAdr;
   if (!window.KorusUiWsHandler) {
     throw new Error("KorusUiWsHandler required — load ui-ws-handler.js before app.js");
   }
@@ -1128,6 +1155,40 @@
     } catch (e) {
       state.integrations = [];
       state.integrationsMarketplace = [];
+    }
+  }
+
+  async function connectMarketplaceItem(it) {
+    if (!it || !it.id) return;
+    state.busy = true;
+    render();
+    try {
+      await apiFetch("/me/integrations/marketplace/" + encodeURIComponent(it.id) + "/connect", {
+        method: "POST",
+      });
+      await loadIntegrations();
+    } catch (e) {
+      state.error = e.message || L("ui.marketplace.connectFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function disconnectMarketplaceItem(it) {
+    if (!it || !it.id) return;
+    state.busy = true;
+    render();
+    try {
+      await apiFetch("/me/integrations/marketplace/" + encodeURIComponent(it.id) + "/connect", {
+        method: "DELETE",
+      });
+      await loadIntegrations();
+    } catch (e) {
+      state.error = e.message || L("ui.marketplace.disconnectFailed");
+    } finally {
+      state.busy = false;
+      render();
     }
   }
 
@@ -2579,6 +2640,9 @@
         })
         .then(function () {
           openWs();
+          if (uiDeepLinkUtils.syncChatUrl) {
+            uiDeepLinkUtils.syncChatUrl(chatId);
+          }
           render();
         })
         .catch(function (err) {
@@ -2600,6 +2664,9 @@
       })
       .then(function () {
         openWs();
+        if (uiDeepLinkUtils.syncChatUrl) {
+          uiDeepLinkUtils.syncChatUrl(chatId);
+        }
         render();
       })
       .catch(function (err) {
@@ -2720,6 +2787,8 @@
         loadBlockedUsers(),
         loadMyPublicLinks(),
         loadMyReminders(),
+        loadMyScheduledMessages(),
+        loadFederationDirectory(),
       ])
         .then(render)
         .catch(function () {
@@ -4529,6 +4598,12 @@
     return !!(mod && mod.state === "enabled");
   }
 
+  function isPlatformFeatureEnabled(featureKey) {
+    if (!featureKey || !state.platformCaps || !state.platformCaps.features) return false;
+    var feature = state.platformCaps.features[featureKey];
+    return !!(feature && feature.state === "enabled");
+  }
+
   async function loadChats() {
     if (!state.tokens) return;
     var list = await apiJson("/chats", { method: "GET" });
@@ -4791,6 +4866,8 @@
     await loadReactionsForThread(chatId);
     await loadPinnedMessages(chatId);
     await loadChatPolls(chatId);
+    await loadChatKanban(chatId);
+    await loadChatWhiteboard(chatId);
     await hydrateReadReceiptsForThread(chatId);
     var liveConf = activeConferenceInChat(chatId);
     if (liveConf && liveConf.conference_id) {
@@ -4889,6 +4966,25 @@
     }
   }
 
+  async function closeChatPoll(pollId) {
+    if (!state.selectedId || !pollId) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      await apiJson("/chats/" + state.selectedId + "/polls/" + pollId + "/close", {
+        method: "POST",
+      });
+      state.phase5Toast = L("ui.polls.closedByYou");
+      await loadChatPolls(state.selectedId);
+    } catch (err) {
+      state.error = err.message || L("ui.polls.closeFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
   async function scheduleComposerMessage(text, scheduledAtIso) {
     if (!state.selectedId || !text || !scheduledAtIso) return;
     state.busy = true;
@@ -4915,6 +5011,7 @@
       clearReplyTo();
       state.scheduleSendOpen = false;
       state.statusMessage = L("ui.schedule.ok");
+      await loadMyScheduledMessages();
     } catch (err) {
       state.error = err.message || L("ui.schedule.failed");
     } finally {
@@ -4935,6 +5032,13 @@
       closeScheduleSend: closeScheduleSend,
       createPoll: createChatPoll,
       votePoll: voteChatPoll,
+      closePoll: closeChatPoll,
+      reloadChatPolls: function () {
+        if (state.selectedId) loadChatPolls(state.selectedId).then(render);
+      },
+      currentUserId: function () {
+        return jwtSub(state.tokens && state.tokens.access_token);
+      },
       scheduleMessage: scheduleComposerMessage,
       closeMessageReminder: closeMessageReminder,
       createMessageReminder: createMessageReminder,
@@ -4942,6 +5046,444 @@
       shareSelfContact: shareSelfContact,
       sendContactCard: sendContactCard,
     };
+  }
+
+  function getPhase5UiCtx() {
+    return {
+      el: el,
+      iconBtn: iconBtn,
+      L: L,
+      state: state,
+      render: render,
+      apiJson: apiJson,
+      openStickersPanel: openStickersPanel,
+      closeStickersPanel: closeStickersPanel,
+      toggleKanbanPanel: toggleKanbanPanel,
+      toggleWhiteboardPanel: toggleWhiteboardPanel,
+      addKanbanTask: addKanbanTask,
+      moveKanbanTask: moveKanbanTask,
+      deleteKanbanTask: deleteKanbanTask,
+      saveWhiteboard: saveWhiteboard,
+      insertGifMessage: insertGifMessage,
+      insertStickerMessage: insertStickerMessage,
+      toggleAiAssistPanel: toggleAiAssistPanel,
+      closeAiAssistPanel: closeAiAssistPanel,
+      runAiAssist: runAiAssist,
+      insertAiReplyToComposer: insertAiReplyToComposer,
+      loadFederationDirectory: loadFederationDirectory,
+      registerPasskeyScaffold: registerPasskeyScaffold,
+      saveSipGateway: saveSipGateway,
+      createStickerPack: createStickerPack,
+      saveEditedMessage: saveEditedMessage,
+    };
+  }
+
+  async function loadChatKanban(chatId) {
+    if (!chatId || !state.tokens) {
+      state.chatKanbanTasks = [];
+      return;
+    }
+    try {
+      var rows = await apiJson("/chats/" + chatId + "/kanban/tasks", { method: "GET" });
+      state.chatKanbanTasks = Array.isArray(rows) ? rows : [];
+    } catch (e) {
+      state.chatKanbanTasks = [];
+    }
+  }
+
+  async function loadChatWhiteboard(chatId) {
+    if (!chatId || !state.tokens) {
+      state.chatWhiteboard = null;
+      return;
+    }
+    try {
+      state.chatWhiteboard = await apiJson("/chats/" + chatId + "/whiteboard", { method: "GET" });
+    } catch (e) {
+      state.chatWhiteboard = null;
+    }
+  }
+
+  async function loadStickerGifs() {
+    if (!state.tokens) {
+      state.stickerGifs = [];
+      return;
+    }
+    try {
+      var rows = await apiJson("/stickers/gifs?q=", { method: "GET" });
+      state.stickerGifs = Array.isArray(rows) ? rows : [];
+    } catch (e) {
+      state.stickerGifs = [];
+    }
+  }
+
+  async function loadStickerPacks() {
+    if (!state.tokens) {
+      state.stickerPacks = [];
+      return;
+    }
+    try {
+      var rows = await apiJson("/stickers/packs", { method: "GET" });
+      state.stickerPacks = Array.isArray(rows) ? rows : [];
+    } catch (e) {
+      state.stickerPacks = [];
+    }
+  }
+
+  async function createStickerPack(name) {
+    if (!name) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      await apiJson("/stickers/packs", { method: "POST", jsonBody: { name: name } });
+      state.phase5Toast = L("ui.phase5.stickerPackCreated");
+      await loadStickerPacks();
+    } catch (err) {
+      state.error = err.message || L("ui.phase5.stickerPackFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function loadFederationDirectory() {
+    if (!state.tokens) {
+      state.federationDirectory = [];
+      return;
+    }
+    try {
+      var data = await apiJson("/platform/federation/directory", { method: "GET" });
+      state.federationDirectory = data && data.partner_orgs ? data.partner_orgs : [];
+    } catch (e) {
+      state.federationDirectory = [];
+    }
+  }
+
+  function toggleAiAssistPanel() {
+    state.phase5AiOpen = !state.phase5AiOpen;
+    if (!state.phase5AiOpen) {
+      state.phase5AiReply = null;
+    }
+    render();
+  }
+
+  function closeAiAssistPanel() {
+    state.phase5AiOpen = false;
+    state.phase5AiReply = null;
+    render();
+  }
+
+  async function runAiAssist(prompt) {
+    if (!state.selectedId || !prompt) return;
+    state.busy = true;
+    state.phase5AiReply = null;
+    render();
+    try {
+      var data = await apiJson("/chats/" + state.selectedId + "/ai/assist", {
+        method: "POST",
+        jsonBody: { prompt: prompt },
+      });
+      state.phase5AiReply = (data && data.reply) || L("ui.phase5.aiAssistEmpty");
+    } catch (err) {
+      state.error = err.message || L("ui.phase5.aiAssistFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function moveKanbanTask(taskId, columnKey) {
+    if (!state.selectedId || !taskId || !columnKey) return;
+    state.busy = true;
+    render();
+    try {
+      await apiJson("/chats/" + state.selectedId + "/kanban/tasks/" + taskId, {
+        method: "PATCH",
+        jsonBody: { column_key: columnKey },
+      });
+      await loadChatKanban(state.selectedId);
+    } catch (err) {
+      state.error = err.message || L("ui.phase5.kanbanFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function deleteKanbanTask(taskId) {
+    if (!state.selectedId || !taskId) return;
+    state.busy = true;
+    render();
+    try {
+      await apiJson("/chats/" + state.selectedId + "/kanban/tasks/" + taskId, {
+        method: "DELETE",
+      });
+      await loadChatKanban(state.selectedId);
+      state.phase5Toast = L("ui.phase5.kanbanDeleted");
+    } catch (err) {
+      state.error = err.message || L("ui.phase5.kanbanFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function loadMyPasskeys() {
+    if (!state.tokens) {
+      state.myPasskeys = [];
+      return;
+    }
+    state.passkeysBusy = true;
+    try {
+      var rows = await apiJson("/platform/passkeys", { method: "GET" });
+      state.myPasskeys = Array.isArray(rows) ? rows : [];
+    } catch (e) {
+      state.myPasskeys = [];
+    } finally {
+      state.passkeysBusy = false;
+    }
+  }
+
+  async function registerPasskeyScaffold() {
+    if (!state.tokens) return;
+    state.passkeysBusy = true;
+    render();
+    try {
+      var cred = "web-scaffold-" + Date.now().toString(36);
+      await apiJson("/platform/passkeys", {
+        method: "POST",
+        jsonBody: { credential_id: cred, public_key: "pk-scaffold" },
+      });
+      await loadMyPasskeys();
+      state.phase5Toast = L("ui.phase5.passkeysRegistered");
+    } catch (err) {
+      state.error = err.message || L("ui.phase5.passkeysFailed");
+    } finally {
+      state.passkeysBusy = false;
+      render();
+    }
+  }
+
+  async function redeemGuestLinkFromUrl(guestToken) {
+    if (!guestToken) return;
+    try {
+      var data = await apiJson("/conferences/guest/" + encodeURIComponent(guestToken), {
+        method: "GET",
+        noAuth: true,
+        noRefresh: true,
+      });
+      if (!data || data.status === "expired") {
+        state.error = L("ui.phase5.guestExpired");
+        return;
+      }
+      if (data.chat_id) {
+        await openChatById(data.chat_id);
+      }
+      if (data.conference_id) {
+        try {
+          var conf = await apiJson("/conferences/" + data.conference_id, { method: "GET" });
+          await joinJitsiConference(conf);
+          ensureCallPanelOpen();
+        } catch (e) {}
+      }
+      state.phase5Toast = L("ui.phase5.guestRedeemed");
+    } catch (err) {
+      state.error = err.message || L("ui.phase5.guestRedeemFailed");
+    }
+  }
+
+  function openStickersPanel() {
+    state.phase5StickersOpen = true;
+    Promise.all([loadStickerGifs(), loadStickerPacks()])
+      .then(render)
+      .catch(render);
+  }
+
+  function closeStickersPanel() {
+    state.phase5StickersOpen = false;
+    render();
+  }
+
+  function toggleKanbanPanel() {
+    state.phase5KanbanOpen = !state.phase5KanbanOpen;
+    if (state.phase5KanbanOpen && state.selectedId) {
+      loadChatKanban(state.selectedId).then(render).catch(render);
+    } else {
+      render();
+    }
+  }
+
+  function toggleWhiteboardPanel() {
+    state.phase5WhiteboardOpen = !state.phase5WhiteboardOpen;
+    if (state.phase5WhiteboardOpen && state.selectedId) {
+      loadChatWhiteboard(state.selectedId).then(render).catch(render);
+    } else {
+      render();
+    }
+  }
+
+  async function addKanbanTask(title) {
+    if (!state.selectedId || !title) return;
+    state.busy = true;
+    render();
+    try {
+      await apiJson("/chats/" + state.selectedId + "/kanban/tasks", {
+        method: "POST",
+        jsonBody: { column_key: "todo", title: title },
+      });
+      await loadChatKanban(state.selectedId);
+    } catch (err) {
+      state.error = err.message || L("ui.phase5.kanbanFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function saveWhiteboard(snapshotJson) {
+    if (!state.selectedId) return;
+    state.busy = true;
+    render();
+    try {
+      state.chatWhiteboard = await apiJson("/chats/" + state.selectedId + "/whiteboard", {
+        method: "PUT",
+        jsonBody: { title: L("ui.phase5.whiteboardTitle"), snapshot_json: snapshotJson || "{}" },
+      });
+      state.phase5Toast = L("ui.phase5.whiteboardSaved");
+    } catch (err) {
+      state.error = err.message || L("ui.phase5.whiteboardFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function insertGifMessage(gif) {
+    if (!state.selectedId || !gif) return;
+    var url = gif.gif_url || gif.preview_url || "";
+    if (!url) return;
+    state.phase5StickersOpen = false;
+    state.busy = true;
+    render();
+    try {
+      var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
+        method: "POST",
+        jsonBody: {
+          type: "gif",
+          content: url,
+          reply_to_msg_id: currentReplyToId(),
+        },
+      });
+      clearReplyTo();
+      await afterLocalSend(state.selectedId, sent);
+    } catch (err) {
+      state.error = err.message || L("messages.sendFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function insertStickerMessage(pack) {
+    if (!state.selectedId || !pack) return;
+    var label = pack.name || pack.pack_id || L("ui.message.sticker");
+    state.phase5StickersOpen = false;
+    state.busy = true;
+    render();
+    try {
+      var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
+        method: "POST",
+        jsonBody: {
+          type: "sticker",
+          content: "[sticker:" + label + "]",
+          reply_to_msg_id: currentReplyToId(),
+        },
+      });
+      clearReplyTo();
+      await afterLocalSend(state.selectedId, sent);
+    } catch (err) {
+      state.error = err.message || L("messages.sendFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  function insertAiReplyToComposer() {
+    if (!state.phase5AiReply) return;
+    var ta = document.getElementById("msgdraft");
+    if (ta) {
+      var prefix = ta.value && !ta.value.endsWith("\n") ? "\n" : "";
+      ta.value = (ta.value || "") + prefix + state.phase5AiReply;
+      scheduleSaveComposerDraft();
+    }
+    state.phase5AiOpen = false;
+    render();
+  }
+
+  async function loadSipGateway() {
+    if (!state.tokens) {
+      state.sipGateway = null;
+      return;
+    }
+    try {
+      state.sipGateway = await apiJson("/platform/sip", { method: "GET" });
+    } catch (e) {
+      state.sipGateway = null;
+    }
+  }
+
+  async function saveSipGateway(enabled, uri) {
+    if (!state.tokens) return;
+    state.busy = true;
+    render();
+    try {
+      state.sipGateway = await apiJson("/platform/sip", {
+        method: "PUT",
+        jsonBody: {
+          enabled: !!enabled,
+          gateway_uri: uri || null,
+          h323_enabled: false,
+        },
+      });
+      state.phase5Toast = L("ui.phase5.sipSaved");
+    } catch (err) {
+      state.error = err.message || L("ui.phase5.sipFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function sendVideoNoteMessage(blob, durationMs) {
+    if (!blob || !state.tokens || !state.selectedId) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      var file = new File([blob], "video-note.webm", { type: blob.type || "video/webm" });
+      var up = await uploadChatFile(file);
+      var body = {
+        type: "video_note",
+        content: up.id,
+        duration_ms: durationMs || null,
+        reply_to_msg_id: currentReplyToId(),
+      };
+      if (state.discussionThreadRootId) {
+        body.thread_id = state.discussionThreadRootId;
+      }
+      var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
+        method: "POST",
+        jsonBody: body,
+      });
+      clearReplyTo();
+      await afterLocalSend(state.selectedId, sent);
+    } catch (err) {
+      state.error = err.message || L("ui.phase5.videoNoteFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
   }
 
   async function loadMyReminders() {
@@ -4957,6 +5499,54 @@
       state.myReminders = [];
     } finally {
       state.myRemindersBusy = false;
+    }
+  }
+
+  async function loadMyScheduledMessages() {
+    if (!state.tokens) {
+      state.myScheduledMessages = [];
+      return;
+    }
+    state.myScheduledMessagesBusy = true;
+    try {
+      var rows = await apiJson("/me/scheduled-messages?limit=20", { method: "GET" });
+      state.myScheduledMessages = Array.isArray(rows) ? rows : [];
+    } catch (e) {
+      state.myScheduledMessages = [];
+    } finally {
+      state.myScheduledMessagesBusy = false;
+    }
+  }
+
+  async function cancelMyReminder(reminderId) {
+    if (!reminderId) return;
+    state.busy = true;
+    try {
+      await apiJson("/me/reminders/" + encodeURIComponent(reminderId), { method: "DELETE" });
+      state.statusMessage = L("ui.reminders.cancelled");
+      await loadMyReminders();
+    } catch (err) {
+      state.error = err.message || L("ui.reminders.cancelFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function cancelScheduledMessage(messageId) {
+    if (!messageId) return;
+    state.busy = true;
+    try {
+      await apiJson("/me/scheduled-messages/" + encodeURIComponent(messageId), {
+        method: "DELETE",
+      });
+      state.statusMessage = L("ui.schedule.cancel");
+      await loadMyScheduledMessages();
+    } catch (err) {
+      state.error = err.message || L("ui.schedule.cancelFailed");
+    } finally {
+      state.busy = false;
+      render();
     }
   }
 
@@ -5103,24 +5693,45 @@
 
   async function editMessagePrompt(m) {
     if (!state.selectedId || !m || m.deleted || m.type !== "text") return;
-    var text = window.prompt(L("messages.editPrompt"), m.content || "");
-    if (text === null) return;
-    text = text.trim();
-    if (!text || text === (m.content || "").trim()) return;
-    var updated = await apiJson("/chats/" + state.selectedId + "/messages/" + m.id, {
-      method: "PATCH",
-      jsonBody: { content: text },
-    });
-    if (updated && updated.id) {
-      mergeMessageIntoThread(updated);
-      if (isE2eeType(updated.type) && state.e2eePlaintextCache) {
-        delete state.e2eePlaintextCache[updated.id];
-      }
-      syncPreviewIfLastMessage(state.selectedId, updated.id);
-    } else {
-      await loadThread(state.selectedId, THREAD_SOFT_RELOAD);
-    }
+    state.phase5Modal = {
+      mode: "edit",
+      messageId: m.id,
+      title: L("ui.edit.title"),
+      body: m.content || "",
+    };
     render();
+  }
+
+  async function saveEditedMessage(modal) {
+    if (!state.selectedId || !modal || modal.mode !== "edit" || !modal.messageId) return;
+    var text = (modal.body || "").trim();
+    if (!text) return;
+    state.busy = true;
+    render();
+    try {
+      var updated = await apiJson(
+        "/chats/" + state.selectedId + "/messages/" + modal.messageId,
+        {
+          method: "PATCH",
+          jsonBody: { content: text },
+        }
+      );
+      state.phase5Modal = null;
+      if (updated && updated.id) {
+        mergeMessageIntoThread(updated);
+        if (isE2eeType(updated.type) && state.e2eePlaintextCache) {
+          delete state.e2eePlaintextCache[updated.id];
+        }
+        syncPreviewIfLastMessage(state.selectedId, updated.id);
+      } else {
+        await loadThread(state.selectedId, THREAD_SOFT_RELOAD);
+      }
+    } catch (e) {
+      state.error = e.message || L("ui.edit.failed");
+    } finally {
+      state.busy = false;
+      render();
+    }
   }
 
   async function deleteMessageConfirm(m) {
@@ -6013,8 +6624,7 @@
     var nestedKey = "ui.sidebar.folder." + fid;
     var nested = L(nestedKey);
     if (nested !== nestedKey) return nested;
-    var fb = { all: "Все", work: "Работа", personal: "Личные", archive: "Архив" };
-    return fb[fid] || fid;
+    return fid;
   }
 
   function filteredChats() {
@@ -6825,6 +7435,12 @@
     if (state.callMode === "mesh" && !meshCallChatReady()) {
       panel.appendChild(el("p", "call-hint call-hint-warn", L("conference.meshNeedsChatHint")));
     }
+    if (state.activeConference && conferenceIsTracked(state.activeConference)) {
+      var confAdrBar = uiCallAdr.mountConfAdrBar(getPhase5UiCtx(), state.activeConference);
+      if (confAdrBar) {
+        panel.appendChild(confAdrBar);
+      }
+    }
     if (state.callMode === "jitsi" && state.activeConference && state.activeConference.join_url) {
       var jHint = el("p", "call-hint");
       jHint.textContent = L("conference.jitsiHint", {
@@ -7190,22 +7806,96 @@
 
     if ("serviceWorker" in navigator) {
       panel.appendChild(el("p", "settings-hint", L("ui.settings.offlineHint")));
+      panel.appendChild(el("p", "settings-hint", L("ui.offline.quotaHint")));
+      var clearRow = el("div", "settings-row");
+      clearRow.appendChild(
+        iconBtn(L("ui.offline.clearCache"), L("ui.offline.clearCache"), {
+          testId: "settings-offline-clear",
+          disabled: state.busy,
+          onClick: function () {
+            if (global.KorusOfflineCache && global.KorusOfflineCache.clearAll) {
+              global.KorusOfflineCache.clearAll().then(function () {
+                state.statusMessage = L("ui.offline.clearCacheOk");
+                render();
+              });
+            }
+          },
+        })
+      );
+      panel.appendChild(clearRow);
     }
-    if (state.myRemindersBusy) {
+    if (state.myRemindersBusy || state.myScheduledMessagesBusy) {
       panel.appendChild(el("p", "settings-hint", L("ui.common.loading")));
-    } else if (state.myReminders && state.myReminders.length) {
-      var remBox = el("div", "settings-reminders");
-      remBox.setAttribute("data-testid", "settings-reminders");
-      remBox.appendChild(el("h3", "settings-subtitle", L("ui.reminders.listTitle")));
-      state.myReminders.forEach(function (r) {
-        if (r.status && r.status !== "pending") return;
+    }
+    var remBox = el("div", "settings-reminders");
+    remBox.setAttribute("data-testid", "settings-reminders");
+    remBox.appendChild(el("h3", "settings-subtitle", L("ui.reminders.listTitle")));
+    var pendingRem = (state.myReminders || []).filter(function (r) {
+      return !r.status || r.status === "pending";
+    });
+    if (!pendingRem.length) {
+      remBox.appendChild(el("p", "settings-hint", L("ui.reminders.emptyList")));
+    } else {
+      pendingRem.forEach(function (r) {
         var row = el("div", "settings-reminder-row");
-        var label = chatTitleById(r.chat_id) + " · " + (r.remind_at || "");
-        row.textContent = label;
+        row.appendChild(
+          el("span", "settings-reminder-label", chatTitleById(r.chat_id) + " · " + (r.remind_at || ""))
+        );
+        var acts = el("div", "settings-reminder-actions");
+        acts.appendChild(
+          iconBtn(L("ui.reminders.openChat"), L("ui.reminders.openChat"), {
+            testId: "reminder-open-" + r.id,
+            onClick: function () {
+              selectChat(r.chat_id);
+            },
+          })
+        );
+        acts.appendChild(
+          iconBtn(L("ui.reminders.cancel"), L("ui.reminders.cancel"), {
+            testId: "reminder-cancel-" + r.id,
+            onClick: function () {
+              cancelMyReminder(r.id);
+            },
+          })
+        );
+        row.appendChild(acts);
         remBox.appendChild(row);
       });
-      panel.appendChild(remBox);
     }
+    panel.appendChild(remBox);
+
+    var schedBox = el("div", "settings-scheduled");
+    schedBox.setAttribute("data-testid", "settings-scheduled");
+    schedBox.appendChild(el("h3", "settings-subtitle", L("ui.settings.scheduledTitle")));
+    var pendingSched = state.myScheduledMessages || [];
+    if (!pendingSched.length) {
+      schedBox.appendChild(el("p", "settings-hint", L("ui.schedule.emptyList")));
+    } else {
+      pendingSched.forEach(function (s) {
+        var row = el("div", "settings-scheduled-row");
+        var preview = (s.content || "").slice(0, 80);
+        row.appendChild(
+          el(
+            "span",
+            "settings-scheduled-label",
+            L("ui.schedule.rowPreview", {
+              chat: chatTitleById(s.chat_id),
+              when: s.scheduled_at || "",
+            }) + " · " + preview
+          )
+        );
+        row.appendChild(
+          iconBtn(L("ui.schedule.cancel"), L("ui.schedule.cancel"), {
+            testId: "scheduled-cancel-" + s.id,
+            onClick: function () {
+              cancelScheduledMessage(s.id);
+            },
+          })
+        );
+        schedBox.appendChild(row);
+      });
+    }
+    panel.appendChild(schedBox);
   }
 
   function appendSettingsProfilePanel(panel) {
@@ -7520,6 +8210,7 @@
       })
     );
     panel.appendChild(rowLinksRefresh);
+    uiPhase5Ext.mountFederationDirectory(getPhase5UiCtx(), panel);
   }
 
   function appendSettingsSecurityPanel(panel) {
@@ -7614,6 +8305,8 @@
     }
     privateHint.textContent = pushHint;
     panel.appendChild(privateHint);
+    uiPhase5Ext.mountPasskeysSection(getPhase5UiCtx(), panel);
+    uiPhase5Ext.mountSipGatewaySection(getPhase5UiCtx(), panel);
   }
 
   function renderSettingsModal(shell) {
@@ -7790,6 +8483,20 @@
       },
     });
     hdrR.appendChild(callBtn);
+    if (state.tokens && state.myPresence) {
+      var presPill = el("button", "presence-pill presence-" + state.myPresence);
+      presPill.type = "button";
+      presPill.setAttribute("data-testid", "header-presence-pill");
+      presPill.title = L("ui.shell.presenceTitle");
+      presPill.textContent = L(PRESENCE_LABEL_KEYS[state.myPresence] || state.myPresence);
+      presPill.onclick = function () {
+        var order = ["online", "away", "dnd", "offline"];
+        var idx = order.indexOf(state.myPresence);
+        var next = order[(idx + 1) % order.length];
+        updatePresence(next);
+      };
+      hdrR.appendChild(presPill);
+    }
     if (state.e2eeKeyCount !== null) {
       hdrR.appendChild(shellE2eeStatusIcon(state.e2eeKeyCount));
     }
@@ -7888,6 +8595,22 @@
       incActs.appendChild(bDec);
       incWrap.appendChild(incActs);
       shell.appendChild(incWrap);
+    }
+    if (state.phase5Toast) {
+      var p5Wrap = el("div", "banner-wrap banner-wrap-ok");
+      var p5Banner = el("div", "info-banner");
+      p5Banner.setAttribute("data-testid", "phase5-toast");
+      p5Banner.textContent = state.phase5Toast;
+      var p5Dismiss = el("button", "banner-dismiss", "×");
+      p5Dismiss.type = "button";
+      p5Dismiss.title = L("ui.common.close");
+      p5Dismiss.onclick = function () {
+        state.phase5Toast = null;
+        render();
+      };
+      p5Wrap.appendChild(p5Banner);
+      p5Wrap.appendChild(p5Dismiss);
+      shell.appendChild(p5Wrap);
     }
     if (state.statusMessage) {
       var okWrap = el("div", "banner-wrap banner-wrap-ok");
@@ -8001,7 +8724,11 @@
     };
     tabs.appendChild(tabChats);
     tabs.appendChild(tabContacts);
-    tabs.appendChild(tabIntegrations);
+    if (isPlatformFeatureEnabled("integrations.sidebar.open")) {
+      tabs.appendChild(tabIntegrations);
+    } else if (state.sidebarMode === "integrations") {
+      state.sidebarMode = "chats";
+    }
     sideToolbar.appendChild(tabs);
     sh.appendChild(sideToolbar);
     side.appendChild(sh);
@@ -8168,6 +8895,19 @@
         });
         iList.appendChild(vitBlock);
       }
+      if (state.platformCaps && state.platformCaps.external_stack) {
+        var stack = state.platformCaps.external_stack;
+        var keys = Object.keys(stack);
+        var passed = keys.filter(function (k) {
+          return stack[k] && stack[k].validation_status === "passed";
+        }).length;
+        var foot = el("div", "chat-list-empty integrations-stack-foot");
+        foot.setAttribute("data-testid", "integrations-external-stack-summary");
+        foot.textContent = L("ui.sidebar.externalStackSummary")
+          .replace("{passed}", String(passed))
+          .replace("{total}", String(keys.length));
+        iList.appendChild(foot);
+      }
       var items = state.integrationsMarketplace && state.integrationsMarketplace.length
         ? state.integrationsMarketplace
         : state.integrations || [];
@@ -8188,9 +8928,16 @@
         return hay.indexOf(q) >= 0;
       });
       if (!items.length) {
-        iList.appendChild(el("div", "chat-list-empty", L("ui.sidebar.noIntegrations")));
+        iList.appendChild(
+          el(
+            "div",
+            "chat-list-empty",
+            q ? L("ui.marketplace.noResults") : L("ui.sidebar.noIntegrations")
+          )
+        );
       } else {
         items.forEach(function (it) {
+          var row = el("div", "integration-item-row");
           var btn = el("button", "chat-item integration-item");
           btn.type = "button";
           var label = it.label || it.bot_name || it.id;
@@ -8204,7 +8951,28 @@
           btn.onclick = function () {
             openIntegration(it);
           };
-          iList.appendChild(btn);
+          row.appendChild(btn);
+          row.appendChild(
+            iconBtn(L("ui.marketplace.open"), L("ui.marketplace.open"), {
+              cls: "integration-open-btn",
+              testId: "marketplace-open-" + (it.instance_id || it.id || it.bot_name),
+              onClick: function () {
+                openIntegration(it);
+              },
+            })
+          );
+          row.appendChild(
+            iconBtn(it.connected ? "✓" : "+", it.connected ? L("ui.marketplace.disconnect") : L("ui.marketplace.connect"), {
+              cls: "integration-connect-btn" + (it.connected ? " connected" : ""),
+              testId: "marketplace-connect-" + (it.instance_id || it.id || it.bot_name),
+              disabled: state.busy,
+              onClick: function () {
+                if (it.connected) disconnectMarketplaceItem(it);
+                else connectMarketplaceItem(it);
+              },
+            })
+          );
+          iList.appendChild(row);
         });
       }
       side.appendChild(iList);
@@ -8352,6 +9120,11 @@
       }
       var thMain = el("div", "thread-header-main");
       thMain.appendChild(el("div", "thread-title", (sel && sel.title) || state.selectedId));
+      if ((state.federationDirectory || []).length) {
+        thMain.appendChild(
+          el("span", "thread-federation-badge", L("ui.federation.badgeThread"))
+        );
+      }
       if (state.discussionThreadRootId) {
         var discBar = el("div", "thread-discussion-bar");
         discBar.appendChild(
@@ -8419,6 +9192,15 @@
             disabled: state.busy,
             onClick: function () {
               setChatFolder(sel.folder_tag === "work" ? null : "work");
+            },
+          })
+        );
+        thActs.appendChild(
+          iconBtn("👤", L("ui.sidebar.folderPersonal"), {
+            testId: "chat-folder-personal",
+            disabled: state.busy,
+            onClick: function () {
+              setChatFolder(sel.folder_tag === "personal" ? null : "personal");
             },
           })
         );
@@ -8509,6 +9291,10 @@
         );
         thread.appendChild(confBanner);
       }
+      var phase5Tools = uiPhase5Ext.mountThreadTools(getPhase5UiCtx());
+      if (phase5Tools) {
+        thread.appendChild(phase5Tools);
+      }
       var tSearchRow = el("div", "thread-search-row");
       var tSearch = el("input");
       tSearch.type = "search";
@@ -8560,6 +9346,14 @@
       var pollsSection = uiPolls.mountPollsSection(getPollsUiCtx());
       if (pollsSection) {
         thread.appendChild(pollsSection);
+      }
+      var kanbanSection = uiPhase5Ext.mountKanbanSection(getPhase5UiCtx());
+      if (kanbanSection) {
+        thread.appendChild(kanbanSection);
+      }
+      var whiteboardSection = uiPhase5Ext.mountWhiteboardSection(getPhase5UiCtx());
+      if (whiteboardSection) {
+        thread.appendChild(whiteboardSection);
       }
       var msgs = el("div", "messages");
       var loadOlder = null;
@@ -8659,9 +9453,11 @@
           openPollCreate: openPollCreate,
           openScheduleSend: openScheduleSend,
           openContactShare: openContactShare,
+          sendVideoNoteMessage: sendVideoNoteMessage,
           loadComposerDraftForChat: loadComposerDraftForChat,
           scheduleSaveComposerDraft: scheduleSaveComposerDraft,
           scheduleTypingNotify: scheduleTypingNotify,
+          reactionPickerEmojis: REACTION_PICKER_EMOJIS,
         })
       );
     }
@@ -8724,6 +9520,12 @@
     if (remOv) shell.appendChild(remOv);
     var contactOv = uiPolls.mountContactShareOverlay(getPollsUiCtx());
     if (contactOv) shell.appendChild(contactOv);
+    var stickersOv = uiPhase5Ext.mountStickersOverlay(getPhase5UiCtx());
+    if (stickersOv) shell.appendChild(stickersOv);
+    var aiOv = uiPhase5Ext.mountAiAssistOverlay(getPhase5UiCtx());
+    if (aiOv) shell.appendChild(aiOv);
+    var phase5Modal = uiCallAdr.mountPhase5Modal(getPhase5UiCtx());
+    if (phase5Modal) shell.appendChild(phase5Modal);
     if (state.membersModalOpen) {
       var mOv = el("div", "settings-overlay");
       mOv.setAttribute("data-testid", "members-overlay");
@@ -8985,6 +9787,11 @@
     if (fromUrl.chatId || fromUrl.msgId) {
       stashPendingDeepLink(fromUrl.chatId, fromUrl.msgId);
     }
+    if (fromUrl.guest) {
+      try {
+        sessionStorage.setItem(PENDING_GUEST_KEY, fromUrl.guest);
+      } catch (e) {}
+    }
     var pending = uiShellUtils.readAndClearPendingDeepLink(
       PENDING_CHAT_KEY,
       PENDING_MSG_KEY
@@ -8993,6 +9800,16 @@
       chatId: pending.chatId || fromUrl.chatId,
       msgId: pending.msgId || fromUrl.msgId,
     };
+  }
+
+  function consumePendingGuestLink() {
+    try {
+      var guest = sessionStorage.getItem(PENDING_GUEST_KEY);
+      sessionStorage.removeItem(PENDING_GUEST_KEY);
+      return guest;
+    } catch (e) {
+      return null;
+    }
   }
 
   function openChatFromUrlParam() {
@@ -9078,6 +9895,13 @@
         }
       }
       await consumePendingMeetingDeepLink();
+      var guestTok = consumePendingGuestLink();
+      if (guestTok) {
+        await redeemGuestLinkFromUrl(guestTok);
+      }
+      await loadMyPasskeys();
+      await loadSipGateway();
+      await loadFederationDirectory();
     } catch (err) {
       state.error = err.message;
     }

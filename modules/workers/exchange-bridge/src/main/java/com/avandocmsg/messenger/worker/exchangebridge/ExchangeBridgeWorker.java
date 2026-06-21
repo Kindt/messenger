@@ -90,7 +90,10 @@ public final class ExchangeBridgeWorker {
         if (lower.startsWith("/calendar") || lower.startsWith("/freebusy") || isExchangePreset(event)) {
             return calendarResponse();
         }
-        return PluginResponse.text("Exchange bridge. Команды: `ping`, `/calendar`, `/freebusy`");
+        if (lower.startsWith("/meeting") || lower.startsWith("/create-meeting")) {
+            return meetingResponse(text);
+        }
+        return PluginResponse.text("Exchange bridge. Команды: `ping`, `/calendar`, `/freebusy`, `/meeting <тема>`");
     }
 
     private static boolean isExchangePreset(PluginEvent event) {
@@ -106,6 +109,15 @@ public final class ExchangeBridgeWorker {
             return PluginResponse.text(GraphCalendarClient.formatMarkdown(GraphCalendarClient.fetchUpcoming()));
         } catch (Exception e) {
             return PluginResponse.text("Exchange недоступен: " + e.getMessage());
+        }
+    }
+
+    private static PluginResponse meetingResponse(String text) {
+        var subject = text.replaceFirst("(?i)^/(create-)?meeting\\s*", "").trim();
+        try {
+            return PluginResponse.text(GraphCalendarClient.proposeMeeting(subject));
+        } catch (Exception e) {
+            return PluginResponse.text("Meeting: " + e.getMessage());
         }
     }
 

@@ -336,7 +336,11 @@
       "accept": "Принять",
       "decline": "Отклонить",
       "exportBanner": "Экспорт «{chat}»{bg}: {status}",
-      "backToChats": "К списку чатов"
+      "backToChats": "К списку чатов",
+      "presenceTitle": "Нажмите, чтобы сменить статус",
+      "updateReady": "Доступна новая версия приложения",
+      "reloadNow": "Обновить",
+      "reloadLater": "Позже"
     },
     "sidebar": {
       "searchPlaceholder": "Чаты или пользователи (от 2 симв.)…",
@@ -365,20 +369,32 @@
       "integrations": "Интеграции",
       "noIntegrations": "Нет интеграций.",
       "vitrine": "Витрина",
+      "externalStackSummary": "External stack: {passed}/{total} OK",
       "archiveToggle": "Архивировать чат",
       "archiveFailed": "Не удалось архивировать чат.",
       "folderWork": "В папку «Работа»",
       "folderFailed": "Не удалось изменить папку.",
       "folderAll": "Все",
       "folderWorkChip": "Работа",
-      "folderPersonal": "Личные",
+      "folderPersonal": "В папку «Личные»",
       "folderArchive": "Архив",
       "folder": {
         "all": "Все",
         "work": "Работа",
         "personal": "Личные",
         "archive": "Архив"
-      }
+      },
+      "filter": {
+        "all": "Все чаты",
+        "unread": "Непрочитанные",
+        "mentions": "Упоминания"
+      },
+      "marketplaceSearch": "Поиск интеграций…",
+      "marketplaceAll": "Все категории",
+      "noChatsUnread": "Нет непрочитанных чатов.",
+      "noChatsMentions": "Нет чатов с упоминаниями.",
+      "pinChat": "Закрепить чат",
+      "unpinChat": "Открепить чат"
     },
     "thread": {
       "empty": "Выберите чат или создайте группу.",
@@ -419,7 +435,94 @@
       "sendLocation": "Отправить геолокацию",
       "createPoll": "Создать опрос",
       "scheduleSend": "Отложить отправку",
-      "shareContact": "Поделиться контактом"
+      "shareContact": "Поделиться контактом",
+      "voiceRecord": "Голосовое сообщение",
+      "emoji": "Эмодзи"
+    },
+    "phase5": {
+      "stickers": "Стикеры",
+      "kanban": "Kanban",
+      "whiteboard": "Доска",
+      "kanbanTitle": "Задачи чата",
+      "colTodo": "К выполнению",
+      "colDoing": "В работе",
+      "colDone": "Готово",
+      "kanbanNewTask": "Новая задача",
+      "kanbanAdd": "Добавить",
+      "kanbanFailed": "Не удалось добавить задачу.",
+      "whiteboardTitle": "Whiteboard",
+      "whiteboardPlaceholder": "JSON-снимок доски (scaffold)",
+      "whiteboardSave": "Сохранить",
+      "whiteboardSaved": "Доска сохранена.",
+      "whiteboardFailed": "Не удалось сохранить доску.",
+      "stickersTitle": "GIF и стикеры",
+      "stickersEmpty": "Каталог пуст — добавьте packs через API.",
+      "federationTitle": "Федерация — partner orgs",
+      "federationEmpty": "Нет partner orgs в trust graph.",
+      "confTools": "ADR-инструменты",
+      "recordStart": "Запись",
+      "recordStarted": "Запись запущена (scaffold).",
+      "recordFailed": "Не удалось начать запись.",
+      "guestLink": "Гость по ссылке",
+      "guestFailed": "Не удалось создать guest link.",
+      "breakout": "Breakout",
+      "breakoutName": "Название комнаты",
+      "breakoutCreated": "Breakout room создана.",
+      "breakoutFailed": "Не удалось создать breakout.",
+      "captions": "Субтитры",
+      "captionsSample": "Пример транскрипта (STT mock)",
+      "captionsFailed": "Не удалось запустить captions.",
+      "videoNote": "Video note",
+      "videoNoteFailed": "Не удалось отправить video note.",
+      "videoMicDenied": "Нет доступа к камере.",
+      "aiAssist": "AI-помощник",
+      "aiAssistTitle": "AI-помощник в чате",
+      "aiAssistPlaceholder": "Задайте вопрос по этому чату…",
+      "aiAssistRun": "Спросить",
+      "aiAssistEmpty": "Нет ответа от AI gateway.",
+      "aiAssistFailed": "Не удалось выполнить AI assist.",
+      "aiInsert": "Вставить в composer",
+      "kanbanMoveBack": "В предыдущую колонку",
+      "kanbanMoveForward": "В следующую колонку",
+      "kanbanDelete": "Удалить задачу",
+      "kanbanDeleted": "Задача удалена.",
+      "passkeysTitle": "Passkeys (scaffold)",
+      "passkeysEmpty": "Passkeys не зарегистрированы.",
+      "passkeysRegister": "Зарегистрировать scaffold credential",
+      "passkeysRegistered": "Passkey scaffold зарегистрирован.",
+      "passkeysFailed": "Не удалось зарегистрировать passkey.",
+      "guestExpired": "Гостевая ссылка истекла.",
+      "guestRedeemed": "Гостевая ссылка принята.",
+      "guestRedeemFailed": "Не удалось принять гостевую ссылку.",
+      "recordList": "Список записей",
+      "recordListEmpty": "Записей пока нет.",
+      "breakoutList": "Breakout-комнаты",
+      "breakoutListEmpty": "Breakout-комнат нет.",
+      "sipTitle": "SIP / H.323 gateway",
+      "sipEnabled": "Включить SIP",
+      "sipUri": "Gateway URI",
+      "sipSave": "Сохранить SIP",
+      "sipSaved": "SIP gateway сохранён.",
+      "sipFailed": "Не удалось сохранить SIP.",
+      "stickerPacks": "Паки стикеров",
+      "stickerSend": "Отправить стикер",
+      "captionsLive": "Транскрипт (live)",
+      "guestCopy": "Копировать ссылку",
+      "guestCopied": "Гостевая ссылка скопирована.",
+      "guestWaiting": "Комната ожидания включена",
+      "breakoutJoin": "Войти",
+      "stickerPackCreate": "Создать пак",
+      "stickerPackName": "Название пака",
+      "stickerPackCreated": "Пак стикеров создан.",
+      "stickerPackFailed": "Не удалось создать пак.",
+      "recordStop": "Остановить запись",
+      "modalCopy": "Копировать",
+      "guestAdmitHint": "Ожидание в зале: отправьте гостю ссылку с токеном после проверки.",
+      "guestAdmitBtn": "Зал ожидания",
+      "guestWaitingEmpty": "Нет гостей в зале ожидания.",
+      "guestAdmitDo": "Допустить гостя",
+      "guestAdmitDone": "Гость допущен.",
+      "recordCompleted": "Запись завершена."
     },
     "polls": {
       "title": "Опросы",
@@ -435,7 +538,11 @@
       "empty": "Нет опросов в этом чате.",
       "createFailed": "Не удалось создать опрос.",
       "voteFailed": "Не удалось проголосовать.",
-      "pickOption": "Выберите хотя бы один вариант."
+      "pickOption": "Выберите хотя бы один вариант.",
+      "close": "Закрыть опрос",
+      "closeFailed": "Не удалось закрыть опрос.",
+      "closedByYou": "Опрос закрыт.",
+      "refreshResults": "Обновить результаты"
     },
     "schedule": {
       "title": "Отложенная отправка",
@@ -444,7 +551,12 @@
       "failed": "Не удалось запланировать сообщение.",
       "ok": "Сообщение запланировано.",
       "emptyDraft": "Сначала введите текст в поле сообщения.",
-      "whenRequired": "Укажите дату и время."
+      "whenRequired": "Укажите дату и время.",
+      "listTitle": "Отложенные сообщения",
+      "cancel": "Отменить отправку",
+      "cancelFailed": "Не удалось отменить отложенное сообщение.",
+      "emptyList": "Нет отложенных сообщений.",
+      "rowPreview": "{chat} · {when}"
     },
     "reminders": {
       "title": "Напоминание о сообщении",
@@ -455,7 +567,12 @@
       "listTitle": "Ожидающие напоминания",
       "preset1h": "Через 1 ч",
       "preset3h": "Через 3 ч",
-      "presetTomorrow": "Завтра"
+      "presetTomorrow": "Завтра",
+      "cancel": "Отменить",
+      "openChat": "Открыть чат",
+      "emptyList": "Нет ожидающих напоминаний.",
+      "cancelled": "Напоминание отменено.",
+      "cancelFailed": "Не удалось отменить напоминание."
     },
     "contactShare": {
       "title": "Поделиться контактом",
@@ -464,7 +581,13 @@
       "failed": "Не удалось отправить контакт."
     },
     "offline": {
-      "cachedThread": "Нет сети — показаны сохранённые сообщения из кэша"
+      "cachedThread": "Нет сети — показаны сохранённые сообщения из кэша",
+      "syncPending": "Синхронизация при восстановлении сети…",
+      "syncDone": "Кэш обновлён",
+      "clearCache": "Очистить офлайн-кэш",
+      "clearCacheOk": "Офлайн-кэш очищен.",
+      "reconnecting": "Переподключение…",
+      "quotaHint": "Кэш хранит последние сообщения выбранных чатов."
     },
     "message": {
       "image": "Изображение",
@@ -489,7 +612,8 @@
       "pubLinkTitle": "Создать публичную ссылку на файл (A/B/C)",
       "linksTitle": "Список и отзыв публичных ссылок",
       "locationLabel": "Моё местоположение",
-      "locationOpen": "Открыть на карте"
+      "locationOpen": "Открыть на карте",
+      "sticker": "Стикер"
     },
     "actions": {
       "reply": "Ответить",
@@ -585,7 +709,10 @@
       "privateKeyHint": "Приватный ключ — только в IndexedDB; на сервер уходит только public key package.",
       "webPushHintRegistered": " Web Push: подписка при включении уведомлений (зарегистрирована). Доставка — push-worker (PUSH_VAPID_* = public key web-client).",
       "webPushHintDefault": " Web Push: подписка при включении уведомлений.",
-      "webPushNoVapid": " Web Push: WEB_CLIENT_VAPID_PUBLIC_KEY и PUSH_VAPID_* на push-worker."
+      "webPushNoVapid": " Web Push: WEB_CLIENT_VAPID_PUBLIC_KEY и PUSH_VAPID_* на push-worker.",
+      "scheduledTitle": "Отложенные сообщения",
+      "notificationPush": "Push-уведомления",
+      "dataUsage": "Использование данных"
     },
     "forward": {
       "title": "Переслать сообщение"
@@ -611,6 +738,67 @@
     "versions": {
       "title": "История правок",
       "none": "Нет сохранённых версий."
+    },
+    "integration": {
+      "close": "Закрыть панель"
+    },
+    "search": {
+      "globalTitle": "Поиск",
+      "filterAll": "Везде",
+      "filterChats": "Чаты",
+      "filterMessages": "Сообщения",
+      "noResults": "Ничего не найдено."
+    },
+    "profile": {
+      "bioHint": "Кратко о себе — видно контактам",
+      "avatarChange": "Сменить аватар"
+    },
+    "mobile": {
+      "back": "Назад к списку",
+      "chatsTitle": "Чаты",
+      "settingsTitle": "Настройки"
+    },
+    "marketplace": {
+      "open": "Открыть",
+      "installed": "Подключено",
+      "categoryBots": "Боты",
+      "categoryStorage": "Хранилище",
+      "categoryCalendar": "Календарь",
+      "categoryHr": "HR / заявки",
+      "noResults": "Интеграции не найдены.",
+      "connect": "Подключить",
+      "disconnect": "Отключить",
+      "connectFailed": "Не удалось подключить интеграцию.",
+      "disconnectFailed": "Не удалось отключить интеграцию."
+    },
+    "federation": {
+      "directoryHint": "Доверенные организации для кросс-org чатов (MVP).",
+      "trustActive": "Активно",
+      "trustPending": "Ожидает",
+      "partnerLabel": "Партнёр",
+      "badgeThread": "Федерация",
+      "joinCopied": "Комната скопирована в буфер обмена."
+    },
+    "whiteboard": {
+      "toolPen": "Карандаш",
+      "toolRect": "Прямоугольник",
+      "toolEraser": "Ластик",
+      "clearCanvas": "Очистить",
+      "undo": "Отменить",
+      "canvasHint": "Рисуйте на полотне — сохранится в snapshot JSON.",
+      "tabCanvas": "Полотно",
+      "tabJson": "JSON"
+    },
+    "edit": {
+      "title": "Изменить сообщение",
+      "save": "Сохранить",
+      "failed": "Не удалось изменить сообщение."
     }
+  },
+  "push": {
+    "title": "Korus Messenger",
+    "body": "Новое сообщение",
+    "defaultTitle": "Korus Messenger",
+    "defaultBody": "Новое сообщение"
   }
 }

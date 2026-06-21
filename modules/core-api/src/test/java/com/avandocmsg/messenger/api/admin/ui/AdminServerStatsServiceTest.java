@@ -76,7 +76,9 @@ class AdminServerStatsServiceTest {
         };
         NatsConnectionStatus nats = () -> false;
         var redisProbe = new RedisProbe(appConfig, null);
-        service = new AdminServerStatsService(ds, appConfig, nats, redisProbe);
+        service = new AdminServerStatsService(
+            new com.avandocmsg.messenger.core.adapter.persistence.JdbcAdminStatsJdbcRepository(ds),
+            appConfig, nats, redisProbe);
     }
 
     @AfterEach

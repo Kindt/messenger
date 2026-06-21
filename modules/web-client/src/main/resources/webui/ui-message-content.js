@@ -124,6 +124,18 @@
       renderContactMessage(bodyEl, m, ctx);
       return;
     }
+    if (t === "gif" || t === "sticker") {
+      var mediaUrl = (m.content || "").trim();
+      if (/^https?:\/\//i.test(mediaUrl)) {
+        var gifImg = document.createElement("img");
+        gifImg.className = "msg-gif-image";
+        gifImg.src = mediaUrl;
+        gifImg.alt = t === "sticker" ? ctx.L("ui.message.sticker") : "GIF";
+        gifImg.setAttribute("data-testid", "message-gif-image");
+        bodyEl.appendChild(gifImg);
+        return;
+      }
+    }
     if (m.link_preview && m.link_preview.url) {
       var lp = ctx.el("div", "msg-link-preview");
       var lpTitle = m.link_preview.title || m.link_preview.url;

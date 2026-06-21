@@ -9,7 +9,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
-@Path("/v1/platform")
+@Path("/v1/platform/capabilities")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Platform", description = "Product module capabilities (Base + add-ons)")
 public class PlatformCapabilitiesResource {
@@ -22,7 +22,6 @@ public class PlatformCapabilitiesResource {
     }
 
     @GET
-    @Path("capabilities")
     @Operation(summary = "Platform capabilities",
         description = "Public snapshot of Base + add-on states for webui and integrations.")
     public PlatformCapabilitiesResponse capabilities() {

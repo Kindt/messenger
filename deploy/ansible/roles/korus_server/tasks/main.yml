@@ -29,6 +29,14 @@
     or korus_product_addons is defined
     or korus_deploy_profile is defined
     or korus_core_api_deploy_mode is defined
+    or korus_external_stack_manifest_enabled | default(true) | bool
+
+- name: Template desired external stack manifest
+  ansible.builtin.template:
+    src: external-stack-manifest.yaml.j2
+    dest: "{{ korus_external_stack_manifest_path | default(korus_repo_root ~ '/docker/external-stack-manifest.yaml') }}"
+    mode: "0644"
+  when: korus_external_stack_manifest_enabled | default(true) | bool
 
 - name: Log QEMU build phase (skips above are expected on localhost)
   ansible.builtin.shell: |

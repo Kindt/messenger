@@ -13,6 +13,7 @@
       match: (s) =>
         s.id === "core-server-stats" ||
         s.id === "core-fleet-stats" ||
+        s.id === "core-external-stack" ||
         s.id === "core-admin-session" ||
         s.id === "core-admin-manifest" ||
         s.id === "core-purge-status",
@@ -58,6 +59,9 @@
     },
     "core-fleet-stats": {
       desc: "Fleet snapshot: allowlist HTTP targets + hot-plug NATS + локальный core-api.",
+    },
+    "core-external-stack": {
+      desc: "External stack (023): desired/observed connectors, health, validation и support boundary.",
     },
     "core-export-compliance": {
       desc: "GDPR-экспорт: задачи, политика полноты, smoke-сценарии для compliance.",

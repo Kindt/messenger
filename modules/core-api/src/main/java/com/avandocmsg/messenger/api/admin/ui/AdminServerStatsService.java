@@ -3,13 +3,11 @@ package com.avandocmsg.messenger.api.admin.ui;
 import com.avandocmsg.messenger.api.admin.ui.dto.AdminServerStatsResponse;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.config.RedisProbe;
-import com.avandocmsg.messenger.api.export.ExportJobStaleCounts;
-import com.avandocmsg.messenger.core.adapter.persistence.JdbcAdminStatsJdbcRepository;
+import com.avandocmsg.messenger.core.port.AdminMetricsQueryPort;
 import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.sql.DataSource;
 import java.lang.management.ManagementFactory;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -21,20 +19,18 @@ public final class AdminServerStatsService implements AdminStatsPort {
 
     private static final Logger log = LoggerFactory.getLogger(AdminServerStatsService.class);
 
-    private final JdbcAdminStatsJdbcRepository adminStatsJdbc;
-    private final DataSource dataSource;
+    private final AdminMetricsQueryPort adminMetricsQueryPort;
     private final AppConfig appConfig;
     private final NatsConnectionStatus natsConnectionStatus;
     private final RedisProbe redisProbe;
 
     public AdminServerStatsService(
-        DataSource dataSource,
+        AdminMetricsQueryPort adminMetricsQueryPort,
         AppConfig appConfig,
         NatsConnectionStatus natsConnectionStatus,
         RedisProbe redisProbe
     ) {
-        this.adminStatsJdbc = new JdbcAdminStatsJdbcRepository(dataSource);
-        this.dataSource = dataSource;
+        this.adminMetricsQueryPort = adminMetricsQueryPort;
         this.appConfig = appConfig;
         this.natsConnectionStatus = natsConnectionStatus;
         this.redisProbe = redisProbe;
@@ -48,11 +44,11 @@ public final class AdminServerStatsService implements AdminStatsPort {
         long heapMax = rt.maxMemory();
         long uptime = ManagementFactory.getRuntimeMXBean().getUptime();
 
-        boolean dbOk = adminStatsJdbc.ping();
+        boolean dbOk = adminMetricsQueryPort.ping();
         boolean redisOk = redisProbe.ping();
         boolean natsOk = natsConnectionStatus.natsClientConnected();
 
-        var counts = adminStatsJdbc.countMessagingTables();
+        var counts = adminMetricsQueryPort.countMessagingTables();
         var exportCompliance = scanExportCompliance();
 
         return new AdminServerStatsResponse(
@@ -66,20 +62,15 @@ public final class AdminServerStatsService implements AdminStatsPort {
     }
 
     private AdminServerStatsResponse.ExportCompliance scanExportCompliance() {
-        var jobScan = adminStatsJdbc.scanExportJobStatuses();
+        var jobScan = adminMetricsQueryPort.scanExportJobStatuses();
         if (!jobScan.ok()) {
             return AdminServerStatsResponse.ExportCompliance.unavailable();
         }
         var auditSince = Instant.now().minus(7, ChronoUnit.DAYS);
-        long audit7d = adminStatsJdbc.countAuditExportSince(auditSince);
-        long auditCancelled7d = adminStatsJdbc.countAuditExportCancelledSince(auditSince);
+        long audit7d = adminMetricsQueryPort.countAuditExportSince(auditSince);
+        long auditCancelled7d = adminMetricsQueryPort.countAuditExportCancelledSince(auditSince);
         int staleMinutes = appConfig.exportProcessingStaleMinutes();
-        long processingStale = 0;
-        try {
-            processingStale = ExportJobStaleCounts.countProcessingStale(dataSource, staleMinutes);
-        } catch (Exception e) {
-            log.warn("export processing stale count query failed (staleMinutes={}): {}", staleMinutes, e.getMessage());
-        }
+        long processingStale = adminMetricsQueryPort.countProcessingStaleExportJobs(staleMinutes);
         return new AdminServerStatsResponse.ExportCompliance(
             true,
             jobScan.total(),

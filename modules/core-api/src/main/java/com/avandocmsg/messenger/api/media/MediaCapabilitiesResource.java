@@ -37,7 +37,7 @@ public class MediaCapabilitiesResource {
             .map(String::trim)
             .filter(s -> !s.isEmpty())
             .toList();
-        var types = List.of("text", "image", "video", "audio", "file");
+        var types = List.of("text", "image", "video", "video_note", "audio", "voice", "file");
         var note = "Видеозвонки (mesh): конференция в чате. Прямой эфир (SFU): POST .../chats/{id}/live-sessions — addon-live (spec 021).";
         boolean liveAddon = platformModuleRegistry.isAddonEffective("addon-live");
         boolean liveEnabled = liveAddon && appConfig.liveStreamingEnabled();

@@ -55,4 +55,27 @@ class IndexerWorkerSolrUpdateTest {
         Map<String, String> op = (Map<String, String>) contentField;
         assertEquals("", op.get("set"));
     }
+
+    @Test
+    void solrMessageIndexBackendUpsertsAndDeletesThroughNeutralAdapter() throws Exception {
+        var solr = mock(SolrClient.class);
+        var backend = new SolrMessageIndexBackend(solr, false, "messages_meta");
+
+        backend.upsert(new SearchDocument(
+            "msg-43",
+            "chat-7",
+            "plain text",
+            Map.of("sender_id", "user-1", "encrypted", false)
+        ));
+        backend.delete("msg-43");
+
+        var docCaptor = ArgumentCaptor.forClass(SolrInputDocument.class);
+        verify(solr).add(docCaptor.capture());
+        verify(solr).deleteById("msg-43");
+
+        var doc = docCaptor.getValue();
+        assertEquals("msg-43", doc.getFieldValue("id"));
+        assertEquals("chat-7", doc.getFieldValue("chat_id_s"));
+        assertEquals("plain text", doc.getFieldValue("content_txt"));
+    }
 }

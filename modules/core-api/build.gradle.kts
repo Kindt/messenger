@@ -79,6 +79,9 @@ application {
         from("src/main/resources") {
             into("conf")
         }
+        from(rootProject.file("docs/external-stack-profiles.yaml")) {
+            into("conf")
+        }
     }
 }
 
@@ -91,6 +94,12 @@ tasks.named<War>("war") {
             !name.startsWith("tomcat-embed")
         }
     )
+}
+
+tasks.named<ProcessResources>("processResources") {
+    from(rootProject.file("docs/external-stack-profiles.yaml")) {
+        into("")
+    }
 }
 
 tasks.register<Test>("benchmark") {

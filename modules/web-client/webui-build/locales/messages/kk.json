@@ -336,7 +336,11 @@
       "accept": "Қабылдау",
       "decline": "Қабылдамау",
       "exportBanner": "«{chat}» экспорты{bg}: {status}",
-      "backToChats": "Чаттар тізіміне"
+      "backToChats": "Чаттар тізіміне",
+      "presenceTitle": "Click to change status",
+      "updateReady": "A new version is available",
+      "reloadNow": "Reload",
+      "reloadLater": "Later"
     },
     "sidebar": {
       "searchPlaceholder": "Чаттар немесе пайдаланушылар (2 таңбадан)…",
@@ -365,20 +369,32 @@
       "integrations": "Интеграциялар",
       "noIntegrations": "Интеграциялар жоқ.",
       "vitrine": "Витрина",
+      "externalStackSummary": "External stack: {passed}/{total} OK",
       "archiveToggle": "Чатты мұрағаттау",
       "archiveFailed": "Чатты мұрағаттау сәтсіз аяқталды.",
       "folderWork": "«Жұмыс» папкасына",
       "folderFailed": "Папканы өзгерту сәтсіз аяқталды.",
       "folderAll": "Барлығы",
       "folderWorkChip": "Жұмыс",
-      "folderPersonal": "Жеке",
+      "folderPersonal": "Mark as personal",
       "folderArchive": "Мұрағат",
       "folder": {
         "all": "Барлығы",
         "work": "Жұмыс",
         "personal": "Жеке",
         "archive": "Мұрағат"
-      }
+      },
+      "filter": {
+        "all": "All chats",
+        "unread": "Unread",
+        "mentions": "Mentions"
+      },
+      "marketplaceSearch": "Search integrations…",
+      "marketplaceAll": "All categories",
+      "noChatsUnread": "No unread chats.",
+      "noChatsMentions": "No chats with mentions.",
+      "pinChat": "Pin chat",
+      "unpinChat": "Unpin chat"
     },
     "thread": {
       "empty": "Чат таңдаңыз немесе топ жасаңыз.",
@@ -419,7 +435,94 @@
       "sendLocation": "Геолокация жіберу",
       "createPoll": "Сауалнама жасау",
       "scheduleSend": "Кейінге жіберу",
-      "shareContact": "Контактпен бөлісу"
+      "shareContact": "Контактпен бөлісу",
+      "voiceRecord": "Дыбысты хабарлама",
+      "emoji": "Emoji"
+    },
+    "phase5": {
+      "stickers": "Стикерлер",
+      "kanban": "Kanban",
+      "whiteboard": "Тақта",
+      "kanbanTitle": "Чат тапсырмалары",
+      "colTodo": "Орындалуы керек",
+      "colDoing": "Орындалуда",
+      "colDone": "Дайын",
+      "kanbanNewTask": "Жаңа тапсырма",
+      "kanbanAdd": "Қосу",
+      "kanbanFailed": "Тапсырма қосылмады.",
+      "whiteboardTitle": "Whiteboard",
+      "whiteboardPlaceholder": "Тақта JSON-сnapshot (scaffold)",
+      "whiteboardSave": "Сақтау",
+      "whiteboardSaved": "Тақта сақталды.",
+      "whiteboardFailed": "Тақта сақталмады.",
+      "stickersTitle": "GIF және стикерлер",
+      "stickersEmpty": "Каталог бос — API арқылы pack қосыңыз.",
+      "federationTitle": "Федерация — partner orgs",
+      "federationEmpty": "Trust graph-та partner orgs жоқ.",
+      "confTools": "ADR-құралдар",
+      "recordStart": "Жазба",
+      "recordStarted": "Жазба басталды (scaffold).",
+      "recordFailed": "Жазба басталмады.",
+      "guestLink": "Guest link",
+      "guestFailed": "Guest link жасалмады.",
+      "breakout": "Breakout",
+      "breakoutName": "Бөлме атауы",
+      "breakoutCreated": "Breakout room жасалды.",
+      "breakoutFailed": "Breakout жасалмады.",
+      "captions": "Субтитрлер",
+      "captionsSample": "Транскрипт мысалы (STT mock)",
+      "captionsFailed": "Captions іске қосылмады.",
+      "videoNote": "Video note",
+      "videoNoteFailed": "Video note жіберілмеді.",
+      "videoMicDenied": "Камераға рұқсат жоқ.",
+      "aiAssist": "AI assist",
+      "aiAssistTitle": "AI chat assist",
+      "aiAssistPlaceholder": "Ask a question about this chat…",
+      "aiAssistRun": "Run",
+      "aiAssistEmpty": "No reply from AI gateway.",
+      "aiAssistFailed": "AI assist failed.",
+      "aiInsert": "Insert into composer",
+      "kanbanMoveBack": "Move to previous column",
+      "kanbanMoveForward": "Move to next column",
+      "kanbanDelete": "Delete task",
+      "kanbanDeleted": "Task deleted.",
+      "passkeysTitle": "Passkeys (scaffold)",
+      "passkeysEmpty": "No passkeys registered.",
+      "passkeysRegister": "Register scaffold credential",
+      "passkeysRegistered": "Passkey scaffold registered.",
+      "passkeysFailed": "Passkey registration failed.",
+      "guestExpired": "Guest link expired.",
+      "guestRedeemed": "Guest link accepted.",
+      "guestRedeemFailed": "Could not redeem guest link.",
+      "recordList": "Recordings list",
+      "recordListEmpty": "No recordings yet.",
+      "breakoutList": "Breakout rooms",
+      "breakoutListEmpty": "No breakout rooms.",
+      "sipTitle": "SIP / H.323 gateway",
+      "sipEnabled": "Enable SIP",
+      "sipUri": "Gateway URI",
+      "sipSave": "Save SIP",
+      "sipSaved": "SIP gateway saved.",
+      "sipFailed": "Could not save SIP.",
+      "stickerPacks": "Sticker packs",
+      "stickerSend": "Send sticker",
+      "captionsLive": "Transcript (live)",
+      "guestCopy": "Copy link",
+      "guestCopied": "Guest link copied.",
+      "guestWaiting": "Waiting room enabled",
+      "breakoutJoin": "Join",
+      "stickerPackCreate": "Create pack",
+      "stickerPackName": "Pack name",
+      "stickerPackCreated": "Sticker pack created.",
+      "stickerPackFailed": "Could not create pack.",
+      "recordStop": "Stop recording",
+      "modalCopy": "Copy",
+      "guestAdmitHint": "Waiting room: share the guest link after host approval.",
+      "guestAdmitBtn": "Waiting room",
+      "guestWaitingEmpty": "No guests in the waiting room.",
+      "guestAdmitDo": "Admit guest",
+      "guestAdmitDone": "Guest admitted.",
+      "recordCompleted": "Recording completed."
     },
     "polls": {
       "title": "Сауалнамалар",
@@ -435,7 +538,11 @@
       "empty": "Бұл чатта сауалнама жоқ.",
       "createFailed": "Сауалнама жасалмады.",
       "voteFailed": "Дауыс беру сәтсіз.",
-      "pickOption": "Кем дегенде бір нұсқаны таңдаңыз."
+      "pickOption": "Кем дегенде бір нұсқаны таңдаңыз.",
+      "close": "Close poll",
+      "closeFailed": "Could not close poll.",
+      "closedByYou": "Poll closed.",
+      "refreshResults": "Refresh results"
     },
     "schedule": {
       "title": "Кейінге жіберу",
@@ -444,7 +551,12 @@
       "failed": "Хабарламаны жоспарлау сәтсіз.",
       "ok": "Хабарлама жоспарланды.",
       "emptyDraft": "Алдымен хабарлама мәтінін енгізіңіз.",
-      "whenRequired": "Күн мен уақытты көрсетіңіз."
+      "whenRequired": "Күн мен уақытты көрсетіңіз.",
+      "listTitle": "Scheduled messages",
+      "cancel": "Cancel send",
+      "cancelFailed": "Could not cancel scheduled message.",
+      "emptyList": "No scheduled messages.",
+      "rowPreview": "{chat} · {when}"
     },
     "reminders": {
       "title": "Хабарлама еске салғышы",
@@ -455,7 +567,12 @@
       "listTitle": "Күтілетін еске салғыштар",
       "preset1h": "1 сағ",
       "preset3h": "3 сағ",
-      "presetTomorrow": "Ертең"
+      "presetTomorrow": "Ертең",
+      "cancel": "Cancel",
+      "openChat": "Open chat",
+      "emptyList": "No pending reminders.",
+      "cancelled": "Reminder cancelled.",
+      "cancelFailed": "Could not cancel reminder."
     },
     "contactShare": {
       "title": "Контактпен бөлісу",
@@ -464,7 +581,13 @@
       "failed": "Контакт жіберілмеді."
     },
     "offline": {
-      "cachedThread": "Желі жоқ — кэштелген хабарламалар көрсетілуде"
+      "cachedThread": "Желі жоқ — кэштелген хабарламалар көрсетілуде",
+      "syncPending": "Sync when back online…",
+      "syncDone": "Cache updated",
+      "clearCache": "Clear offline cache",
+      "clearCacheOk": "Offline cache cleared.",
+      "reconnecting": "Reconnecting…",
+      "quotaHint": "Cache keeps recent messages for selected chats."
     },
     "message": {
       "image": "Сурет",
@@ -489,7 +612,8 @@
       "pubLinkTitle": "Файлға жалпыға ортақ сілтеме жасау (A/B/C)",
       "linksTitle": "Жалпыға ортақ сілтемелер тізімі және кері қайтару",
       "locationLabel": "Менің орным",
-      "locationOpen": "Картада ашу"
+      "locationOpen": "Картада ашу",
+      "sticker": "Sticker"
     },
     "actions": {
       "reply": "Жауап беру",
@@ -585,7 +709,10 @@
       "privateKeyHint": "Жеке кілт — тек IndexedDB-де; серверге тек public key package жіберіледі.",
       "webPushHintRegistered": " Web Push: хабарландырулар қосылғанда жазылым (тіркелген). Жеткізу — push-worker (PUSH_VAPID_* = web-client public key).",
       "webPushHintDefault": " Web Push: хабарландырулар қосылғанда жазылым.",
-      "webPushNoVapid": " Web Push: push-worker-де WEB_CLIENT_VAPID_PUBLIC_KEY және PUSH_VAPID_*."
+      "webPushNoVapid": " Web Push: push-worker-де WEB_CLIENT_VAPID_PUBLIC_KEY және PUSH_VAPID_*.",
+      "scheduledTitle": "Scheduled messages",
+      "notificationPush": "Push notifications",
+      "dataUsage": "Data usage"
     },
     "forward": {
       "title": "Хабарламаны жіберу"
@@ -611,6 +738,67 @@
     "versions": {
       "title": "Өңдеу тарихы",
       "none": "Сақталған нұсқалар жоқ."
+    },
+    "integration": {
+      "close": "Close panel"
+    },
+    "search": {
+      "globalTitle": "Search",
+      "filterAll": "All",
+      "filterChats": "Chats",
+      "filterMessages": "Messages",
+      "noResults": "No results."
+    },
+    "profile": {
+      "bioHint": "Short bio visible to contacts",
+      "avatarChange": "Change avatar"
+    },
+    "mobile": {
+      "back": "Back to list",
+      "chatsTitle": "Chats",
+      "settingsTitle": "Settings"
+    },
+    "marketplace": {
+      "open": "Open",
+      "installed": "Connected",
+      "categoryBots": "Bots",
+      "categoryStorage": "Storage",
+      "categoryCalendar": "Calendar",
+      "categoryHr": "HR / requests",
+      "noResults": "No integrations found.",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "connectFailed": "Could not connect integration.",
+      "disconnectFailed": "Could not disconnect integration."
+    },
+    "federation": {
+      "directoryHint": "Trusted orgs for cross-org chats (MVP).",
+      "trustActive": "Active",
+      "trustPending": "Pending",
+      "partnerLabel": "Partner",
+      "badgeThread": "Federation",
+      "joinCopied": "Room copied to clipboard."
+    },
+    "whiteboard": {
+      "toolPen": "Pen",
+      "toolRect": "Rectangle",
+      "toolEraser": "Eraser",
+      "clearCanvas": "Clear",
+      "undo": "Undo",
+      "canvasHint": "Draw on canvas — saved in snapshot JSON.",
+      "tabCanvas": "Canvas",
+      "tabJson": "JSON"
+    },
+    "edit": {
+      "title": "Edit message",
+      "save": "Save",
+      "failed": "Could not edit message."
     }
+  },
+  "push": {
+    "title": "Korus Messenger",
+    "body": "New message",
+    "defaultTitle": "Korus Messenger",
+    "defaultBody": "New message"
   }
 }

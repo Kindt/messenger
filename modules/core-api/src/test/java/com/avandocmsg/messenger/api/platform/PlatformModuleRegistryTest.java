@@ -26,7 +26,7 @@ class PlatformModuleRegistryTest {
     }
 
     @Test
-    void notInstalledAddonIsDisabledWithInstallReason() {
+    void notSelectedAddonIsDisabledWithNotSelectedReason() {
         var cfg = pilotConfig();
         var registry = new PlatformModuleRegistry(
             ProductModuleCatalogLoader.load(),
@@ -36,7 +36,8 @@ class PlatformModuleRegistryTest {
         );
         var state = registry.resolveAddon("addon-search");
         assertEquals(PlatformModuleState.disabled, state.state());
-        assertEquals(PlatformModuleReason.install, state.reason());
+        assertEquals(PlatformModuleReason.not_selected, state.reason());
+        assertTrue(!state.selected());
     }
 
     @Test
@@ -56,6 +57,74 @@ class PlatformModuleRegistryTest {
         var state = registry.resolveAddon("addon-search");
         assertEquals(PlatformModuleState.degraded, state.state());
         assertEquals(PlatformModuleReason.health_stale, state.reason());
+    }
+
+    @Test
+    void capabilitiesExposeExternalStackSummary() {
+        var registry = new PlatformModuleRegistry(
+            ProductModuleCatalogLoader.load(),
+            java.util.List.of(),
+            new PlatformModuleOverrideRepository(null),
+            pilotConfig()
+        );
+
+        var response = registry.toCapabilitiesResponse();
+
+        var db = response.externalStack().get("relational-db-hot");
+        assertEquals("postgres-16", db.desiredConnector());
+        assertEquals("passed", db.validationStatus());
+        assertTrue(response.externalStack().containsKey("object-storage"));
+        assertTrue(response.externalStack().containsKey("messaging"));
+        assertEquals("enabled", response.features().get("message.send").state());
+    }
+
+    @Test
+    void capabilitiesMapModulesToExternalStackRequirements() {
+        var cfg = new AppConfig() {
+            @Override
+            public String korusProductAddons() {
+                return "addon-search";
+            }
+        };
+        var registry = PlatformModuleRegistry.create(cfg, new PlatformModuleOverrideRepository(null));
+
+        var response = registry.toCapabilitiesResponse();
+
+        assertTrue(response.product().base().externalStackComponents().contains("relational-db-hot"));
+        assertTrue(response.product().base().externalStackProfiles().contains("postgres-16-bundled"));
+        var search = response.modules().get("addon-search");
+        assertTrue(search.externalStackComponents().contains("search"));
+        assertTrue(search.externalStackProfiles().contains("solr-bundled"));
+        assertEquals("fallback", search.degradationMode());
+        assertEquals("fallback_badge", response.features().get("search.fulltext.messages").uiBehavior());
+    }
+
+    @Test
+    void productModuleCatalogReferencesKnownExternalStackProfilesAndComponents() {
+        var errors = ProductModuleCatalogLoader.validateExternalStackReferences(ProductModuleCatalogLoader.load());
+
+        assertTrue(errors.isEmpty(), String.join("\n", errors));
+    }
+
+    @Test
+    void capabilitiesWarnWhenRequiredExternalStackComponentIsDegraded() {
+        var cfg = new AppConfig() {
+            @Override
+            public String korusProductAddons() {
+                return "addon-search";
+            }
+
+            @Override
+            public String searchMode() {
+                return "sql";
+            }
+        };
+        var registry = PlatformModuleRegistry.create(cfg, new PlatformModuleOverrideRepository(null));
+
+        var response = registry.toCapabilitiesResponse();
+
+        assertTrue(response.modules().get("addon-search").externalStackWarnings()
+            .contains("required external stack component search is degraded"));
     }
 
     private static AppConfig pilotConfig() {

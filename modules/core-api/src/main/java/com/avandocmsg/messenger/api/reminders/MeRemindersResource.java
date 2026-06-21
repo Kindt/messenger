@@ -12,10 +12,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
@@ -97,6 +99,32 @@ public class MeRemindersResource {
             .map(MeRemindersResource::toResponse)
             .toList();
         return Response.ok(rows).build();
+    }
+
+    @DELETE
+    @Path("{reminderId}")
+    @Operation(summary = "Cancel pending reminder")
+    public Response cancel(@PathParam("reminderId") String reminderId,
+                           @Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        var id = UuidParams.required(reminderId, "reminder_id");
+        var row = messageReminderPort.find(id);
+        if (row.isEmpty() || !row.get().userId().equals(userId)) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new ApiError(404, messages.get("error.reminder.not_found")))
+                .build();
+        }
+        if (!"pending".equals(row.get().status())) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.reminder.cancel_failed")))
+                .build();
+        }
+        if (!messageReminderPort.updateStatus(id, "cancelled")) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ApiError(500, messages.get("error.reminder.cancel_failed")))
+                .build();
+        }
+        return Response.noContent().build();
     }
 
     private static ReminderResponse toResponse(MessageReminderPort.ReminderRow row) {

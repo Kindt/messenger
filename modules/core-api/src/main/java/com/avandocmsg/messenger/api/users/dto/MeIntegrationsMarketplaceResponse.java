@@ -18,6 +18,7 @@ public record MeIntegrationsMarketplaceResponse(
         @JsonProperty("bot_name") String botName,
         @JsonProperty("icon_url") String iconUrl,
         @JsonProperty("launch_url") String launchUrl,
-        @JsonProperty("open_mode") String openMode
+        @JsonProperty("open_mode") String openMode,
+        @JsonProperty("connected") boolean connected
     ) {}
 }

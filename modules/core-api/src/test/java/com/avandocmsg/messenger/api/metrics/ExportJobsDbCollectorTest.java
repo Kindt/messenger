@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.metrics;
 
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAdminStatsJdbcRepository;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.AfterEach;
@@ -57,7 +58,7 @@ class ExportJobsDbCollectorTest {
 
     @Test
     void collect_exposesStaleGauge() {
-        var samples = new ExportJobsDbCollector(ds, 30).collect();
+        var samples = new ExportJobsDbCollector(new JdbcAdminStatsJdbcRepository(ds), 30).collect();
         var stale = samples.stream()
             .filter(m -> "export_jobs_processing_stale".equals(m.name))
             .findFirst()

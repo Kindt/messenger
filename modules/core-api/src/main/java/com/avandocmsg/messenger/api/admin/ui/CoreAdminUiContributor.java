@@ -29,16 +29,23 @@ public final class CoreAdminUiContributor implements AdminUiContributor {
                 "/admin/ui/fleet/snapshot"
             ),
             new AdminUiSectionDescriptor(
+                "core-external-stack",
+                "External stack (023)",
+                12,
+                AdminUiSectionKind.JSON_PANEL,
+                "/platform/external-stack/status"
+            ),
+            new AdminUiSectionDescriptor(
                 "core-product-modules",
                 "Состав продукта",
-                12,
+                13,
                 AdminUiSectionKind.JSON_PANEL,
                 "/admin/ui/product-modules"
             ),
             new AdminUiSectionDescriptor(
                 "core-export-compliance",
                 "Экспорт / GDPR",
-                13,
+                14,
                 AdminUiSectionKind.JSON_PANEL,
                 "/admin/ui/export-compliance-guide"
             ),

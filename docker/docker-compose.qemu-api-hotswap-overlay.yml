@@ -1,0 +1,11 @@
+# QEMU server guest overlay: bind-mount Gradle installDist output + JVM HotReloadWatcher.
+# Pair with docker-compose.full-server.yml via api-hotswap-guest.sh / qemu-api-hotswap.ps1.
+# Flyway / Dockerfile / dependency changes still need sync-api-core -Rebuild.
+
+services:
+  core-api:
+    environment:
+      HOT_RELOAD: "true"
+    volumes:
+      - /mnt/korus/.qemu-hotswap/core-api/lib:/app/core-api/lib
+      - /mnt/korus/.qemu-hotswap/core-api/conf:/app/core-api/conf

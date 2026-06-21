@@ -11,6 +11,9 @@ final class MeIntegrationsVitrine {
 
     static List<MeIntegrationsVitrineTile> tiles() {
         return List.of(
+            tile("outlook-mail", "Outlook (почта)", "outlook", "https://outlook.office.com/mail/"),
+            tile("outlook-calendar", "Outlook (календарь)", "exchange", "https://outlook.office.com/calendar/"),
+            tile("sharepoint", "SharePoint / OneDrive", "storage", "https://www.microsoft.com/microsoft-365/sharepoint/collaboration"),
             tile("jira", "Jira", "jira", "https://www.atlassian.com/software/jira"),
             tile("confluence", "Confluence", "confluence", "https://www.atlassian.com/software/confluence"),
             tile("naumen", "Naumen", "naumen", "https://www.naumen.ru/products/"),

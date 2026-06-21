@@ -190,6 +190,21 @@ services:
       timeout: 5s
       retries: 5
 
+  stt-mock:
+    build:
+      context: ./demos
+      dockerfile: stt-mock/Dockerfile
+    image: korus/stt-mock:local
+    environment:
+      STT_MOCK_PORT: "8099"
+    ports:
+      - "8099:8099"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8099/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
   ai-bridge:
     build:
       context: ./demos

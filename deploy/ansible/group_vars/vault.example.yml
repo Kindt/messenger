@@ -29,7 +29,7 @@
 # korus_livekit_api_secret: "..."    # -> LIVEKIT_API_SECRET
 # korus_livekit_url: "wss://..."     # -> LIVEKIT_URL
 #
-# addon-directory (LDAP sync):
+# addon-enterprise-auth (LDAP sync):
 # korus_ldap_bind_password: "..."    # org-specific; see org_auth_policy
 #
 # addon-e2ee / addon-search / addon-export: no extra vault keys beyond base DB/JWT/MinIO.

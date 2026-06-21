@@ -336,7 +336,11 @@
       "accept": "Прыняць",
       "decline": "Адхіліць",
       "exportBanner": "Экспарт «{chat}»{bg}: {status}",
-      "backToChats": "Да спісу чатаў"
+      "backToChats": "Да спісу чатаў",
+      "presenceTitle": "Click to change status",
+      "updateReady": "A new version is available",
+      "reloadNow": "Reload",
+      "reloadLater": "Later"
     },
     "sidebar": {
       "searchPlaceholder": "Чаты або карыстальнікі (ад 2 сімв.)…",
@@ -365,20 +369,32 @@
       "integrations": "Інтэграцыі",
       "noIntegrations": "Няма інтэграцый.",
       "vitrine": "Вітрына",
+      "externalStackSummary": "External stack: {passed}/{total} OK",
       "archiveToggle": "Архіваваць чат",
       "archiveFailed": "Не ўдалося архіваваць чат.",
       "folderWork": "У папку «Работа»",
       "folderFailed": "Не ўдалося змяніць папку.",
       "folderAll": "Усе",
       "folderWorkChip": "Работа",
-      "folderPersonal": "Лічныя",
+      "folderPersonal": "Mark as personal",
       "folderArchive": "Архіў",
       "folder": {
         "all": "Усе",
         "work": "Работа",
         "personal": "Лічныя",
         "archive": "Архіў"
-      }
+      },
+      "filter": {
+        "all": "All chats",
+        "unread": "Unread",
+        "mentions": "Mentions"
+      },
+      "marketplaceSearch": "Search integrations…",
+      "marketplaceAll": "All categories",
+      "noChatsUnread": "No unread chats.",
+      "noChatsMentions": "No chats with mentions.",
+      "pinChat": "Pin chat",
+      "unpinChat": "Unpin chat"
     },
     "thread": {
       "empty": "Абярыце чат або стварыце групу.",
@@ -419,7 +435,94 @@
       "sendLocation": "Адправіць геалакацыю",
       "createPoll": "Стварыць апытанне",
       "scheduleSend": "Адложаная адправка",
-      "shareContact": "Падзяліцца кантактам"
+      "shareContact": "Падзяліцца кантактам",
+      "voiceRecord": "Галасавое паведамленне",
+      "emoji": "Emoji"
+    },
+    "phase5": {
+      "stickers": "Стыкеры",
+      "kanban": "Kanban",
+      "whiteboard": "Доска",
+      "kanbanTitle": "Задачы чата",
+      "colTodo": "Да выканання",
+      "colDoing": "У працы",
+      "colDone": "Гатова",
+      "kanbanNewTask": "Новая задача",
+      "kanbanAdd": "Дадаць",
+      "kanbanFailed": "Не ўдалося дадаць задачу.",
+      "whiteboardTitle": "Whiteboard",
+      "whiteboardPlaceholder": "JSON-здымак дошкі (scaffold)",
+      "whiteboardSave": "Захаваць",
+      "whiteboardSaved": "Дошка захавана.",
+      "whiteboardFailed": "Не ўдалося захаваць дошку.",
+      "stickersTitle": "GIF і стыкеры",
+      "stickersEmpty": "Каталог пусты — дадайце packs праз API.",
+      "federationTitle": "Федэрацыя — partner orgs",
+      "federationEmpty": "Няма partner orgs у trust graph.",
+      "confTools": "ADR-інструменты",
+      "recordStart": "Запіс",
+      "recordStarted": "Запіс запущаны (scaffold).",
+      "recordFailed": "Не ўдалося пачаць запіс.",
+      "guestLink": "Госць па спасылцы",
+      "guestFailed": "Не ўдалося стварыць guest link.",
+      "breakout": "Breakout",
+      "breakoutName": "Назва пакоя",
+      "breakoutCreated": "Breakout room створана.",
+      "breakoutFailed": "Не ўдалося стварыць breakout.",
+      "captions": "Субцітры",
+      "captionsSample": "Прыклад транскрыпта (STT mock)",
+      "captionsFailed": "Не ўдалося запусціць captions.",
+      "videoNote": "Video note",
+      "videoNoteFailed": "Не ўдалося адправіць video note.",
+      "videoMicDenied": "Няма доступу да камеры.",
+      "aiAssist": "AI assist",
+      "aiAssistTitle": "AI chat assist",
+      "aiAssistPlaceholder": "Ask a question about this chat…",
+      "aiAssistRun": "Run",
+      "aiAssistEmpty": "No reply from AI gateway.",
+      "aiAssistFailed": "AI assist failed.",
+      "aiInsert": "Insert into composer",
+      "kanbanMoveBack": "Move to previous column",
+      "kanbanMoveForward": "Move to next column",
+      "kanbanDelete": "Delete task",
+      "kanbanDeleted": "Task deleted.",
+      "passkeysTitle": "Passkeys (scaffold)",
+      "passkeysEmpty": "No passkeys registered.",
+      "passkeysRegister": "Register scaffold credential",
+      "passkeysRegistered": "Passkey scaffold registered.",
+      "passkeysFailed": "Passkey registration failed.",
+      "guestExpired": "Guest link expired.",
+      "guestRedeemed": "Guest link accepted.",
+      "guestRedeemFailed": "Could not redeem guest link.",
+      "recordList": "Recordings list",
+      "recordListEmpty": "No recordings yet.",
+      "breakoutList": "Breakout rooms",
+      "breakoutListEmpty": "No breakout rooms.",
+      "sipTitle": "SIP / H.323 gateway",
+      "sipEnabled": "Enable SIP",
+      "sipUri": "Gateway URI",
+      "sipSave": "Save SIP",
+      "sipSaved": "SIP gateway saved.",
+      "sipFailed": "Could not save SIP.",
+      "stickerPacks": "Sticker packs",
+      "stickerSend": "Send sticker",
+      "captionsLive": "Transcript (live)",
+      "guestCopy": "Copy link",
+      "guestCopied": "Guest link copied.",
+      "guestWaiting": "Waiting room enabled",
+      "breakoutJoin": "Join",
+      "stickerPackCreate": "Create pack",
+      "stickerPackName": "Pack name",
+      "stickerPackCreated": "Sticker pack created.",
+      "stickerPackFailed": "Could not create pack.",
+      "recordStop": "Stop recording",
+      "modalCopy": "Copy",
+      "guestAdmitHint": "Waiting room: share the guest link after host approval.",
+      "guestAdmitBtn": "Waiting room",
+      "guestWaitingEmpty": "No guests in the waiting room.",
+      "guestAdmitDo": "Admit guest",
+      "guestAdmitDone": "Guest admitted.",
+      "recordCompleted": "Recording completed."
     },
     "polls": {
       "title": "Апытанні",
@@ -435,7 +538,11 @@
       "empty": "Няма апытанняў у гэтым чаце.",
       "createFailed": "Не ўдалося стварыць апытанне.",
       "voteFailed": "Не ўдалося прагаласаваць.",
-      "pickOption": "Абярыце хаця б адзін варыянт."
+      "pickOption": "Абярыце хаця б адзін варыянт.",
+      "close": "Close poll",
+      "closeFailed": "Could not close poll.",
+      "closedByYou": "Poll closed.",
+      "refreshResults": "Refresh results"
     },
     "schedule": {
       "title": "Адложаная адправка",
@@ -444,7 +551,12 @@
       "failed": "Не ўдалося запланаваць паведамленне.",
       "ok": "Паведамленне запланавана.",
       "emptyDraft": "Спачатку ўвядзіце тэкст у поле паведамлення.",
-      "whenRequired": "Пазначце дату і час."
+      "whenRequired": "Пазначце дату і час.",
+      "listTitle": "Scheduled messages",
+      "cancel": "Cancel send",
+      "cancelFailed": "Could not cancel scheduled message.",
+      "emptyList": "No scheduled messages.",
+      "rowPreview": "{chat} · {when}"
     },
     "reminders": {
       "title": "Нагадванне пра паведамленне",
@@ -455,7 +567,12 @@
       "listTitle": "Чакальныя нагадванні",
       "preset1h": "Праз 1 г",
       "preset3h": "Праз 3 г",
-      "presetTomorrow": "Заўтра"
+      "presetTomorrow": "Заўтра",
+      "cancel": "Cancel",
+      "openChat": "Open chat",
+      "emptyList": "No pending reminders.",
+      "cancelled": "Reminder cancelled.",
+      "cancelFailed": "Could not cancel reminder."
     },
     "contactShare": {
       "title": "Падзяліцца кантактам",
@@ -464,7 +581,13 @@
       "failed": "Не ўдалося адправіць кантакт."
     },
     "offline": {
-      "cachedThread": "Няма сеткі — паказаны кэшаваныя паведамленні"
+      "cachedThread": "Няма сеткі — паказаны кэшаваныя паведамленні",
+      "syncPending": "Sync when back online…",
+      "syncDone": "Cache updated",
+      "clearCache": "Clear offline cache",
+      "clearCacheOk": "Offline cache cleared.",
+      "reconnecting": "Reconnecting…",
+      "quotaHint": "Cache keeps recent messages for selected chats."
     },
     "message": {
       "image": "Выява",
@@ -489,7 +612,8 @@
       "pubLinkTitle": "Стварыць публічную спасылку на файл (A/B/C)",
       "linksTitle": "Спіс і адклік публічных спасылкаў",
       "locationLabel": "Маё месцазнаходжанне",
-      "locationOpen": "Адкрыць на карце"
+      "locationOpen": "Адкрыць на карце",
+      "sticker": "Sticker"
     },
     "actions": {
       "reply": "Адказаць",
@@ -585,7 +709,10 @@
       "privateKeyHint": "Прыватны ключ — толькі ў IndexedDB; на сервер ідзе толькі public key package.",
       "webPushHintRegistered": " Web Push: падпіска пры ўключэнні апавяшчэнняў (зарэгістравана). Дастаўка — push-worker (PUSH_VAPID_* = public key web-client).",
       "webPushHintDefault": " Web Push: падпіска пры ўключэнні апавяшчэнняў.",
-      "webPushNoVapid": " Web Push: WEB_CLIENT_VAPID_PUBLIC_KEY і PUSH_VAPID_* на push-worker."
+      "webPushNoVapid": " Web Push: WEB_CLIENT_VAPID_PUBLIC_KEY і PUSH_VAPID_* на push-worker.",
+      "scheduledTitle": "Scheduled messages",
+      "notificationPush": "Push notifications",
+      "dataUsage": "Data usage"
     },
     "forward": {
       "title": "Пераслаць паведамленне"
@@ -611,6 +738,67 @@
     "versions": {
       "title": "Гісторыя правак",
       "none": "Няма захаваных версій."
+    },
+    "integration": {
+      "close": "Close panel"
+    },
+    "search": {
+      "globalTitle": "Search",
+      "filterAll": "All",
+      "filterChats": "Chats",
+      "filterMessages": "Messages",
+      "noResults": "No results."
+    },
+    "profile": {
+      "bioHint": "Short bio visible to contacts",
+      "avatarChange": "Change avatar"
+    },
+    "mobile": {
+      "back": "Back to list",
+      "chatsTitle": "Chats",
+      "settingsTitle": "Settings"
+    },
+    "marketplace": {
+      "open": "Open",
+      "installed": "Connected",
+      "categoryBots": "Bots",
+      "categoryStorage": "Storage",
+      "categoryCalendar": "Calendar",
+      "categoryHr": "HR / requests",
+      "noResults": "No integrations found.",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "connectFailed": "Could not connect integration.",
+      "disconnectFailed": "Could not disconnect integration."
+    },
+    "federation": {
+      "directoryHint": "Trusted orgs for cross-org chats (MVP).",
+      "trustActive": "Active",
+      "trustPending": "Pending",
+      "partnerLabel": "Partner",
+      "badgeThread": "Federation",
+      "joinCopied": "Room copied to clipboard."
+    },
+    "whiteboard": {
+      "toolPen": "Pen",
+      "toolRect": "Rectangle",
+      "toolEraser": "Eraser",
+      "clearCanvas": "Clear",
+      "undo": "Undo",
+      "canvasHint": "Draw on canvas — saved in snapshot JSON.",
+      "tabCanvas": "Canvas",
+      "tabJson": "JSON"
+    },
+    "edit": {
+      "title": "Edit message",
+      "save": "Save",
+      "failed": "Could not edit message."
     }
+  },
+  "push": {
+    "title": "Korus Messenger",
+    "body": "New message",
+    "defaultTitle": "Korus Messenger",
+    "defaultBody": "New message"
   }
 }

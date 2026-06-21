@@ -336,7 +336,11 @@
       "accept": "Accept",
       "decline": "Decline",
       "exportBanner": "Export \"{chat}\"{bg}: {status}",
-      "backToChats": "Back to chats"
+      "backToChats": "Back to chats",
+      "presenceTitle": "Click to change status",
+      "updateReady": "A new version is available",
+      "reloadNow": "Reload",
+      "reloadLater": "Later"
     },
     "sidebar": {
       "searchPlaceholder": "Chats or users (2+ chars)…",
@@ -365,20 +369,32 @@
       "integrations": "Integrations",
       "noIntegrations": "No integrations.",
       "vitrine": "Featured",
+      "externalStackSummary": "External stack: {passed}/{total} OK",
       "archiveToggle": "Archive chat",
       "archiveFailed": "Failed to archive chat.",
       "folderWork": "Mark as work",
       "folderFailed": "Failed to update folder.",
       "folderAll": "All",
       "folderWorkChip": "Work",
-      "folderPersonal": "Personal",
+      "folderPersonal": "Mark as personal",
       "folderArchive": "Archive",
       "folder": {
         "all": "All",
         "work": "Work",
         "personal": "Personal",
         "archive": "Archive"
-      }
+      },
+      "filter": {
+        "all": "All chats",
+        "unread": "Unread",
+        "mentions": "Mentions"
+      },
+      "marketplaceSearch": "Search integrations…",
+      "marketplaceAll": "All categories",
+      "noChatsUnread": "No unread chats.",
+      "noChatsMentions": "No chats with mentions.",
+      "pinChat": "Pin chat",
+      "unpinChat": "Unpin chat"
     },
     "thread": {
       "empty": "Select a chat or create a group.",
@@ -419,7 +435,94 @@
       "sendLocation": "Send location",
       "createPoll": "Create poll",
       "scheduleSend": "Schedule send",
-      "shareContact": "Share contact"
+      "shareContact": "Share contact",
+      "voiceRecord": "Voice message",
+      "emoji": "Emoji"
+    },
+    "phase5": {
+      "stickers": "Stickers",
+      "kanban": "Kanban",
+      "whiteboard": "Whiteboard",
+      "kanbanTitle": "Chat tasks",
+      "colTodo": "To do",
+      "colDoing": "In progress",
+      "colDone": "Done",
+      "kanbanNewTask": "New task",
+      "kanbanAdd": "Add",
+      "kanbanFailed": "Could not add task.",
+      "whiteboardTitle": "Whiteboard",
+      "whiteboardPlaceholder": "Board snapshot JSON (scaffold)",
+      "whiteboardSave": "Save",
+      "whiteboardSaved": "Whiteboard saved.",
+      "whiteboardFailed": "Could not save whiteboard.",
+      "stickersTitle": "GIFs and stickers",
+      "stickersEmpty": "Catalog empty — add packs via API.",
+      "federationTitle": "Federation — partner orgs",
+      "federationEmpty": "No partner orgs in trust graph.",
+      "confTools": "ADR tools",
+      "recordStart": "Record",
+      "recordStarted": "Recording started (scaffold).",
+      "recordFailed": "Could not start recording.",
+      "guestLink": "Guest link",
+      "guestFailed": "Could not create guest link.",
+      "breakout": "Breakout",
+      "breakoutName": "Room name",
+      "breakoutCreated": "Breakout room created.",
+      "breakoutFailed": "Could not create breakout.",
+      "captions": "Captions",
+      "captionsSample": "Sample transcript (STT mock)",
+      "captionsFailed": "Could not start captions.",
+      "videoNote": "Video note",
+      "videoNoteFailed": "Could not send video note.",
+      "videoMicDenied": "Camera access denied.",
+      "aiAssist": "AI assist",
+      "aiAssistTitle": "AI chat assist",
+      "aiAssistPlaceholder": "Ask a question about this chat…",
+      "aiAssistRun": "Run",
+      "aiAssistEmpty": "No reply from AI gateway.",
+      "aiAssistFailed": "AI assist failed.",
+      "aiInsert": "Insert into composer",
+      "kanbanMoveBack": "Move to previous column",
+      "kanbanMoveForward": "Move to next column",
+      "kanbanDelete": "Delete task",
+      "kanbanDeleted": "Task deleted.",
+      "passkeysTitle": "Passkeys (scaffold)",
+      "passkeysEmpty": "No passkeys registered.",
+      "passkeysRegister": "Register scaffold credential",
+      "passkeysRegistered": "Passkey scaffold registered.",
+      "passkeysFailed": "Passkey registration failed.",
+      "guestExpired": "Guest link expired.",
+      "guestRedeemed": "Guest link accepted.",
+      "guestRedeemFailed": "Could not redeem guest link.",
+      "recordList": "Recordings list",
+      "recordListEmpty": "No recordings yet.",
+      "breakoutList": "Breakout rooms",
+      "breakoutListEmpty": "No breakout rooms.",
+      "sipTitle": "SIP / H.323 gateway",
+      "sipEnabled": "Enable SIP",
+      "sipUri": "Gateway URI",
+      "sipSave": "Save SIP",
+      "sipSaved": "SIP gateway saved.",
+      "sipFailed": "Could not save SIP.",
+      "stickerPacks": "Sticker packs",
+      "stickerSend": "Send sticker",
+      "captionsLive": "Transcript (live)",
+      "guestCopy": "Copy link",
+      "guestCopied": "Guest link copied.",
+      "guestWaiting": "Waiting room enabled",
+      "breakoutJoin": "Join",
+      "stickerPackCreate": "Create pack",
+      "stickerPackName": "Pack name",
+      "stickerPackCreated": "Sticker pack created.",
+      "stickerPackFailed": "Could not create pack.",
+      "recordStop": "Stop recording",
+      "modalCopy": "Copy",
+      "guestAdmitHint": "Waiting room: share the guest link after host approval.",
+      "guestAdmitBtn": "Waiting room",
+      "guestWaitingEmpty": "No guests in the waiting room.",
+      "guestAdmitDo": "Admit guest",
+      "guestAdmitDone": "Guest admitted.",
+      "recordCompleted": "Recording completed."
     },
     "polls": {
       "title": "Polls",
@@ -435,7 +538,11 @@
       "empty": "No polls in this chat.",
       "createFailed": "Could not create poll.",
       "voteFailed": "Could not vote.",
-      "pickOption": "Pick at least one option."
+      "pickOption": "Pick at least one option.",
+      "close": "Close poll",
+      "closeFailed": "Could not close poll.",
+      "closedByYou": "Poll closed.",
+      "refreshResults": "Refresh results"
     },
     "schedule": {
       "title": "Scheduled send",
@@ -444,7 +551,12 @@
       "failed": "Could not schedule message.",
       "ok": "Message scheduled.",
       "emptyDraft": "Enter message text in the composer first.",
-      "whenRequired": "Pick date and time."
+      "whenRequired": "Pick date and time.",
+      "listTitle": "Scheduled messages",
+      "cancel": "Cancel send",
+      "cancelFailed": "Could not cancel scheduled message.",
+      "emptyList": "No scheduled messages.",
+      "rowPreview": "{chat} · {when}"
     },
     "reminders": {
       "title": "Message reminder",
@@ -455,7 +567,12 @@
       "listTitle": "Pending reminders",
       "preset1h": "In 1 hour",
       "preset3h": "In 3 hours",
-      "presetTomorrow": "Tomorrow"
+      "presetTomorrow": "Tomorrow",
+      "cancel": "Cancel",
+      "openChat": "Open chat",
+      "emptyList": "No pending reminders.",
+      "cancelled": "Reminder cancelled.",
+      "cancelFailed": "Could not cancel reminder."
     },
     "contactShare": {
       "title": "Share contact",
@@ -464,7 +581,13 @@
       "failed": "Could not send contact."
     },
     "offline": {
-      "cachedThread": "Offline — showing cached messages"
+      "cachedThread": "Offline — showing cached messages",
+      "syncPending": "Sync when back online…",
+      "syncDone": "Cache updated",
+      "clearCache": "Clear offline cache",
+      "clearCacheOk": "Offline cache cleared.",
+      "reconnecting": "Reconnecting…",
+      "quotaHint": "Cache keeps recent messages for selected chats."
     },
     "message": {
       "image": "Image",
@@ -489,7 +612,8 @@
       "pubLinkTitle": "Create public file link (A/B/C)",
       "linksTitle": "List and revoke public links",
       "locationLabel": "My location",
-      "locationOpen": "Open on map"
+      "locationOpen": "Open on map",
+      "sticker": "Sticker"
     },
     "actions": {
       "reply": "Reply",
@@ -585,7 +709,10 @@
       "privateKeyHint": "Private key stays in IndexedDB only; only public key package is sent to server.",
       "webPushHintRegistered": " Web Push: subscription when notifications enabled (registered). Delivery via push-worker (PUSH_VAPID_* = web-client public key).",
       "webPushHintDefault": " Web Push: subscription when notifications enabled.",
-      "webPushNoVapid": " Web Push: WEB_CLIENT_VAPID_PUBLIC_KEY and PUSH_VAPID_* on push-worker."
+      "webPushNoVapid": " Web Push: WEB_CLIENT_VAPID_PUBLIC_KEY and PUSH_VAPID_* on push-worker.",
+      "scheduledTitle": "Scheduled messages",
+      "notificationPush": "Push notifications",
+      "dataUsage": "Data usage"
     },
     "forward": {
       "title": "Forward message"
@@ -611,6 +738,67 @@
     "versions": {
       "title": "Edit history",
       "none": "No saved versions."
+    },
+    "integration": {
+      "close": "Close panel"
+    },
+    "search": {
+      "globalTitle": "Search",
+      "filterAll": "All",
+      "filterChats": "Chats",
+      "filterMessages": "Messages",
+      "noResults": "No results."
+    },
+    "profile": {
+      "bioHint": "Short bio visible to contacts",
+      "avatarChange": "Change avatar"
+    },
+    "mobile": {
+      "back": "Back to list",
+      "chatsTitle": "Chats",
+      "settingsTitle": "Settings"
+    },
+    "marketplace": {
+      "open": "Open",
+      "installed": "Connected",
+      "categoryBots": "Bots",
+      "categoryStorage": "Storage",
+      "categoryCalendar": "Calendar",
+      "categoryHr": "HR / requests",
+      "noResults": "No integrations found.",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "connectFailed": "Could not connect integration.",
+      "disconnectFailed": "Could not disconnect integration."
+    },
+    "federation": {
+      "directoryHint": "Trusted orgs for cross-org chats (MVP).",
+      "trustActive": "Active",
+      "trustPending": "Pending",
+      "partnerLabel": "Partner",
+      "badgeThread": "Federation",
+      "joinCopied": "Room copied to clipboard."
+    },
+    "whiteboard": {
+      "toolPen": "Pen",
+      "toolRect": "Rectangle",
+      "toolEraser": "Eraser",
+      "clearCanvas": "Clear",
+      "undo": "Undo",
+      "canvasHint": "Draw on canvas — saved in snapshot JSON.",
+      "tabCanvas": "Canvas",
+      "tabJson": "JSON"
+    },
+    "edit": {
+      "title": "Edit message",
+      "save": "Save",
+      "failed": "Could not edit message."
     }
+  },
+  "push": {
+    "title": "Korus Messenger",
+    "body": "New message",
+    "defaultTitle": "Korus Messenger",
+    "defaultBody": "New message"
   }
 }

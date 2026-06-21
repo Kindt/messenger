@@ -59,7 +59,7 @@ When using **`korus_product_addons`**, include vault keys only for installed add
 |--------|----------------------|-------------|
 | `addon-engage` | `korus_vapid_*` | `PUSH_VAPID_*` |
 | `addon-live` | `korus_livekit_*` | `LIVEKIT_*` |
-| `addon-directory` | LDAP bind (org policy) | per org |
+| `addon-enterprise-auth` | LDAP bind (org policy) | per org |
 
 Base secrets (DB, MinIO, JWT, Keycloak) remain required. Template comments: `group_vars/vault.example.yml`.
 
@@ -71,7 +71,7 @@ Secrets in `group_vars/vault.example.yml` are grouped by **add-on id** from [`do
 |--------|----------------------|-------------|
 | `addon-engage` | `korus_vapid_*` | `PUSH_VAPID_*` |
 | `addon-live` | `korus_livekit_*` | `LIVEKIT_*` |
-| `addon-directory` | `korus_ldap_bind_password` | org auth policy |
+| `addon-enterprise-auth` | `korus_ldap_bind_password` | org auth policy |
 
 Runtime probe: `PlatformModuleRegistry` → `secrets_missing` degradation if env absent. Dev/CI omits vault file — templating skipped.
 
@@ -84,6 +84,36 @@ korus_core_api_deploy_mode: embedded  # embedded | war
 ```
 
 Rendered to `docker/.env.korus-server` as `CORE_API_DEPLOY_MODE`. **`embedded`** — текущий full-stack (embedded Tomcat в compose). **`war`** — placeholder до bootstrap T021-100: собрать `docker/Dockerfile.core-api.war`, smoke `scripts/smoke-core-api-jetty.ps1` (QEMU guest).
+
+### External stack desired manifest (spec 023)
+
+`roles/korus_server` renders `docker/external-stack-manifest.yaml`, exports `EXTERNAL_STACK_MANIFEST_DIR` / `EXTERNAL_STACK_MANIFEST_FILE` for the compose bind mount, and passes `/config/<file>` to core-api as `EXTERNAL_STACK_MANIFEST_PATH`. The manifest is a desired-state snapshot for `/api/v1/platform/external-stack/status`; it contains endpoints/resource aliases and support boundaries, not secrets.
+
+Override in inventory/group vars when using external/BYO profiles:
+
+```yaml
+korus_external_stack_manifest_enabled: true
+korus_external_stack_manifest_path: "{{ korus_repo_root }}/docker/external-stack-manifest.yaml"
+korus_db_jdbc_url: "jdbc:postgresql://pg.example.internal:5432/avandocmsg_hot"
+korus_minio_endpoint: "https://s3.example.internal"
+korus_nats_url: "nats://nats.example.internal:4222"
+```
+
+Production cutover, vendor sign-off and live credentials remain deferred to spec 015 until a live server exists.
+
+### Customer validation runbook (spec 023, lab)
+
+Repo-local checklist before BYO cutover on a customer profile (no live-server required):
+
+1. `./gradlew buildIntegrity`
+2. Lab stack up (QEMU or compose guest): API `18080`, UI `19088`
+3. Admin → External stack: upload desired manifest, run preflight (`POST /api/v1/platform/external-stack/preflight/manifests`)
+4. Attached probes: confirm `GET /api/v1/platform/external-stack/status` shows expected components
+5. `scripts/smoke-external-stack-probes.ps1` (if manifest points at lab endpoints)
+6. Search SPI: enable `addon-search`, verify Solr/SQL fallback per profile
+7. Document observed vs desired in cutover report template (`docs/plans/` / admin export)
+
+Live cutover with real FQDN, vault and human sign-off → spec **015** (Sep 2026+).
 
 ### TLS checklist (stage / prod)
 

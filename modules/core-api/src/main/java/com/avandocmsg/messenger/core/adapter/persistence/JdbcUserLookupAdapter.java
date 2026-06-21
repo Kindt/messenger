@@ -32,6 +32,11 @@ public final class JdbcUserLookupAdapter implements UserLookupPort {
     }
 
     @Override
+    public Optional<UserProfile> findByExternalId(String externalId) {
+        return jdbc.findByExternalId(externalId);
+    }
+
+    @Override
     public boolean isReadReceiptsDisabled(UUID id) {
         return jdbc.isReadReceiptsDisabled(id);
     }

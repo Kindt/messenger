@@ -1,0 +1,574 @@
+schema_version: 1
+status: draft
+owner: platform
+updated: 2026-06-20
+description: >
+  Catalog of external stack component profiles for Korus Messenger.
+  This is a design-time contract for deploy validation, Product Modules,
+  admin status, sizing, and future spec/tasks.
+runtime_backing:
+  implementation: modules/core-api platform/stack scaffold
+  status_endpoints:
+    - /api/v1/platform/external-stack/status
+    - /api/v1/platform/external-stack/profiles
+  validators:
+    - manifest_single_active
+    - manifest_secret_redaction
+    - profile_lifecycle_promotion_gate
+    - stateful_component_contracts
+    - migration_checkpoint_contracts
+    - failure_policy_contracts
+
+compatibility_aliases:
+  web-edge: nginx-bundled
+  angie-candidate: angie
+  livekit-bundled: livekit-1.8-bundled
+  vks-integration-candidate: clevermeet
+  dlp-external: icap-dlp-generic
+  integrations-bundled: http-webhook-generic
+
+lifecycle_statuses:
+  supported_bundled: Korus supplies deployment artifacts, validation, sizing, smoke tests, and runbook.
+  supported_external_byo: Korus supports connector/profile validation; customer or vendor owns deployment, HA, backup, and upgrades.
+  candidate: Functional fit exists, but legal, security, compatibility, or vendor-support checks are pending.
+  integration_candidate: Useful as an external integration, not as a direct backend replacement.
+  rejected: Not suitable for the component or risk exceeds expected value.
+
+deployment_modes:
+  bundled: Korus-managed service in the boxed stack.
+  external_byo: Customer-managed endpoint with Korus connector validation.
+  managed_by_customer: Customer-owned service outside Korus deployment lifecycle.
+  rf_candidate: Russian/import-substitution candidate requiring evidence and support gates.
+  unsupported: Explicitly not supported.
+
+roles:
+  active: The only profile receiving production traffic for the component in a Cell.
+  standby: Prepared but not serving active traffic.
+  migration_source: Source profile used during migration or rollback.
+  migration_target: Target profile used during migration before cutover.
+  disabled: Component profile is configured off.
+
+common_manifest_fields:
+  - component
+  - backend_family
+  - connector
+  - version
+  - role
+  - endpoint
+  - resource_name_or_alias
+  - schema_or_protocol_version
+  - compatibility_profile
+  - topology
+  - config_revision
+  - capabilities
+  - data_classification
+  - support_boundary
+
+components:
+  relational-db-hot:
+    capability: relational_storage
+    data_classification: hot-personal-data
+    default_profile: postgres-16-bundled
+    single_active: true
+    profiles:
+      postgres-16-bundled:
+        lifecycle_status: supported_bundled
+        deployment_modes: [bundled]
+        connector: postgres-16
+        support_boundary: korus-managed-lab-or-boxed
+      postgres-16-external:
+        lifecycle_status: supported_external_byo
+        deployment_modes: [external_byo, managed_by_customer]
+        connector: postgres-16
+        support_boundary: customer-managed-db
+        promotion_evidence: [h2_or_lab_migration_green, customer_profile_evidence]
+        unsupported_modes: [silent_fallback]
+      postgres-pro:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: postgres-pro
+        support_boundary: customer-or-vendor-managed-db
+      tantor:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: tantor-postgres
+        support_boundary: customer-or-vendor-managed-db
+      arenadata-postgres:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: arenadata-postgres
+        support_boundary: customer-or-vendor-managed-db
+      jatoba:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: jatoba-postgres
+        support_boundary: customer-or-vendor-managed-db
+      pangolin:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: platform-v-pangolin
+        support_boundary: customer-or-vendor-managed-db
+    validation:
+      - version_allow_list
+      - jdbc_connectivity
+      - encoding_timezone_collation
+      - flyway_privileges
+      - required_extensions
+      - max_connections_vs_pools
+      - migration_lock_timeout_policy
+    degradation:
+      api_behavior: fail_closed
+      user_behavior: core_api_unavailable
+      fallback_allowed: false
+    migration:
+      checkpoint: backup_id_flyway_version_wal_lsn
+      rollback: previous_primary_as_standby_until_watch_window
+
+  relational-db-archive:
+    capability: archive_storage
+    data_classification: archive-compliance-data
+    default_profile: postgres-16-bundled
+    single_active: true
+    profiles:
+      postgres-16-bundled:
+        lifecycle_status: supported_bundled
+        deployment_modes: [bundled]
+        connector: postgres-16
+      postgres-16-external:
+        lifecycle_status: supported_external_byo
+        deployment_modes: [external_byo, managed_by_customer]
+        connector: postgres-16
+      rf-postgres-compatible:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: postgres-compatible-rf
+    validation:
+      - jdbc_connectivity
+      - flyway_or_schema_compatibility
+      - retention_archive_query_smoke
+      - backup_restore_contract
+    degradation:
+      api_behavior: archive_features_503
+      user_behavior: archive_export_degraded
+      fallback_allowed: false
+
+  object-storage:
+    capability: files_retention_deep_archive
+    data_classification: file-content
+    default_profile: s3-minio-bundled
+    single_active: true
+    profiles:
+      s3-minio-bundled:
+        lifecycle_status: supported_bundled
+        deployment_modes: [bundled]
+        connector: minio-s3
+      s3-compatible-external:
+        lifecycle_status: supported_external_byo
+        deployment_modes: [external_byo, managed_by_customer]
+        connector: s3-compatible
+      yadro-tatlin-object:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: s3-compatible
+      pc-storage-s3:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: s3-compatible
+      pc-depot:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: s3-compatible
+      vk-cloud-storage:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: s3-compatible
+    validation:
+      - endpoint_tls_auth
+      - bucket_exists_or_create_policy
+      - put_get_head_delete_list_smoke
+      - multipart_upload_smoke
+      - checksum_support
+      - path_style_or_virtual_hosted_style
+      - lifecycle_object_lock_retention_policy
+    degradation:
+      api_behavior: uploads_fail_controlled_error
+      user_behavior: file_temporarily_unavailable
+      retention_behavior: queue_or_pause_never_purge_without_snapshot
+    migration:
+      checkpoint: object_inventory_generation_time_cursor_checksum_manifest
+      rollback: old_bucket_read_only_until_watch_window
+
+  messaging:
+    capability: event_bus
+    data_classification: event-metadata
+    default_profile: nats-2.10-bundled
+    single_active: true
+    profiles:
+      nats-2.10-bundled:
+        lifecycle_status: supported_bundled
+        deployment_modes: [bundled]
+        connector: nats-2.10
+      nats-2.x-external:
+        lifecycle_status: supported_external_byo
+        deployment_modes: [external_byo, managed_by_customer]
+        connector: nats-2.x
+      kafka-bridge:
+        lifecycle_status: integration_candidate
+        deployment_modes: [external_byo]
+        connector: kafka-bridge
+      arenadata-streaming-kafka:
+        lifecycle_status: integration_candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: kafka-bridge
+    validation:
+      - connect_auth_tls
+      - publish_subscribe_subject_prefix_smoke
+      - queue_group_behavior
+      - jetstream_availability_if_required
+      - max_payload
+      - reconnect_and_drain_policy
+    degradation:
+      api_behavior: workers_pause_or_lag
+      user_behavior: realtime_fanout_degraded
+      fallback_allowed: false
+    migration:
+      checkpoint: jetstream_stream_sequence_or_drain_marker
+      rollback: previous_nats_endpoint_until_watch_window
+
+  idp:
+    capability: identity_provider
+    data_classification: identity-security
+    default_profile: keycloak-24-bundled
+    single_active: true
+    profiles:
+      keycloak-24-bundled:
+        lifecycle_status: supported_bundled
+        deployment_modes: [bundled]
+        connector: keycloak-24
+      keycloak-external:
+        lifecycle_status: supported_external_byo
+        deployment_modes: [external_byo, managed_by_customer]
+        connector: keycloak
+      oidc-generic:
+        lifecycle_status: supported_external_byo
+        deployment_modes: [external_byo, managed_by_customer]
+        connector: oidc-generic
+      blitz-idp:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: oidc-saml-rf
+    validation:
+      - issuer_jwks_tls
+      - token_signature_audience_issuer_clock_skew
+      - required_claims_user_org_roles
+      - admin_api_only_for_managed_keycloak
+      - logout_refresh_session_contract
+    degradation:
+      api_behavior: fail_closed
+      user_behavior: new_login_unavailable
+      fallback_allowed: false
+    migration:
+      checkpoint: realm_export_or_claim_mapping_revision
+      rollback: previous_issuer_with_token_lifetime_policy
+
+  cache:
+    capability: cache_rate_limit
+    data_classification: cache-security-adjacent
+    default_profile: redis-7-bundled
+    single_active: true
+    profiles:
+      redis-7-bundled:
+        lifecycle_status: supported_bundled
+        deployment_modes: [bundled]
+        connector: redis-7
+      redis-compatible-external:
+        lifecycle_status: supported_external_byo
+        deployment_modes: [external_byo, managed_by_customer]
+        connector: redis-compatible
+      valkey:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo]
+        connector: valkey
+      keydb:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo]
+        connector: keydb
+      dragonfly:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo]
+        connector: dragonfly
+      tarantool:
+        lifecycle_status: integration_candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: redis-compatibility-layer
+    validation:
+      - ping_auth_tls
+      - command_subset_get_set_del_expire_counters_ttl
+      - key_prefix_isolation
+      - cluster_or_sentinel_only_if_supported
+    degradation:
+      read_cache: fail_open
+      auth_rate_limit: profile_specific_fail_open_or_fail_closed
+
+  web-edge:
+    capability: web_edge_tls
+    data_classification: edge-traffic
+    default_profile: nginx-bundled
+    single_active: true
+    profiles:
+      nginx-bundled:
+        lifecycle_status: supported_bundled
+        deployment_modes: [bundled]
+        connector: nginx
+      external-lb:
+        lifecycle_status: supported_external_byo
+        deployment_modes: [external_byo, managed_by_customer]
+        connector: reverse-proxy-generic
+      angie:
+        lifecycle_status: candidate
+        deployment_modes: [bundled, external_byo, rf_candidate]
+        connector: nginx-compatible
+      angie-pro:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: nginx-compatible-commercial
+      angie-adc:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: enterprise-adc
+      angie-ingress:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: kubernetes-ingress
+    validation:
+      - health_routing
+      - websocket_upgrade
+      - upload_download_body_limits
+      - forwarded_headers
+      - tls_cert_chain
+      - security_headers_csp
+    degradation:
+      api_behavior: edge_unavailable
+      user_behavior: app_unavailable_or_realtime_degraded
+
+  media:
+    capability: calls_live_media
+    data_classification: media-metadata
+    default_profile: livekit-1.8-bundled
+    single_active: true
+    profiles:
+      livekit-1.8-bundled:
+        lifecycle_status: supported_bundled
+        deployment_modes: [bundled]
+        connector: livekit-1.8
+      livekit-external:
+        lifecycle_status: supported_external_byo
+        deployment_modes: [external_byo, managed_by_customer]
+        connector: livekit
+      clevermeet:
+        lifecycle_status: integration_candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: vks-integration
+      iva-mcu:
+        lifecycle_status: integration_candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: vks-integration
+      iva-one:
+        lifecycle_status: integration_candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: vks-integration
+      videomost:
+        lifecycle_status: integration_candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: vks-integration
+      kontur-talk:
+        lifecycle_status: integration_candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: vks-integration
+      vinteo:
+        lifecycle_status: integration_candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: vks-integration
+    validation:
+      - token_issue_smoke
+      - room_create_join_if_livekit_compatible
+      - udp_tcp_tls_ports
+      - vks_api_spike_required_for_rf_candidates
+    degradation:
+      api_behavior: calls_disabled
+      user_behavior: hide_call_controls
+      chat_core_affected: false
+
+  turn:
+    capability: webrtc_nat_traversal
+    data_classification: media-traffic
+    default_profile: none
+    single_active: true
+    profiles:
+      none:
+        lifecycle_status: rejected
+        deployment_modes: [unsupported]
+        connector: none
+      coturn-external:
+        lifecycle_status: supported_external_byo
+        deployment_modes: [external_byo, managed_by_customer]
+        connector: coturn
+      coturn-bundled-candidate:
+        lifecycle_status: candidate
+        deployment_modes: [bundled]
+        connector: coturn
+    validation:
+      - turn_realm_secret_tls
+      - relay_reachability
+      - udp_tcp_port_open
+    degradation:
+      api_behavior: restricted_networks_may_fail_calls
+      user_behavior: call_connectivity_degraded
+
+  notifications:
+    capability: push_notifications
+    data_classification: notification-metadata
+    default_profile: webpush-vapid-bundled-config
+    single_active: true
+    profiles:
+      webpush-vapid-bundled-config:
+        lifecycle_status: supported_bundled
+        deployment_modes: [bundled]
+        connector: webpush-vapid
+      external-notification-gateway:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo]
+        connector: notification-gateway
+      rf-sms-push-gateway:
+        lifecycle_status: integration_candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: notification-gateway
+    validation:
+      - vapid_key_pair
+      - subject_owner
+      - gateway_auth_tls_if_external
+    degradation:
+      delivery_semantics: best_effort
+      user_behavior: push_disabled_warning
+
+  dlp:
+    capability: dlp_policy
+    data_classification: message-content-policy
+    default_profile: disabled
+    single_active: true
+    profiles:
+      disabled:
+        lifecycle_status: rejected
+        deployment_modes: [unsupported]
+        connector: none
+      icap-dlp-generic:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, managed_by_customer]
+        connector: icap
+      infowatch:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: icap-or-vendor-api
+      searchinform:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: icap-or-vendor-api
+      solar-dozor:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: icap-or-vendor-api
+    validation:
+      - endpoint_auth_tls
+      - verdict_schema
+      - timeout_policy
+      - payload_limits
+      - tenant_org_policy_mapping
+      - e2ee_plaintext_boundary
+    degradation:
+      fail_policy: tenant_org_policy
+      possible_modes: [fail_open, fail_closed, quarantine_async]
+
+  integrations:
+    capability: webhooks_plugins
+    data_classification: integration-event-metadata
+    default_profile: http-webhook-generic
+    single_active: true
+    profiles:
+      http-webhook-generic:
+        lifecycle_status: supported_bundled
+        deployment_modes: [bundled, external_byo]
+        connector: http-webhook
+      plugin-l1-l3-external:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo, managed_by_customer]
+        connector: plugin-api
+    validation:
+      - endpoint_auth_tls
+      - timeout_policy
+      - payload_limits
+      - tenant_org_mapping
+      - retry_and_audit_contract
+    degradation:
+      api_behavior: integration_delivery_degraded
+      chat_core_affected: false
+
+  bots:
+    capability: bot_delivery
+    data_classification: bot-event-metadata
+    default_profile: bot-api-internal
+    single_active: true
+    profiles:
+      bot-api-internal:
+        lifecycle_status: supported_bundled
+        deployment_modes: [bundled]
+        connector: korus-bot-api
+      bot-api-external-gateway:
+        lifecycle_status: candidate
+        deployment_modes: [external_byo]
+        connector: bot-gateway
+    validation:
+      - endpoint_auth_tls
+      - event_schema
+      - retry_timeout_policy
+    degradation:
+      api_behavior: bot_delivery_degraded
+      chat_core_affected: false
+
+  search:
+    capability: message_search
+    data_classification: message-metadata-and-optional-plaintext
+    default_profile: sql-search
+    single_active: true
+    profiles:
+      sql-search:
+        lifecycle_status: supported_bundled
+        deployment_modes: [bundled]
+        connector: jdbc-sql
+      solr-bundled:
+        lifecycle_status: supported_bundled
+        deployment_modes: [bundled]
+        connector: solr
+      opensearch-candidate:
+        lifecycle_status: integration_candidate
+        deployment_modes: [external_byo, rf_candidate]
+        connector: opensearch
+        promotion_evidence: [search_reindex_contract_green, vendor_certification_required]
+        unsupported_modes: [production_without_reindex_gate, supported_bundled_claim]
+      elasticsearch-candidate:
+        lifecycle_status: integration_candidate
+        deployment_modes: [external_byo]
+        connector: elasticsearch
+        promotion_evidence: [search_reindex_contract_green, vendor_certification_required]
+        unsupported_modes: [production_without_reindex_gate, supported_bundled_claim]
+    validation:
+      - query_contract
+      - acl_filtering
+      - reindex_cursor_version
+      - no_silent_fallback
+    degradation:
+      api_behavior: explicit_sql_fallback_or_controlled_error
+      user_behavior: search_degraded_core_chat_unaffected
+      fallback_allowed: explicit_degraded_status_only
+    migration:
+      checkpoint: reindex_cursor_index_schema_version_shadow_target
+      rollback: previous_search_backend_until_watch_window

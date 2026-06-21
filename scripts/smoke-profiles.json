@@ -18,6 +18,21 @@
       "description": "Base + Solr indexer",
       "smoke_scripts": ["scripts/smoke-hotplug-indexer.sh"]
     },
+    "base+productivity": {
+      "korus_product_addons": ["addon-productivity"],
+      "description": "Base + polls, scheduled messages, reminders, stickers and GIFs",
+      "smoke_scripts": ["scripts/smoke-ready.sh"]
+    },
+    "base+collaboration": {
+      "korus_product_addons": ["addon-collaboration"],
+      "description": "Base + kanban and whiteboard",
+      "smoke_scripts": ["scripts/smoke-ready.sh"]
+    },
+    "base+ai": {
+      "korus_product_addons": ["addon-ai"],
+      "description": "Base + AI assist, speech recognition and captions",
+      "smoke_scripts": ["scripts/smoke-ready.sh"]
+    },
     "base+compliance-export": {
       "korus_product_addons": ["addon-export"],
       "description": "Base + compliance export worker",
@@ -53,6 +68,31 @@
       "description": "Base + MLS wire (buildIntegrity *Mls*)",
       "smoke_scripts": []
     },
+    "base+enterprise-auth": {
+      "korus_product_addons": ["addon-enterprise-auth"],
+      "description": "Base + enterprise auth policy, directory sync, SCIM, IP allowlist and passkeys",
+      "smoke_scripts": ["scripts/smoke-ready.sh"]
+    },
+    "base+bots": {
+      "korus_product_addons": ["addon-bots"],
+      "description": "Base + Bot API",
+      "smoke_scripts": ["scripts/smoke-ready.sh"]
+    },
+    "base+federation": {
+      "korus_product_addons": ["addon-federation"],
+      "description": "Base + federation trust and directory",
+      "smoke_scripts": ["scripts/smoke-ready.sh"]
+    },
+    "base+dlp": {
+      "korus_product_addons": ["addon-dlp"],
+      "description": "Base + DLP preflight and audit",
+      "smoke_scripts": ["scripts/smoke-ready.sh"]
+    },
+    "base+migration-import": {
+      "korus_product_addons": ["addon-migration-import"],
+      "description": "Base + administrative migration import jobs",
+      "smoke_scripts": ["scripts/smoke-ready.sh"]
+    },
     "reference-all": {
       "korus_product_addons": [
         "addon-engage",
@@ -65,7 +105,13 @@
         "addon-bots",
         "addon-integrations",
         "addon-e2ee",
-        "addon-directory"
+        "addon-productivity",
+        "addon-collaboration",
+        "addon-ai",
+        "addon-enterprise-auth",
+        "addon-federation",
+        "addon-dlp",
+        "addon-migration-import"
       ],
       "description": "Manual presales / lab full — not nightly CI",
       "smoke_scripts": ["scripts/smoke-deploy-acceptance.sh"]

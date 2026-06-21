@@ -101,6 +101,25 @@ public final class JdbcUserJdbcRepository {
         return Optional.empty();
     }
 
+    public Optional<UserProfile> findByExternalId(String externalId) {
+        if (externalId == null || externalId.isBlank()) {
+            return Optional.empty();
+        }
+        var sql = SELECT_USER + " WHERE external_id = ? LIMIT 1";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, externalId.trim());
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapRow(rs));
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to find user by external_id: {}", externalId, e);
+        }
+        return Optional.empty();
+    }
+
     public Optional<UserProfile> findByEmail(String email) {
         if (email == null || email.isBlank()) {
             return Optional.empty();
