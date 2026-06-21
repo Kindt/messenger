@@ -71,13 +71,23 @@ public final class ConnectorCompatibilityPacks {
         var warnings = candidateCount > 0
             ? List.of("candidate profiles require explicit promotion before production use")
             : List.<String>of();
+        var remediationActions = new ArrayList<String>();
+        failures.stream()
+            .filter(failure -> failure.contains("has no validation contract"))
+            .forEach(failure -> remediationActions.add("add component validation contract for catalog component"));
+        if (candidateCount > 0) {
+            remediationActions.add("promote, keep migration-only, or reject candidate profiles before production use");
+        }
         return new ExternalStackCatalogHealthReport(
             failures.isEmpty(),
             components.size(),
             CATALOG.size(),
             candidateCount,
+            failures.size(),
+            warnings.size(),
             failures,
-            warnings
+            warnings,
+            remediationActions
         );
     }
 
@@ -111,10 +121,16 @@ public final class ConnectorCompatibilityPacks {
             .filter(pack -> pack.lifecycleStatus() == LifecycleStatus.rejected)
             .count();
         String warning = null;
+        String severity = "ok";
+        var remediationActions = new ArrayList<String>();
         if (candidates > 0) {
             warning = "candidate profiles require explicit promotion";
+            severity = "warning";
+            remediationActions.add(component + ": promote, keep migration-only, or reject candidate profiles");
         } else if (supported == 0) {
             warning = "no production-supported profile";
+            severity = "blocked";
+            remediationActions.add(component + ": add or promote a production-supported profile");
         }
         return new ExternalStackComponentProfileSummary(
             component,
@@ -122,7 +138,9 @@ public final class ConnectorCompatibilityPacks {
             supported,
             candidates,
             rejected,
-            warning
+            warning,
+            severity,
+            remediationActions
         );
     }
 

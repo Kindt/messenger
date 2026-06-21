@@ -755,12 +755,15 @@
         const compatibilityPacks = await ctx.apiFetch("/platform/external-stack/compatibility-packs");
         const componentContracts = await ctx.apiFetch("/platform/external-stack/component-contracts");
         const catalogHealth = await ctx.apiFetch("/platform/external-stack/catalog-health");
+        const cutoverReadiness = await ctx.apiFetch("/platform/external-stack/cutover/readiness");
         const componentProfileSummary = await ctx.apiFetch("/platform/external-stack/component-profile-summary");
         summary._externalStackCompatibilityPacks = compatibilityPacks;
         summary._externalStackComponentContracts = componentContracts;
         summary._externalStackCatalogHealth = catalogHealth;
+        summary._externalStackCutoverReadiness = cutoverReadiness;
         summary._externalStackComponentProfileSummary = componentProfileSummary;
         renderExternalStackTable(data, summary, profiles);
+        renderExternalStackCutoverReadiness(cutoverReadiness, summary);
         renderExternalStackCatalogHealth(catalogHealth, summary);
         renderExternalStackComponentProfileSummary(componentProfileSummary, summary);
         renderExternalStackDesiredObservedDiff(data, summary);
@@ -771,6 +774,7 @@
           profiles: profiles,
           compatibility_packs: compatibilityPacks,
           catalog_health: catalogHealth,
+          cutover_readiness: cutoverReadiness,
           component_profile_summary: componentProfileSummary,
         };
         summary._externalStackLastReport = report;
@@ -838,6 +842,7 @@
           renderExternalStackTable(data, summary);
           renderExternalStackCompatibilityPacks(summary._externalStackCompatibilityPacks, summary);
           renderExternalStackComponentContracts(summary._externalStackComponentContracts, summary);
+          renderExternalStackCutoverReadiness(summary._externalStackCutoverReadiness, summary);
           renderExternalStackCatalogHealth(summary._externalStackCatalogHealth, summary);
           renderExternalStackComponentProfileSummary(summary._externalStackComponentProfileSummary, summary);
         }
@@ -1312,7 +1317,10 @@
     line.appendChild(document.createTextNode(
       " components=" + (data.component_count || 0) +
       " profiles=" + (data.profile_count || 0) +
-      " candidates=" + (data.candidate_profile_count || 0)
+      " candidates=" + (data.candidate_profile_count || 0) +
+      " failures=" + (data.failure_count || (data.failures || []).length) +
+      " warnings=" + (data.warning_count || (data.warnings || []).length) +
+      " catalog remediation=" + ((data.remediation_actions || []).length)
     ));
     box.appendChild(line);
     const details = document.createElement("details");
@@ -1324,7 +1332,51 @@
     pre.textContent = []
       .concat(data.failures || [])
       .concat(data.warnings || ["candidate profiles require explicit promotion before production use"])
+      .concat(data.remediation_actions || [])
       .join("\n") || "No catalog drift.";
+    details.appendChild(pre);
+    box.appendChild(details);
+    container.appendChild(box);
+  }
+
+  function renderExternalStackCutoverReadiness(data, container) {
+    container.querySelectorAll(".external-stack-cutover-readiness").forEach((n) => n.remove());
+    if (!data) {
+      return;
+    }
+    const box = document.createElement("div");
+    box.className = "panel-form external-stack-cutover-readiness";
+    const badge = global.AdminUi && AdminUi.statusBadge
+      ? AdminUi.statusBadge(data.ready === true, data.ready ? "cutover ready" : "cutover blocked")
+      : document.createTextNode(data.ready ? "cutover ready" : "cutover blocked");
+    const title = document.createElement("p");
+    title.className = "form-section-label";
+    title.textContent = "Lab cutover readiness";
+    box.appendChild(title);
+    const line = document.createElement("p");
+    line.className = "muted small";
+    line.appendChild(badge);
+    line.appendChild(document.createTextNode(
+      " severity=" + (data.severity || "?") +
+      " blockers=" + (data.blocker_count || 0) +
+      " warnings=" + (data.warning_count || 0) +
+      " remediation=" + ((data.remediation_actions || []).length)
+    ));
+    box.appendChild(line);
+    const code = document.createElement("code");
+    code.textContent = data.smoke_command || ".\\scripts\\smoke-external-stack-lab-cutover.ps1";
+    box.appendChild(code);
+    const details = document.createElement("details");
+    details.className = "external-stack-drilldown";
+    const summary = document.createElement("summary");
+    summary.textContent = "cutover readiness details";
+    details.appendChild(summary);
+    const pre = document.createElement("pre");
+    pre.textContent = []
+      .concat(data.blockers || [])
+      .concat(data.warnings || [])
+      .concat(data.remediation_actions || [])
+      .join("\n") || "No cutover readiness issues.";
     details.appendChild(pre);
     box.appendChild(details);
     container.appendChild(box);
@@ -1351,7 +1403,7 @@
     table.className = "json-panel-table";
     const head = document.createElement("thead");
     const hr = document.createElement("tr");
-    ["component", "group", "profiles", "supported", "candidates", "rejected", "warning"].forEach((h) => {
+    ["component", "group", "profiles", "supported", "candidates", "rejected", "severity", "component remediation", "warning"].forEach((h) => {
       const th = document.createElement("th");
       th.textContent = h;
       hr.appendChild(th);
@@ -1371,6 +1423,8 @@
         item.supported_count,
         item.candidate_count,
         item.rejected_count,
+        item.readiness_severity || "ok",
+        (item.remediation_actions || []).length,
         item.readiness_warning || "—",
       ].forEach((val) => {
         const td = document.createElement("td");

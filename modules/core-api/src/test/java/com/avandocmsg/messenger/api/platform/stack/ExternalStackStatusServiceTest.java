@@ -313,6 +313,26 @@ class ExternalStackStatusServiceTest {
         assertTrue(search.supportedCount() >= 1);
         assertTrue(search.candidateCount() >= 2);
         assertEquals("candidate profiles require explicit promotion", search.readinessWarning());
+        assertEquals("warning", search.readinessSeverity());
+        assertTrue(search.remediationActions()
+            .contains("search: promote, keep migration-only, or reject candidate profiles"));
+    }
+
+    @Test
+    void resourceExposesLabCutoverReadinessReport() {
+        var resource = new ExternalStackStatusResource();
+
+        var report = resource.cutoverReadiness();
+
+        assertEquals("repo-local-lab", report.environment());
+        assertEquals("warning", report.severity());
+        assertTrue(report.ready());
+        assertTrue(report.warningCount() >= 1);
+        assertTrue(report.smokeCommand().contains("smoke-external-stack-lab-cutover.ps1"));
+        assertTrue(report.remediationActions()
+            .contains("promote, keep migration-only, or reject candidate profiles before production use"));
+        assertTrue(report.remediationActions()
+            .contains("search: promote, keep migration-only, or reject candidate profiles"));
     }
 
     private static ComponentBackendManifest manifest(String component, String connector, ExternalStackRole role) {

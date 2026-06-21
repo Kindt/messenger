@@ -82,11 +82,17 @@ class ClasspathAdminStaticServletTest {
         assertTrue(panels.contains("/platform/external-stack/preflight/manifests/report"));
         assertTrue(panels.contains("manifest report"));
         assertTrue(panels.contains("/platform/external-stack/catalog-health"));
+        assertTrue(panels.contains("/platform/external-stack/cutover/readiness"));
+        assertTrue(panels.contains("renderExternalStackCutoverReadiness"));
+        assertTrue(panels.contains("cutover readiness"));
         assertTrue(panels.contains("renderExternalStackCatalogHealth"));
         assertTrue(panels.contains("candidate profiles require explicit promotion"));
+        assertTrue(panels.contains("catalog remediation="));
         assertTrue(panels.contains("/platform/external-stack/component-profile-summary"));
         assertTrue(panels.contains("renderExternalStackComponentProfileSummary"));
         assertTrue(panels.contains("profile readiness"));
+        assertTrue(panels.contains("readiness_severity"));
+        assertTrue(panels.contains("component remediation"));
         assertTrue(panels.contains("missing_required_checks"));
         assertTrue(panels.contains("warning_count"));
         assertTrue(panels.contains("missing_required_check_count"));

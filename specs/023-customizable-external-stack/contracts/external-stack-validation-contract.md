@@ -82,10 +82,13 @@ Repo-local API:
   - Output: one component contract with required checks and failure policy.
   - Constraint: unknown component contracts return not-found semantics.
 - `GET /api/v1/platform/external-stack/catalog-health`
-  - Output: catalog drift report with counts, failures and candidate warnings.
+  - Output: catalog drift report with counts, failures, warnings and remediation actions.
   - Constraint: report is read-only and must not hide candidate profiles.
+- `GET /api/v1/platform/external-stack/cutover/readiness`
+  - Output: repo-local lab cutover readiness report with severity, blockers, warnings, smoke command and remediation actions.
+  - Constraint: report is read-only, preflight-only and must not imply live-server cutover readiness.
 - `GET /api/v1/platform/external-stack/component-profile-summary`
-  - Output: readiness summary by component with supported/candidate/rejected counts.
+  - Output: readiness summary by component with supported/candidate/rejected counts, readiness severity and remediation actions.
   - Constraint: candidate counts remain visible and are not treated as supported capacity.
 - `GET /api/v1/platform/external-stack/component-profile-summary/{component}`
   - Output: one component readiness summary.
@@ -131,3 +134,6 @@ Validation is accepted when:
 14. Profile evidence preflight must expose missing promotion evidence and unsupported modes without promoting candidate profiles.
 15. Manifest preflight report must expose deterministic `remediation_actions` for single-active, serve-traffic, profile mismatch/support and missing evidence failures.
 16. Profile evidence preflight report must expose deterministic `remediation_actions` for unsupported profiles, missing promotion evidence and unsupported modes.
+17. Catalog health report must expose deterministic `remediation_actions` for missing contracts and candidate-profile promotion drift.
+18. Component profile summary must expose `readiness_severity` and deterministic `remediation_actions` for candidate-only or unsupported component readiness.
+19. Lab cutover readiness must aggregate catalog/component readiness and expose a preflight-only smoke command without switching live traffic.

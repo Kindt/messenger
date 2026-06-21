@@ -25,6 +25,8 @@ KORUS_SERVER_ENV_TEMPLATE = (
 FULL_SERVER_COMPOSE = REPO_ROOT / "docker/docker-compose.full-server.yml"
 EXTERNAL_STACK_PROFILES = REPO_ROOT / "docs/external-stack-profiles.yaml"
 PRODUCT_MODULES = REPO_ROOT / "modules/core-api/src/main/resources/product-modules.yaml"
+SMOKE_INDEX = REPO_ROOT / "scripts/SMOKE_INDEX.md"
+EXTERNAL_STACK_LAB_CUTOVER_SMOKE = REPO_ROOT / "scripts/smoke-external-stack-lab-cutover.ps1"
 
 
 class TestCellManifest(unittest.TestCase):
@@ -127,6 +129,16 @@ class TestCellManifest(unittest.TestCase):
         assert_refs("base", modules["base"])
         for addon in modules.get("addons", []) or []:
             assert_refs(addon["id"], addon)
+
+    def test_external_stack_lab_cutover_smoke_is_preflight_only(self) -> None:
+        smoke_index = SMOKE_INDEX.read_text(encoding="utf-8")
+        smoke_script = EXTERNAL_STACK_LAB_CUTOVER_SMOKE.read_text(encoding="utf-8")
+
+        self.assertIn("smoke-external-stack-lab-cutover.ps1", smoke_index)
+        self.assertIn("checkpoint/profile preflight only", smoke_index)
+        self.assertIn("preflight/checkpoint", smoke_script)
+        self.assertIn("preflight/profile/report", smoke_script)
+        self.assertIn("preflight only", smoke_script)
 
 
 if __name__ == "__main__":

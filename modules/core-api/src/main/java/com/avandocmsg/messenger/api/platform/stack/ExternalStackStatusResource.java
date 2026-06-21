@@ -152,6 +152,43 @@ public class ExternalStackStatusResource {
         }
     }
 
+    @GET
+    @Path("cutover/readiness")
+    @Operation(summary = "Repo-local external stack lab cutover readiness")
+    public ExternalStackCutoverReadinessReport cutoverReadiness() {
+        var catalog = catalogHealth();
+        var componentSummaries = componentProfileSummary().components().values();
+        var blockers = new java.util.ArrayList<String>();
+        blockers.addAll(catalog.failures());
+        componentSummaries.stream()
+            .filter(summary -> "blocked".equals(summary.readinessSeverity()))
+            .map(summary -> "component " + summary.component() + " has no production-supported profile")
+            .forEach(blockers::add);
+
+        var warnings = new java.util.ArrayList<String>();
+        warnings.addAll(catalog.warnings());
+        componentSummaries.stream()
+            .filter(summary -> "warning".equals(summary.readinessSeverity()))
+            .map(summary -> "component " + summary.component() + ": " + summary.readinessWarning())
+            .forEach(warnings::add);
+
+        var remediation = new java.util.ArrayList<String>();
+        remediation.addAll(catalog.remediationActions());
+        componentSummaries.forEach(summary -> remediation.addAll(summary.remediationActions()));
+        var severity = !blockers.isEmpty() ? "blocked" : (!warnings.isEmpty() ? "warning" : "ok");
+        return new ExternalStackCutoverReadinessReport(
+            blockers.isEmpty(),
+            severity,
+            "repo-local-lab",
+            ".\\scripts\\smoke-external-stack-lab-cutover.ps1 -ApiBase http://127.0.0.1:18080/api",
+            blockers.size(),
+            warnings.size(),
+            blockers,
+            warnings,
+            remediation.stream().distinct().toList()
+        );
+    }
+
     @POST
     @Path("preflight/checkpoint")
     @Operation(summary = "Validate external stack migration checkpoint")
