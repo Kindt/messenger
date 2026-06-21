@@ -51,6 +51,7 @@ import com.avandocmsg.messenger.api.platform.PlatformCapabilitiesResource;
 import com.avandocmsg.messenger.api.platform.PlatformModuleOverrideRepository;
 import com.avandocmsg.messenger.api.platform.PlatformModuleRegistry;
 import com.avandocmsg.messenger.api.platform.PlatformAddonGateFilter;
+import com.avandocmsg.messenger.api.platform.stack.ExternalStackStatusResource;
 import com.avandocmsg.messenger.api.metrics.PrometheusMetricsResource;
 import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.core.port.ChatPersistencePort;
@@ -316,6 +317,7 @@ public class JerseyConfig extends ResourceConfig {
         register(com.avandocmsg.messenger.api.live.ChatCallLiveKitResource.class);
         register(MediaCapabilitiesResource.class);
         register(PlatformCapabilitiesResource.class);
+        register(ExternalStackStatusResource.class);
         register(FederationStatusResource.class);
         register(AdminProductModulesResource.class);
         register(BotResource.class);
