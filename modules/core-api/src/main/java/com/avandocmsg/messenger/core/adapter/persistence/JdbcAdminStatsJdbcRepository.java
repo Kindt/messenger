@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.core.port.DatabaseHealthPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,7 +9,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 
 /** JDBC reads for admin server stats, purge estimates, and MLS migration counters. */
-public final class JdbcAdminStatsJdbcRepository {
+public final class JdbcAdminStatsJdbcRepository implements DatabaseHealthPort {
 
     private static final Logger log = LoggerFactory.getLogger(JdbcAdminStatsJdbcRepository.class);
 
@@ -18,6 +19,7 @@ public final class JdbcAdminStatsJdbcRepository {
         this.dataSource = dataSource;
     }
 
+    @Override
     public boolean ping() {
         try (var conn = dataSource.getConnection();
              var st = conn.prepareStatement("SELECT 1");

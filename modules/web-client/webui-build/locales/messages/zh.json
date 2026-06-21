@@ -365,6 +365,7 @@
       "integrations": "集成",
       "noIntegrations": "暂无集成。",
       "vitrine": "精选",
+      "externalStackSummary": "External stack: {passed}/{total} OK",
       "archiveToggle": "归档聊天",
       "archiveFailed": "归档聊天失败。",
       "folderWork": "标记为工作",

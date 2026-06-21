@@ -16,4 +16,12 @@ class ExchangeBridgeWorkerTest {
         var response = ExchangeBridgeWorker.handle(event);
         assertTrue(response.messages().getFirst().text().contains("pong"));
     }
+
+    @Test
+    void meetingCommandReturnsMockProposal() {
+        var event = new PluginEvent("e2", UUID.randomUUID(), "L2", "mention", null, null,
+            "/meeting Standup", Map.of(), Map.of());
+        var response = ExchangeBridgeWorker.handle(event);
+        assertTrue(response.messages().getFirst().text().contains("Встреча создана"));
+    }
 }

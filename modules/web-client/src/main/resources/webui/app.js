@@ -8401,6 +8401,19 @@
         });
         iList.appendChild(vitBlock);
       }
+      if (state.platformCaps && state.platformCaps.external_stack) {
+        var stack = state.platformCaps.external_stack;
+        var keys = Object.keys(stack);
+        var passed = keys.filter(function (k) {
+          return stack[k] && stack[k].validation_status === "passed";
+        }).length;
+        var foot = el("div", "chat-list-empty integrations-stack-foot");
+        foot.setAttribute("data-testid", "integrations-external-stack-summary");
+        foot.textContent = L("ui.sidebar.externalStackSummary")
+          .replace("{passed}", String(passed))
+          .replace("{total}", String(keys.length));
+        iList.appendChild(foot);
+      }
       var items = state.integrationsMarketplace && state.integrationsMarketplace.length
         ? state.integrationsMarketplace
         : state.integrations || [];
