@@ -98,6 +98,8 @@ class WebUiParityAssetsTest {
         assertTrue(app.contains("e2ee_openmls_dev"), "openmls dev flag");
         assertTrue(app.contains("KorusOpenMlsDevFactory"), "openmls dev factory selection");
         assertTrue(app.contains("chat-export-button"), "export button testid");
+        assertTrue(app.contains("isPlatformFeatureEnabled"), "feature-level product module helper");
+        assertTrue(app.contains("integrations.sidebar.open"), "integrations tab gated by feature key");
         var mlsWasm = readResource("webui/korus-mls-wasm.js");
         assertTrue(mlsWasm.contains("/e2ee/mls/session/"), "mls session API for client encrypt");
         assertTrue(exportUtils.contains("/attachments"), "export attachments path");
@@ -176,12 +178,14 @@ class WebUiParityAssetsTest {
     void liveSessionModule_wiredInIndexAndApp() throws Exception {
         var html = readResource("webui/index.html");
         var live = readResource("webui/ui-live-session.js");
+        var livekit = readResource("webui/ui-call-livekit.js");
         var app = readResource("webui/app.js");
         assertTrue(html.contains("ui-live-session.js"), "index loads live module");
         assertTrue(live.contains("KorusUiLiveSession"), "live module export");
         assertTrue(live.contains("live_session_id"), "live session event field");
         assertTrue(app.contains("KorusUiLiveSession"), "app uses live module");
         assertTrue(app.contains("renderLiveSection"), "call panel live section");
+        assertTrue(livekit.contains("live.sfu_join"), "LiveKit button gated by feature key");
     }
 
     @Test

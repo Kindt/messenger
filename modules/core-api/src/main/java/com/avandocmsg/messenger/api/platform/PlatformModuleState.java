@@ -4,5 +4,6 @@ public enum PlatformModuleState {
     required,
     enabled,
     disabled,
-    degraded
+    degraded,
+    installing
 }

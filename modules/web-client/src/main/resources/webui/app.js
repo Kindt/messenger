@@ -4598,6 +4598,12 @@
     return !!(mod && mod.state === "enabled");
   }
 
+  function isPlatformFeatureEnabled(featureKey) {
+    if (!featureKey || !state.platformCaps || !state.platformCaps.features) return false;
+    var feature = state.platformCaps.features[featureKey];
+    return !!(feature && feature.state === "enabled");
+  }
+
   async function loadChats() {
     if (!state.tokens) return;
     var list = await apiJson("/chats", { method: "GET" });
@@ -8718,7 +8724,11 @@
     };
     tabs.appendChild(tabChats);
     tabs.appendChild(tabContacts);
-    tabs.appendChild(tabIntegrations);
+    if (isPlatformFeatureEnabled("integrations.sidebar.open")) {
+      tabs.appendChild(tabIntegrations);
+    } else if (state.sidebarMode === "integrations") {
+      state.sidebarMode = "chats";
+    }
     sideToolbar.appendChild(tabs);
     sh.appendChild(sideToolbar);
     side.appendChild(sh);

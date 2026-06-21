@@ -57,12 +57,28 @@ public class AdminProductModulesResource {
             rows.add(new AdminProductModulesResponse.AddonRow(
                 addon.id(),
                 addon.label(),
-                registry.installedAddonIds().contains(addon.id()),
+                state.selected(),
+                state.installed(),
+                state.schemaInstalled(),
+                state.runtimeReady(),
+                state.adminEnabled(),
                 state.state().name(),
                 state.reason() != null ? state.reason().name() : null,
                 override != null && override.disabled(),
                 override != null && override.forceEnabled(),
-                addon.internalInfra()
+                addon.internalInfra(),
+                addon.runtime() != null ? addon.runtime().services() : java.util.List.of(),
+                addon.runtime() != null ? addon.runtime().workers() : java.util.List.of(),
+                addon.runtime() != null ? addon.runtime().requiredSecrets() : java.util.List.of(),
+                addon.migrationBundle() != null ? addon.migrationBundle().id() : null,
+                addon.migrationBundle() != null ? addon.migrationBundle().historyTable() : null,
+                addon.gates() != null && addon.gates().api() != null ? addon.gates().api().size() : 0,
+                addon.gates() != null && addon.gates().ui() != null ? addon.gates().ui().size() : 0,
+                addon.gates() != null && addon.gates().jobs() != null ? addon.gates().jobs().size() : 0,
+                addon.gates() != null && addon.gates().hooks() != null ? addon.gates().hooks().size() : 0,
+                addon.acceptance() != null ? addon.acceptance().positive() : java.util.List.of(),
+                addon.acceptance() != null ? addon.acceptance().disabled() : java.util.List.of(),
+                addon.acceptance() != null ? addon.acceptance().degraded() : java.util.List.of()
             ));
         }
         return new AdminProductModulesResponse(

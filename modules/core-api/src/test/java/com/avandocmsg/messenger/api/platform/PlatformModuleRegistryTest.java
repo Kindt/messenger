@@ -26,7 +26,7 @@ class PlatformModuleRegistryTest {
     }
 
     @Test
-    void notInstalledAddonIsDisabledWithInstallReason() {
+    void notSelectedAddonIsDisabledWithNotSelectedReason() {
         var cfg = pilotConfig();
         var registry = new PlatformModuleRegistry(
             ProductModuleCatalogLoader.load(),
@@ -36,7 +36,8 @@ class PlatformModuleRegistryTest {
         );
         var state = registry.resolveAddon("addon-search");
         assertEquals(PlatformModuleState.disabled, state.state());
-        assertEquals(PlatformModuleReason.install, state.reason());
+        assertEquals(PlatformModuleReason.not_selected, state.reason());
+        assertTrue(!state.selected());
     }
 
     @Test
@@ -74,6 +75,7 @@ class PlatformModuleRegistryTest {
         assertEquals("passed", db.validationStatus());
         assertTrue(response.externalStack().containsKey("object-storage"));
         assertTrue(response.externalStack().containsKey("messaging"));
+        assertEquals("enabled", response.features().get("message.send").state());
     }
 
     @Test
@@ -94,6 +96,7 @@ class PlatformModuleRegistryTest {
         assertTrue(search.externalStackComponents().contains("search"));
         assertTrue(search.externalStackProfiles().contains("solr-bundled"));
         assertEquals("fallback", search.degradationMode());
+        assertEquals("fallback_badge", response.features().get("search.fulltext.messages").uiBehavior());
     }
 
     @Test

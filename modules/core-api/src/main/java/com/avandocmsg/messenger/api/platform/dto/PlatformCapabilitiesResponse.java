@@ -10,6 +10,7 @@ import java.util.Map;
 public record PlatformCapabilitiesResponse(
     @JsonProperty("product") ProductSection product,
     @JsonProperty("modules") Map<String, ModuleSection> modules,
+    @JsonProperty("features") Map<String, FeatureSection> features,
     @JsonProperty("infra") Map<String, InfraSection> infra,
     @JsonProperty("base_media") BaseMediaSection baseMedia,
     @JsonProperty("external_stack") Map<String, ExternalStackSection> externalStack
@@ -27,10 +28,16 @@ public record PlatformCapabilitiesResponse(
     ) {}
 
     public record ModuleSection(
+        @JsonProperty("selected") boolean selected,
+        @JsonProperty("installed") boolean installed,
+        @JsonProperty("schema_installed") boolean schemaInstalled,
+        @JsonProperty("runtime_ready") boolean runtimeReady,
+        @JsonProperty("admin_enabled") boolean adminEnabled,
         @JsonProperty("state") String state,
         @JsonProperty("reason") String reason,
         @JsonProperty("label") String label,
         @JsonProperty("degradation_mode") String degradationMode,
+        @JsonProperty("ui_behavior") String uiBehavior,
         @JsonProperty("network_profile") String networkProfile,
         @JsonProperty("lifecycle_status") String lifecycleStatus,
         @JsonProperty("successor_addon_id") String successorAddonId,
@@ -38,6 +45,14 @@ public record PlatformCapabilitiesResponse(
         @JsonProperty("external_stack_components") List<String> externalStackComponents,
         @JsonProperty("external_stack_profiles") List<String> externalStackProfiles,
         @JsonProperty("external_stack_warnings") List<String> externalStackWarnings
+    ) {}
+
+    public record FeatureSection(
+        @JsonProperty("owner") String owner,
+        @JsonProperty("state") String state,
+        @JsonProperty("reason") String reason,
+        @JsonProperty("ui_behavior") String uiBehavior,
+        @JsonProperty("api_behavior") String apiBehavior
     ) {}
 
     public record InfraSection(

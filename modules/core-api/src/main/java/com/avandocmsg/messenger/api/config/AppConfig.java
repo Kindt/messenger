@@ -418,6 +418,26 @@ public class AppConfig {
         return props.getProperty("korus.product.addons", "").trim();
     }
 
+    /** Selected add-ons whose deploy bundle is installed; empty means selected add-ons are installed. */
+    public String korusProductInstalledAddons() {
+        return props.getProperty("korus.product.installed.addons", "").trim();
+    }
+
+    /** Selected add-ons whose optional schema bundle is installed; empty means installed add-ons are schema-ready. */
+    public String korusProductSchemaInstalledAddons() {
+        return props.getProperty("korus.product.schema.installed.addons", "").trim();
+    }
+
+    /** Selected add-ons whose runtime services/workers are ready; empty means schema-ready add-ons are runtime-ready. */
+    public String korusProductRuntimeReadyAddons() {
+        return props.getProperty("korus.product.runtime.ready.addons", "").trim();
+    }
+
+    /** Selected add-ons currently in deploy/pre-migration hot install lifecycle. */
+    public String korusProductInstallingAddons() {
+        return props.getProperty("korus.product.installing.addons", "").trim();
+    }
+
     /** Platform core availability for add-on reason {@code core_unavailable}. */
     public boolean coreAvailable() {
         return true;
