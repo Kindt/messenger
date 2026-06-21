@@ -2,6 +2,8 @@ package com.avandocmsg.messenger.api.platform;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.platform.dto.PlatformCapabilitiesResponse;
+import com.avandocmsg.messenger.api.platform.stack.ExternalStackRuntimeManifestProvider;
+import com.avandocmsg.messenger.api.platform.stack.ExternalStackStatusService;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -74,6 +76,7 @@ public class PlatformModuleRegistry {
         var enabledIds = new ArrayList<String>();
         var modules = new LinkedHashMap<String, PlatformCapabilitiesResponse.ModuleSection>();
         var infra = new LinkedHashMap<String, PlatformCapabilitiesResponse.InfraSection>();
+        var externalStack = externalStackSummary();
 
         for (var entry : resolved.entrySet()) {
             var addonId = entry.getKey();
@@ -116,8 +119,25 @@ public class PlatformModuleRegistry {
             modules,
             infra,
             new PlatformCapabilitiesResponse.BaseMediaSection(true, appConfig.jitsiMeetBaseUrl() != null
-                && !appConfig.jitsiMeetBaseUrl().isBlank())
+                && !appConfig.jitsiMeetBaseUrl().isBlank()),
+            externalStack
         );
+    }
+
+    private Map<String, PlatformCapabilitiesResponse.ExternalStackSection> externalStackSummary() {
+        var provider = new ExternalStackRuntimeManifestProvider(appConfig);
+        var status = new ExternalStackStatusService().status(provider.observations());
+        var result = new LinkedHashMap<String, PlatformCapabilitiesResponse.ExternalStackSection>();
+        for (var entry : status.components().entrySet()) {
+            var component = entry.getValue();
+            result.put(entry.getKey(), new PlatformCapabilitiesResponse.ExternalStackSection(
+                component.desiredConnector(),
+                component.healthStatus(),
+                component.validationStatus(),
+                component.supportBoundary()
+            ));
+        }
+        return result;
     }
 
     public boolean isAddonEffective(String addonId) {

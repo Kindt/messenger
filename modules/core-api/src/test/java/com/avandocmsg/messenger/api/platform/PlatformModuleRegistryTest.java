@@ -58,6 +58,24 @@ class PlatformModuleRegistryTest {
         assertEquals(PlatformModuleReason.health_stale, state.reason());
     }
 
+    @Test
+    void capabilitiesExposeExternalStackSummary() {
+        var registry = new PlatformModuleRegistry(
+            ProductModuleCatalogLoader.load(),
+            java.util.List.of(),
+            new PlatformModuleOverrideRepository(null),
+            pilotConfig()
+        );
+
+        var response = registry.toCapabilitiesResponse();
+
+        var db = response.externalStack().get("relational-db-hot");
+        assertEquals("postgres-16", db.desiredConnector());
+        assertEquals("passed", db.validationStatus());
+        assertTrue(response.externalStack().containsKey("object-storage"));
+        assertTrue(response.externalStack().containsKey("messaging"));
+    }
+
     private static AppConfig pilotConfig() {
         return new AppConfig() {
             @Override

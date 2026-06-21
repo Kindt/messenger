@@ -11,7 +11,8 @@ public record PlatformCapabilitiesResponse(
     @JsonProperty("product") ProductSection product,
     @JsonProperty("modules") Map<String, ModuleSection> modules,
     @JsonProperty("infra") Map<String, InfraSection> infra,
-    @JsonProperty("base_media") BaseMediaSection baseMedia
+    @JsonProperty("base_media") BaseMediaSection baseMedia,
+    @JsonProperty("external_stack") Map<String, ExternalStackSection> externalStack
 ) {
     public record ProductSection(
         @JsonProperty("base") BaseProductSection base,
@@ -41,5 +42,12 @@ public record PlatformCapabilitiesResponse(
     public record BaseMediaSection(
         @JsonProperty("mesh_webrtc") boolean meshWebrtc,
         @JsonProperty("jitsi_conference") boolean jitsiConference
+    ) {}
+
+    public record ExternalStackSection(
+        @JsonProperty("desired_connector") String desiredConnector,
+        @JsonProperty("health_status") String healthStatus,
+        @JsonProperty("validation_status") String validationStatus,
+        @JsonProperty("support_boundary") String supportBoundary
     ) {}
 }
