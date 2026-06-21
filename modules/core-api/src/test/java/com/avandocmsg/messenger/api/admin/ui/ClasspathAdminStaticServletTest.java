@@ -2,8 +2,13 @@ package com.avandocmsg.messenger.api.admin.ui;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ClasspathAdminStaticServletTest {
 
@@ -37,5 +42,24 @@ class ClasspathAdminStaticServletTest {
     @Test
     void cacheControl_jsPublic() {
         assertEquals("public, max-age=3600", ClasspathAdminStaticServlet.cacheControl("app.js"));
+    }
+
+    @Test
+    void adminUiAssets_includeExternalStackPanel() throws Exception {
+        var panels = resourceText("admin-ui/panels.js");
+        var helpers = resourceText("admin-ui/ui-helpers.js");
+
+        assertTrue(panels.contains("mountExternalStackStatus"));
+        assertTrue(panels.contains("\"core-external-stack\": mountExternalStackStatus"));
+        assertTrue(helpers.contains("s.id === \"core-external-stack\""));
+        assertTrue(helpers.contains("\"core-external-stack\""));
+        assertTrue(helpers.contains("desired/observed"));
+    }
+
+    private static String resourceText(String path) throws IOException {
+        try (var in = ClasspathAdminStaticServletTest.class.getClassLoader().getResourceAsStream(path)) {
+            assertNotNull(in, path);
+            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
     }
 }

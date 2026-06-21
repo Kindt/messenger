@@ -743,6 +743,121 @@
     container.appendChild(wrap);
   }
 
+  function mountExternalStackStatus(summary, pre, ctx) {
+    summary.innerHTML = "";
+    summary.hidden = false;
+
+    async function reload() {
+      pre.textContent = "Загрузка…";
+      try {
+        const data = await ctx.apiFetch("/platform/external-stack/status");
+        renderExternalStackTable(data, summary);
+        pre.textContent = JSON.stringify(data, null, 2);
+        if (global.AdminUi) {
+          AdminUi.showJsonBlock(true);
+        }
+      } catch (e) {
+        pre.textContent = "Ошибка: " + e.message;
+      }
+    }
+
+    const hint = document.createElement("p");
+    hint.className = "muted small";
+    hint.textContent =
+      "Read-only статус spec 023: desired/observed manifest, health, validation и support boundary без секретов.";
+    summary.appendChild(hint);
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "admin-toolbar";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn-secondary";
+    btn.textContent = "Обновить external stack";
+    btn.addEventListener("click", () => reload().catch(() => {}));
+    toolbar.appendChild(btn);
+    summary.appendChild(toolbar);
+
+    reload().catch(() => {});
+  }
+
+  function renderExternalStackTable(data, container) {
+    container.querySelectorAll(".external-stack-table-wrap").forEach((n) => n.remove());
+    if (!data || !data.components) {
+      return;
+    }
+    const entries = Object.entries(data.components).sort((a, b) => a[0].localeCompare(b[0]));
+    const wrap = document.createElement("div");
+    wrap.className = "json-table-wrap external-stack-table-wrap";
+    wrap.setAttribute("data-testid", "admin-external-stack-table");
+    const table = document.createElement("table");
+    table.className = "json-panel-table";
+    const head = document.createElement("thead");
+    const hr = document.createElement("tr");
+    [
+      "component",
+      "desired",
+      "observed",
+      "health",
+      "validation",
+      "support",
+      "degraded / mismatch",
+    ].forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    head.appendChild(hr);
+    table.appendChild(head);
+    const body = document.createElement("tbody");
+    const badge = global.AdminUi && AdminUi.statusBadge;
+    entries.forEach(([component, c]) => {
+      const tr = document.createElement("tr");
+      if (c.validation_status !== "passed" || c.health_status === "degraded" || c.mismatch === true) {
+        tr.classList.add("fleet-row-bad");
+      }
+      const validation =
+        c.validation_status === "passed" && badge
+          ? badge(true, "passed")
+          : c.validation_status && badge
+            ? badge(false, c.validation_status)
+            : c.validation_status || "—";
+      const health =
+        c.health_status === "healthy" && badge
+          ? badge(true, "healthy")
+          : c.health_status && badge
+            ? badge(false, c.health_status)
+            : c.health_status || "—";
+      const mismatch = c.mismatch ? "mismatch" : "";
+      [
+        component,
+        c.desired_connector || "—",
+        c.observed_connector || "—",
+        health,
+        validation,
+        c.support_boundary || "—",
+        [c.degraded_reason, mismatch].filter(Boolean).join(" · ") || "—",
+      ].forEach((val) => {
+        const td = document.createElement("td");
+        if (val instanceof Node) {
+          td.appendChild(val);
+        } else {
+          td.textContent = val != null ? String(val) : "";
+        }
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    const meta = document.createElement("p");
+    meta.className = "muted small json-panel-note";
+    const passed = entries.filter(([, c]) => c.validation_status === "passed").length;
+    meta.textContent =
+      "External stack components: " + passed + "/" + entries.length + " validation passed.";
+    wrap.appendChild(meta);
+    container.appendChild(wrap);
+  }
+
   function enhancePluginInstances(summary, pre, ctx) {
     if (document.getElementById("pluginInstanceTools")) {
       return;
@@ -1414,6 +1529,7 @@
     "core-ip-allowlist": mountIpAllowlist,
     "core-migration-import": mountMigrationImport,
     "core-federation-trust": mountFederationTrust,
+    "core-external-stack": mountExternalStackStatus,
   };
 
   function tryMount(section, ctx) {
