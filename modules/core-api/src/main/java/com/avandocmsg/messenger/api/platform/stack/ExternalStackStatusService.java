@@ -29,7 +29,10 @@ public class ExternalStackStatusService {
                 observation.degradedReason(),
                 supportScope(observed != null ? observed.supportBoundary() : desired.supportBoundary()),
                 observedEndpoint,
-                observed != null && !desired.connector().equals(observed.connector())
+                observed != null && !desired.connector().equals(observed.connector()),
+                validation != null && validation.passed() ? "passed" : "failed",
+                validation != null ? validation.failures() : List.of(),
+                validation != null ? validation.warnings() : List.of()
             ));
         }
         return new ExternalStackStatusResponse(components);
@@ -68,7 +71,10 @@ public class ExternalStackStatusService {
         @JsonProperty("degraded_reason") String degradedReason,
         @JsonProperty("support_boundary") String supportBoundary,
         @JsonProperty("observed_endpoint") String observedEndpoint,
-        @JsonProperty("mismatch") boolean mismatch
+        @JsonProperty("mismatch") boolean mismatch,
+        @JsonProperty("validation_status") String validationStatus,
+        @JsonProperty("validation_failures") List<String> validationFailures,
+        @JsonProperty("validation_warnings") List<String> validationWarnings
     ) {}
 
     public record ExternalStackProfileStatusResponse(

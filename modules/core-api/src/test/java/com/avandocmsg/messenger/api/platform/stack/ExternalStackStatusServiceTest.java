@@ -44,6 +44,31 @@ class ExternalStackStatusServiceTest {
         assertTrue(component.mismatch());
         assertFalse(component.observedEndpoint().contains("secret"));
         assertEquals("https://<redacted>@s3.customer.test/deep-archive", component.observedEndpoint());
+        assertEquals("passed", component.validationStatus());
+        assertTrue(component.validationFailures().isEmpty());
+    }
+
+    @Test
+    void exposesValidationFailuresWithoutLeakingSecretEndpoint() {
+        var desired = manifest("idp", "oidc-generic", ExternalStackRole.active)
+            .withEndpoint("https://user:secret@idp.example.test/realms/korus");
+        var observed = manifest("idp", "oidc-generic", ExternalStackRole.migration_target)
+            .withEndpoint("https://user:secret@idp.example.test/realms/korus");
+        var validation = ExternalStackManifestValidator.validateDesiredManifests(List.of(observed));
+
+        var status = new ExternalStackStatusService().status(List.of(new ManifestObservation(
+            desired,
+            observed,
+            "degraded",
+            "manifest validation failed",
+            validation
+        )));
+
+        var component = status.components().get("idp");
+        assertEquals("failed", component.validationStatus());
+        assertTrue(component.validationFailures().contains("component idp has no active manifest"));
+        assertFalse(component.observedEndpoint().contains("secret"));
+        assertEquals("https://<redacted>@idp.example.test/realms/korus", component.observedEndpoint());
     }
 
     @Test

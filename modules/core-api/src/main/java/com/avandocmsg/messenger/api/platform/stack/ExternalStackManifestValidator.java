@@ -95,6 +95,9 @@ public final class ExternalStackManifestValidator {
         if (endpoint == null || endpoint.isBlank()) {
             return endpoint;
         }
+        if (endpoint.matches(".*//[^/@]+@.*")) {
+            return endpoint.replaceFirst("//[^/@]+@", "//<redacted>@");
+        }
         try {
             var uri = new URI(endpoint);
             if (uri.getUserInfo() == null || uri.getUserInfo().isBlank()) {
