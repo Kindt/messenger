@@ -87,7 +87,7 @@ Rendered to `docker/.env.korus-server` as `CORE_API_DEPLOY_MODE`. **`embedded`**
 
 ### External stack desired manifest (spec 023)
 
-`roles/korus_server` renders `docker/external-stack-manifest.yaml` and exports `EXTERNAL_STACK_MANIFEST_PATH` into `docker/.env.korus-server`. The manifest is a desired-state snapshot for `/api/v1/platform/external-stack/status`; it contains endpoints/resource aliases and support boundaries, not secrets.
+`roles/korus_server` renders `docker/external-stack-manifest.yaml`, exports `EXTERNAL_STACK_MANIFEST_DIR` / `EXTERNAL_STACK_MANIFEST_FILE` for the compose bind mount, and passes `/config/<file>` to core-api as `EXTERNAL_STACK_MANIFEST_PATH`. The manifest is a desired-state snapshot for `/api/v1/platform/external-stack/status`; it contains endpoints/resource aliases and support boundaries, not secrets.
 
 Override in inventory/group vars when using external/BYO profiles:
 
