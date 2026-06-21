@@ -32,6 +32,7 @@
 | **Deploy acceptance (spec 003)** | `scripts/smoke-deploy-acceptance.sh` | `deploy-messaging-smoke.yml` | orchestrates ready, auth, messaging-e2e, parity-api |
 | **Platform W2 guest (optional)** | `scripts/guest-smoke-platform-w2.sh` | manual (QEMU server guest) | `verify-nats-queue-group`; `KORUS_RUN_EXPORT_PURGE_SMOKE=1` for export-replay |
 | **QEMU wsUrl probe (host)** | `scripts/test-korus-wsurl.ps1` | manual; outer gate preflight | expects `host-lan-ip.txt` + `:19088/web-client-env.js` |
+| **QEMU canonical regression** | `scripts/smoke-local-regression.ps1` | manual only (no CI) | local QEMU one-pass: ready/auth/web/parity/WS/messaging/workers/TURN/cell/container portability |
 | **Read replica env probe** | `scripts/smoke-read-replica-env.sh` | manual (guest) | after `replica-stack-up.sh` or `replica-lab-up.sh` |
 | **k6 pilot baseline** | `scripts/load/pilot-health.js` | manual (host :18080) | see `scripts/load/README.md` |
 | **k6 QEMU baseline (T604 substitute)** | `scripts/run-k6-qemu-baseline.ps1` | manual | writes `deploy/qemu/run/k6-pilot-baseline.json`; fallback if k6 absent |
