@@ -41,16 +41,28 @@ public class ExternalStackStatusService {
     public ExternalStackProfileStatusResponse profileStatus(List<ConnectorProfile> profiles) {
         var profileRows = new LinkedHashMap<String, ProfileStatus>();
         for (var profile : profiles) {
+            var pack = compatibilityPack(profile.profileId());
             profileRows.put(profile.profileId(), new ProfileStatus(
                 profile.profileId(),
                 profile.lifecycleStatus().name(),
                 profile.deploymentModes().stream().map(Enum::name).toList(),
                 profile.lifecycleStatus() == LifecycleStatus.supported_bundled
                     || profile.lifecycleStatus() == LifecycleStatus.supported_external_byo,
-                supportScope(profile.supportBoundary())
+                supportScope(profile.supportBoundary()),
+                pack != null ? pack.requiredChecks() : List.of(),
+                pack != null ? pack.promotionEvidence() : List.of(),
+                pack != null ? pack.unsupportedModes() : List.of()
             ));
         }
         return new ExternalStackProfileStatusResponse(profileRows);
+    }
+
+    private static ConnectorCompatibilityPack compatibilityPack(String profileId) {
+        try {
+            return ConnectorCompatibilityPacks.packFor(profileId);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     private static String supportScope(SupportBoundary supportBoundary) {
@@ -86,6 +98,9 @@ public class ExternalStackStatusService {
         @JsonProperty("lifecycle_status") String lifecycleStatus,
         @JsonProperty("deployment_modes") List<String> deploymentModes,
         @JsonProperty("supported") boolean supported,
-        @JsonProperty("support_boundary") String supportBoundary
+        @JsonProperty("support_boundary") String supportBoundary,
+        @JsonProperty("required_checks") List<String> requiredChecks,
+        @JsonProperty("promotion_evidence") List<String> promotionEvidence,
+        @JsonProperty("unsupported_modes") List<String> unsupportedModes
     ) {}
 }

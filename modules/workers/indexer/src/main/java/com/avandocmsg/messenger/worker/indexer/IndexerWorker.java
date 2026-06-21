@@ -13,7 +13,6 @@ import io.nats.client.Options;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
 import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
-import org.apache.solr.common.SolrInputDocument;
 import io.prometheus.client.hotspot.DefaultExports;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -37,6 +37,7 @@ public class IndexerWorker {
     private final boolean solrEnabled;
     private final boolean cloudMode;
     private final String solrCollection;
+    private final MessageIndexBackend indexBackend;
 
     private final Connection connection;
     private final HotPlugHeartbeat hotPlugHeartbeat;
@@ -86,12 +87,13 @@ public class IndexerWorker {
         this.solrEnabled = solrEnabled;
         this.cloudMode = cloudMode;
         this.solrCollection = solrCollection;
+        this.indexBackend = solrEnabled ? new SolrMessageIndexBackend(solrClient, cloudMode, solrCollection) : null;
         this.serviceId = serviceId != null && !serviceId.isBlank() ? serviceId.trim() : "indexer-worker";
         this.drainTimeoutMs = Math.max(1000L, drainTimeoutMs);
         this.workerMessages = workerMessages;
         this.hotPlugHeartbeat = new HotPlugHeartbeat(this.connection, this.serviceId, heartbeatIntervalMs);
         this.batchBuffer = solrEnabled && batchSize > 1
-            ? new IndexerBatchBuffer(solrClient, cloudMode, solrCollection, batchSize, batchFlushMs, workerMessages)
+            ? new IndexerBatchBuffer(indexBackend, batchSize, batchFlushMs, workerMessages)
             : null;
         log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }
@@ -113,6 +115,7 @@ public class IndexerWorker {
         this.solrEnabled = solrEnabled;
         this.cloudMode = cloudMode;
         this.solrCollection = solrCollection;
+        this.indexBackend = solrEnabled ? new SolrMessageIndexBackend(solrClient, cloudMode, solrCollection) : null;
         this.serviceId = serviceId != null && !serviceId.isBlank() ? serviceId.trim() : "indexer-worker";
         this.drainTimeoutMs = Math.max(1000L, drainTimeoutMs);
         this.workerMessages = workerMessages;
@@ -144,7 +147,7 @@ public class IndexerWorker {
                     if (batchBuffer != null) {
                         batchBuffer.offerDelete(event.messageId());
                     } else {
-                        deleteFromSolr(event.messageId());
+                        indexBackend.delete(event.messageId());
                     }
                     IndexerSolrMetrics.deleteSuccess();
                 } catch (Exception ex) {
@@ -173,34 +176,16 @@ public class IndexerWorker {
         }
     }
 
-    private void deleteFromSolr(String messageId) throws Exception {
-        if (cloudMode) {
-            solrClient.deleteById(solrCollection, messageId);
-        } else {
-            solrClient.deleteById(messageId);
-        }
-        solrClient.commit(cloudMode ? solrCollection : null);
-        log.debug(workerMessages.format("worker.indexer.deleted_solr", messageId));
-    }
-
     private void clearContentTxt(String messageId) throws Exception {
         var doc = clearContentTxtDoc(messageId);
-        if (cloudMode) {
-            solrClient.add(solrCollection, doc);
-        } else {
-            solrClient.add(doc);
-        }
-        solrClient.commit(cloudMode ? solrCollection : null);
+        indexBackend.upsert(doc);
         log.debug(workerMessages.format("worker.indexer.cleared_content", messageId));
     }
 
-    private SolrInputDocument clearContentTxtDoc(String messageId) {
-        var doc = new SolrInputDocument();
-        doc.addField("id", messageId);
+    private SearchDocument clearContentTxtDoc(String messageId) {
         var clearOp = new HashMap<String, String>();
         clearOp.put("set", "");
-        doc.addField("content_txt", clearOp);
-        return doc;
+        return new SearchDocument(messageId, null, null, Map.of("content_txt", clearOp));
     }
 
     private void indexMetadata(MessageWorkerEvent event) throws Exception {
@@ -209,38 +194,28 @@ public class IndexerWorker {
             batchBuffer.offerAdd(doc);
             return;
         }
-        if (cloudMode) {
-            solrClient.add(solrCollection, doc);
-        } else {
-            solrClient.add(doc);
-        }
-        solrClient.commit(cloudMode ? solrCollection : null);
+        indexBackend.upsert(doc);
         log.debug(workerMessages.format("worker.indexer.indexed_solr", event.messageId()));
     }
 
-    private SolrInputDocument buildMetadataDoc(MessageWorkerEvent event) {
-        var doc = new SolrInputDocument();
-        doc.addField("id", event.messageId());
-        doc.addField("chat_id_s", event.chatId());
-        doc.addField("sender_id_s", event.senderId());
+    private SearchDocument buildMetadataDoc(MessageWorkerEvent event) {
+        var metadata = new HashMap<String, Object>();
+        metadata.put("sender_id_s", event.senderId());
         if (event.clientMsgId() != null) {
-            doc.addField("client_msg_id_s", event.clientMsgId());
+            metadata.put("client_msg_id_s", event.clientMsgId());
         }
         if (event.createdAtEpochMs() != null) {
-            doc.addField("created_at_epoch_ms_l", event.createdAtEpochMs());
+            metadata.put("created_at_epoch_ms_l", event.createdAtEpochMs());
         }
         if (event.type() != null) {
-            doc.addField("msg_type_s", event.type());
+            metadata.put("msg_type_s", event.type());
         }
-        doc.addField("flags_i", event.flags());
-        doc.addField("encrypted_b", event.encrypted());
+        metadata.put("flags_i", event.flags());
+        metadata.put("encrypted_b", event.encrypted());
         if (event.storageByteLength() != null) {
-            doc.addField("storage_byte_length_i", event.storageByteLength());
+            metadata.put("storage_byte_length_i", event.storageByteLength());
         }
-        if (event.searchText() != null && !event.searchText().isBlank()) {
-            doc.addField("content_txt", event.searchText());
-        }
-        return doc;
+        return new SearchDocument(event.messageId(), event.chatId(), event.searchText(), metadata);
     }
 
     public void shutdown() {

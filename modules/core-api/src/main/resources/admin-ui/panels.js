@@ -751,8 +751,9 @@
       pre.textContent = "Загрузка…";
       try {
         const data = await ctx.apiFetch("/platform/external-stack/status");
-        renderExternalStackTable(data, summary);
-        pre.textContent = JSON.stringify(data, null, 2);
+        const profiles = await ctx.apiFetch("/platform/external-stack/profiles");
+        renderExternalStackTable(data, summary, profiles);
+        pre.textContent = JSON.stringify({ status: data, profiles: profiles }, null, 2);
         if (global.AdminUi) {
           AdminUi.showJsonBlock(true);
         }
@@ -769,23 +770,215 @@
 
     const toolbar = document.createElement("div");
     toolbar.className = "admin-toolbar";
+    toolbar.id = "externalStackFilters";
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "btn btn-secondary";
     btn.textContent = "Обновить external stack";
     btn.addEventListener("click", () => reload().catch(() => {}));
     toolbar.appendChild(btn);
+    [
+      ["validation", "validation", ["all", "passed", "failed"]],
+      ["health", "health", ["all", "healthy", "degraded", "configured"]],
+      ["mismatch", "mismatch", ["all", "yes", "no"]],
+    ].forEach(([id, label, values]) => {
+      const select = document.createElement("select");
+      select.id = "externalStackFilter-" + id;
+      select.dataset.filter = id;
+      values.forEach((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label + ": " + value;
+        select.appendChild(option);
+      });
+      select.addEventListener("change", () => {
+        const data = summary._externalStackData;
+        if (data) {
+          renderExternalStackTable(data, summary);
+        }
+      });
+      toolbar.appendChild(select);
+    });
     summary.appendChild(toolbar);
+    mountExternalStackPreflight(summary, pre, ctx);
 
     reload().catch(() => {});
   }
 
-  function renderExternalStackTable(data, container) {
+  function mountExternalStackPreflight(summary, pre, ctx) {
+    if (summary.querySelector("#externalStackCheckpointJson")) {
+      return;
+    }
+    const box = document.createElement("div");
+    box.className = "panel-form external-stack-preflight";
+    const title = document.createElement("p");
+    title.className = "form-section-label";
+    title.textContent = "Checkpoint preflight (repo-local)";
+    box.appendChild(title);
+    const hint = document.createElement("p");
+    hint.className = "muted small";
+    hint.textContent = "POST /platform/external-stack/preflight/checkpoint — проверка marker groups без live cutover.";
+    box.appendChild(hint);
+    const ta = document.createElement("textarea");
+    ta.id = "externalStackCheckpointJson";
+    ta.rows = 8;
+    ta.spellcheck = false;
+    ta.value = JSON.stringify(
+      {
+        component: "search",
+        source_profile: "sql-search",
+        target_profile: "solr-bundled",
+        checkpoint_type: "reindex",
+        markers: {
+          reindex_cursor: "messages:42",
+          index_schema_version: "v1",
+          shadow_target: "solr-shadow",
+        },
+        rollback_profile: "sql-search",
+        watch_window: "PT4H",
+      },
+      null,
+      2
+    );
+    box.appendChild(ta);
+    const row = document.createElement("div");
+    row.className = "admin-toolbar";
+    const validate = document.createElement("button");
+    validate.type = "button";
+    validate.className = "btn btn-secondary";
+    validate.textContent = "Validate checkpoint";
+    const result = document.createElement("span");
+    result.className = "muted small";
+    validate.addEventListener("click", async () => {
+      result.textContent = "Проверка…";
+      try {
+        const body = JSON.parse(ta.value);
+        const report = await ctx.apiFetch("/platform/external-stack/preflight/checkpoint", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        result.textContent =
+          (report.passed ? "OK" : "BLOCKED") +
+          " · severity=" +
+          (report.severity || "?") +
+          " · missing=" +
+          ((report.missing_markers || []).join(", ") || "—");
+        pre.textContent = JSON.stringify(report, null, 2);
+        if (global.AdminUi) {
+          AdminUi.showJsonBlock(true);
+        }
+      } catch (e) {
+        result.textContent = "Ошибка: " + e.message;
+      }
+    });
+    row.appendChild(validate);
+    row.appendChild(result);
+    box.appendChild(row);
+    summary.appendChild(box);
+    mountExternalStackManifestPreflight(summary, pre, ctx);
+  }
+
+  function mountExternalStackManifestPreflight(summary, pre, ctx) {
+    if (summary.querySelector("#externalStackManifestsJson")) {
+      return;
+    }
+    const box = document.createElement("div");
+    box.className = "panel-form external-stack-preflight";
+    const title = document.createElement("p");
+    title.className = "form-section-label";
+    title.textContent = "Manifest preflight (repo-local)";
+    box.appendChild(title);
+    const hint = document.createElement("p");
+    hint.className = "muted small";
+    hint.textContent = "POST /platform/external-stack/preflight/manifests — проверка desired manifests без deploy.";
+    box.appendChild(hint);
+    const ta = document.createElement("textarea");
+    ta.id = "externalStackManifestsJson";
+    ta.rows = 10;
+    ta.spellcheck = false;
+    ta.value = JSON.stringify(
+      {
+        manifests: [
+          {
+            component: "object-storage",
+            backend_family: "s3-compatible",
+            connector: "minio-s3",
+            version: "configured",
+            role: "active",
+            endpoint: "https://minio.example.test",
+            resource_name_or_alias: "avandocmsg",
+            schema_or_protocol_version: "s3",
+            compatibility_profile: "s3-minio-bundled",
+            topology: "configured",
+            config_revision: "manual-preflight",
+            capabilities: ["put_get_head_delete_list", "multipart", "checksum"],
+            data_classification: "file-content",
+            support_boundary: {
+              deployment_owner: "korus",
+              backup_owner: "korus",
+              ha_owner: "korus",
+              upgrade_owner: "korus",
+              incident_owner: "korus",
+              vendor_support_required: false,
+              korus_support_scope: "full-stack",
+            },
+            metadata: { serve_traffic: "true" },
+          },
+        ],
+      },
+      null,
+      2
+    );
+    box.appendChild(ta);
+    const row = document.createElement("div");
+    row.className = "admin-toolbar";
+    const validate = document.createElement("button");
+    validate.type = "button";
+    validate.className = "btn btn-secondary";
+    validate.textContent = "Validate manifests";
+    const result = document.createElement("span");
+    result.className = "muted small";
+    validate.addEventListener("click", async () => {
+      result.textContent = "Проверка…";
+      try {
+        const body = JSON.parse(ta.value);
+        const validation = await ctx.apiFetch("/platform/external-stack/preflight/manifests", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        result.textContent =
+          (validation.passed ? "OK" : "FAILED") +
+          " · failures=" +
+          ((validation.failures || []).length) +
+          " · redacted=" +
+          (validation.redacted === true);
+        pre.textContent = JSON.stringify(validation, null, 2);
+        if (global.AdminUi) {
+          AdminUi.showJsonBlock(true);
+        }
+      } catch (e) {
+        result.textContent = "Ошибка: " + e.message;
+      }
+    });
+    row.appendChild(validate);
+    row.appendChild(result);
+    box.appendChild(row);
+    summary.appendChild(box);
+  }
+
+  function renderExternalStackTable(data, container, profiles) {
     container.querySelectorAll(".external-stack-table-wrap").forEach((n) => n.remove());
     if (!data || !data.components) {
       return;
     }
-    const entries = Object.entries(data.components).sort((a, b) => a[0].localeCompare(b[0]));
+    container._externalStackData = data;
+    if (profiles) {
+      container._externalStackProfiles = profiles;
+    }
+    const filters = externalStackFilters(container);
+    const entries = Object.entries(data.components)
+      .filter(([, c]) => externalStackMatches(c, filters))
+      .sort((a, b) => externalStackGroup(a[0]).localeCompare(externalStackGroup(b[0])) || a[0].localeCompare(b[0]));
     const wrap = document.createElement("div");
     wrap.className = "json-table-wrap external-stack-table-wrap";
     wrap.setAttribute("data-testid", "admin-external-stack-table");
@@ -795,6 +988,7 @@
     const hr = document.createElement("tr");
     [
       "component",
+      "group",
       "desired",
       "observed",
       "health",
@@ -828,14 +1022,18 @@
             ? badge(false, c.health_status)
             : c.health_status || "—";
       const mismatch = c.mismatch ? "mismatch" : "";
+      const supportBadge = externalStackSupportBadge(c);
+      const profile = externalStackProfileFor(container._externalStackProfiles, c);
+      const drilldown = externalStackDrilldown(c, profile);
       [
         component,
+        externalStackGroup(component),
         c.desired_connector || "—",
         c.observed_connector || "—",
         health,
         validation,
-        c.support_boundary || "—",
-        [c.degraded_reason, mismatch].filter(Boolean).join(" · ") || "—",
+        supportBadge,
+        drilldown || [c.degraded_reason, mismatch].filter(Boolean).join(" · ") || "—",
       ].forEach((val) => {
         const td = document.createElement("td");
         if (val instanceof Node) {
@@ -853,9 +1051,90 @@
     meta.className = "muted small json-panel-note";
     const passed = entries.filter(([, c]) => c.validation_status === "passed").length;
     meta.textContent =
-      "External stack components: " + passed + "/" + entries.length + " validation passed.";
+      "External stack components: " + passed + "/" + entries.length + " validation passed. Badges: supported/candidate/deferred.";
     wrap.appendChild(meta);
     container.appendChild(wrap);
+  }
+
+  function externalStackFilters(container) {
+    const toolbar = container.querySelector("#externalStackFilters");
+    if (!toolbar) {
+      return { validation: "all", health: "all", mismatch: "all" };
+    }
+    const read = (name) => {
+      const el = toolbar.querySelector('[data-filter="' + name + '"]');
+      return el ? el.value : "all";
+    };
+    return { validation: read("validation"), health: read("health"), mismatch: read("mismatch") };
+  }
+
+  function externalStackMatches(component, filters) {
+    if (filters.validation !== "all" && component.validation_status !== filters.validation) {
+      return false;
+    }
+    if (filters.health !== "all" && component.health_status !== filters.health) {
+      return false;
+    }
+    if (filters.mismatch === "yes" && component.mismatch !== true) {
+      return false;
+    }
+    if (filters.mismatch === "no" && component.mismatch === true) {
+      return false;
+    }
+    return true;
+  }
+
+  function externalStackGroup(component) {
+    if (["media", "turn", "notifications", "dlp", "integrations"].includes(component)) {
+      return "add-ons";
+    }
+    if (["search"].includes(component)) {
+      return "candidates";
+    }
+    return "core";
+  }
+
+  function externalStackSupportBadge(component) {
+    const span = document.createElement("span");
+    span.className = "support-badge";
+    const boundary = component.support_boundary || "—";
+    const connector = (component.desired_connector || "").toLowerCase();
+    if (connector.includes("candidate") || boundary.includes("vendor")) {
+      span.textContent = "candidate";
+    } else if (boundary.includes("deferred")) {
+      span.textContent = "deferred";
+    } else {
+      span.textContent = boundary.includes("customer") ? "external/BYO" : "supported";
+    }
+    span.title = boundary;
+    return span;
+  }
+
+  function externalStackProfileFor(profiles, component) {
+    if (!profiles || !profiles.profiles) {
+      return null;
+    }
+    return profiles.profiles[component.desired_connector] || profiles.profiles[component.observed_connector] || null;
+  }
+
+  function externalStackDrilldown(component, profile) {
+    const details = document.createElement("details");
+    details.className = "external-stack-drilldown";
+    const summary = document.createElement("summary");
+    summary.textContent = [component.degraded_reason, component.mismatch ? "mismatch" : ""].filter(Boolean).join(" · ") || "details";
+    details.appendChild(summary);
+    const lines = []
+      .concat(component.validation_failures || [])
+      .concat(component.validation_warnings || []);
+    if (profile) {
+      lines.push("required_checks: " + (profile.required_checks || []).join(", "));
+      lines.push("promotion_evidence: " + (profile.promotion_evidence || []).join(", "));
+      lines.push("unsupported_modes: " + (profile.unsupported_modes || []).join(", "));
+    }
+    const pre = document.createElement("pre");
+    pre.textContent = lines.length ? lines.join("\n") : "No validation failures/warnings.";
+    details.appendChild(pre);
+    return details;
   }
 
   function enhancePluginInstances(summary, pre, ctx) {

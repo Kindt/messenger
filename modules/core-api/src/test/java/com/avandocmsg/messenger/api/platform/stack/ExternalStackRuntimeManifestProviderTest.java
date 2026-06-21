@@ -2,8 +2,10 @@ package com.avandocmsg.messenger.api.platform.stack;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
 import org.junit.jupiter.api.Test;
+import org.h2.jdbcx.JdbcDataSource;
 
 import java.nio.file.Files;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -138,6 +140,46 @@ class ExternalStackRuntimeManifestProviderTest {
         assertEquals("postgres-16-external", db.desiredConnector());
         assertEquals("connector-validation", db.supportBoundary());
         assertFalse(db.observedEndpoint().contains("secret"));
+    }
+
+    @Test
+    void activeProbeResultsDecorateManifestObservations() {
+        var provider = new ExternalStackRuntimeManifestProvider(
+            new TestConfig(),
+            ExternalStackActiveProbeService.of(Map.of(
+                "relational-db-hot",
+                manifest -> ExternalStackProbeResult.degraded("jdbc privileges missing", "flyway_privileges")
+            ))
+        );
+
+        var db = observation(provider.observations(), "relational-db-hot");
+
+        assertEquals("degraded", db.healthStatus());
+        assertEquals("jdbc privileges missing", db.degradedReason());
+        assertTrue(db.validationResult().warnings().contains("relational-db-hot probe warning: flyway_privileges"));
+        assertFalse(db.validationResult().metadata().values().stream().anyMatch(v -> v.contains("secret")));
+    }
+
+    @Test
+    void boundedActiveProbesCheckJdbcMetadataRedisAndUrlShapes() {
+        var ds = new JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:external_stack_probe;DB_CLOSE_DELAY=-1");
+        var provider = new ExternalStackRuntimeManifestProvider(
+            new TestConfig(),
+            ExternalStackActiveProbeService.bounded(new TestConfig(), ds, () -> false)
+        );
+
+        var db = observation(provider.observations(), "relational-db-hot");
+        var cache = observation(provider.observations(), "cache");
+        var idp = observation(provider.observations(), "idp");
+        var web = observation(provider.observations(), "web-edge");
+
+        assertEquals("healthy", db.healthStatus());
+        assertTrue(db.validationResult().metadata().containsKey("relational-db-hot.database_product"));
+        assertEquals("degraded", cache.healthStatus());
+        assertEquals("redis ping failed", cache.degradedReason());
+        assertEquals("healthy", idp.healthStatus());
+        assertEquals("healthy", web.healthStatus());
     }
 
     private static ManifestObservation observation(

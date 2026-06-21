@@ -91,6 +91,66 @@ class ExternalStackStatusServiceTest {
         assertFalse(status.profiles().get("angie").supported());
     }
 
+    @Test
+    void profileStatusIncludesCompatibilityPackEvidence() {
+        var profile = new ConnectorProfile(
+            "postgres-16-external",
+            "postgres",
+            "postgres-16",
+            LifecycleStatus.supported_external_byo,
+            List.of(DeploymentMode.external_byo),
+            List.of("runtime_manifest"),
+            "relational-db-hot",
+            SupportBoundary.externalByo("customer"),
+            null
+        );
+
+        var status = new ExternalStackStatusService().profileStatus(List.of(profile));
+        var row = status.profiles().get("postgres-16-external");
+
+        assertTrue(row.requiredChecks().contains("flyway_privileges"));
+        assertTrue(row.promotionEvidence().contains("customer_backup_and_wal_evidence"));
+        assertTrue(row.unsupportedModes().contains("silent_fallback"));
+    }
+
+    @Test
+    void resourcePreflightCheckpointReturnsStructuredReport() {
+        var resource = new ExternalStackStatusResource();
+        var checkpoint = new MigrationCheckpoint(
+            "search",
+            "sql-search",
+            "opensearch-candidate",
+            "reindex",
+            Map.of("reindex_cursor", "messages:42"),
+            "",
+            "PT4H"
+        );
+
+        var report = resource.preflightCheckpoint(checkpoint);
+
+        assertFalse(report.passed());
+        assertEquals("search", report.component());
+        assertEquals("blocker", report.severity());
+        assertTrue(report.missingMarkers().contains("index_schema_version"));
+        assertTrue(report.noSilentFallback());
+    }
+
+    @Test
+    void resourcePreflightManifestsReturnsRedactedValidationResult() {
+        var resource = new ExternalStackStatusResource();
+        var primary = manifest("object-storage", "minio-s3", ExternalStackRole.active)
+            .withEndpoint("https://user:secret@s3-a.example.test/files");
+        var secondActive = manifest("object-storage", "external-s3", ExternalStackRole.active)
+            .withEndpoint("https://token:secret@s3-b.example.test/files");
+
+        var result = resource.preflightManifests(new ExternalStackManifestPreflightRequest(List.of(primary, secondActive)));
+
+        assertFalse(result.passed());
+        assertTrue(result.failures().contains("component object-storage has 2 active manifests"));
+        assertTrue(result.redacted());
+        assertFalse(result.metadata().get("object-storage.endpoint").contains("secret"));
+    }
+
     private static ComponentBackendManifest manifest(String component, String connector, ExternalStackRole role) {
         return new ComponentBackendManifest(
             component,

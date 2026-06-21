@@ -1,14 +1,17 @@
 package com.avandocmsg.messenger.api.platform.stack;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.api.config.RedisProbe;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
+import javax.sql.DataSource;
 import java.util.List;
 
 @Path("/v1/platform/external-stack")
@@ -24,8 +27,11 @@ public class ExternalStackStatusResource {
     }
 
     @Inject
-    public ExternalStackStatusResource(AppConfig appConfig) {
-        this(new ExternalStackStatusService(), new ExternalStackRuntimeManifestProvider(appConfig));
+    public ExternalStackStatusResource(AppConfig appConfig, DataSource dataSource, RedisProbe redisProbe) {
+        this(new ExternalStackStatusService(), new ExternalStackRuntimeManifestProvider(
+            appConfig,
+            ExternalStackActiveProbeService.bounded(appConfig, dataSource, redisProbe::ping)
+        ));
     }
 
     ExternalStackStatusResource(ExternalStackRuntimeManifestProvider manifestProvider) {
@@ -49,5 +55,21 @@ public class ExternalStackStatusResource {
     @Operation(summary = "External stack connector profile status")
     public ExternalStackStatusService.ExternalStackProfileStatusResponse profiles() {
         return statusService.profileStatus(manifestProvider != null ? manifestProvider.profiles() : List.of());
+    }
+
+    @POST
+    @Path("preflight/checkpoint")
+    @Operation(summary = "Validate external stack migration checkpoint")
+    public MigrationCheckpointReport preflightCheckpoint(MigrationCheckpoint checkpoint) {
+        return MigrationCheckpointValidator.report(checkpoint);
+    }
+
+    @POST
+    @Path("preflight/manifests")
+    @Operation(summary = "Validate external stack desired manifests")
+    public ValidationResult preflightManifests(ExternalStackManifestPreflightRequest request) {
+        return ExternalStackManifestValidator.validateDesiredManifests(
+            request != null ? request.manifests() : List.of()
+        );
     }
 }

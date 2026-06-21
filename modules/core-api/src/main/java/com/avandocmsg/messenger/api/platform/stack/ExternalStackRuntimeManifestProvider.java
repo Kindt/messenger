@@ -8,6 +8,8 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,9 +18,18 @@ public class ExternalStackRuntimeManifestProvider {
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory()).findAndRegisterModules();
 
     private final AppConfig appConfig;
+    private final ExternalStackActiveProbeService activeProbeService;
 
     public ExternalStackRuntimeManifestProvider(AppConfig appConfig) {
+        this(appConfig, ExternalStackActiveProbeService.none());
+    }
+
+    public ExternalStackRuntimeManifestProvider(
+        AppConfig appConfig,
+        ExternalStackActiveProbeService activeProbeService
+    ) {
         this.appConfig = appConfig;
+        this.activeProbeService = activeProbeService == null ? ExternalStackActiveProbeService.none() : activeProbeService;
     }
 
     public List<ManifestObservation> observations() {
@@ -189,12 +200,35 @@ public class ExternalStackRuntimeManifestProvider {
     }
 
     private ManifestObservation observation(ComponentBackendManifest manifest) {
+        var validation = ExternalStackManifestValidator.validateDesiredManifests(List.of(manifest));
+        var probe = activeProbeService.probe(manifest);
         return new ManifestObservation(
             manifest,
             manifest,
-            "configured",
-            null,
-            ExternalStackManifestValidator.validateDesiredManifests(List.of(manifest))
+            probe.healthy() ? "healthy" : "degraded",
+            probe.degradedReason(),
+            mergeProbeWarnings(manifest, validation, probe)
+        );
+    }
+
+    private static ValidationResult mergeProbeWarnings(
+        ComponentBackendManifest manifest,
+        ValidationResult validation,
+        ExternalStackProbeResult probe
+    ) {
+        if (probe.warnings().isEmpty() && probe.metadata().isEmpty()) {
+            return validation;
+        }
+        var warnings = new ArrayList<>(validation.warnings());
+        probe.warnings().forEach(w -> warnings.add(manifest.component() + " probe warning: " + w));
+        var metadata = new LinkedHashMap<>(validation.metadata());
+        probe.metadata().forEach((k, v) -> metadata.put(manifest.component() + "." + k, v));
+        return new ValidationResult(
+            validation.passed(),
+            validation.failures(),
+            warnings,
+            validation.redacted(),
+            metadata
         );
     }
 
