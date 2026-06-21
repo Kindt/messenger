@@ -155,6 +155,51 @@ class ExternalStackStatusServiceTest {
     }
 
     @Test
+    void resourcePreflightManifestsReportExplainsSeverityByComponent() {
+        var resource = new ExternalStackStatusResource();
+        var primary = manifest("object-storage", "minio-s3", ExternalStackRole.active)
+            .withEndpoint("https://user:secret@minio.example.test/bucket");
+        var secondActive = manifest("object-storage", "external-s3", ExternalStackRole.active);
+        var searchServingStandby = manifest("search", "opensearch", ExternalStackRole.migration_target)
+            .withMetadata(Map.of("serve_traffic", "true"));
+
+        var report = resource.preflightManifestReport(
+            new ExternalStackManifestPreflightRequest(List.of(primary, secondActive, searchServingStandby))
+        );
+
+        assertFalse(report.validation().passed());
+        assertEquals("blocked", report.severity());
+        assertEquals(2, report.components().get("object-storage").manifestCount());
+        assertEquals(2, report.components().get("object-storage").activeCount());
+        assertTrue(report.components().get("object-storage").failures()
+            .contains("component object-storage has 2 active manifests"));
+        assertTrue(report.components().get("search").failures()
+            .contains("component search role migration_target cannot serve active traffic"));
+        assertEquals("https://<redacted>@minio.example.test/bucket",
+            report.components().get("object-storage").redactedEndpoint());
+        assertTrue(report.components().get("object-storage").missingRequiredChecks().contains("bucket_policy"));
+        assertTrue(report.failureCount() >= 2);
+        assertTrue(report.warningCount() >= 1);
+        assertTrue(report.missingRequiredCheckCount() >= 1);
+    }
+
+    @Test
+    void resourcePreflightManifestsReportUsesWarningSeverityForWarningOnlyValidation() {
+        var resource = new ExternalStackStatusResource();
+        var manifest = manifest("object-storage", "minio-s3", ExternalStackRole.active)
+            .withCompatibilityProfile("s3-minio-bundled")
+            .withCapabilities(List.of("put_get_head_delete_list"));
+
+        var report = resource.preflightManifestReport(new ExternalStackManifestPreflightRequest(List.of(manifest)));
+
+        assertTrue(report.passed());
+        assertEquals("warning", report.severity());
+        assertEquals(0, report.failureCount());
+        assertTrue(report.warningCount() > 0);
+        assertTrue(report.missingRequiredCheckCount() > 0);
+    }
+
+    @Test
     void resourceExposesFullCompatibilityPackCatalog() {
         var resource = new ExternalStackStatusResource();
 
@@ -182,6 +227,30 @@ class ExternalStackStatusServiceTest {
     }
 
     @Test
+    void resourcePreflightProfileReportExplainsPromotionEvidence() {
+        var resource = new ExternalStackStatusResource();
+
+        var supported = resource.preflightProfileReport(new ExternalStackProfilePreflightRequest(
+            "postgres-16-external",
+            List.of("h2_or_lab_migration_green")
+        ));
+        var candidate = resource.preflightProfileReport(new ExternalStackProfilePreflightRequest(
+            "opensearch-candidate",
+            List.of("search_reindex_contract_green")
+        ));
+
+        assertTrue(supported.passed());
+        assertEquals("warning", supported.severity());
+        assertTrue(supported.missingPromotionEvidence().contains("customer_profile_evidence"));
+        assertTrue(supported.unsupportedModes().contains("silent_fallback"));
+
+        assertFalse(candidate.passed());
+        assertEquals("blocked", candidate.severity());
+        assertTrue(candidate.failures().contains("profile opensearch-candidate is not production-supported"));
+        assertTrue(candidate.missingPromotionEvidence().contains("vendor_certification_required"));
+    }
+
+    @Test
     void resourceExposesSingleComponentStatus() {
         var resource = new ExternalStackStatusResource(new ExternalStackRuntimeManifestProvider(new TestConfig()));
 
@@ -202,6 +271,33 @@ class ExternalStackStatusServiceTest {
         assertTrue(catalog.contracts().containsKey("object-storage"));
         assertTrue(objectStorage.requiredChecks().contains("put_get_head_delete_list"));
         assertEquals("uploads_controlled_error_no_purge_without_snapshot", objectStorage.failurePolicy());
+    }
+
+    @Test
+    void resourceExposesPassingCatalogHealthReport() {
+        var resource = new ExternalStackStatusResource();
+
+        var health = resource.catalogHealth();
+
+        assertTrue(health.passed());
+        assertTrue(health.componentCount() >= 10);
+        assertTrue(health.profileCount() >= 25);
+        assertTrue(health.failures().isEmpty());
+        assertTrue(health.warnings().contains("candidate profiles require explicit promotion before production use"));
+    }
+
+    @Test
+    void resourceExposesComponentProfileReadinessSummary() {
+        var resource = new ExternalStackStatusResource();
+
+        var catalog = resource.componentProfileSummary();
+        var search = resource.componentProfileSummary("search");
+
+        assertTrue(catalog.components().containsKey("object-storage"));
+        assertTrue(search.profileCount() >= 3);
+        assertTrue(search.supportedCount() >= 1);
+        assertTrue(search.candidateCount() >= 2);
+        assertEquals("candidate profiles require explicit promotion", search.readinessWarning());
     }
 
     private static ComponentBackendManifest manifest(String component, String connector, ExternalStackRole role) {

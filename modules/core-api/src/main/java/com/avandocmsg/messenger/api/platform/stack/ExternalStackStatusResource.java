@@ -127,6 +127,31 @@ public class ExternalStackStatusResource {
         }
     }
 
+    @GET
+    @Path("catalog-health")
+    @Operation(summary = "External stack catalog health and drift report")
+    public ExternalStackCatalogHealthReport catalogHealth() {
+        return ConnectorCompatibilityPacks.healthReport();
+    }
+
+    @GET
+    @Path("component-profile-summary")
+    @Operation(summary = "External stack component profile readiness summary")
+    public ExternalStackComponentProfileSummaryCatalog componentProfileSummary() {
+        return ConnectorCompatibilityPacks.componentSummaries();
+    }
+
+    @GET
+    @Path("component-profile-summary/{component}")
+    @Operation(summary = "External stack component profile readiness summary by component")
+    public ExternalStackComponentProfileSummary componentProfileSummary(@PathParam("component") String component) {
+        try {
+            return ConnectorCompatibilityPacks.componentSummary(component);
+        } catch (IllegalArgumentException e) {
+            throw new NotFoundException("Unknown external stack component profile summary: " + component);
+        }
+    }
+
     @POST
     @Path("preflight/checkpoint")
     @Operation(summary = "Validate external stack migration checkpoint")
@@ -144,29 +169,81 @@ public class ExternalStackStatusResource {
     }
 
     @POST
+    @Path("preflight/manifests/report")
+    @Operation(summary = "Explain external stack desired manifest validation by component")
+    public ExternalStackManifestPreflightReport preflightManifestReport(ExternalStackManifestPreflightRequest request) {
+        return ExternalStackManifestValidator.report(request != null ? request.manifests() : List.of());
+    }
+
+    @POST
     @Path("preflight/profile")
     @Operation(summary = "Validate one external stack connector profile for production use")
     public ValidationResult preflightProfile(ExternalStackProfilePreflightRequest request) {
+        var report = preflightProfileReport(request);
+        return new ValidationResult(
+            report.passed(),
+            report.failures(),
+            report.missingPromotionEvidence().stream()
+                .map(evidence -> "missing promotion evidence: " + evidence)
+                .toList(),
+            true,
+            Map.of(
+                "component", report.component() != null ? report.component() : "",
+                "lifecycle_status", report.lifecycleStatus() != null ? report.lifecycleStatus() : "",
+                "severity", report.severity()
+            )
+        );
+    }
+
+    @POST
+    @Path("preflight/profile/report")
+    @Operation(summary = "Explain external stack connector profile evidence readiness")
+    public ExternalStackProfilePreflightReport preflightProfileReport(ExternalStackProfilePreflightRequest request) {
         var profileId = request != null ? request.profileId() : null;
         if (profileId == null || profileId.isBlank()) {
-            return new ValidationResult(false, List.of("profile_id is required"), List.of(), true, Map.of());
+            return new ExternalStackProfilePreflightReport(
+                false,
+                "blocked",
+                null,
+                null,
+                null,
+                List.of("profile_id is required"),
+                List.of(),
+                List.of()
+            );
         }
         var pack = compatibilityPack(profileId);
         var failures = pack.supported()
             ? List.<String>of()
             : List.of("profile " + profileId + " is not production-supported");
-        return new ValidationResult(
+        var evidence = request != null ? request.evidence() : List.<String>of();
+        var missingEvidence = pack.promotionEvidence().stream()
+            .filter(required -> !evidence.contains(required))
+            .toList();
+        return new ExternalStackProfilePreflightReport(
             failures.isEmpty(),
+            severityForProfile(failures, missingEvidence, pack.unsupportedModes()),
+            profileId,
+            pack.component(),
+            pack.lifecycleStatus().name(),
             failures,
-            pack.unsupportedModes().stream()
-                .map(mode -> "unsupported mode: " + mode)
-                .toList(),
-            true,
-            Map.of(
-                "component", pack.component(),
-                "lifecycle_status", pack.lifecycleStatus().name()
-            )
+            missingEvidence,
+            pack.unsupportedModes()
         );
+    }
+
+    private static String severityForProfile(
+        List<String> failures,
+        List<String> missingEvidence,
+        List<String> unsupportedModes
+    ) {
+        if (!failures.isEmpty()) {
+            return "blocked";
+        }
+        if (!missingEvidence.isEmpty() || !unsupportedModes.isEmpty()) {
+            return "warning";
+        }
+        return "ok";
     }
 
     public record ConnectorCompatibilityPackCatalogResponse(

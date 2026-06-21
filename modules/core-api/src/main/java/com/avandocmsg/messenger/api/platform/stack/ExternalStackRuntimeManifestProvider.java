@@ -45,7 +45,7 @@ public class ExternalStackRuntimeManifestProvider {
                 appConfig.dbJdbcUrl(),
                 "avandocmsg_hot",
                 "flyway-current",
-                "postgres-16-default",
+                "postgres-16-bundled",
                 List.of("jdbc_connectivity", "flyway_privileges", "pool_sizing"),
                 "hot-personal-data"
             )),
@@ -56,7 +56,7 @@ public class ExternalStackRuntimeManifestProvider {
                 appConfig.minioEndpoint(),
                 appConfig.minioBucket(),
                 "s3",
-                "minio-default",
+                "s3-minio-bundled",
                 List.of("put_get_head_delete_list", "multipart", "checksum"),
                 "file-content"
             )),
@@ -67,7 +67,7 @@ public class ExternalStackRuntimeManifestProvider {
                 appConfig.natsUrl(),
                 appConfig.natsJetstream() ? "jetstream" : "core-nats",
                 appConfig.natsJetstream() ? "jetstream" : "core",
-                "nats-2.10-default",
+                "nats-2.10-bundled",
                 List.of("publish_subscribe_subject_prefixes", "queue_groups", "drain_behavior"),
                 "event-metadata"
             )),
@@ -78,7 +78,7 @@ public class ExternalStackRuntimeManifestProvider {
                 appConfig.keycloakIssuer(),
                 "avandocmsg",
                 "oidc",
-                "keycloak-24-default",
+                "keycloak-24-bundled",
                 List.of("issuer_jwks_tls", "token_signature_audience_issuer", "required_claims_user_org_roles"),
                 "identity-security"
             )),
@@ -89,7 +89,7 @@ public class ExternalStackRuntimeManifestProvider {
                 appConfig.redisUri(),
                 "default",
                 "redis",
-                "redis-7-default",
+                "redis-7-bundled",
                 List.of("command_subset_get_set_del_expire_counters_ttl", "key_prefix_isolation"),
                 "cache-security-adjacent"
             )),
@@ -100,7 +100,7 @@ public class ExternalStackRuntimeManifestProvider {
                 appConfig.webPublicBaseUrl(),
                 "public-web",
                 "http",
-                "embedded-tomcat",
+                "nginx-bundled",
                 List.of("health_routing", "forwarded_headers", "security_headers"),
                 "public-edge"
             )),
@@ -111,7 +111,7 @@ public class ExternalStackRuntimeManifestProvider {
                 appConfig.livekitUrl(),
                 appConfig.livekitUrl().isBlank() ? "mesh-webrtc" : "livekit",
                 "livekit",
-                "livekit-default",
+                "livekit-1.8-bundled",
                 List.of("livekit_token_issue", "room_join", "vks_integration_candidate_gate"),
                 "media-metadata"
             )),
@@ -122,7 +122,7 @@ public class ExternalStackRuntimeManifestProvider {
                 appConfig.webrtcStunUris(),
                 "ice",
                 "webrtc",
-                "stun-turn-default",
+                "explicit",
                 List.of("realm_secret", "relay_reachability", "udp_tcp_ports"),
                 "media-network"
             )),
@@ -133,7 +133,7 @@ public class ExternalStackRuntimeManifestProvider {
                 appConfig.webClientVapidPublicKey().orElse("not-configured"),
                 "browser-push",
                 "webpush",
-                "vapid-default",
+                "webpush-vapid-bundled-config",
                 List.of("vapid_config", "gateway_config", "best_effort_semantics"),
                 "notification-metadata"
             )),
@@ -144,7 +144,7 @@ public class ExternalStackRuntimeManifestProvider {
                 appConfig.integrationsBaseUrl(),
                 "dlp-policy",
                 "http-json",
-                "dlp-default",
+                "explicit",
                 List.of("endpoint_auth_tls", "verdict_schema", "tenant_policy", "e2ee_plaintext_boundary"),
                 "compliance-boundary"
             )),
@@ -155,7 +155,7 @@ public class ExternalStackRuntimeManifestProvider {
                 appConfig.integrationsBaseUrl(),
                 "integrations-gateway",
                 "http-json",
-                "connector-runtime-default",
+                "http-webhook-generic",
                 List.of("webhook_plugin_bot_gateway_endpoint", "event_schema", "retry_timeout", "audit_boundary"),
                 "integration-events"
             ))

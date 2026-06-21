@@ -336,7 +336,11 @@
       "accept": "接听",
       "decline": "拒绝",
       "exportBanner": "导出「{chat}」{bg}：{status}",
-      "backToChats": "返回聊天列表"
+      "backToChats": "返回聊天列表",
+      "presenceTitle": "Click to change status",
+      "updateReady": "A new version is available",
+      "reloadNow": "Reload",
+      "reloadLater": "Later"
     },
     "sidebar": {
       "searchPlaceholder": "聊天或用户（至少 2 个字符）…",
@@ -372,14 +376,25 @@
       "folderFailed": "更新文件夹失败。",
       "folderAll": "全部",
       "folderWorkChip": "工作",
-      "folderPersonal": "个人",
+      "folderPersonal": "Mark as personal",
       "folderArchive": "归档",
       "folder": {
         "all": "全部",
         "work": "工作",
         "personal": "个人",
         "archive": "归档"
-      }
+      },
+      "filter": {
+        "all": "All chats",
+        "unread": "Unread",
+        "mentions": "Mentions"
+      },
+      "marketplaceSearch": "Search integrations…",
+      "marketplaceAll": "All categories",
+      "noChatsUnread": "No unread chats.",
+      "noChatsMentions": "No chats with mentions.",
+      "pinChat": "Pin chat",
+      "unpinChat": "Unpin chat"
     },
     "thread": {
       "empty": "请选择聊天或创建群组。",
@@ -421,7 +436,8 @@
       "createPoll": "创建投票",
       "scheduleSend": "定时发送",
       "shareContact": "分享联系人",
-      "voiceRecord": "语音消息"
+      "voiceRecord": "语音消息",
+      "emoji": "Emoji"
     },
     "phase5": {
       "stickers": "贴纸",
@@ -458,7 +474,49 @@
       "captionsFailed": "无法启动字幕。",
       "videoNote": "视频便笺",
       "videoNoteFailed": "无法发送视频便笺。",
-      "videoMicDenied": "无法访问摄像头。"
+      "videoMicDenied": "无法访问摄像头。",
+      "aiAssist": "AI assist",
+      "aiAssistTitle": "AI chat assist",
+      "aiAssistPlaceholder": "Ask a question about this chat…",
+      "aiAssistRun": "Run",
+      "aiAssistEmpty": "No reply from AI gateway.",
+      "aiAssistFailed": "AI assist failed.",
+      "aiInsert": "Insert into composer",
+      "kanbanMoveBack": "Move to previous column",
+      "kanbanMoveForward": "Move to next column",
+      "kanbanDelete": "Delete task",
+      "kanbanDeleted": "Task deleted.",
+      "passkeysTitle": "Passkeys (scaffold)",
+      "passkeysEmpty": "No passkeys registered.",
+      "passkeysRegister": "Register scaffold credential",
+      "passkeysRegistered": "Passkey scaffold registered.",
+      "passkeysFailed": "Passkey registration failed.",
+      "guestExpired": "Guest link expired.",
+      "guestRedeemed": "Guest link accepted.",
+      "guestRedeemFailed": "Could not redeem guest link.",
+      "recordList": "Recordings list",
+      "recordListEmpty": "No recordings yet.",
+      "breakoutList": "Breakout rooms",
+      "breakoutListEmpty": "No breakout rooms.",
+      "sipTitle": "SIP / H.323 gateway",
+      "sipEnabled": "Enable SIP",
+      "sipUri": "Gateway URI",
+      "sipSave": "Save SIP",
+      "sipSaved": "SIP gateway saved.",
+      "sipFailed": "Could not save SIP.",
+      "stickerPacks": "Sticker packs",
+      "stickerSend": "Send sticker",
+      "captionsLive": "Transcript (live)",
+      "guestCopy": "Copy link",
+      "guestCopied": "Guest link copied.",
+      "guestWaiting": "Waiting room enabled",
+      "breakoutJoin": "Join",
+      "stickerPackCreate": "Create pack",
+      "stickerPackName": "Pack name",
+      "stickerPackCreated": "Sticker pack created.",
+      "stickerPackFailed": "Could not create pack.",
+      "recordStop": "Stop recording",
+      "modalCopy": "Copy"
     },
     "polls": {
       "title": "投票",
@@ -474,7 +532,11 @@
       "empty": "此聊天中没有投票。",
       "createFailed": "无法创建投票。",
       "voteFailed": "无法投票。",
-      "pickOption": "请至少选择一个选项。"
+      "pickOption": "请至少选择一个选项。",
+      "close": "Close poll",
+      "closeFailed": "Could not close poll.",
+      "closedByYou": "Poll closed.",
+      "refreshResults": "Refresh results"
     },
     "schedule": {
       "title": "定时发送",
@@ -483,7 +545,12 @@
       "failed": "无法安排消息。",
       "ok": "消息已安排。",
       "emptyDraft": "请先在输入框中输入消息文本。",
-      "whenRequired": "请选择日期和时间。"
+      "whenRequired": "请选择日期和时间。",
+      "listTitle": "Scheduled messages",
+      "cancel": "Cancel send",
+      "cancelFailed": "Could not cancel scheduled message.",
+      "emptyList": "No scheduled messages.",
+      "rowPreview": "{chat} · {when}"
     },
     "reminders": {
       "title": "消息提醒",
@@ -494,7 +561,12 @@
       "listTitle": "待处理提醒",
       "preset1h": "1 小时后",
       "preset3h": "3 小时后",
-      "presetTomorrow": "明天"
+      "presetTomorrow": "明天",
+      "cancel": "Cancel",
+      "openChat": "Open chat",
+      "emptyList": "No pending reminders.",
+      "cancelled": "Reminder cancelled.",
+      "cancelFailed": "Could not cancel reminder."
     },
     "contactShare": {
       "title": "分享联系人",
@@ -503,7 +575,13 @@
       "failed": "无法发送联系人。"
     },
     "offline": {
-      "cachedThread": "离线 — 显示缓存的消息"
+      "cachedThread": "离线 — 显示缓存的消息",
+      "syncPending": "Sync when back online…",
+      "syncDone": "Cache updated",
+      "clearCache": "Clear offline cache",
+      "clearCacheOk": "Offline cache cleared.",
+      "reconnecting": "Reconnecting…",
+      "quotaHint": "Cache keeps recent messages for selected chats."
     },
     "message": {
       "image": "图片",
@@ -528,7 +606,8 @@
       "pubLinkTitle": "创建文件公开链接（A/B/C）",
       "linksTitle": "公开链接列表与撤销",
       "locationLabel": "我的位置",
-      "locationOpen": "在地图上打开"
+      "locationOpen": "在地图上打开",
+      "sticker": "Sticker"
     },
     "actions": {
       "reply": "回复",
@@ -624,7 +703,10 @@
       "privateKeyHint": "私钥仅保存在 IndexedDB；服务器仅接收 public key package。",
       "webPushHintRegistered": " Web Push：启用通知时订阅（已注册）。推送由 push-worker 投递（PUSH_VAPID_* = web-client 公钥）。",
       "webPushHintDefault": " Web Push：启用通知时订阅。",
-      "webPushNoVapid": " Web Push：push-worker 需配置 WEB_CLIENT_VAPID_PUBLIC_KEY 和 PUSH_VAPID_*。"
+      "webPushNoVapid": " Web Push：push-worker 需配置 WEB_CLIENT_VAPID_PUBLIC_KEY 和 PUSH_VAPID_*。",
+      "scheduledTitle": "Scheduled messages",
+      "notificationPush": "Push notifications",
+      "dataUsage": "Data usage"
     },
     "forward": {
       "title": "转发消息"
@@ -650,6 +732,53 @@
     "versions": {
       "title": "编辑历史",
       "none": "没有保存的版本。"
+    },
+    "integration": {
+      "close": "Close panel"
+    },
+    "search": {
+      "globalTitle": "Search",
+      "filterAll": "All",
+      "filterChats": "Chats",
+      "filterMessages": "Messages",
+      "noResults": "No results."
+    },
+    "profile": {
+      "bioHint": "Short bio visible to contacts",
+      "avatarChange": "Change avatar"
+    },
+    "mobile": {
+      "back": "Back to list",
+      "chatsTitle": "Chats"
+    },
+    "marketplace": {
+      "open": "Open",
+      "installed": "Connected",
+      "categoryBots": "Bots",
+      "categoryStorage": "Storage",
+      "categoryCalendar": "Calendar",
+      "categoryHr": "HR / requests",
+      "noResults": "No integrations found."
+    },
+    "federation": {
+      "directoryHint": "Trusted orgs for cross-org chats (MVP).",
+      "trustActive": "Active",
+      "trustPending": "Pending",
+      "partnerLabel": "Partner"
+    },
+    "whiteboard": {
+      "toolPen": "Pen",
+      "toolRect": "Rectangle",
+      "toolEraser": "Eraser",
+      "clearCanvas": "Clear",
+      "undo": "Undo",
+      "canvasHint": "Draw on canvas — saved in snapshot JSON.",
+      "tabCanvas": "Canvas",
+      "tabJson": "JSON"
     }
+  },
+  "push": {
+    "title": "Korus Messenger",
+    "body": "New message"
   }
 }

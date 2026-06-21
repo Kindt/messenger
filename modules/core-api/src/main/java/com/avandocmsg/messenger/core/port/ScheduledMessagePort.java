@@ -13,7 +13,12 @@ public interface ScheduledMessagePort {
 
     List<ScheduledRow> listForChat(UUID chatId, int limit);
 
+    List<ScheduledRow> listForSender(UUID senderId, int limit);
+
     List<ScheduledRow> listDue(Instant now, int limit);
+
+    /** Cancel pending row owned by sender. */
+    boolean cancelPending(UUID id, UUID senderId);
 
     boolean updateStatus(UUID id, String status, UUID sentMessageId);
 

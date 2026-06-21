@@ -92,4 +92,14 @@ class JdbcChatPollAdapterH2Test {
         assertEquals(1, counts[1]);
         assertEquals(0, counts[0]);
     }
+
+    @Test
+    void setClosesAt() {
+        var pollId = adapter.create(new com.avandocmsg.messenger.core.port.ChatPollPort.CreatePoll(
+            chatId, userId, "Close?", List.of("A", "B"), false, null));
+        var closedAt = java.time.Instant.parse("2020-01-01T00:00:00Z");
+        assertTrue(adapter.setClosesAt(pollId, closedAt));
+        var row = adapter.find(pollId).orElseThrow();
+        assertEquals(closedAt, row.closesAt());
+    }
 }

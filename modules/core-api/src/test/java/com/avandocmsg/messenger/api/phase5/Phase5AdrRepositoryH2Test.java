@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class Phase5AdrRepositoryH2Test {
 
@@ -77,5 +78,38 @@ class Phase5AdrRepositoryH2Test {
         var taskId = repo.createKanbanTask(chatId, userId, "todo", "Ship ADR scaffolds", null);
         assertEquals(1, repo.listKanbanTasks(chatId).size());
         assertEquals(taskId, repo.listKanbanTasks(chatId).get(0).id());
+    }
+
+    @Test
+    void kanbanTaskMove() {
+        var taskId = repo.createKanbanTask(chatId, userId, "todo", "Move me", null);
+        var updated = repo.updateKanbanTask(taskId, chatId, "done", 1, null);
+        assertFalse(updated.isEmpty());
+        assertEquals("done", updated.get().columnKey());
+        assertEquals(1, updated.get().sortOrder());
+    }
+
+    @Test
+    void kanbanTaskDelete() {
+        var taskId = repo.createKanbanTask(chatId, userId, "todo", "Delete me", null);
+        assertTrue(repo.deleteKanbanTask(taskId, chatId));
+        assertEquals(0, repo.listKanbanTasks(chatId).size());
+    }
+
+    @Test
+    void guestLinkRedeem() throws Exception {
+        try (var c = ds.getConnection(); var st = c.createStatement()) {
+            st.execute("""
+                CREATE TABLE conference_guest_links (
+                  id UUID PRIMARY KEY, conference_id UUID NOT NULL, chat_id UUID NOT NULL,
+                  token_hash VARCHAR(128) NOT NULL, waiting_room BOOLEAN DEFAULT TRUE,
+                  expires_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
+                """);
+        }
+        var confId = UUID.randomUUID();
+        var link = repo.createGuestLink(confId, chatId, true, null);
+        var found = repo.findGuestLinkByToken(link.guestToken());
+        assertFalse(found.isEmpty());
+        assertEquals(confId, found.get().conferenceId());
     }
 }

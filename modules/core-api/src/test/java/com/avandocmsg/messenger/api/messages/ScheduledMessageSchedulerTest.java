@@ -106,8 +106,18 @@ class ScheduledMessageSchedulerTest {
         }
 
         @Override
+        public List<ScheduledRow> listForSender(UUID senderId, int limit) {
+            return List.of();
+        }
+
+        @Override
         public List<ScheduledRow> listDue(Instant now, int limit) {
             return due;
+        }
+
+        @Override
+        public boolean cancelPending(UUID id, UUID senderId) {
+            return true;
         }
 
         @Override

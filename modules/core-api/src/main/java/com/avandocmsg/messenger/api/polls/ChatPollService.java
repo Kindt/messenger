@@ -101,6 +101,28 @@ public final class ChatPollService {
         return Optional.of(chatPollPort.vote(pollId, userId, optionIndexes));
     }
 
+    /** Manual close by poll creator. */
+    public Optional<PollResponse> close(UUID chatId, UUID pollId, UUID userId) {
+        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
+            return Optional.empty();
+        }
+        var poll = chatPollPort.find(pollId).filter(row -> row.chatId().equals(chatId));
+        if (poll.isEmpty()) {
+            return Optional.empty();
+        }
+        var row = poll.get();
+        if (!row.createdBy().equals(userId)) {
+            return Optional.empty();
+        }
+        if (isClosed(row)) {
+            return Optional.of(toResponse(row, aggregateVotes(row)));
+        }
+        if (!chatPollPort.setClosesAt(pollId, clock.instant())) {
+            return Optional.empty();
+        }
+        return chatPollPort.find(pollId).map(r -> toResponse(r, aggregateVotes(r)));
+    }
+
     private List<Integer> aggregateVotes(ChatPollPort.PollRow row) {
         var counts = new ArrayList<Integer>();
         for (int i = 0; i < row.options().size(); i++) {

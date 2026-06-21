@@ -20,6 +20,17 @@ public final class ExternalStackComponentContracts {
                 ),
                 "fail_closed"
             )),
+        Map.entry("relational-db-archive",
+            contract(
+                "relational-db-archive",
+                List.of(
+                "jdbc_connectivity",
+                "schema_flyway_compatibility",
+                "archive_query_smoke",
+                "restore_drill_contract"
+                ),
+                "archive_export_degraded"
+            )),
         Map.entry("object-storage",
             contract(
                 "object-storage",
@@ -82,6 +93,17 @@ public final class ExternalStackComponentContracts {
                 ),
                 "app_or_realtime_degraded"
             )),
+        Map.entry("search",
+            contract(
+                "search",
+                List.of(
+                "query_contract",
+                "acl_filtering",
+                "reindex_cursor_version",
+                "no_silent_fallback"
+                ),
+                "explicit_degraded_status_only"
+            )),
         Map.entry("media",
             contract(
                 "media",
@@ -135,6 +157,16 @@ public final class ExternalStackComponentContracts {
                 "audit_boundary"
                 ),
                 "audit_and_retry_degraded"
+            )),
+        Map.entry("bots",
+            contract(
+                "bots",
+                List.of(
+                "bot_event_schema",
+                "endpoint_auth_tls",
+                "retry_timeout"
+                ),
+                "bot_delivery_degraded"
             ))
     );
 

@@ -8,9 +8,18 @@
     return "/chats/" + conf.chat_id + "/conferences/" + conf.conference_id + suffix;
   }
 
-  function showTokenModal(ctx, title, token) {
-    ctx.state.phase5Modal = { title: title, body: token };
+  function showTokenModal(ctx, title, body) {
+    ctx.state.phase5Modal = { title: title, body: body || "" };
     ctx.render();
+  }
+
+  function formatList(rows, mapFn) {
+    if (!rows || !rows.length) return "";
+    return rows
+      .map(function (r, idx) {
+        return mapFn(r, idx);
+      })
+      .join("\n");
   }
 
   function mountConfAdrBar(ctx, conf) {
@@ -36,6 +45,28 @@
       })
     );
     bar.appendChild(
+      ctx.iconBtn("📼", ctx.L("ui.phase5.recordList"), {
+        testId: "conf-record-list",
+        disabled: ctx.state.busy,
+        onClick: function () {
+          ctx.apiJson(confPath(conf, "/recordings"), { method: "GET" })
+            .then(function (rows) {
+              var body =
+                rows && rows.length
+                  ? formatList(rows, function (r) {
+                      return (r.recording_id || r.id || "?") + " · " + (r.status || "");
+                    })
+                  : ctx.L("ui.phase5.recordListEmpty");
+              showTokenModal(ctx, ctx.L("ui.phase5.recordList"), body);
+            })
+            .catch(function (err) {
+              ctx.state.error = err.message || ctx.L("ui.phase5.recordFailed");
+              ctx.render();
+            });
+        },
+      })
+    );
+    bar.appendChild(
       ctx.iconBtn("🔗", ctx.L("ui.phase5.guestLink"), {
         testId: "conf-guest-link",
         disabled: ctx.state.busy,
@@ -45,7 +76,12 @@
             jsonBody: { waiting_room: true },
           })
             .then(function (data) {
-              showTokenModal(ctx, ctx.L("ui.phase5.guestLink"), data.guest_token || "");
+              var token = data.guest_token || "";
+              var body = token;
+              if (data.waiting_room) {
+                body = ctx.L("ui.phase5.guestWaiting") + "\n\n" + token;
+              }
+              showTokenModal(ctx, ctx.L("ui.phase5.guestLink"), body);
             })
             .catch(function (err) {
               ctx.state.error = err.message || ctx.L("ui.phase5.guestFailed");
@@ -77,6 +113,28 @@
       })
     );
     bar.appendChild(
+      ctx.iconBtn("📋", ctx.L("ui.phase5.breakoutList"), {
+        testId: "conf-breakout-list",
+        disabled: ctx.state.busy,
+        onClick: function () {
+          ctx.apiJson(confPath(conf, "/breakout-rooms"), { method: "GET" })
+            .then(function (rows) {
+              var body =
+                rows && rows.length
+                  ? formatList(rows, function (r) {
+                      return (r.name || "?") + " · " + (r.livekit_room || "");
+                    })
+                  : ctx.L("ui.phase5.breakoutListEmpty");
+              showTokenModal(ctx, ctx.L("ui.phase5.breakoutList"), body);
+            })
+            .catch(function (err) {
+              ctx.state.error = err.message || ctx.L("ui.phase5.breakoutFailed");
+              ctx.render();
+            });
+        },
+      })
+    );
+    bar.appendChild(
       ctx.iconBtn("💬", ctx.L("ui.phase5.captions"), {
         testId: "conf-captions-start",
         disabled: ctx.state.busy,
@@ -95,6 +153,26 @@
         },
       })
     );
+    bar.appendChild(
+      ctx.iconBtn("📝", ctx.L("ui.phase5.captionsLive"), {
+        testId: "conf-captions-get",
+        disabled: ctx.state.busy,
+        onClick: function () {
+          ctx.apiJson(confPath(conf, "/captions"), { method: "GET" })
+            .then(function (data) {
+              showTokenModal(
+                ctx,
+                ctx.L("ui.phase5.captionsLive"),
+                (data && data.transcript_json) || ctx.L("ui.phase5.captionsSample")
+              );
+            })
+            .catch(function (err) {
+              ctx.state.error = err.message || ctx.L("ui.phase5.captionsFailed");
+              ctx.render();
+            });
+        },
+      })
+    );
     return bar;
   }
 
@@ -105,7 +183,21 @@
     var card = ctx.el("div", "phase5-overlay-card");
     card.appendChild(ctx.el("h3", "phase5-overlay-title", ctx.state.phase5Modal.title || ""));
     card.appendChild(ctx.el("pre", "phase5-modal-body", ctx.state.phase5Modal.body || ""));
-    card.appendChild(
+    var actions = ctx.el("div", "phase5-modal-actions");
+    if (ctx.state.phase5Modal.body && global.KorusUiClipboardUtils) {
+      actions.appendChild(
+        ctx.iconBtn("📋", ctx.L("ui.phase5.modalCopy"), {
+          testId: "phase5-modal-copy",
+          onClick: function () {
+            global.KorusUiClipboardUtils.copyText(ctx.state.phase5Modal.body, function () {
+              ctx.state.phase5Toast = ctx.L("ui.phase5.guestCopied");
+              ctx.render();
+            });
+          },
+        })
+      );
+    }
+    actions.appendChild(
       ctx.iconBtn("✕", ctx.L("ui.common.close"), {
         testId: "phase5-modal-close",
         onClick: function () {
@@ -114,6 +206,7 @@
         },
       })
     );
+    card.appendChild(actions);
     ov.appendChild(card);
     return ov;
   }

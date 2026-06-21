@@ -1,8 +1,10 @@
 /**
- * Spec 022 Phase 5 extended UI: stickers, kanban, whiteboard (ADR scaffolds).
+ * Spec 022 Phase 5 extended UI: stickers, kanban, whiteboard, AI, passkeys (ADR scaffolds).
  */
 (function (global) {
   "use strict";
+
+  var KANBAN_COLS = ["todo", "doing", "done"];
 
   function mountThreadTools(ctx) {
     if (!ctx.state.selectedId || ctx.state.selectedId === ctx.state.savedChatId) return null;
@@ -35,7 +37,56 @@
         },
       })
     );
+    bar.appendChild(
+      ctx.iconBtn("✨", ctx.L("ui.phase5.aiAssist"), {
+        testId: "phase5-ai-assist-open",
+        disabled: ctx.state.busy,
+        onClick: function () {
+          ctx.toggleAiAssistPanel();
+        },
+      })
+    );
     return bar;
+  }
+
+  function appendKanbanMoveBtns(ctx, taskEl, task) {
+    var taskId = task.task_id || task.id;
+    if (!taskId) return;
+    var col = task.column_key || "todo";
+    var idx = KANBAN_COLS.indexOf(col);
+    if (idx > 0) {
+      var prev = KANBAN_COLS[idx - 1];
+      var backBtn = ctx.el("button", "kanban-move-btn");
+      backBtn.type = "button";
+      backBtn.setAttribute("data-testid", "kanban-move-" + taskId + "-" + prev);
+      backBtn.textContent = "←";
+      backBtn.title = ctx.L("ui.phase5.kanbanMoveBack");
+      backBtn.onclick = function () {
+        ctx.moveKanbanTask(taskId, prev);
+      };
+      taskEl.appendChild(backBtn);
+    }
+    if (idx >= 0 && idx < KANBAN_COLS.length - 1) {
+      var next = KANBAN_COLS[idx + 1];
+      var fwdBtn = ctx.el("button", "kanban-move-btn");
+      fwdBtn.type = "button";
+      fwdBtn.setAttribute("data-testid", "kanban-move-" + taskId + "-" + next);
+      fwdBtn.textContent = "→";
+      fwdBtn.title = ctx.L("ui.phase5.kanbanMoveForward");
+      fwdBtn.onclick = function () {
+        ctx.moveKanbanTask(taskId, next);
+      };
+      taskEl.appendChild(fwdBtn);
+    }
+    var delBtn = ctx.el("button", "kanban-move-btn kanban-del-btn");
+    delBtn.type = "button";
+    delBtn.setAttribute("data-testid", "kanban-delete-" + taskId);
+    delBtn.textContent = "×";
+    delBtn.title = ctx.L("ui.phase5.kanbanDelete");
+    delBtn.onclick = function () {
+      ctx.deleteKanbanTask(taskId);
+    };
+    taskEl.appendChild(delBtn);
   }
 
   function mountKanbanSection(ctx) {
@@ -43,14 +94,13 @@
     var wrap = ctx.el("div", "thread-kanban");
     wrap.setAttribute("data-testid", "thread-kanban");
     wrap.appendChild(ctx.el("div", "thread-kanban-title", ctx.L("ui.phase5.kanbanTitle")));
-    var cols = ["todo", "doing", "done"];
     var labels = {
       todo: ctx.L("ui.phase5.colTodo"),
       doing: ctx.L("ui.phase5.colDoing"),
       done: ctx.L("ui.phase5.colDone"),
     };
     var grid = ctx.el("div", "kanban-grid");
-    cols.forEach(function (col) {
+    KANBAN_COLS.forEach(function (col) {
       var colEl = ctx.el("div", "kanban-col");
       colEl.setAttribute("data-column", col);
       colEl.appendChild(ctx.el("div", "kanban-col-head", labels[col] || col));
@@ -59,7 +109,10 @@
           return (t.column_key || "todo") === col;
         })
         .forEach(function (t) {
-          colEl.appendChild(ctx.el("div", "kanban-task", t.title || ""));
+          var taskEl = ctx.el("div", "kanban-task");
+          taskEl.appendChild(ctx.el("span", "kanban-task-title", t.title || ""));
+          appendKanbanMoveBtns(ctx, taskEl, t);
+          colEl.appendChild(taskEl);
         });
       grid.appendChild(colEl);
     });
@@ -92,23 +145,36 @@
     var wrap = ctx.el("div", "thread-whiteboard");
     wrap.setAttribute("data-testid", "thread-whiteboard");
     wrap.appendChild(ctx.el("div", "thread-whiteboard-title", ctx.L("ui.phase5.whiteboardTitle")));
-    var ta = document.createElement("textarea");
-    ta.className = "whiteboard-editor";
-    ta.setAttribute("data-testid", "whiteboard-editor");
-    ta.rows = 6;
-    ta.placeholder = ctx.L("ui.phase5.whiteboardPlaceholder");
-    ta.value =
+    var editorHost = ctx.el("div", "whiteboard-editor-host");
+    var initial =
       (ctx.state.chatWhiteboard && ctx.state.chatWhiteboard.snapshot_json) ||
       '{"version":1,"strokes":[]}';
+    var editor = null;
+    if (global.KorusUiWhiteboardCanvas && global.KorusUiWhiteboardCanvas.mount) {
+      editor = global.KorusUiWhiteboardCanvas.mount(ctx, editorHost, initial);
+    } else {
+      var ta = document.createElement("textarea");
+      ta.className = "whiteboard-editor";
+      ta.setAttribute("data-testid", "whiteboard-editor");
+      ta.rows = 6;
+      ta.placeholder = ctx.L("ui.phase5.whiteboardPlaceholder");
+      ta.value = initial;
+      editorHost.appendChild(ta);
+      editor = {
+        getSnapshotJson: function () {
+          return ta.value;
+        },
+      };
+    }
     var saveBtn = ctx.iconBtn("💾", ctx.L("ui.phase5.whiteboardSave"), {
       testId: "whiteboard-save",
       primary: true,
       disabled: ctx.state.busy,
       onClick: function () {
-        ctx.saveWhiteboard(ta.value);
+        ctx.saveWhiteboard(editor.getSnapshotJson());
       },
     });
-    wrap.appendChild(ta);
+    wrap.appendChild(editorHost);
     wrap.appendChild(saveBtn);
     return wrap;
   }
@@ -119,6 +185,38 @@
     ov.setAttribute("data-testid", "stickers-overlay");
     var card = ctx.el("div", "phase5-overlay-card");
     card.appendChild(ctx.el("h3", "phase5-overlay-title", ctx.L("ui.phase5.stickersTitle")));
+    card.appendChild(ctx.el("h4", "phase5-overlay-sub", ctx.L("ui.phase5.stickerPacks")));
+    var packGrid = ctx.el("div", "stickers-pack-grid");
+    (ctx.state.stickerPacks || []).forEach(function (p, idx) {
+      var btn = ctx.el("button", "stickers-pack-item");
+      btn.type = "button";
+      btn.setAttribute("data-testid", "sticker-pack-" + idx);
+      btn.textContent = p.name || p.pack_id || "?";
+      btn.onclick = function () {
+        ctx.insertStickerMessage(p);
+      };
+      packGrid.appendChild(btn);
+    });
+    if (!(ctx.state.stickerPacks || []).length) {
+      packGrid.appendChild(ctx.el("p", "phase5-hint", ctx.L("ui.phase5.stickersEmpty")));
+    }
+    card.appendChild(packGrid);
+    var packCreateRow = ctx.el("div", "stickers-pack-create");
+    var packInp = document.createElement("input");
+    packInp.type = "text";
+    packInp.className = "stickers-pack-create-input";
+    packInp.setAttribute("data-testid", "sticker-pack-create-input");
+    packInp.placeholder = ctx.L("ui.phase5.stickerPackName");
+    var packCreateBtn = ctx.iconBtn("+", ctx.L("ui.phase5.stickerPackCreate"), {
+      testId: "sticker-pack-create",
+      disabled: ctx.state.busy,
+      onClick: function () {
+        ctx.createStickerPack((packInp.value || "").trim());
+      },
+    });
+    packCreateRow.appendChild(packInp);
+    packCreateRow.appendChild(packCreateBtn);
+    card.appendChild(packCreateRow);
     var grid = ctx.el("div", "stickers-gif-grid");
     (ctx.state.stickerGifs || []).forEach(function (g, idx) {
       var btn = ctx.el("button", "stickers-gif-item");
@@ -149,14 +247,80 @@
     return ov;
   }
 
+  function mountAiAssistOverlay(ctx) {
+    if (!ctx.state.phase5AiOpen) return null;
+    var ov = ctx.el("div", "phase5-overlay");
+    ov.setAttribute("data-testid", "ai-assist-overlay");
+    var card = ctx.el("div", "phase5-overlay-card ai-assist-card");
+    card.appendChild(ctx.el("h3", "phase5-overlay-title", ctx.L("ui.phase5.aiAssistTitle")));
+    var inp = document.createElement("textarea");
+    inp.className = "ai-assist-input";
+    inp.setAttribute("data-testid", "ai-assist-input");
+    inp.rows = 3;
+    inp.placeholder = ctx.L("ui.phase5.aiAssistPlaceholder");
+    card.appendChild(inp);
+    var runBtn = ctx.iconBtn("▶", ctx.L("ui.phase5.aiAssistRun"), {
+      testId: "ai-assist-run",
+      primary: true,
+      disabled: ctx.state.busy,
+      onClick: function () {
+        ctx.runAiAssist((inp.value || "").trim());
+      },
+    });
+    card.appendChild(runBtn);
+    if (ctx.state.phase5AiReply) {
+      card.appendChild(ctx.el("pre", "ai-assist-reply", ctx.state.phase5AiReply));
+      card.appendChild(
+        ctx.iconBtn("↩", ctx.L("ui.phase5.aiInsert"), {
+          testId: "ai-assist-insert",
+          disabled: ctx.state.busy,
+          onClick: function () {
+            ctx.insertAiReplyToComposer();
+          },
+        })
+      );
+    }
+    card.appendChild(
+      ctx.iconBtn("✕", ctx.L("ui.common.close"), {
+        testId: "ai-assist-close",
+        onClick: function () {
+          ctx.closeAiAssistPanel();
+        },
+      })
+    );
+    ov.appendChild(card);
+    ov.onclick = function (e) {
+      if (e.target === ov) ctx.closeAiAssistPanel();
+    };
+    return ov;
+  }
+
   function mountFederationDirectory(ctx, panel) {
     if (!panel) return;
-    panel.appendChild(ctx.el("h3", "settings-subtitle", ctx.L("ui.phase5.federationTitle")));
+    var head = ctx.el("div", "settings-row");
+    head.appendChild(ctx.el("h3", "settings-subtitle", ctx.L("ui.phase5.federationTitle")));
+    head.appendChild(
+      ctx.el("p", "phase5-hint federation-directory-hint", ctx.L("ui.federation.directoryHint"))
+    );
+    head.appendChild(
+      ctx.iconBtn("↻", ctx.L("ui.common.refresh"), {
+        testId: "federation-refresh",
+        disabled: ctx.state.busy,
+        onClick: function () {
+          ctx.loadFederationDirectory().then(ctx.render).catch(ctx.render);
+        },
+      })
+    );
+    panel.appendChild(head);
     var list = ctx.el("div", "federation-directory-list");
     list.setAttribute("data-testid", "federation-directory-list");
     (ctx.state.federationDirectory || []).forEach(function (p) {
       var row = ctx.el("div", "federation-directory-row");
-      row.textContent = (p.name || p.org_id) + (p.slug ? " (" + p.slug + ")" : "");
+      var label = (p.name || p.org_id) + (p.slug ? " (" + p.slug + ")" : "");
+      if (p.trust_level) {
+        label += " · " + p.trust_level;
+      }
+      row.textContent = label;
       list.appendChild(row);
     });
     if (!(ctx.state.federationDirectory || []).length) {
@@ -165,11 +329,72 @@
     panel.appendChild(list);
   }
 
+  function mountPasskeysSection(ctx, panel) {
+    if (!panel) return;
+    panel.appendChild(ctx.el("h3", "settings-subtitle", ctx.L("ui.phase5.passkeysTitle")));
+    var list = ctx.el("div", "passkeys-list");
+    list.setAttribute("data-testid", "passkeys-list");
+    (ctx.state.myPasskeys || []).forEach(function (pk) {
+      var row = ctx.el("div", "passkeys-row");
+      row.textContent = (pk.credential_id || pk.id || "").slice(0, 24);
+      list.appendChild(row);
+    });
+    if (!(ctx.state.myPasskeys || []).length) {
+      list.appendChild(ctx.el("p", "phase5-hint", ctx.L("ui.phase5.passkeysEmpty")));
+    }
+    panel.appendChild(list);
+    var row = ctx.el("div", "settings-row");
+    row.appendChild(
+      ctx.iconBtn("＋", ctx.L("ui.phase5.passkeysRegister"), {
+        testId: "passkey-register-scaffold",
+        disabled: ctx.state.busy || ctx.state.passkeysBusy,
+        onClick: function () {
+          ctx.registerPasskeyScaffold();
+        },
+      })
+    );
+    panel.appendChild(row);
+  }
+
+  function mountSipGatewaySection(ctx, panel) {
+    if (!panel) return;
+    panel.appendChild(ctx.el("h3", "settings-subtitle", ctx.L("ui.phase5.sipTitle")));
+    var row = ctx.el("div", "settings-row sip-gateway-row");
+    var enabled = ctx.el("input");
+    enabled.type = "checkbox";
+    enabled.id = "sip-enabled";
+    enabled.checked = !!(ctx.state.sipGateway && ctx.state.sipGateway.enabled);
+    row.appendChild(enabled);
+    row.appendChild(ctx.el("label", "sip-label", ctx.L("ui.phase5.sipEnabled")));
+    panel.appendChild(row);
+    var uriRow = ctx.el("div", "settings-row");
+    var uriInp = document.createElement("input");
+    uriInp.type = "text";
+    uriInp.className = "sip-uri-input";
+    uriInp.setAttribute("data-testid", "sip-uri-input");
+    uriInp.placeholder = ctx.L("ui.phase5.sipUri");
+    uriInp.value = (ctx.state.sipGateway && ctx.state.sipGateway.gateway_uri) || "";
+    uriRow.appendChild(uriInp);
+    uriRow.appendChild(
+      ctx.iconBtn("💾", ctx.L("ui.phase5.sipSave"), {
+        testId: "sip-save",
+        disabled: ctx.state.busy,
+        onClick: function () {
+          ctx.saveSipGateway(enabled.checked, uriInp.value);
+        },
+      })
+    );
+    panel.appendChild(uriRow);
+  }
+
   global.KorusUiPhase5Ext = {
     mountThreadTools: mountThreadTools,
     mountKanbanSection: mountKanbanSection,
     mountWhiteboardSection: mountWhiteboardSection,
     mountStickersOverlay: mountStickersOverlay,
+    mountAiAssistOverlay: mountAiAssistOverlay,
     mountFederationDirectory: mountFederationDirectory,
+    mountPasskeysSection: mountPasskeysSection,
+    mountSipGatewaySection: mountSipGatewaySection,
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);

@@ -336,7 +336,11 @@
       "accept": "수락",
       "decline": "거절",
       "exportBanner": "「{chat}」 내보내기{bg}: {status}",
-      "backToChats": "채팅 목록으로"
+      "backToChats": "채팅 목록으로",
+      "presenceTitle": "Click to change status",
+      "updateReady": "A new version is available",
+      "reloadNow": "Reload",
+      "reloadLater": "Later"
     },
     "sidebar": {
       "searchPlaceholder": "채팅 또는 사용자(2자 이상)…",
@@ -372,14 +376,25 @@
       "folderFailed": "폴더를 변경하지 못했습니다.",
       "folderAll": "전체",
       "folderWorkChip": "업무",
-      "folderPersonal": "개인",
+      "folderPersonal": "Mark as personal",
       "folderArchive": "보관",
       "folder": {
         "all": "전체",
         "work": "업무",
         "personal": "개인",
         "archive": "보관"
-      }
+      },
+      "filter": {
+        "all": "All chats",
+        "unread": "Unread",
+        "mentions": "Mentions"
+      },
+      "marketplaceSearch": "Search integrations…",
+      "marketplaceAll": "All categories",
+      "noChatsUnread": "No unread chats.",
+      "noChatsMentions": "No chats with mentions.",
+      "pinChat": "Pin chat",
+      "unpinChat": "Unpin chat"
     },
     "thread": {
       "empty": "채팅을 선택하거나 그룹을 만드세요.",
@@ -421,7 +436,8 @@
       "createPoll": "투표 만들기",
       "scheduleSend": "예약 전송",
       "shareContact": "연락처 공유",
-      "voiceRecord": "음성 메시지"
+      "voiceRecord": "음성 메시지",
+      "emoji": "Emoji"
     },
     "phase5": {
       "stickers": "스티커",
@@ -458,7 +474,49 @@
       "captionsFailed": "자막을 시작하지 못했습니다.",
       "videoNote": "Video note",
       "videoNoteFailed": "Video note를 보내지 못했습니다.",
-      "videoMicDenied": "카메라 접근이 거부되었습니다."
+      "videoMicDenied": "카메라 접근이 거부되었습니다.",
+      "aiAssist": "AI assist",
+      "aiAssistTitle": "AI chat assist",
+      "aiAssistPlaceholder": "Ask a question about this chat…",
+      "aiAssistRun": "Run",
+      "aiAssistEmpty": "No reply from AI gateway.",
+      "aiAssistFailed": "AI assist failed.",
+      "aiInsert": "Insert into composer",
+      "kanbanMoveBack": "Move to previous column",
+      "kanbanMoveForward": "Move to next column",
+      "kanbanDelete": "Delete task",
+      "kanbanDeleted": "Task deleted.",
+      "passkeysTitle": "Passkeys (scaffold)",
+      "passkeysEmpty": "No passkeys registered.",
+      "passkeysRegister": "Register scaffold credential",
+      "passkeysRegistered": "Passkey scaffold registered.",
+      "passkeysFailed": "Passkey registration failed.",
+      "guestExpired": "Guest link expired.",
+      "guestRedeemed": "Guest link accepted.",
+      "guestRedeemFailed": "Could not redeem guest link.",
+      "recordList": "Recordings list",
+      "recordListEmpty": "No recordings yet.",
+      "breakoutList": "Breakout rooms",
+      "breakoutListEmpty": "No breakout rooms.",
+      "sipTitle": "SIP / H.323 gateway",
+      "sipEnabled": "Enable SIP",
+      "sipUri": "Gateway URI",
+      "sipSave": "Save SIP",
+      "sipSaved": "SIP gateway saved.",
+      "sipFailed": "Could not save SIP.",
+      "stickerPacks": "Sticker packs",
+      "stickerSend": "Send sticker",
+      "captionsLive": "Transcript (live)",
+      "guestCopy": "Copy link",
+      "guestCopied": "Guest link copied.",
+      "guestWaiting": "Waiting room enabled",
+      "breakoutJoin": "Join",
+      "stickerPackCreate": "Create pack",
+      "stickerPackName": "Pack name",
+      "stickerPackCreated": "Sticker pack created.",
+      "stickerPackFailed": "Could not create pack.",
+      "recordStop": "Stop recording",
+      "modalCopy": "Copy"
     },
     "polls": {
       "title": "투표",
@@ -474,7 +532,11 @@
       "empty": "이 채팅에 투표가 없습니다.",
       "createFailed": "투표를 만들 수 없습니다.",
       "voteFailed": "투표할 수 없습니다.",
-      "pickOption": "하나 이상 선택하세요."
+      "pickOption": "하나 이상 선택하세요.",
+      "close": "Close poll",
+      "closeFailed": "Could not close poll.",
+      "closedByYou": "Poll closed.",
+      "refreshResults": "Refresh results"
     },
     "schedule": {
       "title": "예약 전송",
@@ -483,7 +545,12 @@
       "failed": "메시지를 예약할 수 없습니다.",
       "ok": "메시지가 예약되었습니다.",
       "emptyDraft": "먼저 메시지 입력란에 텍스트를 입력하세요.",
-      "whenRequired": "날짜와 시간을 선택하세요."
+      "whenRequired": "날짜와 시간을 선택하세요.",
+      "listTitle": "Scheduled messages",
+      "cancel": "Cancel send",
+      "cancelFailed": "Could not cancel scheduled message.",
+      "emptyList": "No scheduled messages.",
+      "rowPreview": "{chat} · {when}"
     },
     "reminders": {
       "title": "메시지 알림",
@@ -494,7 +561,12 @@
       "listTitle": "대기 중인 알림",
       "preset1h": "1시간 후",
       "preset3h": "3시간 후",
-      "presetTomorrow": "내일"
+      "presetTomorrow": "내일",
+      "cancel": "Cancel",
+      "openChat": "Open chat",
+      "emptyList": "No pending reminders.",
+      "cancelled": "Reminder cancelled.",
+      "cancelFailed": "Could not cancel reminder."
     },
     "contactShare": {
       "title": "연락처 공유",
@@ -503,7 +575,13 @@
       "failed": "연락처를 보낼 수 없습니다."
     },
     "offline": {
-      "cachedThread": "오프라인 — 캐시된 메시지 표시"
+      "cachedThread": "오프라인 — 캐시된 메시지 표시",
+      "syncPending": "Sync when back online…",
+      "syncDone": "Cache updated",
+      "clearCache": "Clear offline cache",
+      "clearCacheOk": "Offline cache cleared.",
+      "reconnecting": "Reconnecting…",
+      "quotaHint": "Cache keeps recent messages for selected chats."
     },
     "message": {
       "image": "이미지",
@@ -528,7 +606,8 @@
       "pubLinkTitle": "파일 공개 링크 만들기(A/B/C)",
       "linksTitle": "공개 링크 목록 및 취소",
       "locationLabel": "내 위치",
-      "locationOpen": "지도에서 열기"
+      "locationOpen": "지도에서 열기",
+      "sticker": "Sticker"
     },
     "actions": {
       "reply": "답장",
@@ -624,7 +703,10 @@
       "privateKeyHint": "개인 키 — IndexedDB에만 저장; 서버로는 public key package만 전송됩니다.",
       "webPushHintRegistered": " Web Push: 알림을 켤 때 구독(등록됨). 전달 — push-worker(PUSH_VAPID_* = web-client public key).",
       "webPushHintDefault": " Web Push: 알림을 켤 때 구독.",
-      "webPushNoVapid": " Web Push: push-worker에 WEB_CLIENT_VAPID_PUBLIC_KEY 및 PUSH_VAPID_* 필요."
+      "webPushNoVapid": " Web Push: push-worker에 WEB_CLIENT_VAPID_PUBLIC_KEY 및 PUSH_VAPID_* 필요.",
+      "scheduledTitle": "Scheduled messages",
+      "notificationPush": "Push notifications",
+      "dataUsage": "Data usage"
     },
     "forward": {
       "title": "메시지 전달"
@@ -650,6 +732,53 @@
     "versions": {
       "title": "편집 기록",
       "none": "저장된 버전이 없습니다."
+    },
+    "integration": {
+      "close": "Close panel"
+    },
+    "search": {
+      "globalTitle": "Search",
+      "filterAll": "All",
+      "filterChats": "Chats",
+      "filterMessages": "Messages",
+      "noResults": "No results."
+    },
+    "profile": {
+      "bioHint": "Short bio visible to contacts",
+      "avatarChange": "Change avatar"
+    },
+    "mobile": {
+      "back": "Back to list",
+      "chatsTitle": "Chats"
+    },
+    "marketplace": {
+      "open": "Open",
+      "installed": "Connected",
+      "categoryBots": "Bots",
+      "categoryStorage": "Storage",
+      "categoryCalendar": "Calendar",
+      "categoryHr": "HR / requests",
+      "noResults": "No integrations found."
+    },
+    "federation": {
+      "directoryHint": "Trusted orgs for cross-org chats (MVP).",
+      "trustActive": "Active",
+      "trustPending": "Pending",
+      "partnerLabel": "Partner"
+    },
+    "whiteboard": {
+      "toolPen": "Pen",
+      "toolRect": "Rectangle",
+      "toolEraser": "Eraser",
+      "clearCanvas": "Clear",
+      "undo": "Undo",
+      "canvasHint": "Draw on canvas — saved in snapshot JSON.",
+      "tabCanvas": "Canvas",
+      "tabJson": "JSON"
     }
+  },
+  "push": {
+    "title": "Korus Messenger",
+    "body": "New message"
   }
 }

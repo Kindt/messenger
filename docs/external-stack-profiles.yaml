@@ -405,6 +405,10 @@ components:
     default_profile: none
     single_active: true
     profiles:
+      none:
+        lifecycle_status: rejected
+        deployment_modes: [unsupported]
+        connector: none
       coturn-external:
         lifecycle_status: supported_external_byo
         deployment_modes: [external_byo, managed_by_customer]
@@ -453,6 +457,10 @@ components:
     default_profile: disabled
     single_active: true
     profiles:
+      disabled:
+        lifecycle_status: rejected
+        deployment_modes: [unsupported]
+        connector: none
       icap-dlp-generic:
         lifecycle_status: candidate
         deployment_modes: [external_byo, managed_by_customer]

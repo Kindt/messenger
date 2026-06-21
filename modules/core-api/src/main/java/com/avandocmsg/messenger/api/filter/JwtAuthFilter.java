@@ -35,6 +35,7 @@ public class JwtAuthFilter implements ContainerRequestFilter {
         "v1/media/capabilities",
         "v1/metrics",
         "v1/files/pub",
+        "v1/conferences/guest",
         "v1/admin/console",
         "v1/bot",
         "v1/integrations/outbound"

@@ -101,6 +101,20 @@ korus_nats_url: "nats://nats.example.internal:4222"
 
 Production cutover, vendor sign-off and live credentials remain deferred to spec 015 until a live server exists.
 
+### Customer validation runbook (spec 023, lab)
+
+Repo-local checklist before BYO cutover on a customer profile (no live-server required):
+
+1. `./gradlew buildIntegrity`
+2. Lab stack up (QEMU or compose guest): API `18080`, UI `19088`
+3. Admin → External stack: upload desired manifest, run preflight (`POST /api/v1/platform/external-stack/preflight/manifests`)
+4. Attached probes: confirm `GET /api/v1/platform/external-stack/status` shows expected components
+5. `scripts/smoke-external-stack-probes.ps1` (if manifest points at lab endpoints)
+6. Search SPI: enable `addon-search`, verify Solr/SQL fallback per profile
+7. Document observed vs desired in cutover report template (`docs/plans/` / admin export)
+
+Live cutover with real FQDN, vault and human sign-off → spec **015** (Sep 2026+).
+
 ### TLS checklist (stage / prod)
 
 1. Use `inventory/stage/` or `inventory/prod/`, or set in your inventory `group_vars/all.yml`:

@@ -95,6 +95,40 @@
     fmt.appendChild(bBold);
     fmt.appendChild(bIt);
     fmt.appendChild(bCode);
+    var emojiOpen = false;
+    var emojiWrap = ctx.el("div", "composer-emoji-wrap");
+    var bEmoji = ctx.el("button", "btn btn-ghost btn-icon", "😀");
+    bEmoji.type = "button";
+    bEmoji.title = ctx.L("ui.thread.emoji");
+    bEmoji.setAttribute("data-testid", "composer-emoji-toggle");
+    bEmoji.onclick = function () {
+      emojiOpen = !emojiOpen;
+      emojiPop.style.display = emojiOpen ? "flex" : "none";
+    };
+    var emojiPop = ctx.el("div", "composer-emoji-pop");
+    emojiPop.style.display = "none";
+    emojiPop.setAttribute("data-testid", "composer-emoji-pop");
+    (ctx.reactionPickerEmojis || ["👍", "❤️", "😂", "🔥", "🎉"]).forEach(function (em) {
+      var eb = ctx.el("button", "composer-emoji-item");
+      eb.type = "button";
+      eb.textContent = em;
+      eb.onclick = function () {
+        var ta = document.getElementById("msgdraft");
+        if (!ta) return;
+        var s = ta.selectionStart;
+        var val = ta.value;
+        ta.value = val.slice(0, s) + em + val.slice(s);
+        ta.focus();
+        ta.selectionStart = ta.selectionEnd = s + em.length;
+        emojiOpen = false;
+        emojiPop.style.display = "none";
+        if (ctx.scheduleSaveComposerDraft) ctx.scheduleSaveComposerDraft();
+      };
+      emojiPop.appendChild(eb);
+    });
+    emojiWrap.appendChild(bEmoji);
+    emojiWrap.appendChild(emojiPop);
+    fmt.appendChild(emojiWrap);
     var filePick = document.createElement("input");
     filePick.type = "file";
     filePick.id = "msgFilePick";

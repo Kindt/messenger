@@ -21,6 +21,9 @@ public interface ChatPollPort {
     /** No-op for MVP (polls have no status column); reserved for future lifecycle. */
     boolean updateStatus(UUID pollId, String status);
 
+    /** Set poll close time (manual close or schedule). */
+    boolean setClosesAt(UUID pollId, Instant closesAt);
+
     List<VoteRow> listVotes(UUID pollId);
 
     record CreatePoll(

@@ -105,4 +105,20 @@ public class ChatPollResource {
                 .entity(new ApiError(404, messages.get("error.poll.not_found")))
                 .build());
     }
+
+    @POST
+    @Path("{pollId}/close")
+    @Operation(summary = "Close poll (creator only)")
+    public Response close(@PathParam("chatId") String chatId,
+                          @PathParam("pollId") String pollId,
+                          @Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        var cid = UuidParams.required(chatId, "chat_id");
+        var pid = UuidParams.required(pollId, "poll_id");
+        return chatPollService.close(cid, pid, userId)
+            .map(p -> Response.ok(p).build())
+            .orElse(Response.status(Response.Status.FORBIDDEN)
+                .entity(new ApiError(403, messages.get("error.poll.cannot_close")))
+                .build());
+    }
 }

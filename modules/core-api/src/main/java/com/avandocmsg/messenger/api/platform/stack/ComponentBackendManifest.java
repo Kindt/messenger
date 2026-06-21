@@ -56,4 +56,10 @@ public record ComponentBackendManifest(
             resourceNameOrAlias, schemaOrProtocolVersion, compatibilityProfile, topology, configRevision,
             capabilities, dataClassification, supportBoundary, metadata);
     }
+
+    public ComponentBackendManifest withMetadata(Map<String, String> newMetadata) {
+        return new ComponentBackendManifest(component, backendFamily, connector, version, role, endpoint,
+            resourceNameOrAlias, schemaOrProtocolVersion, compatibilityProfile, topology, configRevision,
+            capabilities, dataClassification, supportBoundary, newMetadata);
+    }
 }

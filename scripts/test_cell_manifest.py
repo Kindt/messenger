@@ -24,6 +24,7 @@ KORUS_SERVER_ENV_TEMPLATE = (
 )
 FULL_SERVER_COMPOSE = REPO_ROOT / "docker/docker-compose.full-server.yml"
 EXTERNAL_STACK_PROFILES = REPO_ROOT / "docs/external-stack-profiles.yaml"
+PRODUCT_MODULES = REPO_ROOT / "modules/core-api/src/main/resources/product-modules.yaml"
 
 
 class TestCellManifest(unittest.TestCase):
@@ -102,6 +103,30 @@ class TestCellManifest(unittest.TestCase):
         postgres = data["components"]["relational-db-hot"]["profiles"]["postgres-16-external"]
         self.assertIn("customer_profile_evidence", postgres.get("promotion_evidence", []))
         self.assertIn("silent_fallback", postgres.get("unsupported_modes", []))
+
+    def test_external_stack_default_profiles_and_product_module_refs_are_valid(self) -> None:
+        stack = load_manifest(EXTERNAL_STACK_PROFILES)
+        modules = load_manifest(PRODUCT_MODULES)
+        components = stack["components"]
+        profiles = {
+            profile_id
+            for component in components.values()
+            for profile_id in component.get("profiles", {}).keys()
+        }
+
+        for component_id, component in components.items():
+            default_profile = component.get("default_profile")
+            self.assertIn(default_profile, component.get("profiles", {}), component_id)
+
+        def assert_refs(owner: str, entry: dict[str, object]) -> None:
+            for component_id in entry.get("external_stack_components", []) or []:
+                self.assertIn(component_id, components, f"{owner}: {component_id}")
+            for profile_id in entry.get("external_stack_profiles", []) or []:
+                self.assertIn(profile_id, profiles, f"{owner}: {profile_id}")
+
+        assert_refs("base", modules["base"])
+        for addon in modules.get("addons", []) or []:
+            assert_refs(addon["id"], addon)
 
 
 if __name__ == "__main__":

@@ -275,21 +275,132 @@ public final class Phase5AdrRepository {
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    out.add(new KanbanTaskRow(
-                        rs.getObject("id", UUID.class),
-                        rs.getObject("chat_id", UUID.class),
-                        rs.getString("column_key"),
-                        rs.getString("title"),
-                        rs.getObject("assignee_id", UUID.class),
-                        rs.getObject("created_by", UUID.class),
-                        rs.getInt("sort_order"),
-                        rs.getTimestamp("created_at").toInstant()));
+                    out.add(mapKanbanTask(rs));
                 }
             }
         } catch (SQLException e) {
             throw new IllegalStateException("listKanbanTasks failed", e);
         }
         return out;
+    }
+
+    public Optional<KanbanTaskRow> getKanbanTask(UUID taskId, UUID chatId) {
+        var sql = """
+            SELECT id, chat_id, column_key, title, assignee_id, created_by, sort_order, created_at
+            FROM chat_kanban_tasks WHERE id = ? AND chat_id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, taskId);
+            stmt.setObject(2, chatId);
+            try (var rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(mapKanbanTask(rs));
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("getKanbanTask failed", e);
+        }
+    }
+
+    public Optional<KanbanTaskRow> updateKanbanTask(
+        UUID taskId,
+        UUID chatId,
+        String columnKey,
+        Integer sortOrder,
+        String title
+    ) {
+        var sets = new ArrayList<String>();
+        if (columnKey != null && !columnKey.isBlank()) {
+            sets.add("column_key = ?");
+        }
+        if (sortOrder != null) {
+            sets.add("sort_order = ?");
+        }
+        if (title != null && !title.isBlank()) {
+            sets.add("title = ?");
+        }
+        if (sets.isEmpty()) {
+            return getKanbanTask(taskId, chatId);
+        }
+        var sql = "UPDATE chat_kanban_tasks SET " + String.join(", ", sets) + " WHERE id = ? AND chat_id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            var idx = 1;
+            if (columnKey != null && !columnKey.isBlank()) {
+                stmt.setString(idx++, columnKey.trim());
+            }
+            if (sortOrder != null) {
+                stmt.setInt(idx++, sortOrder);
+            }
+            if (title != null && !title.isBlank()) {
+                stmt.setString(idx++, title.trim());
+            }
+            stmt.setObject(idx++, taskId);
+            stmt.setObject(idx, chatId);
+            if (stmt.executeUpdate() == 0) {
+                return Optional.empty();
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("updateKanbanTask failed", e);
+        }
+        return getKanbanTask(taskId, chatId);
+    }
+
+    public boolean deleteKanbanTask(UUID taskId, UUID chatId) {
+        var sql = "DELETE FROM chat_kanban_tasks WHERE id = ? AND chat_id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, taskId);
+            stmt.setObject(2, chatId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new IllegalStateException("deleteKanbanTask failed", e);
+        }
+    }
+
+    public Optional<GuestLinkLookupRow> findGuestLinkByToken(String token) {
+        if (token == null || token.isBlank()) {
+            return Optional.empty();
+        }
+        var hash = sha256(token.trim());
+        var sql = """
+            SELECT id, conference_id, chat_id, waiting_room, expires_at, created_at
+            FROM conference_guest_links WHERE token_hash = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, hash);
+            try (var rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(new GuestLinkLookupRow(
+                    rs.getObject("id", UUID.class),
+                    rs.getObject("conference_id", UUID.class),
+                    rs.getObject("chat_id", UUID.class),
+                    rs.getBoolean("waiting_room"),
+                    rs.getTimestamp("expires_at") != null
+                        ? rs.getTimestamp("expires_at").toInstant()
+                        : null,
+                    rs.getTimestamp("created_at").toInstant()));
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("findGuestLinkByToken failed", e);
+        }
+    }
+
+    private static KanbanTaskRow mapKanbanTask(java.sql.ResultSet rs) throws SQLException {
+        return new KanbanTaskRow(
+            rs.getObject("id", UUID.class),
+            rs.getObject("chat_id", UUID.class),
+            rs.getString("column_key"),
+            rs.getString("title"),
+            rs.getObject("assignee_id", UUID.class),
+            rs.getObject("created_by", UUID.class),
+            rs.getInt("sort_order"),
+            rs.getTimestamp("created_at").toInstant());
     }
 
     public Optional<SipGatewayRow> getSipGateway(UUID orgId) {
@@ -530,6 +641,8 @@ public final class Phase5AdrRepository {
                                String storageKey, Instant createdAt) {}
     public record GuestLinkRow(UUID id, UUID conferenceId, UUID chatId, String guestToken,
                                boolean waitingRoom, Instant expiresAt, Instant createdAt) {}
+    public record GuestLinkLookupRow(UUID id, UUID conferenceId, UUID chatId, boolean waitingRoom,
+                                     Instant expiresAt, Instant createdAt) {}
     public record BreakoutRow(UUID id, UUID parentConferenceId, UUID chatId, String name,
                               String livekitRoom, Instant createdAt) {}
     public record WhiteboardRow(UUID id, UUID chatId, UUID createdBy, String title,

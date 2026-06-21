@@ -95,10 +95,30 @@
       });
   }
 
+  function clearAll() {
+    if (!global.indexedDB) return Promise.resolve();
+    return openDb()
+      .then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction(STORE, "readwrite");
+          tx.objectStore(STORE).clear();
+          tx.oncomplete = function () {
+            db.close();
+            resolve();
+          };
+          tx.onerror = function () {
+            reject(tx.error);
+          };
+        });
+      })
+      .catch(function () {});
+  }
+
   global.KorusOfflineCache = {
     MAX_PER_CHAT: MAX_PER_CHAT,
     putMessages: putMessages,
     appendMessage: appendMessage,
     getMessages: getMessages,
+    clearAll: clearAll,
   };
 })(typeof window !== "undefined" ? window : globalThis);

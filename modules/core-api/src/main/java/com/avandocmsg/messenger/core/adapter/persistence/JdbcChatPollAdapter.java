@@ -182,6 +182,23 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
     }
 
     @Override
+    public boolean setClosesAt(UUID pollId, Instant closesAt) {
+        if (pollId == null || closesAt == null) {
+            return false;
+        }
+        var sql = "UPDATE chat_polls SET closes_at = ? WHERE id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setTimestamp(1, Timestamp.from(closesAt));
+            stmt.setObject(2, pollId);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            log.error("chat poll setClosesAt failed poll={}", pollId, e);
+            return false;
+        }
+    }
+
+    @Override
     public List<VoteRow> listVotes(UUID pollId) {
         var sql = """
             SELECT poll_id, user_id, option_indexes, voted_at

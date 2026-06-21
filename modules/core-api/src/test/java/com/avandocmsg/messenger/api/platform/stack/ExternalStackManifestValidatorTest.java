@@ -48,6 +48,72 @@ class ExternalStackManifestValidatorTest {
     }
 
     @Test
+    void rejectsUnknownCompatibilityProfile() {
+        var manifest = activeManifest("object-storage", "external-s3")
+            .withCompatibilityProfile("missing-s3-profile");
+
+        var result = ExternalStackManifestValidator.validateDesiredManifests(List.of(manifest));
+
+        assertFalse(result.passed());
+        assertTrue(result.failures()
+            .contains("component object-storage references unknown compatibility profile missing-s3-profile"));
+    }
+
+    @Test
+    void rejectsCompatibilityProfileFromDifferentComponent() {
+        var manifest = activeManifest("object-storage", "external-s3")
+            .withCompatibilityProfile("opensearch-candidate");
+
+        var result = ExternalStackManifestValidator.validateDesiredManifests(List.of(manifest));
+
+        assertFalse(result.passed());
+        assertTrue(result.failures()
+            .contains("component object-storage profile opensearch-candidate belongs to component search"));
+    }
+
+    @Test
+    void rejectsActiveManifestUsingCandidateProfile() {
+        var manifest = activeManifest("search", "opensearch")
+            .withCompatibilityProfile("opensearch-candidate");
+
+        var result = ExternalStackManifestValidator.validateDesiredManifests(List.of(manifest));
+
+        assertFalse(result.passed());
+        assertTrue(result.failures()
+            .contains("component search profile opensearch-candidate is not production-supported"));
+    }
+
+    @Test
+    void warnsForActiveExternalByoProfileUnsupportedModes() {
+        var manifest = activeManifest("relational-db-hot", "postgres-16")
+            .withCompatibilityProfile("postgres-16-external")
+            .withMetadata(Map.of("serve_traffic", "true"));
+
+        var result = ExternalStackManifestValidator.validateDesiredManifests(List.of(manifest));
+
+        assertTrue(result.passed());
+        assertTrue(result.warnings()
+            .contains("component relational-db-hot profile postgres-16-external requires customer support boundary evidence"));
+        assertTrue(result.warnings()
+            .contains("component relational-db-hot profile postgres-16-external unsupported mode: silent_fallback"));
+    }
+
+    @Test
+    void warnsWhenActiveManifestDoesNotProvideRequiredCheckEvidence() {
+        var manifest = activeManifest("object-storage", "minio-s3")
+            .withCompatibilityProfile("s3-minio-bundled")
+            .withCapabilities(List.of("put_get_head_delete_list"));
+
+        var result = ExternalStackManifestValidator.validateDesiredManifests(List.of(manifest));
+
+        assertTrue(result.passed());
+        assertTrue(result.warnings()
+            .contains("component object-storage missing required check evidence: bucket_policy"));
+        assertTrue(result.warnings()
+            .contains("component object-storage missing required check evidence: multipart"));
+    }
+
+    @Test
     void rejectsCandidateAsSupportedBundled() {
         var profile = new ConnectorProfile(
             "angie",

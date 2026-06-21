@@ -75,10 +75,29 @@ Repo-local API:
 - `GET /api/v1/platform/external-stack/status/{component}`
   - Output: one component status row with desired/observed connector, health, validation and support boundary.
   - Constraint: no secret-bearing endpoint output.
+- `GET /api/v1/platform/external-stack/component-contracts`
+  - Output: component validation contract catalog keyed by component id.
+  - Constraint: read-only contract surface; no runtime probes or endpoint switches.
+- `GET /api/v1/platform/external-stack/component-contracts/{component}`
+  - Output: one component contract with required checks and failure policy.
+  - Constraint: unknown component contracts return not-found semantics.
+- `GET /api/v1/platform/external-stack/catalog-health`
+  - Output: catalog drift report with counts, failures and candidate warnings.
+  - Constraint: report is read-only and must not hide candidate profiles.
+- `GET /api/v1/platform/external-stack/component-profile-summary`
+  - Output: readiness summary by component with supported/candidate/rejected counts.
+  - Constraint: candidate counts remain visible and are not treated as supported capacity.
+- `GET /api/v1/platform/external-stack/component-profile-summary/{component}`
+  - Output: one component readiness summary.
+  - Constraint: unknown components return not-found semantics.
 - `POST /api/v1/platform/external-stack/preflight/manifests`
   - Input: `{ "manifests": [ComponentBackendManifest...] }`
   - Output: manifest `ValidationResult`
-  - Constraint: validates desired state only; no deploy, no secret exposure, no runtime endpoint switch.
+  - Constraint: validates desired state only; no deploy, no secret exposure, no runtime endpoint switch. Unknown profile ids, component/profile mismatch and active candidate profiles fail validation.
+- `POST /api/v1/platform/external-stack/preflight/manifests/report`
+  - Input: `{ "manifests": [ComponentBackendManifest...] }`
+  - Output: manifest explain report with severity (`ok`, `warning`, `blocked`), totals and per-component summaries including `missing_required_checks`.
+  - Constraint: uses redacted metadata only; no endpoint switch.
 - `POST /api/v1/platform/external-stack/preflight/checkpoint`
   - Input: `MigrationCheckpoint`
   - Output: structured checkpoint report
@@ -100,3 +119,8 @@ Validation is accepted when:
 6. Supported profiles include an impact model for performance, resilience, resources, price/TCO and administration.
 7. Product Modules catalog has no dangling external stack component/profile references.
 8. Capabilities output includes warnings when enabled/degraded add-ons require degraded external stack components.
+9. Every catalog component default profile is represented by an explicit profile entry, including optional disabled/none states.
+10. Every compatibility profile referenced by a desired manifest resolves to the same component and is production-supported before active traffic is allowed.
+11. Active external/BYO manifests warn about customer support-boundary evidence and unsupported modes even when validation passes.
+12. Active manifests warn when they do not provide evidence for all component contract required checks.
+13. Preflight report severity is `blocked` for failures, `warning` for warning-only evidence gaps and `ok` only when no failures/warnings remain.

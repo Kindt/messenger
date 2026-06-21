@@ -4,13 +4,16 @@ import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
 import com.avandocmsg.messenger.api.phase5.dto.CreateKanbanTaskRequest;
 import com.avandocmsg.messenger.api.phase5.dto.KanbanTaskResponse;
+import com.avandocmsg.messenger.api.phase5.dto.UpdateKanbanTaskRequest;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -58,6 +61,38 @@ public class ChatKanbanAdrResource {
         return service.createKanbanTask(cid, userId, column, title)
             .map(id -> Response.status(Response.Status.CREATED)
                 .entity(KanbanTaskResponse.created(id.toString(), column, title)).build())
+            .orElse(forbidden());
+    }
+
+    @PATCH
+    @Path("tasks/{taskId}")
+    @Operation(summary = "Move or update kanban task")
+    public Response updateTask(@PathParam("chatId") String chatId,
+                               @PathParam("taskId") String taskId,
+                               UpdateKanbanTaskRequest request,
+                               @Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        var cid = UuidParams.required(chatId, "chat_id");
+        var tid = UuidParams.required(taskId, "task_id");
+        var column = request != null ? request.columnKey() : null;
+        var sort = request != null ? request.sortOrder() : null;
+        var title = request != null ? request.title() : null;
+        return service.updateKanbanTask(cid, userId, tid, column, sort, title)
+            .map(row -> Response.ok(KanbanTaskResponse.from(row)).build())
+            .orElse(forbidden());
+    }
+
+    @DELETE
+    @Path("tasks/{taskId}")
+    @Operation(summary = "Delete kanban task")
+    public Response deleteTask(@PathParam("chatId") String chatId,
+                               @PathParam("taskId") String taskId,
+                               @Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        var cid = UuidParams.required(chatId, "chat_id");
+        var tid = UuidParams.required(taskId, "task_id");
+        return service.deleteKanbanTask(cid, userId, tid)
+            .map(v -> Response.noContent().build())
             .orElse(forbidden());
     }
 

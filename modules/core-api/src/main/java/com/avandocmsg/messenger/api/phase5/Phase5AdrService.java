@@ -160,6 +160,37 @@ public final class Phase5AdrService {
         return repository.listKanbanTasks(chatId);
     }
 
+    public Optional<Phase5AdrRepository.KanbanTaskRow> updateKanbanTask(
+        UUID chatId,
+        UUID userId,
+        UUID taskId,
+        String columnKey,
+        Integer sortOrder,
+        String title
+    ) {
+        if (!isChatMember(chatId, userId) || taskId == null) {
+            return Optional.empty();
+        }
+        return repository.updateKanbanTask(taskId, chatId, columnKey, sortOrder, title);
+    }
+
+    public Optional<Boolean> deleteKanbanTask(UUID chatId, UUID userId, UUID taskId) {
+        if (!isChatMember(chatId, userId) || taskId == null) {
+            return Optional.empty();
+        }
+        return repository.deleteKanbanTask(taskId, chatId) ? Optional.of(Boolean.TRUE) : Optional.empty();
+    }
+
+    public Optional<GuestRedeemResult> redeemGuestLink(String token) {
+        return repository.findGuestLinkByToken(token)
+            .map(row -> {
+                if (row.expiresAt() != null && row.expiresAt().isBefore(java.time.Instant.now())) {
+                    return new GuestRedeemResult(row, "expired");
+                }
+                return new GuestRedeemResult(row, "ready");
+            });
+    }
+
     public Optional<Phase5AdrRepository.SipGatewayRow> sipStatus(UUID userId) {
         return orgIdForUser(userId).flatMap(repository::getSipGateway);
     }
@@ -299,4 +330,18 @@ public final class Phase5AdrService {
     }
 
     public record AiAssistResult(String status, String reply) {}
+
+    public record GuestRedeemResult(Phase5AdrRepository.GuestLinkLookupRow link, String status) {
+        public UUID conferenceId() {
+            return link.conferenceId();
+        }
+
+        public UUID chatId() {
+            return link.chatId();
+        }
+
+        public boolean waitingRoom() {
+            return link.waitingRoom();
+        }
+    }
 }

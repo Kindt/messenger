@@ -1575,6 +1575,137 @@ button {
   border-radius: calc(var(--radius) - 2px);
   background: var(--bg);
   border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.kanban-task-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.kanban-move-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 0.75rem;
+}
+
+.kanban-move-btn:hover {
+  color: var(--text);
+}
+
+.composer-emoji-wrap {
+  position: relative;
+}
+
+.composer-emoji-pop {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 220px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow, 0 4px 12px rgba(0, 0, 0, 0.12));
+}
+
+.composer-emoji-item {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 2px;
+}
+
+.ai-assist-card {
+  min-width: min(420px, 92vw);
+}
+
+.ai-assist-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  resize: vertical;
+}
+
+.ai-assist-reply {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  white-space: pre-wrap;
+  max-height: 160px;
+  overflow: auto;
+}
+
+.presence-pill {
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.presence-online {
+  border-color: #22c55e;
+}
+
+.presence-away {
+  border-color: #eab308;
+}
+
+.presence-dnd {
+  border-color: #ef4444;
+}
+
+.presence-offline {
+  opacity: 0.75;
+}
+
+.msg-gif-image {
+  max-width: min(280px, 100%);
+  max-height: 200px;
+  border-radius: var(--radius);
+  display: block;
+}
+
+.passkeys-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.passkeys-row {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  font-family: ui-monospace, monospace;
 }
 
 .kanban-add-row {
@@ -1664,6 +1795,118 @@ button {
   border: 1px solid var(--border);
   max-height: 240px;
   overflow: auto;
+}
+
+.stickers-pack-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.stickers-pack-item {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.stickers-pack-item:hover {
+  border-color: var(--accent, #3b82f6);
+}
+
+.phase5-overlay-sub {
+  font-size: 0.85rem;
+  margin: 8px 0 4px;
+  color: var(--muted);
+}
+
+.kanban-del-btn {
+  color: #ef4444;
+}
+
+.whiteboard-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.whiteboard-tab {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.whiteboard-tab.active {
+  border-color: var(--accent, #3b82f6);
+}
+
+.whiteboard-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.whiteboard-tool-btn {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.whiteboard-canvas {
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  touch-action: none;
+  background: #fff;
+}
+
+.stickers-pack-create {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.stickers-pack-create-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-reminder-row,
+.settings-scheduled-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-reminder-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.phase5-modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.hidden {
+  display: none !important;
 }
 
 .stickers-gif-grid {

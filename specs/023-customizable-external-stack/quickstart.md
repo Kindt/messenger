@@ -92,14 +92,19 @@ git diff --check
 - `/api/v1/platform/external-stack/profiles` дополняет profile lifecycle данными compatibility pack: required checks, promotion evidence and unsupported modes.
 - `/api/v1/platform/external-stack/compatibility-packs` возвращает полный catalog supported/external/candidate packs, включая profiles, которых нет в текущем runtime manifest; `/compatibility-packs/{profileId}` возвращает один pack.
 - `/api/v1/platform/external-stack/status/{component}` возвращает один component status для drill-down/API automation.
+- `/api/v1/platform/external-stack/component-contracts` и `/component-contracts/{component}` возвращают read-only catalog required checks/failure policies для repo-local gates и Admin UI.
+- `/api/v1/platform/external-stack/catalog-health` возвращает drift report по component/profile counts, candidate count, failures and warnings.
+- `/api/v1/platform/external-stack/component-profile-summary` и `/component-profile-summary/{component}` возвращают readiness summary по профилям component: supported/candidate/rejected counts and promotion warning.
 - Compatibility pack catalog загружается из `docs/external-stack-profiles.yaml` и упаковывается в core-api resources; aliases, promotion evidence and unsupported modes живут в YAML и проверяются repo-local gate.
-- `POST /api/v1/platform/external-stack/preflight/manifests` принимает `{ "manifests": [...] }` and returns manifest `ValidationResult` for deploy-generated or hand-authored desired state before applying it.
+- `POST /api/v1/platform/external-stack/preflight/manifests` принимает `{ "manifests": [...] }` and returns manifest `ValidationResult` for deploy-generated or hand-authored desired state before applying it. Validation checks single-active, role traffic, endpoint redaction, unknown compatibility profiles, profile/component mismatch and candidate active usage; active external/BYO profiles add warnings for support-boundary evidence and unsupported modes. Active manifests also warn when `capabilities` do not provide evidence for all component contract required checks.
+- `POST /api/v1/platform/external-stack/preflight/manifests/report` возвращает explain report: severity (`ok`/`warning`/`blocked`), `failure_count`, `warning_count`, `missing_required_check_count`, original validation, per-component manifest/active counts, failures/warnings, structured `missing_required_checks` and redacted endpoint metadata.
 - `POST /api/v1/platform/external-stack/preflight/checkpoint` принимает `MigrationCheckpoint` JSON и возвращает structured report без запуска live cutover.
 - `POST /api/v1/platform/external-stack/preflight/profile` проверяет один `profile_id` на production support и возвращает redacted `ValidationResult`.
-- Admin panel показывает groups/lifecycle filters, support badges, desired/observed diff, downloadable JSON report, compatibility pack catalog and drill-down; raw JSON остаётся ниже для диагностики.
+- Admin panel показывает catalog health, component profile readiness, groups/lifecycle filters, support badges, desired/observed diff, downloadable JSON report, compatibility pack catalog, component validation contracts and drill-down; raw JSON остаётся ниже для диагностики.
 - Admin panel содержит repo-local Manifest/Checkpoint/Profile preflight forms с sample JSON selector and copy-curl buttons.
 - Search Provider SPI покрывает текущие SQL/Solr paths. OpenSearch/Elasticsearch представлены disabled candidate backends с `describe()/status()` metadata, guard against primary binding и без live client dependency.
 - Product Modules capabilities возвращают `external_stack_components` / `external_stack_profiles` / `external_stack_warnings` для base и add-ons, чтобы UI/ops видели backend dependencies и degradation boundary.
+- Repo-local catalog drift gates проверяют, что `default_profile` существует в profile map и Product Modules не ссылаются на отсутствующие components/profiles.
 
 ## Completion Gate
 

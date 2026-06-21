@@ -79,6 +79,7 @@ import com.avandocmsg.messenger.api.filter.OrgIpAllowlistFilter;
 import com.avandocmsg.messenger.api.filter.OrgRoutingFilter;
 import com.avandocmsg.messenger.api.health.HealthResource;
 import com.avandocmsg.messenger.api.messages.MessageResource;
+import com.avandocmsg.messenger.api.messages.MeScheduledMessagesResource;
 import com.avandocmsg.messenger.api.messages.ScheduledMessageResource;
 import com.avandocmsg.messenger.api.polls.ChatPollResource;
 import com.avandocmsg.messenger.api.polls.ChatPollService;
@@ -310,6 +311,7 @@ public class JerseyConfig extends ResourceConfig {
         register(ScheduledMessageResource.class);
         register(ChatPollResource.class);
         register(MeRemindersResource.class);
+        register(MeScheduledMessagesResource.class);
         register(FileResource.class);
         register(ChatBanResource.class);
         register(CryptoResource.class);
@@ -319,6 +321,7 @@ public class JerseyConfig extends ResourceConfig {
         register(com.avandocmsg.messenger.api.users.MeIntegrationsMarketplaceResource.class);
         register(com.avandocmsg.messenger.api.phase5.StickerCatalogResource.class);
         register(com.avandocmsg.messenger.api.phase5.ChatConferenceAdrResource.class);
+        register(com.avandocmsg.messenger.api.phase5.ConferenceGuestRedeemResource.class);
         register(com.avandocmsg.messenger.api.phase5.ChatKanbanAdrResource.class);
         register(com.avandocmsg.messenger.api.phase5.ChatWhiteboardAdrResource.class);
         register(com.avandocmsg.messenger.api.phase5.ChatAiAssistAdrResource.class);

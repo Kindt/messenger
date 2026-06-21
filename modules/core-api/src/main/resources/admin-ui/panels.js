@@ -753,11 +753,26 @@
         const data = await ctx.apiFetch("/platform/external-stack/status");
         const profiles = await ctx.apiFetch("/platform/external-stack/profiles");
         const compatibilityPacks = await ctx.apiFetch("/platform/external-stack/compatibility-packs");
+        const componentContracts = await ctx.apiFetch("/platform/external-stack/component-contracts");
+        const catalogHealth = await ctx.apiFetch("/platform/external-stack/catalog-health");
+        const componentProfileSummary = await ctx.apiFetch("/platform/external-stack/component-profile-summary");
         summary._externalStackCompatibilityPacks = compatibilityPacks;
+        summary._externalStackComponentContracts = componentContracts;
+        summary._externalStackCatalogHealth = catalogHealth;
+        summary._externalStackComponentProfileSummary = componentProfileSummary;
         renderExternalStackTable(data, summary, profiles);
+        renderExternalStackCatalogHealth(catalogHealth, summary);
+        renderExternalStackComponentProfileSummary(componentProfileSummary, summary);
         renderExternalStackDesiredObservedDiff(data, summary);
         renderExternalStackCompatibilityPacks(compatibilityPacks, summary);
-        const report = { status: data, profiles: profiles, compatibility_packs: compatibilityPacks };
+        renderExternalStackComponentContracts(componentContracts, summary);
+        const report = {
+          status: data,
+          profiles: profiles,
+          compatibility_packs: compatibilityPacks,
+          catalog_health: catalogHealth,
+          component_profile_summary: componentProfileSummary,
+        };
         summary._externalStackLastReport = report;
         pre.textContent = JSON.stringify(report, null, 2);
         if (global.AdminUi) {
@@ -822,6 +837,9 @@
         if (data) {
           renderExternalStackTable(data, summary);
           renderExternalStackCompatibilityPacks(summary._externalStackCompatibilityPacks, summary);
+          renderExternalStackComponentContracts(summary._externalStackComponentContracts, summary);
+          renderExternalStackCatalogHealth(summary._externalStackCatalogHealth, summary);
+          renderExternalStackComponentProfileSummary(summary._externalStackComponentProfileSummary, summary);
         }
       });
       toolbar.appendChild(select);
@@ -913,7 +931,7 @@
     box.appendChild(title);
     const hint = document.createElement("p");
     hint.className = "muted small external-stack-schema-help";
-    hint.textContent = "POST /platform/external-stack/preflight/profile — проверка production support для одного profile_id.";
+    hint.textContent = "POST /platform/external-stack/preflight/profile/report — evidence readiness для одного profile_id.";
     box.appendChild(hint);
     const selector = document.createElement("select");
     selector.id = "externalStackSampleSelector";
@@ -932,16 +950,25 @@
     validate.textContent = "Validate profile";
     const result = document.createElement("span");
     result.className = "muted small";
-    const bodyText = () => JSON.stringify({ profile_id: selector.value }, null, 2);
+    const bodyText = () => JSON.stringify({
+      profile_id: selector.value,
+      evidence: selector.value === "postgres-16-external" ? ["h2_or_lab_migration_green"] : [],
+    }, null, 2);
     validate.addEventListener("click", async () => {
       result.textContent = "Проверка…";
       try {
-        const validation = await ctx.apiFetch("/platform/external-stack/preflight/profile", {
+        const validation = await ctx.apiFetch("/platform/external-stack/preflight/profile/report", {
           method: "POST",
           body: bodyText(),
         });
         result.textContent =
-          (validation.passed ? "OK" : "FAILED") + " · failures=" + ((validation.failures || []).join(", ") || "—");
+          (validation.passed ? "OK" : "FAILED") +
+          " · severity=" +
+          (validation.severity || "?") +
+          " · missing evidence=" +
+          ((validation.missing_promotion_evidence || []).length) +
+          " · unsupported=" +
+          ((validation.unsupported_modes || []).length);
         pre.textContent = JSON.stringify(validation, null, 2);
         if (global.AdminUi) {
           AdminUi.showJsonBlock(true);
@@ -950,7 +977,7 @@
         result.textContent = "Ошибка: " + e.message;
       }
     });
-    row.appendChild(externalStackCopyCurl("/platform/external-stack/preflight/profile", bodyText));
+    row.appendChild(externalStackCopyCurl("/platform/external-stack/preflight/profile/report", bodyText));
     row.appendChild(validate);
     row.appendChild(result);
     box.appendChild(row);
@@ -969,7 +996,7 @@
     box.appendChild(title);
     const hint = document.createElement("p");
     hint.className = "muted small";
-    hint.textContent = "POST /platform/external-stack/preflight/manifests — проверка desired manifests без deploy.";
+    hint.textContent = "POST /platform/external-stack/preflight/manifests/report — manifest report по desired manifests без deploy.";
     box.appendChild(hint);
     const ta = document.createElement("textarea");
     ta.id = "externalStackManifestsJson";
@@ -997,16 +1024,22 @@
       result.textContent = "Проверка…";
       try {
         const body = JSON.parse(ta.value);
-        const validation = await ctx.apiFetch("/platform/external-stack/preflight/manifests", {
+        const validation = await ctx.apiFetch("/platform/external-stack/preflight/manifests/report", {
           method: "POST",
           body: JSON.stringify(body),
         });
         result.textContent =
           (validation.passed ? "OK" : "FAILED") +
+          " · severity=" +
+          (validation.severity || "?") +
           " · failures=" +
-          ((validation.failures || []).length) +
+          (validation.failure_count || 0) +
+          " · warnings=" +
+          (validation.warning_count || 0) +
+          " · missing checks=" +
+          (validation.missing_required_check_count || externalStackMissingRequiredChecksCount(validation)) +
           " · redacted=" +
-          (validation.redacted === true);
+          (validation.validation && validation.validation.redacted === true);
         pre.textContent = JSON.stringify(validation, null, 2);
         if (global.AdminUi) {
           AdminUi.showJsonBlock(true);
@@ -1069,6 +1102,15 @@
         },
       ],
     };
+  }
+
+  function externalStackMissingRequiredChecksCount(report) {
+    if (!report || !report.components) {
+      return 0;
+    }
+    return Object.values(report.components)
+      .map((component) => (component.missing_required_checks || []).length)
+      .reduce((sum, count) => sum + count, 0);
   }
 
   function externalStackDownloadReport(filename, data) {
@@ -1246,6 +1288,98 @@
     container.appendChild(wrap);
   }
 
+  function renderExternalStackCatalogHealth(data, container) {
+    container.querySelectorAll(".external-stack-catalog-health").forEach((n) => n.remove());
+    if (!data) {
+      return;
+    }
+    const box = document.createElement("div");
+    box.className = "panel-form external-stack-catalog-health";
+    const badge = global.AdminUi && AdminUi.statusBadge
+      ? AdminUi.statusBadge(data.passed === true, data.passed ? "catalog OK" : "catalog drift")
+      : document.createTextNode(data.passed ? "catalog OK" : "catalog drift");
+    const title = document.createElement("p");
+    title.className = "form-section-label";
+    title.textContent = "Catalog health";
+    box.appendChild(title);
+    const line = document.createElement("p");
+    line.className = "muted small";
+    line.appendChild(badge);
+    line.appendChild(document.createTextNode(
+      " components=" + (data.component_count || 0) +
+      " profiles=" + (data.profile_count || 0) +
+      " candidates=" + (data.candidate_profile_count || 0)
+    ));
+    box.appendChild(line);
+    const details = document.createElement("details");
+    details.className = "external-stack-drilldown";
+    const summary = document.createElement("summary");
+    summary.textContent = "catalog drift details";
+    details.appendChild(summary);
+    const pre = document.createElement("pre");
+    pre.textContent = []
+      .concat(data.failures || [])
+      .concat(data.warnings || ["candidate profiles require explicit promotion before production use"])
+      .join("\n") || "No catalog drift.";
+    details.appendChild(pre);
+    box.appendChild(details);
+    container.appendChild(box);
+  }
+
+  function renderExternalStackComponentProfileSummary(data, container) {
+    container.querySelectorAll(".external-stack-profile-summary-wrap").forEach((n) => n.remove());
+    if (!data || !data.components) {
+      return;
+    }
+    const filters = externalStackFilters(container);
+    const entries = Object.values(data.components)
+      .filter((item) => filters.group === "all" || externalStackGroup(item.component) === filters.group)
+      .sort((a, b) => externalStackGroup(a.component).localeCompare(externalStackGroup(b.component)) ||
+        String(a.component || "").localeCompare(String(b.component || "")));
+    const wrap = document.createElement("div");
+    wrap.className = "json-table-wrap external-stack-profile-summary-wrap";
+    wrap.setAttribute("data-testid", "admin-external-stack-profile-readiness");
+    const heading = document.createElement("p");
+    heading.className = "form-section-label";
+    heading.textContent = "Component profile readiness";
+    wrap.appendChild(heading);
+    const table = document.createElement("table");
+    table.className = "json-panel-table";
+    const head = document.createElement("thead");
+    const hr = document.createElement("tr");
+    ["component", "group", "profiles", "supported", "candidates", "rejected", "warning"].forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    head.appendChild(hr);
+    table.appendChild(head);
+    const body = document.createElement("tbody");
+    entries.forEach((item) => {
+      const tr = document.createElement("tr");
+      if (item.candidate_count > 0 || item.supported_count === 0) {
+        tr.classList.add("fleet-row-bad");
+      }
+      [
+        item.component,
+        externalStackGroup(item.component),
+        item.profile_count,
+        item.supported_count,
+        item.candidate_count,
+        item.rejected_count,
+        item.readiness_warning || "—",
+      ].forEach((val) => {
+        const td = document.createElement("td");
+        td.textContent = val != null ? String(val) : "—";
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    container.appendChild(wrap);
+  }
+
   function renderExternalStackCompatibilityPacks(data, container) {
     container.querySelectorAll(".external-stack-pack-wrap").forEach((n) => n.remove());
     if (!data || !data.packs) {
@@ -1302,6 +1436,54 @@
     note.className = "muted small json-panel-note";
     note.textContent = "Full catalog includes supported, external/BYO and candidate packs; candidate rows are not production support claims.";
     wrap.appendChild(note);
+    container.appendChild(wrap);
+  }
+
+  function renderExternalStackComponentContracts(data, container) {
+    container.querySelectorAll(".external-stack-contract-wrap").forEach((n) => n.remove());
+    if (!data || !data.contracts) {
+      return;
+    }
+    const filters = externalStackFilters(container);
+    const entries = Object.values(data.contracts)
+      .filter((contract) => filters.group === "all" || externalStackGroup(contract.component) === filters.group)
+      .sort((a, b) => externalStackGroup(a.component).localeCompare(externalStackGroup(b.component)) ||
+        String(a.component || "").localeCompare(String(b.component || "")));
+    const wrap = document.createElement("div");
+    wrap.className = "json-table-wrap external-stack-contract-wrap";
+    wrap.setAttribute("data-testid", "admin-external-stack-component-contracts");
+    const heading = document.createElement("p");
+    heading.className = "form-section-label";
+    heading.textContent = "Component validation contracts";
+    wrap.appendChild(heading);
+    const table = document.createElement("table");
+    table.className = "json-panel-table";
+    const head = document.createElement("thead");
+    const hr = document.createElement("tr");
+    ["component", "group", "checks", "failure policy"].forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    head.appendChild(hr);
+    table.appendChild(head);
+    const body = document.createElement("tbody");
+    entries.forEach((contract) => {
+      const tr = document.createElement("tr");
+      [
+        contract.component,
+        externalStackGroup(contract.component),
+        (contract.required_checks || []).join(", "),
+        contract.failure_policy,
+      ].forEach((val) => {
+        const td = document.createElement("td");
+        td.textContent = val != null ? String(val) : "—";
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
     container.appendChild(wrap);
   }
 

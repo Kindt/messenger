@@ -54,6 +54,78 @@ public final class ConnectorCompatibilityPacks {
         return pack;
     }
 
+    public static ExternalStackCatalogHealthReport healthReport() {
+        var failures = new ArrayList<String>();
+        var components = CATALOG.stream()
+            .map(ConnectorCompatibilityPack::component)
+            .distinct()
+            .toList();
+        var contractComponents = ExternalStackComponentContracts.catalog().keySet();
+        components.stream()
+            .filter(component -> !contractComponents.contains(component))
+            .forEach(component -> failures.add("component " + component + " has no validation contract"));
+        var candidateCount = (int) CATALOG.stream()
+            .filter(pack -> pack.lifecycleStatus() == LifecycleStatus.candidate
+                || pack.lifecycleStatus() == LifecycleStatus.integration_candidate)
+            .count();
+        var warnings = candidateCount > 0
+            ? List.of("candidate profiles require explicit promotion before production use")
+            : List.<String>of();
+        return new ExternalStackCatalogHealthReport(
+            failures.isEmpty(),
+            components.size(),
+            CATALOG.size(),
+            candidateCount,
+            failures,
+            warnings
+        );
+    }
+
+    public static ExternalStackComponentProfileSummaryCatalog componentSummaries() {
+        var summaries = CATALOG.stream()
+            .collect(Collectors.groupingBy(
+                ConnectorCompatibilityPack::component,
+                Collectors.collectingAndThen(Collectors.toList(), ConnectorCompatibilityPacks::componentSummary)
+            ));
+        return new ExternalStackComponentProfileSummaryCatalog(Map.copyOf(summaries));
+    }
+
+    public static ExternalStackComponentProfileSummary componentSummary(String component) {
+        var packs = CATALOG.stream()
+            .filter(pack -> pack.component().equals(component))
+            .toList();
+        if (packs.isEmpty()) {
+            throw new IllegalArgumentException("No external stack component profiles: " + component);
+        }
+        return componentSummary(packs);
+    }
+
+    private static ExternalStackComponentProfileSummary componentSummary(List<ConnectorCompatibilityPack> packs) {
+        var component = packs.getFirst().component();
+        var supported = (int) packs.stream().filter(ConnectorCompatibilityPack::supported).count();
+        var candidates = (int) packs.stream()
+            .filter(pack -> pack.lifecycleStatus() == LifecycleStatus.candidate
+                || pack.lifecycleStatus() == LifecycleStatus.integration_candidate)
+            .count();
+        var rejected = (int) packs.stream()
+            .filter(pack -> pack.lifecycleStatus() == LifecycleStatus.rejected)
+            .count();
+        String warning = null;
+        if (candidates > 0) {
+            warning = "candidate profiles require explicit promotion";
+        } else if (supported == 0) {
+            warning = "no production-supported profile";
+        }
+        return new ExternalStackComponentProfileSummary(
+            component,
+            packs.size(),
+            supported,
+            candidates,
+            rejected,
+            warning
+        );
+    }
+
     private static List<ConnectorCompatibilityPack> loadCatalog() {
         var packs = new ArrayList<ConnectorCompatibilityPack>();
         var root = readCatalogRoot();

@@ -91,6 +91,34 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
     }
 
     @Override
+    public List<ScheduledRow> listForSender(UUID senderId, int limit) {
+        var lim = Math.max(1, Math.min(limit, 100));
+        var sql = """
+            SELECT id, chat_id, sender_id, message_type, content, scheduled_at, status,
+                   reply_to_msg_id, thread_id, client_msg_id, sent_message_id, created_at
+            FROM scheduled_messages
+            WHERE sender_id = ? AND status = 'pending'
+            ORDER BY scheduled_at ASC
+            LIMIT ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, senderId);
+            stmt.setInt(2, lim);
+            try (var rs = stmt.executeQuery()) {
+                var out = new ArrayList<ScheduledRow>();
+                while (rs.next()) {
+                    out.add(mapRow(rs));
+                }
+                return out;
+            }
+        } catch (Exception e) {
+            log.error("scheduled message listForSender failed sender={}", senderId, e);
+            return List.of();
+        }
+    }
+
+    @Override
     public List<ScheduledRow> listDue(Instant now, int limit) {
         var lim = Math.max(1, Math.min(limit, 100));
         var sql = """
@@ -135,6 +163,23 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("scheduled message updateStatus failed {}", id, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean cancelPending(UUID id, UUID senderId) {
+        var sql = """
+            UPDATE scheduled_messages SET status = 'cancelled'
+            WHERE id = ? AND sender_id = ? AND status = 'pending'
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, id);
+            stmt.setObject(2, senderId);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            log.error("scheduled message cancelPending failed id={}", id, e);
             return false;
         }
     }

@@ -77,6 +77,24 @@ class ClasspathAdminStaticServletTest {
         assertTrue(panels.contains("externalStackCopyCurl"));
         assertTrue(panels.contains("/platform/external-stack/preflight/profile"));
         assertTrue(panels.contains("external-stack-schema-help"));
+        assertTrue(panels.contains("/platform/external-stack/component-contracts"));
+        assertTrue(panels.contains("renderExternalStackComponentContracts"));
+        assertTrue(panels.contains("/platform/external-stack/preflight/manifests/report"));
+        assertTrue(panels.contains("manifest report"));
+        assertTrue(panels.contains("/platform/external-stack/catalog-health"));
+        assertTrue(panels.contains("renderExternalStackCatalogHealth"));
+        assertTrue(panels.contains("candidate profiles require explicit promotion"));
+        assertTrue(panels.contains("/platform/external-stack/component-profile-summary"));
+        assertTrue(panels.contains("renderExternalStackComponentProfileSummary"));
+        assertTrue(panels.contains("profile readiness"));
+        assertTrue(panels.contains("missing_required_checks"));
+        assertTrue(panels.contains("warning_count"));
+        assertTrue(panels.contains("missing_required_check_count"));
+        assertTrue(panels.contains("warnings="));
+        assertTrue(panels.contains("missing checks="));
+        assertTrue(panels.contains("/platform/external-stack/preflight/profile/report"));
+        assertTrue(panels.contains("missing_promotion_evidence"));
+        assertTrue(panels.contains("missing evidence="));
     }
 
     private static String resourceText(String path) throws IOException {
