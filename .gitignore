@@ -38,7 +38,12 @@ CHANGELOG.md
 tz_full.html
 tz_revision_proposal.md
 
-scripts/presentation/
+!scripts/presentation/
+!scripts/presentation/**
+scripts/presentation/__pycache__/
+scripts/presentation/**/*.pyc
+scripts/presentation/gaps_export.json
+scripts/presentation/gaps_classified.json
 scripts/run_python_verification.py
 scripts/profiling/
 scripts/publish-spec-001-branch.ps1

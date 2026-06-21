@@ -1,0 +1,64 @@
+{
+  "products": [
+    {
+      "product_id": "express",
+      "urls": [
+        "https://express.ms/pricing",
+        "https://docs.express.ms/"
+      ],
+      "last_verified": "2026-06-15"
+    },
+    {
+      "product_id": "pachka",
+      "urls": ["https://pachca.ru/pricing"],
+      "last_verified": "2026-06-15"
+    },
+    {
+      "product_id": "vk_saas",
+      "urls": ["https://biz.mail.ru/docs/saas/workspace-price/index.html"],
+      "last_verified": "2026-06-15"
+    },
+    {
+      "product_id": "loop",
+      "urls": ["https://loop.ru/pricing"],
+      "last_verified": "2026-06-15"
+    },
+    {
+      "product_id": "compass",
+      "urls": ["https://getcompass.ru/pricing"],
+      "last_verified": "2026-06-15"
+    },
+    {
+      "product_id": "trueconf",
+      "urls": ["https://trueconf.ru/price/server/"],
+      "last_verified": "2026-06-15"
+    },
+    {
+      "product_id": "mts_link",
+      "urls": ["https://mts-link.ru/chats/"],
+      "last_verified": "2026-06-15"
+    },
+    {
+      "product_id": "rocket",
+      "urls": ["https://www.rocket.chat/pricing"],
+      "last_verified": "2026-06-15"
+    },
+    {
+      "product_id": "mattermost",
+      "urls": ["https://mattermost.com/pricing/"],
+      "last_verified": "2026-06-15"
+    },
+    {
+      "product_id": "vk_onprem",
+      "urls": ["https://workspace.vk.ru/"],
+      "last_verified": "2026-06-15"
+    },
+    {
+      "product_id": "korus",
+      "urls": [
+        "https://github.com/kumekay/korus_messenger/blob/main/docs/DEV_STACK_PROFILES.md"
+      ],
+      "last_verified": "2026-06-15"
+    }
+  ]
+}
