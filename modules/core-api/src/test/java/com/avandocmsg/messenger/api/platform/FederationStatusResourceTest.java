@@ -9,7 +9,7 @@ class FederationStatusResourceTest {
 
     @Test
     void globalStatus_returnsScaffoldDisabled() {
-        var svc = new FederationStatusService(null);
+        var svc = new FederationStatusService(null, null);
         var res = svc.globalStatus();
         assertEquals("scaffold", res.mode());
         assertFalse(res.enabled());

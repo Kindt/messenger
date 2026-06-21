@@ -75,6 +75,8 @@ import io.minio.MinioClient;
 import io.nats.client.Connection;
 import io.nats.client.JetStream;
 import jakarta.servlet.ServletContext;
+import org.apache.catalina.Context;
+import org.apache.catalina.startup.Tomcat;
 import org.apache.solr.client.solrj.SolrClient;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
@@ -209,7 +211,35 @@ public class CoreApiComposition {
         return appConfig;
     }
 
+    @FunctionalInterface
+    private interface HttpServletRegistration {
+        void register(String jerseyName, ServletContainer jerseyServlet, ClasspathAdminStaticServlet adminServlet);
+    }
+
     public void wireToServletContext(ServletContext servletContext) {
+        wireApplicationStack((jerseyName, jerseyServlet, adminServlet) -> {
+            var jerseyReg = servletContext.addServlet(jerseyName, jerseyServlet);
+            if (jerseyReg != null) {
+                jerseyReg.addMapping("/api/*");
+            }
+            var adminReg = servletContext.addServlet("adminUiStatic", adminServlet);
+            if (adminReg != null) {
+                adminReg.addMapping("/admin", "/admin/*");
+            }
+        });
+    }
+
+    /** Embedded Tomcat: register servlets on {@link Context} before {@code tomcat.start()}. */
+    public void wireToEmbeddedTomcatContext(Context tomcatContext) {
+        wireApplicationStack((jerseyName, jerseyServlet, adminServlet) -> {
+            Tomcat.addServlet(tomcatContext, jerseyName, jerseyServlet);
+            tomcatContext.addServletMappingDecoded("/api/*", jerseyName);
+            Tomcat.addServlet(tomcatContext, "adminUiStatic", adminServlet);
+            tomcatContext.addServletMappingDecoded("/admin/*", "adminUiStatic");
+        });
+    }
+
+    private void wireApplicationStack(HttpServletRegistration registration) {
         var solrBinding = SolrClientFactory.create(appConfig);
         this.solrClient = solrBinding.client();
         var exportFileAccess = new ExportFileAccess(appConfig, Optional.of(minioClient));
@@ -226,7 +256,7 @@ public class CoreApiComposition {
         var federationMemberGuard = new com.avandocmsg.messenger.api.federation.FederationMemberGuard(
             federationTrustPort, userLookupPort);
         var federationStatusService = new com.avandocmsg.messenger.api.platform.FederationStatusService(
-            federationTrustPort);
+            federationTrustPort, organizationLookupPort);
         var devicePort = CoreModule.devicePort(dataSource, this.clock, this.uuidGenerator);
         var messageRepoPort = messagePersistence;
         var messageQueryPort = messagePersistence;
@@ -364,6 +394,14 @@ public class CoreApiComposition {
         this.messageReminderPort = CoreModule.messageReminderPort(dataSource);
         var chatPollService = new com.avandocmsg.messenger.api.polls.ChatPollService(
             chatPollPort, chatPersistencePort, this.clock);
+        var phase5AdrService = new com.avandocmsg.messenger.api.phase5.Phase5AdrService(
+            new com.avandocmsg.messenger.api.phase5.Phase5AdrRepository(dataSource),
+            chatPersistencePort,
+            conferencePort,
+            userLookupPort,
+            pluginRepository,
+            pluginPlatformService,
+            appConfig);
 
         var jerseyServlet = new ServletContainer(
             new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
@@ -387,17 +425,9 @@ public class CoreApiComposition {
                 authPolicyService, directorySyncService, migrationImportJobPort, devicePort, orgUserDirectory,
                 platformModuleRegistry, platformModuleOverrideRepository,
                 federationTrustPort, federationStatusService, dlpBridgeGate,
-                chatPollPort, chatPollService, scheduledMessagePort, messageReminderPort));
+                chatPollPort, chatPollService, scheduledMessagePort, messageReminderPort, phase5AdrService));
 
-        var jerseyReg = servletContext.addServlet(SERVLET_NAME, jerseyServlet);
-        if (jerseyReg != null) {
-            jerseyReg.addMapping("/api/*");
-        }
-
-        var adminReg = servletContext.addServlet("adminUiStatic", new ClasspathAdminStaticServlet());
-        if (adminReg != null) {
-            adminReg.addMapping("/admin", "/admin/*");
-        }
+        registration.register(SERVLET_NAME, jerseyServlet, new ClasspathAdminStaticServlet());
     }
 
     public void startBackgroundServices() throws IOException {

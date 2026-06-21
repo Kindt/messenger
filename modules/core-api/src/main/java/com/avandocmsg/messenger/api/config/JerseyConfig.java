@@ -189,7 +189,8 @@ public class JerseyConfig extends ResourceConfig {
                         ChatPollPort chatPollPort,
                         ChatPollService chatPollService,
                         ScheduledMessagePort scheduledMessagePort,
-                        MessageReminderPort messageReminderPort) {
+                        MessageReminderPort messageReminderPort,
+                        com.avandocmsg.messenger.api.phase5.Phase5AdrService phase5AdrService) {
         register(new AbstractBinder() {
             @Override
             protected void configure() {
@@ -271,6 +272,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(chatPollService).to(ChatPollService.class);
                 bind(scheduledMessagePort).to(ScheduledMessagePort.class);
                 bind(messageReminderPort).to(MessageReminderPort.class);
+                bind(phase5AdrService).to(com.avandocmsg.messenger.api.phase5.Phase5AdrService.class);
                 bind(CoreModule.scimGroupRepositoryPort(dataSource)).to(ScimGroupRepositoryPort.class);
                 bind(BotRateLimiter.fromEnv()).to(BotRateLimiter.class);
                 bind(new com.avandocmsg.messenger.api.security.OrgIpAllowlistService(
@@ -309,6 +311,10 @@ public class JerseyConfig extends ResourceConfig {
         register(MeSettingsResource.class);
         register(MeIntegrationsResource.class);
         register(com.avandocmsg.messenger.api.users.MeIntegrationsMarketplaceResource.class);
+        register(com.avandocmsg.messenger.api.phase5.StickerCatalogResource.class);
+        register(com.avandocmsg.messenger.api.phase5.ChatConferenceAdrResource.class);
+        register(com.avandocmsg.messenger.api.phase5.ChatCollaborationAdrResource.class);
+        register(com.avandocmsg.messenger.api.phase5.PlatformAdrResource.class);
         register(ExportResource.class);
         register(ConferenceResource.class);
         register(ChatConferenceResource.class);

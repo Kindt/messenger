@@ -9,9 +9,14 @@ import java.util.stream.Collectors;
 
 public final class FederationStatusService {
     private final FederationTrustPort federationTrustPort;
+    private final com.avandocmsg.messenger.core.port.OrganizationLookupPort organizationLookupPort;
 
-    public FederationStatusService(FederationTrustPort federationTrustPort) {
+    public FederationStatusService(
+        FederationTrustPort federationTrustPort,
+        com.avandocmsg.messenger.core.port.OrganizationLookupPort organizationLookupPort
+    ) {
         this.federationTrustPort = federationTrustPort;
+        this.organizationLookupPort = organizationLookupPort;
     }
 
     public FederationStatusResponse globalStatus() {
@@ -50,5 +55,38 @@ public final class FederationStatusService {
             false,
             List.of(),
             "Cross-org federation MVP pending; see docs/adr/ADR-federation-scaffold.md");
+    }
+
+    public com.avandocmsg.messenger.api.platform.dto.FederationDirectoryResponse directoryForOrg(UUID orgId) {
+        if (orgId == null) {
+            return new com.avandocmsg.messenger.api.platform.dto.FederationDirectoryResponse(
+                null, List.of(), "Sign in to view federation directory.");
+        }
+        if (federationTrustPort == null) {
+            return new com.avandocmsg.messenger.api.platform.dto.FederationDirectoryResponse(
+                orgId.toString(), List.of(), "Federation directory scaffold.");
+        }
+        var home = organizationLookupPort != null
+            ? organizationLookupPort.findById(orgId).orElse(null)
+            : null;
+        var partners = federationTrustPort.listActiveForOrg(orgId).stream()
+            .map(t -> t.partnerOrgId())
+            .distinct()
+            .map(pid -> {
+                var org = organizationLookupPort != null
+                    ? organizationLookupPort.findById(pid).orElse(null)
+                    : null;
+                return new com.avandocmsg.messenger.api.platform.dto.FederationDirectoryResponse.FederationDirectoryEntry(
+                    pid.toString(),
+                    org != null ? org.name() : pid.toString(),
+                    org != null ? org.slug() : null);
+            })
+            .toList();
+        return new com.avandocmsg.messenger.api.platform.dto.FederationDirectoryResponse(
+            home != null ? home.id() : orgId.toString(),
+            partners,
+            partners.isEmpty()
+                ? "No trusted partner orgs; configure federation trust in admin."
+                : "Holding catalog: trusted partner organizations.");
     }
 }

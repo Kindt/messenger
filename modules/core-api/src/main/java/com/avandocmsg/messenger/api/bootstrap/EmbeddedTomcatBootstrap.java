@@ -1,7 +1,6 @@
 package com.avandocmsg.messenger.api.bootstrap;
 
 import com.avandocmsg.messenger.api.config.HotReloadWatcher;
-import jakarta.servlet.ServletContext;
 import org.apache.catalina.Context;
 import org.apache.catalina.startup.Tomcat;
 import org.slf4j.Logger;
@@ -38,7 +37,7 @@ public final class EmbeddedTomcatBootstrap {
         ctx = tomcat.addContext("", System.getProperty("java.io.tmpdir"));
         ctx.setParentClassLoader(EmbeddedTomcatBootstrap.class.getClassLoader());
 
-        composition.wireToServletContext((ServletContext) ctx);
+        composition.wireToEmbeddedTomcatContext(ctx);
         composition.startBackgroundServices();
 
         tomcat.start();
@@ -64,7 +63,7 @@ public final class EmbeddedTomcatBootstrap {
             log.info("Hot-reload triggered, restarting application context...");
             ctx.stop();
             ctx.destroy();
-            composition.wireToServletContext((ServletContext) ctx);
+            composition.wireToEmbeddedTomcatContext(ctx);
             ctx.start();
             log.info("Application context reloaded successfully");
         } catch (Exception e) {

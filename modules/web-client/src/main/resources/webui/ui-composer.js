@@ -5,6 +5,7 @@
   "use strict";
 
   var VOICE_MAX_MS = 120000;
+  var VIDEO_NOTE_MAX_MS = 60000;
 
   function wrapComposerSelection(before, after) {
     var ta = document.getElementById("msgdraft");
@@ -174,6 +175,58 @@
       },
     });
     fmt.appendChild(bVoice);
+    if (ctx.sendVideoNoteMessage && navigator.mediaDevices && window.MediaRecorder) {
+      var videoState = { recorder: null, chunks: [], startedAt: 0, stream: null };
+      var bVideoNote = ctx.iconBtn("🎬", ctx.L("ui.phase5.videoNote"), {
+        testId: "video-note-btn",
+        disabled: ctx.state.busy,
+        onClick: function () {
+          if (videoState.recorder) {
+            videoState.recorder.stop();
+            return;
+          }
+          navigator.mediaDevices
+            .getUserMedia({ video: true, audio: true })
+            .then(function (stream) {
+              videoState.chunks = [];
+              videoState.startedAt = Date.now();
+              videoState.stream = stream;
+              var rec = new MediaRecorder(stream);
+              videoState.recorder = rec;
+              bVideoNote.classList.add("active");
+              rec.ondataavailable = function (ev) {
+                if (ev.data && ev.data.size) videoState.chunks.push(ev.data);
+              };
+              rec.onstop = function () {
+                stream.getTracks().forEach(function (t) {
+                  t.stop();
+                });
+                videoState.recorder = null;
+                videoState.stream = null;
+                bVideoNote.classList.remove("active");
+                var durationMs = Date.now() - videoState.startedAt;
+                if (durationMs > VIDEO_NOTE_MAX_MS) durationMs = VIDEO_NOTE_MAX_MS;
+                var blob = new Blob(videoState.chunks, { type: "video/webm" });
+                if (blob.size > 0) {
+                  ctx.sendVideoNoteMessage(blob, durationMs).catch(function (err) {
+                    ctx.state.error = err.message || ctx.L("ui.phase5.videoNoteFailed");
+                    ctx.render();
+                  });
+                }
+              };
+              rec.start();
+              setTimeout(function () {
+                if (videoState.recorder) videoState.recorder.stop();
+              }, VIDEO_NOTE_MAX_MS);
+            })
+            .catch(function () {
+              ctx.state.error = ctx.L("ui.phase5.videoMicDenied");
+              ctx.render();
+            });
+        },
+      });
+      fmt.appendChild(bVideoNote);
+    }
     if (navigator.geolocation && ctx.sendLocationMessage) {
       fmt.appendChild(
         ctx.iconBtn("📍", ctx.L("ui.thread.sendLocation"), {

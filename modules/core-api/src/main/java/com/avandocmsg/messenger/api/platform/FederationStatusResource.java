@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.platform;
 
+import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.platform.dto.FederationStatusResponse;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.core.port.UserLookupPort;
@@ -22,11 +23,17 @@ public class FederationStatusResource {
 
     private final FederationStatusService federationStatusService;
     private final UserLookupPort userLookupPort;
+    private final AppConfig appConfig;
 
     @Inject
-    public FederationStatusResource(FederationStatusService federationStatusService, UserLookupPort userLookupPort) {
+    public FederationStatusResource(
+        FederationStatusService federationStatusService,
+        UserLookupPort userLookupPort,
+        AppConfig appConfig
+    ) {
         this.federationStatusService = federationStatusService;
         this.userLookupPort = userLookupPort;
+        this.appConfig = appConfig;
     }
 
     @GET
@@ -35,13 +42,31 @@ public class FederationStatusResource {
     public FederationStatusResponse status(@Context SecurityContext securityContext) {
         try {
             var userId = CurrentUserId.uuid(securityContext);
-            var profile = userLookupPort.findById(userId).orElse(null);
-            if (profile != null && profile.orgId() != null && !profile.orgId().isBlank()) {
-                return federationStatusService.statusForOrg(UUID.fromString(profile.orgId()));
+            var orgId = resolveOrgId(userId);
+            if (orgId != null) {
+                return federationStatusService.statusForOrg(orgId);
             }
         } catch (Exception ignored) {
             // anonymous / invalid token — fall through to global
         }
         return federationStatusService.globalStatus();
+    }
+
+    @GET
+    @Path("/directory")
+    @Operation(summary = "Federation holding directory", description = "Trusted partner orgs for current user org")
+    public com.avandocmsg.messenger.api.platform.dto.FederationDirectoryResponse directory(
+        @Context SecurityContext securityContext
+    ) {
+        var userId = CurrentUserId.uuid(securityContext);
+        return federationStatusService.directoryForOrg(resolveOrgId(userId));
+    }
+
+    private UUID resolveOrgId(UUID userId) {
+        var profile = userLookupPort.findById(userId).orElse(null);
+        if (profile != null && profile.orgId() != null && !profile.orgId().isBlank()) {
+            return UUID.fromString(profile.orgId());
+        }
+        return appConfig.defaultOrgId().orElse(null);
     }
 }

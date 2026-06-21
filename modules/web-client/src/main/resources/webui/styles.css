@@ -1524,6 +1524,188 @@ button {
   color: var(--muted);
 }
 
+.thread-phase5-tools {
+  display: flex;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(121, 73, 244, 0.04);
+}
+
+.thread-kanban,
+.thread-whiteboard {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 12px 12px;
+  background: rgba(121, 73, 244, 0.05);
+}
+
+.thread-kanban-title,
+.thread-whiteboard-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.kanban-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.kanban-col {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  background: var(--panel);
+  min-height: 72px;
+}
+
+.kanban-col-head {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.kanban-task {
+  font-size: 0.82rem;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.kanban-add-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.kanban-add-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.whiteboard-editor {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  margin-bottom: 8px;
+  resize: vertical;
+}
+
+.conf-adr-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: rgba(121, 73, 244, 0.06);
+}
+
+.conf-adr-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.phase5-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.phase5-overlay-card {
+  width: min(480px, 100%);
+  max-height: min(80vh, 560px);
+  overflow: auto;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg, 0 8px 32px rgba(0, 0, 0, 0.25));
+}
+
+.phase5-overlay-title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.phase5-modal-body {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 0.78rem;
+  padding: 8px;
+  margin: 0 0 12px;
+  border-radius: var(--radius);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  max-height: 240px;
+  overflow: auto;
+}
+
+.stickers-gif-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.stickers-gif-item {
+  padding: 10px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.stickers-gif-item:hover {
+  border-color: var(--accent);
+}
+
+.phase5-hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.federation-directory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.federation-directory-row {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  background: var(--bg);
+}
+
 .poll-card {
   border: 1px solid var(--border);
   border-radius: var(--radius);

@@ -322,6 +322,15 @@
     myReminders: [],
     myRemindersBusy: false,
     threadOfflineCached: false,
+    chatKanbanTasks: [],
+    chatWhiteboard: null,
+    stickerGifs: [],
+    phase5KanbanOpen: false,
+    phase5WhiteboardOpen: false,
+    phase5StickersOpen: false,
+    phase5Modal: null,
+    phase5Toast: null,
+    federationDirectory: [],
   };
 
   var WEB_DEVICE_NAME = "web-client";
@@ -569,6 +578,14 @@
     throw new Error("KorusUiPolls required — load ui-polls.js before app.js");
   }
   var uiPolls = window.KorusUiPolls;
+  if (!window.KorusUiPhase5Ext) {
+    throw new Error("KorusUiPhase5Ext required — load ui-phase5-ext.js before app.js");
+  }
+  var uiPhase5Ext = window.KorusUiPhase5Ext;
+  if (!window.KorusUiCallAdr) {
+    throw new Error("KorusUiCallAdr required — load ui-call-adr.js before app.js");
+  }
+  var uiCallAdr = window.KorusUiCallAdr;
   if (!window.KorusUiWsHandler) {
     throw new Error("KorusUiWsHandler required — load ui-ws-handler.js before app.js");
   }
@@ -2720,6 +2737,7 @@
         loadBlockedUsers(),
         loadMyPublicLinks(),
         loadMyReminders(),
+        loadFederationDirectory(),
       ])
         .then(render)
         .catch(function () {
@@ -4791,6 +4809,8 @@
     await loadReactionsForThread(chatId);
     await loadPinnedMessages(chatId);
     await loadChatPolls(chatId);
+    await loadChatKanban(chatId);
+    await loadChatWhiteboard(chatId);
     await hydrateReadReceiptsForThread(chatId);
     var liveConf = activeConferenceInChat(chatId);
     if (liveConf && liveConf.conference_id) {
@@ -4942,6 +4962,196 @@
       shareSelfContact: shareSelfContact,
       sendContactCard: sendContactCard,
     };
+  }
+
+  function getPhase5UiCtx() {
+    return {
+      el: el,
+      iconBtn: iconBtn,
+      L: L,
+      state: state,
+      render: render,
+      apiJson: apiJson,
+      openStickersPanel: openStickersPanel,
+      closeStickersPanel: closeStickersPanel,
+      toggleKanbanPanel: toggleKanbanPanel,
+      toggleWhiteboardPanel: toggleWhiteboardPanel,
+      addKanbanTask: addKanbanTask,
+      saveWhiteboard: saveWhiteboard,
+      insertGifMessage: insertGifMessage,
+    };
+  }
+
+  async function loadChatKanban(chatId) {
+    if (!chatId || !state.tokens) {
+      state.chatKanbanTasks = [];
+      return;
+    }
+    try {
+      var rows = await apiJson("/chats/" + chatId + "/kanban/tasks", { method: "GET" });
+      state.chatKanbanTasks = Array.isArray(rows) ? rows : [];
+    } catch (e) {
+      state.chatKanbanTasks = [];
+    }
+  }
+
+  async function loadChatWhiteboard(chatId) {
+    if (!chatId || !state.tokens) {
+      state.chatWhiteboard = null;
+      return;
+    }
+    try {
+      state.chatWhiteboard = await apiJson("/chats/" + chatId + "/whiteboard", { method: "GET" });
+    } catch (e) {
+      state.chatWhiteboard = null;
+    }
+  }
+
+  async function loadStickerGifs() {
+    if (!state.tokens) {
+      state.stickerGifs = [];
+      return;
+    }
+    try {
+      var rows = await apiJson("/stickers/gifs?q=", { method: "GET" });
+      state.stickerGifs = Array.isArray(rows) ? rows : [];
+    } catch (e) {
+      state.stickerGifs = [];
+    }
+  }
+
+  async function loadFederationDirectory() {
+    if (!state.tokens) {
+      state.federationDirectory = [];
+      return;
+    }
+    try {
+      var data = await apiJson("/platform/federation/directory", { method: "GET" });
+      state.federationDirectory = data && data.partner_orgs ? data.partner_orgs : [];
+    } catch (e) {
+      state.federationDirectory = [];
+    }
+  }
+
+  function openStickersPanel() {
+    state.phase5StickersOpen = true;
+    loadStickerGifs().then(render).catch(render);
+  }
+
+  function closeStickersPanel() {
+    state.phase5StickersOpen = false;
+    render();
+  }
+
+  function toggleKanbanPanel() {
+    state.phase5KanbanOpen = !state.phase5KanbanOpen;
+    if (state.phase5KanbanOpen && state.selectedId) {
+      loadChatKanban(state.selectedId).then(render).catch(render);
+    } else {
+      render();
+    }
+  }
+
+  function toggleWhiteboardPanel() {
+    state.phase5WhiteboardOpen = !state.phase5WhiteboardOpen;
+    if (state.phase5WhiteboardOpen && state.selectedId) {
+      loadChatWhiteboard(state.selectedId).then(render).catch(render);
+    } else {
+      render();
+    }
+  }
+
+  async function addKanbanTask(title) {
+    if (!state.selectedId || !title) return;
+    state.busy = true;
+    render();
+    try {
+      await apiJson("/chats/" + state.selectedId + "/kanban/tasks", {
+        method: "POST",
+        jsonBody: { column_key: "todo", title: title },
+      });
+      await loadChatKanban(state.selectedId);
+    } catch (err) {
+      state.error = err.message || L("ui.phase5.kanbanFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function saveWhiteboard(snapshotJson) {
+    if (!state.selectedId) return;
+    state.busy = true;
+    render();
+    try {
+      state.chatWhiteboard = await apiJson("/chats/" + state.selectedId + "/whiteboard", {
+        method: "PUT",
+        jsonBody: { title: L("ui.phase5.whiteboardTitle"), snapshot_json: snapshotJson || "{}" },
+      });
+      state.phase5Toast = L("ui.phase5.whiteboardSaved");
+    } catch (err) {
+      state.error = err.message || L("ui.phase5.whiteboardFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function insertGifMessage(gif) {
+    if (!state.selectedId || !gif) return;
+    var url = gif.gif_url || gif.preview_url || "";
+    if (!url) return;
+    state.phase5StickersOpen = false;
+    state.busy = true;
+    render();
+    try {
+      var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
+        method: "POST",
+        jsonBody: {
+          type: "text",
+          content: url,
+          reply_to_msg_id: currentReplyToId(),
+        },
+      });
+      clearReplyTo();
+      await afterLocalSend(state.selectedId, sent);
+    } catch (err) {
+      state.error = err.message || L("messages.sendFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function sendVideoNoteMessage(blob, durationMs) {
+    if (!blob || !state.tokens || !state.selectedId) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      var file = new File([blob], "video-note.webm", { type: blob.type || "video/webm" });
+      var up = await uploadChatFile(file);
+      var body = {
+        type: "video_note",
+        content: up.id,
+        duration_ms: durationMs || null,
+        reply_to_msg_id: currentReplyToId(),
+      };
+      if (state.discussionThreadRootId) {
+        body.thread_id = state.discussionThreadRootId;
+      }
+      var sent = await apiJson("/chats/" + state.selectedId + "/messages", {
+        method: "POST",
+        jsonBody: body,
+      });
+      clearReplyTo();
+      await afterLocalSend(state.selectedId, sent);
+    } catch (err) {
+      state.error = err.message || L("ui.phase5.videoNoteFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
   }
 
   async function loadMyReminders() {
@@ -6825,6 +7035,12 @@
     if (state.callMode === "mesh" && !meshCallChatReady()) {
       panel.appendChild(el("p", "call-hint call-hint-warn", L("conference.meshNeedsChatHint")));
     }
+    if (state.activeConference && conferenceIsTracked(state.activeConference)) {
+      var confAdrBar = uiCallAdr.mountConfAdrBar(getPhase5UiCtx(), state.activeConference);
+      if (confAdrBar) {
+        panel.appendChild(confAdrBar);
+      }
+    }
     if (state.callMode === "jitsi" && state.activeConference && state.activeConference.join_url) {
       var jHint = el("p", "call-hint");
       jHint.textContent = L("conference.jitsiHint", {
@@ -7520,6 +7736,7 @@
       })
     );
     panel.appendChild(rowLinksRefresh);
+    uiPhase5Ext.mountFederationDirectory(getPhase5UiCtx(), panel);
   }
 
   function appendSettingsSecurityPanel(panel) {
@@ -7888,6 +8105,22 @@
       incActs.appendChild(bDec);
       incWrap.appendChild(incActs);
       shell.appendChild(incWrap);
+    }
+    if (state.phase5Toast) {
+      var p5Wrap = el("div", "banner-wrap banner-wrap-ok");
+      var p5Banner = el("div", "info-banner");
+      p5Banner.setAttribute("data-testid", "phase5-toast");
+      p5Banner.textContent = state.phase5Toast;
+      var p5Dismiss = el("button", "banner-dismiss", "×");
+      p5Dismiss.type = "button";
+      p5Dismiss.title = L("ui.common.close");
+      p5Dismiss.onclick = function () {
+        state.phase5Toast = null;
+        render();
+      };
+      p5Wrap.appendChild(p5Banner);
+      p5Wrap.appendChild(p5Dismiss);
+      shell.appendChild(p5Wrap);
     }
     if (state.statusMessage) {
       var okWrap = el("div", "banner-wrap banner-wrap-ok");
@@ -8509,6 +8742,10 @@
         );
         thread.appendChild(confBanner);
       }
+      var phase5Tools = uiPhase5Ext.mountThreadTools(getPhase5UiCtx());
+      if (phase5Tools) {
+        thread.appendChild(phase5Tools);
+      }
       var tSearchRow = el("div", "thread-search-row");
       var tSearch = el("input");
       tSearch.type = "search";
@@ -8560,6 +8797,14 @@
       var pollsSection = uiPolls.mountPollsSection(getPollsUiCtx());
       if (pollsSection) {
         thread.appendChild(pollsSection);
+      }
+      var kanbanSection = uiPhase5Ext.mountKanbanSection(getPhase5UiCtx());
+      if (kanbanSection) {
+        thread.appendChild(kanbanSection);
+      }
+      var whiteboardSection = uiPhase5Ext.mountWhiteboardSection(getPhase5UiCtx());
+      if (whiteboardSection) {
+        thread.appendChild(whiteboardSection);
       }
       var msgs = el("div", "messages");
       var loadOlder = null;
@@ -8659,6 +8904,7 @@
           openPollCreate: openPollCreate,
           openScheduleSend: openScheduleSend,
           openContactShare: openContactShare,
+          sendVideoNoteMessage: sendVideoNoteMessage,
           loadComposerDraftForChat: loadComposerDraftForChat,
           scheduleSaveComposerDraft: scheduleSaveComposerDraft,
           scheduleTypingNotify: scheduleTypingNotify,
@@ -8724,6 +8970,10 @@
     if (remOv) shell.appendChild(remOv);
     var contactOv = uiPolls.mountContactShareOverlay(getPollsUiCtx());
     if (contactOv) shell.appendChild(contactOv);
+    var stickersOv = uiPhase5Ext.mountStickersOverlay(getPhase5UiCtx());
+    if (stickersOv) shell.appendChild(stickersOv);
+    var phase5Modal = uiCallAdr.mountPhase5Modal(getPhase5UiCtx());
+    if (phase5Modal) shell.appendChild(phase5Modal);
     if (state.membersModalOpen) {
       var mOv = el("div", "settings-overlay");
       mOv.setAttribute("data-testid", "members-overlay");
