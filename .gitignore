@@ -51,8 +51,8 @@ scripts/playwright-staging-gate.ps1
 scripts/write-runtime-gate-report.ps1
 scripts/webui-locale-parity-audit.js
 
-.github/workflows/deploy-pages.yml
-.github/workflows/pages-deck.yml
+!.github/workflows/deploy-pages.yml
+!.github/workflows/pages-deck.yml
 
 # =============================================================================
 # Local dev (not prod server/client build or deploy)
