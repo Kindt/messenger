@@ -6,6 +6,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExternalStackStatefulContractTest {
@@ -169,5 +170,28 @@ class ExternalStackStatefulContractTest {
         assertTrue(packs.stream().anyMatch(p -> p.profileId().equals("vks-integration-candidate")));
         assertTrue(packs.stream().anyMatch(p -> p.profileId().equals("dlp-external")));
         assertTrue(packs.stream().anyMatch(p -> p.profileId().equals("integrations-bundled")));
+    }
+
+    @Test
+    void compatibilityPacksLoadFullYamlProfileCatalog() {
+        var jatoba = ConnectorCompatibilityPacks.packFor("jatoba");
+        assertEquals("relational-db-hot", jatoba.component());
+        assertEquals(LifecycleStatus.candidate, jatoba.lifecycleStatus());
+        assertTrue(jatoba.requiredChecks().contains("jdbc_connectivity"));
+        assertTrue(jatoba.unsupportedModes().contains("supported_bundled_claim"));
+
+        var nginx = ConnectorCompatibilityPacks.packFor("nginx-bundled");
+        assertEquals("web-edge", nginx.component());
+        assertEquals(LifecycleStatus.supported_bundled, nginx.lifecycleStatus());
+        assertTrue(nginx.requiredChecks().contains("security_headers"));
+
+        var livekit = ConnectorCompatibilityPacks.packFor("livekit-1.8-bundled");
+        assertEquals("media", livekit.component());
+        assertTrue(livekit.promotionEvidence().contains("korus_bundled_runbook"));
+    }
+
+    @Test
+    void compatibilityPackYamlCatalogIsPackagedAsRuntimeResource() {
+        assertNotNull(ConnectorCompatibilityPacks.class.getResource("/external-stack-profiles.yaml"));
     }
 }

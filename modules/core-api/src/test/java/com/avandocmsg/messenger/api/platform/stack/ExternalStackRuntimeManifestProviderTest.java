@@ -199,6 +199,32 @@ class ExternalStackRuntimeManifestProviderTest {
         assertEquals("nats client disconnected", messaging.degradedReason());
     }
 
+    @Test
+    void boundedActiveProbesRunDeepComponentChecksWhenClientsExposeThem() {
+        var ds = new JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:external_stack_probe_deep;DB_CLOSE_DELAY=-1");
+        var clients = new ExternalStackProbeClients(
+            () -> true,
+            () -> false,
+            () -> true,
+            () -> false,
+            () -> true,
+            () -> false,
+            () -> false,
+            () -> false
+        );
+        var provider = new ExternalStackRuntimeManifestProvider(
+            new TestConfig(),
+            ExternalStackActiveProbeService.bounded(new TestConfig(), ds, clients)
+        );
+
+        assertEquals("redis command subset probe failed", observation(provider.observations(), "cache").degradedReason());
+        assertEquals("s3 sample operation probe failed", observation(provider.observations(), "object-storage").degradedReason());
+        assertEquals("nats subject probe failed", observation(provider.observations(), "messaging").degradedReason());
+        assertEquals("oidc jwks probe failed", observation(provider.observations(), "idp").degradedReason());
+        assertEquals("web-edge security headers probe failed", observation(provider.observations(), "web-edge").degradedReason());
+    }
+
     private static ManifestObservation observation(
         java.util.List<ManifestObservation> observations,
         String component

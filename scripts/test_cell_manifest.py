@@ -23,6 +23,7 @@ KORUS_SERVER_ENV_TEMPLATE = (
     REPO_ROOT / "deploy/ansible/roles/korus_server/templates/korus-server.env.j2"
 )
 FULL_SERVER_COMPOSE = REPO_ROOT / "docker/docker-compose.full-server.yml"
+EXTERNAL_STACK_PROFILES = REPO_ROOT / "docs/external-stack-profiles.yaml"
 
 
 class TestCellManifest(unittest.TestCase):
@@ -79,6 +80,28 @@ class TestCellManifest(unittest.TestCase):
         self.assertIn("EXTERNAL_STACK_MANIFEST_PATH=/config/", env_text)
         self.assertIn("EXTERNAL_STACK_MANIFEST_PATH: /config/", compose_text)
         self.assertIn("${EXTERNAL_STACK_MANIFEST_DIR:-.}:/config:ro", compose_text)
+
+    def test_external_stack_profile_catalog_aliases_and_evidence_are_valid(self) -> None:
+        data = load_manifest(EXTERNAL_STACK_PROFILES)
+        profiles = {
+            profile_id
+            for component in data["components"].values()
+            for profile_id in component.get("profiles", {}).keys()
+        }
+
+        aliases = data.get("compatibility_aliases", {})
+        self.assertGreaterEqual(len(aliases), 6)
+        for alias, target in aliases.items():
+            self.assertNotIn(alias, profiles)
+            self.assertIn(target, profiles)
+
+        search = data["components"]["search"]["profiles"]["opensearch-candidate"]
+        self.assertIn("search_reindex_contract_green", search.get("promotion_evidence", []))
+        self.assertIn("supported_bundled_claim", search.get("unsupported_modes", []))
+
+        postgres = data["components"]["relational-db-hot"]["profiles"]["postgres-16-external"]
+        self.assertIn("customer_profile_evidence", postgres.get("promotion_evidence", []))
+        self.assertIn("silent_fallback", postgres.get("unsupported_modes", []))
 
 
 if __name__ == "__main__":

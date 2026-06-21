@@ -31,7 +31,9 @@ public final class ExternalStackActiveProbeService {
         DataSource dataSource,
         BooleanSupplier redisPing
     ) {
-        return bounded(appConfig, dataSource, redisPing, null, null);
+        return bounded(appConfig, dataSource, new ExternalStackProbeClients(
+            redisPing, null, null, null, null, null, null, null
+        ));
     }
 
     public static ExternalStackActiveProbeService bounded(
@@ -41,17 +43,34 @@ public final class ExternalStackActiveProbeService {
         BooleanSupplier s3Ping,
         BooleanSupplier natsPing
     ) {
+        return bounded(appConfig, dataSource, new ExternalStackProbeClients(
+            redisPing, null, s3Ping, null, natsPing, null, null, null
+        ));
+    }
+
+    public static ExternalStackActiveProbeService bounded(
+        AppConfig appConfig,
+        DataSource dataSource,
+        ExternalStackProbeClients clients
+    ) {
         return of(Map.of(
             "relational-db-hot", manifest -> jdbcMetadataProbe(dataSource),
-            "cache", manifest -> redisProbe(redisPing),
-            "idp", manifest -> oidcShapeProbe(appConfig.keycloakIssuer()),
-            "web-edge", manifest -> urlShapeProbe(appConfig.webPublicBaseUrl(), "web-edge"),
-            "object-storage", manifest -> s3Ping != null
-                ? booleanProbe(s3Ping, "s3 bucket reachable", "s3 bucket probe failed")
-                : configuredEndpointProbe(appConfig.minioEndpoint(), "object-storage", "s3 client not attached"),
-            "messaging", manifest -> natsPing != null
-                ? booleanProbe(natsPing, "nats client connected", "nats client disconnected")
-                : configuredEndpointProbe(appConfig.natsUrl(), "messaging", "nats client not attached")
+            "cache", manifest -> redisProbe(clients),
+            "idp", manifest -> oidcProbe(appConfig.keycloakIssuer(), clients != null ? clients.oidcJwksReachable() : null),
+            "web-edge", manifest -> webEdgeProbe(
+                appConfig.webPublicBaseUrl(),
+                clients != null ? clients.webEdgeSecurityHeaders() : null
+            ),
+            "object-storage", manifest -> s3Probe(
+                appConfig.minioEndpoint(),
+                clients != null ? clients.s3BucketExists() : null,
+                clients != null ? clients.s3SampleOperation() : null
+            ),
+            "messaging", manifest -> natsProbe(
+                appConfig.natsUrl(),
+                clients != null ? clients.natsConnected() : null,
+                clients != null ? clients.natsSubjectProbe() : null
+            )
         ));
     }
 
@@ -82,11 +101,20 @@ public final class ExternalStackActiveProbeService {
         }
     }
 
-    private static ExternalStackProbeResult redisProbe(BooleanSupplier redisPing) {
+    private static ExternalStackProbeResult redisProbe(ExternalStackProbeClients clients) {
+        var redisPing = clients != null ? clients.redisPing() : null;
         if (redisPing == null) {
             return ExternalStackProbeResult.degraded("redis probe not attached");
         }
-        return booleanProbe(redisPing, "redis ping ok", "redis ping failed");
+        var ping = booleanProbe(redisPing, "redis ping ok", "redis ping failed");
+        if (!ping.healthy()) {
+            return ping;
+        }
+        var commandSubset = clients.redisCommandSubset();
+        if (commandSubset == null) {
+            return ping;
+        }
+        return booleanProbe(commandSubset, "redis command subset ok", "redis command subset probe failed");
     }
 
     private static ExternalStackProbeResult booleanProbe(
@@ -103,7 +131,7 @@ public final class ExternalStackActiveProbeService {
         }
     }
 
-    private static ExternalStackProbeResult oidcShapeProbe(String issuer) {
+    private static ExternalStackProbeResult oidcProbe(String issuer, BooleanSupplier jwksReachable) {
         if (issuer == null || issuer.isBlank()) {
             return ExternalStackProbeResult.degraded("oidc issuer not configured");
         }
@@ -118,7 +146,18 @@ public final class ExternalStackActiveProbeService {
         if (!path.contains("/realms/")) {
             return ExternalStackProbeResult.ok(Map.of(), "oidc issuer does not include /realms/ path");
         }
-        return ExternalStackProbeResult.ok();
+        if (jwksReachable == null) {
+            return ExternalStackProbeResult.ok();
+        }
+        return booleanProbe(jwksReachable, "oidc jwks reachable", "oidc jwks probe failed");
+    }
+
+    private static ExternalStackProbeResult webEdgeProbe(String url, BooleanSupplier securityHeaders) {
+        var shape = urlShapeProbe(url, "web-edge");
+        if (!shape.healthy() || securityHeaders == null) {
+            return shape;
+        }
+        return booleanProbe(securityHeaders, "web-edge security headers ok", "web-edge security headers probe failed");
     }
 
     private static ExternalStackProbeResult urlShapeProbe(String url, String label) {
@@ -133,6 +172,36 @@ public final class ExternalStackActiveProbeService {
             return ExternalStackProbeResult.degraded(label + " url must use https", "security_headers_not_verified");
         }
         return ExternalStackProbeResult.ok(Map.of(), "security_headers_placeholder");
+    }
+
+    private static ExternalStackProbeResult s3Probe(
+        String endpoint,
+        BooleanSupplier bucketExists,
+        BooleanSupplier sampleOperation
+    ) {
+        if (bucketExists == null) {
+            return configuredEndpointProbe(endpoint, "object-storage", "s3 client not attached");
+        }
+        var bucket = booleanProbe(bucketExists, "s3 bucket reachable", "s3 bucket probe failed");
+        if (!bucket.healthy() || sampleOperation == null) {
+            return bucket;
+        }
+        return booleanProbe(sampleOperation, "s3 sample operation ok", "s3 sample operation probe failed");
+    }
+
+    private static ExternalStackProbeResult natsProbe(
+        String endpoint,
+        BooleanSupplier connected,
+        BooleanSupplier subjectProbe
+    ) {
+        if (connected == null) {
+            return configuredEndpointProbe(endpoint, "messaging", "nats client not attached");
+        }
+        var connection = booleanProbe(connected, "nats client connected", "nats client disconnected");
+        if (!connection.healthy() || subjectProbe == null) {
+            return connection;
+        }
+        return booleanProbe(subjectProbe, "nats subject probe ok", "nats subject probe failed");
     }
 
     private static ExternalStackProbeResult configuredEndpointProbe(String endpoint, String component, String warning) {

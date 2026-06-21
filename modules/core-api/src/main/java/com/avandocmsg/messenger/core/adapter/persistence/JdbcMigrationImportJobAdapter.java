@@ -6,8 +6,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,7 +35,7 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
             stmt.setObject(1, id);
             stmt.setObject(2, orgId);
             stmt.setString(3, source);
-            stmt.setString(4, configJson != null ? configJson : "{}");
+            bindJson(stmt, 4, configJson, conn);
             stmt.setObject(5, createdBy);
             stmt.executeUpdate();
             return id;
@@ -122,13 +126,30 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, status);
-            stmt.setString(2, resultJson != null ? resultJson : "{}");
+            bindJson(stmt, 2, resultJson, conn);
             stmt.setObject(3, id);
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("migration import status update failed {}", id, e);
             return false;
         }
+    }
+
+    private static void bindJson(PreparedStatement stmt, int index, String json, Connection conn) throws SQLException {
+        var value = json != null ? json : "{}";
+        if (isPostgres(conn)) {
+            var pg = new org.postgresql.util.PGobject();
+            pg.setType("jsonb");
+            pg.setValue(value);
+            stmt.setObject(index, pg);
+        } else {
+            stmt.setString(index, value);
+        }
+    }
+
+    private static boolean isPostgres(Connection conn) throws SQLException {
+        var product = conn.getMetaData().getDatabaseProductName();
+        return product != null && product.toLowerCase(Locale.ROOT).contains("postgresql");
     }
 
     private static JobRow mapRow(java.sql.ResultSet rs) throws Exception {

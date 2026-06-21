@@ -67,6 +67,16 @@ class ClasspathAdminStaticServletTest {
         assertTrue(panels.contains("/platform/external-stack/preflight/manifests"));
         assertTrue(panels.contains("/platform/external-stack/compatibility-packs"));
         assertTrue(panels.contains("renderExternalStackCompatibilityPacks"));
+        assertTrue(panels.contains("renderExternalStackDesiredObservedDiff"));
+        assertTrue(panels.contains("externalStackDownloadReport"));
+        assertTrue(panels.contains("externalStackSampleCheckpoint"));
+        assertTrue(panels.contains("externalStackSampleManifest"));
+        assertTrue(panels.contains("externalStackLifecycleFilter"));
+        assertTrue(panels.contains("externalStackGroupFilter"));
+        assertTrue(panels.contains("externalStackSampleSelector"));
+        assertTrue(panels.contains("externalStackCopyCurl"));
+        assertTrue(panels.contains("/platform/external-stack/preflight/profile"));
+        assertTrue(panels.contains("external-stack-schema-help"));
     }
 
     private static String resourceText(String path) throws IOException {

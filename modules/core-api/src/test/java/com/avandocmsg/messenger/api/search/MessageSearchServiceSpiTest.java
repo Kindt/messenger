@@ -9,7 +9,9 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MessageSearchServiceSpiTest {
 
@@ -43,6 +45,30 @@ class MessageSearchServiceSpiTest {
         assertTrue(service.search(UUID.randomUUID(), "  ", 10).isEmpty());
         assertEquals(0, primary.calls);
         assertEquals(0, fallback.calls);
+    }
+
+    @Test
+    void candidateSearchBackendsAreVisibleButNeverProductionEnabled() {
+        var opensearch = SearchBackendCandidates.opensearch();
+        var elasticsearch = SearchBackendCandidates.elasticsearch();
+
+        assertEquals("opensearch-candidate", opensearch.profileId());
+        assertEquals("elasticsearch-candidate", elasticsearch.profileId());
+        assertEquals("integration_candidate", opensearch.describe().lifecycleStatus());
+        assertFalse(opensearch.describe().productionEnabled());
+        assertEquals("disabled", opensearch.status().state());
+        assertFalse(opensearch.enabled());
+        assertFalse(elasticsearch.enabled());
+        assertThrows(UnsupportedOperationException.class,
+            () -> opensearch.search(UUID.randomUUID(), List.of(UUID.randomUUID()), "hello", 10));
+    }
+
+    @Test
+    void candidateBackendCannotBePrimaryBinding() {
+        var sql = new StubBackend("sql-search", true, false);
+
+        assertThrows(IllegalArgumentException.class,
+            () -> new SearchBackendBinding(SearchBackendCandidates.opensearch(), sql));
     }
 
     private static MessageResponse message(String id, UUID chatId, UUID senderId) {

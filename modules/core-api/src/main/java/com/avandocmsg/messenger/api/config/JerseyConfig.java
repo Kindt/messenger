@@ -319,7 +319,9 @@ public class JerseyConfig extends ResourceConfig {
         register(com.avandocmsg.messenger.api.users.MeIntegrationsMarketplaceResource.class);
         register(com.avandocmsg.messenger.api.phase5.StickerCatalogResource.class);
         register(com.avandocmsg.messenger.api.phase5.ChatConferenceAdrResource.class);
-        register(com.avandocmsg.messenger.api.phase5.ChatCollaborationAdrResource.class);
+        register(com.avandocmsg.messenger.api.phase5.ChatKanbanAdrResource.class);
+        register(com.avandocmsg.messenger.api.phase5.ChatWhiteboardAdrResource.class);
+        register(com.avandocmsg.messenger.api.phase5.ChatAiAssistAdrResource.class);
         register(com.avandocmsg.messenger.api.phase5.PlatformAdrResource.class);
         register(ExportResource.class);
         register(ConferenceResource.class);

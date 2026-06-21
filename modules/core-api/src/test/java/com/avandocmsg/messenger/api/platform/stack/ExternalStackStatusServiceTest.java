@@ -1,9 +1,11 @@
 package com.avandocmsg.messenger.api.platform.stack;
 
+import com.avandocmsg.messenger.api.config.AppConfig;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -109,7 +111,8 @@ class ExternalStackStatusServiceTest {
         var row = status.profiles().get("postgres-16-external");
 
         assertTrue(row.requiredChecks().contains("flyway_privileges"));
-        assertTrue(row.promotionEvidence().contains("customer_backup_and_wal_evidence"));
+        assertTrue(row.promotionEvidence().contains("h2_or_lab_migration_green"));
+        assertTrue(row.promotionEvidence().contains("customer_profile_evidence"));
         assertTrue(row.unsupportedModes().contains("silent_fallback"));
     }
 
@@ -165,6 +168,42 @@ class ExternalStackStatusServiceTest {
             .contains("production_without_reindex_gate"));
     }
 
+    @Test
+    void resourceExposesSingleCompatibilityPackAndProfilePreflight() {
+        var resource = new ExternalStackStatusResource();
+
+        var pack = resource.compatibilityPack("opensearch-candidate");
+        var validation = resource.preflightProfile(new ExternalStackProfilePreflightRequest("opensearch-candidate"));
+
+        assertEquals("search", pack.component());
+        assertFalse(pack.supported());
+        assertFalse(validation.passed());
+        assertTrue(validation.failures().contains("profile opensearch-candidate is not production-supported"));
+    }
+
+    @Test
+    void resourceExposesSingleComponentStatus() {
+        var resource = new ExternalStackStatusResource(new ExternalStackRuntimeManifestProvider(new TestConfig()));
+
+        var component = resource.componentStatus("object-storage");
+
+        assertEquals("minio-s3", component.desiredConnector());
+        assertEquals("passed", component.validationStatus());
+    }
+
+    @Test
+    void resourceExposesComponentValidationContracts() {
+        var resource = new ExternalStackStatusResource();
+
+        var catalog = resource.componentContracts();
+        var objectStorage = resource.componentContract("object-storage");
+
+        assertTrue(catalog.contracts().containsKey("relational-db-hot"));
+        assertTrue(catalog.contracts().containsKey("object-storage"));
+        assertTrue(objectStorage.requiredChecks().contains("put_get_head_delete_list"));
+        assertEquals("uploads_controlled_error_no_purge_without_snapshot", objectStorage.failurePolicy());
+    }
+
     private static ComponentBackendManifest manifest(String component, String connector, ExternalStackRole role) {
         return new ComponentBackendManifest(
             component,
@@ -183,5 +222,67 @@ class ExternalStackStatusServiceTest {
             SupportBoundary.externalByo("customer"),
             Map.of("serve_traffic", "true")
         );
+    }
+
+    private static class TestConfig extends AppConfig {
+        @Override
+        public String dbJdbcUrl() {
+            return "jdbc:postgresql://user:secret@db.example.test:5432/avandocmsg_hot";
+        }
+
+        @Override
+        public String minioEndpoint() {
+            return "https://minio.example.test";
+        }
+
+        @Override
+        public String minioBucket() {
+            return "avandocmsg";
+        }
+
+        @Override
+        public String natsUrl() {
+            return "nats://nats.example.test:4222";
+        }
+
+        @Override
+        public boolean natsJetstream() {
+            return true;
+        }
+
+        @Override
+        public String keycloakIssuer() {
+            return "https://idp.example.test/realms/avandocmsg";
+        }
+
+        @Override
+        public String redisUri() {
+            return "redis://redis.example.test:6379";
+        }
+
+        @Override
+        public String webPublicBaseUrl() {
+            return "https://messenger.example.test/";
+        }
+
+        @Override
+        public String livekitUrl() {
+            return "wss://livekit.example.test";
+        }
+
+        @Override
+        public String webrtcStunUris() {
+            return "stun:turn.example.test:3478";
+        }
+
+        @Override
+        public Optional<String> webClientVapidPublicKey() {
+            return Optional.of("public-vapid-key");
+        }
+
+        @Override
+        public String integrationsBaseUrl() {
+            return "https://integrations.example.test";
+        }
     }
 }

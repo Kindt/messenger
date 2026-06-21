@@ -21,7 +21,9 @@ public record PlatformCapabilitiesResponse(
 
     public record BaseProductSection(
         @JsonProperty("state") String state,
-        @JsonProperty("label") String label
+        @JsonProperty("label") String label,
+        @JsonProperty("external_stack_components") List<String> externalStackComponents,
+        @JsonProperty("external_stack_profiles") List<String> externalStackProfiles
     ) {}
 
     public record ModuleSection(
@@ -32,7 +34,10 @@ public record PlatformCapabilitiesResponse(
         @JsonProperty("network_profile") String networkProfile,
         @JsonProperty("lifecycle_status") String lifecycleStatus,
         @JsonProperty("successor_addon_id") String successorAddonId,
-        @JsonProperty("mode") String mode
+        @JsonProperty("mode") String mode,
+        @JsonProperty("external_stack_components") List<String> externalStackComponents,
+        @JsonProperty("external_stack_profiles") List<String> externalStackProfiles,
+        @JsonProperty("external_stack_warnings") List<String> externalStackWarnings
     ) {}
 
     public record InfraSection(

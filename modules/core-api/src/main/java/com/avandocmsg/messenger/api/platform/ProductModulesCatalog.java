@@ -17,7 +17,9 @@ public record ProductModulesCatalog(
     public record BaseEntry(
         @JsonProperty("id") String id,
         @JsonProperty("label") String label,
-        @JsonProperty("core_infra") List<String> coreInfra
+        @JsonProperty("core_infra") List<String> coreInfra,
+        @JsonProperty("external_stack_components") List<String> externalStackComponents,
+        @JsonProperty("external_stack_profiles") List<String> externalStackProfiles
     ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -30,7 +32,9 @@ public record ProductModulesCatalog(
         @JsonProperty("lifecycle_status") String lifecycleStatus,
         @JsonProperty("successor_addon_id") String successorAddonId,
         @JsonProperty("secrets") List<SecretEntry> secrets,
-        @JsonProperty("env_flags") Map<String, String> envFlags
+        @JsonProperty("env_flags") Map<String, String> envFlags,
+        @JsonProperty("external_stack_components") List<String> externalStackComponents,
+        @JsonProperty("external_stack_profiles") List<String> externalStackProfiles
     ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)

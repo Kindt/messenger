@@ -97,7 +97,10 @@ public class PlatformModuleRegistry {
                 addon.networkProfile(),
                 addon.lifecycleStatus(),
                 addon.successorAddonId(),
-                mode
+                mode,
+                safeList(addon.externalStackComponents()),
+                safeList(addon.externalStackProfiles()),
+                externalStackWarnings(addon, state, externalStack)
             ));
             if (addon.internalInfra() != null) {
                 for (var infraId : addon.internalInfra()) {
@@ -113,7 +116,12 @@ public class PlatformModuleRegistry {
         var base = catalog.base();
         return new PlatformCapabilitiesResponse(
             new PlatformCapabilitiesResponse.ProductSection(
-                new PlatformCapabilitiesResponse.BaseProductSection("required", base.label()),
+                new PlatformCapabilitiesResponse.BaseProductSection(
+                    "required",
+                    base.label(),
+                    safeList(base.externalStackComponents()),
+                    safeList(base.externalStackProfiles())
+                ),
                 enabledIds
             ),
             modules,
@@ -138,6 +146,24 @@ public class PlatformModuleRegistry {
             ));
         }
         return result;
+    }
+
+    private List<String> externalStackWarnings(
+        ProductModulesCatalog.AddonEntry addon,
+        ResolvedAddonState state,
+        Map<String, PlatformCapabilitiesResponse.ExternalStackSection> externalStack
+    ) {
+        var warnings = new ArrayList<String>();
+        for (var componentId : safeList(addon.externalStackComponents())) {
+            var component = externalStack.get(componentId);
+            if (component == null
+                || !"passed".equals(component.validationStatus())
+                || "degraded".equals(component.healthStatus())
+                || state.state() == PlatformModuleState.degraded) {
+                warnings.add("required external stack component " + componentId + " is degraded");
+            }
+        }
+        return List.copyOf(warnings);
     }
 
     public boolean isAddonEffective(String addonId) {
@@ -228,6 +254,10 @@ public class PlatformModuleRegistry {
 
     private static boolean isBlank(String s) {
         return s == null || s.isBlank();
+    }
+
+    private static List<String> safeList(List<String> values) {
+        return values == null ? List.of() : List.copyOf(values);
     }
 
     public record ResolvedAddonState(PlatformModuleState state, PlatformModuleReason reason) {}

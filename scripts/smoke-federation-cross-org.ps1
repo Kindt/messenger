@@ -48,18 +48,14 @@ $csHeaders = @{ Authorization = "Bearer $csToken" }
 $adminId = Get-MeId $adminToken
 $csId = Get-MeId $csToken
 
-$orgs = Invoke-RestMethod -Method GET -Uri "$API/admin/organizations" -Headers $csHeaders
-if (-not $orgs -or $orgs.Count -lt 2) {
-    Write-Host "[SKIP] federation cross-org: need 2+ orgs"
-    exit 0
-}
-
-$orgA = if ($orgs[0].id) { $orgs[0].id } else { $orgs[0].org_id }
-$orgB = if ($orgs[1].id) { $orgs[1].id } else { $orgs[1].org_id }
-if ($orgA -eq $orgB) {
-    Write-Host "[SKIP] federation cross-org: single org only"
-    exit 0
-}
+$suffix = [guid]::NewGuid().ToString("N").Substring(0, 6)
+$orgAObj = Invoke-RestMethod -Method POST -Uri "$API/admin/organizations" -Headers $csHeaders `
+  -ContentType "application/json" -Body (@{ name = "fed-smoke-a-$suffix" } | ConvertTo-Json -Compress)
+$orgBObj = Invoke-RestMethod -Method POST -Uri "$API/admin/organizations" -Headers $csHeaders `
+  -ContentType "application/json" -Body (@{ name = "fed-smoke-b-$suffix" } | ConvertTo-Json -Compress)
+$orgA = if ($orgAObj.id) { $orgAObj.id } else { $orgAObj.org_id }
+$orgB = if ($orgBObj.id) { $orgBObj.id } else { $orgBObj.org_id }
+if (-not $orgA -or -not $orgB) { throw "create orgs failed" }
 
 $orgBodyA = (@{ org_id = $orgA } | ConvertTo-Json -Compress)
 Invoke-RestMethod -Method PATCH -Uri "$API/admin/users/$adminId/organization" `

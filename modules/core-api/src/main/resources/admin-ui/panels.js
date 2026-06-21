@@ -753,9 +753,13 @@
         const data = await ctx.apiFetch("/platform/external-stack/status");
         const profiles = await ctx.apiFetch("/platform/external-stack/profiles");
         const compatibilityPacks = await ctx.apiFetch("/platform/external-stack/compatibility-packs");
+        summary._externalStackCompatibilityPacks = compatibilityPacks;
         renderExternalStackTable(data, summary, profiles);
+        renderExternalStackDesiredObservedDiff(data, summary);
         renderExternalStackCompatibilityPacks(compatibilityPacks, summary);
-        pre.textContent = JSON.stringify({ status: data, profiles: profiles, compatibility_packs: compatibilityPacks }, null, 2);
+        const report = { status: data, profiles: profiles, compatibility_packs: compatibilityPacks };
+        summary._externalStackLastReport = report;
+        pre.textContent = JSON.stringify(report, null, 2);
         if (global.AdminUi) {
           AdminUi.showJsonBlock(true);
         }
@@ -779,13 +783,33 @@
     btn.textContent = "Обновить external stack";
     btn.addEventListener("click", () => reload().catch(() => {}));
     toolbar.appendChild(btn);
+    const download = document.createElement("button");
+    download.type = "button";
+    download.id = "externalStackDownloadReport";
+    download.className = "btn btn-secondary";
+    download.textContent = "Download JSON report";
+    download.addEventListener("click", () =>
+      externalStackDownloadReport("external-stack-report.json", summary._externalStackLastReport || {})
+    );
+    toolbar.appendChild(download);
     [
       ["validation", "validation", ["all", "passed", "failed"]],
       ["health", "health", ["all", "healthy", "degraded", "configured"]],
       ["mismatch", "mismatch", ["all", "yes", "no"]],
+      ["group", "group", ["all", "core", "add-ons", "candidates"]],
+      [
+        "lifecycle",
+        "lifecycle",
+        ["all", "supported_bundled", "supported_external_byo", "candidate", "integration_candidate", "rejected"],
+      ],
     ].forEach(([id, label, values]) => {
       const select = document.createElement("select");
       select.id = "externalStackFilter-" + id;
+      if (id === "lifecycle") {
+        select.id = "externalStackLifecycleFilter";
+      } else if (id === "group") {
+        select.id = "externalStackGroupFilter";
+      }
       select.dataset.filter = id;
       values.forEach((value) => {
         const option = document.createElement("option");
@@ -797,6 +821,7 @@
         const data = summary._externalStackData;
         if (data) {
           renderExternalStackTable(data, summary);
+          renderExternalStackCompatibilityPacks(summary._externalStackCompatibilityPacks, summary);
         }
       });
       toolbar.appendChild(select);
@@ -825,26 +850,18 @@
     ta.id = "externalStackCheckpointJson";
     ta.rows = 8;
     ta.spellcheck = false;
-    ta.value = JSON.stringify(
-      {
-        component: "search",
-        source_profile: "sql-search",
-        target_profile: "solr-bundled",
-        checkpoint_type: "reindex",
-        markers: {
-          reindex_cursor: "messages:42",
-          index_schema_version: "v1",
-          shadow_target: "solr-shadow",
-        },
-        rollback_profile: "sql-search",
-        watch_window: "PT4H",
-      },
-      null,
-      2
-    );
+    ta.value = JSON.stringify(externalStackSampleCheckpoint(), null, 2);
     box.appendChild(ta);
     const row = document.createElement("div");
     row.className = "admin-toolbar";
+    const sample = document.createElement("button");
+    sample.type = "button";
+    sample.id = "externalStackSampleCheckpoint";
+    sample.className = "btn btn-ghost";
+    sample.textContent = "Sample checkpoint JSON";
+    sample.addEventListener("click", () => {
+      ta.value = JSON.stringify(externalStackSampleCheckpoint(), null, 2);
+    });
     const validate = document.createElement("button");
     validate.type = "button";
     validate.className = "btn btn-secondary";
@@ -873,11 +890,71 @@
         result.textContent = "Ошибка: " + e.message;
       }
     });
+    row.appendChild(sample);
+    row.appendChild(externalStackCopyCurl("/platform/external-stack/preflight/checkpoint", () => ta.value));
     row.appendChild(validate);
     row.appendChild(result);
     box.appendChild(row);
     summary.appendChild(box);
     mountExternalStackManifestPreflight(summary, pre, ctx);
+    mountExternalStackProfilePreflight(summary, pre, ctx);
+  }
+
+  function mountExternalStackProfilePreflight(summary, pre, ctx) {
+    if (summary.querySelector("#externalStackProfilePreflight")) {
+      return;
+    }
+    const box = document.createElement("div");
+    box.className = "panel-form external-stack-preflight";
+    box.id = "externalStackProfilePreflight";
+    const title = document.createElement("p");
+    title.className = "form-section-label";
+    title.textContent = "Profile preflight (repo-local)";
+    box.appendChild(title);
+    const hint = document.createElement("p");
+    hint.className = "muted small external-stack-schema-help";
+    hint.textContent = "POST /platform/external-stack/preflight/profile — проверка production support для одного profile_id.";
+    box.appendChild(hint);
+    const selector = document.createElement("select");
+    selector.id = "externalStackSampleSelector";
+    ["postgres-16-bundled", "postgres-16-external", "opensearch-candidate"].forEach((profileId) => {
+      const option = document.createElement("option");
+      option.value = profileId;
+      option.textContent = profileId;
+      selector.appendChild(option);
+    });
+    box.appendChild(selector);
+    const row = document.createElement("div");
+    row.className = "admin-toolbar";
+    const validate = document.createElement("button");
+    validate.type = "button";
+    validate.className = "btn btn-secondary";
+    validate.textContent = "Validate profile";
+    const result = document.createElement("span");
+    result.className = "muted small";
+    const bodyText = () => JSON.stringify({ profile_id: selector.value }, null, 2);
+    validate.addEventListener("click", async () => {
+      result.textContent = "Проверка…";
+      try {
+        const validation = await ctx.apiFetch("/platform/external-stack/preflight/profile", {
+          method: "POST",
+          body: bodyText(),
+        });
+        result.textContent =
+          (validation.passed ? "OK" : "FAILED") + " · failures=" + ((validation.failures || []).join(", ") || "—");
+        pre.textContent = JSON.stringify(validation, null, 2);
+        if (global.AdminUi) {
+          AdminUi.showJsonBlock(true);
+        }
+      } catch (e) {
+        result.textContent = "Ошибка: " + e.message;
+      }
+    });
+    row.appendChild(externalStackCopyCurl("/platform/external-stack/preflight/profile", bodyText));
+    row.appendChild(validate);
+    row.appendChild(result);
+    box.appendChild(row);
+    summary.appendChild(box);
   }
 
   function mountExternalStackManifestPreflight(summary, pre, ctx) {
@@ -898,42 +975,18 @@
     ta.id = "externalStackManifestsJson";
     ta.rows = 10;
     ta.spellcheck = false;
-    ta.value = JSON.stringify(
-      {
-        manifests: [
-          {
-            component: "object-storage",
-            backend_family: "s3-compatible",
-            connector: "minio-s3",
-            version: "configured",
-            role: "active",
-            endpoint: "https://minio.example.test",
-            resource_name_or_alias: "avandocmsg",
-            schema_or_protocol_version: "s3",
-            compatibility_profile: "s3-minio-bundled",
-            topology: "configured",
-            config_revision: "manual-preflight",
-            capabilities: ["put_get_head_delete_list", "multipart", "checksum"],
-            data_classification: "file-content",
-            support_boundary: {
-              deployment_owner: "korus",
-              backup_owner: "korus",
-              ha_owner: "korus",
-              upgrade_owner: "korus",
-              incident_owner: "korus",
-              vendor_support_required: false,
-              korus_support_scope: "full-stack",
-            },
-            metadata: { serve_traffic: "true" },
-          },
-        ],
-      },
-      null,
-      2
-    );
+    ta.value = JSON.stringify(externalStackSampleManifest(), null, 2);
     box.appendChild(ta);
     const row = document.createElement("div");
     row.className = "admin-toolbar";
+    const sample = document.createElement("button");
+    sample.type = "button";
+    sample.id = "externalStackSampleManifest";
+    sample.className = "btn btn-ghost";
+    sample.textContent = "Sample manifest JSON";
+    sample.addEventListener("click", () => {
+      ta.value = JSON.stringify(externalStackSampleManifest(), null, 2);
+    });
     const validate = document.createElement("button");
     validate.type = "button";
     validate.className = "btn btn-secondary";
@@ -962,10 +1015,95 @@
         result.textContent = "Ошибка: " + e.message;
       }
     });
+    row.appendChild(sample);
+    row.appendChild(externalStackCopyCurl("/platform/external-stack/preflight/manifests", () => ta.value));
     row.appendChild(validate);
     row.appendChild(result);
     box.appendChild(row);
     summary.appendChild(box);
+  }
+
+  function externalStackSampleCheckpoint() {
+    return {
+      component: "search",
+      source_profile: "sql-search",
+      target_profile: "solr-bundled",
+      checkpoint_type: "reindex",
+      markers: {
+        reindex_cursor: "messages:42",
+        index_schema_version: "v1",
+        shadow_target: "solr-shadow",
+      },
+      rollback_profile: "sql-search",
+      watch_window: "PT4H",
+    };
+  }
+
+  function externalStackSampleManifest() {
+    return {
+      manifests: [
+        {
+          component: "object-storage",
+          backend_family: "s3-compatible",
+          connector: "minio-s3",
+          version: "configured",
+          role: "active",
+          endpoint: "https://minio.example.test",
+          resource_name_or_alias: "avandocmsg",
+          schema_or_protocol_version: "s3",
+          compatibility_profile: "s3-minio-bundled",
+          topology: "configured",
+          config_revision: "manual-preflight",
+          capabilities: ["put_get_head_delete_list", "multipart", "checksum"],
+          data_classification: "file-content",
+          support_boundary: {
+            deployment_owner: "korus",
+            backup_owner: "korus",
+            ha_owner: "korus",
+            upgrade_owner: "korus",
+            incident_owner: "korus",
+            vendor_support_required: false,
+            korus_support_scope: "full-stack",
+          },
+          metadata: { serve_traffic: "true" },
+        },
+      ],
+    };
+  }
+
+  function externalStackDownloadReport(filename, data) {
+    const blob = new Blob([JSON.stringify(data || {}, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function externalStackCopyCurl(path, bodyText) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn-ghost";
+    btn.textContent = "Copy curl";
+    btn.id = "externalStackCopyCurl";
+    btn.addEventListener("click", () => {
+      const payload = typeof bodyText === "function" ? bodyText() : "{}";
+      const cmd =
+        "curl -sS -X POST http://127.0.0.1:18080/api/v1" +
+        path +
+        " -H 'Content-Type: application/json' --data '" +
+        payload.replace(/'/g, "'\\''") +
+        "'";
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(cmd).catch(() => {});
+      }
+      btn.textContent = "Copied curl";
+      setTimeout(() => {
+        btn.textContent = "Copy curl";
+      }, 1200);
+    });
+    return btn;
   }
 
   function renderExternalStackTable(data, container, profiles) {
@@ -979,7 +1117,7 @@
     }
     const filters = externalStackFilters(container);
     const entries = Object.entries(data.components)
-      .filter(([, c]) => externalStackMatches(c, filters))
+      .filter(([component, c]) => externalStackMatches(c, filters, externalStackProfileFor(container._externalStackProfiles, c), component))
       .sort((a, b) => externalStackGroup(a[0]).localeCompare(externalStackGroup(b[0])) || a[0].localeCompare(b[0]));
     const wrap = document.createElement("div");
     wrap.className = "json-table-wrap external-stack-table-wrap";
@@ -1058,15 +1196,68 @@
     container.appendChild(wrap);
   }
 
+  function renderExternalStackDesiredObservedDiff(data, container) {
+    container.querySelectorAll(".external-stack-diff-wrap").forEach((n) => n.remove());
+    if (!data || !data.components) {
+      return;
+    }
+    const rows = Object.entries(data.components)
+      .filter(([, c]) => c.mismatch === true || c.desired_connector !== c.observed_connector)
+      .sort((a, b) => a[0].localeCompare(b[0]));
+    const wrap = document.createElement("div");
+    wrap.className = "json-table-wrap external-stack-diff-wrap";
+    wrap.setAttribute("data-testid", "admin-external-stack-diff");
+    const title = document.createElement("p");
+    title.className = "form-section-label";
+    title.textContent = "Desired vs observed diff";
+    wrap.appendChild(title);
+    if (!rows.length) {
+      const ok = document.createElement("p");
+      ok.className = "muted small";
+      ok.textContent = "No desired/observed connector mismatches.";
+      wrap.appendChild(ok);
+      container.appendChild(wrap);
+      return;
+    }
+    const table = document.createElement("table");
+    table.className = "json-panel-table";
+    const head = document.createElement("thead");
+    const hr = document.createElement("tr");
+    ["component", "desired", "observed", "reason"].forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    head.appendChild(hr);
+    table.appendChild(head);
+    const body = document.createElement("tbody");
+    rows.forEach(([component, c]) => {
+      const tr = document.createElement("tr");
+      tr.classList.add("fleet-row-bad");
+      [component, c.desired_connector || "—", c.observed_connector || "—", c.degraded_reason || "mismatch"].forEach((val) => {
+        const td = document.createElement("td");
+        td.textContent = val;
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    container.appendChild(wrap);
+  }
+
   function renderExternalStackCompatibilityPacks(data, container) {
     container.querySelectorAll(".external-stack-pack-wrap").forEach((n) => n.remove());
     if (!data || !data.packs) {
       return;
     }
-    const entries = Object.values(data.packs).sort((a, b) =>
-      String(a.component || "").localeCompare(String(b.component || "")) ||
-      String(a.profile_id || "").localeCompare(String(b.profile_id || ""))
-    );
+    const filters = externalStackFilters(container);
+    const entries = Object.values(data.packs)
+      .filter((pack) => filters.lifecycle === "all" || pack.lifecycle_status === filters.lifecycle)
+      .sort((a, b) =>
+        String(a.component || "").localeCompare(String(b.component || "")) ||
+        String(a.profile_id || "").localeCompare(String(b.profile_id || ""))
+      );
     const wrap = document.createElement("div");
     wrap.className = "json-table-wrap external-stack-pack-wrap";
     wrap.setAttribute("data-testid", "admin-external-stack-packs");
@@ -1117,16 +1308,22 @@
   function externalStackFilters(container) {
     const toolbar = container.querySelector("#externalStackFilters");
     if (!toolbar) {
-      return { validation: "all", health: "all", mismatch: "all" };
+      return { validation: "all", health: "all", mismatch: "all", group: "all", lifecycle: "all" };
     }
     const read = (name) => {
       const el = toolbar.querySelector('[data-filter="' + name + '"]');
       return el ? el.value : "all";
     };
-    return { validation: read("validation"), health: read("health"), mismatch: read("mismatch") };
+    return {
+      validation: read("validation"),
+      health: read("health"),
+      mismatch: read("mismatch"),
+      group: read("group"),
+      lifecycle: read("lifecycle"),
+    };
   }
 
-  function externalStackMatches(component, filters) {
+  function externalStackMatches(component, filters, profile, componentId) {
     if (filters.validation !== "all" && component.validation_status !== filters.validation) {
       return false;
     }
@@ -1137,6 +1334,12 @@
       return false;
     }
     if (filters.mismatch === "no" && component.mismatch === true) {
+      return false;
+    }
+    if (filters.group !== "all" && externalStackGroup(componentId) !== filters.group) {
+      return false;
+    }
+    if (filters.lifecycle !== "all" && (!profile || profile.lifecycle_status !== filters.lifecycle)) {
       return false;
     }
     return true;

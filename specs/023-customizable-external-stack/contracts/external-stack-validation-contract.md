@@ -9,6 +9,10 @@
 - Candidate profiles must be visible as candidates and must not be marketed as `supported_bundled` options.
 - Desired manifest, observed manifest, health status and degraded reason must be represented separately.
 - Validation/admin/deploy outputs must redact credentials, tokens, private keys and secret-bearing URLs.
+- Compatibility pack catalog must be data-driven from the external stack profile catalog and must keep candidates visible without promoting them.
+- Product module capability output must expose backend component/profile requirements so add-on degradation can be tied back to external stack state.
+- Profile aliases, promotion evidence and unsupported modes must be validated from the YAML catalog, not hidden in Java-only defaults.
+- Search candidate backends may be described and displayed, but must be rejected if configured as the primary production search backend.
 
 ## Required Validation By Component
 
@@ -65,6 +69,12 @@ Repo-local API:
 - `GET /api/v1/platform/external-stack/compatibility-packs`
   - Output: full connector compatibility pack catalog keyed by `profile_id`
   - Constraint: candidate packs remain candidate/integration candidate and must not be presented as supported bundled.
+- `GET /api/v1/platform/external-stack/compatibility-packs/{profileId}`
+  - Output: one compatibility pack by profile id, including YAML aliases.
+  - Constraint: unknown profiles return not-found semantics.
+- `GET /api/v1/platform/external-stack/status/{component}`
+  - Output: one component status row with desired/observed connector, health, validation and support boundary.
+  - Constraint: no secret-bearing endpoint output.
 - `POST /api/v1/platform/external-stack/preflight/manifests`
   - Input: `{ "manifests": [ComponentBackendManifest...] }`
   - Output: manifest `ValidationResult`
@@ -73,6 +83,10 @@ Repo-local API:
   - Input: `MigrationCheckpoint`
   - Output: structured checkpoint report
   - Constraint: no live-server side effects, no customer secrets, no endpoint switch.
+- `POST /api/v1/platform/external-stack/preflight/profile`
+  - Input: `{ "profile_id": "..." }`
+  - Output: redacted `ValidationResult`
+  - Constraint: candidate/integration candidate profiles fail production preflight until explicitly promoted.
 
 ## Acceptance
 
@@ -84,3 +98,5 @@ Validation is accepted when:
 4. `external_byo` and `managed_by_customer` profiles state customer/vendor ownership.
 5. Candidate/RF profiles remain labeled as candidate or integration candidate until promoted by tests, support boundary and legal/security gates.
 6. Supported profiles include an impact model for performance, resilience, resources, price/TCO and administration.
+7. Product Modules catalog has no dangling external stack component/profile references.
+8. Capabilities output includes warnings when enabled/degraded add-ons require degraded external stack components.

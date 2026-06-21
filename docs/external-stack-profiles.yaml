@@ -19,6 +19,14 @@ runtime_backing:
     - migration_checkpoint_contracts
     - failure_policy_contracts
 
+compatibility_aliases:
+  web-edge: nginx-bundled
+  angie-candidate: angie
+  livekit-bundled: livekit-1.8-bundled
+  vks-integration-candidate: clevermeet
+  dlp-external: icap-dlp-generic
+  integrations-bundled: http-webhook-generic
+
 lifecycle_statuses:
   supported_bundled: Korus supplies deployment artifacts, validation, sizing, smoke tests, and runbook.
   supported_external_byo: Korus supports connector/profile validation; customer or vendor owns deployment, HA, backup, and upgrades.
@@ -73,6 +81,8 @@ components:
         deployment_modes: [external_byo, managed_by_customer]
         connector: postgres-16
         support_boundary: customer-managed-db
+        promotion_evidence: [h2_or_lab_migration_green, customer_profile_evidence]
+        unsupported_modes: [silent_fallback]
       postgres-pro:
         lifecycle_status: candidate
         deployment_modes: [external_byo, rf_candidate]
@@ -534,10 +544,14 @@ components:
         lifecycle_status: integration_candidate
         deployment_modes: [external_byo, rf_candidate]
         connector: opensearch
+        promotion_evidence: [search_reindex_contract_green, vendor_certification_required]
+        unsupported_modes: [production_without_reindex_gate, supported_bundled_claim]
       elasticsearch-candidate:
         lifecycle_status: integration_candidate
         deployment_modes: [external_byo]
         connector: elasticsearch
+        promotion_evidence: [search_reindex_contract_green, vendor_certification_required]
+        unsupported_modes: [production_without_reindex_gate, supported_bundled_claim]
     validation:
       - query_contract
       - acl_filtering

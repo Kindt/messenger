@@ -76,6 +76,54 @@ class PlatformModuleRegistryTest {
         assertTrue(response.externalStack().containsKey("messaging"));
     }
 
+    @Test
+    void capabilitiesMapModulesToExternalStackRequirements() {
+        var cfg = new AppConfig() {
+            @Override
+            public String korusProductAddons() {
+                return "addon-search";
+            }
+        };
+        var registry = PlatformModuleRegistry.create(cfg, new PlatformModuleOverrideRepository(null));
+
+        var response = registry.toCapabilitiesResponse();
+
+        assertTrue(response.product().base().externalStackComponents().contains("relational-db-hot"));
+        assertTrue(response.product().base().externalStackProfiles().contains("postgres-16-bundled"));
+        var search = response.modules().get("addon-search");
+        assertTrue(search.externalStackComponents().contains("search"));
+        assertTrue(search.externalStackProfiles().contains("solr-bundled"));
+        assertEquals("fallback", search.degradationMode());
+    }
+
+    @Test
+    void productModuleCatalogReferencesKnownExternalStackProfilesAndComponents() {
+        var errors = ProductModuleCatalogLoader.validateExternalStackReferences(ProductModuleCatalogLoader.load());
+
+        assertTrue(errors.isEmpty(), String.join("\n", errors));
+    }
+
+    @Test
+    void capabilitiesWarnWhenRequiredExternalStackComponentIsDegraded() {
+        var cfg = new AppConfig() {
+            @Override
+            public String korusProductAddons() {
+                return "addon-search";
+            }
+
+            @Override
+            public String searchMode() {
+                return "sql";
+            }
+        };
+        var registry = PlatformModuleRegistry.create(cfg, new PlatformModuleOverrideRepository(null));
+
+        var response = registry.toCapabilitiesResponse();
+
+        assertTrue(response.modules().get("addon-search").externalStackWarnings()
+            .contains("required external stack component search is degraded"));
+    }
+
     private static AppConfig pilotConfig() {
         return new AppConfig() {
             @Override

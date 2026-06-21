@@ -24,6 +24,20 @@ base:
     - sql_search
     - mesh_webrtc
     - jitsi_conference
+  external_stack_components:
+    - relational-db-hot
+    - cache
+    - messaging
+    - object-storage
+    - idp
+    - web-edge
+  external_stack_profiles:
+    - postgres-16-bundled
+    - redis-7-bundled
+    - nats-2.10-bundled
+    - s3-minio-bundled
+    - keycloak-24-bundled
+    - nginx-bundled
 
 addons:
   - id: addon-engage
@@ -45,6 +59,8 @@ addons:
         env_private: PUSH_VAPID_PRIVATE_KEY
     network_profile: internal_mesh
     lifecycle_status: active
+    external_stack_components: [notifications, messaging]
+    external_stack_profiles: [webpush-vapid-bundled-config, nats-2.10-bundled]
     drain_timeout_seconds: 120
     backup_scope:
       - pg_hot
@@ -75,6 +91,8 @@ addons:
       search_mode: solr
     network_profile: internal_mesh
     lifecycle_status: active
+    external_stack_components: [search, messaging]
+    external_stack_profiles: [solr-bundled, nats-2.10-bundled]
     drain_timeout_seconds: 120
     backup_scope:
       - pg_hot
@@ -94,13 +112,15 @@ addons:
     nats_behavior: skip_purge_jobs
     network_profile: internal_mesh
     lifecycle_status: active
+    external_stack_components: [relational-db-hot, object-storage, messaging]
+    external_stack_profiles: [postgres-16-bundled, s3-minio-bundled, nats-2.10-bundled]
     drain_timeout_seconds: 120
     backup_scope:
       - pg_hot
       - minio
 
   - id: addon-archive
-    label: "Archive DB + перенос"
+    label: "Архив сообщений"
     internal_infra:
       - postgres-archive
       - worker-archiver
@@ -114,13 +134,15 @@ addons:
     nats_behavior: drop
     network_profile: internal_mesh
     lifecycle_status: active
+    external_stack_components: [relational-db-archive, messaging]
+    external_stack_profiles: [postgres-16-bundled, nats-2.10-bundled]
     drain_timeout_seconds: 300
     backup_scope:
       - pg_hot
       - pg_archive
 
   - id: addon-deep-archive
-    label: "Cold storage"
+    label: "Долгосрочное хранение"
     internal_infra:
       - worker-deep-archiver
     compose_profiles:
@@ -133,12 +155,14 @@ addons:
     nats_behavior: skip_deep_purge
     network_profile: internal_mesh
     lifecycle_status: active
+    external_stack_components: [object-storage, messaging]
+    external_stack_profiles: [s3-minio-bundled, nats-2.10-bundled]
     drain_timeout_seconds: 300
     backup_scope:
       - minio
 
   - id: addon-export
-    label: "Compliance export"
+    label: "Экспорт для комплаенса"
     internal_infra:
       - worker-export-replay
     compose_profiles:
@@ -151,6 +175,8 @@ addons:
     nats_behavior: subscribers_off
     network_profile: internal_mesh
     lifecycle_status: active
+    external_stack_components: [relational-db-hot, object-storage, messaging]
+    external_stack_profiles: [postgres-16-bundled, s3-minio-bundled, nats-2.10-bundled]
     drain_timeout_seconds: 600
     backup_scope:
       - pg_hot
@@ -180,6 +206,8 @@ addons:
         env_url: LIVEKIT_URL
     network_profile: edge_media
     lifecycle_status: active
+    external_stack_components: [media, turn]
+    external_stack_profiles: [livekit-1.8-bundled, coturn-external]
     drain_timeout_seconds: 120
     backup_scope: []
     capabilities:
@@ -187,7 +215,7 @@ addons:
       - live_broadcast
 
   - id: addon-bots
-    label: "Bot API"
+    label: "Боты и автоматизация"
     internal_infra:
       - worker-bot-delivery
     compose_profiles:
@@ -200,6 +228,8 @@ addons:
     nats_behavior: drop_bot_events
     network_profile: internal_mesh
     lifecycle_status: active
+    external_stack_components: [bots, messaging]
+    external_stack_profiles: [bot-api-internal, nats-2.10-bundled]
     drain_timeout_seconds: 120
     backup_scope:
       - pg_hot
@@ -210,7 +240,7 @@ addons:
         scope: addon-bots
 
   - id: addon-integrations
-    label: "Плагины L0–L3"
+    label: "Интеграции"
     internal_infra:
       - worker-bot-delivery
       - integrations
@@ -224,6 +254,8 @@ addons:
     nats_behavior: drop
     network_profile: integrations_egress
     lifecycle_status: active
+    external_stack_components: [integrations, messaging]
+    external_stack_profiles: [http-webhook-generic, nats-2.10-bundled]
     drain_timeout_seconds: 120
     backup_scope:
       - pg_hot
@@ -244,6 +276,8 @@ addons:
       mls_wire_enabled: "true"
     network_profile: internal_mesh
     lifecycle_status: active
+    external_stack_components: [relational-db-hot, messaging]
+    external_stack_profiles: [postgres-16-bundled, nats-2.10-bundled]
     drain_timeout_seconds: 60
     backup_scope:
       - pg_hot
@@ -263,6 +297,8 @@ addons:
         secret_ref: org_auth_policy
     network_profile: ldap_egress
     lifecycle_status: active
+    external_stack_components: [idp, relational-db-hot]
+    external_stack_profiles: [oidc-generic, postgres-16-bundled]
     drain_timeout_seconds: 120
     backup_scope:
       - pg_hot

@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.platform;
 
+import com.avandocmsg.messenger.api.platform.stack.ConnectorCompatibilityPacks;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.slf4j.Logger;
@@ -12,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public final class ProductModuleCatalogLoader {
@@ -75,5 +77,44 @@ public final class ProductModuleCatalogLoader {
     ) {
         return catalog.addons() == null ? Optional.empty()
             : catalog.addons().stream().filter(a -> a.id().equals(addonId)).findFirst();
+    }
+
+    public static List<String> validateExternalStackReferences(ProductModulesCatalog catalog) {
+        var errors = new java.util.ArrayList<String>();
+        var components = ConnectorCompatibilityPacks.catalog().stream()
+            .map(pack -> pack.component())
+            .collect(Collectors.toSet());
+        validateReferences("base", safeList(catalog.base().externalStackComponents()),
+            safeList(catalog.base().externalStackProfiles()), components, errors);
+        for (var addon : safeList(catalog.addons())) {
+            validateReferences(addon.id(), safeList(addon.externalStackComponents()),
+                safeList(addon.externalStackProfiles()), components, errors);
+        }
+        return List.copyOf(errors);
+    }
+
+    private static void validateReferences(
+        String owner,
+        List<String> componentIds,
+        List<String> profileIds,
+        Set<String> knownComponents,
+        List<String> errors
+    ) {
+        for (var componentId : componentIds) {
+            if (!knownComponents.contains(componentId)) {
+                errors.add(owner + ": unknown external_stack_component " + componentId);
+            }
+        }
+        for (var profileId : profileIds) {
+            try {
+                ConnectorCompatibilityPacks.packFor(profileId);
+            } catch (IllegalArgumentException e) {
+                errors.add(owner + ": unknown external_stack_profile " + profileId);
+            }
+        }
+    }
+
+    private static <T> List<T> safeList(List<T> value) {
+        return value == null ? List.of() : value;
     }
 }

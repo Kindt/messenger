@@ -24,6 +24,13 @@ if ($orgA -eq $orgB) {
   exit 0
 }
 
+$me = Invoke-RestMethod -Method GET -Uri "$API/users/me" -Headers $headers
+$meId = $me.id
+if (-not $meId) { $meId = $me.user_id }
+$orgPatch = (@{ org_id = $orgA } | ConvertTo-Json -Compress)
+Invoke-RestMethod -Method PATCH -Uri "$API/admin/users/$meId/organization" `
+  -Headers $headers -ContentType "application/json" -Body $orgPatch | Out-Null
+
 $listBefore = Invoke-RestMethod -Method GET -Uri "$API/admin/federation/trust" -Headers $headers
 if (-not ($listBefore -is [array])) {
   throw "expected array from GET federation/trust"

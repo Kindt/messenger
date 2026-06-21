@@ -156,4 +156,8 @@ public final class ExternalStackComponentContracts {
         }
         return contract;
     }
+
+    public static Map<String, ComponentValidationContract> catalog() {
+        return CONTRACTS;
+    }
 }

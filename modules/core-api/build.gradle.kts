@@ -93,6 +93,12 @@ tasks.named<War>("war") {
     )
 }
 
+tasks.named<ProcessResources>("processResources") {
+    from(rootProject.file("docs/external-stack-profiles.yaml")) {
+        into("")
+    }
+}
+
 tasks.register<Test>("benchmark") {
     group = "verification"
     description = "Lightweight CoreApi/MLS timing guards (*BenchmarkTest)"
