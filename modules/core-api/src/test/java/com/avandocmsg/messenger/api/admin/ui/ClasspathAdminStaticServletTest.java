@@ -65,6 +65,8 @@ class ClasspathAdminStaticServletTest {
         assertTrue(panels.contains("/platform/external-stack/preflight/checkpoint"));
         assertTrue(panels.contains("externalStackManifestsJson"));
         assertTrue(panels.contains("/platform/external-stack/preflight/manifests"));
+        assertTrue(panels.contains("/platform/external-stack/compatibility-packs"));
+        assertTrue(panels.contains("renderExternalStackCompatibilityPacks"));
     }
 
     private static String resourceText(String path) throws IOException {

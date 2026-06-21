@@ -151,6 +151,20 @@ class ExternalStackStatusServiceTest {
         assertFalse(result.metadata().get("object-storage.endpoint").contains("secret"));
     }
 
+    @Test
+    void resourceExposesFullCompatibilityPackCatalog() {
+        var resource = new ExternalStackStatusResource();
+
+        var catalog = resource.compatibilityPacks();
+
+        assertTrue(catalog.packs().containsKey("postgres-16-external"));
+        assertTrue(catalog.packs().containsKey("opensearch-candidate"));
+        assertEquals("search", catalog.packs().get("opensearch-candidate").component());
+        assertFalse(catalog.packs().get("opensearch-candidate").supported());
+        assertTrue(catalog.packs().get("opensearch-candidate").unsupportedModes()
+            .contains("production_without_reindex_gate"));
+    }
+
     private static ComponentBackendManifest manifest(String component, String connector, ExternalStackRole role) {
         return new ComponentBackendManifest(
             component,

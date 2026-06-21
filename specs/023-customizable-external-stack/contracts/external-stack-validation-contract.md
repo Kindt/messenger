@@ -62,6 +62,9 @@ Checkpoint automation SHOULD expose a structured report with:
 
 Repo-local API:
 
+- `GET /api/v1/platform/external-stack/compatibility-packs`
+  - Output: full connector compatibility pack catalog keyed by `profile_id`
+  - Constraint: candidate packs remain candidate/integration candidate and must not be presented as supported bundled.
 - `POST /api/v1/platform/external-stack/preflight/manifests`
   - Input: `{ "manifests": [ComponentBackendManifest...] }`
   - Output: manifest `ValidationResult`

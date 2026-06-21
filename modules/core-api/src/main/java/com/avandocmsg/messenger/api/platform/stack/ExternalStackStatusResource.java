@@ -12,7 +12,9 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
 import javax.sql.DataSource;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Path("/v1/platform/external-stack")
 @Produces(MediaType.APPLICATION_JSON)
@@ -57,6 +59,17 @@ public class ExternalStackStatusResource {
         return statusService.profileStatus(manifestProvider != null ? manifestProvider.profiles() : List.of());
     }
 
+    @GET
+    @Path("compatibility-packs")
+    @Operation(summary = "External stack connector compatibility pack catalog")
+    public ConnectorCompatibilityPackCatalogResponse compatibilityPacks() {
+        var packs = new LinkedHashMap<String, ConnectorCompatibilityPack>();
+        for (var pack : ConnectorCompatibilityPacks.catalog()) {
+            packs.put(pack.profileId(), pack);
+        }
+        return new ConnectorCompatibilityPackCatalogResponse(packs);
+    }
+
     @POST
     @Path("preflight/checkpoint")
     @Operation(summary = "Validate external stack migration checkpoint")
@@ -72,4 +85,8 @@ public class ExternalStackStatusResource {
             request != null ? request.manifests() : List.of()
         );
     }
+
+    public record ConnectorCompatibilityPackCatalogResponse(
+        @com.fasterxml.jackson.annotation.JsonProperty("packs") Map<String, ConnectorCompatibilityPack> packs
+    ) {}
 }

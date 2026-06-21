@@ -752,8 +752,10 @@
       try {
         const data = await ctx.apiFetch("/platform/external-stack/status");
         const profiles = await ctx.apiFetch("/platform/external-stack/profiles");
+        const compatibilityPacks = await ctx.apiFetch("/platform/external-stack/compatibility-packs");
         renderExternalStackTable(data, summary, profiles);
-        pre.textContent = JSON.stringify({ status: data, profiles: profiles }, null, 2);
+        renderExternalStackCompatibilityPacks(compatibilityPacks, summary);
+        pre.textContent = JSON.stringify({ status: data, profiles: profiles, compatibility_packs: compatibilityPacks }, null, 2);
         if (global.AdminUi) {
           AdminUi.showJsonBlock(true);
         }
@@ -1053,6 +1055,62 @@
     meta.textContent =
       "External stack components: " + passed + "/" + entries.length + " validation passed. Badges: supported/candidate/deferred.";
     wrap.appendChild(meta);
+    container.appendChild(wrap);
+  }
+
+  function renderExternalStackCompatibilityPacks(data, container) {
+    container.querySelectorAll(".external-stack-pack-wrap").forEach((n) => n.remove());
+    if (!data || !data.packs) {
+      return;
+    }
+    const entries = Object.values(data.packs).sort((a, b) =>
+      String(a.component || "").localeCompare(String(b.component || "")) ||
+      String(a.profile_id || "").localeCompare(String(b.profile_id || ""))
+    );
+    const wrap = document.createElement("div");
+    wrap.className = "json-table-wrap external-stack-pack-wrap";
+    wrap.setAttribute("data-testid", "admin-external-stack-packs");
+    const heading = document.createElement("p");
+    heading.className = "form-section-label";
+    heading.textContent = "Compatibility pack catalog";
+    wrap.appendChild(heading);
+    const table = document.createElement("table");
+    table.className = "json-panel-table";
+    const head = document.createElement("thead");
+    const hr = document.createElement("tr");
+    ["profile", "component", "lifecycle", "checks", "evidence", "unsupported"].forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h;
+      hr.appendChild(th);
+    });
+    head.appendChild(hr);
+    table.appendChild(head);
+    const body = document.createElement("tbody");
+    entries.forEach((pack) => {
+      const tr = document.createElement("tr");
+      if (String(pack.lifecycle_status || "").includes("candidate")) {
+        tr.classList.add("fleet-row-bad");
+      }
+      [
+        pack.profile_id,
+        pack.component,
+        pack.lifecycle_status,
+        (pack.required_checks || []).slice(0, 3).join(", "),
+        (pack.promotion_evidence || []).join(", "),
+        (pack.unsupported_modes || []).join(", ") || "—",
+      ].forEach((val) => {
+        const td = document.createElement("td");
+        td.textContent = val != null ? String(val) : "—";
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    const note = document.createElement("p");
+    note.className = "muted small json-panel-note";
+    note.textContent = "Full catalog includes supported, external/BYO and candidate packs; candidate rows are not production support claims.";
+    wrap.appendChild(note);
     container.appendChild(wrap);
   }
 

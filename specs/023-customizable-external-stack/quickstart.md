@@ -90,9 +90,10 @@ git diff --check
 
 - `/api/v1/platform/external-stack/status` показывает desired/observed connector, bounded `health_status`, `degraded_reason`, validation failures/warnings and redacted endpoint metadata.
 - `/api/v1/platform/external-stack/profiles` дополняет profile lifecycle данными compatibility pack: required checks, promotion evidence and unsupported modes.
+- `/api/v1/platform/external-stack/compatibility-packs` возвращает полный catalog supported/external/candidate packs, включая profiles, которых нет в текущем runtime manifest.
 - `POST /api/v1/platform/external-stack/preflight/manifests` принимает `{ "manifests": [...] }` and returns manifest `ValidationResult` for deploy-generated or hand-authored desired state before applying it.
 - `POST /api/v1/platform/external-stack/preflight/checkpoint` принимает `MigrationCheckpoint` JSON и возвращает structured report без запуска live cutover.
-- Admin panel показывает groups, filters, support badges and drill-down; raw JSON остаётся ниже для диагностики.
+- Admin panel показывает groups, filters, support badges, compatibility pack catalog and drill-down; raw JSON остаётся ниже для диагностики.
 - Admin panel содержит repo-local Manifest/Checkpoint preflight forms: можно вставить JSON и увидеть manifest failures/redaction или checkpoint severity, missing markers, rollback readiness and no-silent-fallback flag.
 - Search Provider SPI покрывает текущие SQL/Solr paths. OpenSearch/Elasticsearch остаются candidate contracts без live client dependency.
 
