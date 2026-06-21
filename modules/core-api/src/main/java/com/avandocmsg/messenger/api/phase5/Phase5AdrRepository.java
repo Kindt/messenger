@@ -110,6 +110,21 @@ public final class Phase5AdrRepository {
         return mapRecordings(sql, conferenceId);
     }
 
+    public boolean completeRecording(UUID recordingId, UUID conferenceId) {
+        var sql = """
+            UPDATE call_recordings SET status = 'completed'
+            WHERE id = ? AND conference_id = ? AND status IN ('recording', 'pending')
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, recordingId);
+            stmt.setObject(2, conferenceId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new IllegalStateException("completeRecording failed", e);
+        }
+    }
+
     public GuestLinkRow createGuestLink(UUID conferenceId, UUID chatId, boolean waitingRoom, Instant expiresAt) {
         var id = UUID.randomUUID();
         var token = UUID.randomUUID().toString().replace("-", "");
@@ -366,7 +381,7 @@ public final class Phase5AdrRepository {
         }
         var hash = sha256(token.trim());
         var sql = """
-            SELECT id, conference_id, chat_id, waiting_room, expires_at, created_at
+            SELECT id, conference_id, chat_id, waiting_room, expires_at, created_at, admitted_at
             FROM conference_guest_links WHERE token_hash = ?
             """;
         try (var conn = dataSource.getConnection();
@@ -384,10 +399,63 @@ public final class Phase5AdrRepository {
                     rs.getTimestamp("expires_at") != null
                         ? rs.getTimestamp("expires_at").toInstant()
                         : null,
-                    rs.getTimestamp("created_at").toInstant()));
+                    rs.getTimestamp("created_at").toInstant(),
+                    rs.getTimestamp("admitted_at") != null
+                        ? rs.getTimestamp("admitted_at").toInstant()
+                        : null));
             }
         } catch (SQLException e) {
             throw new IllegalStateException("findGuestLinkByToken failed", e);
+        }
+    }
+
+    public List<GuestLinkLookupRow> listWaitingGuestLinks(UUID conferenceId) {
+        var sql = """
+            SELECT id, conference_id, chat_id, waiting_room, expires_at, created_at, admitted_at
+            FROM conference_guest_links
+            WHERE conference_id = ? AND waiting_room = true AND admitted_at IS NULL
+            ORDER BY created_at ASC
+            """;
+        var rows = new java.util.ArrayList<GuestLinkLookupRow>();
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, conferenceId);
+            try (var rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    rows.add(new GuestLinkLookupRow(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("conference_id", UUID.class),
+                        rs.getObject("chat_id", UUID.class),
+                        rs.getBoolean("waiting_room"),
+                        rs.getTimestamp("expires_at") != null
+                            ? rs.getTimestamp("expires_at").toInstant()
+                            : null,
+                        rs.getTimestamp("created_at").toInstant(),
+                        rs.getTimestamp("admitted_at") != null
+                            ? rs.getTimestamp("admitted_at").toInstant()
+                            : null));
+                }
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("listWaitingGuestLinks failed", e);
+        }
+        return rows;
+    }
+
+    public boolean admitGuestLink(UUID linkId, UUID conferenceId, UUID chatId) {
+        var sql = """
+            UPDATE conference_guest_links
+            SET admitted_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND conference_id = ? AND chat_id = ? AND waiting_room = true AND admitted_at IS NULL
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, linkId);
+            stmt.setObject(2, conferenceId);
+            stmt.setObject(3, chatId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            throw new IllegalStateException("admitGuestLink failed", e);
         }
     }
 
@@ -642,7 +710,7 @@ public final class Phase5AdrRepository {
     public record GuestLinkRow(UUID id, UUID conferenceId, UUID chatId, String guestToken,
                                boolean waitingRoom, Instant expiresAt, Instant createdAt) {}
     public record GuestLinkLookupRow(UUID id, UUID conferenceId, UUID chatId, boolean waitingRoom,
-                                     Instant expiresAt, Instant createdAt) {}
+                                     Instant expiresAt, Instant createdAt, Instant admittedAt) {}
     public record BreakoutRow(UUID id, UUID parentConferenceId, UUID chatId, String name,
                               String livekitRoom, Instant createdAt) {}
     public record WhiteboardRow(UUID id, UUID chatId, UUID createdBy, String title,

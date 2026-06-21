@@ -1158,6 +1158,40 @@
     }
   }
 
+  async function connectMarketplaceItem(it) {
+    if (!it || !it.id) return;
+    state.busy = true;
+    render();
+    try {
+      await apiFetch("/me/integrations/marketplace/" + encodeURIComponent(it.id) + "/connect", {
+        method: "POST",
+      });
+      await loadIntegrations();
+    } catch (e) {
+      state.error = e.message || L("ui.marketplace.connectFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function disconnectMarketplaceItem(it) {
+    if (!it || !it.id) return;
+    state.busy = true;
+    render();
+    try {
+      await apiFetch("/me/integrations/marketplace/" + encodeURIComponent(it.id) + "/connect", {
+        method: "DELETE",
+      });
+      await loadIntegrations();
+    } catch (e) {
+      state.error = e.message || L("ui.marketplace.disconnectFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
   async function loadContacts() {
     if (!state.tokens) return;
     state.contactsBusy = true;
@@ -8914,6 +8948,17 @@
               testId: "marketplace-open-" + (it.instance_id || it.id || it.bot_name),
               onClick: function () {
                 openIntegration(it);
+              },
+            })
+          );
+          row.appendChild(
+            iconBtn(it.connected ? "✓" : "+", it.connected ? L("ui.marketplace.disconnect") : L("ui.marketplace.connect"), {
+              cls: "integration-connect-btn" + (it.connected ? " connected" : ""),
+              testId: "marketplace-connect-" + (it.instance_id || it.id || it.bot_name),
+              disabled: state.busy,
+              onClick: function () {
+                if (it.connected) disconnectMarketplaceItem(it);
+                else connectMarketplaceItem(it);
               },
             })
           );

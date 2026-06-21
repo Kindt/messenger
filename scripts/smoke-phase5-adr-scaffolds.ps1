@@ -1,6 +1,9 @@
 # Smoke: spec 022 Phase 5 ADR scaffolds (stickers, kanban, sip, passkeys)
 param(
-    [string]$ApiBase = $(if ($env:KORUS_API_URL) { $env:KORUS_API_URL } else { "http://127.0.0.1:18080/api" })
+    [string]$ApiBase = $(if ($env:KORUS_API_URL) {
+        $u = $env:KORUS_API_URL.TrimEnd('/')
+        if ($u -notmatch '/api$') { "$u/api" } else { $u }
+    } else { "http://127.0.0.1:18080/api" })
 )
 $ErrorActionPreference = "Stop"
 
@@ -54,6 +57,31 @@ $guest = Invoke-RestMethod -Uri "$ApiBase/v1/chats/$chatId/conferences/$confId/g
   -Body (@{ waiting_room = $false } | ConvertTo-Json)
 if (-not $guest.guest_token) { throw "guest link missing token" }
 Invoke-RestMethod -Uri "$ApiBase/v1/conferences/guest/$($guest.guest_token)" -Method Get | Out-Null
+
+Write-Host "[7a] guest waiting room admit"
+$guestWait = Invoke-RestMethod -Uri "$ApiBase/v1/chats/$chatId/conferences/$confId/guest-links" -Method Post -Headers $h -ContentType "application/json" `
+  -Body (@{ waiting_room = $true } | ConvertTo-Json)
+Invoke-RestMethod -Uri "$ApiBase/v1/conferences/guest/$($guestWait.guest_token)" -Method Get | Out-Null
+$waiting = Invoke-RestMethod -Uri "$ApiBase/v1/chats/$chatId/conferences/$confId/guest-links/waiting" -Headers $h
+if (-not $waiting -or $waiting.Count -lt 1) { throw "waiting room empty after redeem" }
+$linkId = $waiting[0].link_id
+Invoke-RestMethod -Uri "$ApiBase/v1/chats/$chatId/conferences/$confId/guest-links/$linkId/admit" -Method Post -Headers $h | Out-Null
+$redeemReady = Invoke-RestMethod -Uri "$ApiBase/v1/conferences/guest/$($guestWait.guest_token)" -Method Get
+if ($redeemReady.status -ne "ready") { throw "guest not ready after admit: $($redeemReady.status)" }
+
+Write-Host "[7d] recording complete"
+$rec = Invoke-RestMethod -Uri "$ApiBase/v1/chats/$chatId/conferences/$confId/recordings" -Method Post -Headers $h
+$recId = $rec.recording_id
+if (-not $recId) { throw "recording start missing id" }
+Invoke-RestMethod -Uri "$ApiBase/v1/chats/$chatId/conferences/$confId/recordings/$recId/complete" -Method Post -Headers $h | Out-Null
+
+Write-Host "[7e] marketplace connect"
+$mp = Invoke-RestMethod -Uri "$ApiBase/v1/me/integrations/marketplace" -Headers $h
+if ($mp.items -and $mp.items.Count -gt 0) {
+  $inst = $mp.items[0].id
+  Invoke-RestMethod -Uri "$ApiBase/v1/me/integrations/marketplace/$inst/connect" -Method Post -Headers $h | Out-Null
+  Invoke-RestMethod -Uri "$ApiBase/v1/me/integrations/marketplace/$inst/connect" -Method Delete -Headers $h | Out-Null
+}
 
 Write-Host "[7b] kanban move"
 $tasks = Invoke-RestMethod -Uri "$ApiBase/v1/chats/$chatId/kanban/tasks" -Headers $h

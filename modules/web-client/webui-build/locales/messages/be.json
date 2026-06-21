@@ -518,7 +518,11 @@
       "recordStop": "Stop recording",
       "modalCopy": "Copy",
       "guestAdmitHint": "Waiting room: share the guest link after host approval.",
-      "guestAdmitBtn": "Waiting room"
+      "guestAdmitBtn": "Waiting room",
+      "guestWaitingEmpty": "No guests in the waiting room.",
+      "guestAdmitDo": "Admit guest",
+      "guestAdmitDone": "Guest admitted.",
+      "recordCompleted": "Recording completed."
     },
     "polls": {
       "title": "Апытанні",
@@ -761,7 +765,11 @@
       "categoryStorage": "Storage",
       "categoryCalendar": "Calendar",
       "categoryHr": "HR / requests",
-      "noResults": "No integrations found."
+      "noResults": "No integrations found.",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "connectFailed": "Could not connect integration.",
+      "disconnectFailed": "Could not disconnect integration."
     },
     "federation": {
       "directoryHint": "Trusted orgs for cross-org chats (MVP).",

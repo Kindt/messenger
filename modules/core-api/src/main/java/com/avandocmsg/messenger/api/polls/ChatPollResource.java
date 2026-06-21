@@ -24,7 +24,6 @@ import jakarta.ws.rs.core.SecurityContext;
 
 @Path("/v1/chats/{chatId}/polls")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 @Tag(name = "Polls", description = "In-chat polls")
 public class ChatPollResource {
 
@@ -38,6 +37,7 @@ public class ChatPollResource {
     }
 
     @POST
+    @Consumes(MediaType.APPLICATION_JSON)
     @Operation(summary = "Create poll in chat")
     public Response create(@PathParam("chatId") String chatId,
                            CreatePollRequest request,
@@ -79,6 +79,7 @@ public class ChatPollResource {
 
     @POST
     @Path("{pollId}/vote")
+    @Consumes(MediaType.APPLICATION_JSON)
     @Operation(summary = "Vote on poll")
     public Response vote(@PathParam("chatId") String chatId,
                          @PathParam("pollId") String pollId,

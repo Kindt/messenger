@@ -77,7 +77,7 @@
 | **Federation trust (spec 022 T02308)** | `scripts/smoke-federation-trust.ps1` | manual | host `:18080`; admin trust + platform status |
 | **Federation cross-org member gate** | `scripts/smoke-federation-cross-org.ps1` | manual | host `:18080`; 403 without trust, 201 with trust |
 | **Phase 5 messaging (spec 022 T02301/03/06)** | `scripts/smoke-phase5-messaging.ps1` | manual | host `:18080`; poll + scheduled + reminder API |
-| **Phase 5 ADR depth (spec 022 T02307+)** | `scripts/smoke-phase5-adr-scaffolds.ps1` | manual | host `:18080`; stickers/SIP/passkeys/kanban/conf ADR + poll close / scheduled / reminder cancel |
+| **Phase 5 ADR depth (spec 022 T02307+)** | `scripts/smoke-phase5-adr-scaffolds.ps1` | manual | host `:18080`; stickers/SIP/passkeys/kanban/conf ADR + guest admit / recording complete / marketplace connect |
 | **Phase 5 wave4 UI (Playwright)** | `tests/e2e-web/specs/phase5-wave4-ui.spec.ts` | tier `ui-messaging-extended` | QEMU `:19088`; folders, whiteboard, federation settings, marketplace search |
 | **External stack lab preflight (023)** | `scripts/smoke-external-stack-lab-cutover.ps1` | manual | host `:18080/api`; checkpoint/profile preflight only |
 | **GDPR export completeness (P1-6)** | `scripts/smoke-export-gdpr-fulfillment.ps1` | manual | admin export-compliance-guide + parity API |

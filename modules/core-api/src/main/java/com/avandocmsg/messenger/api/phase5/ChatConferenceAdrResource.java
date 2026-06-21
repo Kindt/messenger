@@ -7,6 +7,7 @@ import com.avandocmsg.messenger.api.phase5.dto.CaptionSessionResponse;
 import com.avandocmsg.messenger.api.phase5.dto.CreateBreakoutRequest;
 import com.avandocmsg.messenger.api.phase5.dto.CreateGuestLinkRequest;
 import com.avandocmsg.messenger.api.phase5.dto.GuestLinkResponse;
+import com.avandocmsg.messenger.api.phase5.dto.GuestWaitingLinkResponse;
 import com.avandocmsg.messenger.api.phase5.dto.RecordingResponse;
 import com.avandocmsg.messenger.api.phase5.dto.StartCaptionsRequest;
 import com.avandocmsg.messenger.common.dto.ApiError;
@@ -27,7 +28,6 @@ import jakarta.ws.rs.core.SecurityContext;
 
 @Path("/v1/chats/{chatId}/conferences/{conferenceId}")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
 @Tag(name = "Conference ADR", description = "Recording, guest links, breakout, captions (T02307/09/10/17)")
 public class ChatConferenceAdrResource {
 
@@ -55,6 +55,22 @@ public class ChatConferenceAdrResource {
             .orElse(forbidden());
     }
 
+    @POST
+    @Path("recordings/{recordingId}/complete")
+    @Operation(summary = "Mark call recording completed (lab scaffold)")
+    public Response completeRecording(@PathParam("chatId") String chatId,
+                                      @PathParam("conferenceId") String conferenceId,
+                                      @PathParam("recordingId") String recordingId,
+                                      @Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        var cid = UuidParams.required(chatId, "chat_id");
+        var confId = UuidParams.required(conferenceId, "conference_id");
+        var recId = UuidParams.required(recordingId, "recording_id");
+        return service.completeRecording(cid, confId, userId, recId)
+            .map(ok -> Response.noContent().build())
+            .orElse(forbidden());
+    }
+
     @GET
     @Path("recordings")
     @Operation(summary = "List call recordings")
@@ -70,6 +86,7 @@ public class ChatConferenceAdrResource {
 
     @POST
     @Path("guest-links")
+    @Consumes(MediaType.APPLICATION_JSON)
     @Operation(summary = "Create guest link with optional waiting room")
     public Response createGuestLink(@PathParam("chatId") String chatId,
                                     @PathParam("conferenceId") String conferenceId,
@@ -85,7 +102,43 @@ public class ChatConferenceAdrResource {
     }
 
     @POST
+    @Path("guest-links/{linkId}/admit")
+    @Operation(summary = "Admit guest from waiting room")
+    public Response admitGuest(@PathParam("chatId") String chatId,
+                               @PathParam("conferenceId") String conferenceId,
+                               @PathParam("linkId") String linkId,
+                               @Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        var cid = UuidParams.required(chatId, "chat_id");
+        var confId = UuidParams.required(conferenceId, "conference_id");
+        var lid = UuidParams.required(linkId, "link_id");
+        return service.admitGuest(cid, confId, userId, lid)
+            .map(ok -> Response.noContent().build())
+            .orElse(forbidden());
+    }
+
+    @GET
+    @Path("guest-links/waiting")
+    @Operation(summary = "List guests waiting for host admit")
+    public Response listWaitingGuests(@PathParam("chatId") String chatId,
+                                        @PathParam("conferenceId") String conferenceId,
+                                        @Context SecurityContext securityContext) {
+        var userId = CurrentUserId.uuid(securityContext);
+        var cid = UuidParams.required(chatId, "chat_id");
+        var confId = UuidParams.required(conferenceId, "conference_id");
+        var rows = service.listWaitingGuests(cid, confId, userId).stream()
+            .map(row -> new GuestWaitingLinkResponse(
+                row.id().toString(),
+                row.waitingRoom(),
+                row.createdAt(),
+                row.admittedAt() != null))
+            .toList();
+        return Response.ok(rows).build();
+    }
+
+    @POST
     @Path("breakout-rooms")
+    @Consumes(MediaType.APPLICATION_JSON)
     @Operation(summary = "Create breakout room scaffold")
     public Response createBreakout(@PathParam("chatId") String chatId,
                                    @PathParam("conferenceId") String conferenceId,
@@ -116,6 +169,7 @@ public class ChatConferenceAdrResource {
 
     @POST
     @Path("captions")
+    @Consumes(MediaType.APPLICATION_JSON)
     @Operation(summary = "Start live captions session (STT mock)")
     public Response startCaptions(@PathParam("chatId") String chatId,
                                   @PathParam("conferenceId") String conferenceId,

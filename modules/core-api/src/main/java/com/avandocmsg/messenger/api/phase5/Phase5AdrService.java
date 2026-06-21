@@ -106,6 +106,15 @@ public final class Phase5AdrService {
         return repository.listRecordings(conferenceId);
     }
 
+    public Optional<Boolean> completeRecording(UUID chatId, UUID conferenceId, UUID userId, UUID recordingId) {
+        if (!isChatMember(chatId, userId) || !conferenceInChat(conferenceId, chatId) || recordingId == null) {
+            return Optional.empty();
+        }
+        return repository.completeRecording(recordingId, conferenceId)
+            ? Optional.of(Boolean.TRUE)
+            : Optional.empty();
+    }
+
     public Optional<Phase5AdrRepository.GuestLinkRow> createGuestLink(
         UUID chatId, UUID conferenceId, UUID userId, boolean waitingRoom
     ) {
@@ -187,8 +196,29 @@ public final class Phase5AdrService {
                 if (row.expiresAt() != null && row.expiresAt().isBefore(java.time.Instant.now())) {
                     return new GuestRedeemResult(row, "expired");
                 }
+                if (row.waitingRoom() && row.admittedAt() == null) {
+                    return new GuestRedeemResult(row, "waiting");
+                }
                 return new GuestRedeemResult(row, "ready");
             });
+    }
+
+    public List<Phase5AdrRepository.GuestLinkLookupRow> listWaitingGuests(
+        UUID chatId, UUID conferenceId, UUID userId
+    ) {
+        if (!isChatMember(chatId, userId) || !conferenceInChat(conferenceId, chatId)) {
+            return List.of();
+        }
+        return repository.listWaitingGuestLinks(conferenceId);
+    }
+
+    public Optional<Boolean> admitGuest(UUID chatId, UUID conferenceId, UUID userId, UUID linkId) {
+        if (!isChatMember(chatId, userId) || !conferenceInChat(conferenceId, chatId) || linkId == null) {
+            return Optional.empty();
+        }
+        return repository.admitGuestLink(linkId, conferenceId, chatId)
+            ? Optional.of(Boolean.TRUE)
+            : Optional.empty();
     }
 
     public Optional<Phase5AdrRepository.SipGatewayRow> sipStatus(UUID userId) {

@@ -79,6 +79,9 @@ application {
         from("src/main/resources") {
             into("conf")
         }
+        from(rootProject.file("docs/external-stack-profiles.yaml")) {
+            into("conf")
+        }
     }
 }
 

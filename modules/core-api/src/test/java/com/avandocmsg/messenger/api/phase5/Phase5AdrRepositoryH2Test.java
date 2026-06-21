@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class Phase5AdrRepositoryH2Test {
@@ -97,13 +98,30 @@ class Phase5AdrRepositoryH2Test {
     }
 
     @Test
+    void completeRecording() throws Exception {
+        try (var c = ds.getConnection(); var st = c.createStatement()) {
+            st.execute("""
+                CREATE TABLE call_recordings (
+                  id UUID PRIMARY KEY, conference_id UUID NOT NULL, chat_id UUID NOT NULL,
+                  started_by UUID NOT NULL, status VARCHAR(32) NOT NULL,
+                  storage_key VARCHAR(256), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
+                """);
+        }
+        var confId = UUID.randomUUID();
+        var recId = repo.startRecording(confId, chatId, userId);
+        assertTrue(repo.completeRecording(recId, confId));
+        assertEquals("completed", repo.listRecordings(confId).get(0).status());
+    }
+
+    @Test
     void guestLinkRedeem() throws Exception {
         try (var c = ds.getConnection(); var st = c.createStatement()) {
             st.execute("""
                 CREATE TABLE conference_guest_links (
                   id UUID PRIMARY KEY, conference_id UUID NOT NULL, chat_id UUID NOT NULL,
                   token_hash VARCHAR(128) NOT NULL, waiting_room BOOLEAN DEFAULT TRUE,
-                  expires_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
+                  expires_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  admitted_at TIMESTAMP)
                 """);
         }
         var confId = UUID.randomUUID();
@@ -111,5 +129,9 @@ class Phase5AdrRepositoryH2Test {
         var found = repo.findGuestLinkByToken(link.guestToken());
         assertFalse(found.isEmpty());
         assertEquals(confId, found.get().conferenceId());
+        assertNull(found.get().admittedAt());
+        assertTrue(repo.admitGuestLink(link.id(), confId, chatId));
+        var waiting = repo.listWaitingGuestLinks(confId);
+        assertTrue(waiting.isEmpty());
     }
 }

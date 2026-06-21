@@ -1983,6 +1983,11 @@ button {
   align-self: center;
 }
 
+.integration-connect-btn.connected {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .stickers-pack-item,
 .stickers-gif-item {
   display: flex;

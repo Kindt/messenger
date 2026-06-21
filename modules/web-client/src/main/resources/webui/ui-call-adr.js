@@ -33,9 +33,51 @@
         disabled: ctx.state.busy,
         onClick: function () {
           ctx.apiJson(confPath(conf, "/recordings"), { method: "POST" })
-            .then(function () {
+            .then(function (data) {
+              ctx.state.phase5ActiveRecordingId =
+                (data && (data.recording_id || data.id)) || null;
               ctx.state.phase5Toast = ctx.L("ui.phase5.recordStarted");
               ctx.render();
+            })
+            .catch(function (err) {
+              ctx.state.error = err.message || ctx.L("ui.phase5.recordFailed");
+              ctx.render();
+            });
+        },
+      })
+    );
+    bar.appendChild(
+      ctx.iconBtn("⏹", ctx.L("ui.phase5.recordStop"), {
+        testId: "conf-record-stop",
+        disabled: ctx.state.busy,
+        onClick: function () {
+          function completeId(recId) {
+            if (!recId) {
+              ctx.state.error = ctx.L("ui.phase5.recordListEmpty");
+              ctx.render();
+              return;
+            }
+            ctx.apiJson(confPath(conf, "/recordings/" + recId + "/complete"), { method: "POST" })
+              .then(function () {
+                ctx.state.phase5ActiveRecordingId = null;
+                ctx.state.phase5Toast = ctx.L("ui.phase5.recordCompleted");
+                ctx.render();
+              })
+              .catch(function (err) {
+                ctx.state.error = err.message || ctx.L("ui.phase5.recordFailed");
+                ctx.render();
+              });
+          }
+          if (ctx.state.phase5ActiveRecordingId) {
+            completeId(ctx.state.phase5ActiveRecordingId);
+            return;
+          }
+          ctx.apiJson(confPath(conf, "/recordings"), { method: "GET" })
+            .then(function (rows) {
+              var pending = (rows || []).find(function (r) {
+                return (r.status || "") === "recording" || (r.status || "") === "pending";
+              });
+              completeId(pending && (pending.recording_id || pending.id));
             })
             .catch(function (err) {
               ctx.state.error = err.message || ctx.L("ui.phase5.recordFailed");
@@ -95,13 +137,33 @@
         testId: "conf-guest-admit",
         disabled: ctx.state.busy,
         onClick: function () {
-          showTokenModal(
-            ctx,
-            ctx.L("ui.phase5.guestAdmitBtn"),
-            ctx.L("ui.phase5.guestAdmitHint") +
-              "\n\n" +
-              ctx.L("ui.phase5.guestWaiting")
-          );
+          if (!conf || !conf.conference_id || !conf.chat_id) {
+            showTokenModal(ctx, ctx.L("ui.phase5.guestAdmitBtn"), ctx.L("ui.phase5.guestAdmitHint"));
+            return;
+          }
+          ctx.apiJson(
+            "/chats/" + conf.chat_id + "/conferences/" + conf.conference_id + "/guest-links/waiting",
+            { method: "GET" }
+          )
+            .then(function (rows) {
+              var body =
+                rows && rows.length
+                  ? formatList(rows, function (r) {
+                      return (r.link_id || "?") + " · " + (r.created_at || "");
+                    })
+                  : ctx.L("ui.phase5.guestWaitingEmpty");
+              ctx.state.phase5Modal = {
+                title: ctx.L("ui.phase5.guestAdmitBtn"),
+                body: body,
+                waitingLinks: rows || [],
+                conference: conf,
+              };
+              ctx.render();
+            })
+            .catch(function (err) {
+              ctx.state.error = err.message || ctx.L("ui.phase5.guestFailed");
+              ctx.render();
+            });
         },
       })
     );
@@ -223,6 +285,40 @@
           disabled: ctx.state.busy,
           onClick: function () {
             ctx.saveEditedMessage(ctx.state.phase5Modal);
+          },
+        })
+      );
+    } else if (
+      ctx.state.phase5Modal.waitingLinks &&
+      ctx.state.phase5Modal.waitingLinks.length &&
+      ctx.state.phase5Modal.conference
+    ) {
+      actions.appendChild(
+        ctx.iconBtn("✓", ctx.L("ui.phase5.guestAdmitDo"), {
+          testId: "guest-admit-first",
+          disabled: ctx.state.busy,
+          onClick: function () {
+            var conf = ctx.state.phase5Modal.conference;
+            var linkId = ctx.state.phase5Modal.waitingLinks[0].link_id;
+            ctx.apiJson(
+              "/chats/" +
+                conf.chat_id +
+                "/conferences/" +
+                conf.conference_id +
+                "/guest-links/" +
+                linkId +
+                "/admit",
+              { method: "POST" }
+            )
+              .then(function () {
+                ctx.state.phase5Modal = null;
+                ctx.state.phase5Toast = ctx.L("ui.phase5.guestAdmitDone");
+                ctx.render();
+              })
+              .catch(function (err) {
+                ctx.state.error = err.message || ctx.L("ui.phase5.guestFailed");
+                ctx.render();
+              });
           },
         })
       );

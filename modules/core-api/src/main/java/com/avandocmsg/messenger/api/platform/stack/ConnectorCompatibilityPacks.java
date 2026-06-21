@@ -249,6 +249,17 @@ public final class ConnectorCompatibilityPacks {
     }
 
     private static JsonNode readCatalogRoot() {
+        var appHome = System.getenv("APP_HOME");
+        if (appHome != null && !appHome.isBlank()) {
+            var confPath = Path.of(appHome, "conf", "external-stack-profiles.yaml");
+            try {
+                if (Files.isRegularFile(confPath)) {
+                    return YAML_MAPPER.readTree(confPath.toFile());
+                }
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to read external stack profile catalog", e);
+            }
+        }
         var repoPath = Path.of("docs", "external-stack-profiles.yaml");
         try {
             if (Files.isRegularFile(repoPath)) {

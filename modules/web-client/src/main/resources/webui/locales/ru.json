@@ -518,7 +518,11 @@
       "recordStop": "Остановить запись",
       "modalCopy": "Копировать",
       "guestAdmitHint": "Ожидание в зале: отправьте гостю ссылку с токеном после проверки.",
-      "guestAdmitBtn": "Зал ожидания"
+      "guestAdmitBtn": "Зал ожидания",
+      "guestWaitingEmpty": "Нет гостей в зале ожидания.",
+      "guestAdmitDo": "Допустить гостя",
+      "guestAdmitDone": "Гость допущен.",
+      "recordCompleted": "Запись завершена."
     },
     "polls": {
       "title": "Опросы",
@@ -761,7 +765,11 @@
       "categoryStorage": "Хранилище",
       "categoryCalendar": "Календарь",
       "categoryHr": "HR / заявки",
-      "noResults": "Интеграции не найдены."
+      "noResults": "Интеграции не найдены.",
+      "connect": "Подключить",
+      "disconnect": "Отключить",
+      "connectFailed": "Не удалось подключить интеграцию.",
+      "disconnectFailed": "Не удалось отключить интеграцию."
     },
     "federation": {
       "directoryHint": "Доверенные организации для кросс-org чатов (MVP).",
