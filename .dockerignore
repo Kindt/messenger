@@ -7,11 +7,13 @@
 .vscode
 .cursor
 deploy/
+docker/.env*
 korus-web/
 specs/
 tests/
 integrations/
 docs/
+!docs/external-stack-profiles.yaml
 scripts/
 keycloak
 tz_full.html

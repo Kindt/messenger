@@ -27,7 +27,9 @@ $job = Invoke-RestMethod -Method POST -Uri "$API/admin/migration-import" `
   -Body $body
 if (-not $job.id) { throw "migration import job missing id" }
 $processed = Invoke-RestMethod -Method POST -Uri "$API/admin/migration-import/$($job.id)/process" `
-  -Headers @{ Authorization = "Bearer $token" }
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType "application/json" `
+  -Body "{}"
 if ($processed.status -ne "completed") {
   throw "migration import process failed status=$($processed.status) result=$($processed.result_json)"
 }

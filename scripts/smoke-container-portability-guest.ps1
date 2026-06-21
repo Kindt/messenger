@@ -62,6 +62,7 @@ if (-not $SkipSync) {
 $guestScript = @'
 set -euo pipefail
 cd /mnt/korus
+sed -i 's/\r$//' scripts/smoke-core-api-war-guest.sh scripts/smoke-ws-gateway-war-guest.sh scripts/lib/*.sh
 bash scripts/smoke-core-api-war-guest.sh
 bash scripts/smoke-ws-gateway-war-guest.sh
 echo "[OK] container-portability guest smokes"

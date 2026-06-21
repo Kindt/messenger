@@ -11,21 +11,19 @@ if (-not $Token) {
 
 $headers = @{ Authorization = "Bearer $Token"; "Content-Type" = "application/json" }
 
-$chats = Invoke-RestMethod -Uri "$BaseUrl/v1/chats" -Headers $headers -Method GET
-if (-not $chats -or $chats.Count -eq 0) {
-    Write-Host "SKIP: no chats for user"
-    exit 0
-}
-$chatId = $chats[0].id
-$msgs = Invoke-RestMethod -Uri "$BaseUrl/v1/chats/$chatId/messages?limit=5" -Headers $headers -Method GET
-if (-not $msgs -or $msgs.Count -eq 0) {
-    Write-Host "SKIP: no messages in chat $chatId"
-    exit 0
-}
-$messageId = $msgs[0].id
+$chatBody = @{
+    type = "group"
+    title = "read-receipts-smoke-$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
+    member_ids = @()
+} | ConvertTo-Json
+$chat = Invoke-RestMethod -Uri "$BaseUrl/v1/chats" -Headers $headers -Method POST -Body $chatBody
+$chatId = $chat.id
+if (-not $chatId) { throw "create chat returned no id" }
 
-Invoke-WebRequest -Uri "$BaseUrl/v1/chats/$chatId/messages/$messageId/read" -Headers $headers -Method POST | Out-Null
-Write-Host "POST /messages/{id}/read -> OK"
+$messageBody = @{ type = "text"; content = "read receipts smoke" } | ConvertTo-Json
+$message = Invoke-RestMethod -Uri "$BaseUrl/v1/chats/$chatId/messages" -Headers $headers -Method POST -Body $messageBody
+$messageId = $message.id
+if (-not $messageId) { throw "send message returned no id" }
 
 $batch = @{ message_ids = @($messageId) } | ConvertTo-Json
 Invoke-WebRequest -Uri "$BaseUrl/v1/chats/$chatId/read-batch" -Headers $headers -Method POST -Body $batch | Out-Null
