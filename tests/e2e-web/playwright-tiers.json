@@ -1,0 +1,139 @@
+{
+  "innerTierNames": [
+    "api",
+    "ui-auth",
+    "ui-mobile",
+    "ui-visual",
+    "ui-conversation",
+    "ui-messaging",
+    "ui-messaging-extended",
+    "ui-files",
+    "ui-conference",
+    "ui-call-flows",
+    "ui-live",
+    "ui-e2ee",
+    "ui-bot",
+    "ui-admin",
+    "ui-admin-extended",
+    "ui-i18n-artifacts",
+    "e2ee-openmls-interop"
+  ],
+  "tiers": {
+    "api": {
+      "description": "API-heavy specs without DOM login",
+      "args": [
+        "specs/profile-settings.spec.ts",
+        "specs/e2ee-capabilities.spec.ts",
+        "specs/contacts-search.spec.ts",
+        "specs/conference-rtc.spec.ts",
+        "specs/plugin-integrations.spec.ts",
+        "specs/phase5-messaging.spec.ts",
+        "specs/phase5-adr-api.spec.ts",
+        "specs/livekit-sfu.spec.ts",
+        "specs/admin-auth-policy.spec.ts",
+        "specs/live-session-moderation.spec.ts",
+        "specs/admin-console.spec.ts"
+      ],
+      "grep": "global search API|blocks list API|device register API|capabilities advertise|legacy e2ee|mls active exposes|plaintext-preview|authenticated user can upload|send with e2ee_scheme|media capabilities include|register subscribe sendMessage|long-poll updates|token rotate|admin lists plugin|admin org plugin|user marketplace catalog|admin federation trust|federation cross-org add member|poll close|scheduled message list|group_call_sfu_enabled|livekit join|admin GET auth-policy|create live session|POST moderation|static shell|panels\\.js returns|admin ui manifest|admin fleet snapshot|admin console redirect"
+    },
+    "ui-auth": {
+      "description": "Auth session UI",
+      "args": ["specs/auth-session.spec.ts", "specs/auth-login-options.spec.ts", "specs/contacts-search.spec.ts"],
+      "grep": "login via UI|logout returns|locale switch|contacts list loads|login-options"
+    },
+    "ui-mobile": {
+      "description": "Responsive shell: single-pane navigation, back button, settings modal (390/768/1280 viewports)",
+      "args": ["specs/mobile-shell.spec.ts"]
+    },
+    "ui-visual": {
+      "description": "Visual guards: desktop 3-user delivery screenshots and phone thread surface checks",
+      "args": ["specs/messaging-visual.spec.ts"]
+    },
+    "ui-conversation": {
+      "description": "Multi-user conversation flows: A/B reply roundtrip, 3-user fan-out, refresh recovery, reactions, deletes",
+      "args": ["specs/messaging-conversation-flows.spec.ts"]
+    },
+    "ui-messaging": {
+      "description": "Messaging critical, group, actions, multi-browser group users",
+      "args": [
+        "specs/messaging-critical.spec.ts",
+        "specs/messaging-group.spec.ts",
+        "specs/messaging-group-users.spec.ts",
+        "specs/messaging-actions.spec.ts"
+      ]
+    },
+    "ui-messaging-extended": {
+      "description": "Spec 022 threads, mentions, integrations launcher, phase5 polls UI",
+      "args": ["specs/messaging-extended.spec.ts", "specs/phase5-polls-ui.spec.ts", "specs/phase5-messaging.spec.ts", "specs/phase5-wave4-ui.spec.ts", "specs/phase5-message-edit.spec.ts", "specs/phase5-adr-api.spec.ts"]
+    },
+    "ui-files": {
+      "description": "Files upload and export DOM",
+      "args": ["specs/files-export.spec.ts"]
+    },
+    "ui-conference": {
+      "description": "Conference RTC UI",
+      "args": ["specs/conference-rtc.spec.ts", "specs/livekit-sfu.spec.ts"]
+    },
+    "ui-call-flows": {
+      "description": "Audio/video call flows with fake media, mocked mesh WebRTC, permission denial, and mocked LiveKit join",
+      "args": ["specs/call-flows.spec.ts"]
+    },
+    "ui-live": {
+      "description": "LiveKit SFU and live streaming",
+      "args": [
+        "specs/livekit-sfu.spec.ts",
+        "specs/live-session-moderation.spec.ts",
+        "specs/admin-auth-policy.spec.ts"
+      ]
+    },
+    "ui-e2ee": {
+      "description": "Browser MLS roundtrip",
+      "args": ["specs/e2ee-browser-roundtrip.spec.ts"]
+    },
+    "ui-bot": {
+      "description": "Bot API REST MVP + v2",
+      "args": ["specs/bot-api.spec.ts"]
+    },
+    "ui-admin": {
+      "description": "Admin console browser UI on core-api /admin/",
+      "args": ["specs/admin-console-ui.spec.ts"]
+    },
+    "ui-admin-extended": {
+      "description": "Admin console extended UI: negative auth, manifest section smoke, visual surfaces, tablet layout",
+      "args": ["specs/admin-console-extended-ui.spec.ts"]
+    },
+    "ui-i18n-artifacts": {
+      "description": "Visible translation artifact audit across web auth, messaging/settings, and admin UI",
+      "args": ["specs/i18n-artifacts.spec.ts"]
+    },
+    "e2ee-openmls-interop": {
+      "description": "Spec 020 OpenMLS wire profile + dev factory smoke",
+      "args": ["specs/e2ee-openmls-interop.spec.ts"]
+    },
+    "ui-push": {
+      "description": "Web Push device register + VAPID settings API",
+      "args": ["specs/web-push.spec.ts"]
+    },
+    "full": {
+      "description": "All specs (outer gate only)",
+      "args": []
+    },
+    "all-inner": {
+      "description": "Run all inner tiers sequentially",
+      "sequential": ["api", "ui-auth", "ui-mobile", "ui-visual", "ui-conversation", "ui-messaging", "ui-messaging-extended", "ui-files", "ui-conference", "ui-call-flows", "ui-live", "ui-e2ee", "ui-bot", "ui-admin", "ui-admin-extended", "ui-i18n-artifacts", "ui-push", "e2ee-openmls-interop"]
+    }
+  },
+  "tierRequirements": {
+    "ui-live": ["addon-live"],
+    "ui-bot": ["addon-bots", "addon-integrations"],
+    "ui-push": ["addon-engage"],
+    "ui-e2ee": ["addon-e2ee"],
+    "ui-files": [],
+    "ui-mobile": [],
+    "ui-visual": [],
+    "ui-conversation": [],
+    "ui-call-flows": [],
+    "ui-i18n-artifacts": [],
+    "api": []
+  }
+}
