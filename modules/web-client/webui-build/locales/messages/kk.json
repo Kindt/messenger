@@ -230,7 +230,8 @@
     "acceptFailed": "Қоңырау қабылданбады",
     "iceFailed": "Қоңырау қатысушысымен байланыс үзілді (желі / ICE / TURN).",
     "screenShareFailed": "Экран: {detail}",
-    "screenShareCancelled": "бас тарту"
+    "screenShareCancelled": "бас тарту",
+    "screenShareUnsupported": "экранды көрсету бұл браузерде немесе контексте қолдау таппайды"
   },
   "messages": {
     "editPrompt": "Хабарламаны өңдеу",

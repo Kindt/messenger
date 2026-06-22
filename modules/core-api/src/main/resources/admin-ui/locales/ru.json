@@ -84,6 +84,26 @@
     "Укажите chat_id.": "Укажите chat_id.",
     "Нужны chat_id и job_id.": "Нужны chat_id и job_id.",
     "Сохранено.": "Сохранено.",
-    "Добавлено.": "Добавлено."
+    "Добавлено.": "Добавлено.",
+    "GET/POST /api/v1/admin/federation/trust — UUID партнёрской организации, статус active|suspended|revoked.": "GET/POST /api/v1/admin/federation/trust — UUID партнёрской организации, статус active|suspended|revoked.",
+    "UUID партнёрской организации": "UUID партнёрской организации",
+    "Статус": "Статус",
+    "Создать доверие": "Создать доверие",
+    "Укажите partner_org_id": "Укажите partner_org_id",
+    "Обновить список": "Обновить список",
+    "Нет записей доверия.": "Нет записей доверия.",
+    "Federation trust": "Доверие федерации",
+    "Cross-org federation trust registry: list and create partner org trust (spec 022 T02308).": "Реестр доверия федерации между организациями: просмотр и создание доверия к партнёрской организации (spec 022 T02308).",
+    "External stack (023)": "Внешний стек (023)",
+    "Directory sync (LDAP)": "Синхронизация каталога (LDAP)",
+    "IP allowlist (org)": "Список разрешённых IP (org)",
+    "Migration import": "Импорт миграции",
+    "Read receipts": "Отчёты о прочтении",
+    "E2EE / MLS": "E2EE / MLS",
+    "Legal hold (extended)": "Юридическое удержание (extended)",
+    "Purge status": "Статус очистки",
+    "Плагины: org policy": "Плагины: политика org",
+    "Плагины: presets": "Плагины: пресеты",
+    "Плагины: instances": "Плагины: экземпляры"
   }
 }

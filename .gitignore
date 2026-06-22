@@ -33,6 +33,14 @@ specs/
 docs/*
 !docs/index.html
 tests/e2e-web/
+!tests/e2e-web/
+tests/e2e-web/*
+!tests/e2e-web/fixtures/
+tests/e2e-web/fixtures/*
+!tests/e2e-web/fixtures/ui-audit.ts
+!tests/e2e-web/specs/
+tests/e2e-web/specs/*
+!tests/e2e-web/specs/ui-interaction-audit.spec.ts
 AGENTS.md
 CHANGELOG.md
 tz_full.html

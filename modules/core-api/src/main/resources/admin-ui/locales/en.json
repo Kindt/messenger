@@ -84,6 +84,26 @@
     "Укажите chat_id.": "Enter chat_id.",
     "Нужны chat_id и job_id.": "chat_id and job_id are required.",
     "Сохранено.": "Saved.",
-    "Добавлено.": "Added."
+    "Добавлено.": "Added.",
+    "GET/POST /api/v1/admin/federation/trust — UUID партнёрской организации, статус active|suspended|revoked.": "GET/POST /api/v1/admin/federation/trust — partner organization UUID, status active|suspended|revoked.",
+    "UUID партнёрской организации": "Partner organization UUID",
+    "Статус": "Status",
+    "Создать доверие": "Create trust",
+    "Укажите partner_org_id": "Enter partner_org_id",
+    "Обновить список": "Refresh list",
+    "Нет записей доверия.": "No trust records.",
+    "Federation trust": "Federation trust",
+    "Cross-org federation trust registry: list and create partner org trust (spec 022 T02308).": "Cross-org federation trust registry: list and create partner org trust (spec 022 T02308).",
+    "External stack (023)": "External stack (023)",
+    "Directory sync (LDAP)": "Directory sync (LDAP)",
+    "IP allowlist (org)": "IP allowlist (org)",
+    "Migration import": "Migration import",
+    "Read receipts": "Read receipts",
+    "E2EE / MLS": "E2EE / MLS",
+    "Legal hold (extended)": "Legal hold (extended)",
+    "Purge status": "Purge status",
+    "Плагины: org policy": "Plugins: org policy",
+    "Плагины: presets": "Plugins: presets",
+    "Плагины: instances": "Plugins: instances"
   }
 }

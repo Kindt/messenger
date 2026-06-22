@@ -15,6 +15,7 @@
     "ui-bot",
     "ui-admin",
     "ui-admin-extended",
+    "ui-interaction-audit",
     "ui-i18n-artifacts",
     "e2ee-openmls-interop"
   ],
@@ -102,6 +103,10 @@
       "description": "Admin console extended UI: negative auth, manifest section smoke, visual surfaces, tablet layout",
       "args": ["specs/admin-console-extended-ui.spec.ts"]
     },
+    "ui-interaction-audit": {
+      "description": "Aggressive client/admin desktop and mobile interaction audit for buttons, links, fields, layout, and runtime errors",
+      "args": ["specs/ui-interaction-audit.spec.ts"]
+    },
     "ui-i18n-artifacts": {
       "description": "Visible translation artifact audit across web auth, messaging/settings, and admin UI",
       "args": ["specs/i18n-artifacts.spec.ts"]
@@ -133,6 +138,7 @@
     "ui-visual": [],
     "ui-conversation": [],
     "ui-call-flows": [],
+    "ui-interaction-audit": [],
     "ui-i18n-artifacts": [],
     "api": []
   }

@@ -4097,8 +4097,16 @@
       await stopScreenShareInternal();
       return;
     }
+    var mediaDevices = navigator.mediaDevices;
+    if (!mediaDevices || typeof mediaDevices.getDisplayMedia !== "function") {
+      state.error = L("rtc.screenShareFailed", {
+        detail: L("rtc.screenShareUnsupported"),
+      });
+      render();
+      return;
+    }
     try {
-      state.callScreenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      state.callScreenStream = await mediaDevices.getDisplayMedia({ video: true, audio: false });
       render();
       var sv = document.getElementById("callScreenVideo");
       if (sv) sv.srcObject = state.callScreenStream;

@@ -781,6 +781,65 @@ textarea {
 }
 
 @media (max-width: 520px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .app-header {
+    align-items: flex-start;
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
+
+  .auth-bar,
+  .auth-session,
+  .nav,
+  .workspace,
+  .workspace-header,
+  .org-context,
+  .panel,
+  .panel-summary,
+  .admin-toolbar,
+  .card-toolbar,
+  .json-block,
+  .json-table-wrap {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .auth-bar,
+  .auth-session,
+  .admin-toolbar,
+  .card-toolbar {
+    width: 100%;
+  }
+
+  .brand,
+  .brand-title,
+  .brand-version,
+  .workspace-title,
+  .workspace-desc,
+  .nav-item,
+  .panel-summary,
+  .panel-summary p,
+  .toolbar-note,
+  .json-panel-note,
+  #panelContent {
+    overflow-wrap: anywhere;
+  }
+
+  .nav {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .workspace-header,
+  .org-context,
+  .panel {
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
+
   .auth-fields {
     width: 100%;
   }
@@ -791,5 +850,24 @@ textarea {
 
   .auth-fields input {
     width: 100%;
+  }
+
+  .admin-toolbar input,
+  .admin-toolbar select,
+  .admin-toolbar textarea,
+  .card-toolbar input,
+  .card-toolbar select,
+  .card-toolbar textarea,
+  .org-context input,
+  .panel-form input,
+  .panel-form select,
+  .panel-form textarea {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .panel-summary table,
+  table.json-panel-table {
+    min-width: 0;
   }
 }

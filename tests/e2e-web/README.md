@@ -38,6 +38,7 @@ Stack once, then iterate by tier (host browser against forwarded ports):
 .\scripts\playwright-dev-loop.ps1 -Tier ui-conversation
 .\scripts\playwright-dev-loop.ps1 -Tier ui-call-flows
 .\scripts\playwright-dev-loop.ps1 -Tier ui-admin-extended
+.\scripts\playwright-dev-loop.ps1 -Tier ui-interaction-audit
 .\scripts\playwright-dev-loop.ps1 -Tier ui-i18n-artifacts
 .\scripts\playwright-dev-loop.ps1 -Tier ui-messaging
 .\scripts\playwright-dev-loop.ps1 -Tier all-inner
@@ -59,6 +60,7 @@ Tier manifest: `playwright-tiers.json`. Status: `deploy/qemu/run/inner-tier-stat
 | `ui-e2ee` | e2ee-browser-roundtrip | &lt; 2m |
 | `ui-admin` | admin-console-ui (browser on `:18080/admin/`) | &lt; 1m |
 | `ui-admin-extended` | admin manifest smoke, visual surfaces, tablet layout | &lt; 2m |
+| `ui-interaction-audit` | aggressive client/admin desktop+mobile interaction audit | &lt; 5m |
 | `ui-i18n-artifacts` | visible raw i18n keys/mojibake audit across web/admin UI | &lt; 1m |
 | `all-inner` | all inner tiers sequentially | &lt; 10m |
 | `full` | outer gate only (`qemu-plan-orchestrator`) | ~5m |
@@ -103,6 +105,7 @@ npx playwright test
 | `e2ee-capabilities.spec.ts` | crypto/e2ee |
 | `e2ee-browser-roundtrip.spec.ts` | browser MLS send when `mls_status=active` |
 | `admin-console-extended-ui.spec.ts` | admin negative auth, manifest nav, visual/tablet smoke |
+| `ui-interaction-audit.spec.ts` | client/admin desktop+mobile buttons, links, fields, layout, and runtime errors |
 | `i18n-artifacts.spec.ts` | visible translation artifact audit for web/auth/settings/messaging/admin |
 
 Server guest needs `MLS_STATUS=active` for MLS specs.
@@ -166,6 +169,12 @@ For those, add a QEMU/live-stack SFU tier that asserts remote participants/track
 - Tablet-width layout keeps header, navigation, and panel visible without horizontal overflow.
 
 The extended smoke intentionally does not execute destructive admin actions. Action-heavy panels should get focused tests with API cleanup/rollback, like the retention policy test.
+
+## Interaction Audit Coverage
+
+`ui-interaction-audit.spec.ts` is an aggressive UI crawler for broad regression discovery. It audits client and admin surfaces in desktop (`1280x900`) and mobile (`390x844`) viewports, clicks safe controls, focuses/fills fields, changes selects, checks horizontal overflow after each action, and fails on page errors or unexpected `console.error`.
+
+The audit writes screenshots and JSON action reports for every surface to `tests/e2e-web/artifacts/ui-interaction-audit/<timestamp>/` and adds `index.json` for review. Set `UI_AUDIT_SCREENSHOT_DIR` to write a run into a specific folder. Destructive and mutation-heavy actions such as logout, delete, purge, retention, admin create/save/apply/rotate/sync/start/stop are skipped or dismissed; add focused tests with cleanup for those behaviors instead of broad crawler clicks.
 
 ## Translation Artifact Coverage
 

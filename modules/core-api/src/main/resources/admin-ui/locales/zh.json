@@ -84,6 +84,26 @@
     "Укажите chat_id.": "请指定 chat_id。",
     "Нужны chat_id и job_id.": "需要 chat_id 和 job_id。",
     "Сохранено.": "已保存。",
-    "Добавлено.": "已添加。"
+    "Добавлено.": "已添加。",
+    "GET/POST /api/v1/admin/federation/trust — UUID партнёрской организации, статус active|suspended|revoked.": "GET/POST /api/v1/admin/federation/trust — 合作组织 UUID，状态 active|suspended|revoked。",
+    "UUID партнёрской организации": "合作组织 UUID",
+    "Статус": "状态",
+    "Создать доверие": "创建信任",
+    "Укажите partner_org_id": "请输入 partner_org_id",
+    "Обновить список": "刷新列表",
+    "Нет записей доверия.": "没有信任记录。",
+    "Federation trust": "联合信任",
+    "Cross-org federation trust registry: list and create partner org trust (spec 022 T02308).": "跨组织联合信任注册表：查看并创建合作组织信任 (spec 022 T02308)。",
+    "External stack (023)": "外部栈 (023)",
+    "Directory sync (LDAP)": "目录同步 (LDAP)",
+    "IP allowlist (org)": "IP 允许列表 (org)",
+    "Migration import": "迁移导入",
+    "Read receipts": "已读回执",
+    "E2EE / MLS": "E2EE / MLS",
+    "Legal hold (extended)": "法律保全 (extended)",
+    "Purge status": "清理状态",
+    "Плагины: org policy": "插件：org policy",
+    "Плагины: presets": "插件：presets",
+    "Плагины: instances": "插件：instances"
   }
 }

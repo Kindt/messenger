@@ -339,6 +339,7 @@
     var render = deps.render;
 
     if (!state.tokens) return;
+    if (!liveStreamingEnabled(state)) return;
 
     var sec = el("div", "call-live-sessions");
     sec.setAttribute("data-testid", "live-session-section");
@@ -354,12 +355,6 @@
     );
     sec.appendChild(head);
     sec.appendChild(el("p", "call-hint", L("live.hint")));
-
-    if (!liveStreamingEnabled(state)) {
-      sec.appendChild(el("p", "call-conf-empty", L("live.notConfigured")));
-      panel.appendChild(sec);
-      return;
-    }
 
     var actions = el("div", "call-conferences-actions");
     if (state.selectedId && state.selectedId !== state.savedChatId) {

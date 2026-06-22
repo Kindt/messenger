@@ -11,7 +11,10 @@
     "test:markdown": "node scripts/test-markdown-utils.mjs",
     "test:message-reply": "node scripts/test-message-reply.mjs",
     "test:composer": "node scripts/test-composer.mjs",
-    "test:webui": "npm run test:message-list && npm run test:ws-events && npm run test:deep-link && npm run test:markdown && npm run test:message-reply && npm run test:composer",
+    "test:call-layout": "node scripts/test-call-layout.mjs",
+    "test:call-screen-share": "node scripts/test-call-screen-share.mjs",
+    "test:live-session": "node scripts/test-live-session.mjs",
+    "test:webui": "npm run test:message-list && npm run test:ws-events && npm run test:deep-link && npm run test:markdown && npm run test:message-reply && npm run test:composer && npm run test:call-layout && npm run test:call-screen-share && npm run test:live-session",
     "build:openmls": "node scripts/build-openmls.mjs",
     "build:assets": "npm run build:css && npm run build:locales && npm run build:openmls",
     "watch:css": "tailwindcss -i ./src/input.css -o ../src/main/resources/webui/tailwind.css --watch"

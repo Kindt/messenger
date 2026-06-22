@@ -84,6 +84,26 @@
     "Укажите chat_id.": "chat_id를 입력하세요.",
     "Нужны chat_id и job_id.": "chat_id와 job_id가 필요합니다.",
     "Сохранено.": "저장되었습니다.",
-    "Добавлено.": "추가되었습니다."
+    "Добавлено.": "추가되었습니다.",
+    "GET/POST /api/v1/admin/federation/trust — UUID партнёрской организации, статус active|suspended|revoked.": "GET/POST /api/v1/admin/federation/trust — 파트너 조직 UUID, 상태 active|suspended|revoked.",
+    "UUID партнёрской организации": "파트너 조직 UUID",
+    "Статус": "상태",
+    "Создать доверие": "신뢰 생성",
+    "Укажите partner_org_id": "partner_org_id를 입력하세요",
+    "Обновить список": "목록 새로고침",
+    "Нет записей доверия.": "신뢰 기록이 없습니다.",
+    "Federation trust": "페더레이션 신뢰",
+    "Cross-org federation trust registry: list and create partner org trust (spec 022 T02308).": "조직 간 페더레이션 신뢰 레지스트리: 파트너 조직 신뢰 조회 및 생성 (spec 022 T02308).",
+    "External stack (023)": "외부 스택 (023)",
+    "Directory sync (LDAP)": "디렉터리 동기화 (LDAP)",
+    "IP allowlist (org)": "IP 허용 목록 (org)",
+    "Migration import": "마이그레이션 가져오기",
+    "Read receipts": "읽음 확인",
+    "E2EE / MLS": "E2EE / MLS",
+    "Legal hold (extended)": "법적 보존 (extended)",
+    "Purge status": "정리 상태",
+    "Плагины: org policy": "플러그인: org policy",
+    "Плагины: presets": "플러그인: presets",
+    "Плагины: instances": "플러그인: instances"
   }
 }

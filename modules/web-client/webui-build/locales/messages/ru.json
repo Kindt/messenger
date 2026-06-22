@@ -230,7 +230,8 @@
     "acceptFailed": "Не удалось принять звонок",
     "iceFailed": "Связь с участником звонка прервана (сеть / ICE / TURN).",
     "screenShareFailed": "Экран: {detail}",
-    "screenShareCancelled": "отмена"
+    "screenShareCancelled": "отмена",
+    "screenShareUnsupported": "демонстрация экрана не поддерживается этим браузером или контекстом"
   },
   "messages": {
     "editPrompt": "Редактировать сообщение",

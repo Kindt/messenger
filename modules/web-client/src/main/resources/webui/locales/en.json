@@ -230,7 +230,8 @@
     "acceptFailed": "Could not accept call",
     "iceFailed": "Connection to call participant lost (network / ICE / TURN).",
     "screenShareFailed": "Screen: {detail}",
-    "screenShareCancelled": "cancelled"
+    "screenShareCancelled": "cancelled",
+    "screenShareUnsupported": "screen sharing is not supported by this browser or context"
   },
   "messages": {
     "editPrompt": "Edit message",

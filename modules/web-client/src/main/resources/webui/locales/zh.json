@@ -230,7 +230,8 @@
     "acceptFailed": "无法接听",
     "iceFailed": "与通话参与者的连接已中断（网络 / ICE / TURN）。",
     "screenShareFailed": "屏幕共享：{detail}",
-    "screenShareCancelled": "已取消"
+    "screenShareCancelled": "已取消",
+    "screenShareUnsupported": "此浏览器或上下文不支持屏幕共享"
   },
   "messages": {
     "editPrompt": "编辑消息",

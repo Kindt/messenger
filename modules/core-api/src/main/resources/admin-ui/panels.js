@@ -2189,12 +2189,12 @@
     const hint = document.createElement("p");
     hint.className = "muted small";
     hint.textContent =
-      "GET/POST /api/v1/admin/federation/trust — partner org UUID, status active|suspended|revoked.";
+      "GET/POST /api/v1/admin/federation/trust — UUID партнёрской организации, статус active|suspended|revoked.";
     box.appendChild(hint);
 
     const createRow = document.createElement("div");
     createRow.className = "admin-toolbar";
-    createRow.appendChild(mkField("federationPartnerOrgId", "partner_org_id", "UUID partner org"));
+    createRow.appendChild(mkField("federationPartnerOrgId", "partner_org_id", "UUID партнёрской организации"));
     const statusSel = document.createElement("select");
     statusSel.id = "federationTrustStatus";
     ["active", "suspended", "revoked"].forEach((st) => {
@@ -2205,21 +2205,21 @@
     });
     const statusLbl = document.createElement("label");
     statusLbl.className = "field";
-    statusLbl.appendChild(document.createTextNode("status "));
+    statusLbl.appendChild(document.createTextNode("Статус "));
     statusLbl.appendChild(statusSel);
     createRow.appendChild(statusLbl);
     const createBtn = document.createElement("button");
     createBtn.type = "button";
     createBtn.className = "btn btn-primary";
     createBtn.setAttribute("data-testid", "admin-federation-trust-create");
-    createBtn.textContent = "Создать trust";
+    createBtn.textContent = "Создать доверие";
     const createMsg = document.createElement("span");
     createMsg.className = "muted small";
     createBtn.addEventListener("click", async () => {
       createMsg.textContent = "";
       const partner = document.getElementById("federationPartnerOrgId")?.value.trim();
       if (!partner) {
-        createMsg.textContent = "partner_org_id required";
+        createMsg.textContent = "Укажите partner_org_id";
         return;
       }
       try {
@@ -2265,7 +2265,7 @@
         const rows = await ctx.apiFetch("/admin/federation/trust");
         trustsWrap.innerHTML = "";
         if (!Array.isArray(rows) || rows.length === 0) {
-          trustsWrap.textContent = "Нет trust записей.";
+          trustsWrap.textContent = "Нет записей доверия.";
           return;
         }
         const table = document.createElement("table");

@@ -84,6 +84,26 @@
     "Укажите chat_id.": "chat_id көрсетіңіз.",
     "Нужны chat_id и job_id.": "chat_id және job_id қажет.",
     "Сохранено.": "Сақталды.",
-    "Добавлено.": "Қосылды."
+    "Добавлено.": "Қосылды.",
+    "GET/POST /api/v1/admin/federation/trust — UUID партнёрской организации, статус active|suspended|revoked.": "GET/POST /api/v1/admin/federation/trust — серіктес ұйым UUID, мәртебе active|suspended|revoked.",
+    "UUID партнёрской организации": "Серіктес ұйым UUID",
+    "Статус": "Мәртебе",
+    "Создать доверие": "Сенім жасау",
+    "Укажите partner_org_id": "partner_org_id көрсетіңіз",
+    "Обновить список": "Тізімді жаңарту",
+    "Нет записей доверия.": "Сенім жазбалары жоқ.",
+    "Federation trust": "Федерация сенімі",
+    "Cross-org federation trust registry: list and create partner org trust (spec 022 T02308).": "Ұйымаралық федерация сенімінің тізілімі: серіктес ұйым сенімдерін қарау және жасау (spec 022 T02308).",
+    "External stack (023)": "Сыртқы стек (023)",
+    "Directory sync (LDAP)": "Каталогты синхрондау (LDAP)",
+    "IP allowlist (org)": "Рұқсат етілген IP тізімі (org)",
+    "Migration import": "Миграция импорты",
+    "Read receipts": "Оқу есептері",
+    "E2EE / MLS": "E2EE / MLS",
+    "Legal hold (extended)": "Заңды сақтау (extended)",
+    "Purge status": "Тазалау күйі",
+    "Плагины: org policy": "Плагиндер: org саясаты",
+    "Плагины: presets": "Плагиндер: presets",
+    "Плагины: instances": "Плагиндер: instances"
   }
 }

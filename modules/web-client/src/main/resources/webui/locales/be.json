@@ -230,7 +230,8 @@
     "acceptFailed": "Не ўдалося прыняць званок",
     "iceFailed": "Сувязь з удзельнікам званка перарвана (сетка / ICE / TURN).",
     "screenShareFailed": "Экран: {detail}",
-    "screenShareCancelled": "адмена"
+    "screenShareCancelled": "адмена",
+    "screenShareUnsupported": "дэманстрацыя экрана не падтрымліваецца гэтым браўзерам або кантэкстам"
   },
   "messages": {
     "editPrompt": "Рэдагаваць паведамленне",

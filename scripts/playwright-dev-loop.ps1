@@ -1,6 +1,6 @@
 # US9 inner loop: preflight + tiered Playwright against live QEMU stack (host browser OK).
 param(
-    [ValidateSet('api', 'ui-auth', 'ui-mobile', 'ui-visual', 'ui-conversation', 'ui-messaging', 'ui-files', 'ui-conference', 'ui-call-flows', 'ui-live', 'ui-e2ee', 'ui-bot', 'ui-admin', 'ui-admin-extended', 'ui-i18n-artifacts', 'e2ee-openmls-interop', 'full', 'all-inner')]
+    [ValidateSet('api', 'ui-auth', 'ui-mobile', 'ui-visual', 'ui-conversation', 'ui-messaging', 'ui-files', 'ui-conference', 'ui-call-flows', 'ui-live', 'ui-e2ee', 'ui-bot', 'ui-admin', 'ui-admin-extended', 'ui-interaction-audit', 'ui-i18n-artifacts', 'e2ee-openmls-interop', 'full', 'all-inner')]
     [string]$Tier = 'api',
     [switch]$SkipPreflight,
     [switch]$SyncWebUi,
@@ -22,6 +22,7 @@ Examples:
   .\scripts\playwright-dev-loop.ps1 -Tier ui-conversation
   .\scripts\playwright-dev-loop.ps1 -Tier ui-call-flows
   .\scripts\playwright-dev-loop.ps1 -Tier ui-admin-extended
+  .\scripts\playwright-dev-loop.ps1 -Tier ui-interaction-audit
   .\scripts\playwright-dev-loop.ps1 -Tier ui-i18n-artifacts
   .\scripts\playwright-dev-loop.ps1 -Tier all-inner
   .\scripts\playwright-dev-loop.ps1 -Tier full   # outer gate (all specs)

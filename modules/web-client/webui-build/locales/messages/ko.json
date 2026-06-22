@@ -230,7 +230,8 @@
     "acceptFailed": "통화를 수락하지 못했습니다",
     "iceFailed": "통화 참가자와의 연결이 끊어졌습니다(네트워크 / ICE / TURN).",
     "screenShareFailed": "화면: {detail}",
-    "screenShareCancelled": "취소"
+    "screenShareCancelled": "취소",
+    "screenShareUnsupported": "이 브라우저 또는 컨텍스트에서는 화면 공유를 지원하지 않습니다"
   },
   "messages": {
     "editPrompt": "메시지 편집",
