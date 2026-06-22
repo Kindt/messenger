@@ -202,6 +202,14 @@ def test_user_adoption_block_is_plain_language():
     assert "обратную связь" in html.lower()
     assert "канал поддержки пилота" in html.lower()
     assert "если у сотрудника нет кнопки" in html.lower()
+    assert "шести подготовленных" in html.lower()
+
+
+def test_user_tab_mentions_six_interface_languages():
+    html = draft_user_s2()
+    assert "Интерфейс подготовлен на 6 языках" in html
+    for token in ("русский", "английский", "белорусский", "казахский", "китайский", "корейский"):
+        assert token in html
 
 
 def test_user_feature_gaps_do_not_hide_existing_phase5_work():

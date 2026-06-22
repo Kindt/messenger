@@ -48,3 +48,4 @@ def test_capability_cards_use_public_terms():
     assert "юридическое удержание" in html
     assert "правила хранения" in html
     assert "ярлык «как приложение»" in html
+    assert "интерфейс подготовлен на 6 языках" in html.lower()
