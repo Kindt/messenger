@@ -6,6 +6,14 @@
   let activeSectionId = null;
   let onOrgApply = null;
 
+  function L(key, params) {
+    return global.AdminI18n ? global.AdminI18n.t(key, params) : key;
+  }
+
+  function LT(text) {
+    return global.AdminI18n ? global.AdminI18n.text(text) : text;
+  }
+
   const GROUPS = [
     {
       id: "overview",
@@ -138,14 +146,29 @@
   function groupFor(section) {
     for (const g of GROUPS) {
       if (g.match(section)) {
-        return g;
+        return Object.assign({}, g, { label: LT(g.label) });
       }
     }
-    return { id: "other", label: "Прочее", match: () => false };
+    return { id: "other", label: LT("Прочее"), match: () => false };
   }
 
   function metaFor(section) {
-    return SECTION_META[section.id] || { desc: "Данные из Admin API." };
+    const meta = SECTION_META[section.id] || { desc: "Данные из Admin API." };
+    let desc = LT(meta.desc);
+    if (
+      desc === meta.desc &&
+      global.AdminI18n &&
+      global.AdminI18n.getLocale &&
+      global.AdminI18n.getLocale() !== "ru"
+    ) {
+      desc = sectionTitle(section);
+    }
+    return Object.assign({}, meta, { desc });
+  }
+
+  function sectionTitle(section) {
+    if (!section) return "";
+    return LT(section.title || section.id);
   }
 
   function getOrgId() {
@@ -192,8 +215,8 @@
     }
     if (navHint) {
       navHint.textContent = isAuth
-        ? "Выберите раздел. Группы соответствуют областям платформы."
-        : "Войдите, чтобы увидеть разделы из подключённых модулей.";
+        ? LT("Выберите раздел. Группы соответствуют областям платформы.")
+        : LT("Войдите, чтобы увидеть разделы из подключённых модулей.");
     }
   }
 
@@ -209,7 +232,7 @@
       return;
     }
     header.hidden = false;
-    title.textContent = section.title || section.id;
+    title.textContent = sectionTitle(section);
     if (desc) {
       desc.textContent = metaFor(section).desc;
     }
@@ -282,7 +305,7 @@
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "nav-item";
-        btn.textContent = s.title;
+        btn.textContent = sectionTitle(s);
         btn.setAttribute("data-testid", "admin-nav-" + s.id);
         btn.addEventListener("click", () => onSelect(s, li));
         li.appendChild(btn);
@@ -325,13 +348,12 @@
     row.className = "admin-toolbar card-toolbar";
     const note = document.createElement("p");
     note.className = "toolbar-note muted small";
-    note.textContent =
-      "Для policies и instances укажите UUID организации (или выберите org в панели сверху).";
+    note.textContent = LT("Для policies и instances укажите UUID организации (или выберите org в панели сверху).");
     row.appendChild(note);
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "btn btn-secondary";
-    btn.textContent = "Обновить с org_id";
+    btn.textContent = LT("Обновить с org_id");
     btn.addEventListener("click", () => {
       Promise.resolve(onReload()).catch(() => {});
     });
@@ -352,7 +374,7 @@
         setOrgId(v);
         const msg = el("orgContextMsg");
         if (msg) {
-          msg.textContent = v ? "Org сохранён в сессии." : "Org очищен.";
+          msg.textContent = v ? LT("Org сохранён в сессии.") : LT("Org очищен.");
         }
         if (typeof onOrgApply === "function" && activeSectionId) {
           onOrgApply();
@@ -365,7 +387,7 @@
     if (btnJson && pre) {
       btnJson.addEventListener("click", () => {
         const collapsed = pre.classList.toggle("is-collapsed");
-        btnJson.textContent = collapsed ? "Развернуть JSON" : "Свернуть";
+        btnJson.textContent = collapsed ? LT("Развернуть JSON") : LT("Свернуть");
       });
     }
   }
@@ -383,6 +405,8 @@
     appendPathWithOrg,
     appendPluginOrgToolbar,
     metaFor,
+    localText: LT,
+    t: L,
     setActiveSectionId: (id) => {
       activeSectionId = id;
     },

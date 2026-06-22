@@ -7658,6 +7658,7 @@
     var bMic = iconBtn(state.callMicOn ? "🎤" : "🔇", state.callMicOn ? L("ui.call.micOn") : L("ui.call.micOff"), {
       primary: state.callMicOn,
       size: "md",
+      testId: "call-mic-toggle",
       onClick: function () {
         toggleCallMic();
       },
@@ -7672,6 +7673,7 @@
     });
     var bScr = iconBtn("🖥", state.callScreenStream ? L("ui.call.stopScreen") : L("ui.call.screen"), {
       size: "md",
+      testId: "call-screen-toggle",
       onClick: function () {
         toggleScreenShare();
       },

@@ -9,6 +9,8 @@
   let authPolicyTargetOrgId = null;
 
   const el = (id) => document.getElementById(id);
+  const LT = (text) => (window.AdminI18n ? AdminI18n.text(text) : text);
+  const L = (key, params) => (window.AdminI18n ? AdminI18n.t(key, params) : key);
 
   function clearAuthStorage() {
     sessionStorage.removeItem(LS_KEY);
@@ -1342,7 +1344,7 @@
     const text = await res.text();
     let body = text ? JSON.parse(text) : {};
     if (!res.ok) {
-      el("authStatus").textContent = body.message || "Ошибка входа";
+      el("authStatus").textContent = body.message || LT("Ошибка входа");
       return;
     }
     setToken(body.access_token);
@@ -1355,10 +1357,11 @@
     updateLogoutButton();
     try {
       const sess = await apiFetch("/admin/session");
-      el("authStatus").textContent =
-        "Вошли как " + (sess.username || sess.user_id || "?") + " (sessionStorage).";
+      el("authStatus").textContent = L("admin.signedIn", {
+        user: sess.username || sess.user_id || "?",
+      });
     } catch (_) {
-      el("authStatus").textContent = "Токен сохранён; не удалось загрузить /admin/session.";
+      el("authStatus").textContent = LT("Токен сохранён; не удалось загрузить /admin/session.");
     }
     await loadManifest();
   }

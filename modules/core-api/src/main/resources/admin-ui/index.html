@@ -16,6 +16,10 @@
     </div>
   </div>
   <div class="auth-bar" id="authBar" data-testid="admin-auth">
+    <label class="field field-inline">
+      <span class="field-label" data-i18n="admin.locale">Язык</span>
+      <select id="adminLocale" data-testid="admin-locale-select"></select>
+    </label>
     <div class="auth-fields" id="authFields">
       <label class="field">
         <span class="field-label">Логин</span>
@@ -61,7 +65,7 @@
       <div class="welcome-card" id="panelHint">
         <div class="welcome-icon" aria-hidden="true">⚙</div>
         <h2>Добро пожаловать</h2>
-        <p class="muted">Войдите под учётной записью с realm-ролью <code>admin</code>, затем выберите раздел в меню слева.</p>
+        <p class="muted" data-i18n="admin.welcomeText">Войдите под учётной записью с realm-ролью admin, затем выберите раздел в меню слева.</p>
         <ul class="welcome-list muted">
           <li>Статистика сервера и состояние зависимостей</li>
           <li>Организации, политики входа и ретенция</li>
@@ -91,6 +95,7 @@
   </nav>
 </footer>
 
+<script src="admin-i18n.js"></script>
 <script src="ui-helpers.js"></script>
 <script src="panels.js"></script>
 <script src="app.js"></script>

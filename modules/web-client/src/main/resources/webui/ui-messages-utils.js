@@ -16,6 +16,11 @@
     if (t === "image") return translate("ui.message.image");
     if (t === "video") return translate("ui.message.video");
     if (t === "file") return translate("ui.message.file");
+    var raw = String(content || "").trim();
+    if (/^[A-Za-z][A-Za-z0-9_-]*(\.[A-Za-z0-9_-]+)+$/.test(raw)) {
+      var translated = translate(raw);
+      if (translated && translated !== raw) return translated;
+    }
     var text = String(content || "")
       .replace(/[*_`#[\]]/g, "")
       .replace(/\s+/g, " ")

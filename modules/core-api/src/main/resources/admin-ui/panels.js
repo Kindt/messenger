@@ -2,6 +2,10 @@
  * Специализированные панели админ-консоли: L0 wizard, legal hold, directory sync.
  */
 (function (global) {
+  function LT(text) {
+    return global.AdminI18n ? global.AdminI18n.text(text) : text;
+  }
+
   function getOrgId(ctx) {
     if (ctx && typeof ctx.getOrgId === "function") {
       const v = ctx.getOrgId();
@@ -47,7 +51,7 @@
   function showResult(pre, data, err) {
     if (pre) {
       if (err) {
-        pre.textContent = "Ошибка: " + err;
+        pre.textContent = LT("Ошибка") + ": " + err;
       } else {
         pre.textContent = JSON.stringify(data, null, 2);
       }
