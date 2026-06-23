@@ -40,6 +40,41 @@
     });
   }
 
+  function captureComposerState(doc, chatId) {
+    doc = doc || document;
+    var ta = doc.getElementById && doc.getElementById("msgdraft");
+    if (!ta || !chatId) return null;
+    return {
+      chatId: chatId,
+      value: ta.value || "",
+      focused: doc.activeElement === ta,
+      selectionStart: typeof ta.selectionStart === "number" ? ta.selectionStart : 0,
+      selectionEnd: typeof ta.selectionEnd === "number" ? ta.selectionEnd : 0,
+    };
+  }
+
+  function restoreComposerState(doc, snapshot, chatId, saveDraft) {
+    doc = doc || document;
+    if (!snapshot || !chatId || snapshot.chatId !== chatId) return;
+    var ta = doc.getElementById && doc.getElementById("msgdraft");
+    if (!ta) return;
+    if (ta.value !== snapshot.value) {
+      ta.value = snapshot.value;
+    }
+    if (saveDraft) saveDraft(chatId, snapshot.value);
+    if (snapshot.focused && typeof ta.focus === "function") {
+      ta.focus();
+      if (
+        typeof ta.selectionStart === "number" &&
+        typeof ta.selectionEnd === "number"
+      ) {
+        var len = (ta.value || "").length;
+        ta.selectionStart = Math.min(snapshot.selectionStart || 0, len);
+        ta.selectionEnd = Math.min(snapshot.selectionEnd || 0, len);
+      }
+    }
+  }
+
   function mountComposer(ctx) {
     var comp = ctx.el("form", "composer");
     comp.onsubmit = function (e) {
@@ -366,6 +401,8 @@
     mountComposer: mountComposer,
     wrapComposerSelection: wrapComposerSelection,
     bindComposerDrop: bindComposerDrop,
+    captureComposerState: captureComposerState,
+    restoreComposerState: restoreComposerState,
     VOICE_MAX_MS: VOICE_MAX_MS,
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);

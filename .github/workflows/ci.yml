@@ -46,5 +46,8 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Python test deps
+        run: pip install pyyaml
+
       - name: "buildIntegrity (compile, test, spotless ratchet, npm audit, benchmark)"
         run: chmod +x gradlew && ./gradlew buildIntegrity --no-daemon

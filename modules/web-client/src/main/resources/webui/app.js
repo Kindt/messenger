@@ -9776,7 +9776,21 @@
     if (!state.tokens) {
       renderAuth();
     } else {
+      var composerSnapshot =
+        uiComposer.captureComposerState &&
+        uiComposer.captureComposerState(document, state.selectedId);
+      if (composerSnapshot) {
+        saveComposerDraftForChat(composerSnapshot.chatId, composerSnapshot.value);
+      }
       renderMain();
+      if (uiComposer.restoreComposerState) {
+        uiComposer.restoreComposerState(
+          document,
+          composerSnapshot,
+          state.selectedId,
+          saveComposerDraftForChat
+        );
+      }
       if (state.shouldScrollThread) {
         state.shouldScrollThread = false;
         scheduleScrollMessages();

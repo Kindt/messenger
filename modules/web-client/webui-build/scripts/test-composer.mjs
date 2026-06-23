@@ -12,16 +12,24 @@ const src = readFileSync(
   "utf8"
 );
 
+let activeElement = null;
+let currentTextarea = null;
 const ta = {
   value: "hello",
   selectionStart: 0,
   selectionEnd: 5,
-  focus: () => {},
+  focus: () => {
+    activeElement = ta;
+  },
 };
+currentTextarea = ta;
 const sandbox = {
   window: { MediaRecorder: function () {} },
   document: {
-    getElementById: (id) => (id === "msgdraft" ? ta : null),
+    get activeElement() {
+      return activeElement;
+    },
+    getElementById: (id) => (id === "msgdraft" ? currentTextarea : null),
     createElement: (tag) => ({ tagName: tag, children: [] }),
   },
   navigator: { mediaDevices: null },
@@ -37,6 +45,41 @@ if (!composer) {
 composer.wrapComposerSelection("**", "**");
 if (ta.value !== "**hello**") {
   throw new Error("wrapComposerSelection failed: " + ta.value);
+}
+
+ta.value = "draft while refresh waits";
+ta.selectionStart = 6;
+ta.selectionEnd = 11;
+ta.focus();
+const snapshot = composer.captureComposerState(sandbox.document, "chat-1");
+currentTextarea = {
+  value: "old saved draft",
+  selectionStart: 0,
+  selectionEnd: 0,
+  focus: () => {
+    activeElement = currentTextarea;
+  },
+};
+let savedDraft = null;
+composer.restoreComposerState(sandbox.document, snapshot, "chat-1", (_chatId, text) => {
+  savedDraft = text;
+});
+if (currentTextarea.value !== "draft while refresh waits") {
+  throw new Error("restoreComposerState did not restore live value: " + currentTextarea.value);
+}
+if (currentTextarea.selectionStart !== 6 || currentTextarea.selectionEnd !== 11) {
+  throw new Error(
+    "restoreComposerState did not restore selection: " +
+      currentTextarea.selectionStart +
+      "/" +
+      currentTextarea.selectionEnd
+  );
+}
+if (activeElement !== currentTextarea) {
+  throw new Error("restoreComposerState did not restore focus");
+}
+if (savedDraft !== "draft while refresh waits") {
+  throw new Error("restoreComposerState did not persist restored draft: " + savedDraft);
 }
 
 console.log("ui-composer smoke OK");
