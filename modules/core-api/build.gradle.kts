@@ -32,8 +32,8 @@ dependencies {
     // DB
     implementation("org.postgresql:postgresql:42.7.1")
     implementation("com.zaxxer:HikariCP:5.1.0")
-    implementation("org.flywaydb:flyway-core:10.8.1")
-    implementation("org.flywaydb:flyway-database-postgresql:10.8.1")
+    implementation("org.flywaydb:flyway-core:12.6.1")
+    implementation("org.flywaydb:flyway-database-postgresql:12.6.1")
 
     // Redis + NATS
     implementation("io.lettuce:lettuce-core:6.3.2.RELEASE")
