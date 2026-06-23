@@ -7571,6 +7571,10 @@
       shell.appendChild(panel);
       return;
     }
+    if (state.callMode !== "mesh") {
+      shell.appendChild(panel);
+      return;
+    }
     panel.appendChild(
       el(
         "p",

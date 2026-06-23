@@ -56,6 +56,8 @@ tasks.register<Exec>("testMessageListUi") {
     inputs.file(layout.projectDirectory.file("webui-build/scripts/test-ws-events.mjs"))
     inputs.file(layout.projectDirectory.file("webui-build/scripts/test-deep-link-utils.mjs"))
     inputs.file(layout.projectDirectory.file("webui-build/scripts/test-markdown-utils.mjs"))
+    inputs.file(layout.projectDirectory.file("webui-build/scripts/test-call-mode-render.mjs"))
+    inputs.file(layout.projectDirectory.file("src/main/resources/webui/app.js"))
     inputs.file(layout.projectDirectory.file("src/main/resources/webui/ui-message-list.js"))
     inputs.file(layout.projectDirectory.file("src/main/resources/webui/ui-ws-events.js"))
     inputs.file(layout.projectDirectory.file("src/main/resources/webui/ui-deep-link-utils.js"))

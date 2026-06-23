@@ -1,7 +1,7 @@
 /* Korus web-client: cache static assets; do NOT show login shell when server is down. */
 "use strict";
 
-var CACHE_NAME = "korus-web-static-v10";
+var CACHE_NAME = "korus-web-static-v11";
 
 function pushDefaultsFromCache() {
   return caches.match("/locales/ru.json").then(function (cached) {
