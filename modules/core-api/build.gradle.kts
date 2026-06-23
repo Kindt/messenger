@@ -45,7 +45,7 @@ dependencies {
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.17.0")
 
     // Logging
-    implementation("ch.qos.logback:logback-classic:1.5.3")
+    implementation("ch.qos.logback:logback-classic:1.5.34")
     implementation("org.slf4j:slf4j-api:2.0.12")
 
     // Auth (JWT)
