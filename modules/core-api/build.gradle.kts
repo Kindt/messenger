@@ -64,7 +64,7 @@ dependencies {
     // Solr (optional message search)
     implementation("org.apache.solr:solr-solrj:10.0.0")
 
-    testImplementation("com.h2database:h2:2.2.224")
+    testImplementation("com.h2database:h2:2.4.240")
 
     // Prometheus text exposition (ТЗ п. 22, observability baseline)
     implementation("io.prometheus:simpleclient:0.16.0")

@@ -15,5 +15,5 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.3")
     implementation("org.slf4j:slf4j-api:2.0.12")
 
-    testImplementation("com.h2database:h2:2.2.224")
+    testImplementation("com.h2database:h2:2.4.240")
 }
