@@ -24,12 +24,11 @@ from scripts.presentation.content import (
     draft_tech_s3,
     draft_tech_s4,
     executive_summary_cards,
-    audience_route_cards,
     role_decision_board,
 )
 from scripts.presentation import module_sizing as ms
 from scripts.presentation.gaps_registry import render_gaps_registry_html
-from scripts.presentation.render import _calc_pm_html, _calc_tech_html, _deck_css, _deck_js, render_block0, render_competitor_list
+from scripts.presentation.render import _calc_pm_html, _calc_tech_html, _deck_css, _deck_js, render_block0, render_competitor_list, render_deck_html
 from scripts.presentation.user_features import render_user_feature_groups_html
 
 
@@ -93,18 +92,28 @@ def test_block0_uses_external_status_language():
     html = render_block0().lower()
     assert "лабораторном стенде" in html
     assert "версия для пилота и доработок" in html
+    assert "статус:</span> рабочий прототип" in html
     assert "dev-стенд" not in html
     assert "рабочая болванка" not in html
 
 
-def test_audience_routes_are_plain_language():
-    html = audience_route_cards()
-    assert "Руководителю и аналитику" in html
-    assert "Продажам" in html
-    assert "IT и ИБ" in html
-    assert "Сотруднику и HR" in html
-    assert html.count("data-tab-link=") == 4
-    assert "HR и внедрению" not in html
+def test_stage_status_is_not_button_like():
+    css = _deck_css()
+    stage_css = css.split(".stage-badge {", 1)[1].split("}", 1)[0]
+    assert "background:" not in stage_css
+    assert "border-radius" not in stage_css
+    assert "border-left" in stage_css
+
+
+def test_role_routes_are_merged_into_tabs():
+    html = render_deck_html()
+    block0 = render_block0()
+    assert "Куда смотреть в зависимости от роли" not in block0
+    assert "audience-route" not in block0
+    assert "<strong>Решение о пилоте</strong><span>статус, риски, бюджет</span>" in html
+    assert "<strong>IT и ИБ</strong><span>архитектура и мощность</span>" in html
+    assert "<strong>Продажи</strong><span>ценность и аргументы</span>" in html
+    assert "<strong>Сотрудники и HR</strong><span>работа и внедрение</span>" in html
     assert "РП" not in html
 
 

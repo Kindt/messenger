@@ -58,20 +58,6 @@ def executive_summary_cards() -> str:
 """
 
 
-def audience_route_cards() -> str:
-    return """
-<div class="audience-route" aria-label="Куда перейти в презентации">
-  <p class="audience-route-title">Куда смотреть в зависимости от роли</p>
-  <div class="audience-route-grid">
-    <a href="#pm" data-tab-link="pm"><strong>Руководителю и аналитику</strong><span>статус, риски и решение о пилоте</span></a>
-    <a href="#sales" data-tab-link="sales"><strong>Продажам</strong><span>ценность, бюджет и аргументы для первой встречи</span></a>
-    <a href="#tech" data-tab-link="tech"><strong>IT и ИБ</strong><span>архитектура, стек, мощность и ограничения</span></a>
-    <a href="#user" data-tab-link="user"><strong>Сотруднику и HR</strong><span>как выглядит работа, как объяснить пилот и собрать обратную связь</span></a>
-  </div>
-</div>
-"""
-
-
 def role_decision_board() -> str:
     return """
 <div class="role-board" aria-label="Что проверяют роли на первом чтении">

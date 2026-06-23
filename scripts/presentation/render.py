@@ -140,13 +140,14 @@ def render_block0() -> str:
     return f"""
 <section id="block-0" class="block-0 hero-warning" aria-label="Статус продукта">
   <div class="hero-inner">
-    <p class="deck-kicker">Korus Messenger · AvandocMsg</p>
+    <div class="hero-meta">
+      <p class="deck-kicker">Korus Messenger · AvandocMsg</p>
+      <p class="stage-badge"><span>Статус:</span> {escape(ps.PRODUCT_STAGE_LABEL.lower())}</p>
+    </div>
     <h1>Корпоративный мессенджер</h1>
-    <p class="stage-badge">{escape(ps.PRODUCT_STAGE_LABEL)}</p>
     <p class="disclaimer">Продукт <strong>не готов</strong> к промышленной эксплуатации. Демонстрация возможностей на <strong>лабораторном стенде</strong>.</p>
     <p class="small version-note">Сборка <strong>{escape(ps.PRODUCT_VERSION)}</strong> — версия для пилота и доработок, не релиз.</p>
     {cnt.executive_summary_cards()}
-    {cnt.audience_route_cards()}
     <div class="block0-grid">
       <div>{donut}</div>
       <div class="callout callout-warn">
@@ -971,12 +972,17 @@ body {
     linear-gradient(135deg, #081a38 0%, #0b2347 58%, #18355f 100%);
   border-bottom: 4px solid var(--accent); padding: 32px 0 28px;
 }
-.deck-kicker { font-size: 13px; color: #b8c6dc; margin: 0 0 4px; letter-spacing: .04em; text-transform: uppercase; }
+.hero-meta {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  margin: 0 0 4px;
+}
+.deck-kicker { font-size: 13px; color: #b8c6dc; margin: 0; letter-spacing: .04em; text-transform: uppercase; }
 .block-0 h1 { font-size: 30px; margin: 0 0 8px; color: #fff; font-weight: 760; letter-spacing: -.02em; }
 .stage-badge {
-  display: inline-block; background: var(--korus-yellow); color: #2f2300; border: 1px solid rgba(255,255,255,.38);
-  padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; margin-bottom: 12px;
+  margin: 0; padding-left: 12px; border-left: 1px solid rgba(198,211,232,.34);
+  color: #c6d3e8; font-size: 12px; line-height: 1.3; white-space: nowrap;
 }
+.stage-badge span { color: #94a9c8; }
 .disclaimer { max-width: 720px; margin: 0 0 16px; color: #eaf1ff; }
 .version-note { margin: 0 0 16px; color: #c6d3e8; max-width: 720px; }
 .exec-grid {
@@ -1029,19 +1035,6 @@ body {
 }
 .evidence-appendix > summary { cursor: pointer; font-weight: 700; color: var(--brand); }
 .evidence-appendix > .small { margin-top: 10px; }
-.audience-route {
-  margin: 0 0 20px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18);
-  border-radius: 16px; padding: 14px 16px; color: #fff;
-}
-.audience-route-title { margin: 0 0 10px; font-weight: 700; color: #fff; }
-.audience-route-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.audience-route a {
-  display: block; text-decoration: none; color: inherit; background: rgba(255,255,255,.96); border: 1px solid rgba(255,255,255,.32);
-  border-radius: 12px; padding: 12px; min-height: 88px;
-}
-.audience-route a:hover { border-color: var(--korus-yellow); background: #fff; }
-.audience-route strong { display: block; font-size: 13px; color: var(--korus-purple); margin-bottom: 5px; }
-.audience-route span { display: block; font-size: 12px; color: #475569; line-height: 1.35; }
 .block0-grid { display: grid; grid-template-columns: minmax(280px, 420px) 1fr; gap: 20px; align-items: start; }
 .block0-h2 { font-size: 16px; margin: 0 0 8px; color: var(--brand); }
 .feature-details {
@@ -1058,15 +1051,18 @@ body {
   border-bottom: 1px solid var(--border); z-index: 20; justify-content: center;
 }
 .tab-bar button {
-  min-height: 44px; padding: 8px 18px; border: 1px solid #cfd8e8; background: var(--surface);
-  cursor: pointer; border-radius: 999px; font-size: 14px; font-weight: 650; color: var(--brand);
+  min-height: 54px; padding: 8px 16px; border: 1px solid #cfd8e8; background: var(--surface);
+  cursor: pointer; border-radius: 16px; color: var(--brand); text-align: left;
   transition: background .15s, color .15s;
 }
+.tab-bar strong { display: block; font-size: 13px; line-height: 1.2; }
+.tab-bar span { display: block; margin-top: 3px; font-size: 11px; line-height: 1.25; color: #64748b; font-weight: 500; }
 .tab-bar button:hover { background: var(--accent-soft); border-color: #cabdf5; }
 .tab-bar button[aria-selected="true"] {
   background: var(--accent); color: #fff; border-color: var(--accent);
   box-shadow: 0 8px 20px rgba(227, 30, 36, .26);
 }
+.tab-bar button[aria-selected="true"] span { color: rgba(255,255,255,.86); }
 .tab-panel { display: none; padding: 24px 0 40px; }
 .tab-panel.active { display: block; }
 .tab-intro {
@@ -1540,7 +1536,6 @@ body {
   .calc-cost-median { font-size: 20px; }
   .donut-layout { justify-content: center; }
   .exec-grid { grid-template-columns: 1fr; }
-  .audience-route-grid { grid-template-columns: 1fr 1fr; }
   .role-board-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .role-board-grid article:nth-child(4) { grid-column: 1 / span 1; }
   .role-board-grid article:nth-child(5) { grid-column: 2 / span 1; }
@@ -1550,17 +1545,24 @@ body {
   }
 }
 @media (max-width: 640px) {
+  .hero-meta {
+    display: block;
+  }
+  .stage-badge {
+    margin-top: 3px; padding-left: 0; border-left: 0; white-space: normal;
+  }
   .tab-bar {
     display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
     padding: 10px max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left));
     top: env(safe-area-inset-top, 0);
   }
   .tab-bar button {
-    width: 100%; min-height: 44px; padding: 10px 12px; font-size: 13px;
+    width: 100%; min-height: 56px; padding: 10px 12px;
     line-height: 1.25; white-space: normal; text-align: center;
   }
+.tab-bar strong { font-size: 12px; }
+.tab-bar span { font-size: 10px; }
   .block0-grid { grid-template-columns: 1fr; }
-  .audience-route-grid { grid-template-columns: 1fr; }
   .role-board-grid { grid-template-columns: 1fr; }
   .role-board-grid article:nth-child(4),
   .role-board-grid article:nth-child(5) { grid-column: auto; }
@@ -1575,7 +1577,8 @@ body {
 }
 @media (max-width: 375px) {
   .block-0 h1 { font-size: 21px; }
-  .tab-bar button { font-size: 12px; padding: 8px 10px; }
+  .tab-bar button { padding: 8px 10px; }
+  .tab-bar span { display: none; }
   .calc-shell-title { font-size: 15px; }
 }
 @media print {
@@ -2311,10 +2314,10 @@ def render_deck_html() -> str:
 <body>
 {render_block0()}
 <nav class="tab-bar" role="tablist" aria-label="Вкладки презентации">
-  <button role="tab" data-testid="deck-tab-pm" data-tab="pm" aria-selected="true" aria-controls="tab-pm">Короткая версия</button>
-  <button role="tab" data-testid="deck-tab-tech" data-tab="tech" aria-controls="tab-tech">IT и ИБ</button>
-  <button role="tab" data-testid="deck-tab-sales" data-tab="sales" aria-controls="tab-sales">Для продаж</button>
-  <button role="tab" data-testid="deck-tab-user" data-tab="user" aria-controls="tab-user">Сотруднику</button>
+  <button role="tab" data-testid="deck-tab-pm" data-tab="pm" aria-selected="true" aria-controls="tab-pm"><strong>Решение о пилоте</strong><span>статус, риски, бюджет</span></button>
+  <button role="tab" data-testid="deck-tab-tech" data-tab="tech" aria-controls="tab-tech"><strong>IT и ИБ</strong><span>архитектура и мощность</span></button>
+  <button role="tab" data-testid="deck-tab-sales" data-tab="sales" aria-controls="tab-sales"><strong>Продажи</strong><span>ценность и аргументы</span></button>
+  <button role="tab" data-testid="deck-tab-user" data-tab="user" aria-controls="tab-user"><strong>Сотрудники и HR</strong><span>работа и внедрение</span></button>
 </nav>
 <main>
   <div id="tab-pm" class="tab-panel active" role="tabpanel" data-testid="deck-panel-pm">{render_tab_pm()}</div>
