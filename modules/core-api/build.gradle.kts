@@ -30,7 +30,7 @@ dependencies {
     implementation("jakarta.validation:jakarta.validation-api:3.0.2")
 
     // DB
-    implementation("org.postgresql:postgresql:42.7.1")
+    implementation("org.postgresql:postgresql:42.7.11")
     implementation("com.zaxxer:HikariCP:5.1.0")
     implementation("org.flywaydb:flyway-core:10.8.1")
     implementation("org.flywaydb:flyway-database-postgresql:10.8.1")

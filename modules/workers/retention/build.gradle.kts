@@ -18,7 +18,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
     implementation("io.minio:minio:8.5.17")
     implementation("com.zaxxer:HikariCP:5.1.0")
-    implementation("org.postgresql:postgresql:42.7.1")
+    implementation("org.postgresql:postgresql:42.7.11")
     implementation("ch.qos.logback:logback-classic:1.5.3")
     implementation("org.slf4j:slf4j-api:2.0.12")
 
