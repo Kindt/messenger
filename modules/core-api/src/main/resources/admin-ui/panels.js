@@ -6,6 +6,17 @@
     return global.AdminI18n ? global.AdminI18n.text(text) : text;
   }
 
+  function adminFmt(template, params) {
+    var s = LT(template);
+    if (!params) {
+      return s;
+    }
+    Object.keys(params).forEach(function (k) {
+      s = s.split("{" + k + "}").join(String(params[k]));
+    });
+    return s;
+  }
+
   function getOrgId(ctx) {
     if (ctx && typeof ctx.getOrgId === "function") {
       const v = ctx.getOrgId();
@@ -142,15 +153,16 @@
   function mountL0Wizard(summary, pre, ctx) {
     summary.innerHTML = "";
     summary.hidden = false;
-    pre.textContent = "Заполните форму и нажмите «Создать L0-бота».";
+    pre.textContent = LT("Заполните форму и нажмите «Создать L0-бота».");
 
     const box = document.createElement("div");
     box.className = "panel-form l0-wizard";
 
     const hint = document.createElement("p");
     hint.className = "muted small";
-    hint.textContent =
-      "POST /api/v1/admin/plugins/instances/l0 — FAQ-меню без внешнего runtime. Org можно взять из панели «Организация» сверху.";
+    hint.textContent = LT(
+      "POST /api/v1/admin/plugins/instances/l0 — FAQ-меню без внешнего runtime. Org можно взять из панели «Организация» сверху."
+    );
     box.appendChild(hint);
 
     const row1 = document.createElement("div");
@@ -181,7 +193,7 @@
 
     const slashCap = document.createElement("p");
     slashCap.className = "form-section-label";
-    slashCap.textContent = "Slash-команды";
+    slashCap.textContent = LT("Slash-команды");
     box.appendChild(slashCap);
     const slashWrap = document.createElement("div");
     slashWrap.id = "l0SlashWrap";
@@ -206,13 +218,13 @@
     const addSlash = document.createElement("button");
     addSlash.type = "button";
     addSlash.className = "btn btn-secondary btn-sm";
-    addSlash.textContent = "+ команда";
+    addSlash.textContent = LT("+ команда");
     addSlash.addEventListener("click", () => addSlashRow("", ""));
     box.appendChild(addSlash);
 
     const menuCap = document.createElement("p");
     menuCap.className = "form-section-label";
-    menuCap.textContent = "Кнопки меню";
+    menuCap.textContent = LT("Кнопки меню");
     box.appendChild(menuCap);
     const menuWrap = document.createElement("div");
     menuWrap.id = "l0MenuWrap";
@@ -237,14 +249,14 @@
     const addBtn = document.createElement("button");
     addBtn.type = "button";
     addBtn.className = "btn btn-secondary btn-sm";
-    addBtn.textContent = "+ кнопка";
+    addBtn.textContent = LT("+ кнопка");
     addBtn.addEventListener("click", () => addMenuRow("", "", "", ""));
     box.appendChild(addBtn);
 
     const advToggle = document.createElement("button");
     advToggle.type = "button";
     advToggle.className = "btn btn-ghost btn-sm";
-    advToggle.textContent = "Расширенный: JSON config";
+    advToggle.textContent = LT("Расширенный: JSON config");
     const advBlock = document.createElement("div");
     advBlock.className = "advanced-block";
     advBlock.hidden = true;
@@ -275,7 +287,7 @@
     const submit = document.createElement("button");
     submit.type = "button";
     submit.className = "btn btn-primary";
-    submit.textContent = "Создать L0-бота";
+    submit.textContent = LT("Создать L0-бота");
     const msg = document.createElement("span");
     msg.className = "muted small";
     submit.addEventListener("click", async () => {
@@ -305,7 +317,9 @@
             config_json: configJson,
           }),
         });
-        msg.textContent = "Создано: " + (res.bot_name || res.id || "OK");
+        msg.textContent = adminFmt("Создано: {name}", {
+          name: res.bot_name || res.id || LT("OK"),
+        });
         showResult(pre, res, null);
         const instInp = document.getElementById("l0LastInstanceId");
         if (instInp && res.id) {
@@ -322,7 +336,7 @@
 
     const postCap = document.createElement("p");
     postCap.className = "form-section-label";
-    postCap.textContent = "После создания — тест invoke";
+    postCap.textContent = LT("После создания — тест invoke");
     box.appendChild(postCap);
     const postRow = document.createElement("div");
     postRow.className = "admin-toolbar";
@@ -330,7 +344,7 @@
     const invokeBtn = document.createElement("button");
     invokeBtn.type = "button";
     invokeBtn.className = "btn btn-secondary";
-    invokeBtn.textContent = "Invoke /help";
+    invokeBtn.textContent = LT("Invoke /help");
     const invokeMsg = document.createElement("span");
     invokeMsg.className = "muted small";
     invokeBtn.addEventListener("click", async () => {
@@ -346,7 +360,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ type: "mention", text: "/help" }),
         });
-        invokeMsg.textContent = "OK";
+        invokeMsg.textContent = LT("OK");
         showResult(pre, res, null);
       } catch (e) {
         invokeMsg.textContent = e.message || String(e);
@@ -602,7 +616,7 @@
         );
         renderStatus(data);
         showResult(pre, data, null);
-        msg.textContent = "status=" + (data.status || "?");
+        msg.textContent = adminFmt("status={status}", { status: data.status || "?" });
       } catch (e) {
         msg.textContent = e.message || String(e);
       }
@@ -610,7 +624,7 @@
 
     loadBtn.addEventListener("click", () => loadStatus().catch(() => {}));
     runBtn.addEventListener("click", async () => {
-      msg.textContent = "sync…";
+      msg.textContent = LT("sync…");
       const oid = orgIdVal();
       if (!oid) {
         msg.textContent = "Нужен org_id.";
@@ -623,7 +637,10 @@
         );
         renderStatus(data);
         showResult(pre, data, null);
-        msg.textContent = "Готово: " + (data.status || "?") + ", users=" + (data.users_upserted ?? "?");
+        msg.textContent = adminFmt("Готово: {status}, users={users}", {
+          status: data.status || "?",
+          users: data.users_upserted ?? "?",
+        });
       } catch (e) {
         msg.textContent = e.message || String(e);
       }
@@ -867,11 +884,13 @@
     box.className = "panel-form external-stack-preflight";
     const title = document.createElement("p");
     title.className = "form-section-label";
-    title.textContent = "Checkpoint preflight (repo-local)";
+    title.textContent = LT("Checkpoint preflight (repo-local)");
     box.appendChild(title);
     const hint = document.createElement("p");
     hint.className = "muted small";
-    hint.textContent = "POST /platform/external-stack/preflight/checkpoint — проверка marker groups без live cutover.";
+    hint.textContent = LT(
+      "POST /platform/external-stack/preflight/checkpoint — проверка marker groups без live cutover."
+    );
     box.appendChild(hint);
     const ta = document.createElement("textarea");
     ta.id = "externalStackCheckpointJson";
@@ -936,11 +955,13 @@
     box.id = "externalStackProfilePreflight";
     const title = document.createElement("p");
     title.className = "form-section-label";
-    title.textContent = "Profile preflight (локально)";
+    title.textContent = LT("Profile preflight (локально)");
     box.appendChild(title);
     const hint = document.createElement("p");
     hint.className = "muted small external-stack-schema-help";
-    hint.textContent = "POST /platform/external-stack/preflight/profile/report — evidence readiness для одного profile_id.";
+    hint.textContent = LT(
+      "POST /platform/external-stack/preflight/profile/report — evidence readiness для одного profile_id."
+    );
     box.appendChild(hint);
     const selector = document.createElement("select");
     selector.id = "externalStackSampleSelector";
@@ -1003,11 +1024,13 @@
     box.className = "panel-form external-stack-preflight";
     const title = document.createElement("p");
     title.className = "form-section-label";
-    title.textContent = "Manifest preflight (локально)";
+    title.textContent = LT("Manifest preflight (локально)");
     box.appendChild(title);
     const hint = document.createElement("p");
     hint.className = "muted small";
-    hint.textContent = "POST /platform/external-stack/preflight/manifests/report — manifest report по desired manifests без deploy.";
+    hint.textContent = LT(
+      "POST /platform/external-stack/preflight/manifests/report — manifest report по desired manifests без deploy."
+    );
     box.appendChild(hint);
     const ta = document.createElement("textarea");
     ta.id = "externalStackManifestsJson";
@@ -1140,7 +1163,7 @@
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "btn btn-ghost";
-    btn.textContent = "Copy curl";
+    btn.textContent = LT("Copy curl");
     btn.id = "externalStackCopyCurl";
     btn.addEventListener("click", () => {
       const payload = typeof bodyText === "function" ? bodyText() : "{}";
@@ -1153,9 +1176,9 @@
       if (navigator.clipboard) {
         navigator.clipboard.writeText(cmd).catch(() => {});
       }
-      btn.textContent = "Copied curl";
+      btn.textContent = LT("Copied curl");
       setTimeout(() => {
-        btn.textContent = "Copy curl";
+        btn.textContent = LT("Copy curl");
       }, 1200);
     });
     return btn;
@@ -1264,12 +1287,12 @@
     wrap.setAttribute("data-testid", "admin-external-stack-diff");
     const title = document.createElement("p");
     title.className = "form-section-label";
-    title.textContent = "Desired vs observed diff";
+    title.textContent = LT("Desired vs observed diff");
     wrap.appendChild(title);
     if (!rows.length) {
       const ok = document.createElement("p");
       ok.className = "muted small";
-      ok.textContent = "No desired/observed connector mismatches.";
+      ok.textContent = LT("No desired/observed connector mismatches.");
       wrap.appendChild(ok);
       container.appendChild(wrap);
       return;
@@ -1313,7 +1336,7 @@
       : document.createTextNode(data.passed ? "catalog OK" : "catalog drift");
     const title = document.createElement("p");
     title.className = "form-section-label";
-    title.textContent = "Catalog health";
+    title.textContent = LT("Catalog health");
     box.appendChild(title);
     const line = document.createElement("p");
     line.className = "muted small";
@@ -1330,7 +1353,7 @@
     const details = document.createElement("details");
     details.className = "external-stack-drilldown";
     const summary = document.createElement("summary");
-    summary.textContent = "catalog drift details";
+    summary.textContent = LT("catalog drift details");
     details.appendChild(summary);
     const pre = document.createElement("pre");
     pre.textContent = []
@@ -1355,7 +1378,7 @@
       : document.createTextNode(data.ready ? "cutover ready" : "cutover blocked");
     const title = document.createElement("p");
     title.className = "form-section-label";
-    title.textContent = "Lab cutover readiness";
+    title.textContent = LT("Lab cutover readiness");
     box.appendChild(title);
     const line = document.createElement("p");
     line.className = "muted small";
@@ -1373,7 +1396,7 @@
     const details = document.createElement("details");
     details.className = "external-stack-drilldown";
     const summary = document.createElement("summary");
-    summary.textContent = "cutover readiness details";
+    summary.textContent = LT("cutover readiness details");
     details.appendChild(summary);
     const pre = document.createElement("pre");
     pre.textContent = []
@@ -1401,7 +1424,7 @@
     wrap.setAttribute("data-testid", "admin-external-stack-profile-readiness");
     const heading = document.createElement("p");
     heading.className = "form-section-label";
-    heading.textContent = "Component profile readiness";
+    heading.textContent = LT("Component profile readiness");
     wrap.appendChild(heading);
     const table = document.createElement("table");
     table.className = "json-panel-table";
@@ -1459,7 +1482,7 @@
     wrap.setAttribute("data-testid", "admin-external-stack-packs");
     const heading = document.createElement("p");
     heading.className = "form-section-label";
-    heading.textContent = "Compatibility pack catalog";
+    heading.textContent = LT("Compatibility pack catalog");
     wrap.appendChild(heading);
     const table = document.createElement("table");
     table.className = "json-panel-table";
@@ -1496,7 +1519,9 @@
     wrap.appendChild(table);
     const note = document.createElement("p");
     note.className = "muted small json-panel-note";
-    note.textContent = "Full catalog includes supported, external/BYO and candidate packs; candidate rows are not production support claims.";
+    note.textContent = LT(
+      "Full catalog includes supported, external/BYO and candidate packs; candidate rows are not production support claims."
+    );
     wrap.appendChild(note);
     container.appendChild(wrap);
   }
@@ -1516,7 +1541,7 @@
     wrap.setAttribute("data-testid", "admin-external-stack-component-contracts");
     const heading = document.createElement("p");
     heading.className = "form-section-label";
-    heading.textContent = "Component validation contracts";
+    heading.textContent = LT("Component validation contracts");
     wrap.appendChild(heading);
     const table = document.createElement("table");
     table.className = "json-panel-table";
@@ -1605,11 +1630,11 @@
     const boundary = component.support_boundary || "—";
     const connector = (component.desired_connector || "").toLowerCase();
     if (connector.includes("candidate") || boundary.includes("vendor")) {
-      span.textContent = "candidate";
+      span.textContent = LT("candidate");
     } else if (boundary.includes("deferred")) {
-      span.textContent = "deferred";
+      span.textContent = LT("deferred");
     } else {
-      span.textContent = boundary.includes("customer") ? "external/BYO" : "supported";
+      span.textContent = boundary.includes("customer") ? LT("external/BYO") : LT("supported");
     }
     span.title = boundary;
     return span;
@@ -1626,7 +1651,7 @@
     const details = document.createElement("details");
     details.className = "external-stack-drilldown";
     const summary = document.createElement("summary");
-    summary.textContent = [component.degraded_reason, component.mismatch ? "mismatch" : ""].filter(Boolean).join(" · ") || "details";
+    summary.textContent = [component.degraded_reason, component.mismatch ? LT("mismatch") : ""].filter(Boolean).join(" · ") || LT("details");
     details.appendChild(summary);
     const lines = []
       .concat(component.validation_failures || [])
@@ -1637,7 +1662,7 @@
       lines.push("unsupported_modes: " + (profile.unsupported_modes || []).join(", "));
     }
     const pre = document.createElement("pre");
-    pre.textContent = lines.length ? lines.join("\n") : "No validation failures/warnings.";
+    pre.textContent = lines.length ? lines.join("\n") : LT("No validation failures/warnings.");
     details.appendChild(pre);
     return details;
   }
@@ -1660,7 +1685,7 @@
     const invokeBtn = document.createElement("button");
     invokeBtn.type = "button";
     invokeBtn.className = "btn btn-secondary";
-    invokeBtn.textContent = "Invoke";
+    invokeBtn.textContent = LT("Invoke");
     const invokeMsg = document.createElement("span");
     invokeMsg.className = "muted small";
     invokeBtn.addEventListener("click", async () => {
@@ -1679,7 +1704,7 @@
             text: document.getElementById("pluginInvokeText")?.value.trim() || "/help",
           }),
         });
-        invokeMsg.textContent = "OK";
+        invokeMsg.textContent = LT("OK");
         showResult(pre, res, null);
       } catch (e) {
         invokeMsg.textContent = e.message || String(e);
@@ -1702,7 +1727,7 @@
     const outBtn = document.createElement("button");
     outBtn.type = "button";
     outBtn.className = "btn btn-primary btn-sm";
-    outBtn.textContent = "Configure outbound";
+    outBtn.textContent = LT("Configure outbound");
     const outMsg = document.createElement("span");
     outMsg.className = "muted small";
     outBtn.addEventListener("click", async () => {
@@ -1725,7 +1750,7 @@
             outbound_token: tok,
           }),
         });
-        outMsg.textContent = "OK";
+        outMsg.textContent = LT("OK");
         showResult(pre, res, null);
       } catch (e) {
         outMsg.textContent = e.message || String(e);
@@ -1769,7 +1794,7 @@
     composeBtn.type = "button";
     composeBtn.className = "btn btn-secondary btn-sm";
     composeBtn.setAttribute("data-testid", "admin-plugin-compose-btn");
-    composeBtn.textContent = "Plan compose";
+    composeBtn.textContent = LT("Plan compose");
     const composeMsg = document.createElement("span");
     composeMsg.className = "muted small";
     composeBtn.addEventListener("click", async () => {
@@ -1866,7 +1891,7 @@
             }),
           }
         );
-        msg.textContent = "OK";
+        msg.textContent = LT("OK");
         showResult(pre, res, null);
       } catch (e) {
         msg.textContent = e.message || String(e);
@@ -1918,7 +1943,7 @@
     flags.appendChild(enLbl);
     const cidrsLbl = document.createElement("label");
     cidrsLbl.className = "small";
-    cidrsLbl.textContent = "allowed_cidrs";
+    cidrsLbl.textContent = LT("allowed_cidrs");
     const cidrsInp = document.createElement("textarea");
     cidrsInp.id = "ipAllowCidrs";
     cidrsInp.rows = 2;
@@ -2019,14 +2044,14 @@
     createRow.className = "admin-toolbar";
     const srcLbl = document.createElement("label");
     srcLbl.className = "small";
-    srcLbl.textContent = "source";
+    srcLbl.textContent = LT("source");
     const srcInp = document.createElement("input");
     srcInp.id = "migrationImportSource";
     srcInp.value = "telegram_export_v1";
     srcLbl.appendChild(srcInp);
     const cfgLbl = document.createElement("label");
     cfgLbl.className = "small";
-    cfgLbl.textContent = "config_json";
+    cfgLbl.textContent = LT("config_json");
     const cfgInp = document.createElement("input");
     cfgInp.id = "migrationImportConfig";
     cfgInp.placeholder = "{}";
@@ -2034,7 +2059,7 @@
     cfgLbl.appendChild(cfgInp);
     const fileLbl = document.createElement("label");
     fileLbl.className = "small";
-    fileLbl.textContent = "telegram export JSON";
+    fileLbl.textContent = LT("telegram export JSON");
     const fileInp = document.createElement("input");
     fileInp.type = "file";
     fileInp.accept = "application/json,.json";
@@ -2048,13 +2073,13 @@
           const txt = String(reader.result || "");
           JSON.parse(txt);
           cfgInp.value = txt;
-          createMsg.textContent = "JSON loaded: " + f.name;
+          createMsg.textContent = LT("JSON loaded: ") + f.name;
         } catch (e) {
-          createMsg.textContent = "Invalid JSON: " + (e.message || String(e));
+          createMsg.textContent = LT("Invalid JSON: ") + (e.message || String(e));
         }
       };
       reader.onerror = () => {
-        createMsg.textContent = "Could not read file";
+        createMsg.textContent = LT("Could not read file");
       };
       reader.readAsText(f);
     });
@@ -2144,7 +2169,7 @@
           const procBtn = document.createElement("button");
           procBtn.type = "button";
           procBtn.className = "btn btn-secondary btn-sm";
-          procBtn.textContent = "Process";
+          procBtn.textContent = LT("Process");
           procBtn.addEventListener("click", async () => {
             try {
               const res = await ctx.apiFetch(

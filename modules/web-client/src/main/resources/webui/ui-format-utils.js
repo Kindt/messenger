@@ -18,13 +18,31 @@
     return "ru-RU";
   }
 
-  function formatInstantLabel(iso) {
-    if (!iso) return "—";
-    try {
-      return new Date(iso).toLocaleString(localeTag());
-    } catch (e) {
-      return String(iso);
+  function instantEpochMs(value) {
+    if (value == null || value === "") return NaN;
+    if (typeof value === "number") {
+      if (!isFinite(value)) return NaN;
+      return value > 100000000000 ? value : value * 1000;
     }
+    var raw = String(value).trim();
+    if (!raw) return NaN;
+    if (/^-?\d+(\.\d+)?$/.test(raw)) {
+      var n = Number(raw);
+      if (!isFinite(n)) return NaN;
+      return n > 100000000000 ? n : n * 1000;
+    }
+    return new Date(raw).getTime();
+  }
+
+  function formatInstantLabel(value) {
+    if (value == null || value === "") return "—";
+    try {
+      var ms = instantEpochMs(value);
+      if (!isNaN(ms)) return new Date(ms).toLocaleString(localeTag());
+    } catch (e) {
+      // Fall through to raw value.
+    }
+    return String(value);
   }
 
   function formatChatListTime(ms) {
@@ -73,6 +91,7 @@
   }
 
   global.KorusUiFormatUtils = {
+    instantEpochMs: instantEpochMs,
     formatInstantLabel: formatInstantLabel,
     formatChatListTime: formatChatListTime,
     formatTtlLabel: formatTtlLabel,

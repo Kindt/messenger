@@ -25,7 +25,9 @@
     );
     var ts = ctx.el("span");
     ts.className = "msg-ts";
-    ts.textContent = new Date(m.created_at).toLocaleString();
+    ts.textContent = ctx.formatInstantLabel
+      ? ctx.formatInstantLabel(m.created_at)
+      : new Date(m.created_at).toLocaleString();
     meta.appendChild(ts);
     if (m.thread_reply_count && m.thread_reply_count > 0 && !ctx.state.discussionThreadRootId) {
       var tBadge = ctx.el("button", "msg-thread-badge", m.thread_reply_count + " ↩");

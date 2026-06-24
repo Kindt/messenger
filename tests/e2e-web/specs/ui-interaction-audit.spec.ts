@@ -1,6 +1,6 @@
 import { expect, Page, test } from "@playwright/test";
 import { adminBaseUrl, adminNavTo, adminUiLogin } from "../fixtures/admin-ui";
-import { apiBase, apiCreateGroup, apiLogin, apiMeId, ensureSmokeUsers } from "../fixtures/auth";
+import { apiBase, apiCreateGroup, apiLogin, apiMarkMessageRead, apiMeId, apiSendMessage, ensureSmokeUsers } from "../fixtures/auth";
 import { VIEWPORT_PHONE } from "../fixtures/mobile-ui";
 import { uiLogin, uiOpenChatByTitle } from "../fixtures/ui";
 import {
@@ -189,4 +189,31 @@ test.describe("UI interaction audit", () => {
       errors.expectNoCollectedErrors(`admin ${viewport.name}`);
     });
   }
+
+  test("read receipt overlay opens from own message checkmarks", async ({ page, request }) => {
+    await page.setViewportSize(DESKTOP.size);
+    await forceAuditLocale(page);
+    const errors = attachUiAuditErrorCollector(page);
+
+    await ensureSmokeUsers(request);
+    const tokenA = await apiLogin(request, "smoke_user_a", "smokepass123");
+    const tokenB = await apiLogin(request, "smoke_user_b", "smokepass123");
+    const idB = await apiMeId(request, tokenB);
+    const title = `read-receipt-audit-${Date.now()}`;
+    const chatId = await apiCreateGroup(request, tokenA, title, [idB]);
+    const messageId = await apiSendMessage(request, tokenA, chatId, "read receipt audit seed");
+    await apiMarkMessageRead(request, tokenB, chatId, messageId);
+
+    await uiLogin(page, "smoke_user_a", "smokepass123");
+    await uiOpenChatByTitle(page, title);
+    await expect(page.locator(".msg-read-receipt-double-check").first()).toBeVisible({
+      timeout: 20_000,
+    });
+    await page.locator(".msg-read-receipt-double-check").first().click();
+    await expect(page.getByTestId("read-receipt-overlay")).toBeVisible({ timeout: 10_000 });
+    await page.getByTestId("read-receipt-close").click();
+    await expect(page.getByTestId("read-receipt-overlay")).toHaveCount(0);
+
+    errors.expectNoCollectedErrors("read receipt overlay");
+  });
 });

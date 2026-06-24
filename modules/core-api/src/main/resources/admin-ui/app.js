@@ -11,6 +11,16 @@
   const el = (id) => document.getElementById(id);
   const LT = (text) => (window.AdminI18n ? AdminI18n.text(text) : text);
   const L = (key, params) => (window.AdminI18n ? AdminI18n.t(key, params) : key);
+  function adminFmt(template, params) {
+    var s = LT(template);
+    if (!params) {
+      return s;
+    }
+    Object.keys(params).forEach(function (k) {
+      s = s.split("{" + k + "}").join(String(params[k]));
+    });
+    return s;
+  }
 
   function clearAuthStorage() {
     sessionStorage.removeItem(LS_KEY);
@@ -102,6 +112,31 @@
     return s + " s";
   }
 
+  function renderAdminKpiCards(container, cards) {
+    container.querySelector(".stats-grid")?.remove();
+    const grid = document.createElement("div");
+    grid.className = "stats-grid";
+    cards.forEach(function (item) {
+      const card = document.createElement("div");
+      card.className = "stat-card";
+      const lbl = document.createElement("div");
+      lbl.className = "stat-card-label";
+      lbl.textContent = item.label;
+      const val = document.createElement("div");
+      val.className = "stat-card-value";
+      val.textContent = item.value;
+      card.appendChild(lbl);
+      card.appendChild(val);
+      grid.appendChild(card);
+    });
+    const cap = container.querySelector(".muted.small");
+    if (cap && cap.nextSibling) {
+      container.insertBefore(grid, cap.nextSibling);
+    } else {
+      container.appendChild(grid);
+    }
+  }
+
   function renderCoreStatsSummary(stats, container) {
     container.innerHTML = "";
     container.hidden = false;
@@ -144,21 +179,36 @@
     const d = stats.dependencies || {};
     const c = stats.counts || {};
     addCard("Версия API", String(stats.api_version || "—"));
-    addCard("Uptime JVM", formatDuration(j.uptime_ms));
+    addCard(LT("Uptime JVM"), formatDuration(j.uptime_ms));
     addCard(
-      "PostgreSQL",
-      badge ? badge(!!d.database_ok, d.database_ok ? "ok" : "нет") : d.database_ok ? "ok" : "недоступна"
+      LT("PostgreSQL"),
+      badge
+        ? badge(!!d.database_ok, d.database_ok ? LT("ok") : LT("нет"))
+        : d.database_ok
+          ? LT("ok")
+          : LT("недоступна")
     );
     addCard(
-      "Redis",
-      badge ? badge(!!d.redis_ok, d.redis_ok ? "ok" : "нет") : d.redis_ok ? "ok" : "недоступен"
+      LT("Redis"),
+      badge
+        ? badge(!!d.redis_ok, d.redis_ok ? LT("ok") : LT("нет"))
+        : d.redis_ok
+          ? LT("ok")
+          : LT("недоступен")
     );
     addCard(
-      "NATS",
-      badge ? badge(!!d.nats_ok, d.nats_ok ? "ok" : "нет") : d.nats_ok ? "ok" : "нет соединения"
+      LT("NATS"),
+      badge
+        ? badge(!!d.nats_ok, d.nats_ok ? LT("ok") : LT("нет"))
+        : d.nats_ok
+          ? LT("ok")
+          : LT("нет соединения")
     );
     container.appendChild(grid);
-    addRow("Heap (used / max)", formatBytes(j.heap_used_bytes) + " / " + formatBytes(j.heap_max_bytes));
+    addRow(
+      LT("Heap (used / max)"),
+      formatBytes(j.heap_used_bytes) + " / " + formatBytes(j.heap_max_bytes)
+    );
     addRow("Процессоры", String(j.processors != null ? j.processors : "—"));
     if (c.counts_available) {
       addRow("Пользователи", String(c.users));
@@ -395,7 +445,7 @@
         const tdField = document.createElement("td");
         tdField.textContent = field;
         const tdReq = document.createElement("td");
-        tdReq.textContent = "yes";
+        tdReq.textContent = LT("да");
         tr.appendChild(tdField);
         tr.appendChild(tdReq);
         pBody.appendChild(tr);
@@ -406,7 +456,9 @@
       if (cp.strict) {
         const strictNote = document.createElement("p");
         strictNote.className = "json-panel-note";
-        strictNote.textContent = "EXPORT_COMPLETENESS_STRICT=true — неполный пакет → export_failed.";
+        strictNote.textContent = LT(
+          "EXPORT_COMPLETENESS_STRICT=true — неполный пакет → export_failed."
+        );
         container.appendChild(strictNote);
       }
     }
@@ -454,7 +506,7 @@
     if (Array.isArray(smokeList) && smokeList.length > 0) {
       const hSmoke = document.createElement("p");
       hSmoke.className = "json-panel-note";
-      hSmoke.textContent = "Smoke-команды (локальный стенд):";
+      hSmoke.textContent = LT("Smoke-команды (локальный стенд):");
       container.appendChild(hSmoke);
       const smokeWrap = document.createElement("div");
       smokeWrap.className = "export-smoke-commands";
@@ -488,7 +540,7 @@
               }
             );
           } else {
-            btn.textContent = "Ctrl+C из pre";
+            btn.textContent = LT("Ctrl+C из pre");
           }
         });
         block.appendChild(btn);
@@ -564,7 +616,7 @@
     box.appendChild(mk("auditFilterResourceId", "resource_id", "UUID"));
     const limLbl = document.createElement("label");
     limLbl.className = "small";
-    limLbl.textContent = "limit";
+    limLbl.textContent = LT("limit");
     const limInp = document.createElement("input");
     limInp.type = "number";
     limInp.id = "auditLimit";
@@ -593,7 +645,7 @@
     row.className = "admin-toolbar export-audit-presets";
     const cap = document.createElement("span");
     cap.className = "small muted";
-    cap.textContent = "Export:";
+    cap.textContent = LT("Export:");
     row.appendChild(cap);
     const presets = [
       { label: "requested", action: "export.requested", resourceType: "export_job", resourceId: "" },
@@ -699,7 +751,7 @@
     box.className = "admin-toolbar";
     const lbl = document.createElement("label");
     lbl.className = "small";
-    lbl.textContent = "UUID";
+    lbl.textContent = LT("UUID");
     const inp = document.createElement("input");
     inp.type = "text";
     inp.id = "deleteOrgId";
@@ -1044,7 +1096,7 @@
     wrap.appendChild(flags);
     const provHint = document.createElement("p");
     provHint.className = "muted small";
-    provHint.textContent = "providers — JSON-массив или добавьте строку ниже:";
+    provHint.textContent = LT("providers — JSON-массив или добавьте строку ниже:");
     wrap.appendChild(provHint);
     const ta = document.createElement("textarea");
     ta.id = "authPolicyProvidersJson";
@@ -1057,7 +1109,7 @@
     addRow.className = "admin-toolbar";
     const lType = document.createElement("label");
     lType.className = "small";
-    lType.textContent = "type";
+    lType.textContent = LT("type");
     const selType = document.createElement("select");
     selType.id = "authPolicyAddType";
     ["ldap", "oidc", "saml"].forEach((t) => {
@@ -1069,7 +1121,7 @@
     lType.appendChild(selType);
     const lAlias = document.createElement("label");
     lAlias.className = "small";
-    lAlias.textContent = "alias";
+    lAlias.textContent = LT("alias");
     const inAlias = document.createElement("input");
     inAlias.type = "text";
     inAlias.id = "authPolicyAddAlias";
@@ -1077,7 +1129,7 @@
     lAlias.appendChild(inAlias);
     const lName = document.createElement("label");
     lName.className = "small";
-    lName.textContent = "display_name";
+    lName.textContent = LT("display_name");
     const inName = document.createElement("input");
     inName.type = "text";
     inName.id = "authPolicyAddDisplayName";
@@ -1090,7 +1142,7 @@
     inEn.id = "authPolicyAddEnabled";
     inEn.checked = true;
     lEn.appendChild(inEn);
-    lEn.appendChild(document.createTextNode(" enabled"));
+    lEn.appendChild(document.createTextNode(" " + LT("enabled")));
     const addBtn = document.createElement("button");
     addBtn.type = "button";
     addBtn.textContent = "Добавить провайдер";
@@ -1191,7 +1243,7 @@
     });
     const lTestProv = document.createElement("label");
     lTestProv.className = "small";
-    lTestProv.textContent = "provider_id (опц.)";
+    lTestProv.textContent = LT("provider_id (опц.)");
     const inTestProv = document.createElement("input");
     inTestProv.type = "text";
     inTestProv.id = "authPolicyTestProviderId";
@@ -1475,6 +1527,56 @@
           cap.textContent = "Источник: GET " + API + fetchPathUsed;
           summary.querySelector(".json-table-wrap")?.remove();
           summary.querySelectorAll(".json-panel-note").forEach((n) => n.remove());
+          summary.querySelector(".stats-grid")?.remove();
+          if (section.id === "core-read-receipts" && data && typeof data.total_rows === "number") {
+            renderAdminKpiCards(summary, [
+              { label: "Строк read receipts", value: String(data.total_rows) },
+            ]);
+          } else if (section.id === "core-e2ee-mls" && data && typeof data === "object") {
+            renderAdminKpiCards(summary, [
+              { label: "MLS groups", value: String(data.mls_group_count ?? "—") },
+              { label: "Pending migrations", value: String(data.pending_migrations_count ?? "—") },
+              { label: "MLS status", value: String(data.mls_status ?? "—") },
+              {
+                label: "OpenMLS native",
+                value: data.openmls_native_binding ? "да" : "нет",
+              },
+            ]);
+          } else if (section.id === "core-purge-status" && data && typeof data === "object") {
+            renderAdminKpiCards(summary, [
+              { label: "Очищено строк", value: String(data.total_purged ?? "—") },
+              { label: "Ошибок", value: String(data.errors_count ?? "—") },
+              { label: "В очереди", value: String(data.pending_count ?? "—") },
+              {
+                label: "Последний проход",
+                value: data.last_pass_at ? String(data.last_pass_at) : "—",
+              },
+            ]);
+          } else if (section.id === "core-admin-session" && data && typeof data === "object") {
+            renderAdminKpiCards(summary, [
+              { label: "Пользователь", value: String(data.username ?? data.sub ?? "—") },
+              {
+                label: "Realm roles",
+                value: Array.isArray(data.realm_roles)
+                  ? data.realm_roles.join(", ") || "—"
+                  : "—",
+              },
+            ]);
+          } else if (section.id === "core-product-modules" && data && typeof data === "object") {
+            const addons = Array.isArray(data.addons) ? data.addons : [];
+            const installed = addons.filter((a) => a && a.installed).length;
+            renderAdminKpiCards(summary, [
+              { label: "Base", value: String(data.base?.state ?? data.base?.label ?? "—") },
+              { label: "Addons", value: String(addons.length) },
+              { label: "Installed", value: String(installed) },
+            ]);
+          } else if (section.id === "core-admin-manifest" && data && typeof data === "object") {
+            const sections = Array.isArray(data.sections) ? data.sections : [];
+            renderAdminKpiCards(summary, [
+              { label: "Разделов", value: String(sections.length) },
+              { label: "API version", value: String(data.api_version ?? "—") },
+            ]);
+          }
           if (Array.isArray(data)) {
             renderArrayTable(data, summary);
           } else if (data && typeof data === "object") {
@@ -1492,15 +1594,15 @@
             suggestRow.className = "admin-toolbar export-suggest-toolbar";
           const lChat = document.createElement("label");
           lChat.className = "small";
-          lChat.textContent = "chat_id";
+          lChat.textContent = LT("ID чата");
           const inChat = document.createElement("input");
           inChat.type = "text";
           inChat.id = "exportSuggestChatId";
-          inChat.placeholder = "UUID чата";
+          inChat.placeholder = LT("UUID чата");
           lChat.appendChild(inChat);
           const lDispatch = document.createElement("label");
           lDispatch.className = "small";
-          lDispatch.textContent = "dispatch";
+          lDispatch.textContent = LT("Dispatch");
           const selDispatch = document.createElement("select");
           selDispatch.id = "exportSuggestDispatch";
           ["local", "nats", "both"].forEach((v) => {
@@ -1512,38 +1614,40 @@
           lDispatch.appendChild(selDispatch);
           const btnNewChat = document.createElement("button");
           btnNewChat.type = "button";
-          btnNewChat.textContent = "new group";
+          btnNewChat.textContent = LT("Новая группа");
           const btnDevSeed = document.createElement("button");
           btnDevSeed.type = "button";
-          btnDevSeed.title = "3 сообщения + PATCH retention (smoke)";
-          btnDevSeed.textContent = "seed+prepare";
+          btnDevSeed.title = LT("3 сообщения + PATCH retention (smoke)");
+          btnDevSeed.textContent = LT("seed+prepare");
           const btnSeedFile = document.createElement("button");
           btnSeedFile.type = "button";
-          btnSeedFile.title = "export-compliance-prep с include_file";
-          btnSeedFile.textContent = "seed+file";
+          btnSeedFile.title = LT("export-compliance-prep с include_file");
+          btnSeedFile.textContent = LT("seed+file");
           const btnPrepareRet = document.createElement("button");
           btnPrepareRet.type = "button";
-          btnPrepareRet.textContent = "retention";
+          btnPrepareRet.textContent = LT("retention");
           const btnSuggest = document.createElement("button");
           btnSuggest.type = "button";
-          btnSuggest.textContent = "export-suggest";
+          btnSuggest.textContent = LT("export-suggest");
           const btnEnqueue = document.createElement("button");
           btnEnqueue.type = "button";
-          btnEnqueue.textContent = "export";
+          btnEnqueue.textContent = LT("export");
           const btnComplianceFlow = document.createElement("button");
           btnComplianceFlow.type = "button";
-          btnComplianceFlow.title =
-            "prep → suggest → export → poll → download → attachments inspect";
-          btnComplianceFlow.textContent = "compliance flow";
+          btnComplianceFlow.title = LT(
+            "prep → suggest → export → poll → download → attachments inspect"
+          );
+          btnComplianceFlow.textContent = LT("compliance flow");
           const btnComplianceFlowFile = document.createElement("button");
           btnComplianceFlowFile.type = "button";
-          btnComplianceFlowFile.title =
-            "prep (include_file) → suggest → export → poll → download → inspect";
-          btnComplianceFlowFile.textContent = "flow+file";
+          btnComplianceFlowFile.title = LT(
+            "prep (include_file) → suggest → export → poll → download → inspect"
+          );
+          btnComplianceFlowFile.textContent = LT("flow+file");
           const btnPollExport = document.createElement("button");
           btnPollExport.type = "button";
-          btnPollExport.title = "poll status по chat_id + job_id (до 120s)";
-          btnPollExport.textContent = "poll";
+          btnPollExport.title = LT("poll status по chat_id + job_id (до 120s)");
+          btnPollExport.textContent = LT("poll");
           const suggestMsg = document.createElement("span");
           suggestMsg.className = "muted small";
 
@@ -1607,7 +1711,7 @@
             suggestMsg.textContent = "";
             try {
               const cid = await ensureChatId();
-              suggestMsg.textContent = "chat_id=" + cid;
+              suggestMsg.textContent = adminFmt("ID чата={id}", { id: cid });
               preEl.textContent = JSON.stringify({ chat_id: cid }, null, 2);
             } catch (e) {
               suggestMsg.textContent = e.message || String(e);
@@ -1636,7 +1740,7 @@
                   })
                 }
               );
-              suggestMsg.textContent = "retention OK";
+              suggestMsg.textContent = LT("retention OK");
               preEl.textContent = JSON.stringify(pol, null, 2);
             } catch (e) {
               suggestMsg.textContent = e.message || String(e);
@@ -1660,7 +1764,7 @@
               if (outCid) {
                 inChat.value = outCid;
               }
-              suggestMsg.textContent = "seed OK, chat=" + outCid;
+              suggestMsg.textContent = adminFmt("seed OK, chat={id}", { id: outCid });
               preEl.textContent = JSON.stringify(prep, null, 2);
             } catch (e) {
               suggestMsg.textContent = e.message || String(e);
@@ -1688,8 +1792,8 @@
               }
               const fileId = prep.file_id || prep.fileId || "";
               suggestMsg.textContent = fileId
-                ? "seed+file OK, file_id=" + fileId
-                : "seed+file OK, chat=" + cid;
+                ? adminFmt("seed+file OK, file_id={id}", { id: fileId })
+                : adminFmt("seed+file OK, chat={id}", { id: cid });
               preEl.textContent = JSON.stringify(prep, null, 2);
             } catch (e) {
               suggestMsg.textContent = e.message || String(e);
@@ -1709,7 +1813,9 @@
                 headers: { "Content-Type": "application/json" },
                 body: "{}"
               });
-              suggestMsg.textContent = "job_id=" + (res.job_id || res.jobId);
+              suggestMsg.textContent = adminFmt("job_id={id}", {
+                id: res.job_id || res.jobId,
+              });
               const jobInp = document.getElementById("exportInspectJobId");
               if (jobInp && (res.job_id || res.jobId)) {
                 jobInp.value = res.job_id || res.jobId;
@@ -1740,8 +1846,8 @@
                 }
               );
               suggestMsg.textContent = res.auto_queued_job_id
-                ? "OK, auto_queued_job_id=" + res.auto_queued_job_id
-                : "OK (" + res.dispatch + ")";
+                ? adminFmt("OK, auto_queued_job_id={id}", { id: res.auto_queued_job_id })
+                : adminFmt("OK ({dispatch})", { dispatch: res.dispatch });
               const jobInp = document.getElementById("exportInspectJobId");
               if (jobInp && res.auto_queued_job_id) {
                 jobInp.value = res.auto_queued_job_id;
@@ -1753,7 +1859,7 @@
           });
 
           async function runComplianceFlow(includeFile) {
-            suggestMsg.textContent = includeFile ? "flow+file…" : "flow…";
+            suggestMsg.textContent = includeFile ? LT("flow+file…") : LT("flow…");
             const cidIn = inChat.value.trim();
             const prepBody = {
               chat_id: cidIn || null,
@@ -1804,7 +1910,7 @@
                 jobInp.value = jobId;
               }
               if (!jobId) {
-                suggestMsg.textContent = "flow OK (no job_id)";
+                suggestMsg.textContent = LT("flow OK (no job_id)");
                 preEl.textContent = JSON.stringify(
                   { prep: prep, suggest: suggest, export: exportRes },
                   null,
@@ -1815,7 +1921,7 @@
               let finalStatus = null;
               try {
                 finalStatus = await pollExportJobStatus(cid, jobId, (st) => {
-                  suggestMsg.textContent = "poll " + st + " …";
+                  suggestMsg.textContent = adminFmt("poll {status} …", { status: st });
                 });
               } catch (pollErr) {
                 suggestMsg.textContent = pollErr.message || String(pollErr);
@@ -1837,8 +1943,11 @@
               const prepFid = prep.file_id || prep.fileId || "";
               suggestMsg.textContent =
                 includeFile && prepFid
-                  ? "flow OK, status=" + st + ", file_id=" + prepFid
-                  : "flow OK, status=" + st;
+                  ? adminFmt("flow OK, status={status}, file_id={id}", {
+                      status: st,
+                      id: prepFid,
+                    })
+                  : adminFmt("flow OK, status={status}", { status: st });
               preEl.textContent = JSON.stringify(
                 {
                   prep: prep,
@@ -1862,8 +1971,10 @@
                       "/attachments?limit=20"
                   );
                 } catch (attErr) {
-                  suggestMsg.textContent =
-                    "flow OK, status=" + st + "; attachments: " + (attErr.message || String(attErr));
+                  suggestMsg.textContent = adminFmt(
+                    "flow OK, status={status}; attachments: {err}",
+                    { status: st, err: attErr.message || String(attErr) }
+                  );
                 }
                 try {
                   manifest = await apiFetch(
@@ -1885,8 +1996,10 @@
                   );
                   const fc = att?.file_count ?? att?.fileCount ?? "?";
                   const mf = Array.isArray(manifest?.files) ? manifest.files.length : "?";
-                  suggestMsg.textContent =
-                    "flow OK, status=" + st + ", bundle скачан, files=" + fc + ", manifest=" + mf;
+                  suggestMsg.textContent = adminFmt(
+                    "flow OK, status={status}, bundle скачан, files={fc}, manifest={mf}",
+                    { status: st, fc: fc, mf: mf }
+                  );
                   if (att || manifest) {
                     preEl.textContent = JSON.stringify(
                       {
@@ -1903,8 +2016,10 @@
                     );
                   }
                 } catch (dlErr) {
-                  suggestMsg.textContent =
-                    "flow OK, status=" + st + "; download: " + (dlErr.message || String(dlErr));
+                  suggestMsg.textContent = adminFmt("flow OK, status={status}; download: {err}", {
+                    status: st,
+                    err: dlErr.message || String(dlErr),
+                  });
                 }
               }
           }
@@ -1935,9 +2050,11 @@
             }
             try {
               const finalStatus = await pollExportJobStatus(cid, jid, (st) => {
-                suggestMsg.textContent = "poll " + st + " …";
+                suggestMsg.textContent = adminFmt("poll {status} …", { status: st });
               });
-              suggestMsg.textContent = "status=" + (finalStatus?.status || "?");
+              suggestMsg.textContent = adminFmt("status={status}", {
+                status: finalStatus?.status || "?",
+              });
               preEl.textContent = JSON.stringify(finalStatus, null, 2);
             } catch (e) {
               suggestMsg.textContent = e.message || String(e);
@@ -1949,7 +2066,7 @@
 
           const btnCancel = document.createElement("button");
           btnCancel.type = "button";
-          btnCancel.textContent = "cancel";
+          btnCancel.textContent = LT("cancel");
           btnCancel.addEventListener("click", async () => {
             suggestMsg.textContent = "";
             const cid = inChat.value.trim();
@@ -1970,7 +2087,9 @@
                 "/admin/chats/" + encodeURIComponent(cid) + "/export/" + encodeURIComponent(jid),
                 { method: "DELETE" }
               );
-              suggestMsg.textContent = "cancelled=" + (res.cancelled || res.status);
+              suggestMsg.textContent = adminFmt("cancelled={status}", {
+                status: res.cancelled || res.status,
+              });
               preEl.textContent = JSON.stringify(res, null, 2);
             } catch (e) {
               suggestMsg.textContent = e.message || String(e);
@@ -2000,7 +2119,7 @@
             row.className = "admin-toolbar export-inspect-toolbar";
             const lJob = document.createElement("label");
             lJob.className = "small";
-            lJob.textContent = "job_id";
+            lJob.textContent = LT("job_id");
             const inJob = document.createElement("input");
             inJob.type = "text";
             inJob.id = "exportInspectJobId";
@@ -2023,7 +2142,7 @@
             row.appendChild(lJob);
             const lJobsFilter = document.createElement("label");
             lJobsFilter.className = "small";
-            lJobsFilter.textContent = "jobs status";
+            lJobsFilter.textContent = LT("jobs status");
             const selJobsStatus = document.createElement("select");
             selJobsStatus.id = "exportJobsStatusFilter";
             [
@@ -2055,7 +2174,7 @@
                   const st = await apiFetch(
                     "/admin/chats/" + encodeURIComponent(cid) + "/export/" + encodeURIComponent(jid) + "/status"
                   );
-                  inspectMsg.textContent = "status=" + st.status;
+                  inspectMsg.textContent = adminFmt("status={status}", { status: st.status });
                   preEl.textContent = JSON.stringify(st, null, 2);
                 } catch (e) {
                   inspectMsg.textContent = e.message || String(e);
@@ -2079,8 +2198,10 @@
                       encodeURIComponent(jid) +
                       "/attachments?limit=100"
                   );
-                  inspectMsg.textContent =
-                    "files " + String(att.file_count) + "/" + String(att.total_count);
+                  inspectMsg.textContent = adminFmt("files {count}/{total}", {
+                    count: String(att.file_count),
+                    total: String(att.total_count),
+                  });
                   summaryEl.querySelectorAll(".export-att-table").forEach((n) => n.remove());
                   const box = document.createElement("div");
                   box.className = "export-att-table";
@@ -2109,7 +2230,7 @@
                   if (st.job_id) {
                     inJob.value = st.job_id;
                   }
-                  inspectMsg.textContent = "status=" + st.status;
+                  inspectMsg.textContent = adminFmt("status={status}", { status: st.status });
                   preEl.textContent = JSON.stringify(st, null, 2);
                 } catch (e) {
                   inspectMsg.textContent = e.message || String(e);
@@ -2132,8 +2253,10 @@
                     jobsUrl += "&status=" + encodeURIComponent(statusFilter);
                   }
                   const list = await apiFetch(jobsUrl);
-                  inspectMsg.textContent =
-                    "jobs=" + String(list.job_count) + (list.status_filter ? " (" + list.status_filter + ")" : "");
+                  inspectMsg.textContent = adminFmt("jobs={count}{filter}", {
+                    count: String(list.job_count),
+                    filter: list.status_filter ? " (" + list.status_filter + ")" : "",
+                  });
                   summaryEl.querySelectorAll(".export-jobs-table").forEach((n) => n.remove());
                   const box = document.createElement("div");
                   box.className = "export-jobs-table";
@@ -2164,7 +2287,9 @@
                     jobsUrl += "&chat_id=" + encodeURIComponent(cid);
                   }
                   const list = await apiFetch(jobsUrl);
-                  inspectMsg.textContent = "all jobs=" + String(list.job_count);
+                  inspectMsg.textContent = adminFmt("all jobs={count}", {
+                    count: String(list.job_count),
+                  });
                   summaryEl.querySelectorAll(".export-jobs-table").forEach((n) => n.remove());
                   const box = document.createElement("div");
                   box.className = "export-jobs-table";
@@ -2205,7 +2330,7 @@
                       "/download?part=bundle",
                     "export-" + jid + ".zip"
                   );
-                  inspectMsg.textContent = "скачано (bundle)";
+                  inspectMsg.textContent = LT("скачано (bundle)");
                 } catch (e) {
                   inspectMsg.textContent = e.message || String(e);
                 }
@@ -2235,7 +2360,9 @@
                       encodeURIComponent(jid),
                     { method: "DELETE" }
                   );
-                  inspectMsg.textContent = "cancelled=" + (res.cancelled || res.status);
+                  inspectMsg.textContent = adminFmt("cancelled={status}", {
+                    status: res.cancelled || res.status,
+                  });
                   preEl.textContent = JSON.stringify(res, null, 2);
                 } catch (e) {
                   inspectMsg.textContent = e.message || String(e);
@@ -2263,7 +2390,9 @@
           appendJsonPanelReload(summary, reloadGuide);
           await reloadGuide();
         } else if (section.id === "core-audit-events") {
-          cap.textContent = "GET " + API + "/admin/audit-events — фильтры и пресеты export ниже.";
+          cap.textContent = LT(
+            "GET /api/v1/admin/audit-events — фильтры и пресеты export ниже."
+          );
           const reloadAudit = async () => {
             try {
               const fp = auditEventsFetchPath();
@@ -2278,7 +2407,9 @@
           appendJsonPanelReload(summary, reloadAudit);
           await reloadAudit();
         } else if (section.id === "core-organizations") {
-          cap.textContent = "GET " + API + "/admin/organizations — список и CRUD ниже.";
+          cap.textContent = LT(
+            "GET /api/v1/admin/organizations — список и CRUD ниже."
+          );
           const reloadOrgs = async () => {
             try {
               const d = await apiFetch("/admin/organizations");
@@ -2301,7 +2432,7 @@
           row.className = "admin-toolbar";
           const lUser = document.createElement("label");
           lUser.className = "small";
-          lUser.textContent = "user_id";
+          lUser.textContent = LT("user_id");
           const inUser = document.createElement("input");
           inUser.type = "text";
           inUser.id = "setUserOrgUserId";
@@ -2309,7 +2440,7 @@
           lUser.appendChild(inUser);
           const lOrg = document.createElement("label");
           lOrg.className = "small";
-          lOrg.textContent = "org_id";
+          lOrg.textContent = LT("org_id");
           const inOrg = document.createElement("input");
           inOrg.type = "text";
           inOrg.id = "setUserOrgOrgId";
@@ -2349,7 +2480,9 @@
           row.appendChild(btn);
           row.appendChild(msg);
           summary.appendChild(row);
-          pre.textContent = "UUID пользователя и организации (список — раздел «Организации»).";
+          pre.textContent = LT(
+            "UUID пользователя и организации (список — раздел «Организации»)."
+          );
         } else if (section.id === "core-auth-policy") {
           authPolicyTargetOrgId = null;
           cap.textContent =
@@ -2502,7 +2635,7 @@
           loadRow.appendChild(kindLbl);
           const idLbl = document.createElement("label");
           idLbl.className = "small";
-          idLbl.textContent = "UUID";
+          idLbl.textContent = LT("UUID");
           const idInp = document.createElement("input");
           idInp.type = "text";
           idInp.id = "retentionTargetId";
@@ -2650,7 +2783,7 @@
     const data = await apiFetch("/admin/ui/manifest");
     const ver = el("apiVersionLabel");
     if (ver && data.api_version) {
-      ver.textContent = "API " + data.api_version;
+      ver.textContent = LT("API ") + data.api_version;
       ver.hidden = false;
     }
     renderSections(data.sections || []);
@@ -2676,7 +2809,9 @@
               msg = j.message;
             }
           } catch (_) {}
-          el("authStatus").textContent = "Keycloak: " + msg + " — локальная сессия сброшена.";
+          el("authStatus").textContent = adminFmt("Keycloak: {msg} — локальная сессия сброшена.", {
+            msg: msg,
+          });
         } else {
           el("authStatus").textContent = "Выход выполнен (refresh отозван).";
         }

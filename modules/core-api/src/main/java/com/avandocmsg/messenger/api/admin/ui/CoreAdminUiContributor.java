@@ -30,7 +30,7 @@ public final class CoreAdminUiContributor implements AdminUiContributor {
             ),
             new AdminUiSectionDescriptor(
                 "core-external-stack",
-                "External stack (023)",
+                "Внешний стек (023)",
                 12,
                 AdminUiSectionKind.JSON_PANEL,
                 "/platform/external-stack/status"
@@ -72,28 +72,28 @@ public final class CoreAdminUiContributor implements AdminUiContributor {
             ),
             new AdminUiSectionDescriptor(
                 "core-directory-sync",
-                "Directory sync (LDAP)",
+                "Синхронизация каталога (LDAP)",
                 22,
                 AdminUiSectionKind.JSON_PANEL,
                 null
             ),
             new AdminUiSectionDescriptor(
                 "core-ip-allowlist",
-                "IP allowlist (org)",
+                "Список разрешённых IP (org)",
                 23,
                 AdminUiSectionKind.JSON_PANEL,
                 null
             ),
             new AdminUiSectionDescriptor(
                 "core-migration-import",
-                "Migration import",
+                "Импорт миграции",
                 24,
                 AdminUiSectionKind.JSON_PANEL,
                 null
             ),
             new AdminUiSectionDescriptor(
                 "core-federation-trust",
-                "Federation trust",
+                "Доверие федерации",
                 25,
                 AdminUiSectionKind.JSON_PANEL,
                 null
@@ -121,7 +121,7 @@ public final class CoreAdminUiContributor implements AdminUiContributor {
             ),
             new AdminUiSectionDescriptor(
                 "core-read-receipts",
-                "Read receipts",
+                "Отчёты о прочтении",
                 38,
                 AdminUiSectionKind.JSON_PANEL,
                 "/admin/read-receipts/stats"
@@ -142,14 +142,14 @@ public final class CoreAdminUiContributor implements AdminUiContributor {
             ),
             new AdminUiSectionDescriptor(
                 "core-legal-hold",
-                "Legal hold (extended)",
+                "Юридическое удержание (extended)",
                 41,
                 AdminUiSectionKind.JSON_PANEL,
                 null
             ),
             new AdminUiSectionDescriptor(
                 "core-purge-status",
-                "Purge status",
+                "Статус очистки",
                 42,
                 AdminUiSectionKind.JSON_PANEL,
                 "/admin/purge/status"

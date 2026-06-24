@@ -96,7 +96,7 @@ public final class MessageSendCoordinator {
             MessageId.of(id),
             ChatId.of(chatId),
             UserId.of(senderId),
-            MessageSendSupport.typeForEncrypted(request.type(), encrypted),
+            MessageSendSupport.typeForSend(request, encrypted),
             content,
             replyToMsgId,
             threadId,

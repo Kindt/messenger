@@ -4,6 +4,13 @@
 (function (global) {
   "use strict";
 
+  function modalCardHead(ctx, title, closeBtn) {
+    var head = ctx.el("div", "settings-head");
+    head.appendChild(ctx.el("h2", "settings-title", title));
+    head.appendChild(closeBtn);
+    return head;
+  }
+
   var KANBAN_COLS = ["todo", "doing", "done"];
 
   function mountThreadTools(ctx) {
@@ -184,8 +191,15 @@
     var ov = ctx.el("div", "phase5-overlay");
     ov.setAttribute("data-testid", "stickers-overlay");
     var card = ctx.el("div", "phase5-overlay-card");
-    card.appendChild(ctx.el("h3", "phase5-overlay-title", ctx.L("ui.phase5.stickersTitle")));
-    card.appendChild(ctx.el("h4", "phase5-overlay-sub", ctx.L("ui.phase5.stickerPacks")));
+    var closeBtn = ctx.iconBtn("✕", ctx.L("ui.common.close"), {
+      testId: "stickers-overlay-close",
+      onClick: function () {
+        ctx.closeStickersPanel();
+      },
+    });
+    card.appendChild(modalCardHead(ctx, ctx.L("ui.phase5.stickersTitle"), closeBtn));
+    var content = ctx.el("div", "settings-content phase5-overlay-content");
+    content.appendChild(ctx.el("h4", "phase5-overlay-sub", ctx.L("ui.phase5.stickerPacks")));
     var packGrid = ctx.el("div", "stickers-pack-grid");
     (ctx.state.stickerPacks || []).forEach(function (p, idx) {
       var btn = ctx.el("button", "stickers-pack-item");
@@ -208,7 +222,7 @@
     if (!(ctx.state.stickerPacks || []).length) {
       packGrid.appendChild(ctx.el("p", "phase5-hint", ctx.L("ui.phase5.stickersEmpty")));
     }
-    card.appendChild(packGrid);
+    content.appendChild(packGrid);
     var packCreateRow = ctx.el("div", "stickers-pack-create");
     var packInp = document.createElement("input");
     packInp.type = "text";
@@ -224,7 +238,7 @@
     });
     packCreateRow.appendChild(packInp);
     packCreateRow.appendChild(packCreateBtn);
-    card.appendChild(packCreateRow);
+    content.appendChild(packCreateRow);
     var grid = ctx.el("div", "stickers-gif-grid");
     (ctx.state.stickerGifs || []).forEach(function (g, idx) {
       var btn = ctx.el("button", "stickers-gif-item");
@@ -248,15 +262,8 @@
     if (!(ctx.state.stickerGifs || []).length) {
       grid.appendChild(ctx.el("p", "phase5-hint", ctx.L("ui.phase5.stickersEmpty")));
     }
-    card.appendChild(grid);
-    card.appendChild(
-      ctx.iconBtn("✕", ctx.L("ui.common.close"), {
-        testId: "stickers-overlay-close",
-        onClick: function () {
-          ctx.closeStickersPanel();
-        },
-      })
-    );
+    content.appendChild(grid);
+    card.appendChild(content);
     ov.appendChild(card);
     ov.onclick = function (e) {
       if (e.target === ov) ctx.closeStickersPanel();
@@ -269,25 +276,34 @@
     var ov = ctx.el("div", "phase5-overlay");
     ov.setAttribute("data-testid", "ai-assist-overlay");
     var card = ctx.el("div", "phase5-overlay-card ai-assist-card");
-    card.appendChild(ctx.el("h3", "phase5-overlay-title", ctx.L("ui.phase5.aiAssistTitle")));
+    var closeBtn = ctx.iconBtn("✕", ctx.L("ui.common.close"), {
+      testId: "ai-assist-close",
+      onClick: function () {
+        ctx.closeAiAssistPanel();
+      },
+    });
+    card.appendChild(modalCardHead(ctx, ctx.L("ui.phase5.aiAssistTitle"), closeBtn));
+    var content = ctx.el("div", "settings-content phase5-overlay-content");
     var inp = document.createElement("textarea");
     inp.className = "ai-assist-input";
     inp.setAttribute("data-testid", "ai-assist-input");
     inp.rows = 3;
     inp.placeholder = ctx.L("ui.phase5.aiAssistPlaceholder");
-    card.appendChild(inp);
-    var runBtn = ctx.iconBtn("▶", ctx.L("ui.phase5.aiAssistRun"), {
-      testId: "ai-assist-run",
-      primary: true,
-      disabled: ctx.state.busy,
-      onClick: function () {
-        ctx.runAiAssist((inp.value || "").trim());
-      },
-    });
-    card.appendChild(runBtn);
+    content.appendChild(inp);
+    var foot = ctx.el("div", "settings-foot phase5-modal-actions");
+    foot.appendChild(
+      ctx.iconBtn("▶", ctx.L("ui.phase5.aiAssistRun"), {
+        testId: "ai-assist-run",
+        primary: true,
+        disabled: ctx.state.busy,
+        onClick: function () {
+          ctx.runAiAssist((inp.value || "").trim());
+        },
+      })
+    );
     if (ctx.state.phase5AiReply) {
-      card.appendChild(ctx.el("pre", "ai-assist-reply", ctx.state.phase5AiReply));
-      card.appendChild(
+      content.appendChild(ctx.el("pre", "ai-assist-reply", ctx.state.phase5AiReply));
+      foot.appendChild(
         ctx.iconBtn("↩", ctx.L("ui.phase5.aiInsert"), {
           testId: "ai-assist-insert",
           disabled: ctx.state.busy,
@@ -297,14 +313,8 @@
         })
       );
     }
-    card.appendChild(
-      ctx.iconBtn("✕", ctx.L("ui.common.close"), {
-        testId: "ai-assist-close",
-        onClick: function () {
-          ctx.closeAiAssistPanel();
-        },
-      })
-    );
+    content.appendChild(foot);
+    card.appendChild(content);
     ov.appendChild(card);
     ov.onclick = function (e) {
       if (e.target === ov) ctx.closeAiAssistPanel();

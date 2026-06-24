@@ -239,6 +239,7 @@
     chatPreview: {},
     typingExpireByChat: {},
     readReceiptsByMessage: {},
+    readReceiptPopupMessageId: null,
     replyTo: null,
     reactionsByMsg: {},
     shouldScrollThread: false,
@@ -399,6 +400,16 @@
     preserveBlobs: true,
   };
   var uiFormatUtils = window.KorusUiFormatUtils || {
+    instantEpochMs: function (value) {
+      if (value == null || value === "") return NaN;
+      if (typeof value === "number") return value > 100000000000 ? value : value * 1000;
+      var raw = String(value).trim();
+      if (/^-?\d+(\.\d+)?$/.test(raw)) {
+        var n = Number(raw);
+        return n > 100000000000 ? n : n * 1000;
+      }
+      return new Date(raw).getTime();
+    },
     formatInstantLabel: function (iso) {
       if (!iso) return "—";
       try {
@@ -3443,6 +3454,10 @@
     return uiFormatUtils.formatInstantLabel(iso);
   }
 
+  function instantEpochMs(value) {
+    return uiFormatUtils.instantEpochMs ? uiFormatUtils.instantEpochMs(value) : new Date(value).getTime();
+  }
+
   function formatChatListTime(ms) {
     return uiFormatUtils.formatChatListTime(ms);
   }
@@ -3450,7 +3465,7 @@
   function chatListTimeMs(c) {
     var prev = state.chatPreview[c.id];
     if (prev && prev.at) return prev.at;
-    if (c.created_at) return new Date(c.created_at).getTime();
+    if (c.created_at) return instantEpochMs(c.created_at);
     return 0;
   }
 
@@ -4496,7 +4511,7 @@
       m.type,
       previewContent,
       m.sender_id,
-      new Date(m.created_at).getTime(),
+      instantEpochMs(m.created_at),
       m.id
     );
   }
@@ -4793,16 +4808,13 @@
 
   function showReadReceiptPopup(messageId) {
     var rr = state.readReceiptsByMessage[messageId];
-    if (!rr) {
-      window.alert(L("readReceipts.none"));
+    if (!rr || !Object.keys(rr).length) {
+      state.error = L("readReceipts.none");
+      render();
       return;
     }
-    var ids = Object.keys(rr);
-    if (!ids.length) {
-      window.alert(L("readReceipts.none"));
-      return;
-    }
-    window.alert(L("readReceipts.title") + ":\n" + ids.join("\n"));
+    state.readReceiptPopupMessageId = messageId;
+    render();
   }
 
   function scheduleUserSearch() {
@@ -5863,7 +5875,7 @@
       reply_to_msg_id: replyTo,
       deleted: false,
       created_at: data.createdAt
-        ? new Date(data.createdAt).toISOString()
+        ? new Date(instantEpochMs(data.createdAt)).toISOString()
         : new Date().toISOString(),
       edited_at: null,
       visibility_ttl_seconds:
@@ -5916,7 +5928,7 @@
         last.type || "text",
         L("ui.message.deleted"),
         last.sender_id,
-        new Date(last.created_at).getTime(),
+        instantEpochMs(last.created_at),
         last.id
       );
     } else {
@@ -6177,7 +6189,7 @@
   function messageExpiryEpochMs(m) {
     var ttl = messageVisibilityTtlSeconds(m);
     if (!ttl || !m || !m.created_at) return null;
-    var created = Date.parse(m.created_at);
+    var created = instantEpochMs(m.created_at);
     if (!created || isNaN(created)) return null;
     return created + ttl * 1000;
   }
@@ -6591,7 +6603,7 @@
   function chatActivityMs(c) {
     var prev = state.chatPreview[c.id];
     if (prev && prev.at) return prev.at;
-    if (c.created_at) return new Date(c.created_at).getTime();
+    if (c.created_at) return instantEpochMs(c.created_at);
     return 0;
   }
 
@@ -6689,6 +6701,72 @@
     return L("ui.brand.tagline");
   }
 
+  function uiLabelFallback(key, ruFallback, fallback) {
+    var translated = L(key);
+    if (translated && translated !== key) return translated;
+    var locale = i18n && i18n.getLocale ? i18n.getLocale() : "ru";
+    return locale === "ru" ? ruFallback : fallback;
+  }
+
+  function sidebarTabButton(icon, labelKey, ruFallback, enFallback, active, testId, onClick) {
+    var btn = el("button", "sidebar-tab" + (active ? " active" : ""));
+    btn.type = "button";
+    var label = uiLabelFallback(labelKey, ruFallback, enFallback);
+    btn.title = label;
+    btn.setAttribute("aria-label", label);
+    btn.setAttribute("data-testid", testId);
+    btn.appendChild(el("span", "sidebar-tab-icon", icon));
+    btn.appendChild(el("span", "sidebar-tab-label", label));
+    btn.onclick = onClick;
+    return btn;
+  }
+
+  function sidebarChipButton(icon, label, active, testId, extraCls, onClick) {
+    var btn = el(
+      "button",
+      "sidebar-chip" + (active ? " active" : "") + (extraCls ? " " + extraCls : "")
+    );
+    btn.type = "button";
+    btn.title = label;
+    btn.setAttribute("aria-label", label);
+    btn.setAttribute("data-testid", testId);
+    btn.appendChild(el("span", "sidebar-chip-icon", icon));
+    btn.appendChild(el("span", "sidebar-chip-label", label));
+    btn.onclick = onClick;
+    return btn;
+  }
+
+  function modalCardHead(titleText, closeBtn) {
+    var head = el("div", "settings-head");
+    head.appendChild(el("h2", "settings-title", titleText));
+    head.appendChild(closeBtn);
+    return head;
+  }
+
+  function memberRoleLabel(role) {
+    var key = "ui.members.role." + role;
+    var translated = L(key);
+    if (translated && translated !== key) return translated;
+    return role;
+  }
+
+  function readReceiptUserLabel(userId) {
+    if (state.chatMembers && state.chatMembers.length) {
+      for (var i = 0; i < state.chatMembers.length; i++) {
+        var m = state.chatMembers[i];
+        if (m && m.user_id === userId) {
+          return m.display_name || m.username || userId.slice(0, 8);
+        }
+      }
+    }
+    return userId.slice(0, 8);
+  }
+
+  function closeReadReceiptPopup() {
+    state.readReceiptPopupMessageId = null;
+    render();
+  }
+
   function appendAppTitle(parent) {
     var row = el("div", "app-title-row");
     row.appendChild(el("div", "app-title-logo", "K"));
@@ -6756,6 +6834,7 @@
     brandRow.appendChild(brandText);
     head.appendChild(brandRow);
     card.appendChild(head);
+    var authContent = el("div", "auth-card-content");
     var tabs = el("div", "auth-tabs");
     var showRegister = authRegistrationAllowed();
     var tLogin = el("button", "auth-tab" + (state.authTab === "login" ? " active" : ""), L("auth.login"));
@@ -6780,7 +6859,7 @@
     } else if (state.authTab === "register") {
       state.authTab = "login";
     }
-    card.appendChild(tabs);
+    authContent.appendChild(tabs);
     if (state.loginOptions && state.loginOptions.methods) {
       var ssoWrap = el("div", "auth-sso-list");
       state.loginOptions.methods.forEach(function (m) {
@@ -6794,11 +6873,11 @@
         ssoWrap.appendChild(btn);
       });
       if (ssoWrap.childNodes.length) {
-        card.appendChild(ssoWrap);
+        authContent.appendChild(ssoWrap);
       }
     }
     if (state.error) {
-      card.appendChild(el("div", "error-banner auth-error", state.error));
+      authContent.appendChild(el("div", "error-banner auth-error", state.error));
     }
     var showPasswordForm =
       (state.authTab === "login" && authPasswordAllowed()) ||
@@ -6828,8 +6907,9 @@
     submit.disabled = state.busy;
     submit.setAttribute("data-testid", "auth-submit");
     form.appendChild(submit);
-    card.appendChild(form);
+    authContent.appendChild(form);
     }
+    card.appendChild(authContent);
     card.appendChild(el("p", "auth-foot", L("auth.hint")));
     shell.appendChild(card);
     root.appendChild(shell);
@@ -7269,6 +7349,7 @@
       })
     );
     panel.appendChild(ph);
+    var panelContent = el("div", "integration-panel-content");
     var frameWrap = el("div", "integration-panel-frame");
     var iframe = document.createElement("iframe");
     iframe.className = "integration-panel-iframe";
@@ -7281,7 +7362,8 @@
     iframe.referrerPolicy = "no-referrer-when-downgrade";
     iframe.src = state.integrationPanel.url;
     frameWrap.appendChild(iframe);
-    panel.appendChild(frameWrap);
+    panelContent.appendChild(frameWrap);
+    panel.appendChild(panelContent);
     shell.appendChild(panel);
   }
 
@@ -7313,36 +7395,48 @@
     ph.appendChild(cl);
     panel.appendChild(ph);
     var modeBar = el("div", "call-mode-bar");
-    var bMesh = iconBtn("📡", "Mesh WebRTC", {
+    function callModeButton(btn, label) {
+      btn.className += " call-mode-tab";
+      btn.appendChild(el("span", "call-mode-label", label));
+      return btn;
+    }
+    function callModeLabel(key, ruFallback, fallback) {
+      return uiLabelFallback(key, ruFallback, fallback);
+    }
+    var bMesh = callModeButton(iconBtn("📡", "Mesh WebRTC", {
       primary: state.callMode === "mesh",
       testId: "mesh-webrtc-button",
       disabled: state.conferenceBusy,
       onClick: function () {
         switchCallMode("mesh");
       },
-    });
-    var bJitsi = iconBtn("🎥", "Jitsi", {
+    }), callModeLabel("ui.call.modeMesh", "Звонок", "Call"));
+    var bJitsi = callModeButton(iconBtn("🎥", "Jitsi", {
       primary: state.callMode === "jitsi",
       disabled: state.conferenceBusy || state.busy,
       onClick: function () {
         switchCallMode("jitsi");
       },
-    });
+    }), callModeLabel("ui.call.modeJitsi", "Встреча", "Meeting"));
     modeBar.appendChild(bMesh);
     modeBar.appendChild(bJitsi);
     if (window.KorusUiCallLivekit && KorusUiCallLivekit.groupCallSfuEnabled(state)) {
       modeBar.appendChild(
-        iconBtn("☁", "LiveKit SFU", {
+        callModeButton(iconBtn("☁", "LiveKit SFU", {
           primary: state.callMode === "livekit",
           testId: "livekit-sfu-button",
           disabled: state.conferenceBusy || state.callPanelToggleBusy,
           onClick: function () {
             switchCallMode("livekit");
           },
-        })
+        }), callModeLabel("ui.call.modeLivekit", "Эфир", "Live"))
       );
     }
     panel.appendChild(modeBar);
+    var panelContent = el("div", "call-panel-content");
+    var callLobby = el("section", "call-lobby");
+    var callLiveStage = el("section", "call-live-stage");
+    panel.appendChild(panelContent);
     if (state.tokens) {
       var confSec = el("div", "call-conferences");
       var confHead = el("div", "call-conferences-head");
@@ -7420,9 +7514,9 @@
       } else {
         confSec.appendChild(el("p", "call-conf-empty", L("conference.noneActive")));
       }
-      panel.appendChild(confSec);
+      callLobby.appendChild(confSec);
       if (window.KorusUiLiveSession) {
-        KorusUiLiveSession.renderLiveSection(panel, state, {
+        KorusUiLiveSession.renderLiveSection(callLobby, state, {
           el: el,
           iconBtn: iconBtn,
           L: L,
@@ -7431,7 +7525,7 @@
         });
       }
       if (window.KorusUiCallLivekit && state.callMode === "livekit") {
-        KorusUiCallLivekit.renderLiveKitSection(panel, state, {
+        KorusUiCallLivekit.renderLiveKitSection(callLiveStage, state, {
           el: el,
           iconBtn: iconBtn,
           L: L,
@@ -7440,13 +7534,16 @@
         });
       }
     }
+    if (callLobby.childNodes.length && state.callMode !== "mesh") {
+      panelContent.appendChild(callLobby);
+    }
     if (state.callMode === "mesh" && !meshCallChatReady()) {
-      panel.appendChild(el("p", "call-hint call-hint-warn", L("conference.meshNeedsChatHint")));
+      panelContent.appendChild(el("p", "call-hint call-hint-warn", L("conference.meshNeedsChatHint")));
     }
     if (state.activeConference && conferenceIsTracked(state.activeConference)) {
       var confAdrBar = uiCallAdr.mountConfAdrBar(getPhase5UiCtx(), state.activeConference);
       if (confAdrBar) {
-        panel.appendChild(confAdrBar);
+        callLiveStage.appendChild(confAdrBar);
       }
     }
     if (state.callMode === "jitsi" && state.activeConference && state.activeConference.join_url) {
@@ -7457,7 +7554,7 @@
             ? state.mediaCaps.jitsi_base_url
             : "meet.jit.si",
       });
-      panel.appendChild(jHint);
+      callLiveStage.appendChild(jHint);
       if (
         conferenceIsTracked(state.activeConference) &&
         state.activeConference.conference_id &&
@@ -7498,7 +7595,7 @@
           partList.appendChild(el("li", "call-participant-row call-participant-empty", "…"));
         }
         partSec.appendChild(partList);
-        panel.appendChild(partSec);
+        callLiveStage.appendChild(partSec);
       }
       var jWrap = el("div", "call-jitsi-wrap");
       var iframe = getOrCreateJitsiIframe();
@@ -7506,7 +7603,7 @@
         iframe.src = state.activeConference.join_url;
       }
       jWrap.appendChild(iframe);
-      panel.appendChild(jWrap);
+      callLiveStage.appendChild(jWrap);
       var jBar = el("div", "call-toolbar");
       jBar.appendChild(
         iconBtn("📋", L("conference.copyLinkHint"), {
@@ -7567,22 +7664,19 @@
         jBar.lastChild.title = L("conference.endGuestHint");
         jBar.lastChild.setAttribute("aria-label", L("conference.endGuestHint"));
       }
+      panelContent.appendChild(callLiveStage);
       panel.appendChild(jBar);
       shell.appendChild(panel);
       return;
     }
     if (state.callMode !== "mesh") {
+      if (callLiveStage.childNodes.length) {
+        panelContent.appendChild(callLiveStage);
+      }
       shell.appendChild(panel);
       return;
     }
-    panel.appendChild(
-      el(
-        "p",
-        "call-hint",
-        "WebRTC mesh через NATS (rtc.signal). ICE: STUN по умолчанию; TURN — WEB_CLIENT_RTC_ICE_SERVERS в /web-client-env.js."
-      )
-    );
-    var stage = el("div", "call-stage");
+    var stage = el("div", "call-stage call-stage-mesh");
     var mainVid = el("div", "call-main-wrap");
     mainVid.id = "callLocalStage";
     var localName = state.myDisplayName || jwtSub(state.tokens && state.tokens.access_token) || "?";
@@ -7602,22 +7696,22 @@
     mainVid.appendChild(localBadge);
     stage.appendChild(mainVid);
     if (state.callScreenStream) {
-      var sw = el("div", "call-screen-wrap");
-      var sv = document.createElement("video");
-      sv.id = "callScreenVideo";
-      sv.className = "call-video call-screen";
-      sv.autoplay = true;
-      sv.playsInline = true;
-      sv.srcObject = state.callScreenStream;
-      sw.appendChild(sv);
-      var wm = el("div", "call-screen-watermark");
-      wm.setAttribute("data-testid", "call-screen-watermark");
-      var wmText = el("div", "call-screen-watermark-text", callWatermarkText());
-      wm.appendChild(wmText);
-      sw.appendChild(wm);
-      stage.appendChild(sw);
+      var shareStatus = el("div", "call-screen-status");
+      shareStatus.setAttribute("data-testid", "call-screen-status");
+      shareStatus.appendChild(el("div", "call-screen-status-title", L("ui.call.screenSharing")));
+      shareStatus.appendChild(el("p", "call-screen-status-text", callWatermarkText()));
+      shareStatus.appendChild(
+        iconBtn("⏹", L("ui.call.stopScreen"), {
+          size: "sm",
+          testId: "call-screen-status-stop",
+          onClick: function () {
+            toggleScreenShare();
+          },
+        })
+      );
+      stage.appendChild(shareStatus);
     }
-    panel.appendChild(stage);
+    callLiveStage.appendChild(stage);
     var thumbs = el("div", "call-thumbs");
     thumbs.appendChild(el("span", "call-thumbs-label", L("ui.call.thumbs")));
     var c1 = document.createElement("canvas");
@@ -7626,7 +7720,7 @@
     c2.className = "call-thumb-canvas";
     thumbs.appendChild(c1);
     thumbs.appendChild(c2);
-    panel.appendChild(thumbs);
+    callLiveStage.appendChild(thumbs);
     var remotes = el("div", "call-remotes");
     remotes.appendChild(el("div", "call-remotes-title", L("ui.call.remotes")));
     state.rtcPeerIds.forEach(function (pid) {
@@ -7665,7 +7759,8 @@
         el("div", "call-participant-slot", L("ui.call.aloneInChat"))
       );
     }
-    panel.appendChild(remotes);
+    callLiveStage.appendChild(remotes);
+    panelContent.appendChild(callLiveStage);
     var bar = el("div", "call-toolbar");
     var bMic = iconBtn(state.callMicOn ? "🎤" : "🔇", state.callMicOn ? L("ui.call.micOn") : L("ui.call.micOff"), {
       primary: state.callMicOn,
@@ -8335,10 +8430,19 @@
     sCard.setAttribute("aria-modal", "true");
     sCard.setAttribute("aria-labelledby", "settings-dialog-title");
 
+    var sHead = el("div", "settings-head");
     var sTitle = el("h2", "settings-title", L("ui.settings.title"));
     sTitle.id = "settings-dialog-title";
-    sCard.appendChild(sTitle);
+    sHead.appendChild(sTitle);
+    var sClose = iconBtn("✕", L("ui.common.close"), {
+      primary: true,
+      testId: "settings-close",
+      onClick: closeSettingsModal,
+    });
+    sHead.appendChild(sClose);
+    sCard.appendChild(sHead);
 
+    var sContent = el("div", "settings-content");
     var tablist = el("div", "settings-tablist");
     tablist.setAttribute("role", "tablist");
     tablist.setAttribute("aria-label", L("ui.settings.tabListLabel"));
@@ -8381,7 +8485,7 @@
       })(tabId);
       tablist.appendChild(tabBtn);
     });
-    sCard.appendChild(tablist);
+    sContent.appendChild(tablist);
 
     var sBody = el("div", "settings-body");
     SETTINGS_TAB_IDS.forEach(function (tabId) {
@@ -8404,14 +8508,8 @@
       }
       sBody.appendChild(tabPanel);
     });
-    sCard.appendChild(sBody);
-
-    var sClose = iconBtn("✕", L("ui.common.close"), {
-      primary: true,
-      testId: "settings-close",
-      onClick: closeSettingsModal,
-    });
-    sCard.appendChild(sClose);
+    sContent.appendChild(sBody);
+    sCard.appendChild(sContent);
 
     sOv.appendChild(sCard);
     sOv.onclick = function (e) {
@@ -8695,57 +8793,58 @@
     );
     sideToolbar.appendChild(sideActs);
     var tabs = el("div", "sidebar-tabs");
-    var tabChats = el(
-      "button",
-      "sidebar-tab sidebar-tab-icon" + (state.sidebarMode === "chats" ? " active" : ""),
-      "💬"
+    tabs.appendChild(
+      sidebarTabButton(
+        "💬",
+        "ui.sidebar.chats",
+        "Чаты",
+        "Chats",
+        state.sidebarMode === "chats",
+        "sidebar-tab-chats",
+        function () {
+          state.sidebarMode = "chats";
+          render();
+        }
+      )
     );
-    tabChats.type = "button";
-    tabChats.title = L("ui.sidebar.chats");
-    tabChats.setAttribute("aria-label", L("ui.sidebar.chats"));
-    tabChats.setAttribute("data-testid", "sidebar-tab-chats");
-    tabChats.onclick = function () {
-      state.sidebarMode = "chats";
-      render();
-    };
-    var tabContacts = el(
-      "button",
-      "sidebar-tab sidebar-tab-icon" + (state.sidebarMode === "contacts" ? " active" : ""),
-      "👥"
+    tabs.appendChild(
+      sidebarTabButton(
+        "👥",
+        "ui.sidebar.contacts",
+        "Контакты",
+        "Contacts",
+        state.sidebarMode === "contacts",
+        "sidebar-tab-contacts",
+        function () {
+          if (state.sidebarMode === "contacts") return;
+          state.sidebarMode = "contacts";
+          loadContacts().then(render);
+        }
+      )
     );
-    tabContacts.type = "button";
-    tabContacts.title = L("ui.sidebar.contacts");
-    tabContacts.setAttribute("aria-label", L("ui.sidebar.contacts"));
-    tabContacts.setAttribute("data-testid", "sidebar-tab-contacts");
-    tabContacts.onclick = function () {
-      if (state.sidebarMode === "contacts") return;
-      state.sidebarMode = "contacts";
-      loadContacts().then(render);
-    };
-    var tabIntegrations = el(
-      "button",
-      "sidebar-tab sidebar-tab-icon" + (state.sidebarMode === "integrations" ? " active" : ""),
-      "🧩"
-    );
-    tabIntegrations.type = "button";
-    tabIntegrations.title = L("ui.sidebar.integrations");
-    tabIntegrations.setAttribute("aria-label", L("ui.sidebar.integrations"));
-    tabIntegrations.setAttribute("data-testid", "sidebar-tab-integrations");
-    tabIntegrations.onclick = function () {
-      if (state.sidebarMode === "integrations") return;
-      state.sidebarMode = "integrations";
-      loadIntegrations().then(render);
-    };
-    tabs.appendChild(tabChats);
-    tabs.appendChild(tabContacts);
     if (isPlatformFeatureEnabled("integrations.sidebar.open")) {
-      tabs.appendChild(tabIntegrations);
+      tabs.appendChild(
+        sidebarTabButton(
+          "🧩",
+          "ui.sidebar.integrations",
+          "Интеграции",
+          "Integrations",
+          state.sidebarMode === "integrations",
+          "sidebar-tab-integrations",
+          function () {
+            if (state.sidebarMode === "integrations") return;
+            state.sidebarMode = "integrations";
+            loadIntegrations().then(render);
+          }
+        )
+      );
     } else if (state.sidebarMode === "integrations") {
       state.sidebarMode = "chats";
     }
     sideToolbar.appendChild(tabs);
     sh.appendChild(sideToolbar);
     side.appendChild(sh);
+    var sidebarContent = el("div", "sidebar-content");
     var qTrim = state.sidebarSearch.trim();
     if (qTrim.length >= 2) {
       var usBlock = el("div", "user-search-block");
@@ -8799,7 +8898,7 @@
       } else if (state.userSearchHits && !state.userSearchHits.length) {
         usBlock.appendChild(el("div", "user-search-hint", L("ui.sidebar.noUsers")));
       }
-      side.appendChild(usBlock);
+      sidebarContent.appendChild(usBlock);
     }
     if (state.sidebarMode === "contacts") {
       var cList = el("div", "chat-list contacts-list");
@@ -8833,7 +8932,7 @@
           el("div", "chat-list-empty", L("ui.sidebar.noContacts"))
         );
       }
-      side.appendChild(cList);
+      sidebarContent.appendChild(cList);
       var impBlock = el("div", "contact-import-block");
       var impLabel = el("div", "user-search-label");
       impLabel.textContent = L("ui.sidebar.importLabel");
@@ -8856,7 +8955,7 @@
         },
       });
       impBlock.appendChild(bImp);
-      side.appendChild(impBlock);
+      sidebarContent.appendChild(impBlock);
     } else if (state.sidebarMode === "integrations") {
       var iList = el("div", "chat-list integrations-list");
       var searchRow = el("div", "integrations-market-search");
@@ -8989,43 +9088,45 @@
           iList.appendChild(row);
         });
       }
-      side.appendChild(iList);
+      sidebarContent.appendChild(iList);
     } else {
     var folderBar = el("div", "sidebar-folder-bar");
     ["all", "work", "personal", "archive"].forEach(function (fid) {
       var tip = sidebarFolderLabel(fid);
       folderBar.appendChild(
-        iconBtn(SIDEBAR_FOLDER_ICONS[fid], tip, {
-          cls:
-            "sidebar-folder-chip sidebar-folder-icon" +
-            (state.sidebarFolder === fid ? " active" : ""),
-          testId: "sidebar-folder-" + fid,
-          onClick: function () {
+        sidebarChipButton(
+          SIDEBAR_FOLDER_ICONS[fid],
+          tip,
+          state.sidebarFolder === fid,
+          "sidebar-folder-" + fid,
+          "sidebar-folder-chip",
+          function () {
             state.sidebarFolder = fid;
             render();
-          },
-        })
+          }
+        )
       );
     });
-    side.appendChild(folderBar);
+    sidebarContent.appendChild(folderBar);
     var filterBar = el("div", "sidebar-filter-bar");
     var filterIcons = { all: "≡", unread: "●", mentions: "@" };
     ["all", "unread", "mentions"].forEach(function (fid) {
       var flabel = sidebarFilterLabel(fid);
       filterBar.appendChild(
-        iconBtn(filterIcons[fid] || "·", flabel, {
-          cls:
-            "sidebar-filter-chip" +
-            (state.sidebarChatFilter === fid ? " active" : ""),
-          testId: "sidebar-filter-" + fid,
-          onClick: function () {
+        sidebarChipButton(
+          filterIcons[fid] || "·",
+          flabel,
+          state.sidebarChatFilter === fid,
+          "sidebar-filter-" + fid,
+          "sidebar-filter-chip",
+          function () {
             state.sidebarChatFilter = fid;
             render();
-          },
-        })
+          }
+        )
       );
     });
-    side.appendChild(filterBar);
+    sidebarContent.appendChild(filterBar);
     var list = el("div", "chat-list");
     list.addEventListener("scroll", function () {
       if (list.scrollTop + list.clientHeight >= list.scrollHeight - 48) {
@@ -9110,8 +9211,9 @@
       b.appendChild(row);
       list.appendChild(b);
     });
-    side.appendChild(list);
+    sidebarContent.appendChild(list);
     }
+    side.appendChild(sidebarContent);
     main.appendChild(side);
     var thread = el("section", "thread");
     if (!state.selectedId) {
@@ -9267,6 +9369,8 @@
       }
       th.appendChild(thActs);
       thread.appendChild(th);
+      var threadBody = el("div", "thread-body");
+      thread.appendChild(threadBody);
       var threadLiveConf = activeConferenceInChat(state.selectedId);
       if (threadLiveConf && state.selectedId !== state.savedChatId) {
         var confBanner = el("div", "conference-live-banner");
@@ -9303,11 +9407,11 @@
             },
           })
         );
-        thread.appendChild(confBanner);
+        threadBody.appendChild(confBanner);
       }
       var phase5Tools = uiPhase5Ext.mountThreadTools(getPhase5UiCtx());
       if (phase5Tools) {
-        thread.appendChild(phase5Tools);
+        threadBody.appendChild(phase5Tools);
       }
       var tSearchRow = el("div", "thread-search-row");
       var tSearch = el("input");
@@ -9321,9 +9425,9 @@
         render();
       };
       tSearchRow.appendChild(tSearch);
-      thread.appendChild(tSearchRow);
+      threadBody.appendChild(tSearchRow);
       if (state.threadSearchBusy) {
-        thread.appendChild(el("div", "thread-search-hint", L("ui.common.searching")));
+        threadBody.appendChild(el("div", "thread-search-hint", L("ui.common.searching")));
       } else if (state.threadSearchHits && state.threadSearch.trim().length >= 2) {
         var hitsBox = el("div", "thread-search-hits");
         if (!state.threadSearchHits.length) {
@@ -9339,7 +9443,7 @@
             hitsBox.appendChild(hb);
           });
         }
-        thread.appendChild(hitsBox);
+        threadBody.appendChild(hitsBox);
       }
       if (state.pinnedMessages.length) {
         var pinsBar = el("div", "thread-pins");
@@ -9355,19 +9459,19 @@
           };
           pinsBar.appendChild(pinBtn);
         });
-        thread.appendChild(pinsBar);
+        threadBody.appendChild(pinsBar);
       }
       var pollsSection = uiPolls.mountPollsSection(getPollsUiCtx());
       if (pollsSection) {
-        thread.appendChild(pollsSection);
+        threadBody.appendChild(pollsSection);
       }
       var kanbanSection = uiPhase5Ext.mountKanbanSection(getPhase5UiCtx());
       if (kanbanSection) {
-        thread.appendChild(kanbanSection);
+        threadBody.appendChild(kanbanSection);
       }
       var whiteboardSection = uiPhase5Ext.mountWhiteboardSection(getPhase5UiCtx());
       if (whiteboardSection) {
-        thread.appendChild(whiteboardSection);
+        threadBody.appendChild(whiteboardSection);
       }
       var msgs = el("div", "messages");
       var loadOlder = null;
@@ -9395,6 +9499,7 @@
         showReadReceiptPopup: showReadReceiptPopup,
         messageVisibilityTtlSeconds: messageVisibilityTtlSeconds,
         messageExpiryEpochMs: messageExpiryEpochMs,
+        formatInstantLabel: formatInstantLabel,
         formatTimeLeft: formatTimeLeft,
         appendReplyQuoteBlock: appendReplyQuoteBlock,
         isE2eeType: isE2eeType,
@@ -9450,8 +9555,9 @@
       if (virtualMounted) {
         state.virtualFocusMessageId = null;
       }
-      thread.appendChild(msgs);
-      thread.appendChild(
+      threadBody.appendChild(msgs);
+      var threadFoot = el("div", "thread-foot");
+      threadFoot.appendChild(
         uiComposer.mountComposer({
           el: el,
           iconBtn: iconBtn,
@@ -9474,6 +9580,7 @@
           reactionPickerEmojis: REACTION_PICKER_EMOJIS,
         })
       );
+      thread.appendChild(threadFoot);
     }
     main.appendChild(thread);
     shell.appendChild(main);
@@ -9492,8 +9599,15 @@
       var fOv = el("div", "forward-overlay");
       fOv.setAttribute("data-testid", "forward-overlay");
       var fCard = el("div", "forward-card");
-      fCard.appendChild(el("h2", "forward-title", L("ui.forward.title")));
-      fCard.appendChild(el("p", "forward-snippet", state.forwardPick.snippet));
+      var fClose = iconBtn("✕", L("ui.common.cancel"), {
+        testId: "forward-cancel",
+        onClick: function () {
+          closeForwardPicker();
+        },
+      });
+      fCard.appendChild(modalCardHead(L("ui.forward.title"), fClose));
+      var fContent = el("div", "settings-content forward-card-content");
+      fContent.appendChild(el("p", "forward-snippet", state.forwardPick.snippet));
       var fList = el("div", "forward-chat-list");
       state.chats
         .filter(function (c) {
@@ -9512,14 +9626,8 @@
           };
           fList.appendChild(fb);
         });
-      fCard.appendChild(fList);
-      var fCancel = iconBtn("✕", L("ui.common.cancel"), {
-        testId: "forward-cancel",
-        onClick: function () {
-          closeForwardPicker();
-        },
-      });
-      fCard.appendChild(fCancel);
+      fContent.appendChild(fList);
+      fCard.appendChild(fContent);
       fOv.appendChild(fCard);
       fOv.onclick = function (e) {
         if (e.target === fOv) closeForwardPicker();
@@ -9545,12 +9653,18 @@
       mOv.setAttribute("data-testid", "members-overlay");
       var mCard = el("div", "settings-card members-card");
       var selChat = currentChat();
-      var mTitle = el("h2", "settings-title");
-      mTitle.textContent =
+      var mTitleText =
         selChat && selChat.type === "group"
           ? L("ui.members.groupTitle", { name: selChat.title || selChat.id.slice(0, 8) })
           : L("ui.members.chatTitle");
-      mCard.appendChild(mTitle);
+      var mClose = iconBtn("✕", L("ui.common.close"), {
+        testId: "members-close",
+        primary: true,
+        onClick: function () {
+          closeMembersModal();
+        },
+      });
+      mCard.appendChild(modalCardHead(mTitleText, mClose));
       var mBody = el("div", "settings-body members-body");
       if (state.chatMembersBusy) {
         mBody.appendChild(el("p", "settings-hint", L("ui.common.loading")));
@@ -9584,7 +9698,7 @@
           var label =
             (m.display_name || m.username || m.user_id) +
             " · " +
-            m.role +
+            memberRoleLabel(m.role) +
             (m.banned ? L("ui.members.banned") : "");
           mRow.appendChild(el("span", "member-row-label", label));
           if (myRole === "owner" && m.user_id !== meId && m.role !== "owner" && !m.banned) {
@@ -9593,7 +9707,7 @@
             ["member", "admin"].forEach(function (r) {
               var opt = document.createElement("option");
               opt.value = r;
-              opt.textContent = r;
+              opt.textContent = memberRoleLabel(r);
               if (m.role === r) opt.selected = true;
               roleSel.appendChild(opt);
             });
@@ -9653,15 +9767,9 @@
       } else {
         mBody.appendChild(el("p", "settings-hint", L("ui.members.noMembers")));
       }
-      mCard.appendChild(mBody);
-      var mClose = iconBtn("✕", L("ui.common.close"), {
-        testId: "members-close",
-        primary: true,
-        onClick: function () {
-          closeMembersModal();
-        },
-      });
-      mCard.appendChild(mClose);
+      var mContent = el("div", "settings-content");
+      mContent.appendChild(mBody);
+      mCard.appendChild(mContent);
       mOv.appendChild(mCard);
       mOv.onclick = function (e) {
         if (e.target === mOv) closeMembersModal();
@@ -9671,7 +9779,13 @@
     if (state.fileLinksOpen) {
       var flOv = el("div", "settings-overlay");
       var flCard = el("div", "settings-card members-card");
-      flCard.appendChild(el("h2", "settings-title", L("ui.fileLinks.title")));
+      var flClose = iconBtn("✕", L("ui.common.close"), {
+        primary: true,
+        onClick: function () {
+          closeFilePublicLinksModal();
+        },
+      });
+      flCard.appendChild(modalCardHead(L("ui.fileLinks.title"), flClose));
       var flBody = el("div", "settings-body members-body");
       if (state.fileLinksBusy) {
         flBody.appendChild(el("p", "settings-hint", L("ui.common.loading")));
@@ -9700,8 +9814,9 @@
       } else {
         flBody.appendChild(el("p", "settings-hint", L("ui.fileLinks.none")));
       }
-      flCard.appendChild(flBody);
-      var flFoot = el("div", "modal-footer");
+      var flContent = el("div", "settings-content");
+      flContent.appendChild(flBody);
+      var flFoot = el("div", "modal-footer settings-foot");
       flFoot.appendChild(
         iconBtn("＋", L("ui.fileLinks.create"), {
           disabled: state.busy || !state.fileLinksFileId,
@@ -9710,15 +9825,8 @@
           },
         })
       );
-      flFoot.appendChild(
-        iconBtn("✕", L("ui.common.close"), {
-          primary: true,
-          onClick: function () {
-            closeFilePublicLinksModal();
-          },
-        })
-      );
-      flCard.appendChild(flFoot);
+      flContent.appendChild(flFoot);
+      flCard.appendChild(flContent);
       flOv.appendChild(flCard);
       flOv.onclick = function (e) {
         if (e.target === flOv) closeFilePublicLinksModal();
@@ -9728,7 +9836,13 @@
     if (state.messageVersionsOpen) {
       var vOv = el("div", "settings-overlay");
       var vCard = el("div", "settings-card members-card");
-      vCard.appendChild(el("h2", "settings-title", L("ui.versions.title")));
+      var vClose = iconBtn("✕", L("ui.common.close"), {
+        primary: true,
+        onClick: function () {
+          closeMessageVersionsModal();
+        },
+      });
+      vCard.appendChild(modalCardHead(L("ui.versions.title"), vClose));
       var vBody = el("div", "settings-body members-body");
       if (state.messageVersionsBusy) {
         vBody.appendChild(el("p", "settings-hint", L("ui.common.loading")));
@@ -9740,7 +9854,7 @@
             "#" +
             (idx + 1) +
             " · " +
-            new Date(ver.created_at).toLocaleString() +
+            (formatInstantLabel ? formatInstantLabel(ver.created_at) : new Date(ver.created_at).toLocaleString()) +
             (ver.edited_by ? " · " + ver.edited_by.slice(0, 8) : "");
           vRow.appendChild(head);
           var body = el("pre", "version-row-body", ver.content || "");
@@ -9750,19 +9864,50 @@
       } else {
         vBody.appendChild(el("p", "settings-hint", L("ui.versions.none")));
       }
-      vCard.appendChild(vBody);
-      var vClose = iconBtn("✕", L("ui.common.close"), {
-        primary: true,
-        onClick: function () {
-          closeMessageVersionsModal();
-        },
-      });
-      vCard.appendChild(vClose);
+      var vContent = el("div", "settings-content");
+      vContent.appendChild(vBody);
+      vCard.appendChild(vContent);
       vOv.appendChild(vCard);
       vOv.onclick = function (e) {
         if (e.target === vOv) closeMessageVersionsModal();
       };
       shell.appendChild(vOv);
+    }
+    if (state.readReceiptPopupMessageId) {
+      var rrOv = el("div", "settings-overlay");
+      rrOv.setAttribute("data-testid", "read-receipt-overlay");
+      var rrCard = el("div", "settings-card members-card");
+      var rrClose = iconBtn("✕", L("ui.common.close"), {
+        testId: "read-receipt-close",
+        primary: true,
+        onClick: closeReadReceiptPopup,
+      });
+      rrCard.appendChild(modalCardHead(L("readReceipts.title"), rrClose));
+      var rrBody = el("div", "settings-body members-body");
+      var rr = state.readReceiptsByMessage[state.readReceiptPopupMessageId] || {};
+      var rrIds = Object.keys(rr).sort(function (a, b) {
+        return (rr[b] || 0) - (rr[a] || 0);
+      });
+      if (!rrIds.length) {
+        rrBody.appendChild(el("p", "settings-hint", L("readReceipts.none")));
+      } else {
+        rrIds.forEach(function (uid) {
+          var row = el("div", "read-receipt-row");
+          row.appendChild(el("span", "read-receipt-user", readReceiptUserLabel(uid)));
+          row.appendChild(
+            el("span", "read-receipt-time muted", formatInstantLabel(rr[uid]))
+          );
+          rrBody.appendChild(row);
+        });
+      }
+      var rrContent = el("div", "settings-content");
+      rrContent.appendChild(rrBody);
+      rrCard.appendChild(rrContent);
+      rrOv.appendChild(rrCard);
+      rrOv.onclick = function (e) {
+        if (e.target === rrOv) closeReadReceiptPopup();
+      };
+      shell.appendChild(rrOv);
     }
     root.appendChild(shell);
   }

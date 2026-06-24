@@ -94,6 +94,24 @@ button {
   max-height: none;
 }
 
+.messenger-shell.call-open.integration-open {
+  grid-template-columns: minmax(0, 1fr) min(360px, 28vw) clamp(480px, 36vw, 680px);
+}
+
+.messenger-shell.call-open.integration-open > .integration-panel {
+  grid-column: 2;
+  grid-row: 2;
+  width: auto;
+  flex: none;
+}
+
+.messenger-shell.call-open.integration-open > .call-panel {
+  grid-column: 3;
+  grid-row: 2;
+  width: clamp(480px, 36vw, 680px);
+  flex: none;
+}
+
 .messenger-shell.integration-open > .integration-panel {
   width: min(420px, 44vw);
   flex-shrink: 0;
@@ -102,6 +120,14 @@ button {
   flex-direction: column;
   border-left: 1px solid var(--border);
   background: var(--panel);
+}
+
+.integration-panel-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .integration-panel-head {
@@ -167,7 +193,7 @@ button {
     max-height: 42vh;
     border-left: none;
     border-bottom: 1px solid var(--border);
-    overflow-y: auto;
+    overflow: hidden;
     order: 0;
   }
 
@@ -575,12 +601,32 @@ button {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
+.settings-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .settings-title {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 1rem;
   text-wrap: balance;
+  flex: 1;
+  min-width: 0;
 }
 
 .settings-tablist {
@@ -638,7 +684,6 @@ button {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 14px;
   overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
@@ -769,13 +814,63 @@ button {
 
 .forward-card {
   width: min(400px, 100%);
-  max-height: 70vh;
-  overflow-y: auto;
+  max-height: min(90vh, 720px);
+  min-height: 0;
+  overflow: hidden;
   padding: 16px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--panel);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+}
+
+.forward-card-content,
+.phase5-overlay-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.phase5-overlay-card {
+  display: flex;
+  flex-direction: column;
+  max-height: min(90vh, 720px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.settings-foot {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 12px;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+}
+
+.read-receipt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.read-receipt-row:last-child {
+  border-bottom: none;
+}
+
+.read-receipt-user {
+  font-weight: 500;
+}
+
+.read-receipt-time {
+  font-size: 0.78rem;
+  flex-shrink: 0;
 }
 
 .forward-title {
@@ -915,6 +1010,100 @@ button {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex-shrink: 0;
+}
+
+.sidebar-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-tabs {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-tab {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 4px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.1;
+}
+
+.sidebar-tab-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.sidebar-tab-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-tab.active {
+  background: var(--brand-soft, rgba(121, 73, 244, 0.12));
+  border-color: var(--brand, #7949f4);
+  color: var(--text);
+}
+
+.sidebar-chip {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 4px 3px;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.05;
+}
+
+.sidebar-chip-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.sidebar-chip-label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-chip.active,
+.sidebar-folder-chip.active,
+.sidebar-filter-chip.active {
+  background: var(--brand-soft, rgba(121, 73, 244, 0.12));
+  border-color: var(--brand, #7949f4);
+  color: var(--text);
 }
 
 .sidebar-search {
@@ -1143,39 +1332,6 @@ button {
   min-width: 0;
 }
 
-.sidebar-tabs {
-  display: flex;
-  gap: 3px;
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-}
-
-.sidebar-tab {
-  flex: 1;
-  padding: 4px 6px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  font-size: 0.8rem;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.sidebar-tab-icon {
-  min-width: 1.75rem;
-  max-width: 2.25rem;
-  padding: 4px;
-  font-size: 0.95rem;
-  text-align: center;
-}
-
-.sidebar-tab.active {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-}
-
 .sidebar-folder-bar {
   display: flex;
   flex-wrap: wrap;
@@ -1185,31 +1341,11 @@ button {
 }
 
 .sidebar-folder-chip {
-  padding: 4px 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  cursor: pointer;
-  line-height: 1;
-  white-space: nowrap;
+  /* legacy alias; layout via .sidebar-chip */
 }
 
-.sidebar-folder-chip.btn-icon {
-  min-width: 1.75rem;
-  padding: 4px 6px;
-  font-size: 0.95rem;
-  line-height: 1;
-}
-
-.sidebar-folder-chip:hover {
-  color: var(--text);
-  border-color: var(--accent);
-}
-
-.sidebar-folder-chip.active {
-  background: var(--accent-dim);
+.sidebar-folder-chip:hover,
+.sidebar-filter-chip:hover {
   color: var(--text);
   border-color: var(--accent);
 }
@@ -1481,6 +1617,25 @@ button {
   flex-direction: column;
   min-height: 0;
   background: var(--bg);
+}
+
+.thread-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.thread-body > .messages {
+  flex: 1;
+  min-height: 0;
+}
+
+.thread-foot {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
 }
 
 .messages-load-more {
@@ -2755,6 +2910,13 @@ button {
   margin-bottom: 16px;
 }
 
+.auth-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
 .auth-card-brand {
   display: flex;
   align-items: center;
@@ -3009,6 +3171,19 @@ button {
   border-bottom: 1px solid var(--border);
 }
 
+.call-mode-tab.btn-icon {
+  width: auto;
+  min-width: 0;
+  height: 2.25rem;
+  padding: 0 10px;
+  gap: 6px;
+}
+
+.call-mode-label {
+  font-size: 0.76rem;
+  line-height: 1;
+}
+
 .call-conferences {
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
@@ -3025,6 +3200,25 @@ button {
 
 .call-conferences-title {
   font-weight: 600;
+}
+
+.call-panel-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.call-lobby {
+  border-bottom: 1px solid var(--border);
+}
+
+.call-live-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .call-conferences-actions {
@@ -3323,7 +3517,7 @@ button {
   background: #000;
 }
 
-.call-participants {
+.call-mesh-participants {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
@@ -3392,7 +3586,34 @@ button {
   gap: 8px;
   padding: 10px 12px;
   border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
   margin-top: auto;
+}
+
+.call-screen-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+}
+
+.call-screen-status-title {
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+
+.call-screen-status-text {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .msg-thread-badge,

@@ -4,6 +4,13 @@
 (function (global) {
   "use strict";
 
+  function modalCardHead(ctx, title, closeBtn) {
+    var head = ctx.el("div", "settings-head");
+    head.appendChild(ctx.el("h2", "settings-title", title));
+    head.appendChild(closeBtn);
+    return head;
+  }
+
   function totalVotes(counts) {
     if (!counts || !counts.length) return 0;
     return counts.reduce(function (a, b) {
@@ -146,35 +153,34 @@
     var ov = ctx.el("div", "forward-overlay poll-create-overlay");
     ov.setAttribute("data-testid", "poll-create-overlay");
     var card = ctx.el("div", "forward-card poll-create-card");
-    card.appendChild(ctx.el("h2", "forward-title", ctx.L("ui.polls.create")));
+    var closeBtn = ctx.iconBtn("✕", ctx.L("ui.common.cancel"), {
+      testId: "poll-create-cancel",
+      onClick: function () {
+        ctx.closePollCreate();
+      },
+    });
+    card.appendChild(modalCardHead(ctx, ctx.L("ui.polls.create"), closeBtn));
+    var content = ctx.el("div", "settings-content forward-card-content");
     var q = document.createElement("input");
     q.type = "text";
     q.className = "poll-create-input";
     q.setAttribute("data-testid", "poll-create-question");
     q.placeholder = ctx.L("ui.polls.question");
-    card.appendChild(q);
+    content.appendChild(q);
     var ta = document.createElement("textarea");
     ta.className = "poll-create-options";
     ta.rows = 4;
     ta.setAttribute("data-testid", "poll-create-options");
     ta.placeholder = ctx.L("ui.polls.optionsHint");
-    card.appendChild(ta);
+    content.appendChild(ta);
     var multiRow = ctx.el("label", "poll-create-multiple");
     var multi = document.createElement("input");
     multi.type = "checkbox";
     multi.setAttribute("data-testid", "poll-create-allow-multiple");
     multiRow.appendChild(multi);
     multiRow.appendChild(document.createTextNode(" " + ctx.L("ui.polls.allowMultiple")));
-    card.appendChild(multiRow);
-    var actions = ctx.el("div", "poll-create-actions");
-    actions.appendChild(
-      ctx.iconBtn(ctx.L("ui.common.cancel"), ctx.L("ui.common.cancel"), {
-        testId: "poll-create-cancel",
-        onClick: function () {
-          ctx.closePollCreate();
-        },
-      })
-    );
+    content.appendChild(multiRow);
+    var actions = ctx.el("div", "poll-create-actions settings-foot");
     actions.appendChild(
       ctx.iconBtn(ctx.L("ui.polls.submit"), ctx.L("ui.polls.submit"), {
         primary: true,
@@ -192,7 +198,8 @@
         },
       })
     );
-    card.appendChild(actions);
+    content.appendChild(actions);
+    card.appendChild(content);
     ov.appendChild(card);
     ov.onclick = function (e) {
       if (e.target === ov) ctx.closePollCreate();
@@ -205,28 +212,27 @@
     var ov = ctx.el("div", "forward-overlay schedule-send-overlay");
     ov.setAttribute("data-testid", "schedule-send-overlay");
     var card = ctx.el("div", "forward-card schedule-send-card");
-    card.appendChild(ctx.el("h2", "forward-title", ctx.L("ui.schedule.title")));
+    var closeBtn = ctx.iconBtn("✕", ctx.L("ui.common.cancel"), {
+      testId: "schedule-send-cancel",
+      onClick: function () {
+        ctx.closeScheduleSend();
+      },
+    });
+    card.appendChild(modalCardHead(ctx, ctx.L("ui.schedule.title"), closeBtn));
+    var content = ctx.el("div", "settings-content forward-card-content");
     var draft = "";
     var taEl = document.getElementById("msgdraft");
     if (taEl) draft = (taEl.value || "").trim();
-    card.appendChild(ctx.el("p", "schedule-send-preview", draft || ctx.L("ui.schedule.emptyDraft")));
+    content.appendChild(ctx.el("p", "schedule-send-preview", draft || ctx.L("ui.schedule.emptyDraft")));
     var when = document.createElement("input");
     when.type = "datetime-local";
     when.className = "schedule-send-when";
     when.setAttribute("data-testid", "schedule-send-when");
     var min = new Date(Date.now() + 60000);
     when.min = min.toISOString().slice(0, 16);
-    card.appendChild(ctx.el("label", "schedule-send-label", ctx.L("ui.schedule.when")));
-    card.appendChild(when);
-    var actions = ctx.el("div", "poll-create-actions");
-    actions.appendChild(
-      ctx.iconBtn(ctx.L("ui.common.cancel"), ctx.L("ui.common.cancel"), {
-        testId: "schedule-send-cancel",
-        onClick: function () {
-          ctx.closeScheduleSend();
-        },
-      })
-    );
+    content.appendChild(ctx.el("label", "schedule-send-label", ctx.L("ui.schedule.when")));
+    content.appendChild(when);
+    var actions = ctx.el("div", "poll-create-actions settings-foot");
     actions.appendChild(
       ctx.iconBtn(ctx.L("ui.schedule.submit"), ctx.L("ui.schedule.submit"), {
         primary: true,
@@ -243,7 +249,8 @@
         },
       })
     );
-    card.appendChild(actions);
+    content.appendChild(actions);
+    card.appendChild(content);
     ov.appendChild(card);
     ov.onclick = function (e) {
       if (e.target === ov) ctx.closeScheduleSend();
@@ -284,18 +291,17 @@
     var ov = ctx.el("div", "forward-overlay reminder-overlay");
     ov.setAttribute("data-testid", "message-reminder-overlay");
     var card = ctx.el("div", "forward-card reminder-card");
-    card.appendChild(ctx.el("h2", "forward-title", ctx.L("ui.reminders.title")));
+    var closeBtn = ctx.iconBtn("✕", ctx.L("ui.common.cancel"), {
+      testId: "message-reminder-cancel",
+      onClick: function () {
+        ctx.closeMessageReminder();
+      },
+    });
+    card.appendChild(modalCardHead(ctx, ctx.L("ui.reminders.title"), closeBtn));
+    var content = ctx.el("div", "settings-content forward-card-content");
     var picker = mountWhenPicker(ctx, "message-reminder");
-    card.appendChild(picker.wrap);
-    var actions = ctx.el("div", "poll-create-actions");
-    actions.appendChild(
-      ctx.iconBtn(ctx.L("ui.common.cancel"), ctx.L("ui.common.cancel"), {
-        testId: "message-reminder-cancel",
-        onClick: function () {
-          ctx.closeMessageReminder();
-        },
-      })
-    );
+    content.appendChild(picker.wrap);
+    var actions = ctx.el("div", "poll-create-actions settings-foot");
     actions.appendChild(
       ctx.iconBtn(ctx.L("ui.reminders.submit"), ctx.L("ui.reminders.submit"), {
         primary: true,
@@ -312,7 +318,8 @@
         },
       })
     );
-    card.appendChild(actions);
+    content.appendChild(actions);
+    card.appendChild(content);
     ov.appendChild(card);
     ov.onclick = function (e) {
       if (e.target === ov) ctx.closeMessageReminder();
@@ -325,7 +332,14 @@
     var ov = ctx.el("div", "forward-overlay contact-share-overlay");
     ov.setAttribute("data-testid", "contact-share-overlay");
     var card = ctx.el("div", "forward-card contact-share-card");
-    card.appendChild(ctx.el("h2", "forward-title", ctx.L("ui.contactShare.title")));
+    var closeBtn = ctx.iconBtn("✕", ctx.L("ui.common.cancel"), {
+      testId: "contact-share-cancel",
+      onClick: function () {
+        ctx.closeContactShare();
+      },
+    });
+    card.appendChild(modalCardHead(ctx, ctx.L("ui.contactShare.title"), closeBtn));
+    var content = ctx.el("div", "settings-content forward-card-content");
     var list = ctx.el("div", "contact-share-list");
     list.setAttribute("data-testid", "contact-share-list");
     var selfBtn = ctx.el("button", "contact-share-item", ctx.L("ui.contactShare.shareSelf"));
@@ -355,17 +369,8 @@
     } else {
       list.appendChild(ctx.el("div", "thread-polls-hint", ctx.L("ui.contactShare.noContacts")));
     }
-    card.appendChild(list);
-    var actions = ctx.el("div", "poll-create-actions");
-    actions.appendChild(
-      ctx.iconBtn(ctx.L("ui.common.cancel"), ctx.L("ui.common.cancel"), {
-        testId: "contact-share-cancel",
-        onClick: function () {
-          ctx.closeContactShare();
-        },
-      })
-    );
-    card.appendChild(actions);
+    content.appendChild(list);
+    card.appendChild(content);
     ov.appendChild(card);
     ov.onclick = function (e) {
       if (e.target === ov) ctx.closeContactShare();

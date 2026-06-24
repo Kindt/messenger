@@ -636,6 +636,9 @@
       "title": "视频 / 会议",
       "titleAudio": "音频通话 / 会议",
       "collapse": "收起",
+      "modeMesh": "通话",
+      "modeJitsi": "会议",
+      "modeLivekit": "直播",
       "thumbs": "缩略图（每 2 秒刷新）",
       "remotes": "远程流（聊天参与者）",
       "aloneInChat": "聊天中只有您，或无法访问参与者列表。",
@@ -647,6 +650,7 @@
       "badgeSpeaking": "正在说话",
       "badgeSharing": "屏幕共享",
       "screen": "屏幕",
+      "screenSharing": "您正在共享屏幕",
       "stopScreen": "停止共享"
     },
     "settings": {
@@ -733,7 +737,12 @@
       "ban": "封禁",
       "unban": "解除封禁",
       "banned": " · 已封禁",
-      "noMembers": "暂无成员。"
+      "noMembers": "暂无成员。",
+      "role": {
+        "member": "成员",
+        "admin": "管理员",
+        "owner": "所有者"
+      }
     },
     "fileLinks": {
       "title": "文件公开链接",

@@ -44,7 +44,13 @@
   }
 
   function sortMessagesAsc(rows) {
+    var formatUtils =
+      (typeof globalThis !== "undefined" && globalThis.KorusUiFormatUtils) ||
+      (global && global.KorusUiFormatUtils);
     return (rows || []).slice().sort(function (a, b) {
+      if (formatUtils && formatUtils.instantEpochMs) {
+        return formatUtils.instantEpochMs(a.created_at) - formatUtils.instantEpochMs(b.created_at);
+      }
       return new Date(a.created_at) - new Date(b.created_at);
     });
   }

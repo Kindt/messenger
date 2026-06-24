@@ -4,6 +4,13 @@
 (function (global) {
   "use strict";
 
+  function modalCardHead(ctx, title, closeBtn) {
+    var head = ctx.el("div", "settings-head");
+    head.appendChild(ctx.el("h2", "settings-title", title));
+    head.appendChild(closeBtn);
+    return head;
+  }
+
   function confPath(conf, suffix) {
     return "/chats/" + conf.chat_id + "/conferences/" + conf.conference_id + suffix;
   }
@@ -262,9 +269,18 @@
     var ov = ctx.el("div", "phase5-overlay");
     ov.setAttribute("data-testid", "phase5-info-modal");
     var card = ctx.el("div", "phase5-overlay-card");
+    var closeBtn = ctx.iconBtn("✕", ctx.L("ui.common.close"), {
+      testId: "phase5-modal-close",
+      onClick: function () {
+        ctx.state.phase5Modal = null;
+        ctx.state.phase5ModalJoinRoom = null;
+        ctx.render();
+      },
+    });
     card.appendChild(
-      ctx.el("h3", "phase5-overlay-title", ctx.state.phase5Modal.title || "")
+      modalCardHead(ctx, ctx.state.phase5Modal.title || "", closeBtn)
     );
+    var content = ctx.el("div", "settings-content phase5-overlay-content");
     if (ctx.state.phase5Modal.mode === "edit") {
       var inp = document.createElement("textarea");
       inp.className = "phase5-modal-edit-input";
@@ -273,11 +289,11 @@
       inp.oninput = function () {
         ctx.state.phase5Modal.body = inp.value;
       };
-      card.appendChild(inp);
+      content.appendChild(inp);
     } else {
-      card.appendChild(ctx.el("pre", "phase5-modal-body", ctx.state.phase5Modal.body || ""));
+      content.appendChild(ctx.el("pre", "phase5-modal-body", ctx.state.phase5Modal.body || ""));
     }
-    var actions = ctx.el("div", "phase5-modal-actions");
+    var actions = ctx.el("div", "phase5-modal-actions settings-foot");
     if (ctx.state.phase5Modal.mode === "edit" && ctx.saveEditedMessage) {
       actions.appendChild(
         ctx.iconBtn("✓", ctx.L("ui.edit.save"), {
@@ -348,17 +364,10 @@
         );
       }
     }
-    actions.appendChild(
-      ctx.iconBtn("✕", ctx.L("ui.common.close"), {
-        testId: "phase5-modal-close",
-        onClick: function () {
-          ctx.state.phase5Modal = null;
-          ctx.state.phase5ModalJoinRoom = null;
-          ctx.render();
-        },
-      })
-    );
-    card.appendChild(actions);
+    if (actions.childNodes.length) {
+      content.appendChild(actions);
+    }
+    card.appendChild(content);
     ov.appendChild(card);
     return ov;
   }

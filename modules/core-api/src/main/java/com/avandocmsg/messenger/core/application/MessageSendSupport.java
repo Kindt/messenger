@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.core.application;
 
 import com.avandocmsg.messenger.api.mls.MlsMessageTypes;
+import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 
 import java.util.Base64;
 import java.util.UUID;
@@ -11,13 +12,13 @@ public final class MessageSendSupport {
     private MessageSendSupport() {
     }
 
-    public static boolean usesMlsScheme(com.avandocmsg.messenger.api.messages.dto.SendMessageRequest request) {
+    public static boolean usesMlsScheme(SendMessageRequest request) {
         return request != null
             && request.e2eeScheme() != null
             && MlsMessageTypes.SCHEME_MLS.equalsIgnoreCase(request.e2eeScheme());
     }
 
-    public static boolean shouldServerEncrypt(com.avandocmsg.messenger.api.messages.dto.SendMessageRequest request) {
+    public static boolean shouldServerEncrypt(SendMessageRequest request) {
         if (request == null) {
             return true;
         }
@@ -69,7 +70,20 @@ public final class MessageSendSupport {
         if (encrypted == null) {
             return type != null ? type : "text";
         }
-        return "e2ee-" + (type != null ? type : "text");
+        return e2eeType(type);
+    }
+
+    public static String typeForSend(SendMessageRequest request, com.avandocmsg.messenger.api.mls.dto.EncryptedMessage encrypted) {
+        var type = request != null ? request.type() : null;
+        if (encrypted != null || (usesMlsScheme(request) && looksClientEncrypted(request.content()))) {
+            return e2eeType(type);
+        }
+        return type != null ? type : "text";
+    }
+
+    private static String e2eeType(String type) {
+        var base = type != null && !type.isBlank() ? type : "text";
+        return base.startsWith("e2ee-") ? base : "e2ee-" + base;
     }
 
     public static String combinedCiphertextBase64(com.avandocmsg.messenger.api.mls.dto.EncryptedMessage encrypted) {

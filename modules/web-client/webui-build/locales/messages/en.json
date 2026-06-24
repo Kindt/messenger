@@ -636,6 +636,9 @@
       "title": "Video / conference",
       "titleAudio": "Audio call / conference",
       "collapse": "Collapse",
+      "modeMesh": "Call",
+      "modeJitsi": "Meeting",
+      "modeLivekit": "Live",
       "thumbs": "Thumbnails (refresh every 2 s)",
       "remotes": "Remote streams (chat participants)",
       "aloneInChat": "You are alone in the chat, or member list is unavailable.",
@@ -647,6 +650,7 @@
       "badgeSpeaking": "Speaking",
       "badgeSharing": "Screen sharing",
       "screen": "Screen",
+      "screenSharing": "You are sharing your screen",
       "stopScreen": "Stop screen"
     },
     "settings": {
@@ -733,7 +737,12 @@
       "ban": "Ban",
       "unban": "Unban",
       "banned": " · banned",
-      "noMembers": "No members."
+      "noMembers": "No members.",
+      "role": {
+        "member": "Member",
+        "admin": "Admin",
+        "owner": "Owner"
+      }
     },
     "fileLinks": {
       "title": "File public links",
