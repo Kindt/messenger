@@ -32,6 +32,7 @@ scripts/__pycache__/
 specs/
 docs/*
 !docs/index.html
+!docs/runtime-startup-keycloak-audit.md
 tests/e2e-web/
 !tests/e2e-web/
 tests/e2e-web/*
