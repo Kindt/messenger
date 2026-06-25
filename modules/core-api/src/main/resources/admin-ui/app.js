@@ -7,6 +7,8 @@
   let retentionPatchTarget = null;
   /** UUID org для PATCH auth-policy. */
   let authPolicyTargetOrgId = null;
+  /** Последний manifest для перерисовки nav при смене locale. */
+  let cachedManifestSections = null;
 
   const el = (id) => document.getElementById(id);
   const LT = (text) => (window.AdminI18n ? AdminI18n.text(text) : text);
@@ -1384,6 +1386,20 @@
     URL.revokeObjectURL(a.href);
   }
 
+  async function refreshAuthStatus() {
+    if (!token()) {
+      return;
+    }
+    try {
+      const sess = await apiFetch("/admin/session");
+      el("authStatus").textContent = L("admin.signedIn", {
+        user: sess.username || sess.user_id || "?",
+      });
+    } catch (_) {
+      el("authStatus").textContent = LT("Токен сохранён; не удалось загрузить /admin/session.");
+    }
+  }
+
   async function login() {
     const username = el("username").value.trim();
     const password = el("password").value;
@@ -1407,20 +1423,17 @@
       sessionStorage.removeItem(LS_REFRESH);
     }
     updateLogoutButton();
-    try {
-      const sess = await apiFetch("/admin/session");
-      el("authStatus").textContent = L("admin.signedIn", {
-        user: sess.username || sess.user_id || "?",
-      });
-    } catch (_) {
-      el("authStatus").textContent = LT("Токен сохранён; не удалось загрузить /admin/session.");
-    }
+    await refreshAuthStatus();
     await loadManifest();
   }
 
-  function renderSections(sections) {
+  function renderSections(sections, preserveActiveSectionId) {
     if (window.AdminUi) {
-      AdminUi.renderGroupedNav(sections, (s, li) => selectSection(s, li));
+      AdminUi.renderGroupedNav(
+        sections,
+        (s, li) => selectSection(s, li),
+        preserveActiveSectionId
+      );
       return;
     }
     const ul = el("sectionList");
@@ -2781,13 +2794,23 @@
 
   async function loadManifest() {
     const data = await apiFetch("/admin/ui/manifest");
+    cachedManifestSections = data.sections || [];
     const ver = el("apiVersionLabel");
     if (ver && data.api_version) {
       ver.textContent = LT("API ") + data.api_version;
       ver.hidden = false;
     }
-    renderSections(data.sections || []);
+    renderSections(cachedManifestSections);
     updateLogoutButton();
+  }
+
+  function onAdminLocaleChanged() {
+    refreshAuthStatus().catch(function () {});
+    if (!token() || !cachedManifestSections || !window.AdminUi) {
+      return;
+    }
+    const activeId = AdminUi.getActiveSectionId();
+    renderSections(cachedManifestSections, activeId || undefined);
   }
 
   async function logout() {
@@ -2835,6 +2858,8 @@
   }));
 
   updateLogoutButton();
+
+  document.addEventListener("admin-locale-changed", onAdminLocaleChanged);
 
   if (token()) {
     loadManifest().catch((e) => {

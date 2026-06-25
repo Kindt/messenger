@@ -266,7 +266,11 @@
     }
   }
 
-  function renderGroupedNav(sections, onSelect) {
+  function getActiveSectionId() {
+    return activeSectionId;
+  }
+
+  function renderGroupedNav(sections, onSelect, preserveActiveSectionId) {
     const container = el("sectionList");
     if (!container) {
       return;
@@ -289,6 +293,8 @@
     });
 
     let firstLi = null;
+    let preservedLi = null;
+    let preservedSection = null;
     sortedKeys.forEach((key) => {
       const { group, items } = grouped.get(key);
       const block = document.createElement("div");
@@ -313,12 +319,20 @@
         if (!firstLi) {
           firstLi = { s, li };
         }
+        if (preserveActiveSectionId && s.id === preserveActiveSectionId) {
+          preservedLi = li;
+          preservedSection = s;
+        }
       });
       block.appendChild(ul);
       container.appendChild(block);
     });
 
-    if (firstLi) {
+    if (preservedSection && preservedLi) {
+      setActiveNav(preservedLi);
+      setPanelHeader(preservedSection);
+      activeSectionId = preservedSection.id;
+    } else if (firstLi) {
       onSelect(firstLi.s, firstLi.li);
     }
   }
@@ -407,6 +421,7 @@
     metaFor,
     localText: LT,
     t: L,
+    getActiveSectionId,
     setActiveSectionId: (id) => {
       activeSectionId = id;
     },

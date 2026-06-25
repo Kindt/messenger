@@ -225,6 +225,11 @@
       applyLang(next);
       applyDom();
       if (next !== DEFAULT_LOCALE) prefetchDefaultLocale();
+      try {
+        document.dispatchEvent(
+          new CustomEvent("admin-locale-changed", { detail: { locale: next } })
+        );
+      } catch (e) {}
       return next;
     });
   }
