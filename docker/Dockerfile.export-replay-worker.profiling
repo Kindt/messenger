@@ -9,4 +9,5 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/modules/workers/export-replay/build/install/export-replay /app/export-replay
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:+UseContainerSupport -XX:+UseG1GC"
 ENTRYPOINT ["/app/export-replay/bin/export-replay"]

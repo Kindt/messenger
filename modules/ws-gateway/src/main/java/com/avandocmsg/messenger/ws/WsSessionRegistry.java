@@ -24,6 +24,7 @@ public final class WsSessionRegistry {
     private final ConcurrentMap<String, Set<Session>> byUser = new ConcurrentHashMap<>();
     private final ConcurrentMap<Session, String> sessionToUser = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Set<String>> chatToUsers = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, AtomicInteger> sessionCountByUser = new ConcurrentHashMap<>();
     private final AtomicInteger totalSessions = new AtomicInteger();
 
     public WsSessionRegistry(int maxPerUser, int maxTotal) {
@@ -39,20 +40,29 @@ public final class WsSessionRegistry {
         if (totalSessions.get() >= maxTotal) {
             return RegisterResult.MAX_TOTAL;
         }
-        var sessions = byUser.computeIfAbsent(userId, id -> ConcurrentHashMap.newKeySet());
-        synchronized (sessions) {
-            if (sessions.size() >= maxPerUser) {
+        var count = sessionCountByUser.computeIfAbsent(userId, id -> new AtomicInteger(0));
+        while (true) {
+            var current = count.get();
+            if (current >= maxPerUser) {
                 return RegisterResult.MAX_PER_USER;
             }
-            if (totalSessions.get() >= maxTotal) {
-                return RegisterResult.MAX_TOTAL;
-            }
-            if (sessions.add(session)) {
-                sessionToUser.put(session, userId);
-                totalSessions.incrementAndGet();
-                linkUserToChats(userId, chatIds);
+            if (count.compareAndSet(current, current + 1)) {
+                break;
             }
         }
+        if (totalSessions.incrementAndGet() > maxTotal) {
+            count.decrementAndGet();
+            totalSessions.decrementAndGet();
+            return RegisterResult.MAX_TOTAL;
+        }
+        var sessions = byUser.computeIfAbsent(userId, id -> ConcurrentHashMap.newKeySet());
+        if (!sessions.add(session)) {
+            count.decrementAndGet();
+            totalSessions.decrementAndGet();
+            return RegisterResult.ACCEPTED;
+        }
+        sessionToUser.put(session, userId);
+        linkUserToChats(userId, chatIds);
         return RegisterResult.ACCEPTED;
     }
 
@@ -65,18 +75,19 @@ public final class WsSessionRegistry {
             return;
         }
         var sessions = byUser.get(userId);
-        if (sessions == null) {
+        if (sessions != null && sessions.remove(session)) {
             totalSessions.updateAndGet(n -> Math.max(0, n - 1));
-            return;
-        }
-        synchronized (sessions) {
-            if (sessions.remove(session)) {
-                totalSessions.updateAndGet(n -> Math.max(0, n - 1));
+            var count = sessionCountByUser.get(userId);
+            if (count != null) {
+                count.updateAndGet(n -> Math.max(0, n - 1));
             }
             if (sessions.isEmpty()) {
                 byUser.remove(userId, sessions);
+                sessionCountByUser.remove(userId, count);
                 unlinkUserFromAllChats(userId);
             }
+        } else {
+            totalSessions.updateAndGet(n -> Math.max(0, n - 1));
         }
     }
 
@@ -88,9 +99,7 @@ public final class WsSessionRegistry {
         if (sessions == null || sessions.isEmpty()) {
             return List.of();
         }
-        synchronized (sessions) {
-            return List.copyOf(sessions);
-        }
+        return List.copyOf(sessions);
     }
 
     public Collection<String> userIdsForChat(String chatId) {
@@ -101,13 +110,19 @@ public final class WsSessionRegistry {
         if (users == null || users.isEmpty()) {
             return List.of();
         }
-        synchronized (users) {
-            return List.copyOf(users);
-        }
+        return List.copyOf(users);
     }
 
     public int openSessionCount() {
         return totalSessions.get();
+    }
+
+    /** Snapshot of all registered sessions (keepalive ping/eviction). */
+    public Collection<Session> allOpenSessions() {
+        if (sessionToUser.isEmpty()) {
+            return List.of();
+        }
+        return List.copyOf(sessionToUser.keySet());
     }
 
     private void linkUserToChats(String userId, Collection<String> chatIds) {
@@ -118,21 +133,15 @@ public final class WsSessionRegistry {
             if (chatId == null || chatId.isBlank()) {
                 continue;
             }
-            var users = chatToUsers.computeIfAbsent(chatId, id -> ConcurrentHashMap.newKeySet());
-            synchronized (users) {
-                users.add(userId);
-            }
+            chatToUsers.computeIfAbsent(chatId, id -> ConcurrentHashMap.newKeySet()).add(userId);
         }
     }
 
     private void unlinkUserFromAllChats(String userId) {
         for (var entry : chatToUsers.entrySet()) {
             var users = entry.getValue();
-            synchronized (users) {
-                users.remove(userId);
-                if (users.isEmpty()) {
-                    chatToUsers.remove(entry.getKey(), users);
-                }
+            if (users.remove(userId) && users.isEmpty()) {
+                chatToUsers.remove(entry.getKey(), users);
             }
         }
     }

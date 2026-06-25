@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.common.plugin.integration;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
+import com.avandocmsg.messenger.common.http.HttpClientSupport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -9,16 +11,13 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 
 /** OpenAI-compatible chat completion for L3 triage. */
 public final class OpenAiCompatibleLlmClient {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final HttpClient HTTP = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(10))
-        .build();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
+    private static final HttpClient HTTP = HttpClientSupport.sharedClient();
 
     private OpenAiCompatibleLlmClient() {}
 

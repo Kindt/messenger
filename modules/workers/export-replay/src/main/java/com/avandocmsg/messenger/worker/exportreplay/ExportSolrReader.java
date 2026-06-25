@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.exportreplay;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -21,7 +22,7 @@ import java.util.UUID;
 final class ExportSolrReader {
 
     private static final Logger log = LoggerFactory.getLogger(ExportSolrReader.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final SolrClient client;
     private final boolean cloudMode;

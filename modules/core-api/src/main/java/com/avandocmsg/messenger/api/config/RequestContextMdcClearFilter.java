@@ -13,5 +13,6 @@ public class RequestContextMdcClearFilter implements ContainerResponseFilter {
     public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) {
         MDC.remove(RequestContextMdcFilter.MDC_HTTP_METHOD);
         MDC.remove(RequestContextMdcFilter.MDC_HTTP_PATH);
+        MDC.remove(RequestContextMdcFilter.MDC_REQUEST_ID);
     }
 }

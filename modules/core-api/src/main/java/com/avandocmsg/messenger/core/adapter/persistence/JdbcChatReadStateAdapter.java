@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.port.ChatReadStatePort;
 
 import org.slf4j.Logger;
@@ -32,6 +34,7 @@ public final class JdbcChatReadStateAdapter implements ChatReadStatePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, userId);
             stmt.setObject(2, chatId);
             stmt.setObject(3, lastReadMessageId);
@@ -69,6 +72,7 @@ public final class JdbcChatReadStateAdapter implements ChatReadStatePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             int i = 1;
             stmt.setObject(i++, chatId);
             stmt.setObject(i++, userId);

@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.api.directory;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.common.scheduling.ScheduledTaskSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +30,8 @@ public final class DirectorySyncScheduler implements AutoCloseable {
             return t;
         });
         var initialDelay = Math.min(minutes, 5L);
-        executor.scheduleAtFixedRate(this::tick, initialDelay, minutes, TimeUnit.MINUTES);
+        ScheduledTaskSupport.scheduleAtFixedRateWithJitter(
+            executor, this::tick, initialDelay, minutes, TimeUnit.MINUTES.toMillis(2), TimeUnit.MINUTES);
         log.info("Directory sync scheduler started (interval {} min)", minutes);
     }
 

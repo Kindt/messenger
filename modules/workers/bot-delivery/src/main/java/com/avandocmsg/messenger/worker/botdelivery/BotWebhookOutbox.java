@@ -17,6 +17,8 @@ import java.util.UUID;
 final class BotWebhookOutbox {
     static final int MAX_ATTEMPTS = 5;
     static final Duration BASE_BACKOFF = Duration.ofSeconds(30);
+    static final int DEFAULT_FAILED_RETENTION_DAYS = 7;
+    static final int DEFAULT_FAILED_PURGE_BATCH = 500;
 
     private final DataSource dataSource;
     private final Clock clock;
@@ -163,13 +165,65 @@ final class BotWebhookOutbox {
     void markFailed(UUID id) throws SQLException {
         var sql = """
             UPDATE bot_webhook_outbox
-            SET status = 'failed', updated_at = CURRENT_TIMESTAMP
+            SET status = 'failed', updated_at = ?
             WHERE id = ?
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, id);
+            stmt.setTimestamp(1, Timestamp.from(clock.instant()));
+            stmt.setObject(2, id);
             stmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Deletes {@code status='failed'} rows older than {@code retentionDays} (by {@code updated_at}).
+     * Env: {@code BOT_WEBHOOK_OUTBOX_FAILED_RETENTION_DAYS} (default 7, 0 disables),
+     * {@code BOT_WEBHOOK_OUTBOX_FAILED_PURGE_BATCH} (default 500).
+     */
+    int purgeFailed(int retentionDays, int batchLimit) throws SQLException {
+        if (retentionDays <= 0 || batchLimit <= 0) {
+            return 0;
+        }
+        var cutoff = Timestamp.from(clock.instant().minus(Duration.ofDays(retentionDays)));
+        var sql = """
+            DELETE FROM bot_webhook_outbox
+            WHERE id IN (
+                SELECT id FROM bot_webhook_outbox
+                WHERE status = 'failed' AND updated_at < ?
+                ORDER BY updated_at
+                LIMIT ?
+            )
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setTimestamp(1, cutoff);
+            stmt.setInt(2, Math.max(1, batchLimit));
+            return stmt.executeUpdate();
+        }
+    }
+
+    static int failedRetentionDaysFromEnv() {
+        var raw = System.getenv("BOT_WEBHOOK_OUTBOX_FAILED_RETENTION_DAYS");
+        if (raw == null || raw.isBlank()) {
+            return DEFAULT_FAILED_RETENTION_DAYS;
+        }
+        try {
+            return Math.max(0, Integer.parseInt(raw.trim()));
+        } catch (NumberFormatException e) {
+            return DEFAULT_FAILED_RETENTION_DAYS;
+        }
+    }
+
+    static int failedPurgeBatchFromEnv() {
+        var raw = System.getenv("BOT_WEBHOOK_OUTBOX_FAILED_PURGE_BATCH");
+        if (raw == null || raw.isBlank()) {
+            return DEFAULT_FAILED_PURGE_BATCH;
+        }
+        try {
+            return Math.max(1, Math.min(5000, Integer.parseInt(raw.trim())));
+        } catch (NumberFormatException e) {
+            return DEFAULT_FAILED_PURGE_BATCH;
         }
     }
 

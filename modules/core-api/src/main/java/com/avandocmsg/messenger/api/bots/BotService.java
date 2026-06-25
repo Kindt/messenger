@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.bots;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.bots.dto.BotResponse;
 import com.avandocmsg.messenger.api.bots.dto.BotUpdateEvent;
 import com.avandocmsg.messenger.api.bots.dto.BotUpdatesResponse;
@@ -9,6 +10,7 @@ import com.avandocmsg.messenger.api.bots.dto.RotateBotTokenResponse;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanService;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
+import com.avandocmsg.messenger.common.concurrent.InterruptibleWait;
 import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
@@ -25,7 +27,7 @@ import java.util.regex.Pattern;
 public class BotService {
     private static final Pattern BOT_NAME = Pattern.compile("^[a-zA-Z0-9_]{3,32}$");
     private static final int MAX_UPDATES = 100;
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final BotRepository botRepository;
     private final ChatPersistencePort chatPersistencePort;
@@ -180,10 +182,7 @@ public class BotService {
             if (timeout <= 0) {
                 break;
             }
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            if (InterruptibleWait.awaitDeadline(deadline, 500L)) {
                 break;
             }
         } while (System.currentTimeMillis() < deadline);

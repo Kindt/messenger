@@ -69,28 +69,19 @@ public final class ProductModuleCatalogLoader {
 
     public static List<String> resolveInstalledAddons(
         ProductModulesCatalog catalog,
-        String explicitAddonsCsv,
-        String legacyDeployProfile
+        String explicitAddonsCsv
     ) {
         if (explicitAddonsCsv != null && !explicitAddonsCsv.isBlank()) {
             return parseCsv(explicitAddonsCsv);
-        }
-        if (legacyDeployProfile != null && !legacyDeployProfile.isBlank()
-            && catalog.legacyDeployProfileMap() != null) {
-            var entry = catalog.legacyDeployProfileMap().get(legacyDeployProfile.trim().toLowerCase());
-            if (entry != null && entry.addons() != null) {
-                return List.copyOf(entry.addons());
-            }
         }
         return List.of();
     }
 
     public static List<String> resolveSelectedAddons(
         ProductModulesCatalog catalog,
-        String explicitAddonsCsv,
-        String legacyDeployProfile
+        String explicitAddonsCsv
     ) {
-        return resolveInstalledAddons(catalog, explicitAddonsCsv, legacyDeployProfile);
+        return resolveInstalledAddons(catalog, explicitAddonsCsv);
     }
 
     private static List<String> parseCsv(String csv) {
@@ -151,13 +142,6 @@ public final class ProductModuleCatalogLoader {
             validateBundle(addon.id(), addon.migrationBundle(), "addon", errors);
             validateGates(addon, ownerByFeature, errors);
             validateAcceptance(addon, errors);
-        }
-        for (var entry : safeMap(catalog.legacyDeployProfileMap()).entrySet()) {
-            for (var addonId : safeList(entry.getValue().addons())) {
-                if (!addonIds.contains(addonId)) {
-                    errors.add("legacy profile " + entry.getKey() + " references unknown add-on " + addonId);
-                }
-            }
         }
         errors.addAll(validateExternalStackReferences(catalog));
         return List.copyOf(errors);

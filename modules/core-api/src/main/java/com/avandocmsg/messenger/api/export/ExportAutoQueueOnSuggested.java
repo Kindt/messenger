@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.export;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.core.port.ChatPersistencePort;
@@ -20,7 +21,7 @@ import java.util.UUID;
 public final class ExportAutoQueueOnSuggested {
 
     private static final Logger log = LoggerFactory.getLogger(ExportAutoQueueOnSuggested.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     static final String AUDIT_AUTO_QUEUED = "export.auto_queued";
     static final String AUDIT_SKIPPED = "export.auto_queue_skipped";

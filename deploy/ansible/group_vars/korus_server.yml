@@ -1,57 +1,17 @@
 ---
-# Deploy profile: pilot (lite hot-path), standard (full-server), enterprise (future scale overlays).
-# **Deprecated product SKU** — prefer korus_product_addons (spec 021). Profile still selects stack-up script.
-korus_deploy_profile: standard
+# Rendered by roles/korus_server/templates/korus-server.env.j2 (vault + deploy profile).
+korus_server_env_path: "{{ korus_repo_root }}/docker/.env.korus-server"
+korus_external_stack_manifest_path: "{{ korus_repo_root }}/docker/external-stack-manifest.yaml"
+
+# Product add-ons: comma-separated list of enabled add-on ids; empty = Base-only.
+# All available add-ons are listed in docs/product-modules.yaml.
+korus_product_addons: ""
+# Example: "addon-engage,addon-search,addon-retention,addon-export,addon-archive,addon-deep-archive,addon-live,addon-bots,addon-integrations,addon-e2ee,addon-enterprise-auth"
 
 # core-api container mode (spec 021 Phase 7.2): embedded (default) | war (Tomcat/Jetty WAR image).
 # war requires CoreApiComposition bootstrap (T021-100) and docker/Dockerfile.core-api.war build.
 korus_core_api_deploy_mode: embedded
 # korus_core_api_war_container_image: korus-messenger-core-api-war:local
 
-# Product add-ons (spec 021). When unset/empty env, core-api resolves from legacy_deploy_profile_map.
-# Example Base-only: korus_product_addons: []
-# korus_product_addons:
-#   - addon-engage
-#   - addon-search
-korus_compose_full_server: "{{ korus_repo_root }}/docker/docker-compose.full-server.yml"
-korus_compose_pilot: "{{ korus_repo_root }}/docker/docker-compose.full-server.yml"
-korus_compose_pilot_overrides: "{{ korus_repo_root }}/docker/docker-compose.pilot-overrides.yml"
-# Legacy standalone file (deprecated): docker/docker-compose.pilot.yml — use full-server + pilot-overrides via scripts/lean-stack-up.sh
-korus_compose_keycloak_prod: "{{ korus_repo_root }}/docker/docker-compose.keycloak-prod.yml"
-korus_compose_scale: "{{ korus_repo_root }}/docker/docker-compose.scale.yml"
-korus_compose_replica: "{{ korus_repo_root }}/docker/docker-compose.replica.yml"
-# Scale overlays (Wave 2): merge korus_compose_scale / korus_compose_replica when korus_enable_scale|korus_enable_read_replica
-korus_enable_scale: false
-korus_enable_read_replica: false
-korus_ws_replicas: 2
-korus_pipeline_replicas: 2
-korus_compose_lan_publish: "{{ korus_repo_root }}/docker/docker-compose.lan-publish.yml"
-korus_use_lan_publish: false
-korus_configure_ufw: false
-korus_api_base_url: "http://127.0.0.1:{{ korus_api_port }}"
-korus_ws_url: "ws://127.0.0.1:{{ korus_ws_port }}/ws"
-# CORS for web origin (override in two-host / stage TLS)
-korus_cors_allowed_origins: "http://127.0.0.1:9088"
-# CSP enforce (spec 014 S2); QEMU + stage/prod inventories use this default
-korus_csp_policy: "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
-# Prod secrets from ansible-vault (group_vars/vault.yml); templated to korus_server_env_path.
-# korus_db_password          -> DB_PASSWORD, POSTGRES_PASSWORD, KC_DB_PASSWORD
-# korus_minio_secret_key     -> MINIO_SECRET_KEY, MINIO_ROOT_PASSWORD
-# korus_keycloak_admin_password -> KEYCLOAK_ADMIN_PASSWORD, KEYCLOAK_MASTER_PASSWORD
-# korus_jwt_secret           -> JWT_SECRET (when compose override supports it)
-# korus_coturn_secret        -> TURN credential (korus-web turn overlay / WEB_CLIENT_RTC_ICE_SERVERS)
-# korus_vapid_public_key       -> WEB_CLIENT_VAPID_PUBLIC_KEY (web) + PUSH_VAPID_PUBLIC_KEY (push-worker)
-# korus_vapid_private_key      -> PUSH_VAPID_PRIVATE_KEY
-# korus_vapid_subject          -> PUSH_VAPID_SUBJECT
-# korus_cors_allowed_origins -> CORS_ALLOWED_ORIGINS (stage/prod HTTPS origin)
-# korus_keycloak_issuer      -> KEYCLOAK_ISSUER (optional when Keycloak published at HTTPS)
-# korus_keycloak_jwks_url    -> KEYCLOAK_JWKS_URL (optional override)
-korus_server_env_path: "{{ korus_repo_root }}/docker/.env.korus-server"
-# Spec 023: desired external-stack manifest rendered by deploy tooling.
-# Runtime reads it via EXTERNAL_STACK_MANIFEST_PATH and exposes desired/observed status.
-korus_external_stack_manifest_path: "{{ korus_repo_root }}/docker/external-stack-manifest.yaml"
-korus_external_stack_manifest_enabled: true
-# L2 live streaming: browser on Windows host uses forwarded port 17880 (see deploy/qemu/README.md)
-korus_livekit_url: "ws://127.0.0.1:17880"
-korus_livekit_api_key: devkey
-korus_livekit_api_secret: korus-dev-livekit-secret-32bytes!
+# Jenkins / ADO pipeline overrides
+# korus_repo_root: /var/lib/jenkins/workspace/korus-messenger

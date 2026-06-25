@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.export;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.params.UuidParams;
 import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.core.port.ExportJobPort;
@@ -21,7 +22,7 @@ public final class ExportDownloadSupport {
     public static final String AUDIT_USER_DOWNLOAD = "export.downloaded";
     public static final String AUDIT_ADMIN_DOWNLOAD = "export.admin_downloaded";
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private ExportDownloadSupport() {}
 

@@ -222,6 +222,16 @@ class CoreApiBenchmarkTest {
 
             @Override
             public void delete(String objectName) throws Exception {}
+
+            @Override
+            public java.util.Optional<String> presignedGetUrl(String objectName, int ttlSeconds) {
+                return java.util.Optional.empty();
+            }
+
+            @Override
+            public java.util.Optional<String> presignedPutUrl(String objectName, int ttlSeconds, String contentType) {
+                return java.util.Optional.empty();
+            }
         };
         MessageQueryPort queryPort = new MessageQueryPort() {
             @Override

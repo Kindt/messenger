@@ -55,6 +55,7 @@ public final class IndexerHotPlugMonitor implements AutoCloseable {
         } catch (Exception e) {
             log.debug("Unsubscribe {}: {}", NatsSubjects.SVC_HEARTBEAT_WILDCARD, e.getMessage());
         }
+        registry.close();
     }
 
     private static String normalize(String value) {

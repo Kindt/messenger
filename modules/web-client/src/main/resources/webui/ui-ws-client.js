@@ -49,11 +49,22 @@
       }, delay);
     }
 
+    function detachSocketHandlers(socket) {
+      if (!socket) {
+        return;
+      }
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onerror = null;
+      socket.onclose = null;
+    }
+
     function replaceSocket(st) {
       if (!st.ws) {
         return;
       }
       st.wsReplacing = true;
+      detachSocketHandlers(st.ws);
       try {
         st.ws.close();
       } catch (e) {}

@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.scim;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.core.port.OrgUserDirectoryPort;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -10,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 public class ScimUserMapper {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     static final List<String> USER_SCHEMA = List.of("urn:ietf:params:scim:schemas:core:2.0:User");
     static final List<String> LIST_SCHEMA = List.of("urn:ietf:params:scim:api:messages:2.0:ListResponse");
 

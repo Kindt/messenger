@@ -88,10 +88,10 @@ try {
         Start-Sleep -Seconds 30
         try {
             $metrics = Invoke-WebRequest -Uri $MetricsUrl -UseBasicParsing -TimeoutSec 5
-            $open = Read-MetricValue $metrics.Content "ws_open_sessions"
+            $open = Read-MetricValue $metrics.Content "ws_active_sessions"
             if ($null -ne $open) {
                 $samples += $open
-                Write-Host "  ws_open_sessions=$open" -ForegroundColor DarkGray
+                Write-Host "  ws_active_sessions=$open" -ForegroundColor DarkGray
             }
         } catch {
             Write-Host "  [WARN] metrics unavailable at $MetricsUrl" -ForegroundColor Yellow
@@ -119,5 +119,5 @@ Write-Host "[OK] load-ws-soak complete ($Connections conn, ${DurationSeconds}s)"
 Write-Host "Live gate (pilot guest): ws-gateway RSS < ${MaxRssMb}MB - check docker stats ws-gateway on server guest" -ForegroundColor DarkGray
 if ($samples.Count -gt 0) {
     $maxOpen = ($samples | Measure-Object -Maximum).Maximum
-    Write-Host "Metrics peak ws_open_sessions=$maxOpen (expect >= $Connections when hub healthy)" -ForegroundColor DarkGray
+    Write-Host "Metrics peak ws_active_sessions=$maxOpen (expect >= $Connections when hub healthy)" -ForegroundColor DarkGray
 }

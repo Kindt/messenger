@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.conference.dto.ConferenceParticipantResponse;
 import com.avandocmsg.messenger.api.conference.dto.ConferenceResponse;
 import com.avandocmsg.messenger.api.config.AppConfig;
@@ -17,6 +18,8 @@ import java.util.UUID;
 
 public final class JdbcConferenceAdapter implements ConferencePort {
     private static final Logger log = LoggerFactory.getLogger(JdbcConferenceAdapter.class);
+    /** Upper bound for COUNT scan on large conferences (FR-055). */
+    static final int COUNT_ACTIVE_PARTICIPANTS_LIMIT = 10_000;
     private final DataSource dataSource;
     private final AppConfig appConfig;
     private final UuidGenerator uuidGenerator;
@@ -41,6 +44,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, createdBy);
             stmt.setString(3, title != null ? title : "");
@@ -64,11 +68,15 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             INNER JOIN users u ON u.id = cp.user_id
             WHERE cp.conference_id = ? AND cp.left_at IS NULL
             ORDER BY cp.joined_at ASC
+            LIMIT ?
             """;
         var list = new ArrayList<ConferenceParticipantResponse>();
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, conferenceId);
+        try (var conn = dataSource.getConnection()) {
+            com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport.prepareRead(conn);
+            try (var stmt = conn.prepareStatement(sql)) {
+                com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport.applyDefaultTimeout(stmt);
+                stmt.setObject(1, conferenceId);
+                stmt.setInt(2, COUNT_ACTIVE_PARTICIPANTS_LIMIT);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     var joined = rs.getTimestamp("joined_at");
@@ -79,6 +87,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
                         joined != null ? joined.toInstant() : null));
                 }
             }
+            }
         } catch (Exception e) {
             log.error("listActiveParticipants {}", conferenceId, e);
         }
@@ -88,12 +97,17 @@ public final class JdbcConferenceAdapter implements ConferencePort {
     @Override
     public int countActiveParticipants(UUID conferenceId) {
         var sql = """
-            SELECT COUNT(*) FROM conference_participants
-            WHERE conference_id = ? AND left_at IS NULL
+            SELECT COUNT(*) FROM (
+                SELECT 1 FROM conference_participants
+                WHERE conference_id = ? AND left_at IS NULL
+                LIMIT ?
+            ) capped
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, conferenceId);
+            stmt.setInt(2, COUNT_ACTIVE_PARTICIPANTS_LIMIT);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt(1);
@@ -116,6 +130,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, roomSlug.trim());
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -136,6 +151,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, conferenceId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -161,6 +177,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
         var list = new ArrayList<ConferenceResponse>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, userId);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -182,6 +199,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
         var list = new ArrayList<ConferenceResponse>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -203,6 +221,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, conferenceId);
             stmt.setObject(2, userId);
             return stmt.executeUpdate() > 0;
@@ -220,6 +239,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, conferenceId);
             stmt.setObject(2, userId);
             return stmt.executeUpdate() > 0;
@@ -234,6 +254,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
         var sql = "SELECT created_by FROM conferences WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, conferenceId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -251,6 +272,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
         var sql = "UPDATE conferences SET status = 'ended', ended_at = now() WHERE id = ? AND status = 'active'";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, conferenceId);
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {

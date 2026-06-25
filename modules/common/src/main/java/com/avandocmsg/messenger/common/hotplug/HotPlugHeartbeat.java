@@ -1,6 +1,8 @@
 package com.avandocmsg.messenger.common.hotplug;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.common.scheduling.ScheduledTaskSupport;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.nats.client.Connection;
@@ -28,7 +30,7 @@ public final class HotPlugHeartbeat implements AutoCloseable {
     private volatile ScheduledFuture<?> task;
 
     public HotPlugHeartbeat(Connection nats, String serviceId, long intervalMs) {
-        this(nats, serviceId, intervalMs, Clock.systemUTC(), new ObjectMapper());
+        this(nats, serviceId, intervalMs, Clock.systemUTC(), MessengerJson.mapper());
     }
 
     HotPlugHeartbeat(Connection nats, String serviceId, long intervalMs, Clock clock, ObjectMapper mapper) {
@@ -49,7 +51,8 @@ public final class HotPlugHeartbeat implements AutoCloseable {
         if (task != null && !task.isCancelled()) {
             return;
         }
-        task = scheduler.scheduleAtFixedRate(() -> publish("ACTIVE"), 0, intervalMs, TimeUnit.MILLISECONDS);
+        task = ScheduledTaskSupport.scheduleAtFixedRateWithJitter(
+            scheduler, () -> publish("ACTIVE"), 0, intervalMs, intervalMs / 5, TimeUnit.MILLISECONDS);
     }
 
     public synchronized void stop() {

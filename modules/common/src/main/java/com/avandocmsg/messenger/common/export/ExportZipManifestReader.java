@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.common.export;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -12,7 +13,7 @@ import java.util.Optional;
 /** Parses {@link ExportOutputRef#ZIP_ATTACHMENTS_MANIFEST} inside export zip bundles. */
 public final class ExportZipManifestReader {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private ExportZipManifestReader() {}
 

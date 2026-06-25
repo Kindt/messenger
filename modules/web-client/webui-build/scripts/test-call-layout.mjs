@@ -7,13 +7,16 @@ import { dirname, join } from "node:path";
 
 const dir = dirname(fileURLToPath(import.meta.url));
 const css = readFileSync(
-  join(dir, "../../src/main/resources/webui/styles.css"),
+  join(dir, "../src/styles.css"),
   "utf8"
 );
 
 function ruleFor(selector) {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = css.match(new RegExp(escaped + "\\s*\\{([^}]*)\\}", "m"));
+  const normalizeSelectors = (s) => s.replace(/\s*>\s*/g, ">");
+  const normalizedSelector = normalizeSelectors(selector);
+  const normalizedCss = normalizeSelectors(css);
+  const escaped = normalizedSelector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = normalizedCss.match(new RegExp(escaped + "\\s*\\{([^}]*)\\}", "m"));
   if (!match) {
     throw new Error("Missing CSS rule: " + selector);
   }

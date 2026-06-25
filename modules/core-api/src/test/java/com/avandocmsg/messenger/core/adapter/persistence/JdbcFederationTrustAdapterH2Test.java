@@ -63,4 +63,16 @@ class JdbcFederationTrustAdapterH2Test {
         assertTrue(adapter.anyActiveTrust());
         assertEquals(1, adapter.listActiveForOrg(orgA).size());
     }
+
+    @Test
+    void listActiveForOrg_respectsLimitCap() throws Exception {
+        for (int i = 0; i < 3; i++) {
+            var partner = UUID.randomUUID();
+            try (var c = ds.getConnection(); Statement st = c.createStatement()) {
+                st.execute("INSERT INTO organizations (id, name) VALUES ('" + partner + "', 'P" + i + "')");
+            }
+            adapter.insert(orgA, partner, "active", null);
+        }
+        assertEquals(3, adapter.listActiveForOrg(orgA).size());
+    }
 }

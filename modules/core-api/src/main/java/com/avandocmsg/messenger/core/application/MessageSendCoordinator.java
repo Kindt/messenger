@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.core.application;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.api.mls.MlsMigrationService;
@@ -26,7 +27,7 @@ import java.util.UUID;
  */
 public final class MessageSendCoordinator {
     private static final Logger log = LoggerFactory.getLogger(MessageSendCoordinator.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final MessageRepositoryPort messageRepositoryPort;
     private final ChatRepositoryPort chatRepositoryPort;
@@ -174,7 +175,7 @@ public final class MessageSendCoordinator {
                 msg.visibilityTtlSeconds(),
                 msg.threadId());
             var data = MAPPER.writeValueAsBytes(event);
-            natsOutbound.publishPipelineMessageSend(data);
+            natsOutbound.publishPipelineMessageSend(data, msg.senderId());
         } catch (Exception e) {
             log.warn("Failed to publish msg.send event for {}", msg.id(), e);
         }

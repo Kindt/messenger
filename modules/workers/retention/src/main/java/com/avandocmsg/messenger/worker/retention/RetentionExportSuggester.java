@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.retention;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,7 +17,7 @@ import java.util.UUID;
 final class RetentionExportSuggester {
 
     private static final Logger log = LoggerFactory.getLogger(RetentionExportSuggester.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private RetentionExportSuggester() {
     }

@@ -1,22 +1,24 @@
 package com.avandocmsg.messenger.worker.archiver;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.health.WorkerDependencyHealth;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
+import com.avandocmsg.messenger.common.nats.MessageDownstreamRouting;
+import com.avandocmsg.messenger.common.nats.NatsConnectionOptions;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.nats.client.Connection;
 import io.nats.client.Nats;
-import io.nats.client.Options;
+import io.prometheus.client.hotspot.DefaultExports;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
-import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -26,7 +28,7 @@ import java.util.UUID;
  */
 public class ArchiverWorker {
     private static final Logger log = LoggerFactory.getLogger(ArchiverWorker.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final String QUEUE_GROUP = "archiver-workers";
 
     private final Connection connection;
@@ -39,12 +41,7 @@ public class ArchiverWorker {
         this.archiveDataSource = archiveDataSource;
         this.archiveEnabled = archiveEnabled;
         this.workerMessages = workerMessages;
-        var options = Options.builder()
-            .server(natsUrl)
-            .connectionName("archiver-worker")
-            .reconnectWait(Duration.ofSeconds(2))
-            .maxReconnects(-1)
-            .build();
+        var options = NatsConnectionOptions.clientBuilder(natsUrl, "archiver-worker").build();
         this.connection = Nats.connect(options);
         log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }
@@ -56,8 +53,17 @@ public class ArchiverWorker {
             log.info(workerMessages.get("worker.archiver.archive_db_disabled"));
         }
         var dispatcher = connection.createDispatcher(this::handle);
-        dispatcher.subscribe(NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP);
-        log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP));
+        dispatcher.subscribe(NatsSubjects.MSG_EVENT_DOWNSTREAM, QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_DOWNSTREAM, QUEUE_GROUP));
+        if (MessageDownstreamRouting.legacySubscribeEnabled()) {
+            dispatcher.subscribe(NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP);
+            log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP));
+        }
+    }
+
+    boolean healthReady() {
+        return WorkerDependencyHealth.natsConnected(connection)
+            && (!archiveEnabled || WorkerDependencyHealth.jdbcReachable(archiveDataSource));
     }
 
     private void ensureArchiveTable() throws Exception {
@@ -82,27 +88,36 @@ public class ArchiverWorker {
     }
 
     private void handle(io.nats.client.Message msg) {
-        byte[] deepPayload = null;
+        if (msg.getData() == null || msg.getData().length == 0) {
+            return;
+        }
         try {
-            var payload = new String(msg.getData(), StandardCharsets.UTF_8);
-            var event = MAPPER.readValue(payload, MessageWorkerEvent.class);
-            deepPayload = MAPPER.writeValueAsBytes(event);
+            MessageDownstreamRouting.dispatchDownstreamMessage(
+                msg, MessageDownstreamRouting.ROUTE_INDEX, MAPPER, this::processWorkerEvent);
+        } catch (MessageDownstreamRouting.DownstreamDispatchException e) {
+            log.error(workerMessages.get("worker.archiver.handle_failed"), e.getCause());
+        }
+    }
+
+    private void processWorkerEvent(MessageWorkerEvent event) {
+        try {
+            var payload = MAPPER.writeValueAsBytes(event);
 
             if ("delete".equalsIgnoreCase(event.indexOp())) {
                 if (archiveEnabled) {
                     deleteArchiveRow(event.messageId());
                 }
-                publishDeepArchive(deepPayload, event.messageId());
+                publishDeepArchive(payload, event.messageId());
                 return;
             }
 
             if (!archiveEnabled) {
-                publishDeepArchive(deepPayload, event.messageId());
+                publishDeepArchive(payload, event.messageId());
                 return;
             }
 
             if (upsertArchiveRow(event)) {
-                publishDeepArchive(deepPayload, event.messageId());
+                publishDeepArchive(payload, event.messageId());
             }
         } catch (Exception e) {
             log.error(workerMessages.get("worker.archiver.handle_failed"), e);
@@ -208,13 +223,38 @@ public class ArchiverWorker {
         }
 
         try {
+            DefaultExports.initialize();
+            ArchiverMetricsHttpServer metricsServer = null;
+            var metricsPort = parseMetricsPort(System.getenv("ARCHIVER_METRICS_PORT"));
             var worker = new ArchiverWorker(natsUrl, archiveDs, archiveEnabled, workerMessages);
+            if (metricsPort > 0) {
+                metricsServer = ArchiverMetricsHttpServer.start(metricsPort, worker::healthReady, workerMessages);
+                log.info(workerMessages.format("worker.archiver.metrics_url", metricsServer.getPort()));
+            }
             worker.start();
-            Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));
+            var finalMetricsServer = metricsServer;
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                worker.shutdown();
+                if (finalMetricsServer != null) {
+                    finalMetricsServer.close();
+                }
+            }));
             Thread.currentThread().join();
         } catch (Exception e) {
             log.error(workerMessages.get("worker.common.fatal_error"), e);
             System.exit(1);
+        }
+    }
+
+    private static int parseMetricsPort(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return 0;
+        }
+        try {
+            var port = Integer.parseInt(raw.trim());
+            return port > 0 && port <= 65535 ? port : 0;
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 }

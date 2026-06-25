@@ -1,12 +1,12 @@
 package com.avandocmsg.messenger.worker.exchangebridge;
 
-import com.avandocmsg.messenger.common.http.WorkerHealthHttpServer;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.plugin.PluginEvent;
 import com.avandocmsg.messenger.common.plugin.PluginResponse;
 import com.avandocmsg.messenger.common.plugin.integration.GraphCalendarClient;
 import com.sun.net.httpserver.HttpServer;
+import io.prometheus.client.hotspot.DefaultExports;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,10 +29,11 @@ public final class ExchangeBridgeWorker {
         int port = parsePort(System.getenv("EXCHANGE_BRIDGE_PORT"), 8093);
         int healthPort = parsePort(System.getenv("EXCHANGE_BRIDGE_METRICS_PORT"), 9193);
 
+        DefaultExports.initialize();
         var pluginServer = startPluginServer(port, messages);
-        try (var health = WorkerHealthHttpServer.startHealthOnly(
-            healthPort, "exchange-bridge-health", () -> true, messages)) {
-            log.info(messages.format("bridge.http_started", port, health.getPort()));
+        ExchangeBridgeMetricsHttpServer.HealthProbe pluginUp = () -> pluginServer.getAddress() != null;
+        try (var metrics = ExchangeBridgeMetricsHttpServer.start(healthPort, pluginUp, messages)) {
+            log.info(messages.format("bridge.http_started", port, metrics.getPort()));
             Thread.currentThread().join();
         } finally {
             pluginServer.stop(0);

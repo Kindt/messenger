@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.domain.UserProfile;
 import com.avandocmsg.messenger.core.port.UserRepositoryPort;
@@ -42,6 +44,7 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, displayName);
             stmt.setString(2, phone);
             stmt.setObject(3, id.value());
@@ -86,6 +89,7 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
         var sql = "UPDATE users SET " + String.join(", ", updates) + " WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             int idx = 1;
             for (var param : params) {
                 if (param instanceof Timestamp ts) {
@@ -111,6 +115,7 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setBoolean(1, disableReadReceipts);
             stmt.setObject(2, id.value());
             return stmt.executeUpdate() > 0;
@@ -129,6 +134,7 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, uiLocale);
             stmt.setObject(2, id.value());
             return stmt.executeUpdate() > 0;
@@ -145,6 +151,7 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
         var sql = "UPDATE users SET last_seen_at = now(), updated_at = now() WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id.value());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {

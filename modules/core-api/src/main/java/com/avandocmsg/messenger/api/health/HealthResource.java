@@ -54,6 +54,13 @@ public class HealthResource {
     }
 
     @GET
+    @Path("live")
+    @Operation(summary = "Liveness", description = "Process up; no dependency probes (FR-096)")
+    public HealthResponse live() {
+        return new HealthResponse("ok", appConfig.version());
+    }
+
+    @GET
     @Path("ready")
     @Operation(summary = "Readiness", description = "Проверка подключения к PostgreSQL (для оркестраторов)")
     @ApiResponse(responseCode = "200", description = "БД доступна",
@@ -61,7 +68,7 @@ public class HealthResource {
     @ApiResponse(responseCode = "503", description = "БД недоступна",
         content = @Content(schema = @Schema(implementation = HealthReadyResponse.class)))
     public Response ready() {
-        boolean dbOk = databaseHealthPort.ping();
+        boolean dbOk = databaseHealthPort.lightPing();
         boolean redisOk = redisProbe.ping();
         boolean natsOk = natsConnectionStatus.natsClientConnected();
         var body = new HealthReadyResponse(dbOk ? "ready" : "not_ready", appConfig.version(), dbOk, redisOk, natsOk);

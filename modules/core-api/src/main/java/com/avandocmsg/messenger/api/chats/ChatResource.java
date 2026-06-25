@@ -14,6 +14,7 @@ import com.avandocmsg.messenger.api.chats.dto.UnreadCountResponse;
 import com.avandocmsg.messenger.api.chats.dto.UpdateChatRequest;
 import com.avandocmsg.messenger.api.chats.dto.UpdateRoleRequest;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
+import com.avandocmsg.messenger.api.params.ListPagination;
 import com.avandocmsg.messenger.api.params.UuidParams;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.security.TimingNormalization;
@@ -75,9 +76,17 @@ public class ChatResource {
     @Operation(summary = "List chats", description = "Get all chats the current user is a member of")
     @ApiResponse(responseCode = "200", description = "List of chats",
         content = @Content(array = @ArraySchema(schema = @Schema(implementation = ChatResponse.class))))
-    public Response list(@Context SecurityContext securityContext) {
+    public Response list(@QueryParam("offset") Integer offset,
+                         @QueryParam("limit") Integer limit,
+                         @Context SecurityContext securityContext) {
+        var validation = ListPagination.validate(limit, offset);
+        var badRequest = ListPagination.badRequest(validation, messages);
+        if (badRequest.isPresent()) {
+            return badRequest.get();
+        }
+        var page = ListPagination.resolve(limit, offset, ListPagination.DEFAULT_CHAT_LIST_LIMIT);
         var userId = CurrentUserId.uuid(securityContext);
-        var chats = chatService.list(userId);
+        var chats = chatService.list(userId, page);
         return Response.ok(chats).build();
     }
 

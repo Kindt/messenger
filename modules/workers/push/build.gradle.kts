@@ -8,15 +8,19 @@ application {
 
 dependencies {
     implementation(project(":modules:common"))
-    implementation("io.nats:jnats:2.17.4")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
-    implementation("nl.martijndwars:web-push:5.1.1")
-    implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
-    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
-    implementation("ch.qos.logback:logback-classic:1.5.3")
-    implementation("org.slf4j:slf4j-api:2.0.12")
+    implementation(libs.jnats)
+    implementation(libs.hikari) {
+        exclude(group = "org.slf4j", module = "slf4j-api")
+    }
+    implementation(libs.web.push) {
+        exclude(group = "org.slf4j", module = "slf4j-api")
+    }
+    implementation(libs.bcpkix.jdk18on)
+    implementation(libs.bcprov.jdk18on)
+    implementation(libs.bundles.logging)
+    implementation(libs.bundles.prometheus.server)
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation(libs.h2)
 }
 
 tasks.test {

@@ -31,6 +31,31 @@ class BotRateLimiterTest {
     }
 
     @Test
+    void scheduledEviction_prunesStaleBotsWithoutTryAcquire() throws InterruptedException {
+        var limiter = new BotRateLimiter(3, true, 50L);
+        try {
+            var botId = UUID.randomUUID();
+            limiter.seedTimestampForTest(botId, java.time.Instant.now().minusSeconds(601).toEpochMilli());
+            assertEquals(1, limiter.trackedBotCount());
+            Thread.sleep(150);
+            assertEquals(0, limiter.trackedBotCount());
+        } finally {
+            limiter.close();
+        }
+    }
+
+    @Test
+    void fromEnv_isCloseableAndAppliesDefaultLimit() {
+        try (var limiter = BotRateLimiter.fromEnv()) {
+            var botId = UUID.randomUUID();
+            for (int i = 0; i < 30; i++) {
+                assertTrue(limiter.tryAcquire(botId));
+            }
+            assertFalse(limiter.tryAcquire(botId));
+        }
+    }
+
+    @Test
     void isolatesBots() {
         var limiter = new BotRateLimiter(1);
         assertTrue(limiter.tryAcquire(UUID.randomUUID()));

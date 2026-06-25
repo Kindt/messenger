@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.api.plugins;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
+import com.avandocmsg.messenger.common.http.HttpClientSupport;
 import com.avandocmsg.messenger.common.plugin.PluginEvent;
 import com.avandocmsg.messenger.common.plugin.PluginResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,16 +16,14 @@ import java.time.Duration;
 
 public class IntegrationRouterClient {
     private static final Logger log = LoggerFactory.getLogger(IntegrationRouterClient.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final HttpClient httpClient;
     private final String defaultRuntimeBaseUrl;
 
     public IntegrationRouterClient(String defaultRuntimeBaseUrl) {
         this.defaultRuntimeBaseUrl = trimTrailingSlash(defaultRuntimeBaseUrl);
-        this.httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+        this.httpClient = HttpClientSupport.sharedClient();
     }
 
     public PluginResponse forward(PluginEvent event, String runtimeEndpoint) throws Exception {

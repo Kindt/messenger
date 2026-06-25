@@ -1,0 +1,17 @@
+{
+  "wave": "B",
+  "phase": "post",
+  "git_sha": "3e98daf",
+  "environment": "repo-static",
+  "metrics": {
+    "web_first_load_kb": null,
+    "web_js_gzip_kb": null,
+    "web_locales_loaded": null,
+    "api_health_p99_ms": null,
+    "nats_msgs_per_send_estimate": null,
+    "core_api_heap_mb_after_1h": null,
+    "ws_gateway_heap_mb_after_1h": null,
+    "read_cache_hit_ratio": null
+  },
+  "notes": "Wave B integrate: ./gradlew buildIntegrity PASS (2026-06-25). T043–T049 subagent batches B6/B7. QEMU live metrics + EXPLAIN on Postgres deferred to guest lab. SQL EXPLAIN: V065/V066/V067 migrations present; trgm user search + pipeline fanout NOT EXISTS — verify on lab PG."
+}

@@ -1,6 +1,8 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
-import com.avandocmsg.messenger.api.config.JdbcQuerySupport;
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.metrics.JdbcQueryMetrics;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.MessageVersionResponse;
@@ -12,11 +14,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -76,7 +80,7 @@ public final class JdbcMessageReadRepository {
                     return Optional.of(rs.getObject("id", UUID.class));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("findLatestMessageId failed", e);
         }
         return Optional.empty();
@@ -97,7 +101,7 @@ public final class JdbcMessageReadRepository {
                     return Optional.of(msg);
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to find message {}", id, e);
         }
         return Optional.empty();
@@ -146,7 +150,7 @@ public final class JdbcMessageReadRepository {
                     result.add(MessageResponseJdbcMapper.mapMessage(rs));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             if (e instanceof SQLException sqlEx && isQueryTimeout(sqlEx)) {
                 JdbcQueryMetrics.queryTimeout();
             }
@@ -158,11 +162,13 @@ public final class JdbcMessageReadRepository {
 
     public List<MessageVersionResponse> findVersions(UUID msgId) {
         var sql = "SELECT id, message_id, content, edited_by, created_at FROM message_versions "
-            + "WHERE message_id = ? ORDER BY created_at DESC";
+            + "WHERE message_id = ? ORDER BY created_at DESC LIMIT ?";
         var result = new ArrayList<MessageVersionResponse>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+            applyQueryTimeout(stmt);
             stmt.setObject(1, msgId);
+            stmt.setInt(2, JdbcListLimits.MESSAGE_VERSIONS);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     result.add(new MessageVersionResponse(
@@ -173,18 +179,21 @@ public final class JdbcMessageReadRepository {
                         rs.getTimestamp("created_at").toInstant()));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to find versions for message {}", msgId, e);
         }
         return result;
     }
 
     public List<ReactionResponse> getReactions(UUID messageId) {
-        var sql = "SELECT message_id, user_id, reaction, created_at FROM message_reactions WHERE message_id = ? ORDER BY created_at";
+        var sql = "SELECT message_id, user_id, reaction, created_at FROM message_reactions "
+            + "WHERE message_id = ? ORDER BY created_at LIMIT ?";
         var result = new ArrayList<ReactionResponse>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+            applyQueryTimeout(stmt);
             stmt.setObject(1, messageId);
+            stmt.setInt(2, JdbcListLimits.MESSAGE_REACTIONS);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     result.add(new ReactionResponse(
@@ -194,18 +203,21 @@ public final class JdbcMessageReadRepository {
                         rs.getTimestamp("created_at").toInstant()));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to get reactions for message {}", messageId, e);
         }
         return result;
     }
 
     public List<PinnedMessageResponse> getPinnedMessages(UUID chatId) {
-        var sql = "SELECT chat_id, message_id, pinned_by, created_at FROM pinned_messages WHERE chat_id = ? ORDER BY created_at DESC";
+        var sql = "SELECT chat_id, message_id, pinned_by, created_at FROM pinned_messages "
+            + "WHERE chat_id = ? ORDER BY created_at DESC LIMIT ?";
         var result = new ArrayList<PinnedMessageResponse>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+            applyQueryTimeout(stmt);
             stmt.setObject(1, chatId);
+            stmt.setInt(2, JdbcListLimits.PINNED_MESSAGES);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     result.add(new PinnedMessageResponse(
@@ -215,7 +227,7 @@ public final class JdbcMessageReadRepository {
                         rs.getTimestamp("created_at").toInstant()));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to get pinned messages for chat {}", chatId, e);
         }
         return result;
@@ -226,7 +238,7 @@ public final class JdbcMessageReadRepository {
             SELECT m.id, m.chat_id
             FROM messages m
             INNER JOIN chat_members cm ON cm.chat_id = m.chat_id AND cm.user_id = ? AND cm.banned = false
-            WHERE (trim(m.content) = ? OR m.attachment_file_id = ?)
+            WHERE (m.content = ? OR m.attachment_file_id = ?)
               AND m.deleted = false
               AND """ + MessageJdbcSql.MSG_VISIBILITY_TTL_VISIBLE + """
               AND m.sender_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
@@ -236,6 +248,7 @@ public final class JdbcMessageReadRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, viewerId);
             stmt.setString(2, fileId.toString());
             stmt.setObject(3, fileId);
@@ -248,7 +261,7 @@ public final class JdbcMessageReadRepository {
                         rs.getObject("chat_id", UUID.class)));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("findLatestMessageRefForViewer failed", e);
         }
         return Optional.empty();
@@ -260,7 +273,7 @@ public final class JdbcMessageReadRepository {
             FROM messages m
             INNER JOIN chat_members cm ON cm.chat_id = m.chat_id AND cm.user_id = ? AND cm.banned = false
             WHERE (
-                (trim(m.content) = ? AND m.type NOT LIKE 'e2ee-%')
+                (m.content = ? AND m.type NOT LIKE 'e2ee-%')
                 OR m.attachment_file_id = ?
               )
               AND m.deleted = false
@@ -271,6 +284,7 @@ public final class JdbcMessageReadRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, viewerId);
             stmt.setString(2, fileId.toString());
             stmt.setObject(3, fileId);
@@ -279,7 +293,7 @@ public final class JdbcMessageReadRepository {
             try (var rs = stmt.executeQuery()) {
                 return rs.next();
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("viewerMayAccessFileViaSharedNonE2eeMessage failed", e);
             return false;
         }
@@ -289,41 +303,56 @@ public final class JdbcMessageReadRepository {
         if (chatIds.isEmpty()) {
             return List.of();
         }
-        var sql = """
-            SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at,
-                m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id
-            FROM messages m
-            WHERE m.chat_id = ANY (?)
-              AND m.deleted = false
-              AND """ + MessageJdbcSql.MSG_VISIBILITY_TTL_VISIBLE + """
-              AND m.type NOT LIKE 'e2ee-%'
-              AND POSITION(lower(CAST (? AS text)) IN lower(coalesce(m.content, ''))) > 0
-              AND EXISTS (SELECT 1 FROM chat_members cm WHERE cm.chat_id = m.chat_id AND cm.user_id = ? AND cm.banned = false)
-              AND m.sender_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
-              AND m.sender_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)
-            ORDER BY m.created_at DESC
-            LIMIT ?
-            """;
         var result = new ArrayList<MessageResponse>();
-        try (var conn = read().getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            applyQueryTimeout(stmt);
-            var arr = conn.createArrayOf("uuid", chatIds.toArray(new UUID[0]));
-            stmt.setArray(1, arr);
-            stmt.setString(2, queryText);
-            stmt.setObject(3, userId);
-            stmt.setObject(4, userId);
-            stmt.setObject(5, userId);
-            stmt.setInt(6, limit);
-            try (var rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    result.add(MessageResponseJdbcMapper.mapMessage(rs));
+        try (var conn = read().getConnection()) {
+            JdbcConnectionSupport.prepareRead(conn);
+            var searchClause = plaintextSearchClause(isPostgres(conn));
+            var sql = """
+                SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at,
+                    m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id
+                FROM messages m
+                WHERE m.chat_id = ANY (?)
+                  AND m.deleted = false
+                  AND """ + MessageJdbcSql.MSG_VISIBILITY_TTL_VISIBLE + """
+                  AND m.type NOT LIKE 'e2ee-%'
+                  AND """ + searchClause + """
+                  AND EXISTS (SELECT 1 FROM chat_members cm WHERE cm.chat_id = m.chat_id AND cm.user_id = ? AND cm.banned = false)
+                  AND m.sender_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
+                  AND m.sender_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)
+                ORDER BY m.created_at DESC
+                LIMIT ?
+                """;
+            try (var stmt = conn.prepareStatement(sql)) {
+                applyQueryTimeout(stmt);
+                var arr = conn.createArrayOf("uuid", chatIds.toArray(new UUID[0]));
+                stmt.setArray(1, arr);
+                stmt.setString(2, queryText);
+                stmt.setObject(3, userId);
+                stmt.setObject(4, userId);
+                stmt.setObject(5, userId);
+                stmt.setInt(6, limit);
+                try (var rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        result.add(MessageResponseJdbcMapper.mapMessage(rs));
+                    }
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("searchPlaintextForUser failed", e);
         }
         return result;
+    }
+
+    static String plaintextSearchClause(boolean postgres) {
+        if (postgres) {
+            return "to_tsvector('russian', coalesce(m.content, '')) @@ plainto_tsquery('russian', ?)";
+        }
+        return "POSITION(lower(CAST (? AS text)) IN lower(coalesce(m.content, ''))) > 0";
+    }
+
+    private static boolean isPostgres(Connection conn) throws SQLException {
+        var product = conn.getMetaData().getDatabaseProductName();
+        return product != null && product.toLowerCase(Locale.ROOT).contains("postgresql");
     }
 
     public List<MessageResponse> loadMessagesForSearchResults(UUID userId, List<String> orderedIds, int limit) {
@@ -363,7 +392,7 @@ public final class JdbcMessageReadRepository {
                     byId.put(UUID.fromString(row.id()), row);
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("loadMessagesForSearchResults failed", e);
             return List.of();
         }

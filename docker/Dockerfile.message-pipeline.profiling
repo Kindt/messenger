@@ -6,4 +6,5 @@ RUN gradle --console=plain :modules:workers:message-pipeline:installDist --no-da
 FROM eclipse-temurin:25-jdk
 WORKDIR /app
 COPY --from=builder /app/modules/workers/message-pipeline/build/install/message-pipeline /app/message-pipeline
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:+UseContainerSupport -XX:+UseG1GC"
 ENTRYPOINT ["/app/message-pipeline/bin/message-pipeline"]

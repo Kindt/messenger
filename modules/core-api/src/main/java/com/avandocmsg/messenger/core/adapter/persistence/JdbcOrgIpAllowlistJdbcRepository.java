@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.security.OrgIpAllowlistRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +23,7 @@ public final class JdbcOrgIpAllowlistJdbcRepository {
         var sql = "SELECT org_id, enabled, allowed_cidrs FROM org_ip_allowlist WHERE org_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -47,6 +50,7 @@ public final class JdbcOrgIpAllowlistJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             stmt.setBoolean(2, enabled);
             stmt.setString(3, allowedCidrs != null ? allowedCidrs : "");

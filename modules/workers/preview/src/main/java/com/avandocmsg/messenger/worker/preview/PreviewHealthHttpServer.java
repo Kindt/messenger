@@ -20,8 +20,8 @@ final class PreviewHealthHttpServer implements AutoCloseable {
 
     static PreviewHealthHttpServer start(int port, PreviewReadinessCheck probe, UserMessageSource messages)
             throws IOException {
-        var delegate = WorkerHealthHttpServer.startHealthOnly(
-            port, "preview-health-http", probe::ready, messages);
+        var delegate = WorkerHealthHttpServer.startWithMetrics(
+            port, "preview-metrics-http", probe::ready, messages, PreviewMetrics::registerBuildInfoOnce);
         return new PreviewHealthHttpServer(delegate);
     }
 

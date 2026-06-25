@@ -11,8 +11,7 @@ public record ProductModulesCatalog(
     @JsonProperty("schema_version") int schemaVersion,
     @JsonProperty("base") BaseEntry base,
     @JsonProperty("substrates") List<SubstrateEntry> substrates,
-    @JsonProperty("addons") List<AddonEntry> addons,
-    @JsonProperty("legacy_deploy_profile_map") Map<String, LegacyProfileEntry> legacyDeployProfileMap
+    @JsonProperty("addons") List<AddonEntry> addons
 ) {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record BaseEntry(
@@ -152,10 +151,5 @@ public record ProductModulesCatalog(
         @JsonProperty("positive") List<String> positive,
         @JsonProperty("disabled") List<String> disabled,
         @JsonProperty("degraded") List<String> degraded
-    ) {}
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record LegacyProfileEntry(
-        @JsonProperty("addons") List<String> addons
     ) {}
 }

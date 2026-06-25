@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.auth;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.auth.dto.LoginRequest;
 import com.avandocmsg.messenger.api.auth.dto.LoginResponse;
 import com.avandocmsg.messenger.api.auth.dto.RegisterRequest;
@@ -25,7 +26,7 @@ import java.util.UUID;
 
 public class AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final AppConfig appConfig;
     private final UserLookupPort userLookupPort;
@@ -179,8 +180,8 @@ public class AuthService {
     }
 
     /**
-     * Отзыв refresh-токена в Keycloak (RFC 7009, endpoint {@code .../openid-connect/revoke}).
-     * Идемпотентно для клиента: при уже недействительном токене Keycloak может вернуть 400 — считаем успехом для logout.
+     * РћС‚Р·С‹РІ refresh-С‚РѕРєРµРЅР° РІ Keycloak (RFC 7009, endpoint {@code .../openid-connect/revoke}).
+     * РРґРµРјРїРѕС‚РµРЅС‚РЅРѕ РґР»СЏ РєР»РёРµРЅС‚Р°: РїСЂРё СѓР¶Рµ РЅРµРґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕРј С‚РѕРєРµРЅРµ Keycloak РјРѕР¶РµС‚ РІРµСЂРЅСѓС‚СЊ 400 вЂ” СЃС‡РёС‚Р°РµРј СѓСЃРїРµС…РѕРј РґР»СЏ logout.
      */
     public boolean revokeRefreshToken(String refreshToken) {
         try {
@@ -199,7 +200,7 @@ public class AuthService {
             if (code >= 200 && code < 300) {
                 return true;
             }
-            // Keycloak: неверный/истёкший токен часто даёт 400 — для logout это ожидаемо
+            // Keycloak: РЅРµРІРµСЂРЅС‹Р№/РёСЃС‚С‘РєС€РёР№ С‚РѕРєРµРЅ С‡Р°СЃС‚Рѕ РґР°С‘С‚ 400 вЂ” РґР»СЏ logout СЌС‚Рѕ РѕР¶РёРґР°РµРјРѕ
             if (code == 400) {
                 return true;
             }
@@ -211,7 +212,7 @@ public class AuthService {
         }
     }
 
-    /** Как {@link #login}, но по refresh_token; при отсутствии нового refresh в ответе Keycloak подставляется переданный токен. */
+    /** РљР°Рє {@link #login}, РЅРѕ РїРѕ refresh_token; РїСЂРё РѕС‚СЃСѓС‚СЃС‚РІРёРё РЅРѕРІРѕРіРѕ refresh РІ РѕС‚РІРµС‚Рµ Keycloak РїРѕРґСЃС‚Р°РІР»СЏРµС‚СЃСЏ РїРµСЂРµРґР°РЅРЅС‹Р№ С‚РѕРєРµРЅ. */
     public LoginResponse refreshAccessToken(String refreshToken) {
         try {
             var tokenEndpoint = appConfig.keycloakIssuer() + "/protocol/openid-connect/token";

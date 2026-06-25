@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.files;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.files.dto.CreatePublicLinkRequest;
 import com.avandocmsg.messenger.api.files.dto.FileInfoResponse;
@@ -7,6 +8,8 @@ import com.avandocmsg.messenger.api.files.dto.FileMessageRefResponse;
 import com.avandocmsg.messenger.api.files.dto.OwnerPublicLinkSummary;
 import com.avandocmsg.messenger.api.files.dto.PublicLinkCreatedResponse;
 import com.avandocmsg.messenger.api.files.dto.PublicLinkSummary;
+import com.avandocmsg.messenger.api.files.dto.FilePresignUploadRequest;
+import com.avandocmsg.messenger.api.files.dto.FilePresignUploadResponse;
 import com.avandocmsg.messenger.api.files.dto.FileUploadResponse;
 import com.avandocmsg.messenger.api.metrics.ApiDeniedMetrics;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
@@ -48,6 +51,7 @@ import org.glassfish.jersey.media.multipart.FormDataParam;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -57,7 +61,7 @@ import java.util.UUID;
 @Tag(name = "Files", description = "File upload and download")
 public class FileResource {
 
-    private static final ObjectMapper FILE_AUDIT_JSON = new ObjectMapper();
+    private static final ObjectMapper FILE_AUDIT_JSON = MessengerJson.mapper();
 
     private static String writeFileAuditJson(ObjectNode n) {
         try {
@@ -281,6 +285,16 @@ public class FileResource {
     }
 
     @GET
+    @Path("/{fileId}/content")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    @Operation(summary = "Download file content (presigned redirect)",
+        description = "307 redirect to MinIO presigned URL when enabled; otherwise streams bytes")
+    public Response downloadContent(@PathParam("fileId") String fileId,
+                                    @Context SecurityContext securityContext) {
+        return download(fileId, securityContext);
+    }
+
+    @GET
     @Path("/{fileId}/download")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     @Operation(summary = "Download file", description = "Скачивание: владелец или участник чата с доступом к файлу")
@@ -303,6 +317,16 @@ public class FileResource {
                 .build();
         }
         var info = FileDomainMapper.toResponse(meta.get());
+        if (appConfig.filePresignRedirectEnabled()) {
+            var presigned = fileApplicationService.presignedDownloadUrl(
+                fileIdDomain, appConfig.minioPresignTtlSeconds());
+            if (presigned.isPresent()) {
+                return Response.status(Response.Status.TEMPORARY_REDIRECT)
+                    .location(URI.create(presigned.get()))
+                    .header("Cache-Control", appConfig.filePresignRedirectCacheControl())
+                    .build();
+            }
+        }
         var stream = fileApplicationService.download(fileIdDomain);
         if (stream == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
@@ -311,6 +335,77 @@ public class FileResource {
             .header("Content-Disposition", "attachment; filename=\"" + info.filename() + "\"")
             .header("Content-Type", info.mimeType())
             .build();
+    }
+
+    @POST
+    @Path("/presign-upload")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Operation(summary = "Presigned PUT upload URL",
+        description = "Client uploads bytes to MinIO then calls confirm-presigned-upload")
+    @ApiResponse(responseCode = "201", description = "Presigned upload issued",
+        content = @Content(schema = @Schema(implementation = FilePresignUploadResponse.class)))
+    public Response presignUpload(FilePresignUploadRequest body,
+                                  @Context SecurityContext securityContext) {
+        if (body == null || body.size() <= 0) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.file.empty_file")))
+                .build();
+        }
+        if (body.size() > fileService.maxUploadBytes()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, uploadTooLargeMessage(fileService.maxUploadBytes())))
+                .build();
+        }
+        var userId = CurrentUserId.uuid(securityContext);
+        var ttl = appConfig.minioPresignTtlSeconds();
+        var result = fileApplicationService.beginPresignedUpload(
+            body.filename(), body.mimeType(), body.size(), UserId.of(userId), ttl);
+        if (result.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.file.upload_failed")))
+                .build();
+        }
+        var r = result.get();
+        return Response.status(Response.Status.CREATED)
+            .entity(new FilePresignUploadResponse(
+                r.file().id().value().toString(),
+                r.uploadUrl(),
+                r.downloadUrl(),
+                r.expiresInSeconds()))
+            .build();
+    }
+
+    @POST
+    @Path("/{fileId}/confirm-presigned-upload")
+    @Operation(summary = "Confirm presigned upload",
+        description = "Verifies object exists in storage after direct MinIO PUT")
+    @ApiResponse(responseCode = "200", description = "Upload confirmed",
+        content = @Content(schema = @Schema(implementation = FileUploadResponse.class)))
+    public Response confirmPresignedUpload(@PathParam("fileId") String fileId,
+                                           @Context SecurityContext securityContext) {
+        var fid = UuidParams.required(fileId, "file_id");
+        var userId = CurrentUserId.uuid(securityContext);
+        var fileIdDomain = FileId.of(fid);
+        if (!fileApplicationService.confirmPresignedUpload(fileIdDomain, UserId.of(userId))) {
+            if (fileApplicationService.findById(fileIdDomain).isEmpty()) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.file.upload_failed")))
+                .build();
+        }
+        var info = fileApplicationService.findById(fileIdDomain)
+            .map(FileDomainMapper::toResponse)
+            .orElse(null);
+        if (info == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        return Response.ok(new FileUploadResponse(
+            info.id(),
+            info.filename(),
+            info.mimeType(),
+            info.size(),
+            "/api/v1/files/" + info.id() + "/download")).build();
     }
 
     @GET

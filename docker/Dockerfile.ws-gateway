@@ -4,10 +4,15 @@ COPY . .
 RUN gradle --console=plain :modules:ws-gateway:distTar --no-daemon -x test
 
 FROM eclipse-temurin:25-jre
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl \
+  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/modules/ws-gateway/build/distributions/ws-gateway.tar .
 RUN tar xf ws-gateway.tar && rm ws-gateway.tar
 EXPOSE 8081
 ENV APP_HOME=/app/ws-gateway
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport"
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport -XX:+UseZGC"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:9191/health >/dev/null || exit 1
 ENTRYPOINT ["/app/ws-gateway/bin/ws-gateway"]

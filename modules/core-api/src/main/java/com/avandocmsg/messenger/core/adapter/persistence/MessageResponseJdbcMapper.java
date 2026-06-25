@@ -9,7 +9,7 @@ final class MessageResponseJdbcMapper {
     private MessageResponseJdbcMapper() {
     }
 
-    static MessageResponse mapMessage(ResultSet rs) throws Exception {
+    static MessageResponse mapMessage(ResultSet rs) throws java.sql.SQLException {
         var ts = rs.getTimestamp("created_at");
         var editedTs = rs.getTimestamp("edited_at");
         var replyTo = rs.getObject("reply_to_msg_id", java.util.UUID.class);
@@ -48,7 +48,8 @@ final class MessageResponseJdbcMapper {
             mapReplyPreview(rs));
     }
 
-    static com.avandocmsg.messenger.api.messages.dto.MessageReplyPreview mapReplyPreview(ResultSet rs) throws Exception {
+    static com.avandocmsg.messenger.api.messages.dto.MessageReplyPreview mapReplyPreview(ResultSet rs)
+        throws java.sql.SQLException {
         if (!hasColumn(rs, "reply_preview_id")) {
             return null;
         }

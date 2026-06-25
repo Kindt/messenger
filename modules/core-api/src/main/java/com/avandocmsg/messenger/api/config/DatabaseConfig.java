@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.api.config;
 
+import com.avandocmsg.messenger.common.jdbc.HikariPoolSettings;
+import com.avandocmsg.messenger.common.jdbc.HikariPoolSupport;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
@@ -57,27 +59,34 @@ public class DatabaseConfig {
         }
     }
 
+    HikariPoolSettings poolSettings() {
+        return new HikariPoolSettings(
+            appConfig.dbPoolMinimumIdle(),
+            appConfig.dbPoolConnectionTimeoutMs(),
+            appConfig.dbPoolIdleTimeoutMs(),
+            appConfig.dbPoolMaxLifetimeMs(),
+            appConfig.dbPoolKeepaliveTimeMs(),
+            appConfig.dbJdbcCachePrepStmts(),
+            appConfig.dbJdbcPrepStmtCacheSize(),
+            appConfig.dbJdbcPrepStmtCacheSqlLimit(),
+            appConfig.dbJdbcPrepareThreshold());
+    }
+
     private HikariDataSource buildPool(String jdbcUrl, String poolName, int maxPoolSize) {
         var hikari = new HikariConfig();
         hikari.setJdbcUrl(jdbcUrl);
-        if (jdbcUrl.startsWith("jdbc:postgresql:")) {
-            hikari.setDriverClassName("org.postgresql.Driver");
-        }
         hikari.setUsername(appConfig.dbUser());
         hikari.setPassword(appConfig.dbPassword());
         hikari.setMaximumPoolSize(maxPoolSize);
-        hikari.setMinimumIdle(2);
-        hikari.setConnectionTimeout(5000);
-        hikari.setIdleTimeout(300000);
-        hikari.setMaxLifetime(600000);
         hikari.setPoolName(poolName);
         hikari.setReadOnly(poolName.contains("-read"));
-        hikari.addDataSourceProperty("cachePrepStmts", "true");
-        hikari.addDataSourceProperty("prepStmtCacheSize", "250");
-        hikari.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-        hikari.addDataSourceProperty("prepareThreshold", "0");
+        HikariPoolSupport.apply(hikari, poolSettings(), jdbcUrl);
         var ds = new HikariDataSource(hikari);
-        log.info("Database pool configured: {} (max={})", jdbcUrl, maxPoolSize);
+        log.info(
+            "Database pool configured: {} (max={}, prepareThreshold={})",
+            jdbcUrl,
+            maxPoolSize,
+            poolSettings().prepareThreshold());
         return ds;
     }
 }

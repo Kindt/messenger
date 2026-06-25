@@ -16,6 +16,19 @@ class MessageWorkerEventTest {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
+    void withSearchTextMaxChars_capsPreviewPayload() throws Exception {
+        var longText = "a".repeat(200);
+        var send = new MessageSendEvent(
+            "mid", "cid", "sid", "text", longText, null, null, null, null, null, null);
+        var ev = MessageWorkerEvent.fromSendEvent(send);
+        assertEquals(200, ev.searchText().length());
+        var slim = ev.withSearchTextMaxChars(MessageWorkerEvent.PUSH_BOT_SEARCH_TEXT_MAX);
+        assertEquals(MessageWorkerEvent.PUSH_BOT_SEARCH_TEXT_MAX, slim.searchText().length());
+        var json = MAPPER.writeValueAsString(slim);
+        assertTrue(json.length() < MAPPER.writeValueAsString(ev).length());
+    }
+
+    @Test
     void fromSendEvent_marksEncryptedWhenE2eePrefix() {
         var send = new MessageSendEvent(
             "mid", "cid", "sid", "e2ee-text", "blob", "cmid", 1000L, null, null, null, null);

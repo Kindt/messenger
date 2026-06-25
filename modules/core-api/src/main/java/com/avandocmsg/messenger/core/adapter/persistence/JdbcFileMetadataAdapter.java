@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.domain.FileBlob;
 import com.avandocmsg.messenger.core.domain.FileId;
 import com.avandocmsg.messenger.core.domain.StoredFile;
@@ -29,6 +31,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id.value());
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -58,6 +61,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id.value());
             stmt.setString(2, filename);
             stmt.setString(3, mimeType);
@@ -80,6 +84,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
         var sql = "DELETE FROM file_metadata WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id.value());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
@@ -95,6 +100,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
         var sql = "SELECT content_hash, storage_key, blob_size, ref_count FROM file_blob WHERE content_hash = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, contentHash);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -123,6 +129,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, contentHash);
             stmt.setString(2, storageKey);
             stmt.setLong(3, blobSize);
@@ -140,6 +147,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
         var sql = "UPDATE file_blob SET ref_count = ref_count + 1 WHERE content_hash = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, contentHash);
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
@@ -159,6 +167,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, contentHash);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {

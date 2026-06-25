@@ -1,24 +1,52 @@
 package com.avandocmsg.messenger.api.bots;
 
+import com.avandocmsg.messenger.common.scheduling.ScheduledTaskSupport;
+
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * In-memory sliding-window rate limit per bot (default 30 req/min, env BOT_RATE_LIMIT_PER_MIN).
  */
-public class BotRateLimiter {
+public class BotRateLimiter implements AutoCloseable {
 
     private static final long IDLE_EVICT_MS = 600_000L;
+    private static final long EVICT_INTERVAL_MS = 300_000L;
 
     private final int limitPerMinute;
     private final Map<UUID, Deque<Long>> windows = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService evictionScheduler;
 
     public BotRateLimiter(int limitPerMinute) {
+        this(limitPerMinute, false, EVICT_INTERVAL_MS);
+    }
+
+    BotRateLimiter(int limitPerMinute, boolean scheduleEviction, long evictIntervalMs) {
         this.limitPerMinute = Math.max(1, limitPerMinute);
+        if (scheduleEviction) {
+            this.evictionScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+                var t = new Thread(r, "bot-rate-limit-evict");
+                t.setDaemon(true);
+                return t;
+            });
+            var intervalMs = Math.max(1L, evictIntervalMs);
+            ScheduledTaskSupport.scheduleAtFixedRateWithJitter(
+                evictionScheduler,
+                this::evictIdleEntries,
+                intervalMs,
+                intervalMs,
+                intervalMs / 10,
+                TimeUnit.MILLISECONDS);
+        } else {
+            this.evictionScheduler = null;
+        }
     }
 
     public static BotRateLimiter fromEnv() {
@@ -31,7 +59,7 @@ public class BotRateLimiter {
                 // keep default
             }
         }
-        return new BotRateLimiter(limit);
+        return new BotRateLimiter(limit, true, EVICT_INTERVAL_MS);
     }
 
     public boolean tryAcquire(UUID botId) {
@@ -73,5 +101,12 @@ public class BotRateLimiter {
         var q = new ArrayDeque<Long>();
         q.addLast(epochMs);
         windows.put(botId, q);
+    }
+
+    @Override
+    public void close() {
+        if (evictionScheduler != null) {
+            evictionScheduler.shutdownNow();
+        }
     }
 }

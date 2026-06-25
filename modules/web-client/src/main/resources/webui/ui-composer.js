@@ -382,6 +382,15 @@
       }
     };
     comp.appendChild(ta);
+    if (
+      ctx.state.uploadProgress != null &&
+      global.KorusUiUxPerception &&
+      global.KorusUiUxPerception.mountUploadProgressBar
+    ) {
+      comp.appendChild(
+        global.KorusUiUxPerception.mountUploadProgressBar(ctx.el, ctx.state.uploadProgress, ctx.L)
+      );
+    }
     var sb = ctx.iconBtn("➤", ctx.L("ui.thread.send"), {
       primary: true,
       cls: "composer-send-btn",

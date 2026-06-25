@@ -317,6 +317,10 @@
       "members": "Қатысушылар",
       "join": "Кіру"
     },
+    "search": {
+      "emptyTitle": "Сәйкестік жоқ",
+      "emptyHint": "Сұранысты өзгертіңіз немесе жазуын тексеріңіз."
+    },
     "auth": {
       "username": "Логин",
       "password": "Құпия сөз",
@@ -415,6 +419,8 @@
       "confLiveDefault": "Бейнеконференция жүріп жатыр",
       "searchPlaceholder": "Осы чатта іздеу (2 таңбадан, E2EE-сыз)…",
       "nothingInChat": "Осы чатта ештеңе табылмады.",
+      "searchEmptyTitle": "Осы чатта ештеңе жоқ",
+      "searchEmptyHint": "Басқа сөздерді қолданыңыз немесе тақтадағы іздеуді пайдаланыңыз.",
       "replyPrefix": "Жауап: {text}",
       "markdownHint": "Markdown: **қалың**, *курсив*, `код`, [сілтеме](https://…)",
       "autoDelete": "Автожою:",
@@ -590,6 +596,21 @@
       "reconnecting": "Reconnecting…",
       "quotaHint": "Cache keeps recent messages for selected chats."
     },
+    "export": {
+      "cancelled": "Export cancelled",
+      "failed": "Export failed",
+      "failedJob": "Export finished with an error",
+      "timeout": "Export wait timed out",
+      "statusQueued": "queued",
+      "statusProcessing": "processing",
+      "statusWaiting": "waiting",
+      "started": "Export started — you can switch chats; download will begin automatically",
+      "ready": "Export ready, archive downloaded",
+      "alreadyRunning": "Another export is already running",
+      "noJobId": "Server did not return job_id",
+      "cancelFailed": "Could not cancel export",
+      "attachmentsPreview": "Export attachments: {count} file(s)"
+    },
     "message": {
       "image": "Сурет",
       "video": "Бейне",
@@ -675,6 +696,7 @@
       "presenceOffline": "Желіде емес",
       "customStatus": "Статус",
       "dndSchedule": "Мазаламау уақыты",
+      "dndSeeNotificationsTab": "«Мазаламау» ұзақтығы «Хабарландырулар» вкладкасында.",
       "dndUntilManual": "Өшіргенге дейін",
       "dndUntil30m": "30 минут",
       "dndUntil1h": "1 сағат",
@@ -790,6 +812,15 @@
       "directoryHint": "Trusted orgs for cross-org chats (MVP).",
       "trustActive": "Active",
       "trustPending": "Pending",
+      "trustLevel": {
+        "trusted": "Сенімді",
+        "verified": "Расталған",
+        "pending": "Күтуде",
+        "partial": "Ішінара",
+        "none": "Сенімсіз",
+        "blocked": "Блокталған",
+        "unknown": "Деңгей: {value}"
+      },
       "partnerLabel": "Partner",
       "badgeThread": "Federation",
       "joinCopied": "Room copied to clipboard."

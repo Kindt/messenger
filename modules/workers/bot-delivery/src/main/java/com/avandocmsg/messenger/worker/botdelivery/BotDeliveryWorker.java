@@ -1,15 +1,21 @@
 package com.avandocmsg.messenger.worker.botdelivery;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.json.MessengerJson;
+import com.avandocmsg.messenger.common.health.WorkerDependencyHealth;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
+import com.avandocmsg.messenger.common.http.HttpClientSupport;
 import com.avandocmsg.messenger.common.jdbc.HikariDataSources;
+import com.avandocmsg.messenger.common.nats.MessageDownstreamRouting;
+import com.avandocmsg.messenger.common.nats.NatsConnectionOptions;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.common.scheduling.ScheduledTaskSupport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.nats.client.Connection;
 import io.nats.client.Nats;
-import io.nats.client.Options;
+import io.prometheus.client.hotspot.DefaultExports;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +31,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -36,10 +41,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class BotDeliveryWorker {
     private static final Logger log = LoggerFactory.getLogger(BotDeliveryWorker.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final String QUEUE_GROUP = "bot-delivery-workers";
-    private static final String SUBSCRIPTIONS_TABLE = "bot_webhook_subscriptions";
-
     private final Connection connection;
     private final DataSource dataSource;
     private final HttpClient httpClient;
@@ -51,7 +54,7 @@ public class BotDeliveryWorker {
     private final boolean outboxEnabled;
     private final ScheduledExecutorService retryScheduler;
 
-    private final ConcurrentHashMap<String, Boolean> delivered = new ConcurrentHashMap<>();
+    private final BotDeliveryDedupCache delivered = BotDeliveryDedupCache.fromEnv();
 
     public BotDeliveryWorker(String natsUrl, DataSource dataSource, String fallbackWebhookUrl,
                              String webhookHmacSecret, boolean subscriptionsEnabled,
@@ -70,7 +73,7 @@ public class BotDeliveryWorker {
             webhookHmacSecret != null && !webhookHmacSecret.isBlank() ? webhookHmacSecret.trim() : null;
         this.subscriptionsEnabled = subscriptionsEnabled;
         this.workerMessages = workerMessages;
-        this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+        this.httpClient = HttpClientSupport.sharedClient();
         this.outboxEnabled = BotWebhookOutbox.tablePresent(dataSource);
         this.outbox = outboxEnabled ? new BotWebhookOutbox(dataSource, clock) : null;
         this.retryScheduler = outboxEnabled
@@ -80,34 +83,44 @@ public class BotDeliveryWorker {
                 return t;
             })
             : null;
-        var options = Options.builder()
-            .server(natsUrl)
-            .connectionName("bot-delivery-worker")
-            .reconnectWait(Duration.ofSeconds(2))
-            .maxReconnects(-1)
-            .build();
+        var options = NatsConnectionOptions.clientBuilder(natsUrl, "bot-delivery-worker").build();
         this.connection = Nats.connect(options);
         log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }
 
     public void start() {
         var dispatcher = connection.createDispatcher(this::handle);
-        dispatcher.subscribe(NatsSubjects.MSG_EVENT_BOT, QUEUE_GROUP);
+        dispatcher.subscribe(NatsSubjects.MSG_EVENT_DOWNSTREAM, QUEUE_GROUP);
         var modeHint = subscriptionsEnabled
             ? "(per-chat subscriptions enabled)"
             : "(fallback BOT_WEBHOOK_URL only)";
         log.info(workerMessages.format("worker.common.subscribed_extra",
-            NatsSubjects.MSG_EVENT_BOT, QUEUE_GROUP, modeHint));
+            NatsSubjects.MSG_EVENT_DOWNSTREAM, QUEUE_GROUP, modeHint));
+        if (MessageDownstreamRouting.legacySubscribeEnabled()) {
+            dispatcher.subscribe(NatsSubjects.MSG_EVENT_BOT, QUEUE_GROUP);
+            log.info(workerMessages.format("worker.common.subscribed_extra",
+                NatsSubjects.MSG_EVENT_BOT, QUEUE_GROUP, modeHint));
+        }
         if (retryScheduler != null) {
-            retryScheduler.scheduleAtFixedRate(this::processOutboxRetries, 15, 30, TimeUnit.SECONDS);
+            ScheduledTaskSupport.scheduleAtFixedRateWithJitter(
+                retryScheduler, this::processOutboxRetries, 15, 30, 5000L, TimeUnit.SECONDS);
+            ScheduledTaskSupport.scheduleAtFixedRateWithJitter(
+                retryScheduler, this::purgeFailedOutbox, 5, 60, 30_000L, TimeUnit.MINUTES);
             log.info(workerMessages.format("worker.bot_delivery.outbox_retry_enabled"));
         }
     }
 
     private void handle(io.nats.client.Message msg) {
         try {
-            var payload = new String(msg.getData(), StandardCharsets.UTF_8);
-            var event = MAPPER.readValue(payload, MessageWorkerEvent.class);
+            MessageDownstreamRouting.dispatchDownstreamMessage(
+                msg, MessageDownstreamRouting.ROUTE_BOT, MAPPER, this::processWorkerEvent);
+        } catch (MessageDownstreamRouting.DownstreamDispatchException e) {
+            log.error(workerMessages.get("worker.bot_delivery.handle_failed"), e.getCause());
+        }
+    }
+
+    private void processWorkerEvent(MessageWorkerEvent event) {
+        try {
             var targets = resolveTargets(event);
             if (targets.isEmpty()) {
                 log.warn(workerMessages.format("worker.bot_delivery.no_webhook_targets", event.chatId(), event.messageId()));
@@ -128,49 +141,27 @@ public class BotDeliveryWorker {
     private record DeliveryTarget(UUID botId, String webhookUrl) {}
 
     private List<DeliveryTarget> resolveTargets(MessageWorkerEvent event) throws SQLException {
+        return resolveTargets(event, new BotDeliveryTargets.Prefetch(dataSource));
+    }
+
+    /** Package-visible for FR-127 batch prefetch tests. */
+    List<DeliveryTarget> resolveTargetsBatch(List<MessageWorkerEvent> events) throws SQLException {
+        var prefetch = new BotDeliveryTargets.Prefetch(dataSource);
+        var all = new ArrayList<DeliveryTarget>();
+        for (var event : events) {
+            all.addAll(resolveTargets(event, prefetch));
+        }
+        return all;
+    }
+
+    private List<DeliveryTarget> resolveTargets(MessageWorkerEvent event, BotDeliveryTargets.Prefetch prefetch)
+        throws SQLException {
         var targets = new ArrayList<DeliveryTarget>();
         if (subscriptionsEnabled) {
             var chatId = UUID.fromString(event.chatId());
-            try (var conn = dataSource.getConnection()) {
-                if (tableExists(conn, "bots")) {
-                    var sql = """
-                        SELECT s.webhook_url, b.bot_name, b.listen_mode, b.default_webhook_url, s.bot_id
-                        FROM bot_webhook_subscriptions s
-                        LEFT JOIN bots b ON b.id = s.bot_id
-                        WHERE s.chat_id = ?
-                        """;
-                    try (var stmt = conn.prepareStatement(sql)) {
-                        stmt.setObject(1, chatId);
-                        try (var rs = stmt.executeQuery()) {
-                            while (rs.next()) {
-                                var botId = (UUID) rs.getObject("bot_id");
-                                var webhook = rs.getString("webhook_url");
-                                if (botId == null) {
-                                    addTarget(targets, null, webhook);
-                                    continue;
-                                }
-                                var botName = rs.getString("bot_name");
-                                var listenMode = rs.getString("listen_mode");
-                                var defaultUrl = rs.getString("default_webhook_url");
-                                if (!BotEventFilter.shouldDeliver(event, botName, listenMode)) {
-                                    continue;
-                                }
-                                var effective = webhook != null && !webhook.isBlank() ? webhook : defaultUrl;
-                                addTarget(targets, botId, effective);
-                            }
-                        }
-                    }
-                } else {
-                    var sql = "SELECT webhook_url FROM " + SUBSCRIPTIONS_TABLE + " WHERE chat_id = ?";
-                    try (var stmt = conn.prepareStatement(sql)) {
-                        stmt.setObject(1, chatId);
-                        try (var rs = stmt.executeQuery()) {
-                            while (rs.next()) {
-                                addTarget(targets, null, rs.getString(1));
-                            }
-                        }
-                    }
-                }
+            var rows = prefetch.forChat(chatId);
+            for (var resolved : BotDeliveryTargets.resolveForEvent(event, rows)) {
+                targets.add(new DeliveryTarget(resolved.botId(), resolved.webhookUrl()));
             }
         }
         if (targets.isEmpty() && fallbackWebhookUrl != null) {
@@ -179,18 +170,12 @@ public class BotDeliveryWorker {
         return targets;
     }
 
-    private static void addTarget(List<DeliveryTarget> targets, UUID botId, String raw) {
-        if (raw != null && !raw.isBlank()) {
-            targets.add(new DeliveryTarget(botId, raw.trim()));
-        }
-    }
-
     private void enqueueUpdate(UUID botId, String payloadJson) {
         if (botId == null) {
             return;
         }
         try (var conn = dataSource.getConnection()) {
-            if (!tableExists(conn, "bot_updates")) {
+            if (!BotDeliveryTargets.tableExists(conn, "bot_updates")) {
                 return;
             }
             var sql = """
@@ -209,7 +194,7 @@ public class BotDeliveryWorker {
 
     private void deliver(UUID botId, String webhookUrl, MessageWorkerEvent event, String json) {
         var dedupKey = event.messageId() + "|" + webhookUrl;
-        var first = delivered.putIfAbsent(dedupKey, Boolean.TRUE) == null;
+        var first = delivered.markIfFirst(dedupKey);
         if (!first) {
             log.warn(workerMessages.format("worker.bot_delivery.duplicate_delivery", event.messageId(), webhookUrl));
         }
@@ -252,6 +237,24 @@ public class BotDeliveryWorker {
         }
     }
 
+    void purgeFailedOutbox() {
+        if (outbox == null) {
+            return;
+        }
+        var retentionDays = BotWebhookOutbox.failedRetentionDaysFromEnv();
+        if (retentionDays <= 0) {
+            return;
+        }
+        try {
+            var deleted = outbox.purgeFailed(retentionDays, BotWebhookOutbox.failedPurgeBatchFromEnv());
+            if (deleted > 0) {
+                log.info(workerMessages.format("worker.bot_delivery.outbox_failed_purged", deleted, retentionDays));
+            }
+        } catch (Exception e) {
+            log.warn(workerMessages.format("worker.bot_delivery.outbox_failed_purge_failed", e.getMessage()));
+        }
+    }
+
     private void retryOutboxRow(BotWebhookOutbox.PendingDelivery pending) {
         try {
             var status = postWebhook(httpClient, pending.webhookUrl(), pending.payloadJson(), webhookHmacSecret);
@@ -290,13 +293,6 @@ public class BotDeliveryWorker {
         return resp.statusCode();
     }
 
-    private static boolean tableExists(java.sql.Connection conn, String table) throws SQLException {
-        var md = conn.getMetaData();
-        try (var rs = md.getTables(conn.getSchema(), null, table, new String[]{"TABLE"})) {
-            return rs.next();
-        }
-    }
-
     static String buildPayload(MessageWorkerEvent event) {
         ObjectNode root = MAPPER.createObjectNode();
         root.put("event_id", event.messageId());
@@ -315,6 +311,10 @@ public class BotDeliveryWorker {
         return root.toString();
     }
 
+    boolean healthReady() {
+        return WorkerDependencyHealth.natsAndJdbc(connection, dataSource);
+    }
+
     public void shutdown() {
         if (retryScheduler != null) {
             retryScheduler.shutdownNow();
@@ -329,13 +329,11 @@ public class BotDeliveryWorker {
 
     static boolean detectSubscriptionsTable(DataSource ds, UserMessageSource workerMessages) {
         try (var c = ds.getConnection()) {
-            var md = c.getMetaData();
-            try (var rs = md.getTables(c.getSchema(), null, SUBSCRIPTIONS_TABLE, new String[]{"TABLE"})) {
-                return rs.next();
-            }
+            return BotDeliveryTargets.tableExists(c, BotDeliveryTargets.SUBSCRIPTIONS_TABLE);
         } catch (SQLException e) {
             LoggerFactory.getLogger(BotDeliveryWorker.class)
-                .warn(workerMessages.format("worker.common.schema_inspect_failed", SUBSCRIPTIONS_TABLE), e);
+                .warn(workerMessages.format("worker.common.schema_inspect_failed",
+                    BotDeliveryTargets.SUBSCRIPTIONS_TABLE), e);
             return false;
         }
     }
@@ -361,13 +359,38 @@ public class BotDeliveryWorker {
         var subs = detectSubscriptionsTable(ds, workerMessages);
 
         try {
+            DefaultExports.initialize();
+            BotDeliveryMetricsHttpServer metricsServer = null;
+            var metricsPort = parseMetricsPort(System.getenv("BOT_DELIVERY_METRICS_PORT"));
             var worker = new BotDeliveryWorker(natsUrl, ds, fallback, hmacSecret, subs, workerMessages);
+            if (metricsPort > 0) {
+                metricsServer = BotDeliveryMetricsHttpServer.start(metricsPort, worker::healthReady, workerMessages);
+                log.info(workerMessages.format("worker.bot_delivery.metrics_url", metricsServer.getPort()));
+            }
             worker.start();
-            Runtime.getRuntime().addShutdownHook(new Thread(worker::shutdown));
+            var finalMetricsServer = metricsServer;
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                if (finalMetricsServer != null) {
+                    finalMetricsServer.close();
+                }
+                worker.shutdown();
+            }));
             Thread.currentThread().join();
         } catch (Exception e) {
             log.error(workerMessages.get("worker.common.fatal_error"), e);
             System.exit(1);
+        }
+    }
+
+    private static int parseMetricsPort(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return 0;
+        }
+        try {
+            var port = Integer.parseInt(raw.trim());
+            return port > 0 && port <= 65535 ? port : 0;
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 

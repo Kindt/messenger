@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.chats;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.chats.dto.ReadReceiptResponse;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.metrics.ReadReceiptMetrics;
@@ -20,7 +21,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -30,7 +30,7 @@ import java.util.UUID;
 
 public class ReadReceiptService {
     private static final Logger log = LoggerFactory.getLogger(ReadReceiptService.class);
-    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final ObjectMapper JSON = MessengerJson.mapper();
 
     private final MessageReadReceiptPort readReceiptPort;
     private final ChatPersistencePort chatPersistencePort;
@@ -174,7 +174,7 @@ public class ReadReceiptService {
 
     private void publishReceipt(ReadReceiptEvent event) {
         try {
-            var bytes = JSON.writeValueAsString(event).getBytes(StandardCharsets.UTF_8);
+            var bytes = JSON.writeValueAsBytes(event);
             natsOutbound.publish(NatsSubjects.MSG_READ_RECEIPT, bytes);
         } catch (Exception e) {
             log.debug("read receipt publish failed: {}", e.getMessage());

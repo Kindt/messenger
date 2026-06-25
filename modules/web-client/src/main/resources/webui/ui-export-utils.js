@@ -8,6 +8,11 @@
     var apiFetch = deps.apiFetch;
     var scheduleRender = deps.scheduleRender;
     var exportPollGenerationRef = deps.exportPollGenerationRef;
+    var L =
+      deps.L ||
+      function (key) {
+        return global.KorusI18n ? global.KorusI18n.t(key) : key;
+      };
 
     function pollExportUntilReady(jobId, chatId) {
       var state = getState();
@@ -17,14 +22,14 @@
       return new Promise(function (resolve, reject) {
         function tick() {
           if (gen !== exportPollGenerationRef.value) {
-            reject(new Error("Экспорт отменён"));
+            reject(new Error(L("ui.export.cancelled")));
             return;
           }
           attempts++;
           apiJson("/chats/" + chatId + "/export/" + jobId, { method: "GET" })
             .then(function (st) {
               if (gen !== exportPollGenerationRef.value) {
-                reject(new Error("Экспорт отменён"));
+                reject(new Error(L("ui.export.cancelled")));
                 return;
               }
               var status = st && st.status;
@@ -37,15 +42,15 @@
                   .catch(reject);
               }
               if (status === "export_failed") {
-                reject(new Error("Экспорт завершился с ошибкой"));
+                reject(new Error(L("ui.export.failedJob")));
                 return;
               }
               if (status === "export_cancelled") {
-                reject(new Error("Экспорт отменён"));
+                reject(new Error(L("ui.export.cancelled")));
                 return;
               }
               if (attempts >= 60) {
-                reject(new Error("Таймаут ожидания экспорта"));
+                reject(new Error(L("ui.export.timeout")));
                 return;
               }
               var s = getState();
@@ -56,10 +61,10 @@
               ) {
                 var statusLabel =
                   status === "queued"
-                    ? "в очереди"
+                    ? L("ui.export.statusQueued")
                     : status === "processing"
-                      ? "обработка"
-                      : status || "ожидание";
+                      ? L("ui.export.statusProcessing")
+                      : L("ui.export.statusWaiting");
                 setState({ exportProgressLabel: statusLabel + " (" + attempts + "/60)" });
                 scheduleRender();
               }
@@ -97,7 +102,10 @@
         });
         if (manifest && manifest.files && manifest.files.length) {
           setState({
-            statusMessage: "Export attachments: " + manifest.files.length + " file(s)",
+            statusMessage: L("ui.export.attachmentsPreview").replace(
+              "{count}",
+              String(manifest.files.length)
+            ),
           });
         }
       } catch (e) {}
@@ -107,7 +115,7 @@
       var state = getState();
       if (!state.selectedId || state.exportBusy) {
         if (state.exportBusy) {
-          setState({ statusMessage: "Уже выполняется другой экспорт" });
+          setState({ statusMessage: L("ui.export.alreadyRunning") });
           scheduleRender();
         }
         return;
@@ -123,21 +131,20 @@
       try {
         var accepted = await apiJson("/chats/" + chatId + "/export", { method: "POST" });
         var jobId = accepted && accepted.job_id;
-        if (!jobId) throw new Error("Сервер не вернул job_id");
+        if (!jobId) throw new Error(L("ui.export.noJobId"));
         setState({
           exportJobId: jobId,
           exportJobChatId: chatId,
-          statusMessage:
-            "Экспорт запущен — можно перейти в другой чат; скачивание начнётся автоматически",
+          statusMessage: L("ui.export.started"),
         });
         scheduleRender();
         pollExportUntilReady(jobId, chatId)
           .then(function () {
-            setState({ statusMessage: "Экспорт готов, архив скачан" });
+            setState({ statusMessage: L("ui.export.ready") });
           })
           .catch(function (e) {
-            var msg = (e && e.message) || "Экспорт не удался";
-            if (msg.indexOf("отмен") !== -1) {
+            var msg = (e && e.message) || L("ui.export.failed");
+            if (msg === L("ui.export.cancelled")) {
               setState({ statusMessage: msg });
             } else {
               setState({ error: msg });
@@ -154,7 +161,7 @@
           });
       } catch (e) {
         setState({
-          error: e.message || "Экспорт не удался",
+          error: e.message || L("ui.export.failed"),
           exportBusy: false,
           exportProgressLabel: null,
         });
@@ -172,15 +179,14 @@
       try {
         await apiFetch("/chats/" + chatId + "/export/" + jobId, { method: "DELETE" });
         exportPollGenerationRef.value++;
-        setState({ statusMessage: "Экспорт отменён" });
+        setState({ statusMessage: L("ui.export.cancelled") });
       } catch (e) {
-        setState({ error: e.message || "Не удалось отменить экспорт" });
+        setState({ error: e.message || L("ui.export.cancelFailed") });
       } finally {
         setState({
           busy: false,
           exportJobId: null,
           exportJobChatId: null,
-          exportProgressLabel: null,
           exportBusy: false,
         });
         scheduleRender();

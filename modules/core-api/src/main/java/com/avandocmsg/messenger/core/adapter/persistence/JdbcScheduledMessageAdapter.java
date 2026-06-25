@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.port.ScheduledMessagePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +37,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setObject(2, cmd.chatId());
             stmt.setObject(3, cmd.senderId());
@@ -65,6 +68,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -103,6 +107,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, senderId);
             stmt.setInt(2, lim);
             try (var rs = stmt.executeQuery()) {
@@ -131,6 +136,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setTimestamp(1, Timestamp.from(now));
             stmt.setInt(2, lim);
             try (var rs = stmt.executeQuery()) {
@@ -153,6 +159,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             : "UPDATE scheduled_messages SET status = ? WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, status);
             if (sentMessageId != null) {
                 stmt.setObject(2, sentMessageId);
@@ -175,6 +182,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setObject(2, senderId);
             return stmt.executeUpdate() > 0;
@@ -187,6 +195,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
     private List<ScheduledRow> queryList(String sql, UUID chatId, int limit) {
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setInt(2, limit);
             try (var rs = stmt.executeQuery()) {

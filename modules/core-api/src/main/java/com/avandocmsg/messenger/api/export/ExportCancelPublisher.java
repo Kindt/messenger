@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.export;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.dto.ExportReplayCancelEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
@@ -14,7 +15,7 @@ import java.util.UUID;
 public final class ExportCancelPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(ExportCancelPublisher.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private ExportCancelPublisher() {}
 

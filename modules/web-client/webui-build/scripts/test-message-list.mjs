@@ -30,4 +30,28 @@ if (list.shouldVirtualize(200)) {
   throw new Error("shouldVirtualize boundary");
 }
 
+const contentSrc = readFileSync(
+  join(dir, "../../src/main/resources/webui/ui-message-content.js"),
+  "utf8"
+);
+if (!contentSrc.includes('loading = "lazy"')) {
+  throw new Error("ui-message-content missing lazy image loading (FR-083)");
+}
+
+const attachSrc = readFileSync(
+  join(dir, "../../src/main/resources/webui/ui-file-attach.js"),
+  "utf8"
+);
+if (!attachSrc.includes("IntersectionObserver")) {
+  throw new Error("ui-file-attach missing viewport-deferred image load");
+}
+
+const appSrc = readFileSync(
+  join(dir, "../../src/main/resources/webui/app.js"),
+  "utf8"
+);
+if (!appSrc.includes("stopTtlRenderTicker") || !appSrc.includes("clearDeferredUiTimers")) {
+  throw new Error("app.js missing deferred timer cleanup (FR-085)");
+}
+
 console.log("ui-message-list smoke OK");

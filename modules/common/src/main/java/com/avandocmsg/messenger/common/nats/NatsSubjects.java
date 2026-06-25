@@ -6,6 +6,8 @@ package com.avandocmsg.messenger.common.nats;
  */
 public final class NatsSubjects {
     public static final String MSG_SEND = "msg.send";
+    /** Dead-letter subject for failed {@link #MSG_SEND} after max deliver attempts. */
+    public static final String MSG_SEND_DLQ = "msg.send.dlq";
     public static final String MSG_DELIVER_PREFIX = "msg.deliver.";
     /** Large-chat broadcast: one publish per event (PS-1.3). */
     public static final String MSG_DELIVER_CHAT_PREFIX = "msg.deliver.chat.";
@@ -46,9 +48,27 @@ public final class NatsSubjects {
     public static final String LIVE_SESSION = "live.session";
 
     /** Metadata-only downstream events (JSON {@link com.avandocmsg.messenger.common.dto.MessageWorkerEvent}). */
+    /**
+     * Legacy per-consumer subject; retained for core-api hot-plug indexer publish, retention workers,
+     * and {@code NATS_DOWNSTREAM_LEGACY_PUBLISH=true} rollback (spec 025 FR-012 Phase 3).
+     */
     public static final String MSG_EVENT_INDEX = "msg.event.index";
+    /**
+     * @deprecated Phase 3: use {@link #MSG_EVENT_DOWNSTREAM} with route {@code push}; kept for legacy publish rollback.
+     */
+    @Deprecated
     public static final String MSG_EVENT_PUSH = "msg.event.push";
+    /**
+     * @deprecated Phase 3: use {@link #MSG_EVENT_DOWNSTREAM} with route {@code bot}; kept for legacy publish rollback.
+     */
+    @Deprecated
     public static final String MSG_EVENT_BOT = "msg.event.bot";
+
+    /**
+     * Consolidated downstream envelope ({@link com.avandocmsg.messenger.common.dto.MessageDownstreamEvent}).
+     * Phase 3 default publish path; legacy triple-publish gated by {@code NATS_DOWNSTREAM_LEGACY_PUBLISH}.
+     */
+    public static final String MSG_EVENT_DOWNSTREAM = "msg.event.downstream";
 
     /** Archiver → deep-archiver handoff (JSON {@link com.avandocmsg.messenger.common.dto.MessageWorkerEvent}). */
     public static final String MSG_EVENT_DEEP_ARCHIVE = "msg.event.deep-archive";
@@ -89,9 +109,11 @@ public final class NatsSubjects {
     public static final String USER_PRESENCE = "user.presence";
 
     /**
-     * Read-cache invalidation hint for core-api (JSON {@link com.avandocmsg.messenger.common.dto.ReadCacheInvalidateEvent}).
-     * Published by message-pipeline after fan-out; core-api applies Redis DEL via {@code ReadCacheCoordinator}.
+     * Legacy read-cache invalidation via NATS (JSON {@link com.avandocmsg.messenger.common.dto.ReadCacheInvalidateEvent}).
+     *
+     * @deprecated spec 025 FR-009: message-pipeline writes Redis DEL directly; subscriber kept for rollback only.
      */
+    @Deprecated
     public static final String MSG_CACHE_INVALIDATE = "msg.cache.invalidate";
 
     /**

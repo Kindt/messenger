@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.onecbridge;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.http.WorkerHealthHttpServer;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
@@ -22,8 +23,8 @@ import java.util.regex.Pattern;
 /** Spec 014: 1C:Enterprise OData bridge (mock or live). */
 public final class OneCBridgeWorker {
     private static final Logger log = LoggerFactory.getLogger(OneCBridgeWorker.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final Pattern DOC = Pattern.compile("([A-Za-zА-Яа-я0-9_]+)-(\\d+)");
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
+    private static final Pattern DOC = Pattern.compile("([A-Za-z\u0410-\u042F\u0430-\u044F0-9_]+)-(\\d+)");
 
     private OneCBridgeWorker() {}
 
@@ -35,8 +36,9 @@ public final class OneCBridgeWorker {
         int healthPort = parsePort(System.getenv("ONEC_BRIDGE_METRICS_PORT"), 9197);
 
         var pluginServer = startPluginServer(port, messages);
+        var pluginUp = (java.util.function.BooleanSupplier) () -> pluginServer.getAddress() != null;
         try (var health = WorkerHealthHttpServer.startHealthOnly(
-            healthPort, "onec-bridge-health", () -> true, messages)) {
+            healthPort, "onec-bridge-health", pluginUp, messages)) {
             log.info(messages.format("bridge.http_started", port, health.getPort()));
             Thread.currentThread().join();
         } finally {
@@ -98,7 +100,7 @@ public final class OneCBridgeWorker {
         if (lower.startsWith("/doc ")) {
             return documentResponse(text.substring(5).trim());
         }
-        return PluginResponse.text("1C bridge. Команды: `ping`, `/catalog`, `/doc <Type>-<Number>`");
+        return PluginResponse.text("1C bridge. РљРѕРјР°РЅРґС‹: `ping`, `/catalog`, `/doc <Type>-<Number>`");
     }
 
     private static boolean isOneCPreset(PluginEvent event) {
@@ -110,24 +112,24 @@ public final class OneCBridgeWorker {
         try {
             return PluginResponse.text(OneCODataClient.formatCatalogMarkdown(OneCODataClient.fetchCatalogTop(5)));
         } catch (Exception e) {
-            return PluginResponse.text("1C OData недоступен: " + e.getMessage());
+            return PluginResponse.text("1C OData РЅРµРґРѕСЃС‚СѓРїРµРЅ: " + e.getMessage());
         }
     }
 
     private static PluginResponse documentResponse(String arg) {
         Matcher m = DOC.matcher(arg);
         if (!m.matches()) {
-            return PluginResponse.text("Формат: `/doc SalesOrder-1001`");
+            return PluginResponse.text("Р¤РѕСЂРјР°С‚: `/doc SalesOrder-1001`");
         }
         try {
             var json = OneCODataClient.fetchDocument(m.group(1), m.group(2));
             var value = json.path("value");
             var node = value.isArray() && !value.isEmpty() ? value.get(0) : json;
             var number = node.path("Number").asText(arg);
-            var posted = node.path("Posted").asText(node.path("Проведен").asText("?"));
-            return PluginResponse.text("Документ **" + number + "** — проведён: **" + posted + "**");
+            var posted = node.path("Posted").asText(node.path("РџСЂРѕРІРµРґРµРЅ").asText("?"));
+            return PluginResponse.text("Р”РѕРєСѓРјРµРЅС‚ **" + number + "** вЂ” РїСЂРѕРІРµРґС‘РЅ: **" + posted + "**");
         } catch (Exception e) {
-            return PluginResponse.text("1C документ недоступен: " + e.getMessage());
+            return PluginResponse.text("1C РґРѕРєСѓРјРµРЅС‚ РЅРµРґРѕСЃС‚СѓРїРµРЅ: " + e.getMessage());
         }
     }
 

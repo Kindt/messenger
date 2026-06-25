@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.common.export;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
@@ -9,7 +10,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
  */
 public final class ExportGdprDisclosures {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private ExportGdprDisclosures() {}
 
@@ -70,7 +71,7 @@ public final class ExportGdprDisclosures {
                 ? e2eeFileCandidateCount + " heuristic file_metadata row(s) uploaded by chat members (not from E2EE bodies)."
                 : (e2eeMessageCount > 0
                 ? "Optional heuristic list omitted; set EXPORT_REPLAY_INCLUDE_E2EE_FILE_CANDIDATES=true to include."
-                : "Not applicable — no E2EE messages in this export."));
+                : "Not applicable вЂ” no E2EE messages in this export."));
         addDisclosure(arr, "message_versions", "chat_data", includeVersions,
             includeVersions ? "Edit history included when enabled." : "Edit history not included in this export.");
         addDisclosure(arr, "reactions", "chat_data", includeReactions,

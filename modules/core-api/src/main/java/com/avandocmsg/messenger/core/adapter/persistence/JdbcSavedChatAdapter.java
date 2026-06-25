@@ -1,7 +1,9 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
 import com.avandocmsg.messenger.core.port.SavedChatPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.slf4j.Logger;
@@ -37,6 +39,7 @@ public final class JdbcSavedChatAdapter implements SavedChatPort {
         }
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(SELECT_SAVED_CHAT)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, userId.value());
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -59,11 +62,12 @@ public final class JdbcSavedChatAdapter implements SavedChatPort {
             return Optional.empty();
         }
         try (var conn = dataSource.getConnection()) {
-            conn.setAutoCommit(false);
+            JdbcConnectionSupport.beginTransaction(conn);
             try {
                 var chatId = uuidGenerator.randomUuid();
                 try (var stmt = conn.prepareStatement(
                     "INSERT INTO chats (id, title, type, owner_id, created_at, updated_at) VALUES (?, ?, 'saved', ?, now(), now())")) {
+                    JdbcQuerySupport.applyDefaultTimeout(stmt);
                     stmt.setObject(1, chatId);
                     stmt.setString(2, "Saved Messages");
                     stmt.setObject(3, userId.value());
@@ -71,6 +75,7 @@ public final class JdbcSavedChatAdapter implements SavedChatPort {
                 }
                 try (var stmt = conn.prepareStatement(
                     "INSERT INTO chat_members (chat_id, user_id, role, joined_at) VALUES (?, ?, ?, now())")) {
+                    JdbcQuerySupport.applyDefaultTimeout(stmt);
                     stmt.setObject(1, chatId);
                     stmt.setObject(2, userId.value());
                     stmt.setString(3, "owner");

@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.export;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +15,7 @@ import org.slf4j.LoggerFactory;
 public final class ExportSuggestedSubscriber implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(ExportSuggestedSubscriber.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     static final String QUEUE_GROUP = "core-api-export-suggested";
 
     private final ExportSuggestedHandler handler;

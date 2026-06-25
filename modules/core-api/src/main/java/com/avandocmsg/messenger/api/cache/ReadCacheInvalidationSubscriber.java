@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.cache;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.dto.ReadCacheInvalidateEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.application.ReadCacheCoordinator;
@@ -13,12 +14,15 @@ import org.slf4j.LoggerFactory;
 import java.util.UUID;
 
 /**
- * Applies distributed read-cache invalidation from message-pipeline fan-out (spec 006 T302).
+ * Legacy NATS subscriber for read-cache invalidation (spec 006 T302).
+ *
+ * @deprecated spec 025 FR-009: pipeline invalidates Redis directly; kept for rollback only.
  */
+@Deprecated
 public final class ReadCacheInvalidationSubscriber implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(ReadCacheInvalidationSubscriber.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     static final String QUEUE_GROUP = "core-api-cache-invalidate";
 
     private final ReadCachePort readCache;

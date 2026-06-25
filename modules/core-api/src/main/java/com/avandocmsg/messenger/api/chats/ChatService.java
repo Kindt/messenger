@@ -1,8 +1,10 @@
 package com.avandocmsg.messenger.api.chats;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
 import com.avandocmsg.messenger.api.chats.dto.ChatResponse;
+import com.avandocmsg.messenger.api.params.ListPagination;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import com.avandocmsg.messenger.core.port.ChatPersistencePort;
@@ -25,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +34,7 @@ import java.util.UUID;
 
 public class ChatService {
     private static final Logger log = LoggerFactory.getLogger(ChatService.class);
-    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final ObjectMapper JSON = MessengerJson.mapper();
     private static final TypeReference<List<ChatResponse>> CHAT_LIST_TYPE = new TypeReference<>() {
     };
 
@@ -140,6 +141,15 @@ public class ChatService {
     }
 
     public List<ChatResponse> list(UUID userId) {
+        return list(userId, new ListPagination.Page(0, ListPagination.MAX_LIMIT));
+    }
+
+    public List<ChatResponse> list(UUID userId, ListPagination.Page page) {
+        var full = loadChatList(userId);
+        return ListPagination.slice(full, page);
+    }
+
+    private List<ChatResponse> loadChatList(UUID userId) {
         if (readCachePort.enabled()) {
             var key = ReadCacheKeys.chatList(userId);
             var cached = readCachePort.get(key);
@@ -331,7 +341,7 @@ public class ChatService {
         }
         try {
             var ev = new TypingEvent(chatId.toString(), userId.toString(), clock.millis());
-            var bytes = JSON.writeValueAsString(ev).getBytes(StandardCharsets.UTF_8);
+            var bytes = JSON.writeValueAsBytes(ev);
             natsOutbound.publish(NatsSubjects.MSG_TYPING, bytes);
         } catch (Exception e) {
             log.debug("typing publish failed: {}", e.getMessage());

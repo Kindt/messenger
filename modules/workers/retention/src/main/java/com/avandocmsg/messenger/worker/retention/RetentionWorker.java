@@ -2,13 +2,15 @@ package com.avandocmsg.messenger.worker.retention;
 
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
+import com.avandocmsg.messenger.common.nats.NatsConnectionOptions;
+import com.avandocmsg.messenger.common.concurrent.InterruptibleWait;
+import com.avandocmsg.messenger.common.scheduling.ScheduledTaskSupport;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import io.minio.MinioClient;
 import io.minio.BucketExistsArgs;
 import io.nats.client.Connection;
 import io.nats.client.Nats;
-import io.nats.client.Options;
 import io.prometheus.client.hotspot.DefaultExports;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -227,17 +228,14 @@ public final class RetentionWorker {
                 log.error(workerMessages.get("worker.retention.scan_failed"), e);
             }
         };
-        scanExecutor.scheduleWithFixedDelay(
+        ScheduledTaskSupport.scheduleWithFixedDelayAndJitter(
+            scanExecutor,
             pass,
-            initialDelaySeconds,
-            scanIntervalSeconds,
-            TimeUnit.SECONDS
-        );
+            TimeUnit.SECONDS.toMillis(initialDelaySeconds),
+            TimeUnit.SECONDS.toMillis(scanIntervalSeconds),
+            TimeUnit.SECONDS.toMillis(Math.min(60L, scanIntervalSeconds)));
         while (!shutdownRequested.get()) {
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            if (InterruptibleWait.sleepMillis(500)) {
                 shutdownRequested.set(true);
             }
         }
@@ -284,12 +282,7 @@ public final class RetentionWorker {
 
             var natsUrl = System.getenv().getOrDefault("NATS_URL", "nats://localhost:4222");
             try {
-                var options = Options.builder()
-                    .server(natsUrl)
-                    .connectionName("retention-worker")
-                    .reconnectWait(Duration.ofSeconds(2))
-                    .maxReconnects(-1)
-                    .build();
+                var options = NatsConnectionOptions.clientBuilder(natsUrl, "retention-worker").build();
                 nats = Nats.connect(options);
                 log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
             } catch (Exception e) {

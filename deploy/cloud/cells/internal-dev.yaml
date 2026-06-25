@@ -17,6 +17,9 @@ compute:
   web_private_ip: 192.168.76.20
   web_public_ip: 127.0.0.1
 
+modules:
+  selection: all  # all available modules enabled for internal-dev
+
 dns:
   mode: platform_subdomain
   fqdn: internal-dev.messenger.cloud.example.com

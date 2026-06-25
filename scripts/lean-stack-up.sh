@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lean stack (spec 006 FR-OPT-01): full-server + pilot-overrides + keycloak-prod.
-# Base-only product addons (legacy korus_deploy_profile=pilot). Run in QEMU server guest.
+# Base-only (empty product addons). Run in QEMU server guest.
 set -euo pipefail
 
 BUILD=false

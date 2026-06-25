@@ -128,8 +128,7 @@ class PlatformAddonGateFilterTest {
             ProductModuleCatalogLoader.load(),
             ProductModuleCatalogLoader.resolveSelectedAddons(
                 ProductModuleCatalogLoader.load(),
-                config.korusProductAddons(),
-                config.korusDeployProfile()
+                config.korusProductAddons()
             ),
             new PlatformModuleOverrideRepository(null),
             config

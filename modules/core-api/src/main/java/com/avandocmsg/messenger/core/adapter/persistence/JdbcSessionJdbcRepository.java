@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.mls.SessionRepository.MlsSession;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.slf4j.Logger;
@@ -32,6 +34,7 @@ public final class JdbcSessionJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -52,6 +55,7 @@ public final class JdbcSessionJdbcRepository {
                   "FROM e2ee_sessions WHERE chat_id = ? AND epoch = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setLong(2, epoch);
             try (var rs = stmt.executeQuery()) {
@@ -72,6 +76,7 @@ public final class JdbcSessionJdbcRepository {
         var sql = "INSERT INTO e2ee_sessions (id, chat_id, epoch, cipher_suite, created_at, updated_at) VALUES (?, ?, 0, ?, now(), now())";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             var id = uuidGenerator.randomUuid();
             stmt.setObject(1, id);
             stmt.setObject(2, chatId);
@@ -92,6 +97,7 @@ public final class JdbcSessionJdbcRepository {
         var sql = "UPDATE e2ee_sessions SET epoch = epoch + 1, tree_hash = ?, confirmed_transcript_hash = ?, updated_at = now() WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setBytes(1, treeHash);
             stmt.setBytes(2, transcriptHash);
             stmt.setObject(3, sessionId);

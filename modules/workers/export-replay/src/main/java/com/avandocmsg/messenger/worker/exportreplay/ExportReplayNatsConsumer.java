@@ -1,15 +1,14 @@
 package com.avandocmsg.messenger.worker.exportreplay;
 
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+import com.avandocmsg.messenger.common.nats.NatsConnectionOptions;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import io.nats.client.Connection;
 import io.nats.client.Nats;
-import io.nats.client.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.time.Duration;
 
 /** NATS subscriptions for export-replay jobs (queue group + cancel hints + complete publish). */
 public final class ExportReplayNatsConsumer implements AutoCloseable {
@@ -21,12 +20,7 @@ public final class ExportReplayNatsConsumer implements AutoCloseable {
 
     public ExportReplayNatsConsumer(String natsUrl, UserMessageSource workerMessages) throws Exception {
         this.workerMessages = workerMessages;
-        var options = Options.builder()
-            .server(natsUrl)
-            .connectionName("export-replay-worker")
-            .reconnectWait(Duration.ofSeconds(2))
-            .maxReconnects(-1)
-            .build();
+        var options = NatsConnectionOptions.clientBuilder(natsUrl, "export-replay-worker").build();
         this.connection = Nats.connect(options);
         log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }

@@ -17,6 +17,9 @@ compute:
   web_private_ip: 10.10.1.20
   web_public_ip: 203.0.113.50
 
+modules:
+  selection: contracted  # selected per contract
+
 dns:
   mode: customer_cname
   fqdn: chat.acme.example.com

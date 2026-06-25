@@ -8,6 +8,7 @@ import com.avandocmsg.messenger.common.export.ExportCompletenessValidator;
 import com.avandocmsg.messenger.common.export.ExportOutputRef;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
@@ -36,7 +37,7 @@ import java.util.UUID;
  */
 public class ExportReplayJobRunner {
     private static final Logger log = LoggerFactory.getLogger(ExportReplayJobRunner.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private static final String SQL_REFERENCED_FILES = ExportReferencedFilesSql.REFERENCED_FILES;
 
@@ -232,10 +233,10 @@ public class ExportReplayJobRunner {
 
     public void handle(io.nats.client.Message msg) {
         try {
-            var payload = new String(msg.getData(), StandardCharsets.UTF_8);
-            var job = MAPPER.readValue(payload, ExportReplayJob.class);
+            var job = MAPPER.readValue(msg.getData(), ExportReplayJob.class);
             if (job.jobId() == null || job.jobId().isBlank() || job.chatId() == null || job.chatId().isBlank()) {
-                log.warn(workerMessages.format("worker.export_replay.invalid_payload", payload));
+                log.warn(workerMessages.format("worker.export_replay.invalid_payload",
+                    new String(msg.getData(), StandardCharsets.UTF_8)));
                 ExportReplayMetrics.jobSkipped("invalid_payload");
                 return;
             }
@@ -278,18 +279,10 @@ public class ExportReplayJobRunner {
                         Files.deleteIfExists(out);
                     } catch (IOException zipErr) {
                         log.warn(workerMessages.format("worker.export_replay.zip_failed", job.jobId(), zipErr.getMessage()));
-                        Files.writeString(
-                            out,
-                            MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(root),
-                            StandardCharsets.UTF_8
-                        );
+                        ExportArtifactWriter.writePrettyJson(out, root);
                     }
                 } else {
-                    Files.writeString(
-                        out,
-                        MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(root),
-                        StandardCharsets.UTF_8
-                    );
+                    ExportArtifactWriter.writePrettyJson(out, root);
                 }
                 log.info(workerMessages.format("worker.export_replay.export_written",
                     job.jobId(),
@@ -439,7 +432,7 @@ public class ExportReplayJobRunner {
             .put("requestedBy", job.requestedBy() != null ? job.requestedBy() : "")
             .put("stubStatus", "pending_implementation")
             .put("writtenAtEpochMs", Instant.now().toEpochMilli());
-        Files.writeString(out, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(stub), StandardCharsets.UTF_8);
+        ExportArtifactWriter.writePrettyJson(out, stub);
     }
 
     private void writeError(Path out, ExportReplayJob job, String code, String detail) throws Exception {
@@ -452,7 +445,7 @@ public class ExportReplayJobRunner {
             .put("errorCode", code)
             .put("errorDetail", detail != null ? detail : "")
             .put("writtenAtEpochMs", Instant.now().toEpochMilli());
-        Files.writeString(out, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(err), StandardCharsets.UTF_8);
+        ExportArtifactWriter.writePrettyJson(out, err);
     }
 
     private ObjectNode exportFromDatabase(ExportReplayJob job, UUID jobUuid) throws SQLException {

@@ -9,4 +9,5 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends curl \
   && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/modules/workers/indexer/build/install/indexer /app/indexer
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:+UseContainerSupport -XX:+UseG1GC"
 ENTRYPOINT ["/app/indexer/bin/indexer"]

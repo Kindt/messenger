@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.conference;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.conference.dto.ConferenceParticipantResponse;
 import com.avandocmsg.messenger.api.conference.dto.ConferenceResponse;
 import com.avandocmsg.messenger.api.conference.dto.CreateConferenceRequest;
@@ -20,7 +21,7 @@ import java.util.UUID;
 
 public class ConferenceService {
     private static final Logger log = LoggerFactory.getLogger(ConferenceService.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final ConferencePort conferencePort;
     private final ChatPersistencePort chatPersistencePort;
@@ -38,7 +39,7 @@ public class ConferenceService {
         this.messages = messages;
     }
 
-    /** Встреча «как в Телемосте»: группа-контейнер + конференция + join_url для приглашений. */
+    /** Р’СЃС‚СЂРµС‡Р° В«РєР°Рє РІ РўРµР»РµРјРѕСЃС‚РµВ»: РіСЂСѓРїРїР°-РєРѕРЅС‚РµР№РЅРµСЂ + РєРѕРЅС„РµСЂРµРЅС†РёСЏ + join_url РґР»СЏ РїСЂРёРіР»Р°С€РµРЅРёР№. */
     public Optional<ConferenceResponse> createStandalone(UUID userId, CreateConferenceRequest request) {
         var title = request != null && request.title() != null && !request.title().isBlank()
             ? request.title().trim()

@@ -1,11 +1,10 @@
-# Pilot env overrides when using docker-compose.full-server.yml without solr/full profiles.
+# Lean env overrides when using docker-compose.full-server.yml without solr/full modules.
 # Merge: -f docker-compose.full-server.yml -f docker-compose.pilot-overrides.yml -f docker-compose.keycloak-prod.yml
 services:
   core-api:
     environment:
       SEARCH_MODE: sql
       MLS_WIRE_ENABLED: "false"
-      KORUS_DEPLOY_PROFILE: pilot
       REDIS_READ_CACHE_ENABLED: "true"
       REDIS_READ_CACHE_TTL_CHAT_LIST_SECONDS: "60"
       REDIS_READ_CACHE_TTL_CHAT_UNREAD_SECONDS: "30"

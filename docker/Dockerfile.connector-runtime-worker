@@ -13,5 +13,6 @@ WORKDIR /app
 COPY --from=builder /app/modules/workers/connector-runtime/build/install/connector-runtime /app/connector-runtime
 ENV CONNECTOR_RUNTIME_PORT=8091
 ENV CONNECTOR_RUNTIME_METRICS_PORT=9191
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:+UseContainerSupport -XX:+UseG1GC"
 EXPOSE 8091 9191
 ENTRYPOINT ["/app/connector-runtime/bin/connector-runtime"]

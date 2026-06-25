@@ -17,6 +17,9 @@ import java.util.UUID;
 public final class PipelineFanoutLogic {
     private static final Logger log = LoggerFactory.getLogger(PipelineFanoutLogic.class);
 
+    /** Aligns with {@code JdbcListLimits.CHAT_MEMBERS} (core-api); worker has no core-api dep. */
+    private static final int MAX_CHAT_MEMBERS = 10_000;
+
     private PipelineFanoutLogic() {
     }
 
@@ -29,8 +32,12 @@ public final class PipelineFanoutLogic {
         var sql = """
             SELECT cm.user_id FROM chat_members cm
             WHERE cm.chat_id = ? AND cm.user_id != ? AND cm.banned = false
-              AND cm.user_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
-              AND cm.user_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)
+              AND NOT EXISTS (
+                SELECT 1 FROM blocks b
+                WHERE (b.blocker_id = ? AND b.blocked_id = cm.user_id)
+                   OR (b.blocker_id = cm.user_id AND b.blocked_id = ?)
+              )
+            LIMIT ?
             """;
         var result = new ArrayList<String>();
         try (var conn = dataSource.getConnection();
@@ -39,6 +46,7 @@ public final class PipelineFanoutLogic {
             stmt.setObject(2, excludeSenderId);
             stmt.setObject(3, excludeSenderId);
             stmt.setObject(4, excludeSenderId);
+            stmt.setInt(5, MAX_CHAT_MEMBERS);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     result.add(rs.getObject("user_id", UUID.class).toString());
@@ -50,9 +58,6 @@ public final class PipelineFanoutLogic {
         return result;
     }
 
-    /**
-     * Whether {@code userId} is an active (non-banned) member of {@code chatId}.
-     */
     public static List<String> loadAllChatMemberUserIds(DataSource dataSource, UUID chatId,
                                                         UserMessageSource workerMessages) {
         var sql = """
@@ -74,7 +79,44 @@ public final class PipelineFanoutLogic {
         return result;
     }
 
-    /** Active users in org (for presence fan-out). */
+    /**
+     * Scoped presence recipients: contacts + co-chat members (spec 025 FR-013).
+     * Replaces org-wide fan-out for {@code user.presence}.
+     */
+    public static List<String> loadPresenceRecipientUserIds(DataSource dataSource, UUID userId,
+                                                            UserMessageSource workerMessages) {
+        var sql = """
+            SELECT DISTINCT peer FROM (
+              SELECT contact_user_id AS peer FROM contacts WHERE user_id = ?
+              UNION
+              SELECT user_id AS peer FROM contacts WHERE contact_user_id = ?
+              UNION
+              SELECT cm2.user_id AS peer FROM chat_members cm1
+              INNER JOIN chat_members cm2 ON cm1.chat_id = cm2.chat_id
+              WHERE cm1.user_id = ? AND cm2.user_id != ? AND cm1.banned = false AND cm2.banned = false
+            ) scoped
+            WHERE peer != ?
+            """;
+        var result = new ArrayList<String>();
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, userId);
+            stmt.setObject(2, userId);
+            stmt.setObject(3, userId);
+            stmt.setObject(4, userId);
+            stmt.setObject(5, userId);
+            try (var rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(rs.getObject("peer", UUID.class).toString());
+                }
+            }
+        } catch (Exception e) {
+            log.error("presence recipients load failed user={}", userId, e);
+        }
+        return result;
+    }
+
+    /** Active users in org (legacy; prefer {@link #loadPresenceRecipientUserIds}). */
     public static List<String> loadOrgUserIds(DataSource dataSource, UUID orgId, UUID excludeUserId,
                                               UserMessageSource workerMessages) {
         var sql = """

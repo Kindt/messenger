@@ -317,6 +317,10 @@
       "members": "Members",
       "join": "Join"
     },
+    "search": {
+      "emptyTitle": "No matches",
+      "emptyHint": "Try a different query or check spelling."
+    },
     "auth": {
       "username": "Username",
       "password": "Password",
@@ -415,6 +419,8 @@
       "confLiveDefault": "Video conference in progress",
       "searchPlaceholder": "Search in this chat (2+ chars, no E2EE)…",
       "nothingInChat": "Nothing found in this chat.",
+      "searchEmptyTitle": "Nothing in this chat",
+      "searchEmptyHint": "Try other words or use global search in the header.",
       "replyPrefix": "Reply: {text}",
       "markdownHint": "Markdown: **bold**, *italic*, `code`, [link](https://…)",
       "autoDelete": "Auto-delete:",
@@ -590,6 +596,21 @@
       "reconnecting": "Reconnecting…",
       "quotaHint": "Cache keeps recent messages for selected chats."
     },
+    "export": {
+      "cancelled": "Export cancelled",
+      "failed": "Export failed",
+      "failedJob": "Export finished with an error",
+      "timeout": "Export wait timed out",
+      "statusQueued": "queued",
+      "statusProcessing": "processing",
+      "statusWaiting": "waiting",
+      "started": "Export started — you can switch chats; download will begin automatically",
+      "ready": "Export ready, archive downloaded",
+      "alreadyRunning": "Another export is already running",
+      "noJobId": "Server did not return job_id",
+      "cancelFailed": "Could not cancel export",
+      "attachmentsPreview": "Export attachments: {count} file(s)"
+    },
     "message": {
       "image": "Image",
       "video": "Video",
@@ -675,6 +696,7 @@
       "presenceOffline": "Offline",
       "customStatus": "Status text",
       "dndSchedule": "Do not disturb until",
+      "dndSeeNotificationsTab": "DND duration is on the Notifications tab.",
       "dndUntilManual": "Until I turn off",
       "dndUntil30m": "30 minutes",
       "dndUntil1h": "1 hour",
@@ -790,6 +812,15 @@
       "directoryHint": "Trusted orgs for cross-org chats (MVP).",
       "trustActive": "Active",
       "trustPending": "Pending",
+      "trustLevel": {
+        "trusted": "Trusted",
+        "verified": "Verified",
+        "pending": "Pending",
+        "partial": "Partial",
+        "none": "Untrusted",
+        "blocked": "Blocked",
+        "unknown": "Level: {value}"
+      },
       "partnerLabel": "Partner",
       "badgeThread": "Federation",
       "joinCopied": "Room copied to clipboard."

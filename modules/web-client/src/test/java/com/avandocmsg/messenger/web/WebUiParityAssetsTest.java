@@ -22,45 +22,18 @@ class WebUiParityAssetsTest {
     }
 
     @Test
-    void indexHtml_loadsUtilityModulesBeforeAppJs() throws Exception {
+    void indexHtml_loadsProductionBundleWithWasmPrereqs() throws Exception {
         var html = readResource("webui/index.html");
-        var scripts = List.of(
-            "ui-i18n.js",
-            "ui-shell-utils.js",
-            "ui-transport-utils.js",
-            "ui-ws-client.js",
-            "ui-ws-events.js",
-            "ui-ws-handler.js",
-            "ui-format-utils.js",
-            "ui-messages-utils.js",
-            "ui-deep-link-utils.js",
-            "ui-clipboard-utils.js",
-            "ui-markdown-utils.js",
-            "ui-file-attach.js",
-            "ui-message-content.js",
-            "ui-message-reply.js",
-            "ui-message-article.js",
-            "ui-message-list.js",
-            "ui-composer.js",
-            "ui-rtc-utils.js",
-            "ui-live-session.js",
-            "ui-pwa-settings-utils.js",
-            "korus-mls-wasm.js",
-            "e2ee/openmls/korus-openmls-dev.js",
-            "ui-export-utils.js",
-            "ui-e2ee-mls.js",
-            "ui-e2ee-utils.js",
-            "ui-offline-cache.js",
-            "app.js"
-        );
-        var last = -1;
-        for (var script : scripts) {
-            var idx = html.indexOf(script);
-            assertTrue(idx >= 0, "index.html must reference " + script);
-            assertTrue(idx > last, script + " must appear after prior scripts");
-            last = idx;
-        }
+        var wasmIdx = html.indexOf("<script src=\"/korus-mls-wasm.js\"");
+        var openmlsIdx = html.indexOf("<script src=\"/e2ee/openmls/korus-openmls-dev.js\"");
+        var bundleIdx = html.indexOf("<script src=\"/app.bundle.js\"");
+        assertTrue(wasmIdx >= 0, "index.html must reference korus-mls-wasm.js");
+        assertTrue(openmlsIdx >= 0, "index.html must reference korus-openmls-dev.js");
+        assertTrue(bundleIdx >= 0, "index.html must reference app.bundle.js");
+        assertTrue(wasmIdx < bundleIdx, "WASM script must appear before app.bundle.js");
+        assertTrue(openmlsIdx < bundleIdx, "OpenMLS dev script must appear before app.bundle.js");
         assertTrue(!html.contains("locales/ru.js"), "legacy locale .js scripts must not be in index.html");
+        assertTrue(!html.contains("ui-i18n.js"), "per-module scripts must not be in index.html (bundled)");
     }
 
     @Test
@@ -175,16 +148,15 @@ class WebUiParityAssetsTest {
     }
 
     @Test
-    void liveSessionModule_wiredInIndexAndApp() throws Exception {
+    void liveSessionModule_wiredInBundleAndLazyCallModules() throws Exception {
         var html = readResource("webui/index.html");
+        var bundle = readResource("webui/app.bundle.js");
         var live = readResource("webui/ui-live-session.js");
         var livekit = readResource("webui/ui-call-livekit.js");
-        var app = readResource("webui/app.js");
-        assertTrue(html.contains("ui-live-session.js"), "index loads live module");
-        assertTrue(live.contains("KorusUiLiveSession"), "live module export");
-        assertTrue(live.contains("live_session_id"), "live session event field");
-        assertTrue(app.contains("KorusUiLiveSession"), "app uses live module");
-        assertTrue(app.contains("renderLiveSection"), "call panel live section");
+        assertTrue(html.contains("app.bundle.js"), "index loads production bundle");
+        assertTrue(bundle.contains("KorusUiLiveSession"), "bundle includes live module wiring");
+        assertTrue(bundle.contains("renderLiveSection"), "bundle renders live section");
+        assertTrue(live.contains("live_session_id"), "live module event field in source");
         assertTrue(livekit.contains("live.sfu_join"), "LiveKit button gated by feature key");
     }
 

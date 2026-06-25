@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Instant;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record ChatResponse(
     String id,
     String title,

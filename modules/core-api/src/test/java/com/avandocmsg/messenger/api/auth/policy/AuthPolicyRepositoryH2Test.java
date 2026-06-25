@@ -22,7 +22,7 @@ class AuthPolicyRepositoryH2Test {
     void init() throws Exception {
         orgId = UUID.randomUUID();
         var cfg = new HikariConfig();
-        cfg.setJdbcUrl("jdbc:h2:mem:authpolicy_" + UUID.randomUUID() + ";DB_CLOSE_DELAY=-1");
+        cfg.setJdbcUrl("jdbc:h2:mem:authpolicy_" + UUID.randomUUID() + ";MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
         cfg.setMaximumPoolSize(4);
         ds = new HikariDataSource(cfg);
         try (var c = ds.getConnection(); Statement st = c.createStatement()) {

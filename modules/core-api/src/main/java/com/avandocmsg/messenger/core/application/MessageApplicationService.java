@@ -12,6 +12,7 @@ import com.avandocmsg.messenger.core.domain.ChatType;
 import com.avandocmsg.messenger.core.domain.Message;
 import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.api.params.ListPagination;
 import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
@@ -133,8 +134,8 @@ public final class MessageApplicationService {
         if (messageQueryPort == null || !canAccessChat(chatId, userId)) {
             return List.of();
         }
-        if (limit <= 0 || limit > 100) {
-            limit = 50;
+        if (limit <= 0 || limit > ListPagination.MAX_LIMIT) {
+            limit = ListPagination.DEFAULT_MESSAGE_LIST_LIMIT;
         }
         return messageQueryPort.findByChatId(chatId, limit, before, userId, threadId);
     }

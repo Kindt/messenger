@@ -1,0 +1,17 @@
+{
+  "wave": "E",
+  "phase": "post",
+  "git_sha": "3e98daf",
+  "environment": "repo-static",
+  "metrics": {
+    "web_first_load_kb": 347.3,
+    "web_js_gzip_kb": null,
+    "web_locales_loaded": 1,
+    "api_health_p99_ms": null,
+    "nats_msgs_per_send_estimate": 1,
+    "core_api_heap_mb_after_1h": null,
+    "ws_gateway_heap_mb_after_1h": null,
+    "read_cache_hit_ratio": null
+  },
+  "notes": "Wave E integrate: buildIntegrity PASS. NATS downstream Phase 2/3; UX perception; MessengerJson/JDBC rollout; CI first-load gate 347.3KB/450KB. QEMU VP-A runtime metrics null until guest lab."
+}

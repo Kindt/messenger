@@ -3,6 +3,8 @@
 #
 #   docker compose -f docker/docker-compose.full-server.yml \
 #     -f docker/docker-compose.resource-limits.yml up -d
+#
+# Guest VM sizing vs these caps: docs/deploy/QEMU_GUEST_RESOURCES.md
 
 version: "3.8"
 
@@ -35,6 +37,10 @@ services:
     mem_limit: 896m
     cpus: "1.0"
 
+  keycloak:
+    mem_limit: 768m
+    cpus: "1.0"
+
   core-api:
     mem_limit: 768m
     cpus: "2.0"
@@ -48,6 +54,14 @@ services:
     cpus: "1.0"
 
   push-worker:
+    mem_limit: 384m
+    cpus: "0.5"
+
+  preview-worker:
+    mem_limit: 384m
+    cpus: "0.5"
+
+  bot-delivery-worker:
     mem_limit: 384m
     cpus: "0.5"
 

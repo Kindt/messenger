@@ -1,8 +1,8 @@
 package com.avandocmsg.messenger.worker.exportreplay;
 
+import com.avandocmsg.messenger.common.health.WorkerDependencyHealth;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
-import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import io.prometheus.client.hotspot.DefaultExports;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -306,8 +306,11 @@ public class ExportReplayWorker {
             );
             if (metricsPort > 0) {
                 DefaultExports.initialize();
+                final DataSource healthDs = ds;
                 metricsServer = ExportReplayMetricsHttpServer.start(
-                    metricsPort, worker::natsConnected, workerMessages);
+                    metricsPort,
+                    () -> worker.natsConnected() && WorkerDependencyHealth.jdbcReachable(healthDs),
+                    workerMessages);
                 log.info(workerMessages.format("worker.export_replay.metrics_url", metricsServer.getPort()));
             }
             worker.start();

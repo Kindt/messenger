@@ -7,6 +7,8 @@ import java.util.List;
 /** Fan-out to {@link NatsSubjects#MSG_DELIVER_PREFIX} or chat broadcast (PS-1.3). */
 public final class DeliverFanout {
 
+    public static final int DEFAULT_DIRECT_MAX = 500;
+
     public record Config(int directMax, boolean chatBroadcastEnabled) {
         public Config {
             directMax = Math.max(1, directMax);
@@ -14,7 +16,7 @@ public final class DeliverFanout {
 
         public static Config fromEnv() {
             return new Config(
-                parsePositive(System.getenv("PIPELINE_FANOUT_DIRECT_MAX"), 256),
+                parsePositive(System.getenv("PIPELINE_FANOUT_DIRECT_MAX"), DEFAULT_DIRECT_MAX),
                 !"false".equalsIgnoreCase(trimToNull(System.getenv("PIPELINE_FANOUT_CHAT_ENABLED"))));
         }
 

@@ -43,10 +43,7 @@ public final class UpstreamProxyServlet extends HttpServlet {
             throw new ServletException("init-param upstreamBase is required");
         }
         upstreamBase = normalizedUpstreamBase(raw);
-        httpClient = HttpClient.newBuilder()
-            .connectTimeout(CONNECT_TIMEOUT)
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .build();
+        httpClient = UpstreamProxySettings.buildClient(UpstreamProxySettings.fromEnv(), CONNECT_TIMEOUT);
     }
 
     @Override

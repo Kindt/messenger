@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.mls.MlsGroupState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +36,7 @@ public final class JdbcMlsGroupStateJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, state.groupId());
             stmt.setObject(2, state.chatId());
             stmt.setLong(3, state.epoch());
@@ -60,12 +63,20 @@ public final class JdbcMlsGroupStateJdbcRepository {
         if (dataSource == null) {
             return 0L;
         }
-        var sql = "SELECT COUNT(*) AS c FROM mls_group_state";
+        var sql = """
+            SELECT COUNT(*) AS c FROM (
+                SELECT 1 FROM mls_group_state
+                LIMIT ?
+            ) capped
+            """;
         try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql);
-             var rs = stmt.executeQuery()) {
-            if (rs.next()) {
-                return rs.getLong("c");
+             var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
+            stmt.setInt(1, JdbcListLimits.COUNT_CAP_ADMIN);
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getLong("c");
+                }
             }
         } catch (Exception e) {
             log.error("countAll mls_group_state failed", e);
@@ -80,6 +91,7 @@ public final class JdbcMlsGroupStateJdbcRepository {
         var sql = "DELETE FROM mls_group_state WHERE group_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, groupId);
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
@@ -96,6 +108,7 @@ public final class JdbcMlsGroupStateJdbcRepository {
             + column + " = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {

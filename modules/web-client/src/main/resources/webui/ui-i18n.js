@@ -205,19 +205,21 @@
     return current;
   }
 
+  function prefetchDefaultLocale() {
+    if (loaded[DEFAULT_LOCALE] || loading[DEFAULT_LOCALE]) return;
+    loadLocale(DEFAULT_LOCALE).catch(function () {});
+  }
+
   function setLocale(code) {
     var next = code && localeCodes.indexOf(code) >= 0 ? code : DEFAULT_LOCALE;
-    return loadLocale(DEFAULT_LOCALE)
-      .then(function () {
-        if (next !== DEFAULT_LOCALE) return loadLocale(next);
-      })
-      .then(function () {
-        current = next;
-        try {
-          localStorage.setItem(LOCALE_KEY, next);
-        } catch (e) {}
-        applyHtmlLang(next);
-      });
+    return loadLocale(next).then(function () {
+      current = next;
+      try {
+        localStorage.setItem(LOCALE_KEY, next);
+      } catch (e) {}
+      applyHtmlLang(next);
+      if (next !== DEFAULT_LOCALE) prefetchDefaultLocale();
+    });
   }
 
   function init() {
@@ -228,8 +230,8 @@
       .then(function () {
         current = detectLocale();
         applyHtmlLang(current);
-        return loadLocale(DEFAULT_LOCALE).then(function () {
-          if (current !== DEFAULT_LOCALE) return loadLocale(current);
+        return loadLocale(current).then(function () {
+          if (current !== DEFAULT_LOCALE) prefetchDefaultLocale();
         });
       });
   }

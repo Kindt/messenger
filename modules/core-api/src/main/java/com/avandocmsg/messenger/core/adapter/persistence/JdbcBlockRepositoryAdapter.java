@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.domain.BlockedUser;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
@@ -24,6 +26,7 @@ public final class JdbcBlockRepositoryAdapter implements BlockRepositoryPort {
         var sql = "SELECT 1 FROM blocks WHERE blocker_id = ? AND blocked_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, blockerId.value());
             stmt.setObject(2, blockedId.value());
             try (var rs = stmt.executeQuery()) {
@@ -39,6 +42,7 @@ public final class JdbcBlockRepositoryAdapter implements BlockRepositoryPort {
         var sql = "INSERT INTO blocks (blocker_id, blocked_id, created_at) VALUES (?, ?, now()) ON CONFLICT DO NOTHING";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, blockerId.value());
             stmt.setObject(2, blockedId.value());
             return stmt.executeUpdate() > 0;
@@ -52,6 +56,7 @@ public final class JdbcBlockRepositoryAdapter implements BlockRepositoryPort {
         var sql = "DELETE FROM blocks WHERE blocker_id = ? AND blocked_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, blockerId.value());
             stmt.setObject(2, blockedId.value());
             return stmt.executeUpdate() > 0;
@@ -68,20 +73,25 @@ public final class JdbcBlockRepositoryAdapter implements BlockRepositoryPort {
             JOIN users u ON u.id = b.blocked_id
             WHERE b.blocker_id = ?
             ORDER BY b.created_at DESC
+            LIMIT ?
             """;
         var out = new ArrayList<BlockedUser>();
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, blockerId.value());
-            try (var rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    Timestamp ts = rs.getTimestamp("blocked_at");
-                    Instant blockedAt = ts != null ? ts.toInstant() : Instant.EPOCH;
-                    out.add(new BlockedUser(
-                        UserId.of(rs.getObject("id", UUID.class)),
-                        rs.getString("username"),
-                        rs.getString("display_name"),
-                        blockedAt));
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareRead(conn);
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                stmt.setObject(1, blockerId.value());
+                stmt.setInt(2, JdbcListLimits.BLOCKED_USERS);
+                try (var rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        Timestamp ts = rs.getTimestamp("blocked_at");
+                        Instant blockedAt = ts != null ? ts.toInstant() : Instant.EPOCH;
+                        out.add(new BlockedUser(
+                            UserId.of(rs.getObject("id", UUID.class)),
+                            rs.getString("username"),
+                            rs.getString("display_name"),
+                            blockedAt));
+                    }
                 }
             }
         } catch (Exception e) {

@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.common.plugin.integration;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
+import com.avandocmsg.messenger.common.http.HttpClientSupport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -19,11 +21,8 @@ import java.util.regex.Pattern;
 
 /** WebDAV PROPFIND search (live) or mock JSON search. */
 public final class WebDavStorageClient {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final HttpClient HTTP = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(8))
-        .followRedirects(HttpClient.Redirect.NORMAL)
-        .build();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
+    private static final HttpClient HTTP = HttpClientSupport.sharedFollowingRedirects();
     private static final Pattern HREF = Pattern.compile("<(?:D:)?href>([^<]+)</(?:D:)?href>", Pattern.CASE_INSENSITIVE);
 
     private WebDavStorageClient() {}

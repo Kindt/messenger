@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.phase5;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.plugins.PluginPlatformService;
 import com.avandocmsg.messenger.api.plugins.PluginRepository;
@@ -15,7 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public final class Phase5AdrService {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final String AI_PRESET = "ai-chat-gateway";
     private static final String STT_PRESET = "stt-mock";
 

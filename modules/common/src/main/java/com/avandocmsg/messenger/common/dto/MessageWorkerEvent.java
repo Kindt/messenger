@@ -21,6 +21,7 @@ public record MessageWorkerEvent(
     boolean encrypted,
     Integer storageByteLength,
     /** Plaintext snippet for Solr only when {@link #encrypted} is false; omitted in JSON when null. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     String searchText,
     /**
      * Solr indexer operation: {@code null} or omitted — upsert (новое сообщение из pipeline);
@@ -35,6 +36,31 @@ public record MessageWorkerEvent(
     }
 
     private static final int MAX_SEARCH_TEXT_CHARS = 8000;
+
+    /** Max {@link #searchText()} chars on push/bot NATS subjects (preview only). */
+    public static final int PUSH_BOT_SEARCH_TEXT_MAX = 128;
+
+    /**
+     * Slim copy for push/bot consumers that only need a short preview (spec 025 FR-044/FR-045).
+     */
+    public MessageWorkerEvent withSearchTextMaxChars(int maxChars) {
+        if (maxChars <= 0 || searchText == null || searchText.length() <= maxChars) {
+            return this;
+        }
+        return new MessageWorkerEvent(
+            messageId,
+            chatId,
+            senderId,
+            clientMsgId,
+            createdAtEpochMs,
+            type,
+            flags,
+            encrypted,
+            storageByteLength,
+            searchText.substring(0, maxChars),
+            indexOp
+        );
+    }
 
     public static MessageWorkerEvent fromSendEvent(MessageSendEvent send) {
         boolean encrypted = isEncryptedType(send.type());

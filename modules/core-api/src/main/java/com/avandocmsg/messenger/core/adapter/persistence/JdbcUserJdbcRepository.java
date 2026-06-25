@@ -1,15 +1,21 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.users.dto.UserProfile;
 import com.avandocmsg.messenger.api.users.dto.UserSearchHit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,6 +50,7 @@ public final class JdbcUserJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setString(2, un);
             stmt.setString(3, dn);
@@ -57,6 +64,7 @@ public final class JdbcUserJdbcRepository {
         var sql = "INSERT INTO users (id, username, display_name, created_at, updated_at) VALUES (?, ?, ?, now(), now())";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setString(2, username);
             stmt.setString(3, displayName != null ? displayName : username);
@@ -73,6 +81,7 @@ public final class JdbcUserJdbcRepository {
         var sql = SELECT_USER + " WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -89,6 +98,7 @@ public final class JdbcUserJdbcRepository {
         var sql = SELECT_USER + " WHERE username = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, username);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -108,6 +118,7 @@ public final class JdbcUserJdbcRepository {
         var sql = SELECT_USER + " WHERE external_id = ? LIMIT 1";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, externalId.trim());
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -127,6 +138,7 @@ public final class JdbcUserJdbcRepository {
         var sql = SELECT_USER + " WHERE lower(email) = lower(?)";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, email.trim());
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -146,6 +158,7 @@ public final class JdbcUserJdbcRepository {
         var sql = SELECT_USER + " WHERE org_id = ? AND external_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             stmt.setString(2, externalId);
             try (var rs = stmt.executeQuery()) {
@@ -164,6 +177,7 @@ public final class JdbcUserJdbcRepository {
         var result = new ArrayList<UserProfile>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             stmt.setInt(2, Math.max(offset, 0));
             stmt.setInt(3, Math.min(Math.max(limit, 1), 200));
@@ -182,6 +196,7 @@ public final class JdbcUserJdbcRepository {
         var sql = "SELECT count(*) FROM users WHERE org_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -213,6 +228,7 @@ public final class JdbcUserJdbcRepository {
                 """;
             try (var conn = dataSource.getConnection();
                  var stmt = conn.prepareStatement(sql)) {
+                     JdbcQuerySupport.applyDefaultTimeout(stmt);
                 stmt.setString(1, un);
                 stmt.setString(2, dn);
                 stmt.setString(3, blankToNull(email));
@@ -231,6 +247,7 @@ public final class JdbcUserJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setString(2, un);
             stmt.setString(3, dn);
@@ -263,6 +280,7 @@ public final class JdbcUserJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setString(2, un);
             stmt.setString(3, dn);
@@ -289,6 +307,7 @@ public final class JdbcUserJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, un);
             stmt.setString(2, dn);
             stmt.setString(3, blankToNull(email));
@@ -307,6 +326,7 @@ public final class JdbcUserJdbcRepository {
         var sql = "UPDATE users SET hidden = ?, updated_at = now() WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setBoolean(1, !active);
             stmt.setObject(2, id);
             return stmt.executeUpdate() > 0;
@@ -332,6 +352,7 @@ public final class JdbcUserJdbcRepository {
         var sql = "SELECT privacy_disable_read_receipts FROM users WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -345,19 +366,22 @@ public final class JdbcUserJdbcRepository {
     }
 
     public List<UserProfile> search(String query, int limit) {
-        var sql = SELECT_USER +
-                  " WHERE hidden = false AND (username ILIKE ? OR display_name ILIKE ?) " +
-                  "ORDER BY username LIMIT ?";
         var result = new ArrayList<UserProfile>();
-        var pattern = "%" + query + "%";
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, pattern);
-            stmt.setString(2, pattern);
-            stmt.setInt(3, limit);
-            try (var rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    result.add(mapRow(rs));
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareRead(conn);
+            var postgres = JdbcDialect.isPostgres(conn);
+            var clause = userSearchClause(postgres, "username", "display_name");
+            var sql = SELECT_USER +
+                      " WHERE hidden = false AND " + clause + " " +
+                      "ORDER BY username LIMIT ?";
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                bindUserSearchParams(stmt, postgres, query, 1);
+                stmt.setInt(3, limit);
+                try (var rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        result.add(mapRow(rs));
+                    }
                 }
             }
         } catch (Exception e) {
@@ -378,41 +402,68 @@ public final class JdbcUserJdbcRepository {
             safe = safe.substring(0, 64);
         }
         var lim = Math.min(Math.max(limit, 1), 50);
-        var pattern = "%" + safe + "%";
-        var sql = """
-            SELECT u.id, u.username, u.display_name
-            FROM users u
-            WHERE u.hidden = false AND u.id <> ?
-              AND (u.username ILIKE ? OR u.display_name ILIKE ?)
-              AND NOT EXISTS (
-                SELECT 1 FROM blocks b
-                WHERE (b.blocker_id = ? AND b.blocked_id = u.id)
-                   OR (b.blocker_id = u.id AND b.blocked_id = ?)
-              )
-            ORDER BY u.username
-            LIMIT ?
-            """;
         var result = new ArrayList<UserSearchHit>();
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareRead(conn);
+            var postgres = JdbcDialect.isPostgres(conn);
+            var clause = userSearchClause(postgres, "u.username", "u.display_name");
+            var sql = """
+                SELECT u.id, u.username, u.display_name
+                FROM users u
+                WHERE u.hidden = false AND u.id <> ?
+                  AND """ + clause + """
+                  AND NOT EXISTS (
+                    SELECT 1 FROM blocks b
+                    WHERE (b.blocker_id = ? AND b.blocked_id = u.id)
+                       OR (b.blocker_id = u.id AND b.blocked_id = ?)
+                  )
+                ORDER BY u.username
+                LIMIT ?
+                """;
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, viewerId);
-            stmt.setString(2, pattern);
-            stmt.setString(3, pattern);
+            bindUserSearchParams(stmt, postgres, safe, 2);
             stmt.setObject(4, viewerId);
             stmt.setObject(5, viewerId);
             stmt.setInt(6, lim);
-            try (var rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    result.add(new UserSearchHit(
-                        rs.getObject("id", UUID.class).toString(),
-                        rs.getString("username"),
-                        rs.getString("display_name")));
+                try (var rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        result.add(new UserSearchHit(
+                            rs.getObject("id", UUID.class).toString(),
+                            rs.getString("username"),
+                            rs.getString("display_name")));
+                    }
                 }
             }
         } catch (Exception e) {
             log.error("searchForViewer failed", e);
         }
         return result;
+    }
+
+    static String userSearchClause(boolean postgres, String usernameCol, String displayNameCol) {
+        if (postgres) {
+            return "(lower(" + usernameCol + ") LIKE lower(?) OR lower(" + displayNameCol + ") LIKE lower(?))";
+        }
+        return "(POSITION(lower(CAST (? AS text)) IN lower(coalesce(" + usernameCol + ", ''))) > 0"
+            + " OR POSITION(lower(CAST (? AS text)) IN lower(coalesce(" + displayNameCol + ", ''))) > 0)";
+    }
+
+    static String userSearchBindValue(boolean postgres, String query) {
+        var q = query != null ? query.trim() : "";
+        if (postgres) {
+            return "%" + q + "%";
+        }
+        return q.toLowerCase(Locale.ROOT);
+    }
+
+    private static void bindUserSearchParams(
+            PreparedStatement stmt, boolean postgres, String query, int startIndex)
+            throws SQLException {
+        var val = userSearchBindValue(postgres, query);
+        stmt.setString(startIndex, val);
+        stmt.setString(startIndex + 1, val);
     }
 
     private UserProfile mapRow(ResultSet rs) throws Exception {

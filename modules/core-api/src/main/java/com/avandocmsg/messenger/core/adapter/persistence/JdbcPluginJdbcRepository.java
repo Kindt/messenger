@@ -1,5 +1,8 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.json.MessengerJson;
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.plugins.PluginRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +17,7 @@ import java.util.UUID;
 
 public final class JdbcPluginJdbcRepository {
     private static final Logger log = LoggerFactory.getLogger(JdbcPluginJdbcRepository.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final DataSource dataSource;
 
@@ -30,8 +33,9 @@ public final class JdbcPluginJdbcRepository {
             """;
         var out = new ArrayList<PluginRepository.PresetRow>();
         try (var conn = dataSource.getConnection();
-             var ps = conn.prepareStatement(sql);
-             var rs = ps.executeQuery()) {
+             var ps = conn.prepareStatement(sql)) {
+            JdbcQuerySupport.applyDefaultTimeout(ps);
+            try (var rs = ps.executeQuery()) {
             while (rs.next()) {
                 out.add(new PluginRepository.PresetRow(
                     rs.getString(1),
@@ -40,6 +44,7 @@ public final class JdbcPluginJdbcRepository {
                     rs.getInt(4),
                     rs.getString(5)
                 ));
+            }
             }
         } catch (Exception e) {
             log.warn("listPresets failed: {}", e.getMessage());
@@ -61,6 +66,7 @@ public final class JdbcPluginJdbcRepository {
         var out = new ArrayList<PluginRepository.InstanceRow>();
         try (var conn = dataSource.getConnection();
              var ps = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(ps);
             ps.setObject(1, orgId);
             ps.setInt(2, Math.max(1, Math.min(limit, 500)));
             ps.setInt(3, Math.max(0, offset));
@@ -79,6 +85,7 @@ public final class JdbcPluginJdbcRepository {
         var sql = "SELECT COUNT(*) FROM plugin_instances WHERE org_id = ?";
         try (var conn = dataSource.getConnection();
              var ps = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(ps);
             ps.setObject(1, orgId);
             try (var rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -104,6 +111,7 @@ public final class JdbcPluginJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var ps = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(ps);
             ps.setObject(1, orgId);
             ps.setString(2, botName.trim());
             try (var rs = ps.executeQuery()) {
@@ -123,6 +131,7 @@ public final class JdbcPluginJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var ps = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(ps);
             ps.setBoolean(1, enabled);
             ps.setObject(2, id);
             return ps.executeUpdate() == 1;
@@ -142,6 +151,7 @@ public final class JdbcPluginJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var ps = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(ps);
             ps.setObject(1, id);
             try (var rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -162,6 +172,7 @@ public final class JdbcPluginJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var ps = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(ps);
             ps.setObject(1, row.id());
             ps.setObject(2, row.orgId());
             ps.setString(3, row.presetId());
@@ -186,6 +197,7 @@ public final class JdbcPluginJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var ps = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(ps);
             ps.setObject(1, orgId);
             try (var rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -210,6 +222,7 @@ public final class JdbcPluginJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var ps = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(ps);
             ps.setObject(1, row.orgId());
             ps.setString(2, MAPPER.writeValueAsString(row.allowedPresetIds()));
             ps.setString(3, row.llmMode());
@@ -230,6 +243,7 @@ public final class JdbcPluginJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var ps = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(ps);
             ps.setObject(1, targetChatId);
             ps.setObject(2, actorUserId);
             ps.setString(3, tokenHash);

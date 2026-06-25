@@ -4,8 +4,17 @@
   "description": "Tailwind CSS build for modules/web-client webui static assets",
   "scripts": {
     "build:css": "tailwindcss -i ./src/input.css -o ../src/main/resources/webui/tailwind.css --minify",
+    "build:fonts": "node scripts/build-fonts.mjs",
+    "build:styles": "node scripts/build-styles.mjs",
+    "build:js": "node scripts/build-bundle.mjs",
+    "build:bundle": "npm run build:js",
     "build:locales": "node scripts/build-locales.mjs",
+    "build:admin-manifest": "node scripts/build-admin-manifest.mjs",
+    "build:admin-styles": "node scripts/build-admin-styles.mjs",
+    "build:admin-bundle": "node scripts/build-admin-bundle.mjs",
+    "build:admin": "npm run build:admin-manifest && npm run build:admin-styles && npm run build:admin-bundle",
     "test:message-list": "node scripts/test-message-list.mjs",
+    "test:i18n-locale": "node scripts/test-i18n-locale.mjs",
     "test:format-utils": "node scripts/test-format-utils.mjs",
     "test:ws-events": "node scripts/test-ws-events.mjs",
     "test:deep-link": "node scripts/test-deep-link-utils.mjs",
@@ -20,13 +29,17 @@
     "test:sidebar-chips": "node scripts/test-sidebar-chips.mjs",
     "test:admin-i18n": "node scripts/test-admin-i18n.mjs",
     "test:live-session": "node scripts/test-live-session.mjs",
-    "test:webui": "npm run test:message-list && npm run test:format-utils && npm run test:ws-events && npm run test:deep-link && npm run test:markdown && npm run test:message-reply && npm run test:composer && npm run test:call-layout && npm run test:call-screen-share && npm run test:call-mode-render && npm run test:layout-zones && npm run test:overlay-zones && npm run test:sidebar-chips && npm run test:admin-i18n && npm run test:live-session",
+    "test:first-load": "node scripts/check-first-load.mjs",
+    "test:webui": "npm run test:message-list && npm run test:i18n-locale && npm run test:format-utils && npm run test:ws-events && npm run test:deep-link && npm run test:markdown && npm run test:message-reply && npm run test:composer && npm run test:call-layout && npm run test:call-screen-share && npm run test:call-mode-render && npm run test:layout-zones && npm run test:overlay-zones && npm run test:sidebar-chips && npm run test:admin-i18n && npm run test:live-session",
     "build:openmls": "node scripts/build-openmls.mjs",
-    "build:assets": "npm run build:css && npm run build:locales && npm run build:openmls",
+    "build:assets": "npm run build:css && npm run build:fonts && npm run build:styles && npm run build:locales && npm run build:openmls && npm run build:js",
     "watch:css": "tailwindcss -i ./src/input.css -o ../src/main/resources/webui/tailwind.css --watch"
   },
   "devDependencies": {
+    "@fontsource/source-sans-3": "^5.2.9",
     "@tailwindcss/cli": "^4.1.11",
+    "esbuild": "^0.28.1",
+    "lightningcss": "^1.32.0",
     "tailwindcss": "^4.1.11"
   }
 }

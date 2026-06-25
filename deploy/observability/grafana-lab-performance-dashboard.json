@@ -1,0 +1,104 @@
+{
+  "title": "Korus Lab Performance",
+  "uid": "korus-lab-perf",
+  "schemaVersion": 39,
+  "version": 1,
+  "timezone": "browser",
+  "tags": ["korus", "spec-025", "lab"],
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "WS active sessions",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "ws_active_sessions",
+          "legendFormat": "sessions"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "WS fan-out recipients rate",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(ws_fanout_recipients[5m])",
+          "legendFormat": "recipients/s"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "JVM heap used (workers)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "jvm_memory_bytes_used{area=\"heap\"}",
+          "legendFormat": "{{job}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Process CPU (workers)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(process_cpu_seconds_total[5m])",
+          "legendFormat": "{{job}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Push Web Push deliveries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(push_web_sent_total[5m])",
+          "legendFormat": "sent/s"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(push_web_failed_total[5m])",
+          "legendFormat": "failed/s"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Preview fetch rate",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(preview_fetch_total[5m])",
+          "legendFormat": "fetch/s"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(preview_fetch_failures_total[5m])",
+          "legendFormat": "failures/s"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Scrape targets up",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "count(up == 1)",
+          "legendFormat": "up"
+        }
+      ]
+    }
+  ]
+}

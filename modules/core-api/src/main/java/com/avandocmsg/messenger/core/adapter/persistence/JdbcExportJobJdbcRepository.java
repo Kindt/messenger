@@ -1,6 +1,8 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
 
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
+
 
 import org.slf4j.Logger;
 
@@ -52,6 +54,7 @@ public final class JdbcExportJobJdbcRepository {
         try (var conn = dataSource.getConnection();
 
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
 
             stmt.setObject(1, jobId);
 
@@ -83,6 +86,7 @@ public final class JdbcExportJobJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -106,6 +110,7 @@ public final class JdbcExportJobJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -157,6 +162,7 @@ public final class JdbcExportJobJdbcRepository {
         try (var conn = dataSource.getConnection();
 
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
 
             stmt.setObject(1, jobId);
 
@@ -203,6 +209,7 @@ public final class JdbcExportJobJdbcRepository {
         var rows = new ArrayList<ExportJobRow>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             if (hasStatus) {
                 stmt.setString(2, statusFilter.trim());
@@ -262,6 +269,7 @@ public final class JdbcExportJobJdbcRepository {
         var rows = new ArrayList<ExportJobRow>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             var idx = 1;
             if (hasStatus) {
                 stmt.setString(idx++, statusFilter.trim());
@@ -291,6 +299,7 @@ public final class JdbcExportJobJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, jobId);
             stmt.setObject(2, chatId);
             return stmt.executeUpdate() > 0;
@@ -310,6 +319,7 @@ public final class JdbcExportJobJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, jobId);
             stmt.setObject(2, chatId);
             return stmt.executeUpdate() > 0;
@@ -380,6 +390,7 @@ public final class JdbcExportJobJdbcRepository {
         try (var conn = dataSource.getConnection();
 
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
 
             stmt.setString(1, status);
 
@@ -445,6 +456,7 @@ public final class JdbcExportJobJdbcRepository {
         try (var conn = dataSource.getConnection();
 
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
 
             stmt.setString(1, status);
 
@@ -528,6 +540,7 @@ public final class JdbcExportJobJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 return rs.next();
@@ -551,17 +564,12 @@ public final class JdbcExportJobJdbcRepository {
         var cutoff = Timestamp.from(Instant.now().minus(staleMinutes, ChronoUnit.MINUTES));
 
         try (var conn = dataSource.getConnection();
-
              var st = conn.prepareStatement(
-
                  """
-
                  SELECT COUNT(*) FROM export_jobs
-
                  WHERE status = 'processing' AND updated_at < ?
-
                  """)) {
-
+            JdbcQuerySupport.applyDefaultTimeout(st);
             st.setTimestamp(1, cutoff);
 
             try (var rs = st.executeQuery()) {

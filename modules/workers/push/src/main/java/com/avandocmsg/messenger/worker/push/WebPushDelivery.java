@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.push;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,7 +12,6 @@ import org.slf4j.LoggerFactory;
 
 import java.security.GeneralSecurityException;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Sends Web Push notifications when {@code PUSH_VAPID_* env vars} are set.
@@ -19,7 +19,7 @@ import java.util.Optional;
  */
 public final class WebPushDelivery {
     private static final Logger log = LoggerFactory.getLogger(WebPushDelivery.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final PushService pushService;
     private final UserMessageSource workerMessages;

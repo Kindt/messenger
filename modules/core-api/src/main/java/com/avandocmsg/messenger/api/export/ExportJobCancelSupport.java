@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.export;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.export.dto.ExportCancelResponse;
 import com.avandocmsg.messenger.api.metrics.ExportMetrics;
 import com.avandocmsg.messenger.core.port.AuditPort;
@@ -20,7 +21,7 @@ public final class ExportJobCancelSupport {
     public static final String AUDIT_USER_CANCEL = "export.cancelled";
     public static final String AUDIT_ADMIN_CANCEL = "export.admin_cancelled";
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private static final Set<String> CANCELLABLE = Set.of("queued", "processing");
 

@@ -1,64 +1,61 @@
 <!DOCTYPE html>
+
 <html lang="ru" data-palette="korus" data-appearance="dark">
+
   <head>
+
     <meta charset="UTF-8" />
+
     <meta
+
       name="viewport"
+
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+
     />
+
     <meta name="theme-color" content="#7949f4" />
+
     <meta name="apple-mobile-web-app-capable" content="yes" />
+
     <meta name="apple-mobile-web-app-title" content="Korus" />
+
     <title>Korus Messenger</title>
+
     <link rel="manifest" href="/manifest.json" />
+
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+
     <link rel="apple-touch-icon" href="/icon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap"
-      rel="stylesheet"
-    />
+
+    <link rel="stylesheet" href="/fonts.css" />
+
     <link rel="stylesheet" href="/tailwind.css" />
+
     <link rel="stylesheet" href="/styles.css" />
+
     <link rel="stylesheet" href="/themes.css" />
+
   </head>
+
   <body>
+
     <div id="root"></div>
+
     <script src="/web-client-env.js"></script>
-    <script src="/ui-i18n.js"></script>
-    <script src="/ui-shell-utils.js"></script>
-    <script src="/ui-transport-utils.js"></script>
-    <script src="/ui-ws-client.js"></script>
-    <script src="/ui-ws-events.js"></script>
-    <script src="/ui-ws-handler.js"></script>
-    <script src="/ui-format-utils.js"></script>
-    <script src="/ui-messages-utils.js"></script>
-    <script src="/ui-deep-link-utils.js"></script>
-    <script src="/ui-clipboard-utils.js"></script>
-    <script src="/ui-markdown-utils.js"></script>
-    <script src="/ui-file-attach.js"></script>
-    <script src="/ui-message-content.js"></script>
-    <script src="/ui-message-reply.js"></script>
-    <script src="/ui-message-article.js"></script>
-    <script src="/ui-message-list.js"></script>
-    <script src="/ui-composer.js"></script>
-    <script src="/ui-polls.js"></script>
-    <script src="/ui-phase5-ext.js"></script>
-    <script src="/ui-whiteboard-canvas.js"></script>
-    <script src="/ui-call-adr.js"></script>
-    <script src="/ui-rtc-utils.js"></script>
-    <script src="/ui-call-mesh.js"></script>
-    <script src="/ui-call-livekit.js"></script>
-    <script src="/ui-live-session.js"></script>
-    <script src="/ui-pwa-settings-utils.js"></script>
-    <script src="/korus-mls-wasm.js"></script>
-    <script src="/e2ee/openmls/korus-openmls-dev.js"></script>
-    <script src="/ui-export-utils.js"></script>
-    <script src="/ui-icon-buttons.js"></script>
-    <script src="/ui-e2ee-mls.js"></script>
-    <script src="/ui-e2ee-utils.js"></script>
-    <script src="/ui-offline-cache.js"></script>
-    <script src="/app.js"></script>
+
+    <!-- T073/FR-082: production bundle (~32 modules). Rebuild: npm run build:js in webui-build -->
+
+    <!-- FR-087: MLS WASM + OpenMLS dev build stay outside bundle; load before bundle (defer order) -->
+    <!-- FR-121: ui-call-mesh.js / ui-call-livekit.js lazy via import("/ui-lazy-call.mjs") in app.bundle.js -->
+
+    <script src="/korus-mls-wasm.js" defer></script>
+
+    <script src="/e2ee/openmls/korus-openmls-dev.js" defer></script>
+
+    <script src="/app.bundle.js" defer></script>
+
   </body>
+
 </html>
+

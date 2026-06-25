@@ -12,7 +12,7 @@
 - name: Template server secrets env from vault
   ansible.builtin.template:
     src: korus-server.env.j2
-    dest: "{{ korus_server_env_path }}"
+    dest: "{{ korus_server_env_path | default(korus_repo_root ~ '/docker/.env.korus-server') }}"
     mode: "0600"
   when: >
     korus_db_password is defined
@@ -27,7 +27,6 @@
     or korus_keycloak_issuer is defined
     or korus_keycloak_jwks_url is defined
     or korus_product_addons is defined
-    or korus_deploy_profile is defined
     or korus_core_api_deploy_mode is defined
     or korus_external_stack_manifest_enabled | default(true) | bool
 
@@ -65,10 +64,10 @@
     {% elif korus_fleet_targets_json is defined %}
     export FLEET_TARGETS_JSON='{{ korus_fleet_targets_json }}'
     {% endif %}
-    if [[ -f "{{ korus_server_env_path }}" ]]; then
+    if [[ -f "{{ korus_server_env_path | default(korus_repo_root ~ '/docker/.env.korus-server') }}" ]]; then
       set -a
       # shellcheck source=/dev/null
-      source "{{ korus_server_env_path }}"
+      source "{{ korus_server_env_path | default(korus_repo_root ~ '/docker/.env.korus-server') }}"
       set +a
     fi
     if [[ -f "{{ korus_repo_root }}/docker/.env.livekit" ]]; then
@@ -77,12 +76,12 @@
       source "{{ korus_repo_root }}/docker/.env.livekit"
       set +a
     fi
-    profile="{{ korus_deploy_profile | default('standard') }}"
+    addons="{{ korus_product_addons | default('') }}"
     args=( --skip-ensure )
-    if [[ "$profile" == "pilot" ]]; then
+    if [[ -z "$addons" ]]; then
       script="scripts/lean-stack-up.sh"
       args+=( --down-full-first )
-    elif [[ "$profile" == "enterprise" || "{{ korus_enable_scale | default(false) | lower }}" == "true" ]]; then
+    elif [[ "{{ korus_enable_scale | default(false) | lower }}" == "true" ]]; then
       script="scripts/enterprise-stack-up.sh"
       args+=( --no-wait-ready )
       export KORUS_ENABLE_READ_REPLICA={{ 1 if (korus_enable_read_replica | default(false) | bool) else 0 }}
@@ -135,7 +134,7 @@
   args:
     executable: /bin/bash
   changed_when: false
-  when: (korus_deploy_profile | default('standard')) != 'pilot'
+  when: korus_product_addons is defined and korus_product_addons | length > 0
 
 - name: Media enterprise profile notes (spec 022)
   ansible.builtin.debug:

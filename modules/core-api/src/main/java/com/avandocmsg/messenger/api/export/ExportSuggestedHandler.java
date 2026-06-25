@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.export;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.common.dto.ExportSuggestedEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -14,7 +15,7 @@ import java.util.UUID;
 public final class ExportSuggestedHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ExportSuggestedHandler.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     static final String AUDIT_ACTION = "export.suggested";
     static final String RESOURCE_TYPE_CHAT = "chat";

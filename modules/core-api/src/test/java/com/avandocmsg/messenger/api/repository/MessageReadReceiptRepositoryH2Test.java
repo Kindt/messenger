@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.api.repository;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcListLimits;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -105,5 +106,16 @@ class MessageReadReceiptRepositoryH2Test {
         assertEquals(1L, repo.countAll());
         assertEquals(1, repo.deleteOlderThanDays(30));
         assertEquals(0L, repo.countAll());
+    }
+
+    @Test
+    void countAll_capsAtAdminLimit() throws Exception {
+        try (var c = ds.getConnection(); var st = c.createStatement()) {
+            st.execute("""
+                INSERT INTO message_read_receipts (message_id, user_id, read_at)
+                SELECT RANDOM_UUID(), '%s', CURRENT_TIMESTAMP FROM SYSTEM_RANGE(1, %d)
+                """.formatted(userId, JdbcListLimits.COUNT_CAP_ADMIN + 1));
+        }
+        assertEquals(JdbcListLimits.COUNT_CAP_ADMIN, repo.countAll());
     }
 }

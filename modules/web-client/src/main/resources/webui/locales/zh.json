@@ -317,6 +317,10 @@
       "members": "成员",
       "join": "加入"
     },
+    "search": {
+      "emptyTitle": "没有匹配结果",
+      "emptyHint": "请修改搜索词或检查拼写。"
+    },
     "auth": {
       "username": "用户名",
       "password": "密码",
@@ -415,6 +419,8 @@
       "confLiveDefault": "视频会议进行中",
       "searchPlaceholder": "在此聊天中搜索（至少 2 个字符，不含 E2EE）…",
       "nothingInChat": "此聊天中未找到结果。",
+      "searchEmptyTitle": "此聊天中没有结果",
+      "searchEmptyHint": "请尝试其他词语或使用顶栏全局搜索。",
       "replyPrefix": "回复：{text}",
       "markdownHint": "Markdown：**粗体**、*斜体*、`代码`、[链接](https://…)",
       "autoDelete": "自动删除：",
@@ -590,6 +596,21 @@
       "reconnecting": "Reconnecting…",
       "quotaHint": "Cache keeps recent messages for selected chats."
     },
+    "export": {
+      "cancelled": "Export cancelled",
+      "failed": "Export failed",
+      "failedJob": "Export finished with an error",
+      "timeout": "Export wait timed out",
+      "statusQueued": "queued",
+      "statusProcessing": "processing",
+      "statusWaiting": "waiting",
+      "started": "Export started — you can switch chats; download will begin automatically",
+      "ready": "Export ready, archive downloaded",
+      "alreadyRunning": "Another export is already running",
+      "noJobId": "Server did not return job_id",
+      "cancelFailed": "Could not cancel export",
+      "attachmentsPreview": "Export attachments: {count} file(s)"
+    },
     "message": {
       "image": "图片",
       "video": "视频",
@@ -675,6 +696,7 @@
       "presenceOffline": "离线",
       "customStatus": "状态",
       "dndSchedule": "勿扰至",
+      "dndSeeNotificationsTab": "勿扰时长请在「通知」选项卡中设置。",
       "dndUntilManual": "直到我关闭",
       "dndUntil30m": "30 分钟",
       "dndUntil1h": "1 小时",
@@ -790,6 +812,15 @@
       "directoryHint": "Trusted orgs for cross-org chats (MVP).",
       "trustActive": "Active",
       "trustPending": "Pending",
+      "trustLevel": {
+        "trusted": "已信任",
+        "verified": "已验证",
+        "pending": "待处理",
+        "partial": "部分信任",
+        "none": "未信任",
+        "blocked": "已阻止",
+        "unknown": "级别：{value}"
+      },
       "partnerLabel": "Partner",
       "badgeThread": "Federation",
       "joinCopied": "Room copied to clipboard."

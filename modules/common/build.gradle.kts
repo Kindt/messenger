@@ -1,14 +1,29 @@
 dependencies {
-    api(platform("com.fasterxml.jackson:jackson-bom:2.21.3"))
-    api("com.fasterxml.jackson.core:jackson-databind")
-    api("com.fasterxml.jackson.core:jackson-annotations")
-    api("com.zaxxer:HikariCP:5.1.0")
-    api("org.postgresql:postgresql:42.7.1")
-    api("io.nats:jnats:2.17.4")
-    api("io.prometheus:simpleclient:0.16.0")
-    api("io.prometheus:simpleclient_httpserver:0.16.0")
-    implementation("io.minio:minio:8.5.17")
-    implementation("com.github.luben:zstd-jni:1.5.6-6")
+    api(platform(libs.jackson.bom))
+    api(libs.jackson.databind)
+    api(libs.jackson.annotations)
+    api(libs.jackson.datatype.jsr310)
+    api(libs.slf4j.api)
+    implementation(libs.hikari) {
+        exclude(group = "org.slf4j", module = "slf4j-api")
+    }
+    implementation(libs.postgresql)
+    implementation(libs.jnats)
+    implementation(libs.prometheus.simpleclient)
+    implementation(libs.prometheus.simpleclient.httpserver)
+    implementation(libs.minio) {
+        exclude(group = "com.fasterxml.jackson.core", module = "jackson-databind")
+        exclude(group = "com.fasterxml.jackson.core", module = "jackson-annotations")
+        exclude(group = "com.fasterxml.jackson.core", module = "jackson-core")
+    }
+    implementation(libs.zstd.jni)
+    implementation(libs.logstash.logback.encoder) {
+        exclude(group = "com.fasterxml.jackson.core")
+    }
+    implementation(libs.caffeine) {
+        exclude(group = "com.google.errorprone", module = "error_prone_annotations")
+    }
 
-    testImplementation("io.prometheus:simpleclient_common:0.16.0")
+    testImplementation(libs.prometheus.simpleclient.common)
+    testRuntimeOnly(libs.logback.classic)
 }

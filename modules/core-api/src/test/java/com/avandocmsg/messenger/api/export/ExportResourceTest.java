@@ -305,7 +305,7 @@ class ExportResourceTest {
         }
 
         @Override
-        public void publishPipelineMessageSend(byte[] payload) {
+        public void publishPipelineMessageSend(byte[] payload, String userId) {
         }
     }
 

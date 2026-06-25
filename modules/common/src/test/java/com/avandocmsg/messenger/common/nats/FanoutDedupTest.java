@@ -27,4 +27,24 @@ class FanoutDedupTest {
         assertFalse(dedup.isDuplicate("msg-1", "user:u1"));
         assertFalse(dedup.isDuplicate("msg-1", "user:u1"));
     }
+
+    @Test
+    void isDuplicate_allowsRedeliveryAfterTtlExpires() throws InterruptedException {
+        var dedup = new FanoutDedup(1, 100);
+        assertFalse(dedup.isDuplicate("msg-1", "user:u1"));
+        assertTrue(dedup.isDuplicate("msg-1", "user:u1"));
+        Thread.sleep(1_100);
+        assertFalse(dedup.isDuplicate("msg-1", "user:u1"));
+    }
+
+    @Test
+    void isDuplicate_evictsWhenOverMaxSize() {
+        var maxSize = 2;
+        var dedup = new FanoutDedup(3600, maxSize);
+        for (int i = 0; i < maxSize + 5; i++) {
+            assertFalse(dedup.isDuplicate("msg-" + i, "user:u1"));
+        }
+        dedup.cleanUp();
+        assertTrue(dedup.estimatedSize() <= maxSize);
+    }
 }

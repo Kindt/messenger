@@ -600,13 +600,5 @@ addons:
     gates: {api: [{path: /v1/admin/migration-import/**, methods: [GET, POST], feature: migration_import.job.create, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.migration_import.disabled}], ui: [{feature: migration_import.job.create, control: migration-import-panel, behavior: hide}], jobs: [{job: migration-import-processor, feature: migration_import.job.process, disabled_behavior: pause, degraded_behavior: pause}], hooks: []}
     acceptance: {positive: [migration-import-positive], disabled: [migration-import-disabled], degraded: [migration-import-storage-degraded]}
 
-legacy_deploy_profile_map:
-  pilot:
-    addons: []
-    scale: {ha_enabled: false}
-  standard:
-    addons: [addon-engage, addon-search, addon-retention, addon-export, addon-archive, addon-deep-archive, addon-live, addon-bots, addon-integrations, addon-e2ee, addon-enterprise-auth]
-    scale: {ha_enabled: false}
-  enterprise:
-    addons: [addon-productivity, addon-engage, addon-search, addon-collaboration, addon-ai, addon-live, addon-retention, addon-archive, addon-deep-archive, addon-export, addon-enterprise-auth, addon-e2ee, addon-bots, addon-integrations, addon-federation, addon-dlp, addon-migration-import]
-    scale: {ha_enabled: true}
+# Module selection defined via korus_product_addons (env) — no legacy deploy profiles.
+# See core + modules model (spec 025).

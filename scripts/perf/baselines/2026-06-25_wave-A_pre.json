@@ -1,0 +1,17 @@
+{
+  "wave": "A",
+  "phase": "pre",
+  "git_sha": "3e98daf",
+  "environment": "repo-static",
+  "metrics": {
+    "web_first_load_kb": null,
+    "web_js_gzip_kb": null,
+    "web_locales_loaded": null,
+    "api_health_p99_ms": null,
+    "nats_msgs_per_send_estimate": null,
+    "core_api_heap_mb_after_1h": null,
+    "ws_gateway_heap_mb_after_1h": null,
+    "read_cache_hit_ratio": null
+  },
+  "notes": "QEMU stack unreachable (127.0.0.1:19088/18080 curl exit 7). Static pre-Wave-A snapshot; re-capture on qemu-lab when stack up per baseline-metrics-contract.md."
+}

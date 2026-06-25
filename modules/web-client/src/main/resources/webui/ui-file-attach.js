@@ -12,7 +12,27 @@
     }
   }
 
-  async function attachAuthenticatedImage(fileId, imgEl, ctx) {
+  function whenVisible(el, run) {
+    if (typeof IntersectionObserver === "undefined") {
+      run();
+      return;
+    }
+    var observer = new IntersectionObserver(
+      function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].isIntersecting) {
+            observer.disconnect();
+            run();
+            return;
+          }
+        }
+      },
+      { rootMargin: "240px" }
+    );
+    observer.observe(el);
+  }
+
+  async function loadAuthenticatedImageBlob(fileId, imgEl, ctx) {
     try {
       var meta = await fetchFileMetadata(fileId, ctx);
       if (meta && meta.filename) {
@@ -40,6 +60,12 @@
     } catch (e) {
       /* attachment preview optional */
     }
+  }
+
+  function attachAuthenticatedImage(fileId, imgEl, ctx) {
+    whenVisible(imgEl, function () {
+      loadAuthenticatedImageBlob(fileId, imgEl, ctx);
+    });
   }
 
   async function attachAuthenticatedAudio(fileId, audioEl, ctx) {

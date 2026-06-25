@@ -6,4 +6,5 @@ RUN gradle --console=plain :modules:workers:archiver:installDist --no-daemon -x 
 FROM eclipse-temurin:25-jdk
 WORKDIR /app
 COPY --from=builder /app/modules/workers/archiver/build/install/archiver /app/archiver
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:+UseContainerSupport -XX:+UseG1GC"
 ENTRYPOINT ["/app/archiver/bin/archiver"]

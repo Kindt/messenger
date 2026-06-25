@@ -82,7 +82,7 @@ class MessageSendCoordinatorTest {
         }
 
         @Override
-        public void publishPipelineMessageSend(byte[] payload) {
+        public void publishPipelineMessageSend(byte[] payload, String userId) {
             pipelinePayloads.add(payload != null ? payload.clone() : null);
         }
     }

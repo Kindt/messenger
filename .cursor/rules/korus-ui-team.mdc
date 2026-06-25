@@ -1,0 +1,16 @@
+---
+alwaysApply: true
+---
+
+# Korus UI team workflow
+
+Tasks touching `webui/`, web-client UI, i18n locales, Tailwind `webui-build`, responsive/mobile UI, or Playwright `ui-*` tiers:
+
+1. Read `.cursor/skills/korus-ui-orchestrator/SKILL.md` **FIRST**
+2. Classify pipeline (P1–P5) **before** editing files
+3. Follow role phases and gates — spec `specs/026-cursor-ui-agent-orchestrator/`
+4. **P2/P3:** no `webui/` edits until **UX Evaluator** `ui-ux-review` PASS (placement, usability, IA)
+
+If task is **not** UI (backend, ansible, hex only): orchestrator exits quickly — ignore UI phases.
+
+Engineer domain reference (after orchestrator routes to ENGINEER): `.cursor/skills/korus-webui/SKILL.md`

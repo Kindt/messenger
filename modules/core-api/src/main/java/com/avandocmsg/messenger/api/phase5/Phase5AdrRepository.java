@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.phase5;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.sql.DataSource;
@@ -16,7 +17,7 @@ import java.util.UUID;
 
 /** JDBC scaffold for spec 022 Phase 5 ADR backlog (repo MVP). */
 public final class Phase5AdrRepository {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final DataSource dataSource;
 

@@ -11,5 +11,6 @@ WORKDIR /app
 COPY --from=builder /app/modules/workers/exchange-bridge/build/install/exchange-bridge /app/exchange-bridge
 ENV EXCHANGE_BRIDGE_PORT=8093
 ENV EXCHANGE_BRIDGE_METRICS_PORT=9193
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:+UseContainerSupport -XX:+UseG1GC"
 EXPOSE 8093 9193
 ENTRYPOINT ["/app/exchange-bridge/bin/exchange-bridge"]

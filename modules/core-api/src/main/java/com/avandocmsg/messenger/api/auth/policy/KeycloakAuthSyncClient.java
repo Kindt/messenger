@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.auth.policy;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,7 +22,7 @@ import java.util.UUID;
 /** Sync LDAP user federation and OIDC/SAML identity brokers into Keycloak Admin API. */
 public class KeycloakAuthSyncClient {
     private static final Logger log = LoggerFactory.getLogger(KeycloakAuthSyncClient.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final AppConfig appConfig;
     private final HttpClient httpClient;
@@ -362,6 +363,6 @@ public class KeycloakAuthSyncClient {
         if (body == null) {
             return "";
         }
-        return body.length() > 200 ? body.substring(0, 200) + "…" : body;
+        return body.length() > 200 ? body.substring(0, 200) + "вЂ¦" : body;
     }
 }

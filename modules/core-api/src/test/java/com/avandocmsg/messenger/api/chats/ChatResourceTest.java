@@ -13,9 +13,17 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ChatResourceTest {
+
+    @Test
+    void list_limitAboveMax_returns400() {
+        var resource = new ChatResource(null, null, null, null, I18nTestFixtures.messagesEn());
+        var response = resource.list(0, 1001, userSecurityContext());
+        assertEquals(400, response.getStatus());
+    }
 
     @Test
     void create_group_invalidMemberId_throwsInvalidUuidParameterException() {

@@ -2,11 +2,19 @@ global:
   resolve_timeout: 5m
 
 route:
-  receiver: dev-null
+  receiver: lab-webhook
   group_by: [alertname]
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 4h
+  routes:
+    - receiver: dev-null
+      matchers:
+        - alertname = Watchdog
 
 receivers:
   - name: dev-null
+  - name: lab-webhook
+    webhook_configs:
+      - url: ${ALERTMANAGER_WEBHOOK_URL}
+        send_resolved: true

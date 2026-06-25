@@ -65,7 +65,7 @@ while time.time() < end:
         with urllib.request.urlopen(metrics_url, timeout=5) as resp:
             body = resp.read().decode("utf-8", errors="replace")
         for line in body.splitlines():
-            if line.startswith("ws_open_sessions "):
+            if line.startswith("ws_active_sessions "):
                 print(f"  {line.strip()}", flush=True)
                 break
     except Exception as e:

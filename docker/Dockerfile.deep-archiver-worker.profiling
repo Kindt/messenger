@@ -6,4 +6,5 @@ RUN gradle --console=plain :modules:workers:deep-archiver:installDist --no-daemo
 FROM eclipse-temurin:25-jdk
 WORKDIR /app
 COPY --from=builder /app/modules/workers/deep-archiver/build/install/deep-archiver /app/deep-archiver
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:+UseContainerSupport -XX:+UseG1GC"
 ENTRYPOINT ["/app/deep-archiver/bin/deep-archiver"]

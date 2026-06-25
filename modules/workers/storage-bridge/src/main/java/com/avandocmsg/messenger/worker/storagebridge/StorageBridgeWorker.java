@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.storagebridge;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.http.WorkerHealthHttpServer;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
@@ -23,7 +24,7 @@ import java.util.concurrent.Executors;
 /** Spec 014 P2: file storage bridge (WebDAV/SMB mock search demo). */
 public final class StorageBridgeWorker {
     private static final Logger log = LoggerFactory.getLogger(StorageBridgeWorker.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private StorageBridgeWorker() {}
 
@@ -35,8 +36,9 @@ public final class StorageBridgeWorker {
         int healthPort = parsePort(System.getenv("STORAGE_BRIDGE_METRICS_PORT"), 9194);
 
         var pluginServer = startPluginServer(port, messages);
+        var pluginUp = (java.util.function.BooleanSupplier) () -> pluginServer.getAddress() != null;
         try (var health = WorkerHealthHttpServer.startHealthOnly(
-            healthPort, "storage-bridge-health", () -> true, messages)) {
+            healthPort, "storage-bridge-health", pluginUp, messages)) {
             log.info(messages.format("bridge.http_started", port, health.getPort()));
             Thread.currentThread().join();
         } finally {
@@ -98,9 +100,9 @@ public final class StorageBridgeWorker {
         }
         return new PluginResponse(
             List.of(com.avandocmsg.messenger.common.plugin.PluginMessage.markdown(
-                "Storage bridge. Команды: `ping`, `/file <query>`")),
-            List.of(new PluginCard("Поиск", null, List.of(
-                new PluginButton("search_report", "Найти Q1-report")
+                "Storage bridge. РљРѕРјР°РЅРґС‹: `ping`, `/file <query>`")),
+            List.of(new PluginCard("РџРѕРёСЃРє", null, List.of(
+                new PluginButton("search_report", "РќР°Р№С‚Рё Q1-report")
             ))),
             null
         );
@@ -125,7 +127,7 @@ public final class StorageBridgeWorker {
         try {
             return PluginResponse.text(WebDavStorageClient.formatMarkdown(WebDavStorageClient.search(query)));
         } catch (Exception e) {
-            return PluginResponse.text("Storage недоступен: " + e.getMessage());
+            return PluginResponse.text("Storage РЅРµРґРѕСЃС‚СѓРїРµРЅ: " + e.getMessage());
         }
     }
 

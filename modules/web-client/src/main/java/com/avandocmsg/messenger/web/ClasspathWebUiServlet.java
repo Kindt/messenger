@@ -94,6 +94,7 @@ public final class ClasspathWebUiServlet extends HttpServlet {
         if (lower.endsWith(".html")
             || "sw.js".equals(lower)
             || "app.js".equals(lower)
+            || "app.bundle.js".equals(lower)
             || "themes.css".equals(lower)
             || "styles.css".equals(lower)
             || "tailwind.css".equals(lower)) {

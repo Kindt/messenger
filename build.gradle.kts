@@ -1,7 +1,8 @@
 plugins {
     id("java")
     id("java-library")
-    id("com.diffplug.spotless") version "7.0.2"
+    alias(libs.plugins.spotless)
+    id("org.gradle.test-retry") version "1.6.5"
 }
 
 group = "com.avandocmsg"
@@ -31,8 +32,40 @@ allprojects {
 }
 
 subprojects {
+    if (childProjects.isNotEmpty()) {
+        return@subprojects
+    }
+
     apply(plugin = "java")
     apply(plugin = "java-library")
+    apply(plugin = "org.gradle.test-retry")
+
+    configurations.all {
+        resolutionStrategy {
+            eachDependency {
+                when {
+                    requested.group == "commons-codec" && requested.name == "commons-codec" ->
+                        useVersion("1.17.1")
+                    requested.group == "org.apache.commons" && requested.name == "commons-lang3" ->
+                        useVersion("3.20.0")
+                    requested.group == "org.checkerframework" && requested.name == "checker-qual" ->
+                        useVersion("3.43.0")
+                    requested.group == "org.yaml" && requested.name == "snakeyaml" ->
+                        useVersion("2.6")
+                    requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin-stdlib") ->
+                        useVersion("1.9.10")
+                    requested.group == "jakarta.xml.bind" && requested.name == "jakarta.xml.bind-api" ->
+                        useVersion("4.0.2")
+                    requested.group == "jakarta.validation" && requested.name == "jakarta.validation-api" ->
+                        useVersion("3.1.0")
+                    requested.group == "com.fasterxml.jackson.dataformat"
+                        && requested.name == "jackson-dataformat-toml" ->
+                        useVersion("2.21.3")
+                }
+            }
+            failOnVersionConflict()
+        }
+    }
 
     java {
         sourceCompatibility = JavaVersion.VERSION_25
@@ -45,19 +78,37 @@ subprojects {
     }
 
     dependencies {
-        testImplementation("org.junit.jupiter:junit-jupiter:6.0.3")
-        testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.2")
-        testImplementation("org.mockito:mockito-core:5.23.0") {
+        implementation(enforcedPlatform(rootProject.libs.netty.bom))
+
+        "testImplementation"(rootProject.libs.junit.jupiter)
+        "testRuntimeOnly"(rootProject.libs.junit.platform.launcher)
+        "testImplementation"(rootProject.libs.mockito.core) {
             exclude("net.bytebuddy", "byte-buddy")
             exclude("net.bytebuddy", "byte-buddy-agent")
         }
-        testImplementation("org.mockito:mockito-junit-jupiter:5.23.0")
-        testImplementation("net.bytebuddy:byte-buddy:1.18.8")
-        testImplementation("net.bytebuddy:byte-buddy-agent:1.18.8")
+        "testImplementation"(rootProject.libs.mockito.junit.jupiter) {
+            exclude("net.bytebuddy", "byte-buddy")
+            exclude("net.bytebuddy", "byte-buddy-agent")
+        }
+        "testImplementation"(rootProject.libs.byte.buddy)
+        "testImplementation"(rootProject.libs.byte.buddy.agent)
     }
 
     tasks.withType<Test> {
         useJUnitPlatform()
+        val configuredForks = (findProperty("korus.test.maxParallelForks") as String?)?.toIntOrNull() ?: 0
+        maxParallelForks = if (configuredForks > 0) {
+            configuredForks
+        } else {
+            (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+        }
+        val retryCount = (findProperty("korus.test.retry.maxRetries") as String?)?.toIntOrNull() ?: 0
+        if (retryCount > 0) {
+            retry {
+                maxRetries.set(retryCount)
+                failOnPassedAfterRetry.set(false)
+            }
+        }
         jvmArgs(
             "-Djdk.attach.allowAttachSelf=true",
             // Mockito / ByteBuddy on JDK 25 (inline mocks)
@@ -67,9 +118,16 @@ subprojects {
         )
     }
 
+    plugins.withId("application") {
+        tasks.named("startScripts") {
+            notCompatibleWithConfigurationCache("startScripts resolves application runtime classpath")
+        }
+    }
+
     tasks.register<Test>("bundleParityTest") {
         group = "verification"
         description = "Bundle key parity (ru/en) for ${project.path}"
+        notCompatibleWithConfigurationCache("bundleParityTest wires source set classpath directly")
         testClassesDirs = sourceSets["test"].output.classesDirs
         classpath = sourceSets["test"].runtimeClasspath
         filter {
@@ -89,6 +147,22 @@ tasks.register<Exec>("checkCellManifest") {
     commandLine(pythonCmd, "scripts/test_cell_manifest.py")
 }
 
+/** WebUI locale parity + iconBtn/i18n label lint (spec 026 L4). */
+tasks.register<Exec>("checkWebuiLabelLint") {
+    group = "verification"
+    description = "Locale parity + iconBtn tooltip lint for messenger webui"
+    val nodeCmd = if (System.getProperty("os.name").lowercase().contains("win")) "node.exe" else "node"
+    commandLine(nodeCmd, "scripts/webui-label-lint.js")
+    inputs.file(file("scripts/webui-label-lint.js"))
+    inputs.file(file("scripts/webui-locale-parity-audit.js"))
+    inputs.dir(file("modules/web-client/webui-build/locales/messages"))
+    inputs.files(
+        file("modules/web-client/src/main/resources/webui/app.js"),
+        file("modules/web-client/src/main/resources/webui/ui-icon-buttons.js"),
+        file("modules/web-client/src/main/resources/webui/ui-phase5-ext.js"),
+    )
+}
+
 /** npm audit for webui-build (spec 014 S1-3). */
 tasks.register<Exec>("checkNpmAudit") {
     group = "verification"
@@ -98,13 +172,18 @@ tasks.register<Exec>("checkNpmAudit") {
     commandLine(npmCmd, "audit", "--audit-level=high")
 }
 
+/** Leaf modules only (skip :modules, :modules:workers, :services container projects). */
+fun Project.leafSubprojects(): Sequence<Project> =
+    subprojects.asSequence().filter { it.childProjects.isEmpty() }
+
 /** Avoid Gradle 9 implicit-deps failure when spotless runs parallel to subproject build. */
 tasks.named("spotlessJava") {
-    subprojects.forEach { sub ->
+    leafSubprojects().forEach { sub ->
         mustRunAfter(sub.tasks.named("build"))
     }
     mustRunAfter(tasks.named("checkBundleParity"))
     mustRunAfter(tasks.named("checkCellManifest"))
+    mustRunAfter(tasks.named("checkWebuiLabelLint"))
     mustRunAfter(tasks.named("checkNpmAudit"))
     mustRunAfter(project(":modules:core-api").tasks.named("benchmark"))
 }
@@ -116,11 +195,12 @@ tasks.register("buildIntegrity") {
     dependsOn(
         "checkBundleParity",
         "checkCellManifest",
+        "checkWebuiLabelLint",
         "checkNpmAudit",
         "spotlessCheck",
         ":modules:core-api:benchmark"
     )
-    subprojects.forEach { sub ->
+    leafSubprojects().forEach { sub ->
         dependsOn(sub.tasks.named("build"))
     }
 }
@@ -129,7 +209,7 @@ tasks.register("buildIntegrity") {
 tasks.register("checkBundleParity") {
     group = "verification"
     description = "Run all *BundleParityTest cases across subprojects"
-    subprojects.forEach { sub ->
+    leafSubprojects().forEach { sub ->
         dependsOn(sub.tasks.matching { it.name == "bundleParityTest" })
     }
 }

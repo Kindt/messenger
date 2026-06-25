@@ -1,7 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.metrics.JdbcQueryMetrics;
-import com.avandocmsg.messenger.api.config.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
 import com.avandocmsg.messenger.api.chats.dto.ChatResponse;
 import org.slf4j.Logger;
@@ -56,7 +56,7 @@ public final class JdbcChatJdbcRepository {
         return sqlState != null && sqlState.startsWith("570");
     }
 
-    private void logReadFailure(String operation, Object id, Exception e) {
+    private void logReadFailure(String operation, Object id, SQLException e) {
         if (e instanceof SQLException sqlEx && isQueryTimeout(sqlEx)) {
             JdbcQueryMetrics.queryTimeout();
         }
@@ -78,11 +78,12 @@ public final class JdbcChatJdbcRepository {
         var sql = "SELECT 1 FROM chats WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 return rs.next();
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("chatExists failed chatId={}", chatId, e);
             return false;
         }
@@ -104,13 +105,14 @@ public final class JdbcChatJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(ownerSql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return Optional.of(rs.getObject("org_id", UUID.class));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("findOrgIdForRetentionOverlay (owner) failed chatId={}", chatId, e);
             return Optional.empty();
         }
@@ -124,13 +126,14 @@ public final class JdbcChatJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(memberSql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return Optional.of(rs.getObject("org_id", UUID.class));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("findOrgIdForRetentionOverlay (members) failed chatId={}", chatId, e);
         }
         return Optional.empty();
@@ -141,6 +144,7 @@ public final class JdbcChatJdbcRepository {
         try (var conn = dataSource.getConnection()) {
             conn.setAutoCommit(false);
             try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
                 stmt.setObject(1, chatId);
                 stmt.setString(2, title);
                 stmt.setObject(3, ownerId);
@@ -149,7 +153,7 @@ public final class JdbcChatJdbcRepository {
             addMemberInternal(conn, chatId, ownerId, "owner");
             conn.commit();
             return new ChatResponse(chatId.toString(), title, "group", ownerId.toString(), 1, false, false, null, clock.instant());
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to create group chat", e);
             return null;
         }
@@ -163,6 +167,7 @@ public final class JdbcChatJdbcRepository {
         try (var conn = dataSource.getConnection()) {
             conn.setAutoCommit(false);
             try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
                 stmt.setObject(1, chatId);
                 stmt.setString(2, title);
                 stmt.setObject(3, ownerId);
@@ -172,7 +177,7 @@ public final class JdbcChatJdbcRepository {
             conn.commit();
             return new ChatResponse(chatId.toString(), title, "channel", ownerId.toString(), 1, false, false, null,
                 clock.instant(), null, null, "admins_only");
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to create channel", e);
             return null;
         }
@@ -182,13 +187,14 @@ public final class JdbcChatJdbcRepository {
         var sql = "SELECT type FROM chats WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return Optional.ofNullable(rs.getString("type"));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("getChatType failed chatId={}", chatId, e);
         }
         return Optional.empty();
@@ -199,6 +205,7 @@ public final class JdbcChatJdbcRepository {
         try (var conn = dataSource.getConnection()) {
             conn.setAutoCommit(false);
             try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
                 stmt.setObject(1, chatId);
                 stmt.setObject(2, user1Id);
                 stmt.executeUpdate();
@@ -207,7 +214,7 @@ public final class JdbcChatJdbcRepository {
             addMemberInternal(conn, chatId, user2Id, "member");
             conn.commit();
             return new ChatResponse(chatId.toString(), "", "p2p", null, 2, false, false, null, clock.instant());
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to create P2P chat", e);
             return null;
         }
@@ -222,6 +229,7 @@ public final class JdbcChatJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, user1Id);
             stmt.setObject(2, user2Id);
             try (var rs = stmt.executeQuery()) {
@@ -229,7 +237,7 @@ public final class JdbcChatJdbcRepository {
                     return Optional.of(rs.getObject("id", UUID.class));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to find P2P chat", e);
         }
         return Optional.empty();
@@ -269,7 +277,7 @@ public final class JdbcChatJdbcRepository {
                     result.add(mapChat(rs));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             logReadFailure("listByUser", userId, e);
         }
         return result;
@@ -286,6 +294,7 @@ public final class JdbcChatJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, userId);
             try (var rs = stmt.executeQuery()) {
@@ -293,7 +302,7 @@ public final class JdbcChatJdbcRepository {
                     return Optional.of(rs.getObject("user_id", UUID.class));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("findOtherP2PMember failed", e);
         }
         return Optional.empty();
@@ -332,7 +341,7 @@ public final class JdbcChatJdbcRepository {
                     return Optional.of(mapChat(rs));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             logReadFailure("findById", chatId, e);
         }
         return Optional.empty();
@@ -342,10 +351,11 @@ public final class JdbcChatJdbcRepository {
         var sql = "UPDATE chats SET title = ?, updated_at = now() WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, title);
             stmt.setObject(2, chatId);
             return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to update chat title {}", chatId, e);
             return false;
         }
@@ -355,11 +365,12 @@ public final class JdbcChatJdbcRepository {
         var sql = "UPDATE chat_members SET muted = ? WHERE chat_id = ? AND user_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setBoolean(1, muted);
             stmt.setObject(2, chatId);
             stmt.setObject(3, userId);
             return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to set mute", e);
             return false;
         }
@@ -371,10 +382,11 @@ public final class JdbcChatJdbcRepository {
             : "UPDATE chat_members SET archived_at = NULL WHERE chat_id = ? AND user_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, userId);
             return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to set archive", e);
             return false;
         }
@@ -384,6 +396,7 @@ public final class JdbcChatJdbcRepository {
         var sql = "UPDATE chat_members SET folder_tag = ? WHERE chat_id = ? AND user_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             if (folderTag == null || folderTag.isBlank()) {
                 stmt.setNull(1, java.sql.Types.VARCHAR);
             } else {
@@ -392,7 +405,7 @@ public final class JdbcChatJdbcRepository {
             stmt.setObject(2, chatId);
             stmt.setObject(3, userId);
             return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to set folder tag", e);
             return false;
         }
@@ -404,6 +417,7 @@ public final class JdbcChatJdbcRepository {
             try {
                 var check = "SELECT banned FROM chat_members WHERE chat_id = ? AND user_id = ?";
                 try (var stmt = conn.prepareStatement(check)) {
+                    JdbcQuerySupport.applyDefaultTimeout(stmt);
                     stmt.setObject(1, chatId);
                     stmt.setObject(2, userId);
                     try (var rs = stmt.executeQuery()) {
@@ -418,11 +432,11 @@ public final class JdbcChatJdbcRepository {
                 addMemberInternal(conn, chatId, userId, role);
                 conn.commit();
                 return true;
-            } catch (Exception e) {
+            } catch (SQLException e) {
                 conn.rollback();
                 throw e;
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to add member {} to chat {}", userId, chatId, e);
             return false;
         }
@@ -432,10 +446,11 @@ public final class JdbcChatJdbcRepository {
         var sql = "DELETE FROM chat_members WHERE chat_id = ? AND user_id = ? AND role != 'owner'";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, userId);
             return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to remove member", e);
             return false;
         }
@@ -445,11 +460,12 @@ public final class JdbcChatJdbcRepository {
         var sql = "UPDATE chat_members SET role = ? WHERE chat_id = ? AND user_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, role);
             stmt.setObject(2, chatId);
             stmt.setObject(3, userId);
             return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to set role", e);
             return false;
         }
@@ -466,6 +482,7 @@ public final class JdbcChatJdbcRepository {
         var result = new ArrayList<ChatMemberResponse>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -480,7 +497,7 @@ public final class JdbcChatJdbcRepository {
                     ));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to list members of chat {}", chatId, e);
         }
         return result;
@@ -491,6 +508,7 @@ public final class JdbcChatJdbcRepository {
         var sql = "SELECT owner_id FROM chats WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -498,7 +516,7 @@ public final class JdbcChatJdbcRepository {
                     return ownerId != null ? Optional.of(ownerId) : Optional.empty();
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to find owner for chat {}", chatId, e);
         }
         return Optional.empty();
@@ -508,6 +526,7 @@ public final class JdbcChatJdbcRepository {
         var sql = "SELECT role FROM chat_members WHERE chat_id = ? AND user_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, userId);
             try (var rs = stmt.executeQuery()) {
@@ -515,7 +534,7 @@ public final class JdbcChatJdbcRepository {
                     return rs.getString("role");
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to get member role", e);
         }
         return null;
@@ -525,12 +544,13 @@ public final class JdbcChatJdbcRepository {
         var sql = "SELECT banned FROM chat_members WHERE chat_id = ? AND user_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, userId);
             try (var rs = stmt.executeQuery()) {
                 return rs.next() && rs.getBoolean("banned");
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to check banned status", e);
             return false;
         }
@@ -540,11 +560,12 @@ public final class JdbcChatJdbcRepository {
         var sql = "UPDATE chat_members SET personal_filter_active = ? WHERE chat_id = ? AND user_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setBoolean(1, active);
             stmt.setObject(2, chatId);
             stmt.setObject(3, userId);
             return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to set personal filter", e);
             return false;
         }
@@ -554,12 +575,13 @@ public final class JdbcChatJdbcRepository {
         var sql = "SELECT personal_filter_active FROM chat_members WHERE chat_id = ? AND user_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, userId);
             try (var rs = stmt.executeQuery()) {
                 return rs.next() && rs.getBoolean("personal_filter_active");
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to check personal filter", e);
             return false;
         }
@@ -569,11 +591,12 @@ public final class JdbcChatJdbcRepository {
         var sql = "UPDATE chat_members SET banned = ? WHERE chat_id = ? AND user_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setBoolean(1, banned);
             stmt.setObject(2, chatId);
             stmt.setObject(3, userId);
             return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to set banned status", e);
             return false;
         }
@@ -587,6 +610,7 @@ public final class JdbcChatJdbcRepository {
         var sql = "SELECT id, title, type, created_at FROM chats WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -597,7 +621,7 @@ public final class JdbcChatJdbcRepository {
                         rs.getTimestamp("created_at").toInstant()));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("findByIdBasic failed chatId={}", chatId, e);
         }
         return Optional.empty();
@@ -607,17 +631,21 @@ public final class JdbcChatJdbcRepository {
         if (dataSource == null) {
             return List.of();
         }
-        var sql = "SELECT user_id FROM chat_members WHERE chat_id = ?";
+        var sql = "SELECT user_id FROM chat_members WHERE chat_id = ? LIMIT ?";
         var result = new ArrayList<UUID>();
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, chatId);
+        try (var conn = dataSource.getConnection()) {
+            com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport.prepareRead(conn);
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                stmt.setObject(1, chatId);
+                stmt.setInt(2, JdbcListLimits.CHAT_MEMBERS);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     result.add(rs.getObject("user_id", UUID.class));
                 }
             }
-        } catch (Exception e) {
+            }
+        } catch (SQLException e) {
             log.error("listMemberUserIds failed chatId={}", chatId, e);
         }
         return result;
@@ -639,28 +667,34 @@ public final class JdbcChatJdbcRepository {
                     )
                 )
               )
+            LIMIT ?
             """;
         var result = new ArrayList<UUID>();
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, userId);
-            stmt.setObject(2, userId);
-            stmt.setObject(3, userId);
-            stmt.setObject(4, userId);
+        try (var conn = dataSource.getConnection()) {
+            com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport.prepareRead(conn);
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                stmt.setObject(1, userId);
+                stmt.setObject(2, userId);
+                stmt.setObject(3, userId);
+                stmt.setObject(4, userId);
+                stmt.setInt(5, JdbcListLimits.USER_CHATS);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     result.add(rs.getObject("id", UUID.class));
                 }
             }
-        } catch (Exception e) {
+            }
+        } catch (SQLException e) {
             log.error("Failed to list chat ids for {}", userId, e);
         }
         return result;
     }
 
-    private void addMemberInternal(java.sql.Connection conn, UUID chatId, UUID userId, String role) throws Exception {
+    private void addMemberInternal(java.sql.Connection conn, UUID chatId, UUID userId, String role) throws SQLException {
         var sql = "INSERT INTO chat_members (chat_id, user_id, role, joined_at) VALUES (?, ?, ?, now())";
         try (var stmt = conn.prepareStatement(sql)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, userId);
             stmt.setString(3, role);
@@ -668,7 +702,7 @@ public final class JdbcChatJdbcRepository {
         }
     }
 
-    private ChatResponse mapChat(ResultSet rs) throws Exception {
+    private ChatResponse mapChat(ResultSet rs) throws SQLException {
         Boolean archived = null;
         if (hasColumn(rs, "archived_at")) {
             var archivedTs = rs.getTimestamp("archived_at");

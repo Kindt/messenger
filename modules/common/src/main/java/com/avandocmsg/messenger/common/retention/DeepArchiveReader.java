@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.common.retention;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.dto.DeepArchiveManifest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.minio.GetObjectArgs;
@@ -13,7 +14,7 @@ import java.util.Optional;
 
 public class DeepArchiveReader {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private DeepArchiveReader() {
     }

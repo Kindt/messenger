@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.port.ScimGroupRepositoryPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +30,7 @@ public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepository
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 if (!rs.next()) {
@@ -52,6 +55,7 @@ public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepository
         var out = new ArrayList<ScimGroupRow>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             stmt.setInt(2, offset);
             stmt.setInt(3, limit);
@@ -71,6 +75,7 @@ public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepository
         var sql = "SELECT COUNT(*) FROM scim_groups WHERE org_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             try (var rs = stmt.executeQuery()) {
                 return rs.next() ? rs.getInt(1) : 0;
@@ -89,6 +94,7 @@ public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepository
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setObject(2, orgId);
             stmt.setString(3, displayName);
@@ -110,6 +116,7 @@ public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepository
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, displayName);
             stmt.setString(2, externalId);
             stmt.setString(3, membersJson != null ? membersJson : "[]");
@@ -126,6 +133,7 @@ public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepository
         var sql = "DELETE FROM scim_groups WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             return stmt.executeUpdate() == 1;
         } catch (Exception e) {

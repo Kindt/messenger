@@ -2,18 +2,20 @@ package com.avandocmsg.messenger.api.platform;
 
 import com.avandocmsg.messenger.api.platform.dto.FederationStatusResponse;
 import com.avandocmsg.messenger.core.port.FederationTrustPort;
+import com.avandocmsg.messenger.core.port.OrganizationLookupPort;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 public final class FederationStatusService {
     private final FederationTrustPort federationTrustPort;
-    private final com.avandocmsg.messenger.core.port.OrganizationLookupPort organizationLookupPort;
+    private final OrganizationLookupPort organizationLookupPort;
 
     public FederationStatusService(
         FederationTrustPort federationTrustPort,
-        com.avandocmsg.messenger.core.port.OrganizationLookupPort organizationLookupPort
+        OrganizationLookupPort organizationLookupPort
     ) {
         this.federationTrustPort = federationTrustPort;
         this.organizationLookupPort = organizationLookupPort;
@@ -69,13 +71,16 @@ public final class FederationStatusService {
         var home = organizationLookupPort != null
             ? organizationLookupPort.findById(orgId).orElse(null)
             : null;
-        var partners = federationTrustPort.listActiveForOrg(orgId).stream()
-            .map(t -> t.partnerOrgId())
+        var partnerIds = federationTrustPort.listActiveForOrg(orgId).stream()
+            .map(FederationTrustPort.TrustRow::partnerOrgId)
             .distinct()
+            .toList();
+        var orgsById = organizationLookupPort != null
+            ? organizationLookupPort.findByIds(partnerIds)
+            : Map.<UUID, OrganizationLookupPort.OrgSummary>of();
+        var partners = partnerIds.stream()
             .map(pid -> {
-                var org = organizationLookupPort != null
-                    ? organizationLookupPort.findById(pid).orElse(null)
-                    : null;
+                var org = orgsById.get(pid);
                 return new com.avandocmsg.messenger.api.platform.dto.FederationDirectoryResponse.FederationDirectoryEntry(
                     pid.toString(),
                     org != null ? org.name() : pid.toString(),

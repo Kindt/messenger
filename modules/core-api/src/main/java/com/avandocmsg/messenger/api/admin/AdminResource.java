@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.admin;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.admin.dto.LegalHoldResponse;
 import com.avandocmsg.messenger.api.admin.dto.LegalHoldUpdateRequest;
 import com.avandocmsg.messenger.api.admin.dto.AdminExportCompliancePrepRequest;
@@ -828,7 +829,7 @@ public class AdminResource {
         return Response.noContent().build();
     }
 
-    private static final ObjectMapper ADMIN_AUDIT_JSON = new ObjectMapper();
+    private static final ObjectMapper ADMIN_AUDIT_JSON = MessengerJson.mapper();
 
     private static String writeAdminAuditJson(ObjectNode n) {
         try {

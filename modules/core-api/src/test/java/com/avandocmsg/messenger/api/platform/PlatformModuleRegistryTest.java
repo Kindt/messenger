@@ -9,17 +9,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PlatformModuleRegistryTest {
 
     @Test
-    void pilotProfileResolvesBaseOnly() {
+    void emptyAddonsResolvesBaseOnly() {
         var catalog = ProductModuleCatalogLoader.load();
-        var installed = ProductModuleCatalogLoader.resolveInstalledAddons(catalog, "", "pilot");
+        var installed = ProductModuleCatalogLoader.resolveInstalledAddons(catalog, "");
         assertTrue(installed.isEmpty());
     }
 
     @Test
-    void explicitAddonsOverrideLegacyProfile() {
+    void explicitAddonsOverrideEmpty() {
         var catalog = ProductModuleCatalogLoader.load();
         var installed = ProductModuleCatalogLoader.resolveInstalledAddons(
-            catalog, "addon-search,addon-engage", "pilot");
+            catalog, "addon-search,addon-engage");
         assertEquals(2, installed.size());
         assertTrue(installed.contains("addon-search"));
         assertTrue(installed.contains("addon-engage"));
@@ -27,7 +27,7 @@ class PlatformModuleRegistryTest {
 
     @Test
     void notSelectedAddonIsDisabledWithNotSelectedReason() {
-        var cfg = pilotConfig();
+        var cfg = baseOnlyConfig();
         var registry = new PlatformModuleRegistry(
             ProductModuleCatalogLoader.load(),
             java.util.List.of(),
@@ -65,7 +65,7 @@ class PlatformModuleRegistryTest {
             ProductModuleCatalogLoader.load(),
             java.util.List.of(),
             new PlatformModuleOverrideRepository(null),
-            pilotConfig()
+            baseOnlyConfig()
         );
 
         var response = registry.toCapabilitiesResponse();
@@ -127,18 +127,8 @@ class PlatformModuleRegistryTest {
             .contains("required external stack component search is degraded"));
     }
 
-    private static AppConfig pilotConfig() {
+    private static AppConfig baseOnlyConfig() {
         return new AppConfig() {
-            @Override
-            public String deployProfile() {
-                return "pilot";
-            }
-
-            @Override
-            public String korusDeployProfile() {
-                return "pilot";
-            }
-
             @Override
             public String korusProductAddons() {
                 return "";

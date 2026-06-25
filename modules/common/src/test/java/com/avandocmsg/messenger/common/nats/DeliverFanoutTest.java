@@ -16,6 +16,11 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 class DeliverFanoutTest {
 
     @Test
+    void defaultDirectMaxConstantIs500() {
+        assertEquals(500, DeliverFanout.DEFAULT_DIRECT_MAX);
+    }
+
+    @Test
     void modeFor_usesDirectWithinThreshold() {
         var cfg = new DeliverFanout.Config(256, true);
         assertEquals(DeliverFanout.Mode.DIRECT, DeliverFanout.modeFor(256, cfg));

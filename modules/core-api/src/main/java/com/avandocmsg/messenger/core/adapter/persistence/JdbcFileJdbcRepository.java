@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.files.dto.FileInfoResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +22,7 @@ public final class JdbcFileJdbcRepository {
         var sql = "INSERT INTO file_metadata (id, filename, mime_type, size, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?, now())";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setString(2, filename);
             stmt.setString(3, mimeType);
@@ -37,6 +40,7 @@ public final class JdbcFileJdbcRepository {
         var sql = "SELECT id, filename, mime_type, size, uploaded_by, created_at FROM file_metadata WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -59,6 +63,7 @@ public final class JdbcFileJdbcRepository {
         var sql = "DELETE FROM file_metadata WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {

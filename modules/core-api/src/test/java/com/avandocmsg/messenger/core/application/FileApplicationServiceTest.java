@@ -94,6 +94,24 @@ class FileApplicationServiceTest {
     }
 
     @Test
+    void presignedDownloadUrl_returnsUrlWhenObjectStored() {
+        filePort.file = sampleFile();
+        storage.objects.put(fileId + "/doc.pdf", "payload".getBytes(StandardCharsets.UTF_8));
+
+        var url = service.presignedDownloadUrl(FileId.of(fileId), 300);
+        assertTrue(url.isPresent());
+        assertTrue(url.get().contains("doc.pdf"));
+    }
+
+    @Test
+    void beginPresignedUpload_issuesPutUrlAndMetadata() {
+        var result = service.beginPresignedUpload("pic.png", "image/png", 100, UserId.of(ownerId), 300);
+        assertTrue(result.isPresent());
+        assertTrue(result.get().uploadUrl().contains("pic.png"));
+        assertNotNull(filePort.inserted);
+    }
+
+    @Test
     void delete_removesMetadataAndObject() {
         filePort.file = sampleFile();
         storage.objects.put(fileId + "/doc.pdf", new byte[] {1});
@@ -208,6 +226,16 @@ class FileApplicationServiceTest {
         @Override
         public void delete(String objectName) {
             objects.remove(objectName);
+        }
+
+        @Override
+        public Optional<String> presignedGetUrl(String objectName, int ttlSeconds) {
+            return Optional.of("https://minio.test/" + objectName + "?ttl=" + ttlSeconds);
+        }
+
+        @Override
+        public Optional<String> presignedPutUrl(String objectName, int ttlSeconds, String contentType) {
+            return Optional.of("https://minio.test/upload/" + objectName + "?ttl=" + ttlSeconds);
         }
     }
 

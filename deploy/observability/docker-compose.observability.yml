@@ -1,6 +1,6 @@
 # Local Prometheus + Alertmanager + Grafana (host stack on 8080 / 9193).
-# Usage: docker compose -f deploy/observability/docker-compose.observability.yml up -d
-services:
+# Optional Loki overlay: docker-compose.loki.yml
+# Usage: docker compose -f deploy/observability/docker-compose.observability.yml up -dservices:
   prometheus:
     image: prom/prometheus:v2.55.1
     ports:
@@ -20,8 +20,11 @@ services:
       - "9093:9093"
     volumes:
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    environment:
+      ALERTMANAGER_WEBHOOK_URL: ${ALERTMANAGER_WEBHOOK_URL:-http://127.0.0.1:9/alertmanager-webhook}
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--config.expand-env"
       - "--storage.path=/alertmanager"
 
   grafana:
@@ -37,5 +40,6 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana-export-dashboard.json:/var/lib/grafana/dashboards/export.json:ro
       - ./grafana-fleet-dashboard.json:/var/lib/grafana/dashboards/fleet.json:ro
+      - ./grafana-lab-performance-dashboard.json:/var/lib/grafana/dashboards/lab-performance.json:ro
     depends_on:
       - prometheus

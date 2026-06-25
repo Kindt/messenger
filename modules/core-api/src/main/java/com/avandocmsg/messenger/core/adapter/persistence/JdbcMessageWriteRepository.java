@@ -1,6 +1,8 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
-import com.avandocmsg.messenger.api.config.JdbcQuerySupport;
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,11 +62,13 @@ public final class JdbcMessageWriteRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setObject(2, chatId);
             stmt.setObject(3, senderId);
             stmt.setString(4, type != null ? type : "text");
-            stmt.setString(5, content);
+            var normalizedContent = normalizeContent(content);
+            stmt.setString(5, normalizedContent);
             stmt.setObject(6, replyToMsgId);
             stmt.setObject(7, threadId);
             stmt.setString(8, clientMsgId);
@@ -77,12 +81,12 @@ public final class JdbcMessageWriteRepository {
             }
             stmt.executeUpdate();
             return new MessageResponse(id.toString(), chatId.toString(), senderId.toString(),
-                type != null ? type : "text", content, replyToMsgId != null ? replyToMsgId.toString() : null,
+                type != null ? type : "text", normalizedContent, replyToMsgId != null ? replyToMsgId.toString() : null,
                 false, clock.instant(), null, visibilityTtlSeconds,
                 attachmentFileId != null ? attachmentFileId.toString() : null,
                 threadId != null ? threadId.toString() : null, null, null, null,
                 voiceDurationMs, null, null);
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to insert message", e);
             return null;
         }
@@ -102,7 +106,7 @@ public final class JdbcMessageWriteRepository {
             try (var rs = stmt.executeQuery()) {
                 return rs.next();
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("existsClientMsgId failed chatId={}", chatId, e);
             return false;
         }
@@ -111,10 +115,12 @@ public final class JdbcMessageWriteRepository {
     public boolean updateContent(UUID msgId, UUID editedBy, String newContent) {
         var selectSql = "SELECT content FROM messages WHERE id = ?";
         try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareWrite(conn);
             conn.setAutoCommit(false);
             try {
                 String oldContent;
                 try (var stmt = conn.prepareStatement(selectSql)) {
+                    JdbcQuerySupport.applyDefaultTimeout(stmt);
                     stmt.setObject(1, msgId);
                     try (var rs = stmt.executeQuery()) {
                         if (!rs.next()) {
@@ -125,6 +131,7 @@ public final class JdbcMessageWriteRepository {
                 }
                 var versionSql = "INSERT INTO message_versions (message_id, content, edited_by, created_at) VALUES (?, ?, ?, now())";
                 try (var stmt = conn.prepareStatement(versionSql)) {
+                    JdbcQuerySupport.applyDefaultTimeout(stmt);
                     stmt.setObject(1, msgId);
                     stmt.setString(2, oldContent);
                     stmt.setObject(3, editedBy);
@@ -132,17 +139,18 @@ public final class JdbcMessageWriteRepository {
                 }
                 var updateSql = "UPDATE messages SET content = ?, edited_at = now() WHERE id = ?";
                 try (var stmt = conn.prepareStatement(updateSql)) {
+                    JdbcQuerySupport.applyDefaultTimeout(stmt);
                     stmt.setString(1, newContent);
                     stmt.setObject(2, msgId);
                     stmt.executeUpdate();
                 }
                 conn.commit();
                 return true;
-            } catch (Exception e) {
+            } catch (SQLException e) {
                 conn.rollback();
                 throw e;
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to update message {}", msgId, e);
             return false;
         }
@@ -152,9 +160,10 @@ public final class JdbcMessageWriteRepository {
         var sql = "UPDATE messages SET deleted = true WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, msgId);
             return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to delete message {}", msgId, e);
             return false;
         }
@@ -165,11 +174,12 @@ public final class JdbcMessageWriteRepository {
             + "ON CONFLICT (message_id, user_id, reaction) DO NOTHING";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, messageId);
             stmt.setObject(2, userId);
             stmt.setString(3, reaction);
             return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to add reaction to message {}", messageId, e);
             return false;
         }
@@ -179,11 +189,12 @@ public final class JdbcMessageWriteRepository {
         var sql = "DELETE FROM message_reactions WHERE message_id = ? AND user_id = ? AND reaction = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, messageId);
             stmt.setObject(2, userId);
             stmt.setString(3, reaction);
             return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to remove reaction from message {}", messageId, e);
             return false;
         }
@@ -196,11 +207,12 @@ public final class JdbcMessageWriteRepository {
         var sql = "INSERT INTO pinned_messages (chat_id, message_id, pinned_by, created_at) VALUES (?, ?, ?, now())";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, messageId);
             stmt.setObject(3, pinnedBy);
             return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to pin message {} in chat {}", messageId, chatId, e);
             return false;
         }
@@ -210,10 +222,11 @@ public final class JdbcMessageWriteRepository {
         var sql = "DELETE FROM pinned_messages WHERE chat_id = ? AND message_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, messageId);
             return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to unpin message {} from chat {}", messageId, chatId, e);
             return false;
         }
@@ -223,12 +236,13 @@ public final class JdbcMessageWriteRepository {
         var sql = "SELECT 1 FROM pinned_messages WHERE chat_id = ? AND message_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, messageId);
             try (var rs = stmt.executeQuery()) {
                 return rs.next();
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to check pin state for message {} in chat {}", messageId, chatId, e);
             return false;
         }
@@ -240,5 +254,9 @@ public final class JdbcMessageWriteRepository {
 
     private void applyQueryTimeout(PreparedStatement stmt) throws SQLException {
         JdbcQuerySupport.applyTimeout(stmt, queryTimeoutSeconds);
+    }
+
+    static String normalizeContent(String content) {
+        return content != null ? content.strip() : null;
     }
 }

@@ -1,6 +1,7 @@
 # Container portability nightly (spec 021 Phase 7.5).
 # Generator parity + Gradle WAR artifacts blocking; docker runtime on GitHub ubuntu is build-only.
-# Full WAR runtime: scripts/smoke-container-portability-guest.ps1 on QEMU (T021-143 green 2026-06-20).name: container-portability-nightly
+# Full WAR runtime: scripts/smoke-container-portability-guest.ps1 on QEMU (T021-143 green 2026-06-20).
+name: container-portability-nightly
 
 on:
   schedule:

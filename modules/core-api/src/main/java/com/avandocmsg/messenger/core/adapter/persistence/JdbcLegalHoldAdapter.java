@@ -1,5 +1,8 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.port.LegalHoldPort;
 
 import org.slf4j.Logger;
@@ -49,6 +52,7 @@ public final class JdbcLegalHoldAdapter implements LegalHoldPort {
         }
         try (var conn = dataSource.getConnection();
              var ps = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(ps);
             ps.setObject(1, id);
             try (var rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -77,13 +81,16 @@ public final class JdbcLegalHoldAdapter implements LegalHoldPort {
             VALUES (?, true, true, ?, ?, ?, now(), ?)
             """.formatted(table, idCol);
         try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareWrite(conn);
             try (var ps = conn.prepareStatement(update)) {
+                JdbcQuerySupport.applyDefaultTimeout(ps);
                 bindHold(ps, row, updatedBy, id);
                 if (ps.executeUpdate() > 0) {
                     return true;
                 }
             }
             try (var ps = conn.prepareStatement(insert)) {
+                JdbcQuerySupport.applyDefaultTimeout(ps);
                 ps.setObject(1, id);
                 ps.setBoolean(2, row.legalHold());
                 ps.setBoolean(3, row.legalHoldFiles());

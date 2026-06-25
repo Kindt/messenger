@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.exportreplay;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.retention.DeepArchiveReader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -11,7 +12,7 @@ import java.util.Optional;
 final class ExportDeepArchiveReader {
 
     private static final String SOURCE = "deep-archive";
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final MinioClient client;
     private final String bucket;

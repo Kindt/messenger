@@ -4,7 +4,9 @@ import com.avandocmsg.messenger.core.port.OrganizationLookupPort;
 
 import javax.sql.DataSource;
 import java.time.Clock;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,6 +31,12 @@ public final class JdbcOrganizationLookupAdapter implements OrganizationLookupPo
     @Override
     public Optional<OrgSummary> findById(UUID orgId) {
         return jdbc.findById(orgId).map(JdbcOrganizationLookupAdapter::map);
+    }
+
+    @Override
+    public Map<UUID, OrgSummary> findByIds(Collection<UUID> orgIds) {
+        return jdbc.findByIds(orgIds).entrySet().stream()
+            .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> map(e.getValue())));
     }
 
     @Override

@@ -10,4 +10,5 @@ RUN tar xf core-api.tar && rm core-api.tar
 EXPOSE 8080
 ENV APP_HOME=/app/core-api
 ENV HOT_RELOAD=false
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport -XX:+UseZGC"
 ENTRYPOINT ["/app/core-api/bin/core-api"]

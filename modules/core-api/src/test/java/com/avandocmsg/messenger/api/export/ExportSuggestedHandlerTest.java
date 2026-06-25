@@ -128,7 +128,7 @@ class ExportSuggestedHandlerTest {
         }
 
         @Override
-        public void publishPipelineMessageSend(byte[] payload) {
+        public void publishPipelineMessageSend(byte[] payload, String userId) {
         }
     }
 }

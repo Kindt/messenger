@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.core.application;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.dto.ReactionChangeEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.domain.MessageId;
@@ -15,7 +16,7 @@ import java.util.UUID;
 /** Hexagonal reaction add/remove + NATS fan-out. */
 public final class MessageReactionCoordinator {
     private static final Logger log = LoggerFactory.getLogger(MessageReactionCoordinator.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final MessageRepositoryPort messageRepositoryPort;
     private final NatsOutboundPort natsOutbound;

@@ -8,10 +8,12 @@ application {
 
 dependencies {
     implementation(project(":modules:common"))
-    implementation("io.nats:jnats:2.17.4")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
-    implementation("ch.qos.logback:logback-classic:1.5.3")
-    implementation("org.slf4j:slf4j-api:2.0.12")
-    implementation("org.jsoup:jsoup:1.17.2")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation(libs.jnats)
+    implementation(libs.hikari) {
+        exclude(group = "org.slf4j", module = "slf4j-api")
+    }
+    implementation(libs.bundles.logging)
+    implementation(libs.bundles.prometheus.server)
+    implementation(libs.jsoup)
+    implementation(libs.okhttp)
 }

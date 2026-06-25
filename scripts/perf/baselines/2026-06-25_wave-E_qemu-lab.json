@@ -1,0 +1,13 @@
+﻿{
+    "metrics":  {
+                    "web_first_load_kb":  281.5,
+                    "api_health_ms":  12.4,
+                    "web_ui_http":  "200",
+                    "api_health_http":  "200"
+                },
+    "notes":  "Captured by scripts/perf/run-qemu-lab-gate.ps1",
+    "environment":  "qemu-lab",
+    "wave":  "E",
+    "phase":  "post-qemu",
+    "git_sha":  "3e98daf"
+}

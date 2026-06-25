@@ -3,29 +3,26 @@ plugins {
     war
 }
 
-val tomcatVersion = "11.0.22"
-
 dependencies {
     implementation(project(":modules:common"))
 
-    implementation("org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion")
-    implementation("org.apache.tomcat.embed:tomcat-embed-websocket:$tomcatVersion")
-    runtimeOnly("org.apache.tomcat.embed:tomcat-embed-jasper:$tomcatVersion")
+    implementation(libs.tomcat.embed.core)
+    implementation(libs.tomcat.embed.websocket)
+    runtimeOnly(libs.tomcat.embed.jasper)
 
-    compileOnly("jakarta.servlet:jakarta.servlet-api:6.0.0")
-    compileOnly("jakarta.websocket:jakarta.websocket-api:2.2.0")
-    compileOnly("jakarta.websocket:jakarta.websocket-client-api:2.2.0")
+    compileOnly(libs.jakarta.servlet.api)
+    compileOnly(libs.jakarta.websocket.api)
+    compileOnly(libs.jakarta.websocket.client.api)
 
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0")
-    implementation("io.nats:jnats:2.17.4")
-    implementation("com.nimbusds:nimbus-jose-jwt:9.37.3")
-    implementation("ch.qos.logback:logback-classic:1.5.3")
-    implementation("org.slf4j:slf4j-api:2.0.12")
-    implementation("com.zaxxer:HikariCP:5.1.0")
+    implementation(libs.jnats)
+    implementation(libs.nimbus.jose.jwt)
+    implementation(libs.bundles.logging)
+    implementation(libs.prometheus.simpleclient)
+    implementation(libs.hikari) {
+        exclude(group = "org.slf4j", module = "slf4j-api")
+    }
 
-    testImplementation("com.h2database:h2:2.2.224")
-    testImplementation("org.mockito:mockito-core:5.23.0")
+    testImplementation(libs.h2)
 }
 
 application {
@@ -34,6 +31,7 @@ application {
 }
 
 tasks.named<War>("war") {
+    notCompatibleWithConfigurationCache("war filters runtimeClasspath with file predicate")
     archiveBaseName.set("ws-gateway")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     setClasspath(

@@ -1,13 +1,12 @@
 package com.avandocmsg.messenger.worker.exportreplay;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.minio.MinioClient;
 
 import javax.sql.DataSource;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,7 +17,7 @@ import java.util.UUID;
 /** Loads retention hot-body JSON snapshots from MinIO ({@code retention_hot_body_applied} + object keys). */
 final class ExportRetentionSnapshotReader {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final String SOURCE = "retention-hot-body";
 
     private final MinioClient client;

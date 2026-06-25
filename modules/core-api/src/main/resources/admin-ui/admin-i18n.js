@@ -13,6 +13,8 @@
   };
   var localeCodes = [DEFAULT_LOCALE];
   var loaded = {};
+  var loading = {};
+  var localeVersion = 0;
   var current = DEFAULT_LOCALE;
   var applying = false;
   var originalConfirm = global.confirm ? global.confirm.bind(global) : null;
@@ -33,6 +35,9 @@
       if (manifest && manifest.default) {
         DEFAULT_LOCALE = manifest.default;
       }
+      if (manifest && manifest.keyCount) {
+        localeVersion = Number(manifest.keyCount) || 0;
+      }
       return manifest;
     });
   }
@@ -40,10 +45,28 @@
   function loadLocale(code) {
     var next = localeCodes.indexOf(code) >= 0 ? code : DEFAULT_LOCALE;
     if (loaded[next]) return Promise.resolve(loaded[next]);
-    return fetchJson("locales/" + encodeURIComponent(next) + ".json").then(function (bundle) {
-      loaded[next] = bundle || {};
-      return loaded[next];
-    });
+    if (loading[next]) return loading[next];
+    var url =
+      "locales/" +
+      encodeURIComponent(next) +
+      ".json" +
+      (localeVersion ? "?v=" + encodeURIComponent(String(localeVersion)) : "");
+    loading[next] = fetchJson(url)
+      .then(function (bundle) {
+        loaded[next] = bundle || {};
+        delete loading[next];
+        return loaded[next];
+      })
+      .catch(function (err) {
+        delete loading[next];
+        throw err;
+      });
+    return loading[next];
+  }
+
+  function prefetchDefaultLocale() {
+    if (loaded[DEFAULT_LOCALE] || loading[DEFAULT_LOCALE]) return;
+    loadLocale(DEFAULT_LOCALE).catch(function () {});
   }
 
   function lookup(bundle, key) {
@@ -194,19 +217,16 @@
 
   function setLocale(code) {
     var next = localeCodes.indexOf(code) >= 0 ? code : DEFAULT_LOCALE;
-    return loadLocale(DEFAULT_LOCALE)
-      .then(function () {
-        return next === DEFAULT_LOCALE ? null : loadLocale(next);
-      })
-      .then(function () {
-        current = next;
-        try {
-          localStorage.setItem(STORAGE_KEY, next);
-        } catch (e) {}
-        applyLang(next);
-        applyDom();
-        return next;
-      });
+    return loadLocale(next).then(function () {
+      current = next;
+      try {
+        localStorage.setItem(STORAGE_KEY, next);
+      } catch (e) {}
+      applyLang(next);
+      applyDom();
+      if (next !== DEFAULT_LOCALE) prefetchDefaultLocale();
+      return next;
+    });
   }
 
   function init() {

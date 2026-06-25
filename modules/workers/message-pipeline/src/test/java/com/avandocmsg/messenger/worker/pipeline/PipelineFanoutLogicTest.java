@@ -92,6 +92,16 @@ class PipelineFanoutLogicTest {
     }
 
     @Test
+    void loadRecipientUserIds_excludesSenderBlockedByRecipient() throws Exception {
+        insertBlock(memberA, senderId);
+
+        var ids = PipelineFanoutLogic.loadRecipientUserIds(ds, chatId, senderId, workerMessages);
+        assertEquals(1, ids.size());
+        assertTrue(ids.contains(memberB.toString()));
+        assertFalse(ids.contains(memberA.toString()));
+    }
+
+    @Test
     void loadRecipientUserIds_emptyWhenOnlySender() throws Exception {
         try (var c = ds.getConnection(); Statement st = c.createStatement()) {
             st.execute("DELETE FROM chat_members");
@@ -100,5 +110,36 @@ class PipelineFanoutLogicTest {
         insert(soloChat, senderId, false);
 
         assertTrue(PipelineFanoutLogic.loadRecipientUserIds(ds, soloChat, senderId, workerMessages).isEmpty());
+    }
+
+    @Test
+    void loadPresenceRecipientUserIds_includesContactAndCoChatMember() throws Exception {
+        var contactId = UUID.randomUUID();
+        var coChatMember = UUID.randomUUID();
+        var stranger = UUID.randomUUID();
+        try (var c = ds.getConnection(); Statement st = c.createStatement()) {
+            st.execute("CREATE TABLE contacts (user_id UUID NOT NULL, contact_user_id UUID NOT NULL, PRIMARY KEY (user_id, contact_user_id))");
+            st.execute("CREATE TABLE users (id UUID PRIMARY KEY, org_id UUID, hidden BOOLEAN NOT NULL DEFAULT FALSE)");
+        }
+        var otherChat = UUID.randomUUID();
+        insert(otherChat, senderId, false);
+        insert(otherChat, coChatMember, false);
+        try (var conn = ds.getConnection();
+             var ps = conn.prepareStatement("INSERT INTO contacts (user_id, contact_user_id) VALUES (?, ?)")) {
+            ps.setObject(1, senderId);
+            ps.setObject(2, contactId);
+            ps.executeUpdate();
+        }
+        try (var conn = ds.getConnection();
+             var ps = conn.prepareStatement("INSERT INTO users (id, hidden) VALUES (?, false)")) {
+            ps.setObject(1, stranger);
+            ps.executeUpdate();
+        }
+
+        var ids = PipelineFanoutLogic.loadPresenceRecipientUserIds(ds, senderId, workerMessages);
+        assertTrue(ids.contains(contactId.toString()));
+        assertTrue(ids.contains(coChatMember.toString()));
+        assertFalse(ids.contains(senderId.toString()));
+        assertFalse(ids.contains(stranger.toString()));
     }
 }

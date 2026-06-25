@@ -41,6 +41,14 @@ jobs:
         run: npm ci
         working-directory: modules/web-client/webui-build
 
+      - name: Build webui assets
+        run: npm run build:assets
+        working-directory: modules/web-client/webui-build
+
+      - name: First-load perf gate (SC-024, lab static)
+        run: npm run test:first-load
+        working-directory: modules/web-client/webui-build
+
       - name: Set up Python (cell manifest gate)
         uses: actions/setup-python@v6
         with:

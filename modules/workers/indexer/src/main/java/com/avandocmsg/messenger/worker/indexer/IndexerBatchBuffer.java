@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.worker.indexer;
 
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+import com.avandocmsg.messenger.common.scheduling.ScheduledTaskSupport;
 import org.apache.solr.client.solrj.SolrClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +13,6 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Buffers Solr upserts/deletes for batch commit (spec 006 stage 7).
@@ -25,7 +25,6 @@ final class IndexerBatchBuffer implements AutoCloseable {
     private final int batchSize;
     private final long flushMs;
     private final UserMessageSource workerMessages;
-    private final ReentrantLock lock = new ReentrantLock();
     private final Map<String, SearchDocument> pendingAdds = new LinkedHashMap<>();
     private final List<String> pendingDeletes = new ArrayList<>();
     private final ScheduledExecutorService scheduler;
@@ -45,22 +44,20 @@ final class IndexerBatchBuffer implements AutoCloseable {
             t.setDaemon(true);
             return t;
         });
-        this.scheduler.scheduleAtFixedRate(this::flushQuietly, this.flushMs, this.flushMs, TimeUnit.MILLISECONDS);
+        ScheduledTaskSupport.scheduleAtFixedRateWithJitter(
+            this.scheduler, this::flushQuietly, this.flushMs, this.flushMs, this.flushMs / 5, TimeUnit.MILLISECONDS);
     }
 
     void offerDelete(String messageId) {
         if (messageId == null || messageId.isBlank()) {
             return;
         }
-        lock.lock();
-        try {
+        synchronized (this) {
             pendingAdds.remove(messageId);
             if (!pendingDeletes.contains(messageId)) {
                 pendingDeletes.add(messageId);
             }
             maybeFlushLocked();
-        } finally {
-            lock.unlock();
         }
     }
 
@@ -69,22 +66,16 @@ final class IndexerBatchBuffer implements AutoCloseable {
         if (id == null || id.isBlank()) {
             return;
         }
-        lock.lock();
-        try {
+        synchronized (this) {
             pendingDeletes.remove(id);
             pendingAdds.put(id, doc);
             maybeFlushLocked();
-        } finally {
-            lock.unlock();
         }
     }
 
     void flush() throws Exception {
-        lock.lock();
-        try {
+        synchronized (this) {
             flushLocked();
-        } finally {
-            lock.unlock();
         }
     }
 

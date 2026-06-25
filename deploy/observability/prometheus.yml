@@ -16,6 +16,16 @@ scrape_configs:
     static_configs:
       - targets: ["host.docker.internal:8080"]
 
+  - job_name: korus-ws-gateway
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:9198"]
+
+  - job_name: korus-message-pipeline
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:9197"]
+
   - job_name: korus-export-replay-worker
     metrics_path: /metrics
     static_configs:
@@ -25,3 +35,23 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ["host.docker.internal:9192"]
+
+  - job_name: korus-push-worker
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:9194"]
+
+  - job_name: korus-preview-worker
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:9195"]
+
+  - job_name: korus-deep-archiver
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:9196"]
+
+  - job_name: korus-indexer
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:9199"]

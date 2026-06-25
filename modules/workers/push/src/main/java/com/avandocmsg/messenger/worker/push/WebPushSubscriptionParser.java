@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.push;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.martijndwars.webpush.Subscription;
 
@@ -7,7 +8,7 @@ import java.util.Optional;
 
 final class WebPushSubscriptionParser {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private WebPushSubscriptionParser() {
     }

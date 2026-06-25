@@ -37,8 +37,7 @@ public class PlatformModuleRegistry {
         var catalog = ProductModuleCatalogLoader.load();
         var selected = ProductModuleCatalogLoader.resolveSelectedAddons(
             catalog,
-            appConfig.korusProductAddons(),
-            appConfig.korusDeployProfile()
+            appConfig.korusProductAddons()
         );
         return new PlatformModuleRegistry(catalog, selected, overrideRepo, appConfig);
     }

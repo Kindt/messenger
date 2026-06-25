@@ -27,7 +27,7 @@
 - **Опции по запросу** (галка, по умолчанию выкл.): livekit, worker-bot-delivery, integrations (L1–L3).
 - **Зависимости**: zookeeper→solr; worker-indexer→solr; worker-archiver→postgres-archive.
 - **Dev-min** — только QEMU/разработка; **не** использовать в product deck sizing.
-- **Pilot / Standard / Enterprise** — **не** использовать в deck; устаревшие product-tier labels.
+- **Base + add-ons** — единственная модель продукта в deck; никаких product-tier labels.
 
 ## Sizing gate (spec 021 Phase 8.2)
 

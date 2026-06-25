@@ -19,4 +19,17 @@ final class PushPlatformDefaults {
             return 9191;
         }
     }
+
+    /** Env: {@code PUSH_DEVICE_QUERY_LIMIT}; default {@code 500}; clamped to {@code 1..5000}. */
+    static int deviceQueryLimit() {
+        var raw = System.getenv("PUSH_DEVICE_QUERY_LIMIT");
+        if (raw == null || raw.isBlank()) {
+            return 500;
+        }
+        try {
+            return Math.max(1, Math.min(5000, Integer.parseInt(raw.trim())));
+        } catch (NumberFormatException e) {
+            return 500;
+        }
+    }
 }

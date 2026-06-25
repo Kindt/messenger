@@ -20,8 +20,8 @@ final class PushHealthHttpServer implements AutoCloseable {
 
     static PushHealthHttpServer start(int port, PushReadinessCheck probe, UserMessageSource messages)
             throws IOException {
-        var delegate = WorkerHealthHttpServer.startHealthOnly(
-            port, "push-health-http", probe::ready, messages);
+        var delegate = WorkerHealthHttpServer.startWithMetrics(
+            port, "push-metrics-http", probe::ready, messages, PushMetrics::registerBuildInfoOnce);
         return new PushHealthHttpServer(delegate);
     }
 

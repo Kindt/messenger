@@ -1,15 +1,14 @@
 package com.avandocmsg.messenger.core.application;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.domain.UserProfile;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.util.Optional;
 
 /** JSON helpers for read-cache user profile blobs. */
 public final class ReadCacheJson {
-    private static final ObjectMapper MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
+    private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER = MessengerJson.mapper();
 
     private ReadCacheJson() {
     }

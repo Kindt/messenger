@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.worker.retention;
 
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +24,7 @@ final class ReadReceiptRetentionJanitor {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setInt(1, retentionDays);
             var deleted = stmt.executeUpdate();
             if (deleted > 0) {

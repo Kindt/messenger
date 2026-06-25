@@ -317,6 +317,10 @@
       "members": "Удзельнікі",
       "join": "Увайсці"
     },
+    "search": {
+      "emptyTitle": "Супадзенняў няма",
+      "emptyHint": "Змяніце запыт або праверце напісанне."
+    },
     "auth": {
       "username": "Логін",
       "password": "Пароль",
@@ -415,6 +419,8 @@
       "confLiveDefault": "Ідзе відэаканферэнцыя",
       "searchPlaceholder": "Пошук у гэтым чаце (ад 2 сімв., без E2EE)…",
       "nothingInChat": "Нічога не знойдзена ў гэтым чаце.",
+      "searchEmptyTitle": "У гэтым чаце нічога няма",
+      "searchEmptyHint": "Паспрабуйце іншыя словы або пошук у шапцы.",
       "replyPrefix": "Адказ: {text}",
       "markdownHint": "Markdown: **тлусты**, *курсіў*, `код`, [спасылка](https://…)",
       "autoDelete": "Аўтаматычнае выдаленне:",
@@ -590,6 +596,21 @@
       "reconnecting": "Reconnecting…",
       "quotaHint": "Cache keeps recent messages for selected chats."
     },
+    "export": {
+      "cancelled": "Export cancelled",
+      "failed": "Export failed",
+      "failedJob": "Export finished with an error",
+      "timeout": "Export wait timed out",
+      "statusQueued": "queued",
+      "statusProcessing": "processing",
+      "statusWaiting": "waiting",
+      "started": "Export started — you can switch chats; download will begin automatically",
+      "ready": "Export ready, archive downloaded",
+      "alreadyRunning": "Another export is already running",
+      "noJobId": "Server did not return job_id",
+      "cancelFailed": "Could not cancel export",
+      "attachmentsPreview": "Export attachments: {count} file(s)"
+    },
     "message": {
       "image": "Выява",
       "video": "Відэа",
@@ -675,6 +696,7 @@
       "presenceOffline": "Не ў сетцы",
       "customStatus": "Статус",
       "dndSchedule": "Не турбаваць да",
+      "dndSeeNotificationsTab": "Трываласць «Не турбаваць» — на ўкладцы «Аповеды».",
       "dndUntilManual": "Пакуль не адключу",
       "dndUntil30m": "30 хвілін",
       "dndUntil1h": "1 гадзіна",
@@ -790,6 +812,15 @@
       "directoryHint": "Trusted orgs for cross-org chats (MVP).",
       "trustActive": "Active",
       "trustPending": "Pending",
+      "trustLevel": {
+        "trusted": "Давераны",
+        "verified": "Правераны",
+        "pending": "Чакае",
+        "partial": "Частковы",
+        "none": "Без даверу",
+        "blocked": "Заблакаваны",
+        "unknown": "Уровень: {value}"
+      },
       "partnerLabel": "Partner",
       "badgeThread": "Federation",
       "joinCopied": "Room copied to clipboard."

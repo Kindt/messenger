@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.directory.DirectorySyncRunRow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +28,7 @@ public final class JdbcDirectorySyncRunJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setObject(2, orgId);
             stmt.executeUpdate();
@@ -44,6 +47,7 @@ public final class JdbcDirectorySyncRunJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, status);
             stmt.setInt(2, usersUpserted);
             stmt.setString(3, error);
@@ -64,6 +68,7 @@ public final class JdbcDirectorySyncRunJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             try (var rs = stmt.executeQuery()) {
                 if (!rs.next()) {

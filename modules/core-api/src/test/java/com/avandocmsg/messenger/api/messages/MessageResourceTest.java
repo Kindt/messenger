@@ -16,6 +16,7 @@ import java.security.Principal;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MessageResourceTest {
@@ -37,6 +38,15 @@ class MessageResourceTest {
             () -> resource.send("not-a-uuid",
                 new SendMessageRequest("text", "hello", null, null, null, null, null, null, null),
                 userSecurityContext()));
+    }
+
+    @Test
+    void list_limitAboveMax_returns400() {
+        var appService = new MessageApplicationService(new NoopMessagePort(), memberChatPort());
+        var resource = new MessageResource(appService, new AppConfig(), I18nTestFixtures.messagesEn());
+        var chatId = UUID.randomUUID().toString();
+        var response = resource.list(chatId, 1001, null, null, userSecurityContext());
+        assertEquals(400, response.getStatus());
     }
 
     @Test

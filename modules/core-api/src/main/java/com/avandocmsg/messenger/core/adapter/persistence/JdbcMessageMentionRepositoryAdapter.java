@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.port.MessageMentionRepositoryPort;
 
 import org.slf4j.Logger;
@@ -30,6 +32,7 @@ public final class JdbcMessageMentionRepositoryAdapter implements MessageMention
         var sql = "INSERT INTO message_mentions (message_id, user_id, mention_kind) VALUES (?, ?, ?)";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             for (var row : rows) {
                 stmt.setObject(1, messageId);
                 stmt.setObject(2, row.userId());
@@ -57,6 +60,7 @@ public final class JdbcMessageMentionRepositoryAdapter implements MessageMention
         var mentionAll = new HashMap<UUID, Boolean>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql.toString())) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             int idx = 1;
             for (var id : messageIds) {
                 stmt.setObject(idx++, id);
@@ -90,6 +94,7 @@ public final class JdbcMessageMentionRepositoryAdapter implements MessageMention
         var sql = "SELECT 1 FROM message_mentions WHERE message_id = ? AND user_id = ? LIMIT 1";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, messageId);
             stmt.setObject(2, userId);
             try (var rs = stmt.executeQuery()) {
@@ -106,6 +111,7 @@ public final class JdbcMessageMentionRepositoryAdapter implements MessageMention
         var sql = "SELECT 1 FROM message_mentions WHERE message_id = ? AND mention_kind = 'all' LIMIT 1";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, messageId);
             try (var rs = stmt.executeQuery()) {
                 return rs.next();

@@ -1,6 +1,6 @@
 package com.avandocmsg.messenger.worker.connectorruntime;
 
-import com.avandocmsg.messenger.common.http.WorkerHealthHttpServer;
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.plugin.PluginButton;
@@ -10,6 +10,7 @@ import com.avandocmsg.messenger.common.plugin.PluginMessage;
 import com.avandocmsg.messenger.common.plugin.PluginResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
+import io.prometheus.client.hotspot.DefaultExports;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,11 +22,11 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 
 /**
- * Spec 014: universal connector runtime — Plugin Runtime API v1 on integrations VM.
+ * Spec 014: universal connector runtime вЂ” Plugin Runtime API v1 on integrations VM.
  */
 public final class ConnectorRuntimeWorker {
     private static final Logger log = LoggerFactory.getLogger(ConnectorRuntimeWorker.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private ConnectorRuntimeWorker() {}
 
@@ -36,13 +37,11 @@ public final class ConnectorRuntimeWorker {
         int port = parsePort(System.getenv("CONNECTOR_RUNTIME_PORT"), 8091);
         int healthPort = parsePort(System.getenv("CONNECTOR_RUNTIME_METRICS_PORT"), 9198);
 
+        DefaultExports.initialize();
         var pluginServer = startPluginServer(port, messages);
-        try (var health = WorkerHealthHttpServer.startHealthOnly(
-            healthPort,
-            "connector-runtime-health",
-            () -> true,
-            messages)) {
-            log.info(messages.format("connector.http_started", port, health.getPort()));
+        ConnectorRuntimeMetricsHttpServer.HealthProbe pluginUp = () -> pluginServer.getAddress() != null;
+        try (var metrics = ConnectorRuntimeMetricsHttpServer.start(healthPort, pluginUp, messages)) {
+            log.info(messages.format("connector.http_started", port, metrics.getPort()));
             Thread.currentThread().join();
         } finally {
             pluginServer.stop(0);
@@ -103,7 +102,7 @@ public final class ConnectorRuntimeWorker {
                 return PluginResponse.text("Korus connector-runtime v1\nhttps://korus.local");
             }
             if ("tip".equals(buttonId)) {
-                return PluginResponse.text("Случайный совет: проверьте smoke-plugin-echo.");
+                return PluginResponse.text("РЎР»СѓС‡Р°Р№РЅС‹Р№ СЃРѕРІРµС‚: РїСЂРѕРІРµСЂСЊС‚Рµ smoke-plugin-echo.");
             }
         }
         if ("slash".equals(type) && event.text() != null && event.text().startsWith("/echo ")) {
@@ -114,13 +113,13 @@ public final class ConnectorRuntimeWorker {
             return PluginResponse.text("pong (connector-runtime)");
         }
         return new PluginResponse(
-            List.of(PluginMessage.markdown("Echo menu (connector-runtime). Команды: `ping`, `/echo <text>`")),
+            List.of(PluginMessage.markdown("Echo menu (connector-runtime). РљРѕРјР°РЅРґС‹: `ping`, `/echo <text>`")),
             List.of(new PluginCard(
-                "Меню",
+                "РњРµРЅСЋ",
                 null,
                 List.of(
-                    new PluginButton("about", "О проекте"),
-                    new PluginButton("tip", "Случайный совет")
+                    new PluginButton("about", "Рћ РїСЂРѕРµРєС‚Рµ"),
+                    new PluginButton("tip", "РЎР»СѓС‡Р°Р№РЅС‹Р№ СЃРѕРІРµС‚")
                 )
             )),
             null

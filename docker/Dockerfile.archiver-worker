@@ -4,6 +4,12 @@ COPY . .
 RUN gradle --console=plain :modules:workers:archiver:installDist --no-daemon -x test
 
 FROM eclipse-temurin:25-jre
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl \
+  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/modules/workers/archiver/build/install/archiver /app/archiver
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:+UseContainerSupport -XX:+UseG1GC"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:9191/health >/dev/null || exit 1
 ENTRYPOINT ["/app/archiver/bin/archiver"]

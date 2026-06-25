@@ -1,5 +1,8 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.json.MessengerJson;
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.port.ChatPollPort;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,7 +20,7 @@ import java.util.UUID;
 
 public final class JdbcChatPollAdapter implements ChatPollPort {
     private static final Logger log = LoggerFactory.getLogger(JdbcChatPollAdapter.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {};
     private static final TypeReference<List<Integer>> INT_LIST = new TypeReference<>() {};
 
@@ -39,6 +42,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setObject(2, cmd.chatId());
             stmt.setObject(3, cmd.createdBy());
@@ -66,6 +70,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, pollId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -89,6 +94,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setInt(2, lim);
             try (var rs = stmt.executeQuery()) {
@@ -115,6 +121,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(insertSql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, pollId);
             stmt.setObject(2, userId);
             stmt.setString(3, MAPPER.writeValueAsString(optionIndexes));
@@ -139,6 +146,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(updateSql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, MAPPER.writeValueAsString(optionIndexes));
             stmt.setObject(2, pollId);
             stmt.setObject(3, userId);
@@ -161,6 +169,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setTimestamp(1, Timestamp.from(now));
             stmt.setInt(2, lim);
             try (var rs = stmt.executeQuery()) {
@@ -189,6 +198,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
         var sql = "UPDATE chat_polls SET closes_at = ? WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setTimestamp(1, Timestamp.from(closesAt));
             stmt.setObject(2, pollId);
             return stmt.executeUpdate() > 0;
@@ -207,6 +217,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, pollId);
             try (var rs = stmt.executeQuery()) {
                 var out = new ArrayList<VoteRow>();

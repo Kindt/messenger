@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.core.application;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.dto.PinChangeEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.domain.ChatId;
@@ -16,7 +17,7 @@ import java.util.UUID;
 /** Hexagonal pin/unpin path + NATS fan-out. */
 public final class MessagePinCoordinator {
     private static final Logger log = LoggerFactory.getLogger(MessagePinCoordinator.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final MessageRepositoryPort messageRepositoryPort;
     private final NatsOutboundPort natsOutbound;

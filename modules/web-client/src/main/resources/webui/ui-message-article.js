@@ -12,9 +12,18 @@
         (ctx.myId && m.sender_id === ctx.myId ? " own" : "") +
         (ctx.isMessagePinned(m.id) ? " pinned" : "") +
         (m.deleted ? " deleted" : "") +
-        (ctx.messageMentionsMe(m) ? " msg-mention-me" : "")
+        (ctx.messageMentionsMe(m) ? " msg-mention-me" : "") +
+        (m._pending ? " msg-pending" : "") +
+        (m._failed ? " msg-send-failed" : "")
     );
     art.id = "msg-" + m.id;
+    if (m._pending) {
+      art.setAttribute("data-testid", "message-pending");
+      art.setAttribute("aria-busy", "true");
+    }
+    if (m._failed) {
+      art.setAttribute("data-testid", "message-send-failed");
+    }
     var meta = ctx.el("div", "msg-meta");
     meta.appendChild(
       document.createTextNode(
@@ -29,6 +38,18 @@
       ? ctx.formatInstantLabel(m.created_at)
       : new Date(m.created_at).toLocaleString();
     meta.appendChild(ts);
+    if (m._pending) {
+      var pendingLbl = ctx.el("span", "msg-pending-label", "…");
+      pendingLbl.title = ctx.L("ui.common.loading");
+      pendingLbl.setAttribute("data-testid", "message-pending-label");
+      meta.appendChild(pendingLbl);
+    }
+    if (m._failed) {
+      var failLbl = ctx.el("span", "msg-send-failed-label", "⚠");
+      failLbl.title = ctx.L("messages.sendFailed");
+      failLbl.setAttribute("data-testid", "message-send-failed-label");
+      meta.appendChild(failLbl);
+    }
     if (m.thread_reply_count && m.thread_reply_count > 0 && !ctx.state.discussionThreadRootId) {
       var tBadge = ctx.el("button", "msg-thread-badge", m.thread_reply_count + " ↩");
       tBadge.type = "button";

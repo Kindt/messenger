@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.scim;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.core.port.ScimGroupRepositoryPort;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 public class ScimGroupMapper {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final TypeReference<List<String>> MEMBER_IDS = new TypeReference<>() {};
 
     static final List<String> GROUP_SCHEMA = List.of("urn:ietf:params:scim:schemas:core:2.0:Group");

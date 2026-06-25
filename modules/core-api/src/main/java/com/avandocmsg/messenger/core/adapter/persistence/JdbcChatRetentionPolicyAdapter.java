@@ -1,5 +1,8 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.port.ChatRetentionPolicyPort;
 
 import org.slf4j.Logger;
@@ -29,6 +32,7 @@ public final class JdbcChatRetentionPolicyAdapter implements ChatRetentionPolicy
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 if (!rs.next()) {
@@ -71,7 +75,9 @@ public final class JdbcChatRetentionPolicyAdapter implements ChatRetentionPolicy
             WHERE chat_id = ?
             """;
         try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareWrite(conn);
             try (var stmt = conn.prepareStatement(updateSql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
                 stmt.setObject(1, hotMessageBodyMaxAgeDays);
                 stmt.setObject(2, hotMetadataMinAgeDays);
                 stmt.setBoolean(3, archiveMetadataEnabled);
@@ -90,6 +96,7 @@ public final class JdbcChatRetentionPolicyAdapter implements ChatRetentionPolicy
                 ) VALUES (?, ?, ?, ?, ?, ?, now(), ?)
                 """;
             try (var stmt = conn.prepareStatement(insertSql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
                 stmt.setObject(1, chatId);
                 stmt.setObject(2, hotMessageBodyMaxAgeDays);
                 stmt.setObject(3, hotMetadataMinAgeDays);

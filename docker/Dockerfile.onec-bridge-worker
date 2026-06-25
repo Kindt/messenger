@@ -11,5 +11,6 @@ WORKDIR /app
 COPY --from=builder /app/modules/workers/onec-bridge/build/install/onec-bridge /app/onec-bridge
 ENV ONEC_BRIDGE_PORT=8097
 ENV ONEC_BRIDGE_METRICS_PORT=9197
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:+UseContainerSupport -XX:+UseG1GC"
 EXPOSE 8097 9197
 ENTRYPOINT ["/app/onec-bridge/bin/onec-bridge"]

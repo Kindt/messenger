@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.migration;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -9,7 +10,7 @@ import java.util.List;
 /** Parses Telegram Desktop export JSON (spec 022 US9, ADR telegram-export-import-v1). */
 public final class TelegramExportV1Parser {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     public record ParsedMessage(long exportId, String text) {}
 

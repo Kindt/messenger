@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.core.application;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
@@ -14,7 +15,7 @@ import java.util.function.BooleanSupplier;
 /** Hot-plug aware publisher for Solr indexer NATS events ({@link NatsSubjects#MSG_EVENT_INDEX}). */
 public final class IndexerEventPublisher {
     private static final Logger log = LoggerFactory.getLogger(IndexerEventPublisher.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final int MAX_PENDING_INDEX_EVENTS = 2048;
 
     private final NatsOutboundPort natsOutbound;

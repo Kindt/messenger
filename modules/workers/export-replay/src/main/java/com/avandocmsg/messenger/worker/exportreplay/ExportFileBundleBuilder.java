@@ -1,7 +1,9 @@
 package com.avandocmsg.messenger.worker.exportreplay;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.export.ExportOutputRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
@@ -11,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.DigestInputStream;
@@ -24,7 +25,7 @@ import java.util.zip.ZipOutputStream;
 final class ExportFileBundleBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(ExportFileBundleBuilder.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     static final String ATTACHMENTS_PREFIX = "attachments/";
 
     private ExportFileBundleBuilder() {
@@ -60,12 +61,7 @@ final class ExportFileBundleBuilder {
             exportRoot.put("attachmentManifestPath", ExportOutputRef.ZIP_ATTACHMENTS_MANIFEST);
             patchFileBinaryGdpr(exportRoot, included > 0);
             writePackageManifest(zos, exportRoot, stats);
-            var jsonBytes = MAPPER.writerWithDefaultPrettyPrinter()
-                .writeValueAsString(exportRoot)
-                .getBytes(StandardCharsets.UTF_8);
-            zos.putNextEntry(new ZipEntry(ExportOutputRef.ZIP_JSON_ENTRY));
-            zos.write(jsonBytes);
-            zos.closeEntry();
+            ExportArtifactWriter.writePrettyJsonZipEntry(zos, ExportOutputRef.ZIP_JSON_ENTRY, exportRoot);
             log.info(workerMessages.format("worker.export_replay.zip_built",
                 zipPath.getFileName(), included, skipped, includedBytes));
             return stats;
@@ -88,11 +84,15 @@ final class ExportFileBundleBuilder {
         if (completeness != null && !completeness.isNull()) {
             manifest.set("exportCompleteness", completeness.deepCopy());
         }
-        var bytes = MAPPER.writerWithDefaultPrettyPrinter().writeValueAsBytes(manifest);
-        zos.putNextEntry(new ZipEntry(ExportOutputRef.ZIP_PACKAGE_MANIFEST));
-        zos.write(bytes);
-        zos.closeEntry();
+        writePrettyManifestEntry(zos, ExportOutputRef.ZIP_PACKAGE_MANIFEST, manifest);
         exportRoot.put("packageManifestPath", ExportOutputRef.ZIP_PACKAGE_MANIFEST);
+    }
+
+    private static void writePrettyManifestEntry(ZipOutputStream zos, String entryName, JsonNode manifest)
+        throws IOException {
+        zos.putNextEntry(new ZipEntry(entryName));
+        ExportArtifactWriter.writePrettyJson(zos, manifest);
+        zos.closeEntry();
     }
 
     private static void writeManifestEntry(
@@ -108,10 +108,7 @@ final class ExportFileBundleBuilder {
         manifest.put("skippedCount", skipped);
         manifest.put("includedBytes", includedBytes);
         manifest.set("files", entries);
-        var bytes = MAPPER.writerWithDefaultPrettyPrinter().writeValueAsBytes(manifest);
-        zos.putNextEntry(new ZipEntry(ExportOutputRef.ZIP_ATTACHMENTS_MANIFEST));
-        zos.write(bytes);
-        zos.closeEntry();
+        writePrettyManifestEntry(zos, ExportOutputRef.ZIP_ATTACHMENTS_MANIFEST, manifest);
     }
 
     private record AttachCounts(int included, int skipped, long includedBytes) {

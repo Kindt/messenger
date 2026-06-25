@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.worker.retention;
 
+import com.avandocmsg.messenger.common.concurrent.InterruptibleWait;
+
 /**
  * Throttle helper for hot-body janitor passes ({@link RetentionHotBodyJanitor}).
  */
@@ -8,18 +10,9 @@ final class RetentionInterMessageSleep {
     }
 
     /**
-     * @return {@code true} if sleep was interrupted ({@link Thread#interrupt()} restored on the current thread)
+     * @return {@code true} if wait was interrupted
      */
     static boolean sleepQuiet(long delayMs) {
-        if (delayMs <= 0) {
-            return false;
-        }
-        try {
-            Thread.sleep(delayMs);
-            return false;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return true;
-        }
+        return InterruptibleWait.sleepMillis(delayMs);
     }
 }

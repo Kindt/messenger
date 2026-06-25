@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 
 @Schema(description = "Message")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record MessageResponse(
     @Schema(description = "Message ID") String id,
     @Schema(description = "Chat ID") @JsonProperty("chat_id") String chatId,

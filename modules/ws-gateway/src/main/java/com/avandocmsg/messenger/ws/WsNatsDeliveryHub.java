@@ -21,6 +21,7 @@ public final class WsNatsDeliveryHub implements AutoCloseable {
     private final WsSessionRegistry registry;
     private final Connection connection;
     private final Dispatcher dispatcher;
+    private volatile WsSessionKeepalive keepalive;
 
     public WsNatsDeliveryHub(Connection connection, WsSessionRegistry registry) {
         this.connection = connection;
@@ -30,15 +31,29 @@ public final class WsNatsDeliveryHub implements AutoCloseable {
         log.info("Subscribed to {} (shared dispatcher)", DELIVER_WILDCARD);
     }
 
+    public void attachKeepalive(WsSessionKeepalive keepalive) {
+        this.keepalive = keepalive;
+    }
+
     public WsSessionRegistry.RegisterResult tryRegister(Session session, String userId, Collection<String> chatIds) {
         var result = registry.register(session, userId, chatIds);
-        WsGatewayMetrics.setOpenSessions(registry.openSessionCount());
+        if (result == WsSessionRegistry.RegisterResult.ACCEPTED) {
+            var ka = keepalive;
+            if (ka != null) {
+                ka.onRegistered(session);
+            }
+        }
+        WsGatewayMetrics.setActiveSessions(registry.openSessionCount());
         return result;
     }
 
     public void unregister(Session session) {
+        var ka = keepalive;
+        if (ka != null) {
+            ka.onUnregistered(session);
+        }
         registry.unregister(session);
-        WsGatewayMetrics.setOpenSessions(registry.openSessionCount());
+        WsGatewayMetrics.setActiveSessions(registry.openSessionCount());
     }
 
     public int openSessionCount() {
@@ -72,6 +87,7 @@ public final class WsNatsDeliveryHub implements AutoCloseable {
 
     private void sendText(Collection<Session> sessions, String userId, byte[] payload) {
         WsGatewayMetrics.addDeliveredBytes(payload.length);
+        WsGatewayMetrics.addFanoutRecipients(sessions.size());
         var text = new String(payload, StandardCharsets.UTF_8);
         for (Session session : sessions) {
             try {

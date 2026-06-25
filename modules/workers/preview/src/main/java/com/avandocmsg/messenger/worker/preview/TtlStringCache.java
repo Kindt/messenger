@@ -4,19 +4,17 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /** In-memory TTL cache for MVP preview results (optional Redis later). */
 final class TtlStringCache {
 
     private static final int MAX_ENTRIES = 10_000;
 
-    private record Entry(String value, long expiryEpochMs, long lastAccessNanos) {
-        Entry touch() {
-            return new Entry(value, expiryEpochMs, System.nanoTime());
-        }
-    }
+    private record Entry(String value, long expiryEpochMs) {}
 
     private final ConcurrentHashMap<String, Entry> map = new ConcurrentHashMap<>();
+    private final ConcurrentLinkedQueue<String> fifoKeys = new ConcurrentLinkedQueue<>();
     private final long ttlMs;
 
     TtlStringCache(Duration ttl) {
@@ -33,9 +31,9 @@ final class TtlStringCache {
         var now = System.currentTimeMillis();
         if (e.expiryEpochMs <= now) {
             map.remove(key, e);
+            fifoKeys.remove(key);
             return Optional.empty();
         }
-        map.put(key, e.touch());
         return Optional.of(e.value());
     }
 
@@ -44,7 +42,8 @@ final class TtlStringCache {
         evictExpired();
         enforceCapacity();
         var exp = System.currentTimeMillis() + ttlMs;
-        map.put(key, new Entry(value, exp, System.nanoTime()));
+        map.put(key, new Entry(value, exp));
+        fifoKeys.offer(key);
     }
 
     int size() {
@@ -54,23 +53,22 @@ final class TtlStringCache {
 
     private void evictExpired() {
         var now = System.currentTimeMillis();
-        map.entrySet().removeIf(entry -> entry.getValue().expiryEpochMs <= now);
+        map.entrySet().removeIf(entry -> {
+            if (entry.getValue().expiryEpochMs <= now) {
+                fifoKeys.remove(entry.getKey());
+                return true;
+            }
+            return false;
+        });
     }
 
     private void enforceCapacity() {
-        if (map.size() < MAX_ENTRIES) {
-            return;
-        }
-        String oldestKey = null;
-        long oldestAccess = Long.MAX_VALUE;
-        for (var entry : map.entrySet()) {
-            if (entry.getValue().lastAccessNanos() < oldestAccess) {
-                oldestAccess = entry.getValue().lastAccessNanos();
-                oldestKey = entry.getKey();
+        while (map.size() >= MAX_ENTRIES) {
+            var evictKey = fifoKeys.poll();
+            if (evictKey == null) {
+                break;
             }
-        }
-        if (oldestKey != null) {
-            map.remove(oldestKey);
+            map.remove(evictKey);
         }
     }
 }

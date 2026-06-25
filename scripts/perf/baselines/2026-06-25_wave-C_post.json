@@ -1,0 +1,17 @@
+{
+  "wave": "C",
+  "phase": "post",
+  "git_sha": "3e98daf",
+  "environment": "repo-static",
+  "metrics": {
+    "web_first_load_kb": null,
+    "web_js_gzip_kb": null,
+    "web_locales_loaded": null,
+    "api_health_p99_ms": null,
+    "nats_msgs_per_send_estimate": null,
+    "core_api_heap_mb_after_1h": null,
+    "ws_gateway_heap_mb_after_1h": null,
+    "read_cache_hit_ratio": null
+  },
+  "notes": "Wave C integrate: buildIntegrity PASS. app.bundle.js wired; SW v20 tiers; nginx VERIFY-T078; QEMU SC-006/007 pending guest lab."
+}

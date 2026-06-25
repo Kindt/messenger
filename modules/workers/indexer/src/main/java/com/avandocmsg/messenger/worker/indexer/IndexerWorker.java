@@ -1,15 +1,18 @@
 package com.avandocmsg.messenger.worker.indexer;
 
+import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.health.WorkerDependencyHealth;
 import com.avandocmsg.messenger.common.hotplug.GracefulShutdown;
 import com.avandocmsg.messenger.common.hotplug.HotPlugHeartbeat;
-import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
+import com.avandocmsg.messenger.common.nats.MessageDownstreamRouting;
+import com.avandocmsg.messenger.common.nats.NatsConnectionOptions;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.nats.client.Connection;
 import io.nats.client.Nats;
-import io.nats.client.Options;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
 import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
@@ -17,7 +20,6 @@ import io.prometheus.client.hotspot.DefaultExports;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -30,7 +32,7 @@ import java.util.Optional;
  */
 public class IndexerWorker {
     private static final Logger log = LoggerFactory.getLogger(IndexerWorker.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final String QUEUE_GROUP = "indexer-workers";
 
     private final SolrClient solrClient;
@@ -76,12 +78,7 @@ public class IndexerWorker {
         long batchFlushMs
     )
         throws Exception {
-        var options = Options.builder()
-            .server(natsUrl)
-            .connectionName("indexer-worker")
-            .reconnectWait(Duration.ofSeconds(2))
-            .maxReconnects(-1)
-            .build();
+        var options = NatsConnectionOptions.clientBuilder(natsUrl, "indexer-worker").build();
         this.connection = Nats.connect(options);
         this.solrClient = solrClient;
         this.solrEnabled = solrEnabled;
@@ -125,16 +122,27 @@ public class IndexerWorker {
 
     public void start() {
         var dispatcher = connection.createDispatcher(this::handle);
-        dispatcher.subscribe(NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP);
+        dispatcher.subscribe(NatsSubjects.MSG_EVENT_DOWNSTREAM, QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_DOWNSTREAM, QUEUE_GROUP));
+        if (MessageDownstreamRouting.legacySubscribeEnabled()) {
+            dispatcher.subscribe(NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP);
+            log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP));
+        }
         hotPlugHeartbeat.start();
         hotPlugHeartbeat.publish("ACTIVE");
-        log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP));
     }
 
     private void handle(io.nats.client.Message msg) {
         try {
-            var payload = new String(msg.getData(), StandardCharsets.UTF_8);
-            var event = MAPPER.readValue(payload, MessageWorkerEvent.class);
+            MessageDownstreamRouting.dispatchDownstreamMessage(
+                msg, MessageDownstreamRouting.ROUTE_INDEX, MAPPER, this::processWorkerEvent);
+        } catch (MessageDownstreamRouting.DownstreamDispatchException e) {
+            log.error(workerMessages.get("worker.indexer.handle_failed"), e.getCause());
+        }
+    }
+
+    private void processWorkerEvent(MessageWorkerEvent event) {
+        try {
             if (!solrEnabled) {
                 return;
             }
@@ -179,7 +187,6 @@ public class IndexerWorker {
     private void clearContentTxt(String messageId) throws Exception {
         var doc = clearContentTxtDoc(messageId);
         indexBackend.upsert(doc);
-        log.debug(workerMessages.format("worker.indexer.cleared_content", messageId));
     }
 
     private SearchDocument clearContentTxtDoc(String messageId) {
@@ -195,7 +202,6 @@ public class IndexerWorker {
             return;
         }
         indexBackend.upsert(doc);
-        log.debug(workerMessages.format("worker.indexer.indexed_solr", event.messageId()));
     }
 
     private SearchDocument buildMetadataDoc(MessageWorkerEvent event) {
@@ -245,7 +251,7 @@ public class IndexerWorker {
         var serviceId = System.getenv().getOrDefault("SERVICE_ID", "indexer-worker");
         var heartbeatIntervalMs = envLong("SERVICE_HEARTBEAT_INTERVAL_MS", 10000L);
         var drainTimeoutMs = envLong("SERVICE_DRAIN_TIMEOUT_MS", 30000L);
-        var batchSize = (int) envLong("INDEXER_BATCH_SIZE", 1L);
+        var batchSize = (int) envLong("INDEXER_BATCH_SIZE", 10L);
         var batchFlushMs = envLong("INDEXER_BATCH_FLUSH_MS", 500L);
 
         SolrClient client = null;
@@ -290,7 +296,7 @@ public class IndexerWorker {
                 batchFlushMs
             );
             if (metricsPort > 0) {
-                metricsServer = IndexerMetricsHttpServer.start(metricsPort, () -> true, workerMessages);
+                metricsServer = IndexerMetricsHttpServer.start(metricsPort, worker::healthReady, workerMessages);
                 log.info(workerMessages.format("worker.indexer.metrics_url", metricsServer.getPort()));
             }
             worker.start();
@@ -339,6 +345,21 @@ public class IndexerWorker {
             } catch (Exception e) {
                 log.warn(workerMessages.get("worker.indexer.solr_close_error"), e);
             }
+        }
+    }
+
+    boolean healthReady() {
+        if (!WorkerDependencyHealth.natsConnected(connection)) {
+            return false;
+        }
+        if (!solrEnabled) {
+            return true;
+        }
+        try {
+            solrClient.ping();
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 }

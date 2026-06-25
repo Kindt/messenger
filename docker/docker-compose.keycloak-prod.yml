@@ -1,5 +1,5 @@
-# Keycloak production mode override (FR-OPT-02) for pilot/standard deploy.
-# Merge with full-server + pilot-overrides or full-server when korus_deploy_profile uses prod Keycloak.
+# Keycloak production mode override (FR-OPT-02).
+# Merge with full-server + pilot-overrides for prod Keycloak.
 #
 #   docker compose -f docker/docker-compose.full-server.yml -f docker/docker-compose.pilot-overrides.yml -f docker/docker-compose.keycloak-prod.yml up -d
 

@@ -322,6 +322,19 @@
     return ov;
   }
 
+  function federationTrustLevelLabel(ctx, level) {
+    if (level == null || level === "") return "";
+    var norm = String(level).toLowerCase().replace(/-/g, "_");
+    var aliases = { active: "trusted" };
+    var id = aliases[norm] || norm;
+    var key = "ui.federation.trustLevel." + id;
+    var out = ctx.L(key);
+    if (!out || out === key) {
+      return ctx.L("ui.federation.trustLevel.unknown", { value: String(level) });
+    }
+    return out;
+  }
+
   function mountFederationDirectory(ctx, panel) {
     if (!panel) return;
     var wrap = ctx.el("div", "federation-settings-panel");
@@ -352,7 +365,7 @@
       var row = ctx.el("div", "federation-directory-row");
       var label = (p.name || p.org_id) + (p.slug ? " (" + p.slug + ")" : "");
       if (p.trust_level) {
-        label += " · " + p.trust_level;
+        label += " · " + federationTrustLevelLabel(ctx, p.trust_level);
       }
       row.textContent = label;
       list.appendChild(row);

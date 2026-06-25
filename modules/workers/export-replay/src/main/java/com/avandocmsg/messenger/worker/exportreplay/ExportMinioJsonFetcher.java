@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.exportreplay;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.minio.GetObjectArgs;
@@ -17,7 +18,7 @@ import java.util.Optional;
 final class ExportMinioJsonFetcher {
 
     private static final Logger log = LoggerFactory.getLogger(ExportMinioJsonFetcher.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private ExportMinioJsonFetcher() {
     }

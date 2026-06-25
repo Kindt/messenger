@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.core.application;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.dto.MentionEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.core.domain.ChatId;
@@ -19,7 +20,7 @@ import java.util.UUID;
 /** Persist mentions and publish {@link NatsSubjects#MSG_MENTION} per target user. */
 public final class MessageMentionCoordinator {
     private static final Logger log = LoggerFactory.getLogger(MessageMentionCoordinator.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final ChatRepositoryPort chatRepositoryPort;
     private final MessageMentionRepositoryPort mentionRepositoryPort;
@@ -91,19 +92,30 @@ public final class MessageMentionCoordinator {
         if (natsOutbound == null) {
             return;
         }
-        for (var target : targets) {
-            try {
+        try {
+            if (mentionAll) {
+                var event = new MentionEvent(
+                    messageId.toString(),
+                    chatId.toString(),
+                    senderId.toString(),
+                    null,
+                    true,
+                    createdAtEpochMs);
+                natsOutbound.publish(NatsSubjects.MSG_MENTION, MAPPER.writeValueAsBytes(event));
+                return;
+            }
+            for (var target : targets) {
                 var event = new MentionEvent(
                     messageId.toString(),
                     chatId.toString(),
                     senderId.toString(),
                     target.toString(),
-                    mentionAll,
+                    false,
                     createdAtEpochMs);
                 natsOutbound.publish(NatsSubjects.MSG_MENTION, MAPPER.writeValueAsBytes(event));
-            } catch (Exception e) {
-                log.warn("Failed to publish mention for message {} user {}", messageId, target, e);
             }
+        } catch (Exception e) {
+            log.warn("Failed to publish mention for message {}", messageId, e);
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.common.plugin.integration;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
+import com.avandocmsg.messenger.common.http.HttpClientSupport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -14,10 +16,8 @@ import java.util.Map;
 
 /** On-prem OCR HTTP service or mock fixture. */
 public final class OcrHttpClient {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final HttpClient HTTP = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(10))
-        .build();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
+    private static final HttpClient HTTP = HttpClientSupport.sharedClient();
 
     private OcrHttpClient() {}
 

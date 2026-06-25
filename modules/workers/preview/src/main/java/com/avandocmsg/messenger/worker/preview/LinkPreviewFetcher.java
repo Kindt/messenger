@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.worker.preview;
 
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
+import com.avandocmsg.messenger.common.resilience.SimpleCircuitBreaker;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -23,11 +24,19 @@ final class LinkPreviewFetcher {
     private final OkHttpClient http;
     private final int maxBodyBytes;
     private final UserMessageSource workerMessages;
+    private final SimpleCircuitBreaker circuitBreaker;
 
     LinkPreviewFetcher(Duration connectTimeout, Duration readTimeout, int maxBodyBytes,
                          UserMessageSource workerMessages) {
+        this(connectTimeout, readTimeout, maxBodyBytes, workerMessages,
+            new SimpleCircuitBreaker(5, Duration.ofSeconds(30)));
+    }
+
+    LinkPreviewFetcher(Duration connectTimeout, Duration readTimeout, int maxBodyBytes,
+                         UserMessageSource workerMessages, SimpleCircuitBreaker circuitBreaker) {
         this.maxBodyBytes = Math.max(1024, maxBodyBytes);
         this.workerMessages = workerMessages;
+        this.circuitBreaker = circuitBreaker;
         this.http = new OkHttpClient.Builder()
             .connectTimeout(connectTimeout.toMillis(), TimeUnit.MILLISECONDS)
             .readTimeout(readTimeout.toMillis(), TimeUnit.MILLISECONDS)
@@ -37,12 +46,20 @@ final class LinkPreviewFetcher {
     }
 
     Optional<String> fetchPreviewTitle(String rawUrl) {
+        if (!circuitBreaker.allowCall()) {
+            PreviewMetrics.circuitOpenSkip();
+            log.warn(workerMessages.get("worker.preview.circuit_open"));
+            return Optional.empty();
+        }
+        PreviewMetrics.fetchAttempt();
         URI uri;
         try {
             uri = SsrfGuard.parseHttpUri(rawUrl);
             SsrfGuard.validateHostAllowed(uri.getHost());
         } catch (IOException e) {
             log.debug(workerMessages.format("worker.preview.url_rejected", e.getMessage()));
+            circuitBreaker.recordFailure();
+            PreviewMetrics.fetchFailure();
             return Optional.empty();
         }
         String canonical = uri.toString();
@@ -50,14 +67,19 @@ final class LinkPreviewFetcher {
         try (var response = http.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 log.debug(workerMessages.format("worker.preview.http_status", response.code(), canonical));
+                circuitBreaker.recordFailure();
+                PreviewMetrics.fetchFailure();
                 return Optional.empty();
             }
             try (var peeked = response.peekBody(maxBodyBytes)) {
                 byte[] buf = peeked.bytes();
                 var html = new String(buf, StandardCharsets.UTF_8);
+                circuitBreaker.recordSuccess();
                 return Optional.ofNullable(extractTitle(html));
             }
         } catch (IOException e) {
+            circuitBreaker.recordFailure();
+            PreviewMetrics.fetchFailure();
             log.debug(workerMessages.format("worker.preview.fetch_failed", canonical), e);
             return Optional.empty();
         }

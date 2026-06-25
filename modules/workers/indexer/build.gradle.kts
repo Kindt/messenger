@@ -8,13 +8,16 @@ application {
 
 dependencies {
     implementation(project(":modules:common"))
-    implementation("io.nats:jnats:2.17.4")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
-    implementation("org.apache.solr:solr-solrj:10.0.0")
-    implementation("ch.qos.logback:logback-classic:1.5.3")
-    implementation("org.slf4j:slf4j-api:2.0.12")
-    implementation("io.prometheus:simpleclient:0.16.0")
-    implementation("io.prometheus:simpleclient_hotspot:0.16.0")
-    implementation("io.prometheus:simpleclient_httpserver:0.16.0")
-    implementation("io.prometheus:simpleclient_common:0.16.0")
+    implementation(libs.jnats)
+    implementation(libs.solr.solrj) {
+        exclude(group = "io.swagger.core.v3", module = "swagger-annotations-jakarta")
+        exclude(group = "jakarta.ws.rs", module = "jakarta.ws.rs-api")
+        exclude(group = "com.fasterxml.jackson.core")
+        exclude(group = "com.fasterxml.jackson.dataformat")
+        exclude(group = "com.fasterxml.jackson.datatype")
+        exclude(group = "com.fasterxml.jackson.module")
+        exclude(group = "com.fasterxml.jackson.jakarta.rs")
+    }
+    implementation(libs.bundles.logging)
+    implementation(libs.bundles.prometheus.server)
 }

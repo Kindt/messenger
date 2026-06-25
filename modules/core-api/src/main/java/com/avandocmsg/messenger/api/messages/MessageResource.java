@@ -17,6 +17,7 @@ import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.api.metrics.ApiDeniedMetrics;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
+import com.avandocmsg.messenger.api.params.ListPagination;
 import com.avandocmsg.messenger.api.params.UuidParams;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
@@ -130,6 +131,11 @@ public class MessageResource {
                          @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
         var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var validation = ListPagination.validate(limit, null);
+        var badRequest = ListPagination.badRequest(validation, messages);
+        if (badRequest.isPresent()) {
+            return badRequest.get();
+        }
         if (!messageApplicationService.canAccessChat(chatId, userId)) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.message.not_member")))

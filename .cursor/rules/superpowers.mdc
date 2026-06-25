@@ -1,0 +1,10 @@
+---
+alwaysApply: true
+---
+
+<!-- SUPERPOWERS START -->
+Agent skills: **speckit-*** for spec/plan/tasks/implement (project standard); **superpowers-*** for TDD, debugging, plans, code review, git worktrees.
+Read `.cursor/skills/korus-agent-workflow/SKILL.md` when choosing between them.
+Web UI tasks: `.cursor/skills/korus-ui-orchestrator/SKILL.md` first (spec 026).
+Project constraints override superpowers defaults: Russian user comms; live stack via Docker/Ansible (see deploy/ansible); PR gate `./gradlew buildIntegrity`.
+<!-- SUPERPOWERS END -->

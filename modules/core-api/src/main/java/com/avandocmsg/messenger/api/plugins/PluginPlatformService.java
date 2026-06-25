@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.plugins;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.plugin.PluginEvent;
 import com.avandocmsg.messenger.common.plugin.PluginResponse;
@@ -14,7 +15,7 @@ import java.util.UUID;
 
 public class PluginPlatformService {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final PluginRepository repository;
     private final IntegrationRouterClient routerClient;

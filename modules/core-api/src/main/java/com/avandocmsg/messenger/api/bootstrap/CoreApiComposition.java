@@ -136,7 +136,7 @@ public class CoreApiComposition {
 
     public CoreApiComposition() {
         this.appConfig = new AppConfig();
-        appConfig.validateProductionSecrets();
+        appConfig.validateStartup();
         log.info("Starting AvandocMsg.Messenger core-api v{}", appConfig.version());
         CryptoProvider.ensureLoaded();
         var databaseConfig = new DatabaseConfig(appConfig);
@@ -432,8 +432,15 @@ public class CoreApiComposition {
     }
 
     public void startBackgroundServices() throws IOException {
-        readCacheInvalidationSubscriber = new ReadCacheInvalidationSubscriber(natsConnection, readCachePort);
-        readCacheInvalidationSubscriber.start();
+        if (appConfig.readCacheNatsInvalidateEnabled()) {
+            readCacheInvalidationSubscriber = new ReadCacheInvalidationSubscriber(natsConnection, readCachePort);
+            readCacheInvalidationSubscriber.start();
+        } else {
+            readCacheInvalidationSubscriber = null;
+            log.info(
+                "Read-cache NATS invalidation subscriber disabled (READ_CACHE_NATS_INVALIDATE_ENABLED=false; pipeline uses Redis DEL)"
+            );
+        }
 
         if (appConfig.exportCompleteSubscriberEnabled()) {
             exportCompleteSubscriber = new ExportReplayCompleteSubscriber(natsConnection, exportJobPort);

@@ -2,6 +2,7 @@ package com.avandocmsg.messenger.api.messages;
 
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.core.port.MessageReminderPort;
+import com.avandocmsg.messenger.common.scheduling.ScheduledTaskSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +40,8 @@ public final class MessageReminderScheduler implements AutoCloseable {
             return t;
         });
         var initialDelay = Math.min(seconds, 30L);
-        executor.scheduleAtFixedRate(this::tick, initialDelay, seconds, TimeUnit.SECONDS);
+        ScheduledTaskSupport.scheduleAtFixedRateWithJitter(
+            executor, this::tick, initialDelay, seconds, 5000L, TimeUnit.SECONDS);
         log.info("Message reminder scheduler started (poll {} s, batch {})", seconds, batchSize);
     }
 

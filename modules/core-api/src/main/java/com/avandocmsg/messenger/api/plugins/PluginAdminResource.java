@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.plugins;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.plugins.PluginAdminDtos.ConfigureOutboundRequest;
 import com.avandocmsg.messenger.api.plugins.PluginAdminDtos.CreateL0InstanceRequest;
 import com.avandocmsg.messenger.api.plugins.PluginAdminDtos.InstanceJson;
@@ -35,7 +36,7 @@ import java.util.UUID;
 @RolesAllowed("admin")
 public class PluginAdminResource {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final PluginRepository repository;
     private final PluginPlatformService platformService;

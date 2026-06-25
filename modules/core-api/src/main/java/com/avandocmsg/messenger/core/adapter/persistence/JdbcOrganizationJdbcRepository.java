@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,7 +11,10 @@ import javax.sql.DataSource;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,6 +38,7 @@ public final class JdbcOrganizationJdbcRepository {
         var sql = "INSERT INTO organizations (id, name, created_at) VALUES (?, ?, now())";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setString(2, name.trim());
             stmt.executeUpdate();
@@ -47,6 +53,7 @@ public final class JdbcOrganizationJdbcRepository {
         var sql = "SELECT 1 FROM organizations WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 return rs.next();
@@ -61,6 +68,7 @@ public final class JdbcOrganizationJdbcRepository {
         var sql = "SELECT id, name, slug, created_at FROM organizations WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 if (!rs.next()) {
@@ -78,6 +86,41 @@ public final class JdbcOrganizationJdbcRepository {
         }
     }
 
+    public Map<UUID, OrgRow> findByIds(Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Map.of();
+        }
+        var unique = ids.stream().filter(java.util.Objects::nonNull).distinct().limit(JdbcListLimits.ORGANIZATIONS).toList();
+        if (unique.isEmpty()) {
+            return Map.of();
+        }
+        var sql = new StringBuilder("SELECT id, name, slug, created_at FROM organizations WHERE id IN (");
+        for (int i = 0; i < unique.size(); i++) {
+            sql.append(i == 0 ? "?" : ", ?");
+        }
+        sql.append(')');
+        var out = new HashMap<UUID, OrgRow>();
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareRead(conn);
+            try (var stmt = conn.prepareStatement(sql.toString())) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                int idx = 1;
+                for (var id : unique) {
+                    stmt.setObject(idx++, id);
+                }
+                try (var rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        var row = mapRow(rs);
+                        out.put(UUID.fromString(row.id()), row);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("find orgs by ids failed count={}", unique.size(), e);
+        }
+        return out;
+    }
+
     /**
      * Удаление организации, если ни один пользователь не ссылается на неё через {@code users.org_id}.
      */
@@ -89,6 +132,7 @@ public final class JdbcOrganizationJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
@@ -98,17 +142,22 @@ public final class JdbcOrganizationJdbcRepository {
     }
 
     public List<OrgRow> listAll() {
-        var sql = "SELECT id, name, slug, created_at FROM organizations ORDER BY name";
+        var sql = "SELECT id, name, slug, created_at FROM organizations ORDER BY name LIMIT ?";
         var out = new ArrayList<OrgRow>();
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql);
-             var rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                out.add(new OrgRow(
-                    rs.getObject("id", UUID.class).toString(),
-                    rs.getString("name"),
-                    rs.getString("slug"),
-                    rs.getTimestamp("created_at").toInstant()));
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareRead(conn);
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                stmt.setInt(1, JdbcListLimits.ORGANIZATIONS);
+                try (var rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        out.add(new OrgRow(
+                            rs.getObject("id", UUID.class).toString(),
+                            rs.getString("name"),
+                            rs.getString("slug"),
+                            rs.getTimestamp("created_at").toInstant()));
+                    }
+                }
             }
         } catch (Exception e) {
             log.error("list orgs failed", e);
@@ -120,6 +169,7 @@ public final class JdbcOrganizationJdbcRepository {
         var sql = "UPDATE users SET org_id = ?, updated_at = now() WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             stmt.setObject(2, userId);
             return stmt.executeUpdate() > 0;
@@ -136,6 +186,7 @@ public final class JdbcOrganizationJdbcRepository {
         var sql = "SELECT id, name, slug, created_at FROM organizations WHERE lower(slug) = lower(?)";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, slug.trim());
             try (var rs = stmt.executeQuery()) {
                 if (!rs.next()) {
@@ -164,6 +215,7 @@ public final class JdbcOrganizationJdbcRepository {
         var sql = "UPDATE organizations SET slug = ? WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, slug.trim().toLowerCase());
             stmt.setObject(2, orgId);
             return stmt.executeUpdate() > 0;

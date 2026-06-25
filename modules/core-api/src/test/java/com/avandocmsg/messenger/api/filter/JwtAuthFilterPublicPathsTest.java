@@ -13,6 +13,7 @@ class JwtAuthFilterPublicPathsTest {
         assertTrue(JwtAuthFilter.isPublicJerseyPath("/v1/health"));
         assertTrue(JwtAuthFilter.isPublicJerseyPath("/api/v1/health"));
         assertTrue(JwtAuthFilter.isPublicJerseyPath("v1/health/ready"));
+        assertTrue(JwtAuthFilter.isPublicJerseyPath("v1/health/live"));
     }
 
     @Test

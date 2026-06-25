@@ -1,33 +1,45 @@
-/* Korus web-client: cache static assets; do NOT show login shell when server is down. */
+/* Korus web-client: tiered static cache; do NOT show login shell when server is down. */
 "use strict";
 
-var CACHE_NAME = "korus-web-static-v18";
+var CACHE_VERSION = "v20";
+var SHELL_CACHE = "korus-web-shell-" + CACHE_VERSION;
+var LOCALES_CACHE = "korus-web-locales-" + CACHE_VERSION;
+var STATIC_CACHE = "korus-web-static-" + CACHE_VERSION;
+var ALL_CACHES = [SHELL_CACHE, LOCALES_CACHE, STATIC_CACHE];
 
-function pushDefaultsFromCache() {
-  return caches.match("/locales/ru.json").then(function (cached) {
-    if (!cached) {
-      return { title: "Korus Messenger", body: "New message" };
-    }
-    return cached.json().then(function (bundle) {
-      var push = bundle && bundle.push ? bundle.push : {};
-      return {
-        title: push.defaultTitle || "Korus Messenger",
-        body: push.defaultBody || "New message",
-      };
-    });
-  }).catch(function () {
-    return { title: "Korus Messenger", body: "New message" };
-  });
-}
-
-var PRECACHE = [
+var SHELL_PRECACHE = [
+  "/fonts.css",
   "/tailwind.css",
   "/styles.css",
   "/themes.css",
   "/manifest.json",
   "/icon.svg",
-  "/locales/manifest.json",
 ];
+
+var LOCALES_PRECACHE = ["/locales/manifest.json"];
+
+function pushDefaultsFromCache() {
+  return caches
+    .open(LOCALES_CACHE)
+    .then(function (cache) {
+      return cache.match("/locales/ru.json");
+    })
+    .then(function (cached) {
+      if (!cached) {
+        return { title: "Korus Messenger", body: "New message" };
+      }
+      return cached.json().then(function (bundle) {
+        var push = bundle && bundle.push ? bundle.push : {};
+        return {
+          title: push.defaultTitle || "Korus Messenger",
+          body: push.defaultBody || "New message",
+        };
+      });
+    })
+    .catch(function () {
+      return { title: "Korus Messenger", body: "New message" };
+    });
+}
 
 var OFFLINE_HTML =
   "<!DOCTYPE html><html lang=\"ru\"><head><meta charset=\"UTF-8\"/>" +
@@ -45,24 +57,93 @@ var OFFLINE_HTML =
   "<p style=\"margin-top:1rem\">Если остаётся старая версия UI: Настройки → «Сбросить кэш UI» " +
   "или DevTools → Application → Service Workers → Unregister.</p></div></body></html>";
 
+function isLocaleJson(pathname) {
+  return pathname && pathname.indexOf("/locales/") === 0 && pathname.endsWith(".json");
+}
+
+function isShellAsset(pathname) {
+  if (!pathname) return false;
+  for (var i = 0; i < SHELL_PRECACHE.length; i++) {
+    if (SHELL_PRECACHE[i] === pathname) return true;
+  }
+  return false;
+}
+
 function isStaticAsset(pathname) {
   if (!pathname || pathname.indexOf("/api") === 0) return false;
   if (pathname === "/web-client-env.js" || pathname === "/health") return false;
-  if (pathname === "/sw.js" || pathname === "/app.js") return false;
+  if (pathname === "/sw.js" || pathname === "/app.js" || pathname === "/app.bundle.js") return false;
   if (pathname === "/" || pathname === "/index.html") return false;
+  if (isLocaleJson(pathname)) return true;
   return (
     pathname.endsWith(".css") ||
     pathname.endsWith(".js") ||
     pathname.endsWith(".json") ||
-    pathname.endsWith(".svg")
+    pathname.endsWith(".svg") ||
+    pathname.endsWith(".woff2")
   );
+}
+
+function staleWhileRevalidate(cacheName, request) {
+  return caches.open(cacheName).then(function (cache) {
+    return cache.match(request).then(function (cached) {
+      var networkUpdate = fetch(request)
+        .then(function (response) {
+          if (response && response.ok) {
+            cache.put(request, response.clone());
+          }
+          return response;
+        })
+        .catch(function () {
+          return null;
+        });
+      if (cached) {
+        networkUpdate.catch(function () {});
+        return cached;
+      }
+      return networkUpdate.then(function (response) {
+        if (response) return response;
+        return new Response("", { status: 503, statusText: "Offline" });
+      });
+    });
+  });
+}
+
+function networkFirstLocale(request) {
+  return fetch(request)
+    .then(function (response) {
+      if (response && response.ok) {
+        var copy = response.clone();
+        caches.open(LOCALES_CACHE).then(function (cache) {
+          cache.put(request, copy);
+        });
+      }
+      return response;
+    })
+    .catch(function () {
+      return caches.match(request).then(function (cached) {
+        return (
+          cached ||
+          new Response("{}", {
+            status: 503,
+            statusText: "Offline",
+            headers: { "Content-Type": "application/json; charset=utf-8" },
+          })
+        );
+      });
+    });
 }
 
 self.addEventListener("install", function (event) {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function (cache) {
-      return cache.addAll(PRECACHE).catch(function () {});
-    })
+    Promise.all([
+      caches.open(SHELL_CACHE).then(function (cache) {
+        return cache.addAll(SHELL_PRECACHE).catch(function () {});
+      }),
+      caches.open(LOCALES_CACHE).then(function (cache) {
+        return cache.addAll(LOCALES_PRECACHE).catch(function () {});
+      }),
+    ])
   );
   self.skipWaiting();
 });
@@ -73,7 +154,7 @@ self.addEventListener("activate", function (event) {
       return Promise.all(
         keys
           .filter(function (k) {
-            return k !== CACHE_NAME;
+            return ALL_CACHES.indexOf(k) === -1;
           })
           .map(function (k) {
             return caches.delete(k);
@@ -104,40 +185,17 @@ self.addEventListener("fetch", function (event) {
 
   if (!isStaticAsset(url.pathname)) return;
 
-  if (url.pathname.indexOf("/locales/") === 0 && url.pathname.endsWith(".json")) {
-    event.respondWith(
-      fetch(event.request).then(function (response) {
-        if (response && response.ok) {
-          var copy = response.clone();
-          caches.open(CACHE_NAME).then(function (cache) {
-            cache.put(event.request, copy);
-          });
-        }
-        return response;
-      }).catch(function () {
-        return caches.match(event.request);
-      })
-    );
+  if (isLocaleJson(url.pathname)) {
+    event.respondWith(networkFirstLocale(event.request));
     return;
   }
 
-  event.respondWith(
-    fetch(event.request)
-      .then(function (response) {
-        if (response && response.ok) {
-          var copy = response.clone();
-          caches.open(CACHE_NAME).then(function (cache) {
-            cache.put(event.request, copy);
-          });
-        }
-        return response;
-      })
-      .catch(function () {
-        return caches.match(event.request).then(function (cached) {
-          return cached || new Response("", { status: 503, statusText: "Offline" });
-        });
-      })
-  );
+  if (isShellAsset(url.pathname)) {
+    event.respondWith(staleWhileRevalidate(SHELL_CACHE, event.request));
+    return;
+  }
+
+  event.respondWith(staleWhileRevalidate(STATIC_CACHE, event.request));
 });
 
 self.addEventListener("message", function (event) {

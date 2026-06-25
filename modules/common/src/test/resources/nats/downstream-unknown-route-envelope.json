@@ -1,0 +1,15 @@
+{
+  "route": ["index", "preview", "push", "bot", "future-worker"],
+  "message_id": "550e8400-e29b-41d4-a716-446655440000",
+  "chat_id": "660e8400-e29b-41d4-a716-446655440001",
+  "payload": {
+    "messageId": "550e8400-e29b-41d4-a716-446655440000",
+    "chatId": "660e8400-e29b-41d4-a716-446655440001",
+    "senderId": "770e8400-e29b-41d4-a716-446655440002",
+    "type": "text",
+    "flags": 0,
+    "encrypted": false,
+    "storageByteLength": 5,
+    "searchText": "hello"
+  }
+}

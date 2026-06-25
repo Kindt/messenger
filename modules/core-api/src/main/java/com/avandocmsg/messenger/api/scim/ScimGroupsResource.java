@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.scim;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.core.port.ScimGroupRepositoryPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
@@ -28,7 +29,7 @@ import java.util.UUID;
 @Consumes({"application/scim+json", MediaType.APPLICATION_JSON})
 @RolesAllowed("admin")
 public class ScimGroupsResource {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final ScimGroupRepositoryPort groupRepository;
     private final AppConfig appConfig;

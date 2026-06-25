@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.port.MigrationImportJobPort;
 
 import org.slf4j.Logger;
@@ -32,6 +34,7 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setObject(2, orgId);
             stmt.setString(3, source);
@@ -53,6 +56,7 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -76,6 +80,7 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             stmt.setInt(2, Math.max(1, Math.min(limit, 100)));
             try (var rs = stmt.executeQuery()) {
@@ -102,6 +107,7 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setInt(1, Math.max(1, Math.min(limit, 50)));
             try (var rs = stmt.executeQuery()) {
                 var out = new ArrayList<JobRow>();
@@ -125,6 +131,7 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, status);
             bindJson(stmt, 2, resultJson, conn);
             stmt.setObject(3, id);

@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.port.AuditPort;
 
 import org.slf4j.Logger;
@@ -31,6 +33,7 @@ public final class JdbcAuditAdapter implements AuditPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, actorUserId);
             stmt.setString(2, action);
             stmt.setString(3, resourceType);
@@ -90,6 +93,7 @@ public final class JdbcAuditAdapter implements AuditPort {
         var out = new ArrayList<AuditRow>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             int idx = 1;
             if (filterAction) {
                 stmt.setString(idx++, action);
@@ -128,6 +132,7 @@ public final class JdbcAuditAdapter implements AuditPort {
         var sql = "SELECT COUNT(*) AS c FROM audit_events WHERE action = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, truncate64(action.trim()));
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -151,6 +156,7 @@ public final class JdbcAuditAdapter implements AuditPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, truncate64(action.trim()));
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {

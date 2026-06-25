@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.live;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.live.dto.CreateLiveSessionRequest;
 import com.avandocmsg.messenger.api.live.dto.JoinLiveSessionResponse;
 import com.avandocmsg.messenger.api.live.dto.LiveIngressResponse;
@@ -20,7 +21,7 @@ import java.util.UUID;
 
 public class LiveSessionService {
     private static final Logger log = LoggerFactory.getLogger(LiveSessionService.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final int TOKEN_TTL_SEC = 3600;
 
     private final LiveSessionPort liveSessionPort;

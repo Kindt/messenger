@@ -1,5 +1,8 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.live.dto.LiveSessionResponse;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
@@ -55,6 +58,7 @@ public final class JdbcLiveSessionJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, createdBy);
             stmt.setString(3, title != null ? title : "");
@@ -75,6 +79,7 @@ public final class JdbcLiveSessionJdbcRepository {
         var sql = SESSION_SELECT + " WHERE ls.id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, sessionId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -94,6 +99,7 @@ public final class JdbcLiveSessionJdbcRepository {
         var list = new ArrayList<LiveSessionResponse>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -108,6 +114,7 @@ public final class JdbcLiveSessionJdbcRepository {
 
     public int countActiveViewers(UUID sessionId) {
         try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareRead(conn);
             return countActiveViewersOnConnection(conn, sessionId);
         } catch (Exception e) {
             log.error("count viewers {}", sessionId, e);
@@ -122,6 +129,7 @@ public final class JdbcLiveSessionJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, sessionId);
             stmt.setObject(2, userId);
             try (var rs = stmt.executeQuery()) {
@@ -146,6 +154,7 @@ public final class JdbcLiveSessionJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(upsert)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, sessionId);
             stmt.setObject(2, userId);
             stmt.setString(3, role);
@@ -167,6 +176,7 @@ public final class JdbcLiveSessionJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, sessionId);
             stmt.setObject(2, userId);
             if (stmt.executeUpdate() <= 0) {
@@ -184,6 +194,7 @@ public final class JdbcLiveSessionJdbcRepository {
         var sql = "SELECT created_by FROM live_sessions WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, sessionId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -200,6 +211,7 @@ public final class JdbcLiveSessionJdbcRepository {
         var sql = "UPDATE live_sessions SET status = 'ended', ended_at = now() WHERE id = ? AND status = 'active'";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, sessionId);
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
@@ -216,6 +228,7 @@ public final class JdbcLiveSessionJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, url);
             stmt.setObject(2, sessionId);
             return stmt.executeUpdate() > 0;
@@ -232,6 +245,7 @@ public final class JdbcLiveSessionJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, uuidGenerator.randomUuid());
             stmt.setObject(2, sessionId);
             stmt.setObject(3, actorUserId);
@@ -248,6 +262,7 @@ public final class JdbcLiveSessionJdbcRepository {
         var sql = "UPDATE live_sessions SET moderation_state = ? WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, state);
             stmt.setObject(2, sessionId);
             return stmt.executeUpdate() > 0;
@@ -260,6 +275,7 @@ public final class JdbcLiveSessionJdbcRepository {
     private void syncViewerCount(Connection conn, UUID sessionId) throws SQLException {
         var count = countActiveViewersOnConnection(conn, sessionId);
         try (var stmt = conn.prepareStatement("UPDATE live_sessions SET viewer_count = ? WHERE id = ?")) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setInt(1, count);
             stmt.setObject(2, sessionId);
             stmt.executeUpdate();
@@ -272,6 +288,7 @@ public final class JdbcLiveSessionJdbcRepository {
             WHERE session_id = ? AND left_at IS NULL
             """;
         try (var stmt = conn.prepareStatement(sql)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, sessionId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {

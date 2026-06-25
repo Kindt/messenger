@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.export;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.metrics.ExportMetrics;
 import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.core.port.ExportJobPort;
@@ -21,7 +22,7 @@ import java.util.UUID;
 public final class ExportJobEnqueuer {
 
     private static final Logger log = LoggerFactory.getLogger(ExportJobEnqueuer.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final ExportJobPort exportJobPort;
     private final AuditPort auditPort;

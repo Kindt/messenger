@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.admin;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.admin.dto.AdminExportCompliancePrepRequest;
 import com.avandocmsg.messenger.api.admin.dto.AdminExportSuggestRequest;
 import com.avandocmsg.messenger.api.admin.dto.AdminExportSuggestResponse;
@@ -38,7 +39,7 @@ import java.util.UUID;
 
 final class AdminExportFacade {
     private static final Logger log = LoggerFactory.getLogger(AdminExportFacade.class);
-    private static final ObjectMapper ADMIN_AUDIT_JSON = new ObjectMapper();
+    private static final ObjectMapper ADMIN_AUDIT_JSON = MessengerJson.mapper();
 
     private final AppConfig appConfig;
     private final AuditPort auditPort;

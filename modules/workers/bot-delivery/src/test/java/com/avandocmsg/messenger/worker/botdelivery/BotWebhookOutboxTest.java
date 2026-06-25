@@ -113,6 +113,56 @@ class BotWebhookOutboxTest {
         assertFalse(BotWebhookOutbox.tablePresent(ds));
     }
 
+    @Test
+    void purgeFailed_deletesOldFailedRows() throws Exception {
+        outbox.enqueue(BOT_ID, CHAT_ID, EVENT_ID, WEBHOOK, PAYLOAD);
+        var id = outbox.fetchDue(1).getFirst().id();
+        for (int i = 0; i < BotWebhookOutbox.MAX_ATTEMPTS - 1; i++) {
+            outbox.scheduleRetry(id, i);
+            clock.advance(BotWebhookOutbox.backoffForAttempt(i + 1).plusSeconds(1));
+        }
+        outbox.scheduleRetry(id, BotWebhookOutbox.MAX_ATTEMPTS - 1);
+
+        clock.advance(java.time.Duration.ofDays(8));
+        var deleted = outbox.purgeFailed(7, 100);
+        assertEquals(1, deleted);
+    }
+
+    @Test
+    void purgeFailed_keepsRecentFailedRows() throws Exception {
+        outbox.enqueue(BOT_ID, CHAT_ID, EVENT_ID, WEBHOOK, PAYLOAD);
+        var id = outbox.fetchDue(1).getFirst().id();
+        outbox.markFailed(id);
+
+        var deleted = outbox.purgeFailed(7, 100);
+        assertEquals(0, deleted);
+    }
+
+    @Test
+    void purgeFailed_respectsBatchLimit() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            var eventId = EVENT_ID + "-" + i;
+            outbox.enqueue(BOT_ID, CHAT_ID, eventId, WEBHOOK, PAYLOAD);
+            var rowId = outbox.fetchDue(10).stream()
+                .filter(r -> r.eventId().equals(eventId))
+                .findFirst()
+                .orElseThrow()
+                .id();
+            outbox.markFailed(rowId);
+        }
+        clock.advance(java.time.Duration.ofDays(8));
+
+        assertEquals(2, outbox.purgeFailed(7, 2));
+        assertEquals(3, outbox.purgeFailed(7, 10));
+    }
+
+    @Test
+    void failedRetentionDaysFromEnv_defaultsWhenUnset() {
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+            System.getenv("BOT_WEBHOOK_OUTBOX_FAILED_RETENTION_DAYS") == null);
+        assertEquals(BotWebhookOutbox.DEFAULT_FAILED_RETENTION_DAYS, BotWebhookOutbox.failedRetentionDaysFromEnv());
+    }
+
     static final class MutableClock extends Clock {
         private Instant instant;
 

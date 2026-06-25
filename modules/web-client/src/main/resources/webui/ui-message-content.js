@@ -6,10 +6,18 @@
 
   function appendMessageAttachment(bodyEl, kind, fileId, durationMs, ctx) {
     if (kind === "image") {
+      var wrap = document.createElement("div");
       var img = document.createElement("img");
-      img.className = "msg-attachment-image";
       img.alt = ctx.L("ui.message.image");
-      bodyEl.appendChild(img);
+      img.loading = "lazy";
+      img.decoding = "async";
+      if (global.KorusUiUxPerception && global.KorusUiUxPerception.prepareImageAttachmentWrap) {
+        global.KorusUiUxPerception.prepareImageAttachmentWrap(wrap, img);
+      } else {
+        img.className = "msg-attachment-image";
+      }
+      wrap.appendChild(img);
+      bodyEl.appendChild(wrap);
       ctx.attachAuthenticatedImage(fileId, img);
       return;
     }
@@ -130,6 +138,8 @@
         var gifImg = document.createElement("img");
         gifImg.className = "msg-gif-image";
         gifImg.src = mediaUrl;
+        gifImg.loading = "lazy";
+        gifImg.decoding = "async";
         gifImg.alt = t === "sticker" ? ctx.L("ui.message.sticker") : "GIF";
         gifImg.setAttribute("data-testid", "message-gif-image");
         bodyEl.appendChild(gifImg);

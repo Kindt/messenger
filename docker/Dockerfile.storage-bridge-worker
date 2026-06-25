@@ -11,5 +11,6 @@ WORKDIR /app
 COPY --from=builder /app/modules/workers/storage-bridge/build/install/storage-bridge /app/storage-bridge
 ENV STORAGE_BRIDGE_PORT=8094
 ENV STORAGE_BRIDGE_METRICS_PORT=9194
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:+UseContainerSupport -XX:+UseG1GC"
 EXPOSE 8094 9194
 ENTRYPOINT ["/app/storage-bridge/bin/storage-bridge"]

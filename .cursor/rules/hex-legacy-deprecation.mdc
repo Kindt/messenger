@@ -1,0 +1,46 @@
+---
+description: Hex migration — отказ от legacy *Repository в application layer; пачки PR; БД можно пересоздавать
+alwaysApply: true
+---
+
+# Hex: legacy deprecation (team policy, 2026-06-19)
+
+**Контекст:** продукт **`0.0.1-SNAPSHOT`**, релиза ещё не было. Hex Phase 2–3 в процессе.
+
+## От legacy отказываемся «влегкую»
+
+- **Новый и переносимый код** — только `core.domain` / `core.application` / `core.port` + `core.adapter.*`.
+- **Не тянуть** legacy `api.repository.*` / `api.*Service` в `*ApplicationService`, coordinators (кроме временного JDBC внутри adapter).
+- **Не добавлять** dual-path («если port null — fallback на legacy») в application layer. Порт + adapter — единый путь.
+- **Пачки PR** нормальны: несколько legacy-вызовов убрать в одном PR, не выдерживать долгий параллельный контур.
+- Adapter (`Jdbc*Adapter`) может ещё делегировать в legacy `*Repository` — **внутри adapter**, не в application. Следующий шаг в той же пачке — вынести SQL из legacy, когда трогаем aggregate.
+
+## Уже на port (ориентир)
+
+| Aggregate | Port(s) | Application |
+|-----------|---------|-------------|
+| Message pin | `MessageRepositoryPort` | `MessagePinCoordinator` |
+| Chat read/mark | `MessageRepositoryPort`, `MessageQueryPort` | `ChatService`, `ReadReceiptService` |
+| Search | `MessageQueryPort` | `MessageSearchService` |
+| Migration import | `MessageRepositoryPort` | `MigrationImportProcessor` |
+| Message blocks | `BlockRepositoryPort` | `MessageApplicationService`, `ChatService`, `ContactService`, `BlocksResource` |
+| Mentions (send) | `ChatRepositoryPort`, `MessageMentionRepositoryPort` | `MessageMentionCoordinator` |
+
+## Остаток legacy (целевые пачки)
+
+Repository JDBC facades **закрыты** (Phase 3, 2026-06-19). Остаток — ad-hoc SQL в admin/metrics/health services (`AdminServerStatsService`, `PurgeStatusService`, `MlsMigrationService`, `ExportJobStaleCounts`, `HealthResource`).
+
+## БД и Flyway
+
+- **До первого релиза** схему можно **пересоздавать** (lab/QEMU/H2): wipe Postgres volume, `flyway clean` + migrate, или правка baseline-миграции вместо длинных backfill-цепочек — **если это упрощает hex/схему**.
+- Не блокировать рефакторинг ради «сохранить данные на dev-стенде».
+- Новые миграции всё равно коммитить в `modules/core-api/.../db/migration/` и при смене модели — строка в `docs/db/FLYWAY_AND_SCHEMA.md`.
+- **Stage/prod** (с Sep 2026+) — отдельная дисциплина; до появления стенда применяется lab-политика выше.
+
+## Агент
+
+- При hex-задаче: **удалять** legacy dependency из application, не «оставить на потом».
+- Тесты: H2 / unit; live stack — QEMU guest, не host Docker.
+- PR gate: `./gradlew buildIntegrity` (или модульные тесты при точечном hex).
+
+См. [`docs/ARCHITECTURE_CORE_PACKAGES.md`](../../docs/ARCHITECTURE_CORE_PACKAGES.md), [`docs/plans/08-hexagonal-refactoring.md`](../../docs/plans/08-hexagonal-refactoring.md).

@@ -4,6 +4,9 @@ COPY . .
 RUN gradle --console=plain :modules:core-api:distTar --no-daemon -x test
 
 FROM eclipse-temurin:25-jre
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl \
+  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/modules/core-api/build/distributions/core-api.tar .
 RUN tar xf core-api.tar && rm core-api.tar
@@ -11,5 +14,7 @@ COPY --from=builder /app/docs/external-stack-profiles.yaml /app/core-api/conf/ex
 EXPOSE 8080
 ENV APP_HOME=/app/core-api
 ENV HOT_RELOAD=false
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport"
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport -XX:+UseZGC"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:8080/api/v1/health/live >/dev/null || exit 1
 ENTRYPOINT ["/app/core-api/bin/core-api"]

@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.connectorruntime;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.plugin.PluginResponse;
 import com.avandocmsg.messenger.common.plugin.PluginEvent;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,7 +18,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 final class ConnectorProfileSupport {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final Pattern ISSUE_KEY = Pattern.compile("([A-Z][A-Z0-9]+-\\d+)");
     private static final HttpClient HTTP = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(3))
@@ -51,36 +52,36 @@ final class ConnectorProfileSupport {
         var text = event.text() != null ? event.text().trim() : "";
         var key = extractIssueKey(text);
         if (key == null) {
-            return PluginResponse.text("Jira: укажите ключ задачи, например `/jira OPS-1` или `OPS-1`");
+            return PluginResponse.text("Jira: СѓРєР°Р¶РёС‚Рµ РєР»СЋС‡ Р·Р°РґР°С‡Рё, РЅР°РїСЂРёРјРµСЂ `/jira OPS-1` РёР»Рё `OPS-1`");
         }
         try {
             var json = fetchJson(mockBase() + "/jira/rest/api/2/issue/" + key + ".json");
             var fields = json.path("fields");
             var summary = fields.path("summary").asText("?");
             var status = fields.path("status").path("name").asText("?");
-            return PluginResponse.text("**" + key + "**: " + summary + "\nСтатус: **" + status + "**");
+            return PluginResponse.text("**" + key + "**: " + summary + "\nРЎС‚Р°С‚СѓСЃ: **" + status + "**");
         } catch (Exception e) {
-            return PluginResponse.text("Jira mock недоступен: " + e.getMessage());
+            return PluginResponse.text("Jira mock РЅРµРґРѕСЃС‚СѓРїРµРЅ: " + e.getMessage());
         }
     }
 
     private static PluginResponse handleConfluence(PluginEvent event) {
         var query = confluenceQuery(event);
         if (query.isBlank()) {
-            return PluginResponse.text("Confluence: `/wiki <запрос>` или текст поиска");
+            return PluginResponse.text("Confluence: `/wiki <Р·Р°РїСЂРѕСЃ>` РёР»Рё С‚РµРєСЃС‚ РїРѕРёСЃРєР°");
         }
         try {
             var json = fetchJson(mockBase() + "/confluence/rest/api/content/search?q=" + urlEncode(query));
             var results = json.path("results");
             if (!results.isArray() || results.isEmpty()) {
-                return PluginResponse.text("Ничего не найдено по запросу: " + query);
+                return PluginResponse.text("РќРёС‡РµРіРѕ РЅРµ РЅР°Р№РґРµРЅРѕ РїРѕ Р·Р°РїСЂРѕСЃСѓ: " + query);
             }
             var first = results.get(0);
             var title = first.path("title").asText("?");
             var url = first.path("_links").path("webui").asText("");
             return PluginResponse.text("**" + title + "**\n" + (url.isBlank() ? "" : url));
         } catch (Exception e) {
-            return PluginResponse.text("Confluence mock недоступен: " + e.getMessage());
+            return PluginResponse.text("Confluence mock РЅРµРґРѕСЃС‚СѓРїРµРЅ: " + e.getMessage());
         }
     }
 
@@ -94,9 +95,9 @@ final class ConnectorProfileSupport {
             var json = fetchJson(mockBase() + "/naumen/api/tickets/" + urlEncode(ticketId) + ".json");
             var status = json.path("status").asText("?");
             var subject = json.path("subject").asText("?");
-            return PluginResponse.text("Заявка **" + ticketId + "**: " + subject + "\nСтатус: **" + status + "**");
+            return PluginResponse.text("Р—Р°СЏРІРєР° **" + ticketId + "**: " + subject + "\nРЎС‚Р°С‚СѓСЃ: **" + status + "**");
         } catch (Exception e) {
-            return PluginResponse.text("Naumen mock недоступен: " + e.getMessage());
+            return PluginResponse.text("Naumen mock РЅРµРґРѕСЃС‚СѓРїРµРЅ: " + e.getMessage());
         }
     }
 

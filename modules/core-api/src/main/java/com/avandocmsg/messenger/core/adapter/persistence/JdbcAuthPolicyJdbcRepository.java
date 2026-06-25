@@ -1,5 +1,9 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+
+import com.avandocmsg.messenger.common.json.MessengerJson;
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.auth.policy.AuthProviderEntry;
 import com.avandocmsg.messenger.api.auth.policy.OrgAuthPolicyRow;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -14,7 +18,7 @@ import java.util.UUID;
 
 public final class JdbcAuthPolicyJdbcRepository {
     private static final Logger log = LoggerFactory.getLogger(JdbcAuthPolicyJdbcRepository.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final TypeReference<List<AuthProviderEntry>> PROVIDERS_TYPE = new TypeReference<>() {};
 
     private final DataSource dataSource;
@@ -31,6 +35,7 @@ public final class JdbcAuthPolicyJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             try (var rs = stmt.executeQuery()) {
                 if (!rs.next()) {
@@ -45,6 +50,48 @@ public final class JdbcAuthPolicyJdbcRepository {
     }
 
     public OrgAuthPolicyRow upsert(OrgAuthPolicyRow row) {
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareWrite(conn);
+            if (JdbcDialect.isPostgres(conn)) {
+                return upsertOnConflict(conn, row);
+            }
+            return upsertLegacy(conn, row);
+        } catch (Exception e) {
+            log.error("upsert auth policy failed orgId={}", row.orgId(), e);
+            return row;
+        }
+    }
+
+    private OrgAuthPolicyRow upsertOnConflict(java.sql.Connection conn, OrgAuthPolicyRow row) throws Exception {
+        var sql = """
+            INSERT INTO org_auth_policy (
+                org_id, allow_local_password, allow_self_registration, providers_json,
+                last_apply_status, last_apply_error, updated_at, updated_by
+            ) VALUES (?, ?, ?, ?, ?, ?, now(), ?)
+            ON CONFLICT (org_id) DO UPDATE SET
+                allow_local_password = EXCLUDED.allow_local_password,
+                allow_self_registration = EXCLUDED.allow_self_registration,
+                providers_json = EXCLUDED.providers_json,
+                last_apply_status = EXCLUDED.last_apply_status,
+                last_apply_error = EXCLUDED.last_apply_error,
+                updated_at = now(),
+                updated_by = EXCLUDED.updated_by
+            """;
+        try (var stmt = conn.prepareStatement(sql)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
+            stmt.setObject(1, row.orgId());
+            stmt.setBoolean(2, row.allowLocalPassword());
+            stmt.setBoolean(3, row.allowSelfRegistration());
+            stmt.setString(4, providersToJson(row.providers()));
+            stmt.setString(5, row.lastApplyStatus());
+            stmt.setString(6, row.lastApplyError());
+            stmt.setObject(7, row.updatedBy());
+            stmt.executeUpdate();
+            return findByOrgId(row.orgId()).orElse(row);
+        }
+    }
+
+    private OrgAuthPolicyRow upsertLegacy(java.sql.Connection conn, OrgAuthPolicyRow row) throws Exception {
         var updateSql = """
             UPDATE org_auth_policy SET
                 allow_local_password = ?,
@@ -56,8 +103,8 @@ public final class JdbcAuthPolicyJdbcRepository {
                 updated_by = ?
             WHERE org_id = ?
             """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(updateSql)) {
+        try (var stmt = conn.prepareStatement(updateSql)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setBoolean(1, row.allowLocalPassword());
             stmt.setBoolean(2, row.allowSelfRegistration());
             stmt.setString(3, providersToJson(row.providers()));
@@ -68,19 +115,15 @@ public final class JdbcAuthPolicyJdbcRepository {
             if (stmt.executeUpdate() > 0) {
                 return findByOrgId(row.orgId()).orElse(row);
             }
-        } catch (Exception e) {
-            log.error("update auth policy failed orgId={}", row.orgId(), e);
-            return row;
         }
-
         var insertSql = """
             INSERT INTO org_auth_policy (
                 org_id, allow_local_password, allow_self_registration, providers_json,
                 last_apply_status, last_apply_error, updated_at, updated_by
             ) VALUES (?, ?, ?, ?, ?, ?, now(), ?)
             """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(insertSql)) {
+        try (var stmt = conn.prepareStatement(insertSql)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, row.orgId());
             stmt.setBoolean(2, row.allowLocalPassword());
             stmt.setBoolean(3, row.allowSelfRegistration());
@@ -90,9 +133,6 @@ public final class JdbcAuthPolicyJdbcRepository {
             stmt.setObject(7, row.updatedBy());
             stmt.executeUpdate();
             return findByOrgId(row.orgId()).orElse(row);
-        } catch (Exception e) {
-            log.error("insert auth policy failed orgId={}", row.orgId(), e);
-            return row;
         }
     }
 
@@ -104,6 +144,7 @@ public final class JdbcAuthPolicyJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, status);
             stmt.setString(2, error);
             stmt.setObject(3, orgId);

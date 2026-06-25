@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.admin.fleet;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.admin.fleet.dto.FleetSnapshotResponse;
 import com.avandocmsg.messenger.api.admin.ui.AdminStatsPort;
 import com.avandocmsg.messenger.api.config.AppConfig;
@@ -24,7 +25,7 @@ import java.util.concurrent.Executors;
 
 public final class FleetSnapshotService {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final FleetTargetRegistry registry;
     private final AdminStatsPort localStats;

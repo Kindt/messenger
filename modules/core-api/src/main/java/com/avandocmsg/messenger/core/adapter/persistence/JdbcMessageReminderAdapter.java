@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.port.MessageReminderPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +34,7 @@ public final class JdbcMessageReminderAdapter implements MessageReminderPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setObject(2, cmd.userId());
             stmt.setObject(3, cmd.chatId());
@@ -53,6 +56,7 @@ public final class JdbcMessageReminderAdapter implements MessageReminderPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -77,6 +81,7 @@ public final class JdbcMessageReminderAdapter implements MessageReminderPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, userId);
             stmt.setInt(2, lim);
             try (var rs = stmt.executeQuery()) {
@@ -104,6 +109,7 @@ public final class JdbcMessageReminderAdapter implements MessageReminderPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setTimestamp(1, Timestamp.from(now));
             stmt.setInt(2, lim);
             try (var rs = stmt.executeQuery()) {
@@ -124,6 +130,7 @@ public final class JdbcMessageReminderAdapter implements MessageReminderPort {
         var sql = "UPDATE message_reminders SET status = ? WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, status);
             stmt.setObject(2, id);
             return stmt.executeUpdate() > 0;

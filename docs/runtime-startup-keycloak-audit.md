@@ -104,14 +104,13 @@
   - Дополнительно задает `KORUS_COMPOSE_KEYCLOAK_PROD=docker/docker-compose.keycloak-prod.yml`.
 
 - `deploy/ansible/group_vars/korus_server.yml`
-  - `korus_deploy_profile: standard` по умолчанию.
-  - `pilot` выбирает lean stack, `standard` выбирает full stack.
+  - `korus_product_addons` — список включённых модулей.
+  - Пустой список → lean stack (Base only), непустой → full stack.
   - `korus_server_env_path=docker/.env.korus-server`.
 
 - `deploy/ansible/inventory/qemu/group_vars/all.yml`
   - QEMU-specific inventory.
   - Host-forwarded ports: API `18080`, WS `18082`, UI `19088`.
-  - `korus_deploy_profile: dev`.
   - `korus_fleet_lab: true`.
   - Fleet probes include Keycloak at `http://keycloak:8080/realms/avandocmsg`.
 
@@ -121,7 +120,6 @@
     - `KEYCLOAK_MASTER_PASSWORD`
     - `KEYCLOAK_ISSUER`
     - `KEYCLOAK_JWKS_URL`
-    - `KORUS_DEPLOY_PROFILE`
 
 ## Как запускается Keycloak
 
@@ -206,15 +204,15 @@ This overlay is used by `scripts/server-host-up.ps1` for two-host LAN dev:
 1. Sources `deploy/qemu/vm-bootstrap/korus-plain-build-env.sh`.
 2. Exports `SKIP_KORUS_ENSURE=1`.
 3. Sources `docker/.env.korus-server` when Ansible rendered it.
-4. Chooses script by `korus_deploy_profile`:
-   - `pilot` -> `scripts/lean-stack-up.sh --down-full-first`
-   - `enterprise` or scale enabled -> `scripts/enterprise-stack-up.sh --no-wait-ready`
-   - otherwise -> `scripts/full-stack-up.sh --no-wait-ready`
+4. Chooses script by `korus_product_addons`:
+   - empty → `scripts/lean-stack-up.sh --down-full-first`
+   - scale enabled → `scripts/enterprise-stack-up.sh --no-wait-ready`
+   - otherwise → `scripts/full-stack-up.sh --no-wait-ready`
 5. Waits:
    - `GET {{ korus_api_base_url }}/api/v1/health`
    - `GET {{ korus_keycloak_url }}/realms/avandocmsg`
 6. Runs `KEYCLOAK_URL={{ korus_keycloak_url }} bash scripts/keycloak-ensure-dev-users.sh`.
-7. Runs `scripts/wait-stack-ready.sh` for non-pilot profiles.
+7. Runs `scripts/wait-stack-ready.sh` for full stacks (non-empty addons).
 
 QEMU inventory details found in `deploy/ansible/inventory/qemu/group_vars/all.yml`:
 
@@ -222,7 +220,7 @@ QEMU inventory details found in `deploy/ansible/inventory/qemu/group_vars/all.ym
 - Browser/host WS: `127.0.0.1:18082`.
 - Browser/host UI: `127.0.0.1:19088`.
 - Web guest talks to API through slirp gateway: `http://10.0.2.2:18080`.
-- `korus_deploy_profile: dev`; the Ansible role currently maps anything other than `pilot`/`enterprise` to `scripts/full-stack-up.sh`.
+- `korus_product_addons: []` → `scripts/lean-stack-up.sh`; non-empty → `scripts/full-stack-up.sh`.
 
 ## Dev users and realm verification
 

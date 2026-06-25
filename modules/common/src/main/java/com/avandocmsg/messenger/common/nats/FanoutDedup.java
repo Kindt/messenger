@@ -1,28 +1,38 @@
 package com.avandocmsg.messenger.common.nats;
 
-import java.util.concurrent.ConcurrentHashMap;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+
+import java.time.Duration;
 
 /** In-memory dedup for fan-out delivers (PS-2.2 JetStream redelivery). */
 public final class FanoutDedup {
 
+    public static final int DEFAULT_MAX_SIZE = 10_000;
+
     private final long ttlMs;
-    private final ConcurrentHashMap<String, Long> expiryByKey = new ConcurrentHashMap<>();
+    private final Cache<String, Boolean> cache;
 
     public FanoutDedup(int ttlSeconds) {
+        this(ttlSeconds, DEFAULT_MAX_SIZE);
+    }
+
+    public FanoutDedup(int ttlSeconds, int maxSize) {
         this.ttlMs = ttlSeconds <= 0 ? 0L : ttlSeconds * 1000L;
+        if (ttlMs <= 0) {
+            this.cache = null;
+        } else {
+            this.cache = Caffeine.newBuilder()
+                .maximumSize(Math.max(1, maxSize))
+                .expireAfterWrite(Duration.ofMillis(ttlMs))
+                .build();
+        }
     }
 
     public static FanoutDedup fromEnv() {
-        var raw = System.getenv("PIPELINE_FANOUT_DEDUP_TTL_SECONDS");
-        var ttl = 60;
-        if (raw != null && !raw.isBlank()) {
-            try {
-                ttl = Integer.parseInt(raw.trim());
-            } catch (NumberFormatException ignored) {
-                ttl = 60;
-            }
-        }
-        return new FanoutDedup(ttl);
+        var ttl = parsePositiveInt(System.getenv("PIPELINE_FANOUT_DEDUP_TTL_SECONDS"), 60);
+        var maxSize = parsePositiveInt(System.getenv("PIPELINE_FANOUT_DEDUP_MAX_SIZE"), DEFAULT_MAX_SIZE);
+        return new FanoutDedup(ttl, maxSize);
     }
 
     public boolean enabled() {
@@ -31,27 +41,32 @@ public final class FanoutDedup {
 
     /** @return true when duplicate deliver should be skipped */
     public boolean isDuplicate(String messageId, String recipientKey) {
-        if (ttlMs <= 0 || messageId == null || messageId.isBlank()
+        if (cache == null || messageId == null || messageId.isBlank()
             || recipientKey == null || recipientKey.isBlank()) {
             return false;
         }
-        pruneExpired();
         var key = messageId + "|" + recipientKey;
-        var now = System.currentTimeMillis();
-        var candidateExpiry = now + ttlMs;
-        var prev = expiryByKey.putIfAbsent(key, candidateExpiry);
-        if (prev == null) {
-            return false;
-        }
-        if (prev > now) {
-            return true;
-        }
-        expiryByKey.put(key, candidateExpiry);
-        return false;
+        return cache.asMap().putIfAbsent(key, Boolean.TRUE) != null;
     }
 
-    private void pruneExpired() {
-        var now = System.currentTimeMillis();
-        expiryByKey.entrySet().removeIf(entry -> entry.getValue() <= now);
+    long estimatedSize() {
+        return cache == null ? 0L : cache.estimatedSize();
+    }
+
+    void cleanUp() {
+        if (cache != null) {
+            cache.cleanUp();
+        }
+    }
+
+    private static int parsePositiveInt(String raw, int defaultValue) {
+        if (raw == null || raw.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            return Math.max(0, Integer.parseInt(raw.trim()));
+        } catch (NumberFormatException ignored) {
+            return defaultValue;
+        }
     }
 }

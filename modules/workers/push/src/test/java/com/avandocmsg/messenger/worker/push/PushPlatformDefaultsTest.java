@@ -12,4 +12,10 @@ class PushPlatformDefaultsTest {
         assumeTrue(System.getenv("PUSH_METRICS_PORT") == null);
         assertEquals(9191, PushPlatformDefaults.metricsPort());
     }
+
+    @Test
+    void deviceQueryLimit_defaultsTo500WhenUnset() {
+        assumeTrue(System.getenv("PUSH_DEVICE_QUERY_LIMIT") == null);
+        assertEquals(500, PushPlatformDefaults.deviceQueryLimit());
+    }
 }

@@ -33,4 +33,5 @@ ENV WEB_CLIENT_PORT=9080
 ENV WEB_CLIENT_API_UPSTREAM=http://host.docker.internal:8080
 # URL WebSocket для браузера (не из контейнера): при открытии UI на localhost:9080 обычно указывают порт ws-gateway на хосте.
 ENV WEB_CLIENT_WS_PUBLIC_URL=ws://127.0.0.1:8081/ws
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:+UseContainerSupport -XX:+UseG1GC"
 ENTRYPOINT ["/app/web-client/bin/web-client"]

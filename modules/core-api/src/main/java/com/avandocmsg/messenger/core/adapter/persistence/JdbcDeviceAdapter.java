@@ -1,6 +1,8 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
 import com.avandocmsg.messenger.api.devices.dto.DeviceResponse;
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.port.DevicePort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 
@@ -35,6 +37,7 @@ public final class JdbcDeviceAdapter implements DevicePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(updateSql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, pushProvider);
             stmt.setString(2, pushToken);
             stmt.setObject(3, userId);
@@ -55,6 +58,7 @@ public final class JdbcDeviceAdapter implements DevicePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(insertSql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setObject(2, userId);
             stmt.setString(3, deviceName);
@@ -76,15 +80,20 @@ public final class JdbcDeviceAdapter implements DevicePort {
             FROM devices
             WHERE user_id = ?
             ORDER BY last_active_at DESC NULLS LAST, created_at DESC
+            LIMIT ?
             """;
         var out = new ArrayList<DeviceResponse>();
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, userId);
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareRead(conn);
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                stmt.setObject(1, userId);
+                stmt.setInt(2, JdbcListLimits.DEVICES);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     out.add(mapDeviceRow(rs));
                 }
+            }
             }
         } catch (SQLException e) {
             log.error("listForUser failed", e);
@@ -101,6 +110,7 @@ public final class JdbcDeviceAdapter implements DevicePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, userId);
             stmt.setString(2, deviceName);
             return stmt.executeUpdate() > 0;
@@ -118,6 +128,7 @@ public final class JdbcDeviceAdapter implements DevicePort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, userId);
             stmt.setString(2, deviceName);
             try (var rs = stmt.executeQuery()) {

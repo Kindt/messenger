@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.admin;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.api.migration.TelegramExportV1Parser;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.MessageId;
@@ -17,7 +18,7 @@ import java.util.UUID;
 
 /** Batch processor for migration import jobs (spec 022 T02273). */
 public class MigrationImportProcessor {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final String TG_CLIENT_PREFIX = "tg-import:";
 
     private final MigrationImportJobPort migrationImportJobPort;

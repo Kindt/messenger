@@ -9,7 +9,7 @@ cells:
     status: planned
     fqdn: internal-dev.messenger.cloud.example.com
     commercial_model: c_internal
-    sku: standard
+    modules: [all]
     images_tag: "0.1.0-SNAPSHOT"
     notes: "Phase 1 dogfood; provision via QEMU two-host or stage when available"
 
@@ -17,7 +17,7 @@ cells:
     status: planned
     fqdn: chat.acme.example.com
     commercial_model: b_dedicated
-    sku: standard
+    modules: [addon-engage, addon-search, addon-retention, addon-export, addon-archive, addon-deep-archive, addon-live, addon-bots, addon-integrations, addon-e2ee, addon-enterprise-auth]
     images_tag: "TBD"
     notes: "Example B Cell — do not provision without sales contract"
 

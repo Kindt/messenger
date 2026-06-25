@@ -3,73 +3,96 @@ plugins {
     war
 }
 
-val tomcatVersion = "11.0.22"
-val jerseyVersion = "4.0.2"
-val swaggerVersion = "2.2.49"
-
 dependencies {
     implementation(project(":modules:common"))
     implementation(project(":modules:core-domain"))
     implementation(project(":modules:core-port"))
 
     // Tomcat embedded
-    implementation("org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion")
-    implementation("org.apache.tomcat.embed:tomcat-embed-jasper:$tomcatVersion")
-    implementation("org.apache.tomcat.embed:tomcat-embed-el:$tomcatVersion")
+    implementation(libs.tomcat.embed.core)
+    implementation(libs.tomcat.embed.jasper)
+    implementation(libs.tomcat.embed.el)
 
     // Jersey (JAX-RS)
-    implementation("org.glassfish.jersey.containers:jersey-container-servlet:$jerseyVersion")
-    implementation("org.glassfish.jersey.inject:jersey-hk2:$jerseyVersion")
-    implementation("org.glassfish.jersey.media:jersey-media-json-jackson:$jerseyVersion")
-    implementation("org.glassfish.jersey.media:jersey-media-multipart:$jerseyVersion")
-    implementation("org.glassfish.jersey.ext:jersey-bean-validation:$jerseyVersion")
+    implementation(libs.jersey.container.servlet)
+    implementation(libs.jersey.hk2)
+    implementation(libs.jersey.media.json.jackson) {
+        exclude(group = "com.fasterxml.jackson.core")
+        exclude(group = "com.fasterxml.jackson.datatype")
+        exclude(group = "com.fasterxml.jackson.module")
+        exclude(group = "com.fasterxml.jackson.jakarta.rs")
+    }
+    implementation(libs.jersey.media.multipart)
+    implementation(libs.jersey.bean.validation)
 
     // Jakarta EE
-    implementation("jakarta.servlet:jakarta.servlet-api:6.0.0")
-    implementation("jakarta.ws.rs:jakarta.ws.rs-api:4.0.0")
-    implementation("jakarta.validation:jakarta.validation-api:3.0.2")
+    implementation(libs.jakarta.servlet.api)
+    implementation(libs.jakarta.ws.rs.api)
+    implementation(libs.jakarta.validation.api)
 
     // DB
-    implementation("org.postgresql:postgresql:42.7.1")
-    implementation("com.zaxxer:HikariCP:5.1.0")
-    implementation("org.flywaydb:flyway-core:10.8.1")
-    implementation("org.flywaydb:flyway-database-postgresql:10.8.1")
+    implementation(libs.postgresql)
+    implementation(libs.hikari) {
+        exclude(group = "org.slf4j", module = "slf4j-api")
+    }
+    implementation(libs.flyway.core) {
+        exclude(group = "com.fasterxml.jackson.dataformat", module = "jackson-dataformat-toml")
+    }
+    implementation(libs.flyway.postgresql)
 
     // Redis + NATS
-    implementation("io.lettuce:lettuce-core:6.3.2.RELEASE")
-    implementation("io.nats:jnats:2.17.4")
+    implementation(libs.lettuce)
+    implementation(libs.jnats)
 
-    // JSON + YAML catalog
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.17.0")
+    // JSON + YAML catalog (databind/jsr310 via :modules:common BOM)
+    implementation(libs.jackson.dataformat.yaml)
+    implementation(libs.snakeyaml)
 
     // Logging
-    implementation("ch.qos.logback:logback-classic:1.5.3")
-    implementation("org.slf4j:slf4j-api:2.0.12")
+    implementation(libs.bundles.logging)
 
     // Auth (JWT)
-    implementation("com.nimbusds:nimbus-jose-jwt:9.37.3")
+    implementation(libs.nimbus.jose.jwt)
 
     // OpenAPI / Swagger
-    implementation("io.swagger.core.v3:swagger-jaxrs2-jakarta:$swaggerVersion")
-    implementation("io.swagger.core.v3:swagger-annotations-jakarta:$swaggerVersion")
+    implementation(libs.swagger.jaxrs2.jakarta) {
+        exclude(group = "org.slf4j", module = "slf4j-api")
+        exclude(group = "org.yaml", module = "snakeyaml")
+        exclude(group = "com.fasterxml.jackson.jakarta.rs")
+        exclude(group = "com.fasterxml.jackson.core")
+        exclude(group = "com.fasterxml.jackson.dataformat")
+        exclude(group = "com.fasterxml.jackson.datatype")
+        exclude(group = "com.fasterxml.jackson.module")
+    }
+    implementation(libs.swagger.annotations.jakarta)
 
     // File storage (MinIO S3-compatible)
-    implementation("io.minio:minio:8.5.17")
+    implementation(libs.minio) {
+        exclude(group = "com.fasterxml.jackson.core", module = "jackson-databind")
+        exclude(group = "com.fasterxml.jackson.core", module = "jackson-annotations")
+        exclude(group = "com.fasterxml.jackson.core", module = "jackson-core")
+    }
 
     // Crypto (E2EE / MLS)
-    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+    implementation(libs.bcprov.jdk18on)
 
     // Solr (optional message search)
-    implementation("org.apache.solr:solr-solrj:10.0.0")
+    implementation(libs.solr.solrj) {
+        exclude(group = "io.swagger.core.v3", module = "swagger-annotations-jakarta")
+        exclude(group = "jakarta.ws.rs", module = "jakarta.ws.rs-api")
+        exclude(group = "com.fasterxml.jackson.core")
+        exclude(group = "com.fasterxml.jackson.dataformat")
+        exclude(group = "com.fasterxml.jackson.datatype")
+        exclude(group = "com.fasterxml.jackson.module")
+        exclude(group = "com.fasterxml.jackson.jakarta.rs")
+    }
 
-    testImplementation("com.h2database:h2:2.2.224")
+    testImplementation(libs.h2)
 
     // Prometheus text exposition (ТЗ п. 22, observability baseline)
-    implementation("io.prometheus:simpleclient:0.16.0")
-    implementation("io.prometheus:simpleclient_hotspot:0.16.0")
-    implementation("io.prometheus:simpleclient_common:0.16.0")
+    implementation(libs.prometheus.simpleclient)
+    implementation(libs.prometheus.simpleclient.hotspot)
+    implementation(libs.prometheus.simpleclient.common)
 }
 
 application {
@@ -85,7 +108,12 @@ application {
     }
 }
 
+tasks.named("startScripts") {
+    notCompatibleWithConfigurationCache("startScripts resolves application runtime classpath")
+}
+
 tasks.named<War>("war") {
+    notCompatibleWithConfigurationCache("war filters runtimeClasspath with file predicate")
     archiveBaseName.set("core-api")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     setClasspath(
@@ -102,9 +130,47 @@ tasks.named<ProcessResources>("processResources") {
     }
 }
 
+tasks.register<Exec>("buildAdminUiAssets") {
+    group = "admin-ui"
+    description = "Build admin-ui static assets (minified CSS, JS bundle, locale manifest)"
+    workingDir = rootProject.file("modules/web-client/webui-build")
+    val npm = if (System.getProperty("os.name").lowercase().contains("windows")) "npm.cmd" else "npm"
+    commandLine(npm, "run", "build:admin")
+    inputs.file(rootProject.file("modules/core-api/admin-ui-build/src/styles.css"))
+    inputs.file(rootProject.file("modules/core-api/src/main/resources/admin-ui/index.html"))
+    inputs.files(
+        rootProject.file("modules/core-api/src/main/resources/admin-ui/admin-i18n.js"),
+        rootProject.file("modules/core-api/src/main/resources/admin-ui/ui-helpers.js"),
+        rootProject.file("modules/core-api/src/main/resources/admin-ui/panels.js"),
+        rootProject.file("modules/core-api/src/main/resources/admin-ui/app.js"),
+    )
+    inputs.dir(rootProject.file("modules/core-api/src/main/resources/admin-ui/locales"))
+    outputs.file(rootProject.file("modules/core-api/src/main/resources/admin-ui/styles.css"))
+    outputs.file(rootProject.file("modules/core-api/src/main/resources/admin-ui/admin.bundle.js"))
+    outputs.file(rootProject.file("modules/core-api/src/main/resources/admin-ui/locales/manifest.json"))
+}
+
+tasks.register<Exec>("testAdminUiI18n") {
+    group = "admin-ui"
+    description = "Node smoke for admin-ui i18n and locale parity"
+    dependsOn("buildAdminUiAssets")
+    workingDir = rootProject.file("modules/web-client/webui-build")
+    val npm = if (System.getProperty("os.name").lowercase().contains("windows")) "npm.cmd" else "npm"
+    commandLine(npm, "run", "test:admin-i18n")
+    inputs.file(rootProject.file("modules/web-client/webui-build/scripts/test-admin-i18n.mjs"))
+    inputs.files(
+        rootProject.file("modules/core-api/src/main/resources/admin-ui/app.js"),
+        rootProject.file("modules/core-api/src/main/resources/admin-ui/panels.js"),
+        rootProject.file("modules/core-api/src/main/resources/admin-ui/admin-i18n.js"),
+        rootProject.file("modules/core-api/src/main/resources/admin-ui/index.html"),
+    )
+    inputs.dir(rootProject.file("modules/core-api/src/main/resources/admin-ui/locales"))
+}
+
 tasks.register<Test>("benchmark") {
     group = "verification"
     description = "Lightweight CoreApi/MLS timing guards (*BenchmarkTest)"
+    notCompatibleWithConfigurationCache("benchmark wires source set classpath directly")
     testClassesDirs = sourceSets["test"].output.classesDirs
     classpath = sourceSets["test"].runtimeClasspath
     filter {

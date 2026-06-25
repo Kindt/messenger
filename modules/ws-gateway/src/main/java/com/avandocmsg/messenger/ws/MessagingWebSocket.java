@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.ws;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.dto.RtcSignalEvent;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
@@ -12,6 +13,7 @@ import jakarta.websocket.OnClose;
 import jakarta.websocket.OnError;
 import jakarta.websocket.OnMessage;
 import jakarta.websocket.OnOpen;
+import jakarta.websocket.PongMessage;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.HandshakeRequest;
 import jakarta.websocket.server.ServerEndpoint;
@@ -27,16 +29,18 @@ import java.util.UUID;
 @ServerEndpoint(value = "/ws", configurator = MessagingWebSocket.OriginHandshakeConfigurator.class)
 public class MessagingWebSocket {
     private static final Logger log = LoggerFactory.getLogger(MessagingWebSocket.class);
-    private static final ObjectMapper WS_JSON = new ObjectMapper();
+    private static final ObjectMapper WS_JSON = MessengerJson.mapper();
     static final String ORIGIN_PROP = "ws.origin";
 
     static Connection natsConnection;
     static WsNatsDeliveryHub deliveryHub;
+    static WsSessionKeepalive sessionKeepalive;
     static WsChatMembershipLoader chatMembershipLoader;
     static WsTokenValidator tokenValidator;
     /** Set in {@link com.avandocmsg.messenger.ws.bootstrap.WsGatewayComposition#start()} before accepting connections. */
     static UserMessageSource messages;
     static List<String> allowedOrigins = List.of("*");
+    static boolean perMessageDeflateEnabled = true;
 
     /** Called from {@link com.avandocmsg.messenger.ws.bootstrap.WsGatewayComposition} before accepting connections. */
     public static void configureStaticContext(
@@ -45,13 +49,17 @@ public class MessagingWebSocket {
             Connection nats,
             WsChatMembershipLoader membershipLoader,
             WsNatsDeliveryHub hub,
-            List<String> origins) {
+            WsSessionKeepalive keepalive,
+            List<String> origins,
+            boolean perMessageDeflate) {
         tokenValidator = validator;
         messages = messageSource;
         natsConnection = nats;
         chatMembershipLoader = membershipLoader;
         deliveryHub = hub;
+        sessionKeepalive = keepalive;
         allowedOrigins = origins;
+        perMessageDeflateEnabled = perMessageDeflate;
     }
 
     public static final class OriginHandshakeConfigurator extends ServerEndpointConfig.Configurator {
@@ -61,6 +69,19 @@ public class MessagingWebSocket {
             if (origins != null && !origins.isEmpty()) {
                 sec.getUserProperties().put(ORIGIN_PROP, origins.get(0));
             }
+        }
+
+        @Override
+        public List<jakarta.websocket.Extension> getNegotiatedExtensions(
+                List<jakarta.websocket.Extension> installed,
+                List<jakarta.websocket.Extension> requested) {
+            var negotiated = super.getNegotiatedExtensions(installed, requested);
+            if (perMessageDeflateEnabled) {
+                return negotiated;
+            }
+            return negotiated.stream()
+                .filter(ext -> !"permessage-deflate".equalsIgnoreCase(ext.getName()))
+                .toList();
         }
     }
 
@@ -120,6 +141,10 @@ public class MessagingWebSocket {
 
     @OnMessage(maxMessageSize = 65_536)
     public void onMessage(String text, Session session) {
+        var ka = sessionKeepalive;
+        if (ka != null) {
+            ka.touch(session);
+        }
         var userId = (String) session.getUserProperties().get("ws.userId");
         if (userId == null || natsConnection == null) {
             return;
@@ -141,6 +166,14 @@ public class MessagingWebSocket {
             natsConnection.publish(NatsSubjects.RTC_SIGNAL, WS_JSON.writeValueAsBytes(evt));
         } catch (Exception e) {
             log.debug("Ignoring invalid client WS payload: {}", e.toString());
+        }
+    }
+
+    @OnMessage
+    public void onPong(PongMessage pong, Session session) {
+        var ka = sessionKeepalive;
+        if (ka != null) {
+            ka.onPong(session);
         }
     }
 

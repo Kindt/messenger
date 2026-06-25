@@ -1,5 +1,9 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
+import com.avandocmsg.messenger.common.federation.FederationDeliveryPolicy;
 import com.avandocmsg.messenger.core.port.FederationTrustPort;
 
 import org.slf4j.Logger;
@@ -14,6 +18,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/** Cross-org federation trust registry (spec 022 MVP). No {@code federation_outbox} table yet — delivery
+ *  backoff/batch/payload limits for a future worker are documented in {@link FederationDeliveryPolicy}.
+ *  List queries are capped via {@link JdbcListLimits#FEDERATION_TRUST}. */
 public final class JdbcFederationTrustAdapter implements FederationTrustPort {
     private static final Logger log = LoggerFactory.getLogger(JdbcFederationTrustAdapter.class);
     private final DataSource dataSource;
@@ -29,12 +36,22 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
         }
         var id = UUID.randomUUID();
         var st = status != null ? status : "active";
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareWrite(conn);
+            if (JdbcDialect.isPostgres(conn)) {
+                return insertOnConflict(conn, id, orgId, partnerOrgId, st, expiresAt);
+            }
+        } catch (Exception e) {
+            log.error("federation trust postgres upsert failed", e);
+            return null;
+        }
         var insertSql = """
             INSERT INTO federation_trust (id, org_id, partner_org_id, status, expires_at, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(insertSql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             bindTrustRow(stmt, id, orgId, partnerOrgId, st, expiresAt);
             stmt.executeUpdate();
             return id;
@@ -50,6 +67,29 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
         return upsertExisting(orgId, partnerOrgId, st, expiresAt);
     }
 
+    private UUID insertOnConflict(
+        java.sql.Connection conn,
+        UUID id,
+        UUID orgId,
+        UUID partnerOrgId,
+        String status,
+        Instant expiresAt) throws SQLException {
+        var sql = """
+            INSERT INTO federation_trust (id, org_id, partner_org_id, status, expires_at, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (org_id, partner_org_id) DO UPDATE SET
+                status = EXCLUDED.status,
+                expires_at = EXCLUDED.expires_at,
+                updated_at = CURRENT_TIMESTAMP
+            """;
+        try (var stmt = conn.prepareStatement(sql)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
+            bindTrustRow(stmt, id, orgId, partnerOrgId, status, expiresAt);
+            stmt.executeUpdate();
+        }
+        return findTrustId(orgId, partnerOrgId).orElse(null);
+    }
+
     private UUID upsertExisting(UUID orgId, UUID partnerOrgId, String status, Instant expiresAt) {
         var updateSql = """
             UPDATE federation_trust SET status = ?, expires_at = ?, updated_at = CURRENT_TIMESTAMP
@@ -57,6 +97,7 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(updateSql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, status);
             if (expiresAt != null) {
                 stmt.setTimestamp(2, Timestamp.from(expiresAt));
@@ -77,6 +118,7 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
         var sql = "SELECT id FROM federation_trust WHERE org_id = ? AND partner_org_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             stmt.setObject(2, partnerOrgId);
             try (var rs = stmt.executeQuery()) {
@@ -136,6 +178,7 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
             stmt.setObject(2, partnerOrgId);
             try (var rs = stmt.executeQuery()) {
@@ -155,9 +198,11 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             LIMIT 1
             """;
         try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql);
-             var rs = stmt.executeQuery()) {
+             var stmt = conn.prepareStatement(sql)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
+            try (var rs = stmt.executeQuery()) {
             return rs.next();
+            }
         } catch (Exception e) {
             log.error("federation trust anyActive failed", e);
             return false;
@@ -172,6 +217,7 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -189,6 +235,7 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
         var sql = "UPDATE federation_trust SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, status);
             stmt.setObject(2, id);
             return stmt.executeUpdate() > 0;
@@ -206,16 +253,20 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             WHERE org_id = ? AND status = 'active'
               AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
             ORDER BY created_at DESC
+            LIMIT ?
             """
             : """
             SELECT id, org_id, partner_org_id, status, expires_at
             FROM federation_trust
             WHERE org_id = ?
             ORDER BY created_at DESC
+            LIMIT ?
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
+            stmt.setInt(2, JdbcListLimits.FEDERATION_TRUST);
             try (var rs = stmt.executeQuery()) {
                 var out = new ArrayList<TrustRow>();
                 while (rs.next()) {

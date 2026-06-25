@@ -1,8 +1,11 @@
 package com.avandocmsg.messenger.worker.deeparchive;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.json.MessengerJson;
+import com.avandocmsg.messenger.common.health.WorkerDependencyHealth;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
+import com.avandocmsg.messenger.common.nats.NatsConnectionOptions;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.avandocmsg.messenger.common.retention.ArchiveSnapshotEnvelopeDigest;
 import com.avandocmsg.messenger.common.retention.ArchiveSnapshotFormat;
@@ -19,7 +22,6 @@ import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.nats.client.Connection;
 import io.nats.client.Nats;
-import io.nats.client.Options;
 import io.prometheus.client.hotspot.DefaultExports;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +29,6 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 
 /**
  * Consumes {@link NatsSubjects#MSG_EVENT_DEEP_ARCHIVE} after {@link com.avandocmsg.messenger.worker.archiver.ArchiverWorker}
@@ -44,7 +45,7 @@ import java.time.Duration;
  */
 public class DeepArchiverWorker {
     private static final Logger log = LoggerFactory.getLogger(DeepArchiverWorker.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final String QUEUE_GROUP = "deep-archiver-workers";
 
     private final Connection connection;
@@ -78,12 +79,7 @@ public class DeepArchiverWorker {
         this.compression = compression != null ? compression : SnapshotCompression.NONE;
         this.zstdLevel = zstdLevel;
         this.workerMessages = workerMessages;
-        var options = Options.builder()
-            .server(natsUrl)
-            .connectionName("deep-archiver-worker")
-            .reconnectWait(Duration.ofSeconds(2))
-            .maxReconnects(-1)
-            .build();
+        var options = NatsConnectionOptions.clientBuilder(natsUrl, "deep-archiver-worker").build();
         this.connection = Nats.connect(options);
         log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }
@@ -100,6 +96,10 @@ public class DeepArchiverWorker {
         log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_DEEP_ARCHIVE, QUEUE_GROUP));
     }
 
+    boolean healthReady() {
+        return WorkerDependencyHealth.natsConnected(connection);
+    }
+
     private void ensureBucket() throws Exception {
         var exists = minioClient.bucketExists(BucketExistsArgs.builder().bucket(minioBucket).build());
         if (!exists) {
@@ -110,17 +110,17 @@ public class DeepArchiverWorker {
 
     private void handle(io.nats.client.Message msg) {
         try {
-            var payload = new String(msg.getData(), StandardCharsets.UTF_8);
-            var event = MAPPER.readValue(payload, MessageWorkerEvent.class);
+            var data = msg.getData();
+            var event = MAPPER.readValue(data, MessageWorkerEvent.class);
             log.info(workerMessages.format("worker.deep_archiver.received", event.messageId(), event.chatId()));
             if (minioEnabled) {
-                var root = MAPPER.readTree(payload);
+                var root = MAPPER.readTree(data);
                 var candidateText = resolveCandidateText(event, root);
                 if (shouldSkipDeepArchiveForContent(candidateText)) {
                     log.info(workerMessages.format("worker.deep_archiver.skipped_file_ref", event.messageId()));
                     return;
                 }
-                var bytes = minioSnapshotBytesFromNatsJson(payload, MAPPER);
+                var bytes = minioSnapshotBytesFromNatsJson(new String(data, StandardCharsets.UTF_8), MAPPER);
                 if (shouldWriteChunked(chunkSizeBytes, bytes.length)) {
                     writeChunked(event.messageId(), bytes);
                 } else {
@@ -257,7 +257,7 @@ public class DeepArchiverWorker {
             var metricsPort = parseMetricsPort(System.getenv("DEEP_ARCHIVER_METRICS_PORT"));
             var worker = new DeepArchiverWorker(natsUrl, client, bucket, minioOk, chunkSize, workerMessages);
             if (metricsPort > 0) {
-                metricsServer = DeepArchiverMetricsHttpServer.start(metricsPort, () -> true, workerMessages);
+                metricsServer = DeepArchiverMetricsHttpServer.start(metricsPort, worker::healthReady, workerMessages);
                 log.info(workerMessages.format("worker.deep_archiver.metrics_url", metricsServer.getPort()));
             }
             worker.start();

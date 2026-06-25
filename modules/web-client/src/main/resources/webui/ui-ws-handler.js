@@ -4,9 +4,23 @@
 (function (global) {
   "use strict";
 
+  function parseWsPayload(raw) {
+    if (raw == null) {
+      return null;
+    }
+    var s = typeof raw === "string" ? raw : String(raw);
+    if (s.length < 2 || s.charCodeAt(0) !== 123) {
+      return null;
+    }
+    return JSON.parse(s);
+  }
+
   function handleWsIncoming(ev, ctx) {
     try {
-      var data = JSON.parse(String(ev.data));
+      var data = parseWsPayload(ev && ev.data);
+      if (!data) {
+        return;
+      }
       if (data && data.type === "rtc_signal") {
         ctx.sendHeartbeatThrottled();
         ctx.handleRtcEnvelope(data);
@@ -122,5 +136,6 @@
 
   global.KorusUiWsHandler = {
     handleWsIncoming: handleWsIncoming,
+    parseWsPayload: parseWsPayload,
   };
 })(typeof globalThis !== "undefined" ? globalThis : globalThis);

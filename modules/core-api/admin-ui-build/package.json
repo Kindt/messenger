@@ -1,0 +1,12 @@
+{
+  "name": "korus-admin-ui-build",
+  "private": true,
+  "description": "Build pipeline for core-api admin-ui static assets (FR-112)",
+  "scripts": {
+    "build:styles": "node ../../web-client/webui-build/scripts/build-admin-styles.mjs",
+    "build:bundle": "node ../../web-client/webui-build/scripts/build-admin-bundle.mjs",
+    "build:manifest": "node ../../web-client/webui-build/scripts/build-admin-manifest.mjs",
+    "build": "npm run build:manifest && npm run build:styles && npm run build:bundle",
+    "test:i18n": "node ../../web-client/webui-build/scripts/test-admin-i18n.mjs"
+  }
+}

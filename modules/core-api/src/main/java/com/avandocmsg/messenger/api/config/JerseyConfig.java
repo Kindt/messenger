@@ -358,6 +358,7 @@ public class JerseyConfig extends ResourceConfig {
         register(CorsPreflightFilter.class);
         register(CorsResponseFilter.class);
         register(new SecurityHeadersFilter(appConfig));
+        register(JsonGZipWriterInterceptor.class);
         register(RequestContextMdcClearFilter.class);
         register(JsonMappingExceptionMapper.class);
         register(ForbiddenExceptionMapper.class);

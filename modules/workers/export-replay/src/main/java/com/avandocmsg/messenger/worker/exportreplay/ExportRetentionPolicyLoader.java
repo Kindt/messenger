@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.exportreplay;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.export.ExportGdprDisclosures;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -12,10 +13,10 @@ import java.sql.SQLException;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Loads effective chat retention policy for export JSON (platform → org → chat). */
+/** Loads effective chat retention policy for export JSON (platform в†’ org в†’ chat). */
 final class ExportRetentionPolicyLoader {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private ExportRetentionPolicyLoader() {
     }

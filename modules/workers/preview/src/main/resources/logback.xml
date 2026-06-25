@@ -1,10 +1,8 @@
 <configuration>
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-    </appender>
-    <root level="INFO">
-        <appender-ref ref="STDOUT"/>
+    <property name="LOG_FILE" value="logs/preview.log" />
+    <include resource="logback-shared-appenders.xml" />
+    <root level="${LOG_LEVEL}">
+        <appender-ref ref="ASYNC_JSON" />
+        <appender-ref ref="ASYNC_JSON_FILE" />
     </root>
 </configuration>

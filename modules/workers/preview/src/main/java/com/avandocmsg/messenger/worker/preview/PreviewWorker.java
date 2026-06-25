@@ -1,30 +1,34 @@
 package com.avandocmsg.messenger.worker.preview;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.json.MessengerJson;
+import com.avandocmsg.messenger.common.health.WorkerDependencyHealth;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import com.avandocmsg.messenger.common.jdbc.HikariDataSources;
+import com.avandocmsg.messenger.common.nats.MessageDownstreamRouting;
+import com.avandocmsg.messenger.common.nats.NatsConnectionOptions;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.nats.client.Connection;
 import io.nats.client.Nats;
-import io.nats.client.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.prometheus.client.hotspot.DefaultExports;
 
 import javax.sql.DataSource;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.UUID;
 
 /**
- * Link preview MVP: consumes {@link NatsSubjects#MSG_EVENT_INDEX}, optionally reads {@code messages.content}
+ * Link preview MVP: consumes {@link NatsSubjects#MSG_EVENT_DOWNSTREAM} (route {@code index}),
+ * optionally reads {@code messages.content}
  * from the hot DB when {@code PREVIEW_DB_JDBC_URL} is set, extracts the first HTTP(S) URL, runs an SSRF-aware GET,
  * caches titles in-memory (TTL). Development-only {@code PREVIEW_TEST_URL} is used when no URL is found in plaintext.
  */
 public class PreviewWorker {
     private static final Logger log = LoggerFactory.getLogger(PreviewWorker.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final String QUEUE_GROUP = "preview-workers";
 
     private final Connection connection;
@@ -45,26 +49,32 @@ public class PreviewWorker {
         this.fetcher = fetcher;
         this.cache = cache;
         this.previewTestUrl = previewTestUrl != null && !previewTestUrl.isBlank() ? previewTestUrl.trim() : null;
-        var options = Options.builder()
-            .server(natsUrl)
-            .connectionName("preview-worker")
-            .reconnectWait(Duration.ofSeconds(2))
-            .maxReconnects(-1)
-            .build();
+        var options = NatsConnectionOptions.clientBuilder(natsUrl, "preview-worker").build();
         this.connection = Nats.connect(options);
         log.info(workerMessages.format("worker.common.connected_nats", natsUrl));
     }
 
     public void start() {
         var dispatcher = connection.createDispatcher(this::handle);
-        dispatcher.subscribe(NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP);
-        log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP));
+        dispatcher.subscribe(NatsSubjects.MSG_EVENT_DOWNSTREAM, QUEUE_GROUP);
+        log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_DOWNSTREAM, QUEUE_GROUP));
+        if (MessageDownstreamRouting.legacySubscribeEnabled()) {
+            dispatcher.subscribe(NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP);
+            log.info(workerMessages.format("worker.common.subscribed", NatsSubjects.MSG_EVENT_INDEX, QUEUE_GROUP));
+        }
     }
 
     private void handle(io.nats.client.Message msg) {
         try {
-            var payload = new String(msg.getData(), StandardCharsets.UTF_8);
-            var event = MAPPER.readValue(payload, MessageWorkerEvent.class);
+            MessageDownstreamRouting.dispatchDownstreamMessage(
+                msg, MessageDownstreamRouting.ROUTE_INDEX, MAPPER, this::processWorkerEvent);
+        } catch (MessageDownstreamRouting.DownstreamDispatchException e) {
+            log.error(workerMessages.get("worker.preview.handle_failed"), e.getCause());
+        }
+    }
+
+    private void processWorkerEvent(MessageWorkerEvent event) {
+        try {
             resolveAndFetch(event);
         } catch (Exception e) {
             log.error(workerMessages.get("worker.preview.handle_failed"), e);
@@ -110,6 +120,10 @@ public class PreviewWorker {
         return connection.getStatus() == Connection.Status.CONNECTED;
     }
 
+    boolean healthReady() {
+        return WorkerDependencyHealth.natsAndOptionalJdbc(connection, previewDataSource);
+    }
+
     public void shutdown() {
         try {
             connection.close();
@@ -140,14 +154,15 @@ public class PreviewWorker {
 
         PreviewHealthHttpServer healthServer = null;
         try {
+            DefaultExports.initialize();
             var worker = new PreviewWorker(natsUrl, previewDs, fetcher, cache, testUrl, workerMessages);
             worker.start();
             var metricsPort = parseIntEnv("PREVIEW_METRICS_PORT", 9191);
             if (metricsPort > 0) {
                 healthServer = PreviewHealthHttpServer.start(metricsPort,
-                    (PreviewReadinessCheck) worker::natsConnected,
+                    (PreviewReadinessCheck) worker::healthReady,
                     workerMessages);
-                log.info(workerMessages.format("worker.preview.health_url", healthServer.getPort()));
+                log.info(workerMessages.format("worker.preview.metrics_url", healthServer.getPort()));
             }
             PreviewHealthHttpServer healthRef = healthServer;
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {

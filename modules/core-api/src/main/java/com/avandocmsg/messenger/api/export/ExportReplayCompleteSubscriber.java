@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.export;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.core.port.ExportJobPort;
 import com.avandocmsg.messenger.common.dto.ExportReplayCompleteEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
@@ -18,7 +19,7 @@ import java.util.UUID;
 public final class ExportReplayCompleteSubscriber implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(ExportReplayCompleteSubscriber.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
     static final String QUEUE_GROUP = "core-api-export-complete";
 
     private final ExportJobPort exportJobPort;

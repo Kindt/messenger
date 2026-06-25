@@ -317,6 +317,10 @@
       "members": "참가자",
       "join": "참여"
     },
+    "search": {
+      "emptyTitle": "일치하는 결과 없음",
+      "emptyHint": "검색어를 바꾸거나 철자를 확인하세요."
+    },
     "auth": {
       "username": "사용자 이름",
       "password": "비밀번호",
@@ -415,6 +419,8 @@
       "confLiveDefault": "화상 회의 진행 중",
       "searchPlaceholder": "이 채팅에서 검색(2자 이상, E2EE 제외)…",
       "nothingInChat": "이 채팅에서 찾은 항목이 없습니다.",
+      "searchEmptyTitle": "이 채팅에 결과 없음",
+      "searchEmptyHint": "다른 단어를 쓰거나 상단 전체 검색을 사용하세요.",
       "replyPrefix": "답장: {text}",
       "markdownHint": "Markdown: **굵게**, *기울임*, `코드`, [링크](https://…)",
       "autoDelete": "자동 삭제:",
@@ -590,6 +596,21 @@
       "reconnecting": "Reconnecting…",
       "quotaHint": "Cache keeps recent messages for selected chats."
     },
+    "export": {
+      "cancelled": "Export cancelled",
+      "failed": "Export failed",
+      "failedJob": "Export finished with an error",
+      "timeout": "Export wait timed out",
+      "statusQueued": "queued",
+      "statusProcessing": "processing",
+      "statusWaiting": "waiting",
+      "started": "Export started — you can switch chats; download will begin automatically",
+      "ready": "Export ready, archive downloaded",
+      "alreadyRunning": "Another export is already running",
+      "noJobId": "Server did not return job_id",
+      "cancelFailed": "Could not cancel export",
+      "attachmentsPreview": "Export attachments: {count} file(s)"
+    },
     "message": {
       "image": "이미지",
       "video": "비디오",
@@ -675,6 +696,7 @@
       "presenceOffline": "오프라인",
       "customStatus": "상태",
       "dndSchedule": "방해 금지 종료",
+      "dndSeeNotificationsTab": "방해 금지 시간은 «알림» 탭에서 설정합니다.",
       "dndUntilManual": "내가 끌 때까지",
       "dndUntil30m": "30분",
       "dndUntil1h": "1시간",
@@ -790,6 +812,15 @@
       "directoryHint": "Trusted orgs for cross-org chats (MVP).",
       "trustActive": "Active",
       "trustPending": "Pending",
+      "trustLevel": {
+        "trusted": "신뢰됨",
+        "verified": "검증됨",
+        "pending": "대기",
+        "partial": "부분",
+        "none": "신뢰 없음",
+        "blocked": "차단됨",
+        "unknown": "수준: {value}"
+      },
       "partnerLabel": "Partner",
       "badgeThread": "Federation",
       "joinCopied": "Room copied to clipboard."

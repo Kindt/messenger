@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.retention;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.dto.RetentionAppliedEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
@@ -11,9 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
-import io.minio.StatObjectArgs;
 import io.minio.UploadObjectArgs;
-import io.minio.errors.ErrorResponseException;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import io.nats.client.Connection;
 import org.slf4j.Logger;
@@ -36,8 +35,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Вынос тела сообщения из Hot DB по эффективной политике (платформа → org → {@code chat_retention_policy}),
- * снимок тела в MinIO и {@code MessageWorkerEvent} с {@code index_op=update} для Solr.
+ * Р’С‹РЅРѕСЃ С‚РµР»Р° СЃРѕРѕР±С‰РµРЅРёСЏ РёР· Hot DB РїРѕ СЌС„С„РµРєС‚РёРІРЅРѕР№ РїРѕР»РёС‚РёРєРµ (РїР»Р°С‚С„РѕСЂРјР° в†’ org в†’ {@code chat_retention_policy}),
+ * СЃРЅРёРјРѕРє С‚РµР»Р° РІ MinIO Рё {@code MessageWorkerEvent} СЃ {@code index_op=update} РґР»СЏ Solr.
  */
 final class RetentionHotBodyJanitor {
     private static final Logger log = LoggerFactory.getLogger(RetentionHotBodyJanitor.class);
@@ -46,12 +45,12 @@ final class RetentionHotBodyJanitor {
     private static UserMessageSource logMessages() {
         return LOG_MESSAGES.get();
     }
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    /** Согласовано с {@code AuditRepository} / админским аудитом; массовые операции воркера. */
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
+    /** РЎРѕРіР»Р°СЃРѕРІР°РЅРѕ СЃ {@code AuditRepository} / Р°РґРјРёРЅСЃРєРёРј Р°СѓРґРёС‚РѕРј; РјР°СЃСЃРѕРІС‹Рµ РѕРїРµСЂР°С†РёРё РІРѕСЂРєРµСЂР°. */
     private static final String AUDIT_ACTION_HOT_BODY_CLEARED = "message.retention.hot_body_cleared";
     /**
-     * Одна строка на проход при {@code RETENTION_BULK_AUDIT_MIN_CLEARED} (порог по числу успешно очищенных тел за проход);
-     * не заменяет построчный аудит {@link #AUDIT_ACTION_HOT_BODY_CLEARED} при {@code RETENTION_AUDIT_ENABLED=true}.
+     * РћРґРЅР° СЃС‚СЂРѕРєР° РЅР° РїСЂРѕС…РѕРґ РїСЂРё {@code RETENTION_BULK_AUDIT_MIN_CLEARED} (РїРѕСЂРѕРі РїРѕ С‡РёСЃР»Сѓ СѓСЃРїРµС€РЅРѕ РѕС‡РёС‰РµРЅРЅС‹С… С‚РµР» Р·Р° РїСЂРѕС…РѕРґ);
+     * РЅРµ Р·Р°РјРµРЅСЏРµС‚ РїРѕСЃС‚СЂРѕС‡РЅС‹Р№ Р°СѓРґРёС‚ {@link #AUDIT_ACTION_HOT_BODY_CLEARED} РїСЂРё {@code RETENTION_AUDIT_ENABLED=true}.
      */
     private static final String AUDIT_ACTION_BULK_CLEARED = "message.retention.bulk_cleared";
 
@@ -200,6 +199,13 @@ final class RetentionHotBodyJanitor {
             }
             publishExportSuggestedIfEnabled(nats, batch);
             var sampleChatIds = sampleChatIdsFromBatch(batch, 5);
+            RetentionMinioJanitorSupport.ExistenceIndex snapshotExistenceIndex = null;
+            if (skipSnapshotIfDeepExists && minioEnabled && minioClient != null) {
+                var listedKeys = RetentionMinioJanitorSupport.listObjectKeys(
+                    minioClient, retentionWriteBucket, retentionObjectPrefix);
+                snapshotExistenceIndex = new RetentionMinioJanitorSupport.ExistenceIndex(
+                    minioClient, retentionWriteBucket, listedKeys, workerMessages);
+            }
             int done = 0;
             int errors = 0;
             for (int i = 0; i < batch.size(); i++) {
@@ -221,7 +227,8 @@ final class RetentionHotBodyJanitor {
                         jdbcQueryTimeoutSeconds,
                         snapshotTempfileThresholdBytes,
                         minioMultipartThresholdBytes,
-                        passId
+                        passId,
+                        snapshotExistenceIndex
                     )) {
                         done++;
                     }
@@ -370,7 +377,8 @@ final class RetentionHotBodyJanitor {
         int jdbcQueryTimeoutSeconds,
         long snapshotTempfileThresholdBytes,
         long minioMultipartThresholdBytes,
-        String passId
+        String passId,
+        RetentionMinioJanitorSupport.ExistenceIndex snapshotExistenceIndex
     ) throws Exception {
         int contentUtf8Bytes = RetentionSnapshotMaterialization.utf8ByteLength(c.content());
         var retentionSnapKey = minioEnabled ? retentionObjectPrefix + c.id() + ".json" : null;
@@ -387,7 +395,8 @@ final class RetentionHotBodyJanitor {
                 skipSnapshotIfDeepExists,
                 snapshotTempfileThresholdBytes,
                 minioMultipartThresholdBytes,
-                contentUtf8Bytes
+                contentUtf8Bytes,
+                snapshotExistenceIndex
             );
             storageKey = snapshotResult.storageKey();
             snapshotSha256 = snapshotResult.snapshotSha256();
@@ -462,23 +471,6 @@ final class RetentionHotBodyJanitor {
         }
         RetentionMetrics.hotBodyCleared();
         return true;
-    }
-
-    private static boolean minioObjectExists(MinioClient minioClient, String bucket, String objectKey) {
-        try {
-            minioClient.statObject(StatObjectArgs.builder().bucket(bucket).object(objectKey).build());
-            return true;
-        } catch (ErrorResponseException e) {
-            var code = e.errorResponse() != null ? e.errorResponse().code() : "";
-            if ("NoSuchKey".equals(code) || "NoSuchObject".equals(code)) {
-                return false;
-            }
-            log.debug(logMessages().format("worker.retention.hot_body.stat_unexpected", bucket, objectKey, e.getMessage()));
-            return false;
-        } catch (Exception e) {
-            log.debug(logMessages().format("worker.retention.hot_body.stat_failed", bucket, objectKey, e.getMessage()));
-            return false;
-        }
     }
 
     private static void publishExportSuggestedIfEnabled(Connection nats, List<Candidate> batch) {
@@ -601,7 +593,7 @@ final class RetentionHotBodyJanitor {
         }
     }
 
-    /** JDBC: {@code seconds <= 0} — не вызывать {@link java.sql.Statement#setQueryTimeout(int)} (дефолт драйвера). */
+    /** JDBC: {@code seconds <= 0} вЂ” РЅРµ РІС‹Р·С‹РІР°С‚СЊ {@link java.sql.Statement#setQueryTimeout(int)} (РґРµС„РѕР»С‚ РґСЂР°Р№РІРµСЂР°). */
     private static void applyStatementQueryTimeout(java.sql.PreparedStatement ps, int seconds) throws SQLException {
         if (seconds > 0) {
             ps.setQueryTimeout(seconds);
@@ -654,6 +646,19 @@ final class RetentionHotBodyJanitor {
         return ChunkManifestWriter.shouldWriteChunked(chunkThreshold, payloadBytes);
     }
 
+    private static boolean objectExistsForSnapshotSkip(
+        MinioClient minioClient,
+        String bucket,
+        String objectKey,
+        RetentionMinioJanitorSupport.ExistenceIndex snapshotExistenceIndex
+    ) {
+        if (snapshotExistenceIndex != null) {
+            return snapshotExistenceIndex.objectExists(objectKey);
+        }
+        return new RetentionMinioJanitorSupport.ExistenceIndex(
+            minioClient, bucket, java.util.Set.of(), logMessages()).objectExists(objectKey);
+    }
+
     private record SnapshotStoreResult(String storageKey, String snapshotSha256) {
     }
 
@@ -671,7 +676,8 @@ final class RetentionHotBodyJanitor {
             boolean skipSnapshotIfDeepExists,
             long snapshotTempfileThresholdBytes,
             long minioMultipartThresholdBytes,
-            int contentUtf8Bytes
+            int contentUtf8Bytes,
+            RetentionMinioJanitorSupport.ExistenceIndex snapshotExistenceIndex
         ) throws Exception {
             if (shouldSkipSnapshotForContent(candidate.content())) {
                 log.debug(logMessages().format("worker.retention.hot_body.skip_file_ref", candidate.id()));
@@ -686,13 +692,15 @@ final class RetentionHotBodyJanitor {
             if (skipSnapshotIfDeepExists) {
                 if (RetentionSnapshotSkipResolver.sameBucketAsDeepArchive(retentionWriteBucket, minioDefaultBucket)) {
                     var deepKey = RetentionSnapshotSkipResolver.deepArchiveObjectKey(candidate.id());
-                    if (minioObjectExists(minioClient, retentionWriteBucket, deepKey)) {
+                    if (objectExistsForSnapshotSkip(
+                        minioClient, retentionWriteBucket, deepKey, snapshotExistenceIndex)) {
                         doPut = false;
                         storageKey = deepKey;
                         RetentionMetrics.minioSnapshotSkippedExisting("deep");
                     }
                 }
-                if (doPut && minioObjectExists(minioClient, retentionWriteBucket, retentionSnapKey)) {
+                if (doPut && objectExistsForSnapshotSkip(
+                    minioClient, retentionWriteBucket, retentionSnapKey, snapshotExistenceIndex)) {
                     doPut = false;
                     storageKey = retentionSnapKey;
                     RetentionMetrics.minioSnapshotSkippedExisting("retention");

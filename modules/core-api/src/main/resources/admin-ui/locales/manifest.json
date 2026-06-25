@@ -1,4 +1,12 @@
 {
   "default": "ru",
-  "codes": ["ru", "en", "be", "kk", "zh", "ko"]
+  "codes": [
+    "ru",
+    "en",
+    "be",
+    "kk",
+    "zh",
+    "ko"
+  ],
+  "keyCount": 228
 }

@@ -1,7 +1,6 @@
 package com.avandocmsg.messenger.worker.retention;
 
 import io.minio.MinioClient;
-import io.minio.RemoveObjectArgs;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,12 +94,20 @@ final class FileRetentionJanitor {
             log.info(workerMessages.format("worker.retention.file.dry_run", candidates.size()));
             return 0;
         }
+        var minioDeletes = new ArrayList<RetentionMinioJanitorSupport.MinioDeleteRequest>();
         int deleted = 0;
         for (var c : candidates) {
-            if (deleteOne(dataSource, minioClient, minioEnabled, minioBucket, c, auditEnabled, workerMessages)) {
+            var outcome = deleteOneMetadata(dataSource, c, auditEnabled);
+            if (outcome.deleted()) {
                 deleted++;
+                if (outcome.minioObjectName() != null) {
+                    minioDeletes.add(new RetentionMinioJanitorSupport.MinioDeleteRequest(
+                        c.fileId(), outcome.minioObjectName()));
+                }
             }
         }
+        RetentionMinioJanitorSupport.removeObjectsBatch(
+            minioClient, minioEnabled, minioBucket, minioDeletes, workerMessages);
         if (deleted > 0) {
             log.info(workerMessages.format("worker.retention.file.deleted", deleted));
         }
@@ -127,14 +134,13 @@ final class FileRetentionJanitor {
         return list;
     }
 
-    private static boolean deleteOne(
+    private record DeleteOutcome(boolean deleted, String minioObjectName) {
+    }
+
+    private static DeleteOutcome deleteOneMetadata(
         DataSource dataSource,
-        MinioClient minioClient,
-        boolean minioEnabled,
-        String minioBucket,
         Candidate c,
-        boolean auditEnabled,
-        UserMessageSource workerMessages
+        boolean auditEnabled
     ) throws Exception {
         var objectName = resolveObjectName(c);
         int rows;
@@ -144,23 +150,24 @@ final class FileRetentionJanitor {
             rows = ps.executeUpdate();
         }
         if (rows <= 0) {
-            return false;
+            return new DeleteOutcome(false, null);
         }
         RetentionMetrics.fileMetadataDeleted();
+        String minioObjectName = null;
         if (c.contentHash() != null && !c.contentHash().isBlank()) {
             decrementBlobRef(dataSource, c.contentHash());
             var remaining = blobRefCount(dataSource, c.contentHash());
             if (remaining.isPresent() && remaining.get() <= 0) {
-                deleteMinioObject(minioClient, minioEnabled, minioBucket, objectName, c.fileId(), workerMessages);
+                minioObjectName = objectName;
                 deleteZeroBlobRow(dataSource, c.contentHash());
             }
         } else {
-            deleteMinioObject(minioClient, minioEnabled, minioBucket, objectName, c.fileId(), workerMessages);
+            minioObjectName = objectName;
         }
         if (auditEnabled) {
             insertAudit(dataSource, c.fileId(), objectName);
         }
-        return true;
+        return new DeleteOutcome(true, minioObjectName);
     }
 
     private static String resolveObjectName(Candidate c) {
@@ -168,29 +175,6 @@ final class FileRetentionJanitor {
             return c.storageKey();
         }
         return c.fileId() + "/" + (c.filename() != null && !c.filename().isBlank() ? c.filename() : "file");
-    }
-
-    private static void deleteMinioObject(
-        MinioClient minioClient,
-        boolean minioEnabled,
-        String minioBucket,
-        String objectName,
-        UUID fileId,
-        UserMessageSource workerMessages
-    ) {
-        if (!minioEnabled || minioClient == null || minioBucket == null || minioBucket.isBlank()) {
-            return;
-        }
-        try {
-            minioClient.removeObject(RemoveObjectArgs.builder()
-                .bucket(minioBucket)
-                .object(objectName)
-                .build());
-            RetentionMetrics.minioObjectDeleted();
-        } catch (Exception e) {
-            RetentionMetrics.purgeError("minio_delete");
-            log.warn(workerMessages.format("worker.retention.file.minio_delete_failed", fileId, objectName, e.getMessage()));
-        }
     }
 
     private static void decrementBlobRef(DataSource dataSource, String contentHash) throws SQLException {

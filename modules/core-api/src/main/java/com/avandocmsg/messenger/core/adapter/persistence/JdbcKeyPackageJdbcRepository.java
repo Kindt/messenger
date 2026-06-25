@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.crypto.dto.KeyPackageResponse;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.slf4j.Logger;
@@ -32,6 +34,7 @@ public final class JdbcKeyPackageJdbcRepository {
                   "VALUES (?, ?, ?, ?, ?, ?, now())";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             var id = uuidGenerator.randomUuid();
             stmt.setObject(1, id);
             stmt.setObject(2, userId);
@@ -57,6 +60,7 @@ public final class JdbcKeyPackageJdbcRepository {
         var result = new ArrayList<KeyPackageResponse>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, userId);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -76,6 +80,7 @@ public final class JdbcKeyPackageJdbcRepository {
         var sql = "DELETE FROM e2ee_key_packages WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {

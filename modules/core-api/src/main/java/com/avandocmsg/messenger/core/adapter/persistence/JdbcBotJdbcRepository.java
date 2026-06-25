@@ -1,5 +1,8 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.bots.BotRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,9 +33,12 @@ public final class JdbcBotJdbcRepository {
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """;
         try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareRead(conn);
             conn.setAutoCommit(false);
             try (var userStmt = conn.prepareStatement(sqlUser);
                  var botStmt = conn.prepareStatement(sqlBot)) {
+                JdbcQuerySupport.applyDefaultTimeout(userStmt);
+                JdbcQuerySupport.applyDefaultTimeout(botStmt);
                 userStmt.setObject(1, botUserId);
                 userStmt.setString(2, botName);
                 userStmt.setString(3, displayName);
@@ -83,6 +89,7 @@ public final class JdbcBotJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, tokenHash);
             try (var rs = stmt.executeQuery()) {
                 if (!rs.next()) {
@@ -105,6 +112,7 @@ public final class JdbcBotJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, botName);
             try (var rs = stmt.executeQuery()) {
                 if (!rs.next()) {
@@ -129,6 +137,7 @@ public final class JdbcBotJdbcRepository {
         var out = new ArrayList<BotRepository.BotRow>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, ownerId);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -148,6 +157,7 @@ public final class JdbcBotJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, webhookUrl);
             stmt.setObject(2, botId);
             stmt.setObject(3, ownerId);
@@ -174,10 +184,14 @@ public final class JdbcBotJdbcRepository {
             WHERE bot_id = ? AND chat_id = ?
             """;
         try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareWrite(conn);
             conn.setAutoCommit(false);
             try (var del = conn.prepareStatement(deleteLegacy);
                  var ins = conn.prepareStatement(upsert);
                  var upd = conn.prepareStatement(update)) {
+                JdbcQuerySupport.applyDefaultTimeout(del);
+                JdbcQuerySupport.applyDefaultTimeout(ins);
+                JdbcQuerySupport.applyDefaultTimeout(upd);
                 del.setObject(1, chatId);
                 del.executeUpdate();
 
@@ -209,6 +223,7 @@ public final class JdbcBotJdbcRepository {
         var sql = "DELETE FROM bot_webhook_subscriptions WHERE bot_id = ? AND chat_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, botId);
             stmt.setObject(2, chatId);
             return stmt.executeUpdate() > 0;
@@ -228,6 +243,7 @@ public final class JdbcBotJdbcRepository {
         var out = new ArrayList<BotRepository.ChatSubscriptionRow>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -251,6 +267,7 @@ public final class JdbcBotJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setString(1, tokenHash);
             stmt.setObject(2, botId);
             stmt.setObject(3, ownerId);
@@ -268,6 +285,7 @@ public final class JdbcBotJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, botId);
             stmt.setString(2, eventType);
             stmt.setString(3, payloadJson);
@@ -288,6 +306,7 @@ public final class JdbcBotJdbcRepository {
         var out = new ArrayList<BotRepository.BotUpdateRow>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, botId);
             stmt.setLong(2, offset);
             stmt.setInt(3, limit);
@@ -311,6 +330,7 @@ public final class JdbcBotJdbcRepository {
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setString(2, botName);
             try (var rs = stmt.executeQuery()) {
@@ -327,6 +347,7 @@ public final class JdbcBotJdbcRepository {
     private Optional<BotRepository.BotRow> queryOne(String sql, UUID id) {
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 if (!rs.next()) {

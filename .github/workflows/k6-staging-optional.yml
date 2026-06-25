@@ -1,0 +1,53 @@
+# Optional k6 against staging FQDN (spec 025 T902 / FR-147).
+# Runs only when repository variable STAGE_API_URL is configured.
+name: k6 staging optional
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration_sec:
+        description: k6 duration seconds
+        type: number
+        default: 60
+  schedule:
+    - cron: "0 6 * * 1" # weekly Monday 06:00 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: k6-staging-optional
+  cancel-in-progress: true
+
+jobs:
+  k6:
+    runs-on: ubuntu-latest
+    if: vars.STAGE_API_URL != ''
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A6544E8B3A6F6A6A1E69F2F0
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install -y k6
+
+      - name: k6 baseline against stage API
+        env:
+          STAGE_API_URL: ${{ vars.STAGE_API_URL }}
+        run: |
+          API="${STAGE_API_URL%/}"
+          if [[ "$API" != */api ]]; then API="$API/api"; fi
+          k6 run --vus 5 --duration "${{ inputs.duration_sec || 60 }}s" scripts/load/pilot-health.js \
+            -e K6_BASE_URL="$API" \
+            --summary-export k6-stage-summary.json
+
+      - name: Upload k6 summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-stage-summary
+          path: k6-stage-summary.json
+          retention-days: 14

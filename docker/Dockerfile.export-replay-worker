@@ -10,4 +10,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app/modules/workers/export-replay/build/install/export-replay /app/export-replay
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=50.0 -XX:+UseContainerSupport -XX:+UseG1GC"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:9191/health >/dev/null || exit 1
 ENTRYPOINT ["/app/export-replay/bin/export-replay"]

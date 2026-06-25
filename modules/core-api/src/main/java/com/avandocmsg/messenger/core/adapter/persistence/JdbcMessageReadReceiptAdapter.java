@@ -1,12 +1,15 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
 import com.avandocmsg.messenger.api.chats.dto.ReadReceiptUserInfo;
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.core.port.MessageReadReceiptPort;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -32,12 +35,15 @@ public final class JdbcMessageReadReceiptAdapter implements MessageReadReceiptPo
             VALUES (?, ?, ?)
             ON CONFLICT (message_id, user_id) DO NOTHING
             """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, messageId);
-            stmt.setObject(2, userId);
-            stmt.setTimestamp(3, Timestamp.from(readAt));
-            return stmt.executeUpdate() > 0;
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareWrite(conn);
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                stmt.setObject(1, messageId);
+                stmt.setObject(2, userId);
+                stmt.setTimestamp(3, Timestamp.from(readAt));
+                return stmt.executeUpdate() > 0;
+            }
         } catch (Exception e) {
             log.error("insert read receipt failed", e);
             return false;
@@ -55,13 +61,24 @@ public final class JdbcMessageReadReceiptAdapter implements MessageReadReceiptPo
             ON CONFLICT (message_id, user_id) DO NOTHING
             """;
         int inserted = 0;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            for (var messageId : messageIds) {
-                stmt.setObject(1, messageId);
-                stmt.setObject(2, userId);
-                stmt.setTimestamp(3, Timestamp.from(readAt));
-                inserted += stmt.executeUpdate();
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareWrite(conn);
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                for (var messageId : messageIds) {
+                    stmt.setObject(1, messageId);
+                    stmt.setObject(2, userId);
+                    stmt.setTimestamp(3, Timestamp.from(readAt));
+                    stmt.addBatch();
+                }
+                var counts = stmt.executeBatch();
+                for (var n : counts) {
+                    if (n > 0) {
+                        inserted += n;
+                    } else if (n == Statement.SUCCESS_NO_INFO) {
+                        inserted++;
+                    }
+                }
             }
         } catch (Exception e) {
             log.error("insertBatch read receipts failed", e);
@@ -83,17 +100,20 @@ public final class JdbcMessageReadReceiptAdapter implements MessageReadReceiptPo
             LIMIT ? OFFSET ?
             """;
         var rows = new ArrayList<ReadReceiptUserInfo>();
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, messageId);
-            stmt.setInt(2, Math.max(1, limit));
-            stmt.setInt(3, Math.max(0, offset));
-            try (var rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    rows.add(new ReadReceiptUserInfo(
-                        rs.getObject("user_id", UUID.class).toString(),
-                        rs.getString("display_name"),
-                        rs.getTimestamp("read_at").toInstant()));
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareRead(conn);
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                stmt.setObject(1, messageId);
+                stmt.setInt(2, Math.max(1, limit));
+                stmt.setInt(3, Math.max(0, offset));
+                try (var rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        rows.add(new ReadReceiptUserInfo(
+                            rs.getObject("user_id", UUID.class).toString(),
+                            rs.getString("display_name"),
+                            rs.getTimestamp("read_at").toInstant()));
+                    }
                 }
             }
         } catch (Exception e) {
@@ -107,12 +127,22 @@ public final class JdbcMessageReadReceiptAdapter implements MessageReadReceiptPo
         if (dataSource == null) {
             return 0L;
         }
-        var sql = "SELECT COUNT(*) AS c FROM message_read_receipts";
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql);
-             var rs = stmt.executeQuery()) {
-            if (rs.next()) {
-                return rs.getLong("c");
+        var sql = """
+            SELECT COUNT(*) AS c FROM (
+                SELECT 1 FROM message_read_receipts
+                LIMIT ?
+            ) capped
+            """;
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareRead(conn);
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                stmt.setInt(1, JdbcListLimits.COUNT_CAP_ADMIN);
+                try (var rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getLong("c");
+                    }
+                }
             }
         } catch (Exception e) {
             log.error("countAll read receipts failed", e);
@@ -130,10 +160,13 @@ public final class JdbcMessageReadReceiptAdapter implements MessageReadReceiptPo
             DELETE FROM message_read_receipts
             WHERE read_at < ?
             """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setTimestamp(1, Timestamp.from(cutoff));
-            return stmt.executeUpdate();
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareWrite(conn);
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                stmt.setTimestamp(1, Timestamp.from(cutoff));
+                return stmt.executeUpdate();
+            }
         } catch (Exception e) {
             log.error("deleteOlderThanDays read receipts failed", e);
             return 0;

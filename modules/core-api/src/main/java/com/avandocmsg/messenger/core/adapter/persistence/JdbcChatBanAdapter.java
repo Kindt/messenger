@@ -4,6 +4,8 @@ import com.avandocmsg.messenger.api.chats.bans.dto.ChatBanResponse;
 import com.avandocmsg.messenger.core.port.ChatBanPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
+import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +33,7 @@ public final class JdbcChatBanAdapter implements ChatBanPort {
         var sql = "INSERT INTO chat_bans (id, chat_id, user_id, banned_by, reason, created_at) VALUES (?, ?, ?, ?, ?, now())";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             var id = uuidGenerator.randomUuid();
             stmt.setObject(1, id);
             stmt.setObject(2, chatId);
@@ -51,6 +54,7 @@ public final class JdbcChatBanAdapter implements ChatBanPort {
         var sql = "SELECT id, chat_id, user_id, banned_by, reason, created_at FROM chat_bans WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -65,15 +69,20 @@ public final class JdbcChatBanAdapter implements ChatBanPort {
 
     @Override
     public List<ChatBanResponse> findByChatId(UUID chatId) {
-        var sql = "SELECT id, chat_id, user_id, banned_by, reason, created_at FROM chat_bans WHERE chat_id = ? ORDER BY created_at DESC";
+        var sql = "SELECT id, chat_id, user_id, banned_by, reason, created_at FROM chat_bans "
+            + "WHERE chat_id = ? ORDER BY created_at DESC LIMIT ?";
         var result = new ArrayList<ChatBanResponse>();
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, chatId);
+        try (var conn = dataSource.getConnection()) {
+            JdbcConnectionSupport.prepareRead(conn);
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                stmt.setObject(1, chatId);
+                stmt.setInt(2, JdbcListLimits.CHAT_BANS);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     result.add(mapBan(rs));
                 }
+            }
             }
         } catch (Exception e) {
             log.error("Failed to list bans for chat {}", chatId, e);
@@ -86,6 +95,7 @@ public final class JdbcChatBanAdapter implements ChatBanPort {
         var sql = "DELETE FROM chat_bans WHERE chat_id = ? AND user_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, userId);
             return stmt.executeUpdate() > 0;
@@ -100,6 +110,7 @@ public final class JdbcChatBanAdapter implements ChatBanPort {
         var sql = "SELECT 1 FROM chat_bans WHERE chat_id = ? AND user_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, chatId);
             stmt.setObject(2, userId);
             try (var rs = stmt.executeQuery()) {

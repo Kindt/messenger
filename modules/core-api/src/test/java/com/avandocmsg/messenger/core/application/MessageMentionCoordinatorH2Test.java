@@ -118,6 +118,18 @@ class MessageMentionCoordinatorH2Test {
         assertEquals(targetId.toString(), event.mentionedUserId());
     }
 
+    @Test
+    void afterMessageSent_mentionAll_publishesSingleNatsEvent() throws Exception {
+        var messageId = UUID.randomUUID();
+        coordinator.afterMessageSent(chatId, messageId, senderId, "hello @all", System.currentTimeMillis());
+
+        assertEquals(1, nats.mentionSubjects.size());
+        var event = MAPPER.readValue(nats.mentionPayloads.get(0), MentionEvent.class);
+        assertTrue(event.mentionAll());
+        assertNull(event.mentionedUserId());
+        assertTrue(mentionRepositoryCount(messageId, targetId) >= 1);
+    }
+
     private int mentionRepositoryCount(UUID messageId, UUID userId) throws Exception {
         try (var c = ds.getConnection();
              var ps = c.prepareStatement(
@@ -148,7 +160,7 @@ class MessageMentionCoordinatorH2Test {
         }
 
         @Override
-        public void publishPipelineMessageSend(byte[] payload) {
+        public void publishPipelineMessageSend(byte[] payload, String userId) {
         }
     }
 }

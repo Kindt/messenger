@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.exportreplay;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
@@ -12,7 +13,7 @@ import java.util.UUID;
 /** Best-effort {@code audit_events} row when an export job finishes. */
 final class ExportAuditWriter {
     private static final Logger log = LoggerFactory.getLogger(ExportAuditWriter.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final DataSource dataSource;
     private final UserMessageSource workerMessages;

@@ -2,13 +2,10 @@ plugins {
     id("application")
 }
 
-val tomcatVersion = "11.0.22"
-
 dependencies {
-    implementation("org.apache.tomcat.embed:tomcat-embed-core:$tomcatVersion")
-    implementation("jakarta.servlet:jakarta.servlet-api:6.0.0")
-    implementation("ch.qos.logback:logback-classic:1.5.3")
-    implementation("org.slf4j:slf4j-api:2.0.12")
+    implementation(libs.tomcat.embed.core)
+    implementation(libs.jakarta.servlet.api)
+    implementation(libs.bundles.logging)
 }
 
 application {
@@ -20,12 +17,12 @@ val webuiTailwindOut = layout.projectDirectory.file("src/main/resources/webui/ta
 
 tasks.register<Exec>("buildTailwindCss") {
     group = "webui"
-    description = "Build tailwind.css from webui-build (requires Node/npm)"
+    description = "Build webui static assets (CSS, fonts, locales, JS bundle) via webui-build"
     workingDir = layout.projectDirectory.dir("webui-build").asFile
     val npm = if (System.getProperty("os.name").lowercase().contains("windows")) "npm.cmd" else "npm"
-    commandLine(npm, "run", "build:css")
-    dependsOn("buildLocales")
+    commandLine(npm, "run", "build:assets")
     inputs.file(layout.projectDirectory.file("webui-build/src/input.css"))
+    inputs.file(layout.projectDirectory.file("webui-build/src/styles.css"))
     inputs.file(layout.projectDirectory.file("webui-build/package.json"))
     inputs.file(layout.projectDirectory.file("webui-build/package-lock.json"))
     inputs.files(
@@ -33,6 +30,9 @@ tasks.register<Exec>("buildTailwindCss") {
         layout.projectDirectory.file("src/main/resources/webui/index.html"),
     )
     outputs.file(webuiTailwindOut)
+    outputs.file(layout.projectDirectory.file("src/main/resources/webui/styles.css"))
+    outputs.file(layout.projectDirectory.file("src/main/resources/webui/fonts.css"))
+    outputs.file(layout.projectDirectory.file("src/main/resources/webui/app.bundle.js"))
 }
 
 tasks.register<Exec>("buildLocales") {
@@ -68,5 +68,5 @@ tasks.register<Exec>("testMessageListUi") {
 }
 
 tasks.named("processResources") {
-    dependsOn("buildTailwindCss", "buildLocales", "testMessageListUi")
+    dependsOn("buildTailwindCss", "testMessageListUi")
 }

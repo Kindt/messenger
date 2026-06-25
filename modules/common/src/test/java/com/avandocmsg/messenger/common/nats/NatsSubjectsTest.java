@@ -32,4 +32,11 @@ class NatsSubjectsTest {
         assertEquals("$SVC.heartbeat.*", NatsSubjects.SVC_HEARTBEAT_WILDCARD);
         assertEquals("$SVC.lifecycle.", NatsSubjects.SVC_LIFECYCLE_PREFIX);
     }
+
+    @Test
+    void legacyCacheInvalidateSubject_isDeprecatedForRollbackOnly() throws NoSuchFieldException {
+        var field = NatsSubjects.class.getField("MSG_CACHE_INVALIDATE");
+        assertTrue(field.isAnnotationPresent(Deprecated.class));
+        assertEquals("msg.cache.invalidate", NatsSubjects.MSG_CACHE_INVALIDATE);
+    }
 }

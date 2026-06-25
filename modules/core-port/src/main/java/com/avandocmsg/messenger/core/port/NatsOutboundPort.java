@@ -15,7 +15,11 @@ public interface NatsOutboundPort {
      * Событие конвейера новых сообщений: JetStream при включённом {@code nats.jetstream},
      * иначе ядро NATS с {@link #flush(Duration)}.
      */
-    void publishPipelineMessageSend(byte[] payload) throws Exception;
+    default void publishPipelineMessageSend(byte[] payload) throws Exception {
+        publishPipelineMessageSend(payload, null);
+    }
+
+    void publishPipelineMessageSend(byte[] payload, String userId) throws Exception;
 
     static NatsOutboundPort noop() {
         return new NatsOutboundPort() {
@@ -28,7 +32,7 @@ public interface NatsOutboundPort {
             }
 
             @Override
-            public void publishPipelineMessageSend(byte[] payload) {
+            public void publishPipelineMessageSend(byte[] payload, String userId) {
             }
         };
     }

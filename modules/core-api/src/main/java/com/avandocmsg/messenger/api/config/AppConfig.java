@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -39,14 +40,29 @@ public class AppConfig {
         override("DB_USER", "db.user");
         override("DB_PASSWORD", "db.password");
         override("DB_POOL_SIZE", "db.pool.size");
+        override("DB_POOL_MINIMUM_IDLE", "db.pool.minimum.idle");
+        override("DB_POOL_CONNECTION_TIMEOUT_MS", "db.pool.connection.timeout.ms");
+        override("DB_POOL_IDLE_TIMEOUT_MS", "db.pool.idle.timeout.ms");
+        override("DB_POOL_MAX_LIFETIME_MS", "db.pool.max.lifetime.ms");
+        override("DB_POOL_KEEPALIVE_TIME_MS", "db.pool.keepalive.time.ms");
+        override("DB_JDBC_CACHE_PREP_STMTS", "db.jdbc.cache.prep.stmts");
+        override("DB_JDBC_PREP_STMT_CACHE_SIZE", "db.jdbc.prep.stmt.cache.size");
+        override("DB_JDBC_PREP_STMT_CACHE_SQL_LIMIT", "db.jdbc.prep.stmt.cache.sql.limit");
+        override("DB_JDBC_PREPARE_THRESHOLD", "db.jdbc.prepare.threshold");
         override("DB_READ_JDBC_URL", "db.read.jdbc.url");
         override("DB_READ_POOL_SIZE", "db.read.pool.size");
         override("DB_SHARD_JDBC_URL", "db.shard.jdbc.url");
         override("API_REPLICAS", "api.replicas");
         override("POSTGRES_MAX_CONNECTIONS", "postgres.max.connections");
         override("REDIS_URI", "redis.uri");
+        override("REDIS_CONNECT_TIMEOUT_MS", "redis.connect.timeout.ms");
+        override("REDIS_COMMAND_TIMEOUT_MS", "redis.command.timeout.ms");
         override("NATS_URL", "nats.url");
         override("NATS_JETSTREAM", "nats.jetstream");
+        override("NATS_RECONNECT_WAIT_MS", "nats.reconnect.wait.ms");
+        override("NATS_MAX_RECONNECTS", "nats.max.reconnects");
+        override("NATS_CONNECTION_TIMEOUT_MS", "nats.connection.timeout.ms");
+        override("NATS_PING_INTERVAL_MS", "nats.ping.interval.ms");
         override("KEYCLOAK_ISSUER", "keycloak.issuer");
         override("KEYCLOAK_JWKS_URL", "keycloak.jwks.url");
         override("KEYCLOAK_AUDIENCE", "keycloak.audience");
@@ -59,6 +75,12 @@ public class AppConfig {
         override("MINIO_ACCESS_KEY", "minio.access.key");
         override("MINIO_SECRET_KEY", "minio.secret.key");
         override("MINIO_BUCKET", "minio.bucket");
+        override("MINIO_CONNECT_TIMEOUT_MS", "minio.connect.timeout.ms");
+        override("MINIO_READ_TIMEOUT_MS", "minio.read.timeout.ms");
+        override("MINIO_WRITE_TIMEOUT_MS", "minio.write.timeout.ms");
+        override("MINIO_HTTP_MAX_IDLE_CONNECTIONS", "minio.http.max.idle.connections");
+        override("MINIO_HTTP_KEEP_ALIVE_MINUTES", "minio.http.keep.alive.minutes");
+        override("MINIO_HTTP_RETRY_ON_CONNECTION_FAILURE", "minio.http.retry.on.connection.failure");
         override("HOT_RELOAD", "hot.reload");
         override("FILE_PROXY_MODE", "file.proxy.mode");
         override("FILE_PROXY_URL", "file.proxy.url");
@@ -124,8 +146,10 @@ public class AppConfig {
         override("REDIS_READ_CACHE_TTL_CHAT_UNREAD_SECONDS", "redis.read.cache.ttl.chat_unread.seconds");
         override("REDIS_READ_CACHE_TTL_USER_PROFILE_SECONDS", "redis.read.cache.ttl.user_profile.seconds");
         override("REDIS_READ_CACHE_TTL_USER_PRESENCE_SECONDS", "redis.read.cache.ttl.user_presence.seconds");
+        override("READ_CACHE_NATS_INVALIDATE_ENABLED", "read.cache.nats.invalidate.enabled");
         override("API_JDBC_QUERY_TIMEOUT_SECONDS", "api.jdbc.query.timeout.seconds");
-        override("KORUS_DEPLOY_PROFILE", "korus.deploy.profile");
+        override("MINIO_PRESIGN_TTL_SECONDS", "minio.presign.ttl.seconds");
+        override("FILE_PRESIGN_REDIRECT_ENABLED", "file.presign.redirect.enabled");
         override("KORUS_PRODUCT_ADDONS", "korus.product.addons");
         override("DIRECTORY_SYNC_INTERVAL_MINUTES", "directory.sync.interval.minutes");
         override("SCIM_BEARER_TOKEN", "scim.bearer.token");
@@ -181,6 +205,44 @@ public class AppConfig {
         return Integer.parseInt(props.getProperty("db.pool.size", "10"));
     }
 
+    public int dbPoolMinimumIdle() {
+        return Integer.parseInt(props.getProperty("db.pool.minimum.idle", "2"));
+    }
+
+    public long dbPoolConnectionTimeoutMs() {
+        return Long.parseLong(props.getProperty("db.pool.connection.timeout.ms", "5000"));
+    }
+
+    public long dbPoolIdleTimeoutMs() {
+        return Long.parseLong(props.getProperty("db.pool.idle.timeout.ms", "300000"));
+    }
+
+    public long dbPoolMaxLifetimeMs() {
+        return Long.parseLong(props.getProperty("db.pool.max.lifetime.ms", "600000"));
+    }
+
+    /** HikariCP keepalive for stale connection detection (0 = disabled). Env: DB_POOL_KEEPALIVE_TIME_MS. */
+    public long dbPoolKeepaliveTimeMs() {
+        return Long.parseLong(props.getProperty("db.pool.keepalive.time.ms", "120000"));
+    }
+
+    public boolean dbJdbcCachePrepStmts() {
+        return Boolean.parseBoolean(props.getProperty("db.jdbc.cache.prep.stmts", "true"));
+    }
+
+    public int dbJdbcPrepStmtCacheSize() {
+        return Integer.parseInt(props.getProperty("db.jdbc.prep.stmt.cache.size", "250"));
+    }
+
+    public int dbJdbcPrepStmtCacheSqlLimit() {
+        return Integer.parseInt(props.getProperty("db.jdbc.prep.stmt.cache.sql.limit", "2048"));
+    }
+
+    /** PostgreSQL JDBC prepareThreshold (spec 025 FR-027). Default 1. Env: DB_JDBC_PREPARE_THRESHOLD. */
+    public int dbJdbcPrepareThreshold() {
+        return Integer.parseInt(props.getProperty("db.jdbc.prepare.threshold", "1"));
+    }
+
     /** Optional read replica JDBC URL (spec 006 FR-OPT-05). Empty = route reads to primary. */
     public String dbReadJdbcUrl() {
         return props.getProperty("db.read.jdbc.url", "").trim();
@@ -209,9 +271,17 @@ public class AppConfig {
         return props.getProperty("redis.uri", "redis://localhost:6379");
     }
 
-    /** Env: {@code REDIS_READ_CACHE_ENABLED}. Default false — opt-in for Standard tier. */
+    public Duration redisConnectTimeout() {
+        return Duration.ofMillis(Long.parseLong(props.getProperty("redis.connect.timeout.ms", "5000")));
+    }
+
+    public Duration redisCommandTimeout() {
+        return Duration.ofMillis(Long.parseLong(props.getProperty("redis.command.timeout.ms", "3000")));
+    }
+
+    /** Env: {@code REDIS_READ_CACHE_ENABLED}. Default true (spec 025 FR-110). */
     public boolean redisReadCacheEnabled() {
-        return Boolean.parseBoolean(props.getProperty("redis.read.cache.enabled", "false"));
+        return Boolean.parseBoolean(props.getProperty("redis.read.cache.enabled", "true"));
     }
 
     /** TTL seconds for {@link com.avandocmsg.messenger.core.port.ReadCacheKind} (env overrides per kind). */
@@ -233,7 +303,24 @@ public class AppConfig {
         return props.getProperty("nats.url", "nats://localhost:4222");
     }
 
+    public Duration natsReconnectWait() {
+        return Duration.ofMillis(Long.parseLong(props.getProperty("nats.reconnect.wait.ms", "2000")));
+    }
+
+    public int natsMaxReconnects() {
+        return Integer.parseInt(props.getProperty("nats.max.reconnects", "-1"));
+    }
+
+    public Duration natsConnectionTimeout() {
+        return Duration.ofMillis(Long.parseLong(props.getProperty("nats.connection.timeout.ms", "5000")));
+    }
+
+    public Duration natsPingInterval() {
+        return Duration.ofMillis(Long.parseLong(props.getProperty("nats.ping.interval.ms", "120000")));
+    }
+
     /** When true, {@code msg.send} uses JetStream publish and requires pipeline with {@code NATS_JETSTREAM=true}. */
+    /** Env: {@code NATS_JETSTREAM}. Lab compose uses false; enable for FR-052 JetStream/DLQ features. */
     public boolean natsJetstream() {
         return Boolean.parseBoolean(props.getProperty("nats.jetstream", "false"));
     }
@@ -324,6 +411,42 @@ public class AppConfig {
         return props.getProperty("minio.bucket", "avandocmsg");
     }
 
+    public int minioConnectTimeoutMs() {
+        return Integer.parseInt(props.getProperty("minio.connect.timeout.ms", "10000"));
+    }
+
+    public int minioReadTimeoutMs() {
+        return Integer.parseInt(props.getProperty("minio.read.timeout.ms", "60000"));
+    }
+
+    public int minioWriteTimeoutMs() {
+        return Integer.parseInt(props.getProperty("minio.write.timeout.ms", "60000"));
+    }
+
+    public int minioHttpMaxIdleConnections() {
+        return Integer.parseInt(props.getProperty("minio.http.max.idle.connections", "10"));
+    }
+
+    public int minioHttpKeepAliveMinutes() {
+        return Integer.parseInt(props.getProperty("minio.http.keep.alive.minutes", "5"));
+    }
+
+    public int minioPresignTtlSeconds() {
+        return Integer.parseInt(props.getProperty("minio.presign.ttl.seconds", "300"));
+    }
+
+    public boolean filePresignRedirectEnabled() {
+        return Boolean.parseBoolean(props.getProperty("file.presign.redirect.enabled", "true"));
+    }
+
+    public String filePresignRedirectCacheControl() {
+        return props.getProperty("file.presign.redirect.cache-control", "private, max-age=0, no-store");
+    }
+
+    public boolean minioHttpRetryOnConnectionFailure() {
+        return Boolean.parseBoolean(props.getProperty("minio.http.retry.on.connection.failure", "true"));
+    }
+
     public boolean hotReloadEnabled() {
         return Boolean.parseBoolean(props.getProperty("hot.reload", "true"));
     }
@@ -403,17 +526,7 @@ public class AppConfig {
         }
     }
 
-    /** Deploy profile: dev (default), pilot, standard, enterprise. Env: {@code KORUS_DEPLOY_PROFILE}. */
-    public String deployProfile() {
-        return props.getProperty("korus.deploy.profile", "dev").trim().toLowerCase(Locale.ROOT);
-    }
-
-    /** Alias for product module registry. */
-    public String korusDeployProfile() {
-        return deployProfile();
-    }
-
-    /** Comma-separated add-on ids; empty = resolve from deploy profile or Base-only. Env: {@code KORUS_PRODUCT_ADDONS}. */
+    /** Comma-separated add-on ids; empty = Base-only. Env: {@code KORUS_PRODUCT_ADDONS}. */
     public String korusProductAddons() {
         return props.getProperty("korus.product.addons", "").trim();
     }
@@ -444,11 +557,11 @@ public class AppConfig {
     }
 
     /**
-     * Fail-fast (standard/enterprise) or warn (pilot) when dev-default secrets are used (PS-0.6).
+     * Fail-fast when dev-default secrets are used with non-empty product addons (PS-0.6).
      */
     public void validateProductionSecrets() {
-        var profile = deployProfile();
-        if ("dev".equals(profile) || profile.isBlank()) {
+        var addons = korusProductAddons();
+        if (addons == null || addons.isBlank()) {
             return;
         }
         var issues = new ArrayList<String>();
@@ -464,13 +577,29 @@ public class AppConfig {
         if (issues.isEmpty()) {
             return;
         }
-        var message = "Insecure default secrets for deploy profile '" + profile + "': "
-            + String.join(", ", issues);
-        if ("pilot".equals(profile)) {
-            log.warn("{} (QEMU/dev pilot may use compose defaults)", message);
-            return;
+        throw new IllegalStateException(
+            "Insecure default secrets with product addons enabled: " + String.join(", ", issues));
+    }
+
+    /** Startup validation for operability gates (spec 025 FR-100). */
+    public void validateStartup() {
+        validateProductionSecrets();
+        var presignTtl = minioPresignTtlSeconds();
+        if (presignTtl < 60 || presignTtl > 3600) {
+            throw new IllegalStateException(
+                "minio.presign.ttl.seconds must be between 60 and 3600, got " + presignTtl);
         }
-        throw new IllegalStateException(message);
+        if (dbPoolSize() < 1) {
+            throw new IllegalStateException("db.pool.size must be >= 1, got " + dbPoolSize());
+        }
+        if (dbPoolMinimumIdle() < 0 || dbPoolMinimumIdle() > dbPoolSize()) {
+            throw new IllegalStateException(
+                "db.pool.minimum.idle must be 0.." + dbPoolSize() + ", got " + dbPoolMinimumIdle());
+        }
+        var nats = natsUrl();
+        if (nats == null || nats.isBlank()) {
+            throw new IllegalStateException("nats.url must not be blank");
+        }
     }
 
     private boolean isDevDefaultSecret(String actual, String devDefault) {
@@ -670,6 +799,14 @@ public class AppConfig {
      */
     public boolean exportSuggestedSubscriberEnabled() {
         return Boolean.parseBoolean(props.getProperty("export.suggested.subscriber.enabled", "true"));
+    }
+
+    /**
+     * Subscribe to deprecated {@code msg.cache.invalidate} for Redis read-cache rollback (FR-009).
+     * Default {@code false} — pipeline invalidates Redis directly. Env: {@code READ_CACHE_NATS_INVALIDATE_ENABLED}.
+     */
+    public boolean readCacheNatsInvalidateEnabled() {
+        return Boolean.parseBoolean(props.getProperty("read.cache.nats.invalidate.enabled", "false"));
     }
 
     /**
@@ -900,9 +1037,9 @@ public class AppConfig {
         return Boolean.parseBoolean(props.getProperty("openmls.native.enabled", "false"));
     }
 
-    /** Spec 014: default connector-runtime on korus-integrations VM. */
+    /** Spec 014: connector-runtime base URL. Env: INTEGRATIONS_BASE_URL. */
     public String integrationsBaseUrl() {
-        return props.getProperty("integrations.base.url", "http://192.168.76.30:8091").trim();
+        return props.getProperty("integrations.base.url", "http://localhost:8091").trim();
     }
 
     /** Optional desired external-stack manifest rendered by deploy tooling (spec 023). */

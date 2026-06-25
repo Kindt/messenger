@@ -3,35 +3,27 @@ package com.avandocmsg.messenger.api.config;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class AppConfigProductionSecretsTest {
 
     @Test
-    void validateProductionSecrets_pilotWarnsOnDevDefaults() {
-        var cfg = configWithProfile("pilot");
+    void validateProductionSecrets_baseOnlySkipsCheck() {
+        var cfg = configWithAddons("");
         assertDoesNotThrow(cfg::validateProductionSecrets);
-        assertEquals("pilot", cfg.deployProfile());
     }
 
     @Test
-    void validateProductionSecrets_standardFailsOnDevDefaults() {
-        var cfg = configWithProfile("standard");
+    void validateProductionSecrets_withAddonsFailsOnDevDefaults() {
+        var cfg = configWithAddons("addon-engage,addon-search");
         assertThrows(IllegalStateException.class, cfg::validateProductionSecrets);
     }
 
-    @Test
-    void validateProductionSecrets_devSkipsCheck() {
-        var cfg = configWithProfile("dev");
-        assertDoesNotThrow(cfg::validateProductionSecrets);
-    }
-
-    private static AppConfig configWithProfile(String profile) {
+    private static AppConfig configWithAddons(String addons) {
         return new AppConfig() {
             @Override
-            public String deployProfile() {
-                return profile;
+            public String korusProductAddons() {
+                return addons;
             }
 
             @Override

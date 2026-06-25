@@ -317,6 +317,10 @@
       "members": "Участники",
       "join": "Войти"
     },
+    "search": {
+      "emptyTitle": "Совпадений нет",
+      "emptyHint": "Измените запрос или проверьте написание."
+    },
     "auth": {
       "username": "Логин",
       "password": "Пароль",
@@ -415,6 +419,8 @@
       "confLiveDefault": "Идёт видеоконференция",
       "searchPlaceholder": "Поиск в этом чате (от 2 симв., без E2EE)…",
       "nothingInChat": "Ничего не найдено в этом чате.",
+      "searchEmptyTitle": "В этом чате ничего нет",
+      "searchEmptyHint": "Попробуйте другие слова или воспользуйтесь поиском в шапке.",
       "replyPrefix": "Ответ: {text}",
       "markdownHint": "Markdown: **жирный**, *курсив*, `код`, [ссылка](https://…)",
       "autoDelete": "Автоудаление:",
@@ -590,6 +596,21 @@
       "reconnecting": "Переподключение…",
       "quotaHint": "Кэш хранит последние сообщения выбранных чатов."
     },
+    "export": {
+      "cancelled": "Экспорт отменён",
+      "failed": "Экспорт не удался",
+      "failedJob": "Экспорт завершился с ошибкой",
+      "timeout": "Таймаут ожидания экспорта",
+      "statusQueued": "в очереди",
+      "statusProcessing": "обработка",
+      "statusWaiting": "ожидание",
+      "started": "Экспорт запущен — можно перейти в другой чат; скачивание начнётся автоматически",
+      "ready": "Экспорт готов, архив скачан",
+      "alreadyRunning": "Уже выполняется другой экспорт",
+      "noJobId": "Сервер не вернул job_id",
+      "cancelFailed": "Не удалось отменить экспорт",
+      "attachmentsPreview": "Вложения экспорта: {count} файл(ов)"
+    },
     "message": {
       "image": "Изображение",
       "video": "Видео",
@@ -675,6 +696,7 @@
       "presenceOffline": "Не в сети",
       "customStatus": "Статус",
       "dndSchedule": "Не беспокоить до",
+      "dndSeeNotificationsTab": "Длительность «Не беспокоить» — во вкладке «Уведомления».",
       "dndUntilManual": "Пока не отключу",
       "dndUntil30m": "30 минут",
       "dndUntil1h": "1 час",
@@ -790,6 +812,15 @@
       "directoryHint": "Доверенные организации для кросс-org чатов (MVP).",
       "trustActive": "Активно",
       "trustPending": "Ожидает",
+      "trustLevel": {
+        "trusted": "Доверенный",
+        "verified": "Проверенный",
+        "pending": "Ожидает",
+        "partial": "Частичный",
+        "none": "Без доверия",
+        "blocked": "Заблокирован",
+        "unknown": "Уровень: {value}"
+      },
       "partnerLabel": "Партнёр",
       "badgeThread": "Федерация",
       "joinCopied": "Комната скопирована в буфер обмена."

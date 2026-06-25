@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.admin.fleet;
 
+import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -15,7 +16,7 @@ import java.util.List;
 public final class FleetTargetRegistry {
 
     private static final Logger log = LoggerFactory.getLogger(FleetTargetRegistry.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private final List<FleetTarget> targets;
 

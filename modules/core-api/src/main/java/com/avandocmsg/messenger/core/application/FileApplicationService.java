@@ -169,6 +169,56 @@ public final class FileApplicationService {
         }
     }
 
+    public Optional<String> presignedDownloadUrl(FileId fileId, int ttlSeconds) {
+        var meta = fileMetadataPort.findById(fileId);
+        if (meta.isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            return objectStoragePort.presignedGetUrl(meta.get().resolveObjectKey(), ttlSeconds);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public Optional<FilePresignUploadResult> beginPresignedUpload(String filename, String mimeType, long size,
+                                                                  UserId uploadedBy, int ttlSeconds) {
+        if (size <= 0 || size > maxUploadBytes || fileDedupEnabled) {
+            return Optional.empty();
+        }
+        var fileId = FileId.of(uuidGenerator.randomUuid());
+        var safeName = filename != null ? filename : "file";
+        var contentType = mimeType != null ? mimeType : "application/octet-stream";
+        var objectName = fileId.value().toString() + "/" + safeName;
+        return fileMetadataPort.insert(fileId, safeName, contentType, size, uploadedBy)
+            .flatMap(stored -> {
+                try {
+                    var uploadUrl = objectStoragePort.presignedPutUrl(objectName, ttlSeconds, contentType);
+                    if (uploadUrl.isEmpty()) {
+                        fileMetadataPort.delete(fileId);
+                        return Optional.empty();
+                    }
+                    var downloadUrl = "/api/v1/files/" + fileId.value() + "/download";
+                    return Optional.of(new FilePresignUploadResult(stored, uploadUrl.get(), downloadUrl, ttlSeconds));
+                } catch (Exception e) {
+                    fileMetadataPort.delete(fileId);
+                    return Optional.empty();
+                }
+            });
+    }
+
+    public boolean confirmPresignedUpload(FileId fileId, UserId uploadedBy) {
+        var meta = fileMetadataPort.findById(fileId);
+        if (meta.isEmpty() || !meta.get().uploadedBy().equals(uploadedBy)) {
+            return false;
+        }
+        try (var in = objectStoragePort.get(meta.get().resolveObjectKey())) {
+            return in != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public boolean delete(FileId fileId) {
         var meta = fileMetadataPort.findById(fileId);
         if (meta.isEmpty()) {
@@ -209,4 +259,6 @@ public final class FileApplicationService {
     }
 
     public record FileUploadResult(StoredFile file, String downloadUrl) {}
+
+    public record FilePresignUploadResult(StoredFile file, String uploadUrl, String downloadUrl, int expiresInSeconds) {}
 }

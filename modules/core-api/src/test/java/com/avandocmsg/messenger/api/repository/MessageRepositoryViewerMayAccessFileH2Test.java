@@ -64,7 +64,7 @@ class MessageRepositoryViewerMayAccessFileH2Test {
         }
         insertMember(chatId, senderId, false);
         insertMember(chatId, viewerId, false);
-        insertMessage(msgId, chatId, senderId, "text", "  " + fileId + "  ", false);
+        insertMessage(msgId, chatId, senderId, "text", fileId.toString(), false);
         repo = new MessageRepository(ds, Clock.systemUTC());
     }
 

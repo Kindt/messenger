@@ -1,5 +1,7 @@
 package com.avandocmsg.messenger.api.config;
 
+import com.avandocmsg.messenger.common.nats.NatsClientSettings;
+import com.avandocmsg.messenger.common.nats.NatsConnectionOptions;
 import io.nats.client.Connection;
 import io.nats.client.Nats;
 import org.slf4j.Logger;
@@ -13,11 +15,25 @@ public class NatsConfig {
 
     public NatsConfig(AppConfig appConfig) {
         try {
-            this.connection = Nats.connect(appConfig.natsUrl());
-            log.info("NATS connected: {}", appConfig.natsUrl());
+            var settings = natsClientSettings(appConfig);
+            var options = NatsConnectionOptions.clientBuilder(appConfig.natsUrl(), "core-api", settings).build();
+            this.connection = Nats.connect(options);
+            log.info(
+                "NATS connected: {} (reconnectWait={}ms, connectionTimeout={}ms)",
+                appConfig.natsUrl(),
+                settings.reconnectWait().toMillis(),
+                settings.connectionTimeout().toMillis());
         } catch (IOException | InterruptedException e) {
             throw new RuntimeException("Cannot connect to NATS at " + appConfig.natsUrl(), e);
         }
+    }
+
+    static NatsClientSettings natsClientSettings(AppConfig appConfig) {
+        return new NatsClientSettings(
+            appConfig.natsReconnectWait(),
+            appConfig.natsMaxReconnects(),
+            appConfig.natsConnectionTimeout(),
+            appConfig.natsPingInterval());
     }
 
     public Connection connection() {
