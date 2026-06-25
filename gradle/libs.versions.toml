@@ -51,6 +51,7 @@ jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jac
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations" }
 jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310" }
+jackson-module-jakarta-xmlbind-annotations = { module = "com.fasterxml.jackson.module:jackson-module-jakarta-xmlbind-annotations" }
 jackson-dataformat-yaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml" }
 jackson-dataformat-toml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-toml" }
 

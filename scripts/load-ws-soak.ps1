@@ -45,6 +45,10 @@ function Resolve-WsBaseUrl {
 
 function Open-Ws([string]$Url) {
     $ws = New-Object System.Net.WebSockets.ClientWebSocket
+    $origin = ($WebBaseUrl -replace '/$', '')
+    if ($origin) {
+        $ws.Options.SetRequestHeader("Origin", $origin)
+    }
     $cts = New-Object System.Threading.CancellationTokenSource
     $cts.CancelAfter([TimeSpan]::FromSeconds($ConnectTimeoutSec))
     $uri = New-Object System.Uri($Url, [System.UriKind]::Absolute)
@@ -69,7 +73,7 @@ function Read-MetricValue([string]$Body, [string]$Name) {
 
 $token = Get-Token
 $wsBase = Resolve-WsBaseUrl -Override $WsUrl
-$wsUrl = "$wsBase?token=$([Uri]::EscapeDataString($token))"
+$wsUrl = "${wsBase}?token=$([Uri]::EscapeDataString($token))"
 Write-Host "WS soak: connections=$Connections duration=${DurationSeconds}s url=$wsBase" -ForegroundColor Cyan
 
 $sockets = New-Object System.Collections.Generic.List[object]

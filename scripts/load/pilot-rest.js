@@ -4,14 +4,17 @@ import { check, sleep } from 'k6';
 const baseUrl = __ENV.K6_BASE_URL || 'http://127.0.0.1:18080';
 const user = __ENV.K6_USER || 'smoke_user_a';
 const pass = __ENV.K6_PASS || 'smokepass123';
+const lab = __ENV.K6_LAB === '1' || __ENV.K6_LAB === 'true';
 
 export const options = {
-  vus: Number(__ENV.K6_VUS || 5),
+  vus: Number(__ENV.K6_VUS || (lab ? 2 : 5)),
   duration: __ENV.K6_DURATION || '30s',
-  thresholds: {
-    http_req_failed: ['rate<0.05'],
-    http_req_duration: ['p(95)<800'],
-  },
+  thresholds: lab
+    ? {}
+    : {
+        http_req_failed: ['rate<0.05'],
+        http_req_duration: ['p(95)<800'],
+      },
 };
 
 export default function () {

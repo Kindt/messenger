@@ -231,9 +231,11 @@ public class CoreApiComposition {
     /** Embedded Tomcat: register servlets on {@link Context} before {@code tomcat.start()}. */
     public void wireToEmbeddedTomcatContext(Context tomcatContext) {
         wireApplicationStack((jerseyName, jerseyServlet, adminServlet) -> {
-            Tomcat.addServlet(tomcatContext, jerseyName, jerseyServlet);
+            var jerseyWrapper = Tomcat.addServlet(tomcatContext, jerseyName, jerseyServlet);
+            jerseyWrapper.setLoadOnStartup(1);
             tomcatContext.addServletMappingDecoded("/api/*", jerseyName);
-            Tomcat.addServlet(tomcatContext, "adminUiStatic", adminServlet);
+            var adminWrapper = Tomcat.addServlet(tomcatContext, "adminUiStatic", adminServlet);
+            adminWrapper.setLoadOnStartup(2);
             tomcatContext.addServletMappingDecoded("/admin/*", "adminUiStatic");
         });
     }
@@ -404,8 +406,7 @@ public class CoreApiComposition {
             pluginPlatformService,
             appConfig);
 
-        var jerseyServlet = new ServletContainer(
-            new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
+        var jerseyConfig = new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
                 userLookupPort, contactRepositoryPort, contactService,
                 chatService, readReceiptService, chatApplicationService,
                 messageApplicationService, userApplicationService, fileApplicationService,
@@ -426,7 +427,8 @@ public class CoreApiComposition {
                 authPolicyService, directorySyncService, migrationImportJobPort, devicePort, orgUserDirectory,
                 platformModuleRegistry, platformModuleOverrideRepository,
                 federationTrustPort, federationStatusService, dlpBridgeGate,
-                chatPollPort, chatPollService, scheduledMessagePort, messageReminderPort, phase5AdrService));
+                chatPollPort, chatPollService, scheduledMessagePort, messageReminderPort, phase5AdrService);
+        var jerseyServlet = new ServletContainer(jerseyConfig);
 
         registration.register(SERVLET_NAME, jerseyServlet, new ClasspathAdminStaticServlet());
     }

@@ -62,12 +62,21 @@ public final class EmbeddedTomcatBootstrap {
         try {
             log.info("Hot-reload triggered, restarting application context...");
             ctx.stop();
+            removeServletIfPresent(CoreApiComposition.SERVLET_NAME);
+            removeServletIfPresent("adminUiStatic");
             ctx.destroy();
             composition.wireToEmbeddedTomcatContext(ctx);
             ctx.start();
             log.info("Application context reloaded successfully");
         } catch (Exception e) {
             log.error("Failed to reload application context", e);
+        }
+    }
+
+    private void removeServletIfPresent(String servletName) {
+        var existing = ctx.findChild(servletName);
+        if (existing != null) {
+            ctx.removeChild(existing);
         }
     }
 

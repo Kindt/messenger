@@ -46,6 +46,10 @@ dependencies {
 
     // JSON + YAML catalog (databind/jsr310 via :modules:common BOM)
     implementation(libs.jackson.dataformat.yaml)
+    // Jersey JacksonFeature resolves this introspector at servlet init (excluded from jersey-media-json-jackson).
+    implementation(libs.jackson.module.jakarta.xmlbind.annotations) {
+        exclude(group = "jakarta.activation", module = "jakarta.activation-api")
+    }
     implementation(libs.snakeyaml)
 
     // Logging

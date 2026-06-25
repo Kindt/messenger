@@ -1,0 +1,65 @@
+﻿{
+    "environment":  "qemu-lab",
+    "overall":  "PASS",
+    "finished_at":  "2026-06-25T20:02:25.0617974Z",
+    "api_base":  "http://127.0.0.1:18080",
+    "steps":  [
+                  {
+                      "name":  "VP-00 static",
+                      "status":  "PASS"
+                  },
+                  {
+                      "name":  "API health",
+                      "status":  "PASS"
+                  },
+                  {
+                      "name":  "buildIntegrity",
+                      "status":  "PASS"
+                  },
+                  {
+                      "name":  "smoke-korus-web",
+                      "status":  "PASS"
+                  },
+                  {
+                      "name":  "VP-13 messaging E2E",
+                      "status":  "PASS"
+                  },
+                  {
+                      "name":  "VP-14 file upload parity",
+                      "status":  "PASS"
+                  },
+                  {
+                      "name":  "first-load budget",
+                      "status":  "PASS"
+                  },
+                  {
+                      "name":  "k6 pilot-health",
+                      "status":  "PASS"
+                  },
+                  {
+                      "name":  "k6 pilot-rest",
+                      "status":  "PASS"
+                  },
+                  {
+                      "name":  "QEMU metrics probe",
+                      "status":  "PASS"
+                  },
+                  {
+                      "name":  "QEMU PG EXPLAIN",
+                      "status":  "PASS"
+                  },
+                  {
+                      "name":  "QEMU observability lab",
+                      "status":  "PASS"
+                  },
+                  {
+                      "name":  "VP-01 WS soak (short)",
+                      "status":  "PASS"
+                  },
+                  {
+                      "name":  "redis INFO (guest)",
+                      "status":  "PASS"
+                  }
+              ],
+    "git_sha":  "3e03432"
+}

@@ -342,7 +342,7 @@ public class JerseyConfig extends ResourceConfig {
         register(com.avandocmsg.messenger.api.plugins.PluginOutboundResource.class);
         register(PrometheusMetricsResource.class);
 
-        register(OpenApiConfig.create(appConfig.version()).getClass());
+        register(OpenApiConfig.create(appConfig.version()));
 
         register(BotTokenAuthFilter.class);
         register(PlatformAddonGateFilter.class);

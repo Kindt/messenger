@@ -1,0 +1,42 @@
+---
+description: Build/deploy failure loop — read logs, fix, restart until green
+alwaysApply: true
+---
+
+# Build failure: diagnose → fix → restart (until green)
+
+When **any** build or deploy step fails (Gradle, `buildIntegrity`, Docker image build, guest `core-api-rebuild`, `docker compose up`, Ansible bootstrap), the agent **must not** stop at the first failure or only report status.
+
+## Mandatory loop
+
+1. **Capture logs** — full error, not the last line only:
+   - Host: `build/reports`, Gradle `--stacktrace`, compile output
+   - Guest: `/tmp/korus-job-*.log`, `/var/log/korus-bootstrap.log`, `docker logs` (tail + grep ERROR)
+   - QEMU: `deploy/qemu/run/*-serial.log`, `status-minute.log`
+2. **Diagnose** — root cause (compile error, Jersey init, env/addons, health timeout, infra down)
+3. **Fix** — minimal repo diff; match project conventions
+4. **Restart the same step** — rebuild image, `qemu-sync-api-core -NoCache`, `gradlew buildIntegrity`, compose recreate
+5. **Verify** — health `:18080` / guest `:8080`, or build gate PASS
+6. **Repeat** until **full build passes** and **server/stack is up**, or a **hard blocker** needs the user (missing creds, WHPX broken, explicit user decision)
+
+## Anti-patterns (forbidden)
+
+- Declaring "blocked" after one failed guest job without log analysis and a retry
+- Launching multiple overlapping background workers for the same rebuild
+- Status-only monitoring without fix+restart cycle
+- Host Docker for runtime (see `qemu-host-isolation.mdc`)
+
+## Monitoring + chat
+
+While a long guest build runs: post **timestamped** status in chat every minute (`job`, `host18080`, `guest8080`, container). On failure, next message must include **what broke** and **what fix/restart** is next—not only HTTP codes.
+
+## QEMU entrypoints (server API)
+
+```powershell
+.\scripts\qemu-sync-api-core.ps1 -NoCache          # launch; poll qemu-guest-job.ps1 -Loop
+.\scripts\perf\run-qemu-fix-core-api.ps1           # addons + recreate
+.\scripts\qemu-dev-mode.ps1 -Mode sync-api         # lighter sync
+.\gradlew.bat buildIntegrity                       # host compile gate (no live stack)
+```
+
+Success criteria for core-api lab: `http://127.0.0.1:18080/api/v1/health` → **200**, container healthy.

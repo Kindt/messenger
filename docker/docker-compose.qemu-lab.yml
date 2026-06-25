@@ -1,0 +1,6 @@
+# QEMU lab overrides: base-only product modules + dev secrets (spec 025 FR-140).
+# Used by Ansible qemu-server-local and scripts/perf/run-qemu-fix-core-api.ps1.
+services:
+  core-api:
+    environment:
+      KORUS_PRODUCT_ADDONS: ""
