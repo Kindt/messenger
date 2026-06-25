@@ -49,6 +49,7 @@ Do **not** replace speckit with superpowers `writing-plans` for formal spec-kit 
 |------------|------|
 | **User communication** | Russian for user-facing chat; code/logs/identifiers stay as in repo |
 | **Commits** | Only when user explicitly asks |
+| **Git push** | **Only** `.\scripts\git-push.ps1` (never raw `git push` — corporate proxy breaks GitHub). See `.cursor/rules/git-push-proxy-bypass.mdc` |
 | **Scope** | Minimal diff; do not refactor unrelated code |
 | **PR gate** | `./gradlew buildIntegrity` |
 | **Live stack** | Docker Compose + Ansible — [`deploy/ansible/DEPLOY_QUICKSTART.md`](../../deploy/ansible/DEPLOY_QUICKSTART.md). QEMU scripts — **not in Git** (`.gitignore`, local optional) |

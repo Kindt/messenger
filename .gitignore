@@ -36,6 +36,7 @@ scripts/__pycache__/
 !.cursor/skills/korus-agent-workflow/
 !.cursor/skills/korus-agent-workflow/**
 !.cursor/rules/korus-ui-team.mdc
+!.cursor/rules/git-push-proxy-bypass.mdc
 .specify/
 .opencode/
 specs/

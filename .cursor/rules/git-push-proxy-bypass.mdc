@@ -1,0 +1,22 @@
+---
+description: Git push to GitHub — always use scripts/git-push.ps1 (bypass corporate HTTP proxy)
+alwaysApply: true
+---
+
+# Git push (proxy bypass)
+
+Corporate `http.proxy` points at `gitlab.dm.korusconsulting.ru` and breaks direct `git push` to GitHub.
+
+## Required
+
+- **Always** push via [`scripts/git-push.ps1`](../../scripts/git-push.ps1) — never raw `git push`.
+- Default (current branch → `origin`): `.\scripts\git-push.ps1`
+- Explicit branch: `.\scripts\git-push.ps1 -u origin main`
+- Extra git args pass through: `.\scripts\git-push.ps1 origin main --force-with-lease` (only if user orders)
+
+## Forbidden
+
+- `git push` / `gh` push without clearing proxy
+- `git -c http.proxy= push` ad hoc — use the script (single entry point)
+
+Script runs: `git -c http.proxy= -c https.proxy= push …` from repo root.
