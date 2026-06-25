@@ -26,7 +26,16 @@ scripts/__pycache__/
 # =============================================================================
 # Не продукт: агенты, спеки, документация, презентации, E2E (только локально)
 # =============================================================================
-.cursor/
+|.cursor/
+!.cursor/skills/korus-ui-*/
+!.cursor/skills/korus-ui-/**/*
+!.cursor/skills/korus-webui/
+!.cursor/skills/korus-webui/**
+!.cursor/skills/korus-webui-mobile/
+!.cursor/skills/korus-webui-mobile/**
+!.cursor/skills/korus-agent-workflow/
+!.cursor/skills/korus-agent-workflow/**
+!.cursor/rules/korus-ui-team.mdc
 .specify/
 .opencode/
 specs/
@@ -42,6 +51,11 @@ tests/e2e-web/fixtures/*
 !tests/e2e-web/specs/
 tests/e2e-web/specs/*
 !tests/e2e-web/specs/ui-interaction-audit.spec.ts
+!tests/e2e-web/specs/settings-cross-tab.spec.ts
+!tests/e2e-web/specs/ui-visual-regression.spec.ts
+!tests/e2e-web/specs/ui-visual-regression.spec.ts-snapshots/
+!tests/e2e-web/specs/ui-visual-regression.spec.ts-snapshots/**
+!tests/e2e-web/playwright-tiers.json
 AGENTS.md
 CHANGELOG.md
 tz_full.html
@@ -59,6 +73,9 @@ scripts/publish-spec-001-branch.ps1
 scripts/playwright-staging-gate.ps1
 scripts/write-runtime-gate-report.ps1
 scripts/webui-locale-parity-audit.js
+scripts/webui-label-lint.js
+!.cursor/agents/
+!.cursor/agents/korus-ui-*.md
 
 !.github/workflows/deploy-pages.yml
 !.github/workflows/pages-deck.yml

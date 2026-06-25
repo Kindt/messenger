@@ -4,6 +4,7 @@
     "ui-auth",
     "ui-mobile",
     "ui-visual",
+    "ui-visual-regression",
     "ui-conversation",
     "ui-messaging",
     "ui-messaging-extended",
@@ -39,7 +40,12 @@
     },
     "ui-auth": {
       "description": "Auth session UI",
-      "args": ["specs/auth-session.spec.ts", "specs/auth-login-options.spec.ts", "specs/contacts-search.spec.ts"],
+      "args": [
+        "specs/auth-session.spec.ts",
+        "specs/auth-login-options.spec.ts",
+        "specs/contacts-search.spec.ts",
+        "specs/settings-cross-tab.spec.ts"
+      ],
       "grep": "login via UI|logout returns|locale switch|contacts list loads|login-options"
     },
     "ui-mobile": {
@@ -49,6 +55,10 @@
     "ui-visual": {
       "description": "Visual guards: desktop 3-user delivery screenshots and phone thread surface checks",
       "args": ["specs/messaging-visual.spec.ts"]
+    },
+    "ui-visual-regression": {
+      "description": "Screenshot regression: settings tabs (ru) and search empty states",
+      "args": ["specs/ui-visual-regression.spec.ts"]
     },
     "ui-conversation": {
       "description": "Multi-user conversation flows: A/B reply roundtrip, 3-user fan-out, refresh recovery, reactions, deletes",
@@ -125,7 +135,7 @@
     },
     "all-inner": {
       "description": "Run all inner tiers sequentially",
-      "sequential": ["api", "ui-auth", "ui-mobile", "ui-visual", "ui-conversation", "ui-messaging", "ui-messaging-extended", "ui-files", "ui-conference", "ui-call-flows", "ui-live", "ui-e2ee", "ui-bot", "ui-admin", "ui-admin-extended", "ui-i18n-artifacts", "ui-push", "e2ee-openmls-interop"]
+      "sequential": ["api", "ui-auth", "ui-mobile", "ui-visual", "ui-visual-regression", "ui-conversation", "ui-messaging", "ui-messaging-extended", "ui-files", "ui-conference", "ui-call-flows", "ui-live", "ui-e2ee", "ui-bot", "ui-admin", "ui-admin-extended", "ui-i18n-artifacts", "ui-push", "e2ee-openmls-interop"]
     }
   },
   "tierRequirements": {
@@ -136,6 +146,7 @@
     "ui-files": [],
     "ui-mobile": [],
     "ui-visual": [],
+    "ui-visual-regression": [],
     "ui-conversation": [],
     "ui-call-flows": [],
     "ui-interaction-audit": [],
