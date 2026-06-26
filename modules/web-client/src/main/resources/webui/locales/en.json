@@ -697,6 +697,7 @@
       "collapse": "Collapse",
       "endCall": "End call",
       "auditNotice": "Call is recorded for audit",
+      "auditNoticeComposite": "Single server recording (LiveKit)",
       "recordStart": "Record",
       "recordStop": "Stop",
       "recordStarted": "Your recording started",

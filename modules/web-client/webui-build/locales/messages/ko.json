@@ -697,6 +697,7 @@
       "collapse": "접기",
       "endCall": "통화 종료",
       "auditNotice": "감사용 통화 녹음 중",
+      "auditNoticeComposite": "단일 서버 녹화 (LiveKit)",
       "recordStart": "녹음",
       "recordStop": "중지",
       "recordStarted": "녹음이 시작되었습니다",

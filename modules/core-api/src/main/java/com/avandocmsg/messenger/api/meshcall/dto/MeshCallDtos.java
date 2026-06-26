@@ -13,14 +13,31 @@ public final class MeshCallDtos {
         @JsonProperty("session_id") String sessionId,
         @JsonProperty("audit_recording_id") String auditRecordingId,
         @JsonProperty("media_mode") String mediaMode,
-        String status
+        String status,
+        @JsonProperty("recording_mode") String recordingMode,
+        @JsonProperty("livekit_room") String livekitRoom,
+        @JsonProperty("livekit_url") String livekitUrl,
+        @JsonProperty("livekit_token") String livekitToken
     ) {
         public static MeshCallSessionResponse started(
             String sessionId,
             String auditRecordingId,
-            String mediaMode
+            String mediaMode,
+            String recordingMode,
+            String livekitRoom,
+            String livekitUrl,
+            String livekitToken
         ) {
-            return new MeshCallSessionResponse(sessionId, auditRecordingId, mediaMode, "active");
+            return new MeshCallSessionResponse(
+                sessionId,
+                auditRecordingId,
+                mediaMode,
+                "active",
+                recordingMode,
+                livekitRoom,
+                livekitUrl,
+                livekitToken
+            );
         }
     }
 

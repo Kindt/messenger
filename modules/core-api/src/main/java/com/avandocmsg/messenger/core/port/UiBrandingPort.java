@@ -14,7 +14,8 @@ public interface UiBrandingPort {
         Map<String, String> tokenOverrides,
         String customCss,
         String brandTitle,
-        boolean demoSkinsEnabled
+        boolean demoSkinsEnabled,
+        String shellLayout
     );
 
     Optional<OrgBranding> getOrg(UUID orgId);
@@ -24,7 +25,8 @@ public interface UiBrandingPort {
         String palette,
         Map<String, String> tokenOverrides,
         String customCss,
-        String brandTitle
+        String brandTitle,
+        String shellLayout
     );
 
     boolean deleteOrg(UUID orgId);
@@ -38,6 +40,7 @@ public interface UiBrandingPort {
         String customCss,
         String brandTitle,
         boolean demoSkinsEnabled,
+        String shellLayout,
         long revision,
         Instant createdAt,
         Instant updatedAt
@@ -49,6 +52,7 @@ public interface UiBrandingPort {
         Map<String, String> tokenOverrides,
         String customCss,
         String brandTitle,
+        String shellLayout,
         long revision,
         Instant createdAt,
         Instant updatedAt
@@ -61,6 +65,7 @@ public interface UiBrandingPort {
         String customCss,
         String brandTitle,
         boolean demoSkinsEnabled,
+        String shellLayout,
         long revision,
         String logoUrl
     ) {}

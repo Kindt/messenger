@@ -18,6 +18,12 @@
       "scopeGlobal": "Global",
       "scopeOrg": "Organization",
       "paletteLabel": "Палитра",
+      "layoutLabel": "Layout оболочки",
+      "layout": {
+        "default": "Стандарт",
+        "compact": "Компактный",
+        "auth_split": "Split login"
+      },
       "titleLabel": "Заголовок бренда",
       "titlePlaceholder": "Korus Messenger",
       "tokenPlaceholder": "например #7949f4",

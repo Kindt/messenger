@@ -8,6 +8,7 @@ import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
 import com.avandocmsg.messenger.core.application.UiBrandingService;
 import com.avandocmsg.messenger.core.domain.OrganizationId;
 import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.OrganizationLookupPort;
 import com.avandocmsg.messenger.core.port.UiBrandingPort;
 import com.avandocmsg.messenger.core.port.UserLookupPort;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,11 +17,13 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 
+import java.util.Locale;
 import java.util.UUID;
 
 @Path("/v1/branding")
@@ -29,6 +32,7 @@ import java.util.UUID;
 public class BrandingResource {
     private final UiBrandingService brandingService;
     private final UserLookupPort userLookupPort;
+    private final OrganizationLookupPort organizationLookupPort;
     private final OrganizationApplicationService organizationApplicationService;
     private final AvatarApplicationService avatarApplicationService;
 
@@ -36,19 +40,25 @@ public class BrandingResource {
     public BrandingResource(
         UiBrandingService brandingService,
         UserLookupPort userLookupPort,
+        OrganizationLookupPort organizationLookupPort,
         OrganizationApplicationService organizationApplicationService,
         AvatarApplicationService avatarApplicationService
     ) {
         this.brandingService = brandingService;
         this.userLookupPort = userLookupPort;
+        this.organizationLookupPort = organizationLookupPort;
         this.organizationApplicationService = organizationApplicationService;
         this.avatarApplicationService = avatarApplicationService;
     }
 
     @GET
     @Operation(summary = "Public branding snapshot")
-    public Response getPublicBranding() {
-        return Response.ok(BrandingDtos.fromMerged(brandingService.getPublicBranding())).build();
+    public Response getPublicBranding(@QueryParam("org_slug") String orgSlug) {
+        var orgId = resolveOrgIdFromSlug(orgSlug);
+        if (orgId == null) {
+            return Response.ok(BrandingDtos.fromMerged(brandingService.getPublicBranding())).build();
+        }
+        return Response.ok(BrandingDtos.fromMerged(brandingService.getForOrg(orgId, null))).build();
     }
 
     @GET
@@ -96,9 +106,27 @@ public class BrandingResource {
     @Path("manifest.webmanifest")
     @Produces("application/manifest+json")
     @Operation(summary = "PWA manifest with org/platform theme colors")
-    public Response getWebManifest() {
-        var merged = brandingService.getPublicBranding();
+    public Response getWebManifest(@QueryParam("org_slug") String orgSlug) {
+        var orgId = resolveOrgIdFromSlug(orgSlug);
+        var merged = orgId != null
+            ? brandingService.getForOrg(orgId, null)
+            : brandingService.getPublicBranding();
         return Response.ok(BrandingWebManifestBuilder.build(merged)).build();
+    }
+
+    private UUID resolveOrgIdFromSlug(String orgSlug) {
+        if (orgSlug == null || orgSlug.isBlank()) {
+            return null;
+        }
+        return organizationLookupPort.findBySlug(orgSlug.trim().toLowerCase(Locale.ROOT))
+            .map(summary -> {
+                try {
+                    return UUID.fromString(summary.id());
+                } catch (IllegalArgumentException ignored) {
+                    return null;
+                }
+            })
+            .orElse(null);
     }
 
     private String resolveOrgLogoUrl(UUID userId, UUID orgId) {

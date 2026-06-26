@@ -39,10 +39,32 @@ class ImageResizeServiceTest {
     }
 
     @Test
+    void avatarFixturePng_resizesForE2e() throws Exception {
+        var png = java.util.Base64.getDecoder().decode(
+            "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAASklEQVR4XrXHsQ0AMBADIe+/9Ke/mkg0bLe/eq7neq7neq7neq7neq7neq7neq7neq7neq7neq7neq7neq7neq7neq7neq7neu0BNof8Lr1YpLkAAAAASUVORK5CYII=");
+        try (var in = new ByteArrayInputStream(png)) {
+            assertTrue(ImageResizeService.resizeToJpeg(in, 64, 64, 25_000_000).isPresent());
+        }
+    }
+
+    @Test
     void isResizableMimeType_acceptsCommonImages() {
         assertTrue(ImageResizeService.isResizableMimeType("image/png"));
         assertTrue(ImageResizeService.isResizableMimeType("image/jpeg; charset=binary"));
         assertFalse(ImageResizeService.isResizableMimeType("application/pdf"));
+    }
+
+    @Test
+    void inferImageMimeFromFilename_mapsExtensions() {
+        assertEquals("image/png", ImageResizeService.inferImageMimeFromFilename("avatar.png"));
+        assertEquals("image/jpeg", ImageResizeService.inferImageMimeFromFilename("photo.JPG"));
+        assertEquals(null, ImageResizeService.inferImageMimeFromFilename("doc.pdf"));
+    }
+
+    @Test
+    void isResizableFile_acceptsOctetStreamWhenFilenameIsImage() {
+        assertTrue(ImageResizeService.isResizableFile("application/octet-stream", "e2e-avatar.png"));
+        assertFalse(ImageResizeService.isResizableFile("application/octet-stream", "notes.txt"));
     }
 
     private static byte[] pngBytes(int w, int h, Color color) throws Exception {

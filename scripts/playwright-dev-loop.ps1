@@ -1,6 +1,6 @@
 # US9 inner loop: preflight + tiered Playwright against live QEMU stack (host browser OK).
 param(
-    [ValidateSet('api', 'ui-auth', 'ui-mobile', 'ui-visual', 'ui-visual-regression', 'ui-conversation', 'ui-messaging', 'ui-files', 'ui-conference', 'ui-call-flows', 'ui-live', 'ui-e2ee', 'ui-bot', 'ui-admin', 'ui-admin-extended', 'ui-interaction-audit', 'ui-branding', 'ui-i18n-artifacts', 'ui-avatar', 'ui-tests', 'e2ee-openmls-interop', 'full', 'all-inner')]
+    [ValidateSet('api', 'ui-auth', 'ui-mobile', 'ui-visual', 'ui-visual-regression', 'ui-conversation', 'ui-messaging', 'ui-files', 'ui-conference', 'ui-call-flows', 'ui-live', 'ui-e2ee', 'ui-bot', 'ui-admin', 'ui-admin-extended', 'ui-interaction-audit', 'ui-branding', 'ui-shell-layouts', 'ui-i18n-artifacts', 'ui-avatar', 'ui-tests', 'e2ee-openmls-interop', 'full', 'all-inner')]
     [string]$Tier = 'api',
     [switch]$SkipPreflight,
     [switch]$WaitForStack,

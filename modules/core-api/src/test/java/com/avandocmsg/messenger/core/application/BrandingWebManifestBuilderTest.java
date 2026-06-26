@@ -17,6 +17,7 @@ class BrandingWebManifestBuilderTest {
             null,
             "VTB Messenger",
             true,
+            "default",
             2L,
             null
         );

@@ -102,6 +102,7 @@ public class AppConfig {
         override("LIVEKIT_API_KEY", "livekit.api.key");
         override("LIVEKIT_API_SECRET", "livekit.api.secret");
         override("LIVEKIT_INGRESS_URL", "livekit.ingress.url");
+        override("LIVEKIT_EGRESS_URL", "livekit.egress.url");
         override("LIVESTREAM_ROOM_PREFIX", "livestream.room.prefix");
         override("LIVESTREAM_MAX_WEBRTC_VIEWERS", "livestream.max.webrtc.viewers");
         override("INTEGRATIONS_BASE_URL", "integrations.base.url");
@@ -661,6 +662,15 @@ public class AppConfig {
         } catch (Exception e) {
             return "";
         }
+    }
+
+    /** LiveKit egress HTTP base (e.g. http://livekit-egress:8080). Empty = client-side mesh recording only. */
+    public String livekitEgressUrl() {
+        return props.getProperty("livekit.egress.url", "").trim();
+    }
+
+    public boolean compositeCallRecordingEnabled() {
+        return liveStreamingEnabled() && !livekitEgressUrl().isBlank();
     }
 
     public String livestreamRoomPrefix() {

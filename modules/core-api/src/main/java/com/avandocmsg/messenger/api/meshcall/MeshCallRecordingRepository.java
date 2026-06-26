@@ -20,8 +20,8 @@ public final class MeshCallRecordingRepository {
     public UUID createSession(UUID chatId, UUID userId, String mediaMode) {
         var id = UUID.randomUUID();
         var sql = """
-            INSERT INTO mesh_call_sessions (id, chat_id, started_by, media_mode, status)
-            VALUES (?, ?, ?, ?, 'active')
+            INSERT INTO mesh_call_sessions (id, chat_id, started_by, media_mode, status, recording_mode)
+            VALUES (?, ?, ?, ?, 'active', 'mesh')
             """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
@@ -36,9 +36,47 @@ public final class MeshCallRecordingRepository {
         }
     }
 
+    public void attachSessionComposite(UUID sessionId, UUID chatId, String livekitRoom, String egressId, String mode) {
+        var sql = """
+            UPDATE mesh_call_sessions
+            SET livekit_room = ?, egress_id = ?, recording_mode = ?
+            WHERE id = ? AND chat_id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, livekitRoom);
+            stmt.setString(2, egressId);
+            stmt.setString(3, mode);
+            stmt.setObject(4, sessionId);
+            stmt.setObject(5, chatId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new IllegalStateException("attachSessionComposite failed", e);
+        }
+    }
+
+    public void attachRecordingEgress(UUID recordingId, UUID sessionId, UUID chatId, String egressId, String storageKey) {
+        var sql = """
+            UPDATE mesh_call_recordings SET egress_id = ?, storage_key = ?
+            WHERE id = ? AND session_id = ? AND chat_id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, egressId);
+            stmt.setString(2, storageKey);
+            stmt.setObject(3, recordingId);
+            stmt.setObject(4, sessionId);
+            stmt.setObject(5, chatId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new IllegalStateException("attachRecordingEgress failed", e);
+        }
+    }
+
     public Optional<SessionRow> findSession(UUID sessionId, UUID chatId) {
         var sql = """
-            SELECT id, chat_id, started_by, media_mode, status, started_at, ended_at
+            SELECT id, chat_id, started_by, media_mode, status, started_at, ended_at,
+                   livekit_room, egress_id, recording_mode
             FROM mesh_call_sessions WHERE id = ? AND chat_id = ?
             """;
         try (var conn = dataSource.getConnection();
@@ -93,7 +131,8 @@ public final class MeshCallRecordingRepository {
 
     public Optional<RecordingRow> findRecording(UUID recordingId, UUID sessionId, UUID chatId) {
         var sql = """
-            SELECT id, session_id, chat_id, recorded_by, kind, status, file_id, started_at, ended_at, duration_ms
+            SELECT id, session_id, chat_id, recorded_by, kind, status, file_id, started_at, ended_at, duration_ms,
+                   egress_id, storage_key
             FROM mesh_call_recordings
             WHERE id = ? AND session_id = ? AND chat_id = ?
             """;
@@ -148,14 +187,40 @@ public final class MeshCallRecordingRepository {
         }
     }
 
+    public Optional<RecordingRow> findRecordingByEgress(UUID sessionId, UUID chatId, String egressId) {
+        var sql = """
+            SELECT id, session_id, chat_id, recorded_by, kind, status, file_id, started_at, ended_at, duration_ms,
+                   egress_id, storage_key
+            FROM mesh_call_recordings
+            WHERE session_id = ? AND chat_id = ? AND egress_id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, sessionId);
+            stmt.setObject(2, chatId);
+            stmt.setString(3, egressId);
+            try (var rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(mapRecording(rs));
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("findRecordingByEgress failed", e);
+        }
+    }
+
     public List<RecordingRow> listRecordings(UUID sessionId, UUID chatId, UUID viewerId, boolean includeAudit) {
         var sql = new StringBuilder("""
-            SELECT id, session_id, chat_id, recorded_by, kind, status, file_id, started_at, ended_at, duration_ms
+            SELECT id, session_id, chat_id, recorded_by, kind, status, file_id, started_at, ended_at, duration_ms,
+                   egress_id, storage_key
             FROM mesh_call_recordings
             WHERE session_id = ? AND chat_id = ?
             """);
         if (!includeAudit) {
             sql.append(" AND kind = 'user' AND recorded_by = ?");
+        } else {
+            sql.append(" AND kind IN ('user', 'composite', 'audit')");
         }
         sql.append(" ORDER BY started_at DESC");
         var out = new ArrayList<RecordingRow>();
@@ -185,7 +250,10 @@ public final class MeshCallRecordingRepository {
             rs.getString("media_mode"),
             rs.getString("status"),
             rs.getTimestamp("started_at").toInstant(),
-            rs.getTimestamp("ended_at") != null ? rs.getTimestamp("ended_at").toInstant() : null
+            rs.getTimestamp("ended_at") != null ? rs.getTimestamp("ended_at").toInstant() : null,
+            rs.getString("livekit_room"),
+            rs.getString("egress_id"),
+            rs.getString("recording_mode")
         );
     }
 
@@ -200,7 +268,9 @@ public final class MeshCallRecordingRepository {
             rs.getObject("file_id", UUID.class),
             rs.getTimestamp("started_at").toInstant(),
             rs.getTimestamp("ended_at") != null ? rs.getTimestamp("ended_at").toInstant() : null,
-            rs.getObject("duration_ms") != null ? rs.getLong("duration_ms") : null
+            rs.getObject("duration_ms") != null ? rs.getLong("duration_ms") : null,
+            rs.getString("egress_id"),
+            rs.getString("storage_key")
         );
     }
 
@@ -211,7 +281,10 @@ public final class MeshCallRecordingRepository {
         String mediaMode,
         String status,
         Instant startedAt,
-        Instant endedAt
+        Instant endedAt,
+        String livekitRoom,
+        String egressId,
+        String recordingMode
     ) {}
 
     public record RecordingRow(
@@ -224,6 +297,8 @@ public final class MeshCallRecordingRepository {
         UUID fileId,
         Instant startedAt,
         Instant endedAt,
-        Long durationMs
+        Long durationMs,
+        String egressId,
+        String storageKey
     ) {}
 }

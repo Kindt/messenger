@@ -7,6 +7,7 @@
 
   function normalizeConfig(raw) {
     if (!raw || typeof raw !== "object") return null;
+    var shellLayout = raw.shell_layout || "default";
     return {
       org_id: raw.org_id || null,
       palette: raw.palette || "korus",
@@ -16,7 +17,32 @@
       demo_skins_enabled: raw.demo_skins_enabled,
       revision: raw.revision || 0,
       logo_url: raw.logo_url || null,
+      shell_layout: shellLayout,
+      auth_layout: raw.auth_layout || deriveAuthLayout(shellLayout),
+      post_login_layout: raw.post_login_layout || derivePostLoginLayout(shellLayout),
     };
+  }
+
+  function deriveAuthLayout(shellLayout) {
+    return shellLayout === "auth-split" ? "auth-split" : "default";
+  }
+
+  function derivePostLoginLayout(shellLayout) {
+    if (shellLayout === "auth-split") return "default";
+    if (shellLayout === "compact") return "compact";
+    return "default";
+  }
+
+  function applyShellLayout(doc, config, options) {
+    options = options || {};
+    var cfg = config || {};
+    var layout = options.postLogin
+      ? cfg.post_login_layout || derivePostLoginLayout(cfg.shell_layout)
+      : cfg.auth_layout || deriveAuthLayout(cfg.shell_layout);
+    doc.documentElement.setAttribute("data-shell-layout", layout || "default");
+    if (cfg.shell_layout) {
+      doc.documentElement.setAttribute("data-shell-layout-source", cfg.shell_layout);
+    }
   }
 
   function themeColorFromDoc(doc) {
@@ -150,6 +176,10 @@
       notifyServiceWorker(cfg);
     }
 
+    if (options.applyShellLayout !== false) {
+      applyShellLayout(doc, cfg, options);
+    }
+
     return cfg;
   }
 
@@ -184,6 +214,9 @@
     CACHE_KEY: CACHE_KEY,
     STYLE_ID: STYLE_ID,
     normalizeConfig: normalizeConfig,
+    deriveAuthLayout: deriveAuthLayout,
+    derivePostLoginLayout: derivePostLoginLayout,
+    applyShellLayout: applyShellLayout,
     isPlatformDefaultBranding: isPlatformDefaultBranding,
     resolveMergedPalette: resolveMergedPalette,
     applyOrgBranding: applyOrgBranding,

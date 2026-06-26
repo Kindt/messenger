@@ -1345,6 +1345,7 @@
 
   function renderBrandingPanel(summary, pre, cap) {
     const palettes = ["korus", "vtb", "alfa", "rzd", "sfr", "sberbank"];
+    const shellLayouts = ["default", "compact", "auth-split"];
     const tokenKeys = ["--accent", "--bg", "--text"];
     const previewStyleId = "adminBrandingPreviewStyle";
     let lastLoaded = null;
@@ -1383,6 +1384,20 @@
     });
     paletteLabel.appendChild(paletteSelect);
     row.appendChild(paletteLabel);
+
+    const layoutLabel = document.createElement("label");
+    layoutLabel.className = "small";
+    layoutLabel.textContent = L("admin.branding.layoutLabel");
+    const layoutSelect = document.createElement("select");
+    layoutSelect.id = "brandingShellLayout";
+    shellLayouts.forEach((layout) => {
+      const opt = document.createElement("option");
+      opt.value = layout;
+      opt.textContent = L("admin.branding.layout." + layout.replace(/-/g, "_"));
+      layoutSelect.appendChild(opt);
+    });
+    layoutLabel.appendChild(layoutSelect);
+    row.appendChild(layoutLabel);
 
     const titleLabel = document.createElement("label");
     titleLabel.className = "small";
@@ -1501,6 +1516,7 @@
     function normalizeForm() {
       const payload = {
         palette: paletteSelect.value,
+        shell_layout: layoutSelect.value,
         token_overrides: {},
         custom_css: cssArea.value.trim() || null,
         brand_title: titleInput.value.trim() || null,
@@ -1520,6 +1536,8 @@
     function fillForm(data) {
       const obj = data && typeof data === "object" ? data : {};
       paletteSelect.value = obj.palette && palettes.includes(obj.palette) ? obj.palette : "korus";
+      layoutSelect.value =
+        obj.shell_layout && shellLayouts.includes(obj.shell_layout) ? obj.shell_layout : "default";
       tokenKeys.forEach((tokenKey) => {
         tokenInputs[tokenKey].value =
           obj.token_overrides && typeof obj.token_overrides === "object"
@@ -1535,6 +1553,12 @@
     function applyPreview(payload) {
       const root = document.documentElement;
       root.setAttribute("data-palette", payload.palette || "korus");
+      const shellLayout = payload.shell_layout || "default";
+      root.setAttribute("data-shell-layout-source", shellLayout);
+      root.setAttribute(
+        "data-shell-layout",
+        shellLayout === "auth-split" ? "auth-split" : shellLayout === "compact" ? "compact" : "default"
+      );
       tokenKeys.forEach((tokenKey) => {
         const v = payload.token_overrides && payload.token_overrides[tokenKey];
         if (v) {

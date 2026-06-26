@@ -139,7 +139,8 @@ public class FileResource {
         var filename = headers.getHeaderString("X-Filename");
         var mimeType = headers.getHeaderString("Content-Type");
         if (mimeType == null || mimeType.equals(MediaType.APPLICATION_OCTET_STREAM)) {
-            mimeType = "application/octet-stream";
+            var inferred = ImageResizeService.inferImageMimeFromFilename(filename);
+            mimeType = inferred != null ? inferred : "application/octet-stream";
         }
         if (data == null) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -418,7 +419,7 @@ public class FileResource {
 
     @GET
     @Path("/{fileId}/resize")
-    @Produces("image/jpeg")
+    @Produces({"image/jpeg", MediaType.APPLICATION_JSON})
     @Operation(summary = "Resize image", description = "On-the-fly thumbnail (embedded mode); JPEG output; w/h capped by server config")
     @ApiResponse(responseCode = "200", description = "Resized JPEG")
     @ApiResponse(responseCode = "400", description = "Not an image or invalid dimensions",
@@ -466,7 +467,7 @@ public class FileResource {
                 .build();
         }
         var stored = meta.get();
-        if (!ImageResizeService.isResizableMimeType(stored.mimeType())) {
+        if (!ImageResizeService.isResizableFile(stored.mimeType(), stored.filename())) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(new ApiError(400, messages.get("error.file.resize_not_image")))
                 .type(MediaType.APPLICATION_JSON)

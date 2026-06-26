@@ -324,6 +324,10 @@
     meshAuditRecordingId: null,
     meshUserRecordingId: null,
     meshUserRecordingActive: false,
+    meshCompositeRecording: false,
+    meshLivekitRoom: null,
+    meshLivekitUrl: null,
+    meshLivekitToken: null,
     callPanelToggleBusy: false,
     mediaCaps: null,
     platformCaps: null,
@@ -779,7 +783,11 @@
     });
     state.meshCallSessionId = data && (data.session_id || data.id);
     state.meshAuditRecordingId = data && data.audit_recording_id;
-    if (window.KorusUiCallMeshRecord) {
+    state.meshCompositeRecording = data && data.recording_mode === "composite";
+    state.meshLivekitRoom = (data && data.livekit_room) || null;
+    state.meshLivekitUrl = (data && data.livekit_url) || null;
+    state.meshLivekitToken = (data && data.livekit_token) || null;
+    if (!state.meshCompositeRecording && window.KorusUiCallMeshRecord) {
       await KorusUiCallMeshRecord.startAuditRecording(getMeshRecordCtx());
     }
     broadcastMeshSession();
@@ -793,7 +801,11 @@
     );
     state.meshCallSessionId = sessionId;
     state.meshAuditRecordingId = data && data.audit_recording_id;
-    if (window.KorusUiCallMeshRecord) {
+    state.meshCompositeRecording = data && data.recording_mode === "composite";
+    state.meshLivekitRoom = (data && data.livekit_room) || null;
+    state.meshLivekitUrl = (data && data.livekit_url) || null;
+    state.meshLivekitToken = (data && data.livekit_token) || null;
+    if (!state.meshCompositeRecording && window.KorusUiCallMeshRecord) {
       await KorusUiCallMeshRecord.startAuditRecording(getMeshRecordCtx());
     }
   }
@@ -1106,10 +1118,15 @@
       }
     }
     applyBrandChrome();
+    if (uiBranding.applyShellLayout && cfg) {
+      uiBranding.applyShellLayout(document, cfg, { postLogin: !!state.tokens });
+    }
   }
 
   function refreshBrandingPublic() {
-    return apiJson("/branding")
+    var slug = orgSlugFromUrl();
+    var path = "/branding" + (slug ? "?org_slug=" + encodeURIComponent(slug) : "");
+    return apiJson(path, { noAuth: true, noRefresh: true })
       .then(function (cfg) {
         applyBrandingConfig(cfg);
         return cfg;
@@ -2483,7 +2500,9 @@
         state.meshAuditRecordingId = null;
         state.meshUserRecordingId = null;
         state.meshUserRecordingActive = false;
+        state.meshCompositeRecording = false;
       }
+      if (window.KorusUiCallLivekit) KorusUiCallLivekit.disconnectRoom(state);
       stopMeshCallMedia();
       render();
     } finally {
@@ -2766,6 +2785,24 @@
       }
       await loadRtcPeerIds();
       await startMeshCallSession(mediaMode);
+      if (state.meshCompositeRecording && state.meshLivekitToken) {
+        state.callMode = "livekit";
+        await ensureCallLivekitModule();
+        if (mediaMode === "video") {
+          state.callMediaMode = "video";
+          state.callCamOn = true;
+        } else {
+          state.callMediaMode = "audio";
+          state.callCamOn = false;
+        }
+        await KorusUiCallLivekit.joinGroupCall(state, apiJson, {
+          room_name: state.meshLivekitRoom,
+          livekit_url: state.meshLivekitUrl,
+          access_token: state.meshLivekitToken,
+        });
+        broadcastMeshSession();
+        return;
+      }
       startThumbCapture();
       attachLocalVideo();
       if (window.KorusUiCallMesh) {
@@ -4148,6 +4185,17 @@
         await joinMeshCallSession(inc.meshSessionId);
       } else {
         await startMeshCallSession(state.callCamOn ? "video" : "audio");
+      }
+      if (state.meshCompositeRecording && state.meshLivekitToken) {
+        state.callMode = "livekit";
+        await ensureCallLivekitModule();
+        await KorusUiCallLivekit.joinGroupCall(state, apiJson, {
+          room_name: state.meshLivekitRoom,
+          livekit_url: state.meshLivekitUrl,
+          access_token: state.meshLivekitToken,
+        });
+        state.statusMessage = L("rtc.callAccepted");
+        return;
       }
       startThumbCapture();
       var from = inc.fromUserId;
@@ -7752,8 +7800,15 @@
     if (!userId) return;
     if (!state.avatarByUserId) state.avatarByUserId = {};
     var prev = state.avatarByUserId[userId] || {};
+    if (url === null || url === "") {
+      state.avatarByUserId[userId] = {
+        url: null,
+        title: title != null && title !== "" ? title : prev.title || null,
+      };
+      return;
+    }
     state.avatarByUserId[userId] = {
-      url: url != null && url !== "" ? url : prev.url || null,
+      url: url,
       title: title != null && title !== "" ? title : prev.title || null,
     };
   }
@@ -8035,14 +8090,17 @@
     }
   }
 
-  function renderAuth() {
-    var root = document.getElementById("root");
-    root.innerHTML = "";
-    var shell = el("div", "auth-shell");
-    shell.appendChild(el("div", "auth-shell-glow auth-shell-glow-a"));
-    shell.appendChild(el("div", "auth-shell-glow auth-shell-glow-b"));
-    var card = el("div", "auth-card");
-    var head = el("div", "auth-card-head");
+  function authLayoutMode() {
+    if (state.branding && state.branding.auth_layout) {
+      return state.branding.auth_layout;
+    }
+    if (uiBranding.deriveAuthLayout && state.branding && state.branding.shell_layout) {
+      return uiBranding.deriveAuthLayout(state.branding.shell_layout);
+    }
+    return "default";
+  }
+
+  function buildAuthBrandBlock() {
     var brandRow = el("div", "auth-card-brand");
     var brandLogo = el("div", "auth-brand-logo");
     fillBrandLogo(brandLogo);
@@ -8053,8 +8111,69 @@
     brandText.appendChild(brandTitle);
     brandText.appendChild(el("p", "auth-card-brand-tag", brandTagline()));
     brandRow.appendChild(brandText);
-    head.appendChild(brandRow);
-    card.appendChild(head);
+    return brandRow;
+  }
+
+  function appendAuthDemoSkins(card) {
+    if (!demoSkinsEnabled()) return;
+    var demoSkins = el("div", "auth-demo-skins");
+    demoSkins.setAttribute("data-testid", "auth-demo-skins");
+    var demoHead = el("div", "auth-demo-skins-head");
+    demoHead.appendChild(el("p", "auth-demo-skins-label", L("auth.demoSkins")));
+    var appearanceBtn = el(
+      "button",
+      "auth-appearance-btn",
+      state.appearance === "light" ? "🌙" : "☀️"
+    );
+    appearanceBtn.type = "button";
+    appearanceBtn.setAttribute("data-testid", "auth-appearance-toggle");
+    appearanceBtn.setAttribute(
+      "aria-label",
+      state.appearance === "light" ? L("ui.common.darkTheme") : L("ui.common.lightTheme")
+    );
+    appearanceBtn.onclick = function () {
+      toggleAppearance();
+    };
+    demoHead.appendChild(appearanceBtn);
+    demoSkins.appendChild(demoHead);
+    var demoRow = el("div", "auth-demo-skins-row");
+    demoRow.setAttribute("role", "group");
+    demoRow.setAttribute("aria-label", L("auth.demoSkins"));
+    DEMO_PALETTES.forEach(function (item) {
+      var active = state.palette === item.id;
+      var btn = el(
+        "button",
+        "auth-demo-skin-btn" + (active ? " active" : ""),
+        ""
+      );
+      btn.type = "button";
+      btn.setAttribute("data-testid", "auth-skin-" + item.id);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+      var swatch = el("span", "auth-demo-skin-swatch");
+      swatch.style.background = item.swatch;
+      btn.appendChild(swatch);
+      var label = el("span", null, L(item.labelKey));
+      markBrandNoTranslate(label);
+      btn.appendChild(label);
+      btn.onclick = (function (paletteId) {
+        return function () {
+          setDemoPalette(paletteId);
+        };
+      })(item.id);
+      demoRow.appendChild(btn);
+    });
+    demoSkins.appendChild(demoRow);
+    demoSkins.appendChild(el("p", "auth-demo-skins-disclaimer", L("auth.demoSkinsDisclaimer")));
+    card.appendChild(demoSkins);
+  }
+
+  function buildAuthCard(includeHead) {
+    var card = el("div", "auth-card");
+    if (includeHead) {
+      var head = el("div", "auth-card-head");
+      head.appendChild(buildAuthBrandBlock());
+      card.appendChild(head);
+    }
     var authContent = el("div", "auth-card-content");
     var tabs = el("div", "auth-tabs");
     var showRegister = authRegistrationAllowed();
@@ -8101,86 +8220,58 @@
       (state.authTab === "login" && authPasswordAllowed()) ||
       (state.authTab === "register" && showRegister);
     if (showPasswordForm) {
-    var form = el("form", "auth-form");
-    form.onsubmit = function (e) {
-      e.preventDefault();
-      submitAuth();
-    };
-    form.appendChild(field("u", L("ui.auth.username"), "text", "username", true, 3, 32));
-    var pwdMinLen = state.authTab === "register" ? 8 : null;
-    form.appendChild(field("p", L("ui.auth.password"), "password", "password", true, pwdMinLen, null));
-    if (state.authTab === "register") {
-      form.appendChild(field("d", L("ui.auth.displayName"), "text", null, false, null, null));
-    }
-    var submit = el(
-      "button",
-      "btn btn-primary auth-submit",
-      state.busy
-        ? "…"
-        : state.authTab === "login"
-          ? L("auth.loginSubmit")
-          : L("auth.registerSubmit")
-    );
-    submit.type = "submit";
-    submit.disabled = state.busy;
-    submit.setAttribute("data-testid", "auth-submit");
-    form.appendChild(submit);
-    authContent.appendChild(form);
+      var form = el("form", "auth-form");
+      form.onsubmit = function (e) {
+        e.preventDefault();
+        submitAuth();
+      };
+      form.appendChild(field("u", L("ui.auth.username"), "text", "username", true, 3, 32));
+      var pwdMinLen = state.authTab === "register" ? 8 : null;
+      form.appendChild(field("p", L("ui.auth.password"), "password", "password", true, pwdMinLen, null));
+      if (state.authTab === "register") {
+        form.appendChild(field("d", L("ui.auth.displayName"), "text", null, false, null, null));
+      }
+      var submit = el(
+        "button",
+        "btn btn-primary auth-submit",
+        state.busy
+          ? "…"
+          : state.authTab === "login"
+            ? L("auth.loginSubmit")
+            : L("auth.registerSubmit")
+      );
+      submit.type = "submit";
+      submit.disabled = state.busy;
+      submit.setAttribute("data-testid", "auth-submit");
+      form.appendChild(submit);
+      authContent.appendChild(form);
     }
     card.appendChild(authContent);
     card.appendChild(el("p", "auth-foot", L("auth.hint")));
-    if (demoSkinsEnabled()) {
-      var demoSkins = el("div", "auth-demo-skins");
-      demoSkins.setAttribute("data-testid", "auth-demo-skins");
-      var demoHead = el("div", "auth-demo-skins-head");
-      demoHead.appendChild(el("p", "auth-demo-skins-label", L("auth.demoSkins")));
-      var appearanceBtn = el(
-        "button",
-        "auth-appearance-btn",
-        state.appearance === "light" ? "🌙" : "☀️"
-      );
-      appearanceBtn.type = "button";
-      appearanceBtn.setAttribute("data-testid", "auth-appearance-toggle");
-      appearanceBtn.setAttribute(
-        "aria-label",
-        state.appearance === "light" ? L("ui.common.darkTheme") : L("ui.common.lightTheme")
-      );
-      appearanceBtn.onclick = function () {
-        toggleAppearance();
-      };
-      demoHead.appendChild(appearanceBtn);
-      demoSkins.appendChild(demoHead);
-      var demoRow = el("div", "auth-demo-skins-row");
-      demoRow.setAttribute("role", "group");
-      demoRow.setAttribute("aria-label", L("auth.demoSkins"));
-      DEMO_PALETTES.forEach(function (item) {
-        var active = state.palette === item.id;
-        var btn = el(
-          "button",
-          "auth-demo-skin-btn" + (active ? " active" : ""),
-          ""
-        );
-        btn.type = "button";
-        btn.setAttribute("data-testid", "auth-skin-" + item.id);
-        btn.setAttribute("aria-pressed", active ? "true" : "false");
-        var swatch = el("span", "auth-demo-skin-swatch");
-        swatch.style.background = item.swatch;
-        btn.appendChild(swatch);
-        var label = el("span", null, L(item.labelKey));
-        markBrandNoTranslate(label);
-        btn.appendChild(label);
-        btn.onclick = (function (paletteId) {
-          return function () {
-            setDemoPalette(paletteId);
-          };
-        })(item.id);
-        demoRow.appendChild(btn);
-      });
-      demoSkins.appendChild(demoRow);
-      demoSkins.appendChild(el("p", "auth-demo-skins-disclaimer", L("auth.demoSkinsDisclaimer")));
-      card.appendChild(demoSkins);
+    appendAuthDemoSkins(card);
+    return card;
+  }
+
+  function renderAuth() {
+    var root = document.getElementById("root");
+    root.innerHTML = "";
+    var layout = authLayoutMode();
+    var shellClass = layout === "auth-split" ? "auth-shell auth-shell-split" : "auth-shell";
+    var shell = el("div", shellClass);
+    shell.setAttribute("data-testid", "auth-shell");
+    shell.appendChild(el("div", "auth-shell-glow auth-shell-glow-a"));
+    shell.appendChild(el("div", "auth-shell-glow auth-shell-glow-b"));
+    if (layout === "auth-split") {
+      var hero = el("div", "auth-split-hero");
+      hero.setAttribute("data-testid", "auth-split-hero");
+      hero.appendChild(buildAuthBrandBlock());
+      shell.appendChild(hero);
+      var splitCard = buildAuthCard(false);
+      splitCard.classList.add("auth-split-card");
+      shell.appendChild(splitCard);
+    } else {
+      shell.appendChild(buildAuthCard(true));
     }
-    shell.appendChild(card);
     mountAppNotice(shell);
     root.appendChild(shell);
   }
@@ -8715,7 +8806,7 @@
       state.callMediaMode === "audio" && !state.callCamOn ? "call-panel-title-audio" : "call-panel-title"
     );
     ph.appendChild(titleSpan);
-    ph.appendChild(el("span", "call-panel-audit-hint", L("ui.call.auditNotice")));
+    ph.appendChild(el("span", "call-panel-audit-hint", L(state.meshCompositeRecording ? "ui.call.auditNoticeComposite" : "ui.call.auditNotice")));
     var cl = iconBtn("✕", L("ui.call.collapse"), {
       onClick: function () {
         toggleCallPanel();
@@ -8731,6 +8822,15 @@
       shell.appendChild(panel);
       return;
     }
+    if (state.callMode === "livekit" && window.KorusUiCallLivekit) {
+      var lkStage = el("div", "call-stage call-stage-livekit");
+      lkStage.setAttribute("data-testid", "call-stage-livekit");
+      var lkGrid = el("div", "call-livekit-grid");
+      lkGrid.id = "livekitCallVideos";
+      lkStage.appendChild(lkGrid);
+      callLiveStage.appendChild(lkStage);
+      panelContent.appendChild(callLiveStage);
+    } else {
     var stage = el("div", "call-stage call-stage-mesh");
     var mainVid = el("div", "call-main-wrap");
     mainVid.id = "callLocalStage";
@@ -8824,6 +8924,7 @@
     }
     callLiveStage.appendChild(remotes);
     panelContent.appendChild(callLiveStage);
+    }
     var bar = el("div", "call-toolbar");
     var bMic = iconBtn(state.callMicOn ? "🎤" : "🔇", state.callMicOn ? L("ui.call.micOn") : L("ui.call.micOff"), {
       primary: state.callMicOn,

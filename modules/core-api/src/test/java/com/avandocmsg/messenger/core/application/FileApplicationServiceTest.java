@@ -143,17 +143,19 @@ class FileApplicationServiceTest {
     }
 
     @Test
-    void upload_dedup_reusesBlobWithoutSecondPut() throws IOException {
+    void upload_dedup_republishesMissingObject() throws IOException {
         var dedupService = new FileApplicationService(
             filePort, messageQuery, storage, () -> UUID.randomUUID(), 1024, true);
         var data = "same-content".getBytes(StandardCharsets.UTF_8);
-        var first = dedupService.uploadStream(
+        dedupService.uploadStream(
             new ByteArrayInputStream(data), "a.txt", "text/plain", UserId.of(ownerId)).orElseThrow();
+        var storageKey = storage.objects.keySet().iterator().next();
+        storage.objects.remove(storageKey);
         var second = dedupService.uploadStream(
             new ByteArrayInputStream(data), "b.txt", "text/plain", UserId.of(ownerId)).orElseThrow();
-        assertNotEquals(first.file().id(), second.file().id());
+        assertNotNull(second.file().id());
+        assertTrue(storage.objects.containsKey(storageKey));
         assertEquals(1, storage.objects.size());
-        assertTrue(storage.objects.keySet().iterator().next().startsWith("objects/sha256/"));
     }
 
     private StoredFile sampleFile() {

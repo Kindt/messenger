@@ -1,8 +1,8 @@
 ﻿# Spec 028 вЂ” Org shell layouts (auth + post-login chrome)
 
-**Feature branch:** `028-org-shell-layouts` (to be created)  
+**Feature branch:** `main` (028 без отдельной ветки)  
 **Created:** 2026-06-26  
-**Status:** draft  
+**Status:** **closed** (2026-06-26 — lab/QEMU, layout v1 complete)
 **Predecessor:** [`specs/027-ui-branding/`](../027-ui-branding/) вЂ” **closed** (visual skin: palettes, tokens, custom CSS, demo skins)
 
 ---
@@ -132,8 +132,20 @@ Live stack: QEMU only (not host Docker). Deferred prod: spec 015.
 
 ## Open decisions (for product / implementer)
 
-1. **Single vs dual fields:** one `shell_layout` for v1, or separate auth/post-login from day one?
-2. **Host-based slug:** resolve layout from `Host` header on public branding (parity with auth policy) or query param only in v1?
-3. **Compact scope:** auth + post-login together, or post-login-only option?
+**Locked for v1 (2026-06-26, main):**
+
+1. **Single field** `shell_layout` — не разделяем auth/post-login в БД.
+2. **Public branding:** `?org_slug=` query only (Host — backlog).
+3. **Compact:** post-login density; auth DOM остаётся default, кроме `auth-split`.
 
 Default recommendation: **single field**, **`org_slug` query on public branding**, **compact affects post-login only** when set (auth stays default unless `auth-split`).
+
+---
+
+## Closure notes (2026-06-26)
+
+**Delivered:** V076 `shell_layout`, API merge + `auth_layout`/`post_login_layout` derived fields, public `?org_slug=`, admin dropdown, `shell-layouts.css`, auth-split DOM refactor, compact post-login CSS, Playwright tier `ui-shell-layouts`, QEMU script `run-ui-shell-layouts-qemu.ps1`, plan [`plan.md`](plan.md).
+
+**Lab verify:** `./gradlew buildIntegrity`; live stack `.\scripts\run-ui-shell-layouts-qemu.ps1` (requires guest V076 + web sync).
+
+**Backlog (future specs / ops):** Host header slug routing, separate auth/post-login DB columns, nav IA visibility per org, dedicated portal deployables (spec 015).

@@ -9,6 +9,7 @@ test.describe("UI branding API (spec 027)", () => {
     const body = await res.json();
     expect(typeof body.palette).toBe("string");
     expect(body).toHaveProperty("demo_skins_enabled");
+    expect(body).toHaveProperty("shell_layout");
     expect(body).toHaveProperty("revision");
   });
 

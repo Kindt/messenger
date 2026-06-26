@@ -697,6 +697,7 @@
       "collapse": "收起",
       "endCall": "结束通话",
       "auditNotice": "通话正在审计录制",
+      "auditNoticeComposite": "单一服务器录制 (LiveKit)",
       "recordStart": "录制",
       "recordStop": "停止",
       "recordStarted": "已开始录制",

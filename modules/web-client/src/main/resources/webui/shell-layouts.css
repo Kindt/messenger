@@ -1,0 +1,77 @@
+/* Spec 028 — org shell layout variants (auth + post-login density) */
+
+.auth-shell-split {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(300px, 420px);
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: clamp(16px, 4vw, 48px);
+  gap: clamp(16px, 3vw, 32px);
+}
+
+.auth-split-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  padding: clamp(16px, 4vw, 32px);
+  max-width: 520px;
+}
+
+.auth-split-hero .auth-card-brand {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.auth-split-hero .auth-brand-logo {
+  width: 72px;
+  height: 72px;
+  font-size: 2rem;
+}
+
+.auth-split-card {
+  width: 100%;
+  max-width: 420px;
+  justify-self: center;
+}
+
+@media (max-width: 960px) {
+  .auth-shell-split {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .auth-split-hero {
+    text-align: center;
+    align-items: center;
+    max-width: none;
+  }
+
+  .auth-split-hero .auth-card-brand {
+    align-items: center;
+  }
+}
+
+html[data-shell-layout="compact"] .app-header {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+html[data-shell-layout="compact"] .sidebar-tab {
+  padding: 6px 10px;
+  font-size: 0.92rem;
+}
+
+html[data-shell-layout="compact"] .chat-item {
+  padding: 8px 10px;
+}
+
+html[data-shell-layout="compact"] .contact-item {
+  padding: 8px 10px;
+}
+
+html[data-shell-layout="compact"] .messenger .sidebar {
+  --sidebar-pad: 8px;
+}

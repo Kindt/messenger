@@ -413,10 +413,16 @@ public class CoreApiComposition {
             pluginRepository,
             pluginPlatformService,
             appConfig);
+        var liveKitEgressClient = new com.avandocmsg.messenger.api.live.LiveKitEgressClient(appConfig, liveKitTokenService);
         var meshCallRecordingService = new com.avandocmsg.messenger.api.meshcall.MeshCallRecordingService(
             new com.avandocmsg.messenger.api.meshcall.MeshCallRecordingRepository(dataSource),
             chatPersistencePort,
-            auditPort);
+            auditPort,
+            liveKitTokenService,
+            liveKitEgressClient,
+            appConfig,
+            CoreModule.fileMetadataPort(dataSource),
+            this.uuidGenerator);
 
         var jerseyConfig = new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
                 userLookupPort, contactRepositoryPort, contactService,

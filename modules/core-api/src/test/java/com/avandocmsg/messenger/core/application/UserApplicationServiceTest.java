@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.core.application;
 
 import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.FileId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.domain.UserProfile;
 import com.avandocmsg.messenger.api.config.AppConfig;
@@ -108,6 +109,31 @@ class UserApplicationServiceTest {
     void touchHeartbeat_delegatesToPort() {
         service.touchHeartbeat(UserId.of(targetId));
         assertTrue(userPort.heartbeatTouched);
+    }
+
+    @Test
+    void getProfileForViewer_publicProfileRetainsAvatarFieldsForEnrichment() {
+        var fileId = UUID.randomUUID();
+        userPort.profile = new UserProfile(
+            UserId.of(targetId),
+            "alice",
+            "Alice",
+            "+100",
+            false,
+            Instant.parse("2026-01-01T00:00:00Z"),
+            "online",
+            Instant.parse("2026-01-02T00:00:00Z"),
+            "org-1",
+            true,
+            "ru",
+            null,
+            null,
+            false,
+            FileId.of(fileId));
+
+        var result = service.getProfileForViewer(UserId.of(viewerId), UserId.of(targetId)).orElseThrow();
+        assertEquals(FileId.of(fileId), result.avatarFileId());
+        assertFalse(result.avatarHidden());
     }
 
     private static UserProfile sampleProfile(UUID id, boolean hidden) {

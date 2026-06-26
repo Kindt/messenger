@@ -145,6 +145,8 @@ public final class UserApplicationService {
             false,
             null,
             profile.customStatusText(),
-            null);
+            null,
+            profile.avatarHidden(),
+            profile.avatarFileId());
     }
 }

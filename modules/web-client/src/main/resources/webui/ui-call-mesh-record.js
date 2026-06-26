@@ -236,6 +236,7 @@
   }
 
   async function startAuditRecording(ctx) {
+    if (ctx.state.meshCompositeRecording) return;
     if (!ctx.state.meshAuditRecordingId || auditRecorder) return;
     var stream = buildRecordStream(ctx.state);
     if (!stream || !stream.getAudioTracks().length) return;
@@ -265,6 +266,11 @@
       { method: "POST", jsonBody: { kind: "user" } }
     );
     ctx.state.meshUserRecordingId = data && (data.recording_id || data.id);
+    if (ctx.state.meshCompositeRecording) {
+      ctx.state.meshUserRecordingActive = true;
+      ctx.state.phase5Toast = ctx.L("ui.call.recordStarted");
+      return;
+    }
     var stream = buildRecordStream(ctx.state);
     if (!stream) throw new Error("no media");
     userChunks = [];
@@ -282,17 +288,42 @@
   async function stopUserRecording(ctx) {
     if (!ctx.state.meshUserRecordingActive) return;
     ctx.state.meshUserRecordingActive = false;
+    var recId = ctx.state.meshUserRecordingId;
+    ctx.state.meshUserRecordingId = null;
+    if (ctx.state.meshCompositeRecording && recId) {
+      await ctx.apiJson(
+        meshPath(ctx, "/sessions/" + ctx.state.meshCallSessionId + "/recordings/" + recId + "/stop"),
+        { method: "POST" }
+      );
+      ctx.state.phase5Toast = ctx.L("ui.call.recordCompleted");
+      return;
+    }
     var rec = userRecorder;
     var chunks = userChunks;
-    var recId = ctx.state.meshUserRecordingId;
+    var meshRecId = recId;
     userRecorder = null;
     userChunks = [];
-    ctx.state.meshUserRecordingId = null;
-    await finishRecorder(ctx, rec, chunks, recId, userStartedAt, "mesh-user");
+    await finishRecorder(ctx, rec, chunks, meshRecId, userStartedAt, "mesh-user");
     ctx.state.phase5Toast = ctx.L("ui.call.recordCompleted");
   }
 
   async function finishAll(ctx) {
+    if (ctx.state.meshCompositeRecording) {
+      if (ctx.state.meshUserRecordingActive) {
+        await stopUserRecording(ctx);
+      }
+      if (ctx.state.meshCallSessionId) {
+        try {
+          await ctx.apiJson(meshPath(ctx, "/sessions/" + ctx.state.meshCallSessionId + "/end"), {
+            method: "POST",
+          });
+        } catch (e) {}
+      }
+      ctx.state.meshCallSessionId = null;
+      ctx.state.meshAuditRecordingId = null;
+      ctx.state.meshCompositeRecording = false;
+      return;
+    }
     var auditRec = auditRecorder;
     var auditCh = auditChunks;
     var auditId = ctx.state.meshAuditRecordingId;

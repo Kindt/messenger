@@ -9,6 +9,7 @@
 | Version | File | Назначение |
 |---------|------|------------|
 | V073 | `V073__ui_branding.sql` | **UI branding (spec 027):** `platform_ui_branding` (global palette, token_overrides, custom_css, brand_title, demo_skins_enabled, revision), `org_ui_branding` (per-org override). Seed row `id=1`, palette `korus`. |
+| V076 | `V076__ui_shell_layout.sql` | **Org shell layouts (spec 028):** column `shell_layout` on `platform_ui_branding` (NOT NULL default `default`) and optional `org_ui_branding.shell_layout`. Values: `default`, `compact`, `auth-split`. |
 
 ### V073 — детали
 

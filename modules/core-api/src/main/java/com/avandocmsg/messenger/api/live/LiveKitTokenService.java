@@ -37,6 +37,16 @@ public class LiveKitTokenService {
     }
 
     public String createAccessToken(String roomName, String identity, boolean canPublish, int ttlSeconds) {
+        return createVideoToken(roomName, identity, canPublish, true, false, ttlSeconds);
+    }
+
+    /** Token for LiveKit egress API (room composite recording). */
+    public String createRoomRecordToken(String roomName, int ttlSeconds) {
+        return createVideoToken(roomName, "egress-recorder", false, false, true, ttlSeconds);
+    }
+
+    private String createVideoToken(String roomName, String identity, boolean canPublish, boolean canSubscribe,
+                                    boolean roomRecord, int ttlSeconds) {
         if (!enabled()) {
             throw new IllegalStateException("LiveKit not configured");
         }
@@ -45,7 +55,10 @@ public class LiveKitTokenService {
             video.put("roomJoin", true);
             video.put("room", roomName);
             video.put("canPublish", canPublish);
-            video.put("canSubscribe", true);
+            video.put("canSubscribe", canSubscribe);
+            if (roomRecord) {
+                video.put("roomRecord", true);
+            }
 
             var now = System.currentTimeMillis();
             var claims = new JWTClaimsSet.Builder()

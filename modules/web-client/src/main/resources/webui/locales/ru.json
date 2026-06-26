@@ -697,6 +697,7 @@
       "collapse": "Свернуть",
       "endCall": "Завершить звонок",
       "auditNotice": "Звонок записывается для аудита",
+      "auditNoticeComposite": "Единая серверная запись (LiveKit)",
       "recordStart": "Запись",
       "recordStop": "Стоп",
       "recordStarted": "Ваша запись начата",

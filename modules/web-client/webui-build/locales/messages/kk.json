@@ -697,6 +697,7 @@
       "collapse": "Жию",
       "endCall": "Қоңырауды аяқтау",
       "auditNotice": "Қоңырау аудит үшін жазылуда",
+      "auditNoticeComposite": "Бір серверлік жазба (LiveKit)",
       "recordStart": "Жазба",
       "recordStop": "Тоқтату",
       "recordStarted": "Жазба басталды",

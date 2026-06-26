@@ -18,12 +18,12 @@ if ($Help) {
 Usage: .\scripts\ui-tests.ps1 [-Profile smoke|pr|full] [-SyncWebUi] [-SkipPreflight]
 
 Waits for QEMU VM/stack before run (default). Per-test wait in Playwright if stack drops mid-suite.
-Profiles: smoke ~149 | pr ~400+ | full 1400 scenarios.
+Profiles: smoke ~138 | pr ~400+ | full 1400 scenarios.
 -SkipPreflight: skip host wait + health gate (debug only).
 -WaitTimeoutMinutes / -WaitIntervalSec: host poll before first test (default ping every 3 min).
 
 Profiles:
-  smoke  ~149 scenarios (PR gate)
+  smoke  ~138 scenarios (PR gate)
   pr     smoke + pr-tier scenarios (~400+)
   full   entire manifest (1400)
 
@@ -40,7 +40,14 @@ Examples:
 Write-Host ""
 Write-Host "=== С‚РµСЃС‚С‹ UI ===" -ForegroundColor Cyan
 Write-Host "profile=$Profile" -ForegroundColor DarkGray
+Write-Host "live: deploy\qemu\run\ui-tests-live.json  (watch: .\scripts\ui-tests-watch.ps1)" -ForegroundColor DarkGray
 Write-Host ""
+
+$Root = Split-Path -Parent $PSScriptRoot
+$runLog = Join-Path $Root "deploy\qemu\run\ui-tests-run.log"
+$runDir = Split-Path $runLog
+if (-not (Test-Path $runDir)) { New-Item -ItemType Directory -Path $runDir -Force | Out-Null }
+"=== ui-tests started $(Get-Date -Format o) profile=$Profile ===" | Set-Content -Path $runLog -Encoding UTF8
 
 $env:UI_TESTS_PROFILE = $Profile
 

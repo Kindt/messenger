@@ -59,6 +59,8 @@ tests/e2e-web/*
 !tests/e2e-web/fixtures/
 tests/e2e-web/fixtures/*
 !tests/e2e-web/fixtures/ui-audit.ts
+!tests/e2e-web/fixtures/avatar.ts
+!tests/e2e-web/fixtures/test-with-qemu-wait.ts
 !tests/e2e-web/specs/
 tests/e2e-web/specs/*
 !tests/e2e-web/specs/ui-interaction-audit.spec.ts

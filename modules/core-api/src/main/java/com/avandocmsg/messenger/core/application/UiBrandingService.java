@@ -28,7 +28,7 @@ public final class UiBrandingService {
 
     public UiBrandingPort.PlatformBranding getPlatform() {
         return brandingPort.getPlatform().orElseGet(() ->
-            brandingPort.upsertPlatform("korus", Map.of(), null, null, false));
+            brandingPort.upsertPlatform("korus", Map.of(), null, null, false, ShellLayout.DEFAULT));
     }
 
     public UiBrandingPort.PlatformBranding upsertPlatform(
@@ -36,20 +36,22 @@ public final class UiBrandingService {
         Map<String, String> tokenOverrides,
         String customCss,
         String brandTitle,
-        boolean demoSkinsEnabled
+        boolean demoSkinsEnabled,
+        String shellLayout
     ) {
         return brandingPort.upsertPlatform(
             validatePalette(palette),
             normalizeMap(tokenOverrides),
             customCssSanitizer.sanitize(customCss),
             normalizeTitle(brandTitle),
-            demoSkinsEnabled
+            demoSkinsEnabled,
+            ShellLayout.validateRequired(shellLayout != null ? shellLayout : ShellLayout.DEFAULT)
         );
     }
 
     public UiBrandingPort.OrgBranding getOrg(UUID orgId) {
         return brandingPort.getOrg(orgId).orElseGet(() ->
-            new UiBrandingPort.OrgBranding(orgId, null, Map.of(), null, null, 0, null, null));
+            new UiBrandingPort.OrgBranding(orgId, null, Map.of(), null, null, null, 0, null, null));
     }
 
     public UiBrandingPort.OrgBranding upsertOrg(
@@ -57,14 +59,16 @@ public final class UiBrandingService {
         String palette,
         Map<String, String> tokenOverrides,
         String customCss,
-        String brandTitle
+        String brandTitle,
+        String shellLayout
     ) {
         return brandingPort.upsertOrg(
             orgId,
             palette != null ? validatePalette(palette) : null,
             normalizeMap(tokenOverrides),
             customCssSanitizer.sanitize(customCss),
-            normalizeTitle(brandTitle)
+            normalizeTitle(brandTitle),
+            ShellLayout.validateOptional(shellLayout)
         );
     }
 

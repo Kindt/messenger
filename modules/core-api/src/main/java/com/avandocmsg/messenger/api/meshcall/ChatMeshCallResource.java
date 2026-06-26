@@ -109,6 +109,24 @@ public class ChatMeshCallResource {
     }
 
     @POST
+    @Path("sessions/{sessionId}/recordings/{recordingId}/stop")
+    @Operation(summary = "Stop server-side user clip (LiveKit composite egress)")
+    public Response stopUserRecording(
+        @PathParam("chatId") String chatId,
+        @PathParam("sessionId") String sessionId,
+        @PathParam("recordingId") String recordingId,
+        @Context SecurityContext securityContext
+    ) {
+        var userId = CurrentUserId.uuid(securityContext);
+        var cid = UuidParams.required(chatId, "chat_id");
+        var sid = UuidParams.required(sessionId, "session_id");
+        var rid = UuidParams.required(recordingId, "recording_id");
+        return service.stopUserRecording(cid, userId, sid, rid)
+            .map(ok -> Response.noContent().build())
+            .orElse(forbidden());
+    }
+
+    @POST
     @Path("sessions/{sessionId}/recordings/{recordingId}/complete")
     @Consumes(MediaType.APPLICATION_JSON)
     @Operation(summary = "Complete mesh call recording with uploaded file")

@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JdbcUiBrandingAdapterH2Test {
@@ -41,6 +42,7 @@ class JdbcUiBrandingAdapterH2Test {
                     custom_css TEXT,
                     brand_title VARCHAR(256),
                     demo_skins_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+                    shell_layout VARCHAR(32) NOT NULL DEFAULT 'default',
                     revision BIGINT NOT NULL DEFAULT 1,
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -53,14 +55,17 @@ class JdbcUiBrandingAdapterH2Test {
                     token_overrides JSON NOT NULL DEFAULT '{}',
                     custom_css TEXT,
                     brand_title VARCHAR(256),
+                    shell_layout VARCHAR(32),
                     revision BIGINT NOT NULL DEFAULT 1,
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
                 """);
             st.execute("""
-                INSERT INTO platform_ui_branding (id, palette, token_overrides, custom_css, brand_title, demo_skins_enabled, revision)
-                VALUES (1, 'korus', '{}', NULL, 'Korus', FALSE, 1)
+                INSERT INTO platform_ui_branding (
+                    id, palette, token_overrides, custom_css, brand_title, demo_skins_enabled, shell_layout, revision
+                )
+                VALUES (1, 'korus', '{}', NULL, 'Korus', FALSE, 'default', 1)
                 """);
         }
         adapter = new JdbcUiBrandingAdapter(ds);
@@ -80,9 +85,11 @@ class JdbcUiBrandingAdapterH2Test {
             Map.of("--ui-bg", "#001122"),
             ".layout{padding:8px;}",
             "Platform",
-            true
+            true,
+            "compact"
         );
         assertEquals("vtb", platform.palette());
+        assertEquals("compact", platform.shellLayout());
         assertTrue(platform.revision() >= 2);
 
         var org = adapter.upsertOrg(
@@ -90,17 +97,35 @@ class JdbcUiBrandingAdapterH2Test {
             "alfa",
             Map.of("--ui-bg", "#ffeeaa"),
             ".org{margin:0;}",
-            "Org title"
+            "Org title",
+            "auth-split"
         );
         assertEquals("alfa", org.palette());
+        assertEquals("auth-split", org.shellLayout());
         assertTrue(org.revision() >= 1);
 
         var merged = adapter.mergeForOrg(orgId, "https://cdn/logo.svg");
         assertEquals("alfa", merged.palette());
+        assertEquals("auth-split", merged.shellLayout());
         assertEquals("#ffeeaa", merged.tokenOverrides().get("--ui-bg"));
         assertEquals(".org{margin:0;}", merged.customCss());
         assertEquals("Org title", merged.brandTitle());
         assertEquals("https://cdn/logo.svg", merged.logoUrl());
         assertTrue(merged.demoSkinsEnabled());
+    }
+
+    @Test
+    void orgInheritsPlatformShellLayoutWhenUnset() {
+        adapter.upsertPlatform("korus", Map.of(), null, null, false, "compact");
+        adapter.upsertOrg(orgId, "korus", Map.of(), null, null, null);
+
+        var merged = adapter.mergeForOrg(orgId, null);
+        assertEquals("compact", merged.shellLayout());
+    }
+
+    @Test
+    void rejectsInvalidShellLayout() {
+        assertThrows(IllegalArgumentException.class, () ->
+            adapter.upsertPlatform("korus", Map.of(), null, null, false, "wide"));
     }
 }

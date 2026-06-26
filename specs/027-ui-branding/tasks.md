@@ -18,4 +18,4 @@
 | UBR-014 | `docs/db/FLYWAY_AND_SCHEMA.md` V073 | done |
 | UBR-015 | Post-login demo palette when platform default (`isPlatformDefaultBranding` + `applyBrandingConfig`) | done |
 
-**Spec status:** closed 2026-06-26. Follow-up layout work → [`specs/028-org-shell-layouts/`](../028-org-shell-layouts/).
+**Spec status:** closed 2026-06-26. Follow-up layout backlog → [`specs/028-org-shell-layouts/`](../028-org-shell-layouts/) (closed). Host-based slug / IA → future specs.

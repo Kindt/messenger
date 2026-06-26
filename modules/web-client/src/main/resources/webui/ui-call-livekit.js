@@ -42,10 +42,10 @@
     state.liveKitCallConnected = false;
   }
 
-  async function joinGroupCall(state, apiJson) {
+  async function joinGroupCall(state, apiJson, joinInfo) {
     if (!state.selectedId || !state.tokens) return;
     disconnectRoom(state);
-    var join = await apiJson("/chats/" + state.selectedId + "/calls/livekit/join", { method: "POST" });
+    var join = joinInfo || await apiJson("/chats/" + state.selectedId + "/calls/livekit/join", { method: "POST" });
     var LK = await ensureLiveKitClient();
     var room = new LK.Room({ adaptiveStream: true, dynacast: true });
     state.liveKitCallRoom = room;

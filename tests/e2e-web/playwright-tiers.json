@@ -127,6 +127,10 @@
       "description": "Spec 027 UI branding — public branding API, demo login palettes, post-login server override",
       "args": ["specs/ui-branding.spec.ts"]
     },
+    "ui-shell-layouts": {
+      "description": "Spec 028 org shell layouts — auth-split, compact post-login, org_slug public branding, admin save",
+      "args": ["specs/ui-shell-layouts.spec.ts"]
+    },
     "ui-tests": {
       "description": "тесты UI — data-driven visual/UX/CLK/MED scenarios (default smoke profile)",
       "args": ["specs/ui-tests.spec.ts"]
@@ -161,7 +165,7 @@
     },
     "all-inner": {
       "description": "Run all inner tiers sequentially",
-      "sequential": ["api", "ui-auth", "ui-mobile", "ui-visual", "ui-visual-regression", "ui-conversation", "ui-messaging", "ui-messaging-extended", "ui-files", "ui-conference", "ui-call-flows", "ui-live", "ui-e2ee", "ui-bot", "ui-admin", "ui-admin-extended", "ui-i18n-artifacts", "ui-branding", "ui-avatar", "ui-push", "e2ee-openmls-interop", "ui-tests"]
+      "sequential": ["api", "ui-auth", "ui-mobile", "ui-visual", "ui-visual-regression", "ui-conversation", "ui-messaging", "ui-messaging-extended", "ui-files", "ui-conference", "ui-call-flows", "ui-live", "ui-e2ee", "ui-bot", "ui-admin", "ui-admin-extended", "ui-i18n-artifacts", "ui-branding", "ui-shell-layouts", "ui-avatar", "ui-push", "e2ee-openmls-interop", "ui-tests"]
     }
   },
   "tierRequirements": {
@@ -177,6 +181,7 @@
     "ui-call-flows": [],
     "ui-interaction-audit": [],
     "ui-branding": [],
+    "ui-shell-layouts": [],
     "ui-i18n-artifacts": [],
     "ui-avatar": [],
     "ui-tests": [],

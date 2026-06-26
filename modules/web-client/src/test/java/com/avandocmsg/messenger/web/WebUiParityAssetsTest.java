@@ -200,8 +200,12 @@ class WebUiParityAssetsTest {
         assertTrue(palettes.contains("[data-palette=\"vtb\"]"), "vtb palette block");
         assertTrue(palettes.contains("[data-palette=\"sberbank\"]"), "sberbank palette block");
         assertTrue(themes.contains("themes-palettes.css"), "themes imports palettes");
+        assertTrue(themes.contains("shell-layouts.css"), "themes imports shell layouts");
+        var shellLayouts = readResource("webui/shell-layouts.css");
+        assertTrue(shellLayouts.contains("auth-shell-split"), "auth split layout css");
         assertTrue(branding.contains("KorusUiBranding"), "branding module export");
         assertTrue(branding.contains("applyOrgBranding"), "branding apply helper");
+        assertTrue(branding.contains("applyShellLayout"), "shell layout apply helper");
         assertTrue(branding.contains("applyFavicon"), "branding favicon helper");
         assertTrue(branding.contains("resolveMergedPalette"), "branding palette merge helper");
         assertTrue(app.contains("applyBrandChrome"), "brand chrome sync helper");
@@ -214,5 +218,7 @@ class WebUiParityAssetsTest {
         assertTrue(app.contains("refreshBrandingPublic"), "public branding boot");
         assertTrue(app.contains("refreshBrandingMe"), "authenticated branding refresh");
         assertTrue(app.contains("auth-demo-skins"), "demo skins markup");
+        assertTrue(app.contains("auth-split-hero"), "auth split hero markup");
+        assertTrue(app.contains("org_slug="), "public branding org_slug query");
     }
 }

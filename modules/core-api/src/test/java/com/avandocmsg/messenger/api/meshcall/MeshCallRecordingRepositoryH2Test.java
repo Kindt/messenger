@@ -36,14 +36,15 @@ class MeshCallRecordingRepositoryH2Test {
                 CREATE TABLE mesh_call_sessions (
                   id UUID PRIMARY KEY, chat_id UUID NOT NULL, started_by UUID NOT NULL,
                   media_mode VARCHAR(16) NOT NULL, status VARCHAR(32) NOT NULL,
-                  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, ended_at TIMESTAMP)
+                  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, ended_at TIMESTAMP,
+                  livekit_room VARCHAR(128), egress_id VARCHAR(128), recording_mode VARCHAR(16) DEFAULT 'mesh')
                 """);
             st.execute("""
                 CREATE TABLE mesh_call_recordings (
                   id UUID PRIMARY KEY, session_id UUID NOT NULL, chat_id UUID NOT NULL,
                   recorded_by UUID NOT NULL, kind VARCHAR(16) NOT NULL, status VARCHAR(32) NOT NULL,
                   file_id UUID, started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                  ended_at TIMESTAMP, duration_ms BIGINT)
+                  ended_at TIMESTAMP, duration_ms BIGINT, egress_id VARCHAR(128), storage_key VARCHAR(512))
                 """);
             st.execute("INSERT INTO users (id, login) VALUES ('" + userId + "', 'u')");
             st.execute("INSERT INTO chats (id, title) VALUES ('" + chatId + "', 'c')");

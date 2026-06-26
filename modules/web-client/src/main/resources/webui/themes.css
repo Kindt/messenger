@@ -1,5 +1,6 @@
 /* Messenger theme — palette tokens + component hooks */
 @import url("./themes-palettes.css");
+@import url("./shell-layouts.css");
 
 [data-appearance="light"] .msg-body.md pre {
   background: #f0f0f2;

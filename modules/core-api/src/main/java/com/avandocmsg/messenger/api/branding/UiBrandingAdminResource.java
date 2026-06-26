@@ -63,7 +63,8 @@ public class UiBrandingAdminResource {
                 request.tokenOverrides(),
                 request.customCss(),
                 request.brandTitle(),
-                request.demoSkinsEnabled() != null && request.demoSkinsEnabled()
+                request.demoSkinsEnabled() != null && request.demoSkinsEnabled(),
+                request.shellLayout()
             );
             var actor = CurrentUserId.uuid(securityContext);
             auditPort.record(actor, "branding.platform.updated", "branding_platform", "1", null);
@@ -115,7 +116,8 @@ public class UiBrandingAdminResource {
                 request.palette(),
                 request.tokenOverrides() != null ? request.tokenOverrides() : Map.of(),
                 request.customCss(),
-                request.brandTitle()
+                request.brandTitle(),
+                request.shellLayout()
             );
             var actor = CurrentUserId.uuid(securityContext);
             auditPort.record(actor, "branding.org.updated", "organization", orgId.toString(), null);

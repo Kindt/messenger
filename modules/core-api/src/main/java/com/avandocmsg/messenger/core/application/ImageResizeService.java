@@ -30,6 +30,32 @@ public final class ImageResizeService {
         return RESIZABLE_MIME.contains(normalized);
     }
 
+    /** When raw upload uses application/octet-stream, infer image MIME from filename extension. */
+    public static String inferImageMimeFromFilename(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return null;
+        }
+        var dot = filename.lastIndexOf('.');
+        if (dot < 0 || dot >= filename.length() - 1) {
+            return null;
+        }
+        return switch (filename.substring(dot + 1).toLowerCase(Locale.ROOT)) {
+            case "png" -> "image/png";
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "gif" -> "image/gif";
+            case "bmp" -> "image/bmp";
+            case "webp" -> "image/webp";
+            default -> null;
+        };
+    }
+
+    public static boolean isResizableFile(String mimeType, String filename) {
+        if (isResizableMimeType(mimeType)) {
+            return true;
+        }
+        return isResizableMimeType(inferImageMimeFromFilename(filename));
+    }
+
     public static Optional<byte[]> resizeToJpeg(InputStream source, int targetWidth, int targetHeight,
                                                 long maxSourcePixels) throws IOException {
         return resizeToJpeg(source, targetWidth, targetHeight, maxSourcePixels, DEFAULT_MAX_SOURCE_BYTES);

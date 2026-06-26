@@ -128,6 +128,11 @@ public final class FileApplicationService {
             var storageKey = DEDUP_PREFIX + hash;
             var existing = fileMetadataPort.findBlobByContentHash(hash);
             if (existing.isPresent()) {
+                try (var in = spool.open()) {
+                    objectStoragePort.put(storageKey, in, size, contentType);
+                } catch (Exception e) {
+                    return Optional.empty();
+                }
                 if (!fileMetadataPort.incrementBlobRefCount(hash)) {
                     return Optional.empty();
                 }

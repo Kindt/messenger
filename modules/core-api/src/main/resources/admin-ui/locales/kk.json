@@ -18,6 +18,12 @@
       "scopeGlobal": "Global",
       "scopeOrg": "Organization",
       "paletteLabel": "Palette",
+      "layoutLabel": "Shell layout",
+      "layout": {
+        "default": "Standard",
+        "compact": "Compact",
+        "auth_split": "Split login"
+      },
       "titleLabel": "Brand title",
       "titlePlaceholder": "Korus Messenger",
       "tokenPlaceholder": "for example #7949f4",
