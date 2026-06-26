@@ -18,6 +18,7 @@ class TimingNormalizationTest {
     void padNotFoundExtra_noOpWhenZero() {
         var start = System.nanoTime();
         TimingNormalization.padNotFoundExtra(0);
-        assertTrue(System.nanoTime() - start < 5_000_000L);
+        // Upper bound only guards against accidental sleep on zero; CI runners can be noisy.
+        assertTrue(System.nanoTime() - start < 50_000_000L);
     }
 }

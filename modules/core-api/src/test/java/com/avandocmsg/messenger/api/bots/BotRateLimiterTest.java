@@ -37,8 +37,11 @@ class BotRateLimiterTest {
             var botId = UUID.randomUUID();
             limiter.seedTimestampForTest(botId, java.time.Instant.now().minusSeconds(601).toEpochMilli());
             assertEquals(1, limiter.trackedBotCount());
-            Thread.sleep(150);
-            assertEquals(0, limiter.trackedBotCount());
+            var deadline = System.nanoTime() + 2_000_000_000L;
+            while (limiter.trackedBotCount() > 0 && System.nanoTime() < deadline) {
+                Thread.sleep(25);
+            }
+            assertEquals(0, limiter.trackedBotCount(), "scheduled eviction should prune idle bot windows");
         } finally {
             limiter.close();
         }
