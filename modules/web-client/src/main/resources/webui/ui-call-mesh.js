@@ -15,7 +15,19 @@
     return s.charAt(0).toUpperCase();
   }
 
-  function createAvatarNode(displayName, userId, extraClass) {
+  function createAvatarNode(displayName, userId, extraClass, avatarUrl) {
+    if (global.KorusUiAvatar && typeof global.KorusUiAvatar.renderAvatar === "function") {
+      var node = global.KorusUiAvatar.renderAvatar({
+        url: avatarUrl || "",
+        title: displayName,
+        userId: userId,
+        size: "lg",
+      });
+      node.className =
+        "call-participant-avatar chat-avatar-lg" + (extraClass ? " " + extraClass : "");
+      node.setAttribute("aria-hidden", "true");
+      return node;
+    }
     var div = document.createElement("div");
     div.className = "call-participant-avatar" + (extraClass ? " " + extraClass : "");
     div.textContent = memberInitials(displayName, userId);

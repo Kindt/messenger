@@ -1,11 +1,53 @@
 /* Korus web-client: tiered static cache; do NOT show login shell when server is down. */
 "use strict";
 
-var CACHE_VERSION = "v20";
+var CACHE_VERSION = "v21";
 var SHELL_CACHE = "korus-web-shell-" + CACHE_VERSION;
 var LOCALES_CACHE = "korus-web-locales-" + CACHE_VERSION;
 var STATIC_CACHE = "korus-web-static-" + CACHE_VERSION;
 var ALL_CACHES = [SHELL_CACHE, LOCALES_CACHE, STATIC_CACHE];
+var AVATAR_CACHE = "korus-web-avatars-" + CACHE_VERSION;
+var AVATAR_CACHE_MAX = 64;
+var avatarCacheKeys = [];
+
+function isAvatarResizeRequest(url) {
+  return (
+    url.pathname.indexOf("/api/v1/files/") === 0 &&
+    url.pathname.endsWith("/resize") &&
+    url.search.indexOf("avt=") >= 0
+  );
+}
+
+function rememberAvatarCacheKey(key) {
+  var idx = avatarCacheKeys.indexOf(key);
+  if (idx >= 0) {
+    avatarCacheKeys.splice(idx, 1);
+  }
+  avatarCacheKeys.push(key);
+  while (avatarCacheKeys.length > AVATAR_CACHE_MAX) {
+    var evict = avatarCacheKeys.shift();
+    caches.open(AVATAR_CACHE).then(function (cache) {
+      cache.delete(evict);
+    });
+  }
+}
+
+function avatarCacheFirst(request) {
+  return caches.open(AVATAR_CACHE).then(function (cache) {
+    return cache.match(request).then(function (cached) {
+      if (cached) {
+        return cached;
+      }
+      return fetch(request).then(function (response) {
+        if (response && response.ok) {
+          cache.put(request, response.clone());
+          rememberAvatarCacheKey(request.url);
+        }
+        return response;
+      });
+    });
+  });
+}
 
 var SHELL_PRECACHE = [
   "/fonts.css",
@@ -154,7 +196,7 @@ self.addEventListener("activate", function (event) {
       return Promise.all(
         keys
           .filter(function (k) {
-            return ALL_CACHES.indexOf(k) === -1;
+            return ALL_CACHES.indexOf(k) === -1 && k !== AVATAR_CACHE;
           })
           .map(function (k) {
             return caches.delete(k);
@@ -169,6 +211,15 @@ self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") return;
   var url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
+  if (isAvatarResizeRequest(url)) {
+    event.respondWith(
+      avatarCacheFirst(event.request).catch(function () {
+        return fetch(event.request);
+      })
+    );
+    return;
+  }
 
   if (event.request.mode === "navigate") {
     event.respondWith(
@@ -218,12 +269,13 @@ self.addEventListener("push", function (event) {
           if (j.title) payload.title = j.title;
           if (j.body) payload.body = j.body;
           if (j.url) payload.url = j.url;
+          if (j.icon) payload.icon = j.icon;
         } catch (e) {}
       }
       return Promise.all([
         self.registration.showNotification(payload.title, {
           body: payload.body,
-          icon: "/icon.svg",
+          icon: payload.icon || "/icon.svg",
           tag: "korus-push",
           data: payload,
         }),

@@ -98,6 +98,7 @@ class AdminExportInspectTest {
         return new AdminResource(cfg, audit,
             com.avandocmsg.messenger.core.bootstrap.CoreModule.organizationApplicationService(
                 null, UuidGenerator.standard()),
+            null,
             new JdbcRetentionPolicyAdapter((javax.sql.DataSource) null),
             new EmptyChatPersistencePort(),
             new JdbcChatRetentionPolicyAdapter((javax.sql.DataSource) null),

@@ -12,6 +12,8 @@
 # korus_minio_secret_key: "CHANGE_ME"
 # korus_keycloak_admin_password: "CHANGE_ME"
 # korus_jwt_secret: "CHANGE_ME"
+# korus_avatar_token_hmac_secret: "CHANGE_ME"  # -> AVATAR_TOKEN_HMAC_SECRET (signed avatar resize URLs)
+# korus_api_public_base_url: "https://api.example.com"  # -> API_PUBLIC_BASE_URL (push icon URLs)
 # korus_coturn_secret: "CHANGE_ME"
 # korus_vapid_public_key: "CHANGE_ME"
 # korus_vapid_private_key: "CHANGE_ME"

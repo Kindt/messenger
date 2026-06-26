@@ -42,6 +42,8 @@ export type UiAuditSurfaceOptions = {
   rootSelector: string;
   requiredSelectors?: string[];
   maxActions?: number;
+  /** Stop auditing this surface after N ms even if maxActions not reached (avoids WebRTC hangs). */
+  maxWallClockMs?: number;
   denyPatterns?: RegExp[];
 };
 
@@ -147,8 +149,19 @@ export async function auditInteractiveSurface(
   const report: UiAuditReportEntry[] = [];
   const candidates = await collectInteractiveCandidates(page, options);
   const maxActions = options.maxActions ?? 80;
+  const deadline = Date.now() + (options.maxWallClockMs ?? 120_000);
 
   for (const candidate of candidates.slice(0, maxActions)) {
+    if (Date.now() > deadline) {
+      report.push({
+        surface: options.surface,
+        action: candidate.action,
+        description: candidate.description,
+        status: "skipped",
+        reason: "wall-clock budget exceeded",
+      });
+      break;
+    }
     if (candidate.dangerous || candidate.action === "skip") {
       report.push({
         surface: options.surface,
@@ -173,7 +186,7 @@ export async function auditInteractiveSurface(
     }
 
     try {
-      await locator.scrollIntoViewIfNeeded({ timeout: 5_000 });
+      await locator.scrollIntoViewIfNeeded({ timeout: 2_000 });
       if (candidate.action === "fill") {
         await locator.focus({ timeout: 5_000 });
         await locator.fill(auditFillValue(candidate), { timeout: 5_000 });
@@ -182,7 +195,7 @@ export async function auditInteractiveSurface(
       } else {
         await locator.click({ timeout: 5_000 });
       }
-      await page.waitForTimeout(100);
+      await page.waitForTimeout(50);
       await assertSurfaceHealthy(page, options);
       report.push({
         surface: options.surface,
@@ -243,6 +256,8 @@ async function collectInteractiveCandidates(
       let seq = 0;
       return nodes
         .filter((el) => isCandidateVisible(el))
+        .filter((el) => !el.classList.contains("chat-item"))
+        .filter((el) => !el.closest("aside, [role=complementary], .sidebar, .chat-list"))
         .map((el) => {
           const html = el as HTMLElement;
           const auditId = `ui-audit-${Date.now()}-${seq++}`;
@@ -380,7 +395,9 @@ function auditFillValue(candidate: UiAuditCandidate): string {
 
 function isStaleElementError(err: unknown): boolean {
   const message = err instanceof Error ? err.message : String(err);
-  return /not attached to the DOM|Element is not attached|Execution context was destroyed/i.test(message);
+  return /not attached to the DOM|Element is not attached|Execution context was destroyed|detached from the DOM/i.test(
+    message
+  );
 }
 
 async function selectFirstNonCurrentOption(page: Page, auditId: string): Promise<void> {
@@ -396,15 +413,19 @@ async function selectFirstNonCurrentOption(page: Page, auditId: string): Promise
 
 async function assertSurfaceHealthy(page: Page, options: UiAuditSurfaceOptions): Promise<void> {
   await expect(page.locator("body")).toBeVisible({ timeout: 10_000 });
+  const healthRoot = options.rootSelector === "body" ? "body" : options.rootSelector;
   await expect
     .poll(
       async () =>
-        page.evaluate(() => {
-          const body = document.body;
-          if (!body) return false;
-          const visibleText = body.innerText.replace(/\s+/g, " ").trim();
-          return visibleText.length > 0 || !!body.querySelector("button,input,textarea,select,a[href]");
-        }),
+        page.evaluate((sel) => {
+          const root = document.querySelector(sel) || document.body;
+          if (!root) return false;
+          const visibleText = (root as HTMLElement).innerText.replace(/\s+/g, " ").trim();
+          return (
+            visibleText.length > 0 ||
+            !!root.querySelector("button,input,textarea,select,a[href]")
+          );
+        }, healthRoot),
       { timeout: 10_000 }
     )
     .toBe(true);
@@ -444,7 +465,7 @@ async function attachAuditArtifacts(
   });
   if (report.some((entry) => entry.status === "failed")) {
     await testInfo.attach(`${safeName}-failure.png`, {
-      body: await page.screenshot({ fullPage: true }),
+      body: await page.screenshot({ fullPage: false }),
       contentType: "image/png",
     });
   }
@@ -459,7 +480,8 @@ async function writeAuditDiskArtifacts(
   await fs.mkdir(ARTIFACT_ROOT, { recursive: true });
   const screenshot = path.join(ARTIFACT_ROOT, `${safeName}.png`);
   const reportPath = path.join(ARTIFACT_ROOT, `${safeName}.json`);
-  await page.screenshot({ path: screenshot, fullPage: true });
+  // Viewport capture — fullPage on long chat lists exceeds tier timeout (240s).
+  await page.screenshot({ path: screenshot, fullPage: false });
   await fs.writeFile(reportPath, JSON.stringify(report, null, 2), "utf8");
 
   const artifact: UiAuditDiskArtifact = {

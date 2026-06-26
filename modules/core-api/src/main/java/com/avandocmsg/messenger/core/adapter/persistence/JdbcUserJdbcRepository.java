@@ -26,7 +26,7 @@ public final class JdbcUserJdbcRepository {
     private static final String SELECT_USER = """
         SELECT id, username, display_name, phone, email, external_id, hidden, created_at,
                presence_status, last_seen_at, org_id, privacy_disable_read_receipts, ui_locale,
-               custom_status_text, dnd_until
+               custom_status_text, dnd_until, avatar_file_id, avatar_hidden
         FROM users
         """;
 
@@ -67,7 +67,7 @@ public final class JdbcUserJdbcRepository {
                  JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, id);
             stmt.setString(2, username);
-            stmt.setString(3, displayName != null ? displayName : username);
+            stmt.setString(3, displayName != null && !displayName.isBlank() ? displayName : username);
             stmt.executeUpdate();
             log.info("User created: {} ({})", username, id);
             return true;
@@ -473,6 +473,8 @@ public final class JdbcUserJdbcRepository {
         var dndTs = hasColumn(rs, "dnd_until") ? rs.getTimestamp("dnd_until") : null;
         Instant dndUntil = dndTs != null ? dndTs.toInstant() : null;
         var customStatus = hasColumn(rs, "custom_status_text") ? rs.getString("custom_status_text") : null;
+        var avatarUuid = hasColumn(rs, "avatar_file_id") ? rs.getObject("avatar_file_id", UUID.class) : null;
+        var avatarHidden = hasColumn(rs, "avatar_hidden") && rs.getBoolean("avatar_hidden");
         return new UserProfile(
             rs.getObject("id", UUID.class).toString(),
             rs.getString("username"),
@@ -488,7 +490,10 @@ public final class JdbcUserJdbcRepository {
             rs.getBoolean("privacy_disable_read_receipts"),
             rs.getString("ui_locale"),
             customStatus,
-            dndUntil
+            dndUntil,
+            avatarHidden,
+            avatarUuid != null ? avatarUuid.toString() : null,
+            null
         );
     }
 

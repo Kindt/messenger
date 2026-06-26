@@ -79,6 +79,11 @@ public final class JdbcChatPersistenceAdapter implements ChatPersistencePort {
     }
 
     @Override
+    public boolean updateAvatar(UUID chatId, UUID avatarFileId) {
+        return jdbc.updateAvatar(chatId, avatarFileId);
+    }
+
+    @Override
     public boolean setMuted(UUID chatId, UUID userId, boolean muted) {
         return jdbc.setMuted(chatId, userId, muted);
     }

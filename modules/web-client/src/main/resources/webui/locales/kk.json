@@ -81,6 +81,7 @@
     "membersInvited": "Қатысушылар кездесу чатына қосылды",
     "inviteMembersFailed": "Қатысушылар шақырылмады",
     "jitsiHint": "Jitsi ({host}). Сілтемені қонақтарға жіберіңіз немесе әріптестерді кездесу чатына шақырыңыз.",
+    "participantsBadge": " · {count} қат.",
     "participantsTitle": "Қоңырауда",
     "refreshParticipants": "Қатысушылар тізімін жаңарту",
     "noParticipants": "Әзірше ешкім жоқ",
@@ -154,7 +155,8 @@
     "pushRegisterFailed": "Web Push тіркелмеді",
     "enableFirst": "Алдымен хабарландыруларды қосыңыз",
     "showFailed": "Хабарландыру көрсетілмеді",
-    "testLocalBody": "Сынақ: жергілікті хабарландыру"
+    "testLocalBody": "Сынақ: жергілікті хабарландыру",
+    "enableHint": "Оң жақтағы 🔔 басыңыз — браузер хабарландыру рұқсатын сұрайды."
   },
   "contacts": {
     "hashRequired": "Кемінде бір телефон хэшін енгізіңіз (SHA-256, hex)",
@@ -319,7 +321,19 @@
     },
     "search": {
       "emptyTitle": "Сәйкестік жоқ",
-      "emptyHint": "Сұранысты өзгертіңіз немесе жазуын тексеріңіз."
+      "emptyHint": "Сұранысты өзгертіңіз немесе жазуын тексеріңіз.",
+      "globalTitle": "Іздеу",
+      "filterAll": "Барлығы",
+      "filterChats": "Чаттар",
+      "filterMessages": "Хабарламалар",
+      "noResults": "Ештеңе табылмады.",
+      "globalPlaceholder": "Барлық чаттарда іздеу (2 таңбадан, E2EE-сыз)…",
+      "chatPlaceholder": "Осы чатта іздеу (2 таңбадан, E2EE-сыз)…",
+      "scopeGlobal": "Барлық чаттар",
+      "scopeChat": "Чатта",
+      "scopeAutoGlobal": "Авто: барлығы",
+      "scopeAutoChat": "Авто: чат",
+      "scopeCycleTitle": "Іздеу аумағын ауыстыру"
     },
     "auth": {
       "username": "Логин",
@@ -390,16 +404,20 @@
         "archive": "Мұрағат"
       },
       "filter": {
-        "all": "All chats",
-        "unread": "Unread",
-        "mentions": "Mentions"
+        "all": "Барлық чаттар",
+        "unread": "Оқылмаған",
+        "mentions": "Атаулар"
       },
+      "filterPanelTitle": "Чат сүзгілері",
+      "filterPanelFolders": "Қалталар",
+      "filterPanelShow": "Көрсету",
       "marketplaceSearch": "Search integrations…",
       "marketplaceAll": "All categories",
       "noChatsUnread": "No unread chats.",
       "noChatsMentions": "No chats with mentions.",
       "pinChat": "Pin chat",
-      "unpinChat": "Unpin chat"
+      "unpinChat": "Unpin chat",
+      "resizeTitle": "Drag to resize chat list"
     },
     "thread": {
       "empty": "Чат таңдаңыз немесе топ жасаңыз.",
@@ -415,6 +433,7 @@
       "exportCancel": "Экспортты тоқтату",
       "refresh": "Чатты жаңарту",
       "copyChatLink": "Осы чат сілтемесін көшіру",
+      "directChat": "Жеке чат",
       "confLive": "🎥 {title}",
       "confLiveDefault": "Бейнеконференция жүріп жатыр",
       "searchPlaceholder": "Осы чатта іздеу (2 таңбадан, E2EE-сыз)…",
@@ -428,7 +447,10 @@
       "fileBtn": "Файл",
       "loadOlder": "Ерте хабарламалар",
       "you": "Сіз",
-      "composerPlaceholder": "Хабарлама… (Shift+Enter — жол, файлды сүйреңіз)",
+      "composerPlaceholder": "Хабарлама жазыңыз…",
+      "composerHint": "Enter — жіберу, Shift+Enter — жаңа жол, файлды сүйреуге болады",
+      "composerMore": "Тағы",
+      "chatMore": "Чат әрекеттері",
       "cancelReply": "Жауапты бас тарту",
       "bold": "Қалың",
       "italic": "Курсив",
@@ -464,8 +486,8 @@
       "whiteboardFailed": "Тақта сақталмады.",
       "stickersTitle": "GIF және стикерлер",
       "stickersEmpty": "Каталог бос — API арқылы pack қосыңыз.",
-      "federationTitle": "Федерация — partner orgs",
-      "federationEmpty": "Trust graph-та partner orgs жоқ.",
+      "federationTitle": "Федерация",
+      "federationEmpty": "Сенімді ұйымдар жоқ.",
       "confTools": "ADR-құралдар",
       "recordStart": "Жазба",
       "recordStarted": "Жазба басталды (scaffold).",
@@ -486,17 +508,18 @@
       "aiAssistTitle": "AI chat assist",
       "aiAssistPlaceholder": "Ask a question about this chat…",
       "aiAssistRun": "Run",
-      "aiAssistEmpty": "No reply from AI gateway.",
+      "aiAssistEmpty": "AI жауабы жоқ.",
+      "aiAssistUnavailable": "AI көмекшісі қолжетімсіз (gateway бапталмаған).",
       "aiAssistFailed": "AI assist failed.",
       "aiInsert": "Insert into composer",
       "kanbanMoveBack": "Move to previous column",
       "kanbanMoveForward": "Move to next column",
       "kanbanDelete": "Delete task",
       "kanbanDeleted": "Task deleted.",
-      "passkeysTitle": "Passkeys (scaffold)",
-      "passkeysEmpty": "No passkeys registered.",
-      "passkeysRegister": "Register scaffold credential",
-      "passkeysRegistered": "Passkey scaffold registered.",
+      "passkeysTitle": "Passkey кілттері",
+      "passkeysEmpty": "Тіркелген кілттер жоқ.",
+      "passkeysRegister": "Passkey қосу",
+      "passkeysRegistered": "Passkey тіркелді.",
       "passkeysFailed": "Passkey registration failed.",
       "guestExpired": "Guest link expired.",
       "guestRedeemed": "Guest link accepted.",
@@ -683,18 +706,29 @@
       "tabLinks": "Сілтемелер",
       "tabSecurity": "Қауіпсіздік",
       "appearance": "Безендіру",
+      "theme": "Тақырып",
       "appearanceKorus": "КОРУС Консалтинг безендіруі (#7949F4, korusconsulting.ru).",
       "cache": "Қолданба кэші",
       "resetCache": "UI кэшін тазалау",
       "cacheHint": "Сервер жаңартылғаннан кейін ескі интерфейс көрінсе (Opera, PWA).",
+      "sectionOffline": "Офлайн",
+      "sectionAbout": "Бағдарлама туралы",
       "apiVersion": "API нұсқасы",
+      "kbdTitle": "Пернелер тіркесімі",
       "kbdHint": "<kbd>Ctrl+K</kbd> немесе <kbd>/</kbd> — іздеу · <kbd>Alt+↑</kbd><kbd>Alt+↓</kbd> — чаттар · <kbd>M</kbd> — хабарлама · <kbd>Esc</kbd> — жабу · <kbd>Ctrl+,</kbd> — параметрлер",
       "status": "Күй",
+      "presence": "Қатысу",
+      "sectionAccount": "Тіркелгі",
+      "sectionPresence": "Қатысу",
+      "usernameHint": "Логин тіркелу кезінде белгіленеді және мұнда өзгертілмейді.",
+      "displayNameHint": "Чаттарда сізді басқалар қалай көреді.",
       "presenceOnline": "Желіде",
       "presenceAway": "Кетті",
       "presenceDnd": "Мазаламау",
       "presenceOffline": "Желіде емес",
-      "customStatus": "Статус",
+      "customStatus": "Статус мәтіні",
+      "customStatusPlaceholder": "Мысалы: кеңеске 15:00-ге дейін",
+      "customStatusHint": "Контакттарға атыңыздың жанында көрсетілетін қысқа жазба.",
       "dndSchedule": "Мазаламау уақыты",
       "dndSeeNotificationsTab": "«Мазаламау» ұзақтығы «Хабарландырулар» вкладкасында.",
       "dndUntilManual": "Өшіргенге дейін",
@@ -704,6 +738,7 @@
       "dndUntilTomorrow": "Ертең 9:00-ге дейін",
       "dndUntilActive": "Белсенді {until} дейін",
       "name": "Аты",
+      "email": "Эл. пошта",
       "notifications": "Хабарландырулар",
       "sound": "Хабарландыру дыбысы",
       "lastPublicLink": "Соңғы жалпыға ортақ сілтеме",
@@ -714,8 +749,19 @@
       "devices": "Құрылғылар (Web Push)",
       "noDevices": "Тіркелген құрылғылар жоқ.",
       "disconnect": "Ажырату",
-      "testNotification": "Хабарландыру сынағы",
-      "showTest": "Көрсету",
+      "testNotification": "Хабарландыруды тексеру",
+      "showTest": "Сынақ жіберу",
+      "sectionBrowserNotif": "Браузер",
+      "sectionDnd": "Мазаламау",
+      "sectionPush": "Жеткізу (Web Push)",
+      "sectionPlanner": "Еске салулар және жоспарланған",
+      "pendingReminders": "Күтудегі еске салулар",
+      "permissionStatus": "Браузер рұқсаты",
+      "permissionGranted": "Рұқсат етілген",
+      "permissionDefault": "Сұралмаған",
+      "dndQuickEnable": "Қосу уақыты",
+      "dndOffHint": "«Мазаламау» режимі өшірулі. Күй — «Профиль» вкладкасында.",
+      "pushDevicesHint": "Осы аккаунт үшін белсенді Web Push жазылымы бар құрылғылар.",
       "pushSyncUpdate": "Жазылымды жаңарту",
       "newKeyPackage": "Жаңа key package",
       "create": "Жасау",
@@ -731,7 +777,7 @@
       "pwaInstall": "Қолданбаны орнату",
       "pwaInstallBtn": "Орнату",
       "offlineHint": "Офлайн: статика Service Worker арқылы кэштеледі; API желіні қажет етеді.",
-      "e2eeKeyPackages": "E2EE key packages",
+      "e2eeKeyPackages": "Сервердегі MLS кілттері",
       "webPush": "Web Push",
       "localKeySaved": "Сақталған: {prefix}",
       "localKeySavedYes": "иә",
@@ -779,16 +825,20 @@
     "integration": {
       "close": "Close panel"
     },
-    "search": {
-      "globalTitle": "Search",
-      "filterAll": "All",
-      "filterChats": "Chats",
-      "filterMessages": "Messages",
-      "noResults": "No results."
-    },
     "profile": {
       "bioHint": "Short bio visible to contacts",
-      "avatarChange": "Change avatar"
+      "avatarChange": "Change avatar",
+      "avatarRemove": "Remove avatar",
+      "avatarUploadFailed": "Could not upload avatar",
+      "avatarHidden": "Hide my avatar",
+      "avatarHiddenHint": "Others will see initials instead of your photo"
+    },
+    "avatar": {
+      "altUser": "Avatar of {name}",
+      "altChat": "Chat avatar for {name}",
+      "cropTitle": "Crop avatar",
+      "cropHint": "Drag to reposition. Minimum 128×128 px.",
+      "cropApply": "Apply"
     },
     "mobile": {
       "back": "Back to list",
@@ -809,7 +859,7 @@
       "disconnectFailed": "Could not disconnect integration."
     },
     "federation": {
-      "directoryHint": "Trusted orgs for cross-org chats (MVP).",
+      "directoryHint": "Жасақтар арасындағы чаттар үшін серіктес ұйымдар.",
       "trustActive": "Active",
       "trustPending": "Pending",
       "trustLevel": {
@@ -839,6 +889,10 @@
       "title": "Edit message",
       "save": "Save",
       "failed": "Could not edit message."
+    },
+    "profileCard": {
+      "title": "Profile",
+      "message": "Message"
     }
   },
   "push": {

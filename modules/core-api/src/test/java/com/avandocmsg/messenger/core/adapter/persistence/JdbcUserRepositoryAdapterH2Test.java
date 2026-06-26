@@ -45,7 +45,9 @@ class JdbcUserRepositoryAdapterH2Test {
                   privacy_disable_read_receipts BOOLEAN NOT NULL DEFAULT false,
                   ui_locale VARCHAR(8),
                   custom_status_text VARCHAR(128) NOT NULL DEFAULT '',
-                  dnd_until TIMESTAMP
+                  dnd_until TIMESTAMP,
+                  avatar_file_id UUID,
+                  avatar_hidden BOOLEAN NOT NULL DEFAULT false
                 )
                 """);
         }
@@ -113,9 +115,26 @@ class JdbcUserRepositoryAdapterH2Test {
     }
 
     @Test
+    void updateAvatarHidden_togglesFlag() {
+        assertTrue(adapter.updateAvatarHidden(UserId.of(userId), true));
+        assertTrue(adapter.findById(UserId.of(userId)).orElseThrow().avatarHidden());
+        assertTrue(adapter.updateAvatarHidden(UserId.of(userId), false));
+        assertFalse(adapter.findById(UserId.of(userId)).orElseThrow().avatarHidden());
+    }
+
+    @Test
     void touchHeartbeat_updatesLastSeen() {
         assertTrue(adapter.touchHeartbeat(UserId.of(userId)));
         assertNotNull(adapter.findById(UserId.of(userId)).orElseThrow().lastSeenAt());
+    }
+
+    @Test
+    void updateAvatar_persistsFileId() {
+        var fileId = UUID.randomUUID();
+        assertTrue(adapter.updateAvatar(UserId.of(userId), fileId));
+        assertEquals(fileId, adapter.findById(UserId.of(userId)).orElseThrow().avatarFileId().value());
+        assertTrue(adapter.updateAvatar(UserId.of(userId), null));
+        assertNull(adapter.findById(UserId.of(userId)).orElseThrow().avatarFileId());
     }
 
     @Test

@@ -81,6 +81,7 @@
     "membersInvited": "Удзельнікі дададзены ў чат сустрэчы",
     "inviteMembersFailed": "Не ўдалося запрасіць удзельнікаў",
     "jitsiHint": "Jitsi ({host}). Адправіце спасылку гасцям або запрасіце калег у чат сустрэчы.",
+    "participantsBadge": " · {count} удз.",
     "participantsTitle": "У званку",
     "refreshParticipants": "Абнавіць спіс удзельнікаў",
     "noParticipants": "Пакуль нікога",
@@ -154,7 +155,8 @@
     "pushRegisterFailed": "Не ўдалося зарэгістраваць Web Push",
     "enableFirst": "Спачатку ўключыце апавяшчэнні",
     "showFailed": "Не ўдалося паказаць апавяшчэнне",
-    "testLocalBody": "Тэст: лакальнае апавяшчэнне"
+    "testLocalBody": "Тэст: лакальнае апавяшчэнне",
+    "enableHint": "Націсніце 🔔 справа — браўзер запытае дазвол на апавяшчэнні."
   },
   "contacts": {
     "hashRequired": "Увядзіце хаця б адзін хэш тэлефона (SHA-256, hex)",
@@ -319,7 +321,19 @@
     },
     "search": {
       "emptyTitle": "Супадзенняў няма",
-      "emptyHint": "Змяніце запыт або праверце напісанне."
+      "emptyHint": "Змяніце запыт або праверце напісанне.",
+      "globalTitle": "Пошук",
+      "filterAll": "Усюды",
+      "filterChats": "Чаты",
+      "filterMessages": "Паведамленні",
+      "noResults": "Нічога не знойдзена.",
+      "globalPlaceholder": "Пошук па ўсіх чатах (ад 2 сімв., без E2EE)…",
+      "chatPlaceholder": "Пошук у гэтым чаце (ад 2 сімв., без E2EE)…",
+      "scopeGlobal": "Усюды",
+      "scopeChat": "У чаце",
+      "scopeAutoGlobal": "Аўта: усюды",
+      "scopeAutoChat": "Аўта: чат",
+      "scopeCycleTitle": "Змяніць вобласць пошуку"
     },
     "auth": {
       "username": "Логін",
@@ -390,16 +404,20 @@
         "archive": "Архіў"
       },
       "filter": {
-        "all": "All chats",
-        "unread": "Unread",
-        "mentions": "Mentions"
+        "all": "Усе чаты",
+        "unread": "Непрачытаныя",
+        "mentions": "Згадкі"
       },
+      "filterPanelTitle": "Фільтры чатаў",
+      "filterPanelFolders": "Папкі",
+      "filterPanelShow": "Паказаць",
       "marketplaceSearch": "Search integrations…",
       "marketplaceAll": "All categories",
       "noChatsUnread": "No unread chats.",
       "noChatsMentions": "No chats with mentions.",
       "pinChat": "Pin chat",
-      "unpinChat": "Unpin chat"
+      "unpinChat": "Unpin chat",
+      "resizeTitle": "Drag to resize chat list"
     },
     "thread": {
       "empty": "Абярыце чат або стварыце групу.",
@@ -415,6 +433,7 @@
       "exportCancel": "Адмена экспарту",
       "refresh": "Абнавіць чат",
       "copyChatLink": "Скапіраваць спасылку на гэты чат",
+      "directChat": "Асабісты чат",
       "confLive": "🎥 {title}",
       "confLiveDefault": "Ідзе відэаканферэнцыя",
       "searchPlaceholder": "Пошук у гэтым чаце (ад 2 сімв., без E2EE)…",
@@ -428,7 +447,10 @@
       "fileBtn": "Файл",
       "loadOlder": "Раннія паведамленні",
       "you": "Вы",
-      "composerPlaceholder": "Паведамленне… (Shift+Enter — радок, перацягніце файл)",
+      "composerPlaceholder": "Напішыце паведамленне…",
+      "composerHint": "Enter — адправіць, Shift+Enter — радок, можна перацягнуць файл",
+      "composerMore": "Яшчэ",
+      "chatMore": "Дзеянні чата",
       "cancelReply": "Адмяніць адказ",
       "bold": "Тлусты",
       "italic": "Курсіў",
@@ -464,8 +486,8 @@
       "whiteboardFailed": "Не ўдалося захаваць дошку.",
       "stickersTitle": "GIF і стыкеры",
       "stickersEmpty": "Каталог пусты — дадайце packs праз API.",
-      "federationTitle": "Федэрацыя — partner orgs",
-      "federationEmpty": "Няма partner orgs у trust graph.",
+      "federationTitle": "Федэрацыя",
+      "federationEmpty": "Няма давераных арганізацый.",
       "confTools": "ADR-інструменты",
       "recordStart": "Запіс",
       "recordStarted": "Запіс запущаны (scaffold).",
@@ -486,17 +508,18 @@
       "aiAssistTitle": "AI chat assist",
       "aiAssistPlaceholder": "Ask a question about this chat…",
       "aiAssistRun": "Run",
-      "aiAssistEmpty": "No reply from AI gateway.",
+      "aiAssistEmpty": "Няма адказу ад AI.",
+      "aiAssistUnavailable": "AI-памочнік недаступны (gateway не наладжаны).",
       "aiAssistFailed": "AI assist failed.",
       "aiInsert": "Insert into composer",
       "kanbanMoveBack": "Move to previous column",
       "kanbanMoveForward": "Move to next column",
       "kanbanDelete": "Delete task",
       "kanbanDeleted": "Task deleted.",
-      "passkeysTitle": "Passkeys (scaffold)",
-      "passkeysEmpty": "No passkeys registered.",
-      "passkeysRegister": "Register scaffold credential",
-      "passkeysRegistered": "Passkey scaffold registered.",
+      "passkeysTitle": "Ключы Passkey",
+      "passkeysEmpty": "Няма зарэгістраваных ключоў.",
+      "passkeysRegister": "Дадаць Passkey",
+      "passkeysRegistered": "Passkey зарэгістраваны.",
       "passkeysFailed": "Passkey registration failed.",
       "guestExpired": "Guest link expired.",
       "guestRedeemed": "Guest link accepted.",
@@ -683,18 +706,29 @@
       "tabLinks": "Спасылкі",
       "tabSecurity": "Бяспека",
       "appearance": "Афармленне",
+      "theme": "Тэма",
       "appearanceKorus": "Афармленне КОРУС Консалтинг (#7949F4, korusconsulting.ru).",
       "cache": "Кэш праграмы",
       "resetCache": "Скінуць кэш UI",
       "cacheHint": "Калі пасля абнаўлення сервера бачце стары інтэрфейс (Opera, PWA).",
+      "sectionOffline": "Афлайн",
+      "sectionAbout": "Пра праграму",
       "apiVersion": "Версія API",
+      "kbdTitle": "Гарачыя клавішы",
       "kbdHint": "<kbd>Ctrl+K</kbd> або <kbd>/</kbd> — пошук · <kbd>Alt+↑</kbd><kbd>Alt+↓</kbd> — чаты · <kbd>M</kbd> — паведамленне · <kbd>Esc</kbd> — зачыніць · <kbd>Ctrl+,</kbd> — налады",
       "status": "Статус",
+      "presence": "Присутнасць",
+      "sectionAccount": "Уліковы запіс",
+      "sectionPresence": "Присутнасць",
+      "usernameHint": "Логін задаецца пры рэгістрацыі і тут не змяняецца.",
+      "displayNameHint": "Як вас бачаць іншыя ў чатах.",
       "presenceOnline": "У сетцы",
       "presenceAway": "Адышоў",
       "presenceDnd": "Не турбаваць",
       "presenceOffline": "Не ў сетцы",
-      "customStatus": "Статус",
+      "customStatus": "Тэкст статусу",
+      "customStatusPlaceholder": "Напрыклад: на нарадзе да 15:00",
+      "customStatusHint": "Кароткая подпіс побач з імем для кантактаў.",
       "dndSchedule": "Не турбаваць да",
       "dndSeeNotificationsTab": "Трываласць «Не турбаваць» — на ўкладцы «Аповеды».",
       "dndUntilManual": "Пакуль не адключу",
@@ -704,6 +738,7 @@
       "dndUntilTomorrow": "Да 9:00 заўтра",
       "dndUntilActive": "Актыўна да {until}",
       "name": "Імя",
+      "email": "Эл. пошта",
       "notifications": "Апавяшчэнні",
       "sound": "Гук апавяшчэнняў",
       "lastPublicLink": "Апошняя публічная спасылка",
@@ -714,8 +749,19 @@
       "devices": "Прылады (Web Push)",
       "noDevices": "Няма зарэгістраваных прылад.",
       "disconnect": "Адключыць",
-      "testNotification": "Тэст апавяшчэння",
-      "showTest": "Паказаць",
+      "testNotification": "Праверыць апавяшчэнне",
+      "showTest": "Адправіць тэст",
+      "sectionBrowserNotif": "Браўзер",
+      "sectionDnd": "Не турбаваць",
+      "sectionPush": "Дастаўка (Web Push)",
+      "sectionPlanner": "Напаміны і адкладзеныя",
+      "pendingReminders": "Чакаючыя напаміны",
+      "permissionStatus": "Дазвол браўзера",
+      "permissionGranted": "Дазволена",
+      "permissionDefault": "Не запытана",
+      "dndQuickEnable": "Уключыць да",
+      "dndOffHint": "Рэжым «Не турбаваць» выключаны. Статус — на ўкладцы «Профіль».",
+      "pushDevicesHint": "Прылады з актыўнай падпіскай Web Push для гэтага акаўнта.",
       "pushSyncUpdate": "Абнавіць падпіску",
       "newKeyPackage": "Новы key package",
       "create": "Стварыць",
@@ -731,7 +777,7 @@
       "pwaInstall": "Усталяваць праграму",
       "pwaInstallBtn": "Усталяваць",
       "offlineHint": "Офлайн: статыка кэшуецца Service Worker; API патрабуе сетку.",
-      "e2eeKeyPackages": "E2EE key packages",
+      "e2eeKeyPackages": "Ключы MLS на сервере",
       "webPush": "Web Push",
       "localKeySaved": "Захаваны: {prefix}",
       "localKeySavedYes": "так",
@@ -779,16 +825,20 @@
     "integration": {
       "close": "Close panel"
     },
-    "search": {
-      "globalTitle": "Search",
-      "filterAll": "All",
-      "filterChats": "Chats",
-      "filterMessages": "Messages",
-      "noResults": "No results."
-    },
     "profile": {
       "bioHint": "Short bio visible to contacts",
-      "avatarChange": "Change avatar"
+      "avatarChange": "Change avatar",
+      "avatarRemove": "Remove avatar",
+      "avatarUploadFailed": "Could not upload avatar",
+      "avatarHidden": "Hide my avatar",
+      "avatarHiddenHint": "Others will see initials instead of your photo"
+    },
+    "avatar": {
+      "altUser": "Avatar of {name}",
+      "altChat": "Chat avatar for {name}",
+      "cropTitle": "Crop avatar",
+      "cropHint": "Drag to reposition. Minimum 128×128 px.",
+      "cropApply": "Apply"
     },
     "mobile": {
       "back": "Back to list",
@@ -809,7 +859,7 @@
       "disconnectFailed": "Could not disconnect integration."
     },
     "federation": {
-      "directoryHint": "Trusted orgs for cross-org chats (MVP).",
+      "directoryHint": "Арганізацыі-партнёры для чатаў паміж ячэйкамі.",
       "trustActive": "Active",
       "trustPending": "Pending",
       "trustLevel": {
@@ -839,6 +889,10 @@
       "title": "Edit message",
       "save": "Save",
       "failed": "Could not edit message."
+    },
+    "profileCard": {
+      "title": "Profile",
+      "message": "Message"
     }
   },
   "push": {

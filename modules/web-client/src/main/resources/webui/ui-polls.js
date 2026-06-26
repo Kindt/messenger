@@ -106,46 +106,35 @@
     return card;
   }
 
-  function mountPollsSection(ctx) {
-    if (!ctx.state.selectedId) return null;
-    var wrap = ctx.el("div", "thread-polls");
+  function mountPollsBody(ctx) {
+    var wrap = ctx.el("div", "thread-extras-polls");
     wrap.setAttribute("data-testid", "thread-polls");
-    var head = ctx.el("div", "thread-polls-head");
-    head.appendChild(ctx.el("span", "thread-polls-title", ctx.L("ui.polls.title")));
-    head.appendChild(
-      ctx.iconBtn("↻", ctx.L("ui.polls.refreshResults"), {
-        cls: "thread-polls-refresh",
-        testId: "poll-refresh",
-        disabled: ctx.state.busy,
-        onClick: function () {
-          if (ctx.reloadChatPolls) ctx.reloadChatPolls();
-        },
-      })
-    );
-    head.appendChild(
-      ctx.iconBtn("+", ctx.L("ui.polls.create"), {
-        cls: "thread-polls-add",
-        testId: "poll-create-open",
-        disabled: ctx.state.busy,
-        onClick: function () {
-          ctx.openPollCreate();
-        },
-      })
-    );
-    wrap.appendChild(head);
     if (ctx.state.chatPollsBusy) {
-      wrap.appendChild(ctx.el("div", "thread-polls-hint", ctx.L("ui.common.loading")));
+      wrap.appendChild(ctx.el("div", "thread-extras-hint", ctx.L("ui.common.loading")));
       return wrap;
     }
     var polls = ctx.state.chatPolls || [];
     if (!polls.length) {
-      wrap.appendChild(ctx.el("div", "thread-polls-hint", ctx.L("ui.polls.empty")));
+      wrap.appendChild(ctx.el("div", "thread-extras-hint", ctx.L("ui.polls.empty")));
+      wrap.appendChild(
+        ctx.iconBtn("+", ctx.L("ui.polls.create"), {
+          testId: "poll-create-open",
+          disabled: ctx.state.busy,
+          onClick: function () {
+            ctx.openPollCreate();
+          },
+        })
+      );
       return wrap;
     }
     polls.forEach(function (p) {
       wrap.appendChild(mountPollCard(p, ctx));
     });
     return wrap;
+  }
+
+  function mountPollsSection(ctx) {
+    return mountPollsBody(ctx);
   }
 
   function mountPollCreateOverlay(ctx) {
@@ -379,6 +368,7 @@
   }
 
   global.KorusUiPolls = {
+    mountPollsBody: mountPollsBody,
     mountPollsSection: mountPollsSection,
     mountPollCreateOverlay: mountPollCreateOverlay,
     mountScheduleOverlay: mountScheduleOverlay,

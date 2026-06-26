@@ -19,7 +19,9 @@ import com.avandocmsg.messenger.api.params.UuidParams;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.security.TimingNormalization;
 import com.avandocmsg.messenger.core.application.ChatApplicationService;
+import com.avandocmsg.messenger.core.application.AvatarApplicationService;
 import com.avandocmsg.messenger.core.domain.ChatId;
+import com.avandocmsg.messenger.core.domain.FileId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
@@ -58,16 +60,20 @@ public class ChatResource {
     private final ChatService chatService;
     private final ReadReceiptService readReceiptService;
     private final ChatApplicationService chatApplicationService;
+    private final AvatarApplicationService avatarApplicationService;
     private final AppConfig appConfig;
     private final UserMessageSource messages;
 
     @Inject
     public ChatResource(ChatService chatService, ReadReceiptService readReceiptService,
-                        ChatApplicationService chatApplicationService, AppConfig appConfig,
+                        ChatApplicationService chatApplicationService,
+                        AvatarApplicationService avatarApplicationService,
+                        AppConfig appConfig,
                         UserMessageSource messages) {
         this.chatService = chatService;
         this.readReceiptService = readReceiptService;
         this.chatApplicationService = chatApplicationService;
+        this.avatarApplicationService = avatarApplicationService;
         this.appConfig = appConfig;
         this.messages = messages;
     }
@@ -86,7 +92,8 @@ public class ChatResource {
         }
         var page = ListPagination.resolve(limit, offset, ListPagination.DEFAULT_CHAT_LIST_LIMIT);
         var userId = CurrentUserId.uuid(securityContext);
-        var chats = chatService.list(userId, page);
+        var chats = avatarApplicationService.enrichChatResponses(
+            chatService.list(userId, page), UserId.of(userId));
         return Response.ok(chats).build();
     }
 
@@ -178,17 +185,20 @@ public class ChatResource {
                 .entity(new ApiError(404, messages.get("error.chat.not_found")))
                 .build();
         }
-        return Response.ok(chat).build();
+        return Response.ok(avatarApplicationService.enrichChatResponse(chat, UserId.of(userId))).build();
     }
 
     @PATCH
     @Path("/{chatId}")
-    @Operation(summary = "Update chat", description = "Update chat title (owner/admin only)")
+    @Operation(summary = "Update chat", description = "Update chat title or avatar (owner/admin only)")
     public Response update(@PathParam("chatId") String chatIdStr,
                            UpdateChatRequest request,
                            @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
         var chatId = UuidParams.required(chatIdStr, "chat_id");
+        if (request == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
         if (request.title() != null) {
             var ok = chatService.updateTitle(chatId, userId, request.title());
             if (!ok) {
@@ -197,8 +207,30 @@ public class ChatResource {
                     .build();
             }
         }
+        if (Boolean.TRUE.equals(request.removeAvatar())) {
+            if (!chatService.canManageChatSettings(chatId, userId)) {
+                return Response.status(Response.Status.FORBIDDEN)
+                    .entity(new ApiError(403, messages.get("error.chat.not_authorized")))
+                    .build();
+            }
+            avatarApplicationService.clearChatAvatar(UserId.of(userId), ChatId.of(chatId));
+        } else if (request.avatarFileId() != null && !request.avatarFileId().isBlank()) {
+            if (!chatService.canManageChatSettings(chatId, userId)) {
+                return Response.status(Response.Status.FORBIDDEN)
+                    .entity(new ApiError(403, messages.get("error.chat.not_authorized")))
+                    .build();
+            }
+            var fileId = UuidParams.required(request.avatarFileId(), "avatar_file_id");
+            if (avatarApplicationService.setChatAvatar(UserId.of(userId), ChatId.of(chatId), FileId.of(fileId))
+                .isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ApiError(400, messages.get("error.chat.not_authorized")))
+                    .build();
+            }
+        }
         var chat = chatService.getById(chatId, userId);
-        return chat != null ? Response.ok(chat).build()
+        return chat != null
+            ? Response.ok(avatarApplicationService.enrichChatResponse(chat, UserId.of(userId))).build()
             : Response.status(Response.Status.NOT_FOUND).build();
     }
 
@@ -269,7 +301,7 @@ public class ChatResource {
         var chatId = UuidParams.required(chatIdStr, "chat_id");
         var userId = CurrentUserId.uuid(securityContext);
         return chatService.listMembersForViewer(chatId, userId)
-            .map(members -> Response.ok(members).build())
+            .map(members -> Response.ok(avatarApplicationService.enrichChatMembers(members, UserId.of(userId))).build())
             .orElse(Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.chat.not_a_member")))
                 .build());
@@ -391,6 +423,7 @@ public class ChatResource {
 
     @POST
     @Path("/{chatId}/messages/{messageId}/read")
+    @Consumes({MediaType.WILDCARD, MediaType.APPLICATION_JSON})
     @Operation(summary = "Per-message read receipt", description = "Marks one message as read by the current user")
     @ApiResponse(responseCode = "204", description = "Recorded")
     public Response markMessageRead(@PathParam("chatId") String chatIdStr,

@@ -32,7 +32,9 @@ class OrganizationRepositoryH2Test {
                   id UUID PRIMARY KEY,
                   name VARCHAR(256) NOT NULL,
                   slug VARCHAR(64),
-                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  logo_file_id UUID,
+                  avatar_policy VARCHAR(32) NOT NULL DEFAULT 'visible'
                 )
                 """);
             st.execute("""

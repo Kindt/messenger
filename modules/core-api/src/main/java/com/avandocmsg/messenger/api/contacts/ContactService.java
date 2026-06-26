@@ -4,6 +4,8 @@ import com.avandocmsg.messenger.api.contacts.dto.ContactResponse;
 import com.avandocmsg.messenger.api.contacts.dto.ImportContactsResponse;
 import com.avandocmsg.messenger.core.port.UserLookupPort;
 import com.avandocmsg.messenger.core.domain.Contact;
+import com.avandocmsg.messenger.core.application.AvatarApplicationService;
+import com.avandocmsg.messenger.core.domain.FileId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import com.avandocmsg.messenger.core.port.ContactRepositoryPort;
@@ -19,17 +21,26 @@ public class ContactService {
     private final ContactRepositoryPort contactRepositoryPort;
     private final UserLookupPort userLookupPort;
     private final BlockRepositoryPort blockRepositoryPort;
+    private final AvatarApplicationService avatarApplicationService;
 
     public ContactService(ContactRepositoryPort contactRepositoryPort, UserLookupPort userLookupPort,
                           BlockRepositoryPort blockRepositoryPort) {
+        this(contactRepositoryPort, userLookupPort, blockRepositoryPort, null);
+    }
+
+    public ContactService(ContactRepositoryPort contactRepositoryPort, UserLookupPort userLookupPort,
+                          BlockRepositoryPort blockRepositoryPort,
+                          AvatarApplicationService avatarApplicationService) {
         this.contactRepositoryPort = contactRepositoryPort;
         this.userLookupPort = userLookupPort;
         this.blockRepositoryPort = blockRepositoryPort;
+        this.avatarApplicationService = avatarApplicationService;
     }
 
     public List<ContactResponse> list(UUID userId) {
-        return contactRepositoryPort.list(UserId.of(userId)).stream()
-            .map(ContactService::toResponse)
+        var viewerId = UserId.of(userId);
+        return contactRepositoryPort.list(viewerId).stream()
+            .map(c -> enrichContact(c, viewerId))
             .toList();
     }
 
@@ -61,9 +72,33 @@ public class ContactService {
                 return userLookupPort.findById(id).orElse(null);
             })
             .filter(u -> u != null)
-            .map(u -> new ContactResponse(u.id(), u.username(), u.displayName(), u.phone(), null))
+            .map(u -> enrichContactResponse(owner, u))
             .toList();
         return new ImportContactsResponse(contacts);
+    }
+
+    private ContactResponse enrichContact(Contact contact, UserId viewerId) {
+        var base = toResponse(contact);
+        if (avatarApplicationService == null) {
+            return base;
+        }
+        var avatarFileId = userLookupPort.findById(contact.contactUserId().value())
+            .map(u -> u.avatarFileId())
+            .filter(id -> id != null && !id.isBlank())
+            .map(id -> FileId.of(java.util.UUID.fromString(id)))
+            .orElse(null);
+        return avatarApplicationService.enrichContactResponse(base, viewerId, avatarFileId);
+    }
+
+    private ContactResponse enrichContactResponse(UserId viewerId,
+                                                  com.avandocmsg.messenger.api.users.dto.UserProfile u) {
+        var base = new ContactResponse(u.id(), u.username(), u.displayName(), u.phone(), null);
+        if (avatarApplicationService == null) {
+            return base;
+        }
+        var avatarFileId = u.avatarFileId() != null && !u.avatarFileId().isBlank()
+            ? FileId.of(java.util.UUID.fromString(u.avatarFileId())) : null;
+        return avatarApplicationService.enrichContactResponse(base, viewerId, avatarFileId);
     }
 
     private static ContactResponse toResponse(Contact contact) {

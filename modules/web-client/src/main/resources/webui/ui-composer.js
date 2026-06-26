@@ -75,6 +75,16 @@
     }
   }
 
+  function isComposerSystemNoise(text) {
+    if (!text || !String(text).trim()) return false;
+    var t = String(text).trim();
+    return (
+      /gateway not configured/i.test(t) ||
+      /^AI gateway/i.test(t) ||
+      /ai-chat-gateway preset/i.test(t)
+    );
+  }
+
   function mountComposer(ctx) {
     var comp = ctx.el("form", "composer");
     comp.onsubmit = function (e) {
@@ -244,7 +254,36 @@
       },
     });
     fmt.appendChild(bVoice);
-    if (ctx.sendVideoNoteMessage && navigator.mediaDevices && window.MediaRecorder) {
+    fmt.appendChild(filePick);
+
+    var moreWrap = ctx.el("div", "composer-more-wrap");
+    var moreOpen = false;
+    var morePop = ctx.el("div", "composer-more-pop");
+    morePop.style.display = "none";
+    morePop.setAttribute("data-testid", "composer-more-pop");
+    var moreIcons = ctx.el("div", "composer-more-icons");
+    function closeMoreMenu() {
+      moreOpen = false;
+      morePop.style.display = "none";
+    }
+    function wrapMoreAction(handler) {
+      return function () {
+        closeMoreMenu();
+        handler();
+      };
+    }
+    function featureVisible(featureKey) {
+      if (!featureKey) return true;
+      if (ctx.isPlatformFeatureVisible) return ctx.isPlatformFeatureVisible(featureKey);
+      return true;
+    }
+    if (
+      ctx.sendVideoNoteMessage &&
+      navigator.mediaDevices &&
+      window.MediaRecorder &&
+      featureVisible("message.send") &&
+      featureVisible("file.upload")
+    ) {
       var videoState = { recorder: null, chunks: [], startedAt: 0, stream: null };
       var bVideoNote = ctx.iconBtn("🎬", ctx.L("ui.phase5.videoNote"), {
         testId: "video-note-btn",
@@ -254,6 +293,7 @@
             videoState.recorder.stop();
             return;
           }
+          closeMoreMenu();
           navigator.mediaDevices
             .getUserMedia({ video: true, audio: true })
             .then(function (stream) {
@@ -294,56 +334,53 @@
             });
         },
       });
-      fmt.appendChild(bVideoNote);
+      moreIcons.appendChild(bVideoNote);
     }
-    if (navigator.geolocation && ctx.sendLocationMessage) {
-      fmt.appendChild(
+    if (navigator.geolocation && ctx.sendLocationMessage && featureVisible("message.send")) {
+      moreIcons.appendChild(
         ctx.iconBtn("📍", ctx.L("ui.thread.sendLocation"), {
           testId: "composer-send-location",
           disabled: ctx.state.busy,
-          onClick: function () {
+          onClick: wrapMoreAction(function () {
             ctx.sendLocationMessage();
-          },
+          }),
         })
       );
     }
-    if (ctx.openPollCreate) {
-      fmt.appendChild(
+    if (ctx.isGroupChat && ctx.openPollCreate) {
+      moreIcons.appendChild(
         ctx.iconBtn("📊", ctx.L("ui.thread.createPoll"), {
           testId: "composer-create-poll",
           disabled: ctx.state.busy,
-          onClick: function () {
+          onClick: wrapMoreAction(function () {
             ctx.openPollCreate();
-          },
+          }),
         })
       );
     }
     if (ctx.openScheduleSend) {
-      fmt.appendChild(
+      moreIcons.appendChild(
         ctx.iconBtn("🕐", ctx.L("ui.thread.scheduleSend"), {
           testId: "composer-schedule-send",
           disabled: ctx.state.busy,
-          onClick: function () {
+          onClick: wrapMoreAction(function () {
             ctx.openScheduleSend();
-          },
+          }),
         })
       );
     }
     if (ctx.openContactShare) {
-      fmt.appendChild(
+      moreIcons.appendChild(
         ctx.iconBtn("👤", ctx.L("ui.thread.shareContact"), {
           testId: "composer-share-contact",
           disabled: ctx.state.busy,
-          onClick: function () {
+          onClick: wrapMoreAction(function () {
             ctx.openContactShare();
-          },
+          }),
         })
       );
     }
-    fmt.appendChild(filePick);
-    fmt.appendChild(ctx.el("span", "composer-md-hint", ctx.L("ui.thread.markdownHint")));
-    comp.appendChild(fmt);
-    var ttlRow = ctx.el("div", "composer-ttl-row");
+    var ttlRow = ctx.el("div", "composer-ttl-row composer-ttl-inline");
     ttlRow.appendChild(ctx.el("label", "composer-ttl-label", ctx.L("ui.thread.autoDelete")));
     var ttlSel = document.createElement("select");
     ttlSel.id = "composerTtl";
@@ -364,13 +401,35 @@
       ctx.state.composerTtl = ttlSel.value;
     };
     ttlRow.appendChild(ttlSel);
-    comp.appendChild(ttlRow);
+    if (moreIcons.childNodes.length) {
+      morePop.appendChild(moreIcons);
+    }
+    morePop.appendChild(ttlRow);
+    var bMore = ctx.el("button", "btn btn-ghost btn-icon composer-more-toggle");
+    bMore.type = "button";
+    bMore.title = ctx.L("ui.thread.composerMore");
+    bMore.setAttribute("data-testid", "composer-more-toggle");
+    bMore.textContent = "⋯";
+    bMore.onclick = function () {
+      moreOpen = !moreOpen;
+      morePop.style.display = moreOpen ? "flex" : "none";
+    };
+    moreWrap.appendChild(bMore);
+    moreWrap.appendChild(morePop);
+    comp.appendChild(fmt);
+
+    var mainRow = ctx.el("div", "composer-main-row");
     var ta = ctx.el("textarea");
     ta.id = "msgdraft";
     ta.setAttribute("data-testid", "message-composer");
-    ta.rows = 3;
+    ta.rows = 2;
     ta.placeholder = ctx.L("ui.thread.composerPlaceholder");
-    ta.value = ctx.loadComposerDraftForChat(ctx.state.selectedId);
+    ta.title = ctx.L("ui.thread.composerHint");
+    var draftVal = ctx.loadComposerDraftForChat(ctx.state.selectedId);
+    ta.value = isComposerSystemNoise(draftVal) ? "" : draftVal || "";
+    if (isComposerSystemNoise(draftVal) && ctx.state.selectedId) {
+      ctx.saveComposerDraftForChat(ctx.state.selectedId, "");
+    }
     ta.oninput = function () {
       ctx.scheduleSaveComposerDraft();
       ctx.scheduleTypingNotify();
@@ -381,7 +440,16 @@
         ctx.sendMessage();
       }
     };
-    comp.appendChild(ta);
+    mainRow.appendChild(ta);
+    mainRow.appendChild(moreWrap);
+    var sb = ctx.iconBtn("➤", ctx.L("ui.thread.send"), {
+      primary: true,
+      cls: "composer-send-btn",
+      submit: true,
+      disabled: ctx.state.busy,
+    });
+    mainRow.appendChild(sb);
+    comp.appendChild(mainRow);
     if (
       ctx.state.uploadProgress != null &&
       global.KorusUiUxPerception &&
@@ -391,13 +459,6 @@
         global.KorusUiUxPerception.mountUploadProgressBar(ctx.el, ctx.state.uploadProgress, ctx.L)
       );
     }
-    var sb = ctx.iconBtn("➤", ctx.L("ui.thread.send"), {
-      primary: true,
-      cls: "composer-send-btn",
-      submit: true,
-      disabled: ctx.state.busy,
-    });
-    comp.appendChild(sb);
     bindComposerDrop(comp, function (file) {
       if (ctx.state.selectedId && !ctx.state.busy) {
         ctx.sendFileMessage(file);

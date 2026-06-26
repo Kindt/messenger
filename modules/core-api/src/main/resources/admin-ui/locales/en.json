@@ -2,6 +2,15 @@
   "admin": {
     "documentTitle": "Administration — Korus Messenger",
     "locale": "Language",
+    "brandTitle": "Admin console",
+    "loginLabel": "Username",
+    "passwordLabel": "Password",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "navHint": "Sections are loaded from connected modules.",
+    "orgLabel": "Organization",
+    "apply": "Apply",
+    "welcomeTitle": "Welcome",
     "welcomeText": "Sign in with an account that has the realm role admin, then choose a section in the left menu.",
     "signedIn": "Signed in as {user} (sessionStorage)."
   },
@@ -229,6 +238,21 @@
     "После создания — тест invoke": "After creation — test invoke",
     "Создано: {name}": "Created: {name}",
     "API ": "API ",
-    "Keycloak: {msg} — локальная сессия сброшена.": "Keycloak: {msg} — local session cleared."
+    "Keycloak: {msg} — локальная сессия сброшена.": "Keycloak: {msg} — local session cleared.",
+    "Экспорт: задачи (всего)": "Export: jobs (total)",
+    "Экспорт: queued / processing": "Export: queued / processing",
+    "Экспорт: processing stale": "Export: processing stale",
+    "Экспорт: завершено / ошибка": "Export: completed / failed",
+    "Экспорт: отменено": "Export: cancelled",
+    "Аудит export.* (7 дн.)": "Audit export.* (7 d.)",
+    "Аудит export cancel (7 дн.)": "Audit export cancel (7 d.)",
+    "Экспорт (compliance)": "Export (compliance)",
+    "Задачи export_jobs": "export_jobs tasks",
+    "queued / processing": "queued / processing",
+    "processing stale": "processing stale",
+    "завершено / ошибка": "completed / failed",
+    "отменено": "cancelled",
+    "аудит cancel (7 дн.)": "audit cancel (7 d.)",
+    "Счётчики": "Counters"
   }
 }

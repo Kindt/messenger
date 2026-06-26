@@ -9,6 +9,8 @@ import com.avandocmsg.messenger.core.port.UserLookupPort;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.core.domain.BlockedUser;
+import com.avandocmsg.messenger.core.application.AvatarApplicationService;
+import com.avandocmsg.messenger.core.domain.FileId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,16 +38,19 @@ public class BlocksResource {
     private final BlockRepositoryPort blockRepositoryPort;
     private final UserLookupPort userLookupPort;
     private final ContactRepositoryPort contactRepositoryPort;
+    private final AvatarApplicationService avatarApplicationService;
     private final UserMessageSource messages;
 
     @Inject
     public BlocksResource(BlockRepositoryPort blockRepositoryPort,
                           UserLookupPort userLookupPort,
                           ContactRepositoryPort contactRepositoryPort,
+                          AvatarApplicationService avatarApplicationService,
                           UserMessageSource messages) {
         this.blockRepositoryPort = blockRepositoryPort;
         this.userLookupPort = userLookupPort;
         this.contactRepositoryPort = contactRepositoryPort;
+        this.avatarApplicationService = avatarApplicationService;
         this.messages = messages;
     }
 
@@ -53,8 +58,9 @@ public class BlocksResource {
     @Operation(summary = "Список заблокированных текущим пользователем")
     public Response list(@Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var rows = blockRepositoryPort.listBlockedUsers(UserId.of(userId)).stream()
-            .map(BlocksResource::toResponse)
+        var viewerId = UserId.of(userId);
+        var rows = blockRepositoryPort.listBlockedUsers(viewerId).stream()
+            .map(b -> toResponse(b, viewerId))
             .toList();
         return Response.ok(rows).build();
     }
@@ -111,11 +117,20 @@ public class BlocksResource {
         return Response.noContent().build();
     }
 
-    private static BlockedUserResponse toResponse(BlockedUser blockedUser) {
-        return new BlockedUserResponse(
+    private BlockedUserResponse toResponse(BlockedUser blockedUser, UserId viewerId) {
+        var base = new BlockedUserResponse(
             blockedUser.userId().value().toString(),
             blockedUser.username(),
             blockedUser.displayName(),
             blockedUser.blockedAt());
+        if (avatarApplicationService == null) {
+            return base;
+        }
+        var avatarFileId = userLookupPort.findById(blockedUser.userId().value())
+            .map(u -> u.avatarFileId())
+            .filter(id -> id != null && !id.isBlank())
+            .map(id -> FileId.of(java.util.UUID.fromString(id)))
+            .orElse(null);
+        return avatarApplicationService.enrichBlockedUserResponse(base, viewerId, avatarFileId);
     }
 }

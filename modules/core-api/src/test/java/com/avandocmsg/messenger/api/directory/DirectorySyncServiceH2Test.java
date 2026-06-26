@@ -86,7 +86,9 @@ class DirectorySyncServiceH2Test {
                   privacy_disable_read_receipts BOOLEAN NOT NULL DEFAULT false,
                   ui_locale VARCHAR(8),
                   custom_status_text VARCHAR(128) NOT NULL DEFAULT '',
-                  dnd_until TIMESTAMP
+                  dnd_until TIMESTAMP,
+                  avatar_file_id UUID,
+                  avatar_hidden BOOLEAN NOT NULL DEFAULT false
                 )
                 """);
             st.execute("INSERT INTO organizations (id, name) VALUES ('" + orgId + "', 'Sync Org')");

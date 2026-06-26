@@ -39,6 +39,14 @@ import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrgUserDirectoryAda
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcScimGroupRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcSavedChatAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcUserRepositoryAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAvatarHistoryAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcAvatarAccessRepository;
+import com.avandocmsg.messenger.core.application.AvatarAccessTokenService;
+import com.avandocmsg.messenger.core.application.AvatarApplicationService;
+import com.avandocmsg.messenger.core.application.AvatarUpdatePublisher;
+import com.avandocmsg.messenger.core.application.AvatarUrlBuilder;
+import com.avandocmsg.messenger.core.port.AvatarHistoryPort;
+import com.avandocmsg.messenger.core.port.AvatarAccessPort;
 import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
 import com.avandocmsg.messenger.core.adapter.cache.RedisReadCacheAdapter;
 import com.avandocmsg.messenger.core.adapter.storage.FileProxyObjectStorageAdapter;
@@ -48,6 +56,7 @@ import com.avandocmsg.messenger.core.application.FileApplicationService;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
 import com.avandocmsg.messenger.core.application.UserApplicationService;
+import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import com.avandocmsg.messenger.core.port.ContactRepositoryPort;
 import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
@@ -259,6 +268,48 @@ public final class CoreModule {
         return new JdbcUserRepositoryAdapter(dataSource);
     }
 
+    public static AvatarAccessPort avatarAccessPort(DataSource dataSource) {
+        return new JdbcAvatarAccessRepository(dataSource);
+    }
+
+    public static AvatarAccessTokenService avatarAccessTokenService(AppConfig appConfig) {
+        return new AvatarAccessTokenService(appConfig);
+    }
+
+    public static AvatarUrlBuilder avatarUrlBuilder(AvatarAccessTokenService tokenService, AppConfig appConfig) {
+        return new AvatarUrlBuilder(tokenService, appConfig);
+    }
+
+    public static AvatarUpdatePublisher avatarUpdatePublisher(
+            com.avandocmsg.messenger.core.port.NatsOutboundPort natsOutbound,
+            AvatarUrlBuilder urlBuilder) {
+        return new AvatarUpdatePublisher(natsOutbound, urlBuilder);
+    }
+
+    public static AvatarApplicationService avatarApplicationService(
+            DataSource dataSource,
+            AppConfig appConfig,
+            ReadCachePort readCachePort,
+            NatsOutboundPort natsOutbound,
+            ChatPersistencePort chatPersistencePort) {
+        var tokenService = avatarAccessTokenService(appConfig);
+        var urlBuilder = avatarUrlBuilder(tokenService, appConfig);
+        return new AvatarApplicationService(
+            appConfig,
+            avatarAccessPort(dataSource),
+            urlBuilder,
+            userRepositoryPort(dataSource),
+            chatPersistencePort,
+            fileMetadataPort(dataSource),
+            avatarUpdatePublisher(natsOutbound, urlBuilder),
+            readCachePort,
+            new JdbcAvatarHistoryAdapter(dataSource));
+    }
+
+    public static AvatarHistoryPort avatarHistoryPort(DataSource dataSource) {
+        return new JdbcAvatarHistoryAdapter(dataSource);
+    }
+
     public static SavedChatPort savedChatPort(DataSource dataSource, UuidGenerator uuidGenerator) {
         return new JdbcSavedChatAdapter(dataSource, uuidGenerator);
     }
@@ -296,10 +347,21 @@ public final class CoreModule {
                                                                 ObjectStoragePort objectStoragePort,
                                                                 UuidGenerator uuidGenerator,
                                                                 AppConfig appConfig) {
+        return fileApplicationService(dataSource, messageQueryPort, objectStoragePort, uuidGenerator, appConfig,
+            avatarAccessPort(dataSource));
+    }
+
+    public static FileApplicationService fileApplicationService(DataSource dataSource,
+                                                                MessageQueryPort messageQueryPort,
+                                                                ObjectStoragePort objectStoragePort,
+                                                                UuidGenerator uuidGenerator,
+                                                                AppConfig appConfig,
+                                                                AvatarAccessPort avatarAccessPort) {
         return new FileApplicationService(
             fileMetadataPort(dataSource),
             messageQueryPort,
             objectStoragePort,
+            avatarAccessPort,
             uuidGenerator,
             appConfig.mediaMaxUploadBytes(),
             appConfig.fileDedupEnabled(),

@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.push;
 
+import com.avandocmsg.messenger.common.avatar.WorkerAvatarResizeUrl;
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
 import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.http.HttpClientSupport;
@@ -53,6 +54,7 @@ public class PushWorker {
     private final UserMessageSource workerMessages;
     private final int deviceQueryLimit;
     private final SimpleCircuitBreaker webhookCircuit;
+    private final WorkerAvatarResizeUrl.Config avatarConfig;
 
     public PushWorker(String natsUrl, DataSource dataSource, String pushWebhookUrl,
                       UserMessageSource workerMessages) throws Exception {
@@ -68,6 +70,7 @@ public class PushWorker {
         this.workerMessages = workerMessages;
         this.deviceQueryLimit = PushPlatformDefaults.deviceQueryLimit();
         this.webhookCircuit = new SimpleCircuitBreaker(5, Duration.ofSeconds(30));
+        this.avatarConfig = WorkerAvatarResizeUrl.Config.fromEnv();
         this.httpClient = HttpClientSupport.sharedClient();
         var options = NatsConnectionOptions.clientBuilder(natsUrl, "push-worker").build();
         this.connection = Nats.connect(options);
@@ -127,12 +130,21 @@ public class PushWorker {
         var failed = 0;
         var expired = 0;
         var mentionedUserIds = loadMentionedUserIds(event);
+        UUID senderAvatarFileId = null;
+        try {
+            if (event.senderId() != null && !event.senderId().isBlank()) {
+                senderAvatarFileId = loadUserAvatarFileId(UUID.fromString(event.senderId()));
+            }
+        } catch (Exception e) {
+            log.debug(workerMessages.format("worker.push.sender_avatar_failed", e.getMessage()));
+        }
         for (var d : devices) {
             if (!WebPushDelivery.isWebProvider(d.provider())) {
                 continue;
             }
+            var iconUrl = resolvePushIconUrl(d.userId(), senderAvatarFileId);
             var preview = PushNotificationPreview.forEvent(event, chatTitle, workerMessages,
-                isUserMentioned(mentionedUserIds, d.userId()));
+                isUserMentioned(mentionedUserIds, d.userId()), iconUrl);
             var result = webPushDelivery.send(d.token(), preview);
             switch (result) {
                 case SENT -> sent++;
@@ -185,6 +197,31 @@ public class PushWorker {
             }
         }
         return null;
+    }
+
+    private UUID loadUserAvatarFileId(UUID userId) throws SQLException {
+        var sql = "SELECT avatar_file_id FROM users WHERE id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(1, userId);
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getObject(1, UUID.class);
+                }
+            }
+        }
+        return null;
+    }
+
+    private String resolvePushIconUrl(String recipientUserId, UUID senderAvatarFileId) {
+        if (senderAvatarFileId == null || recipientUserId == null || recipientUserId.isBlank()) {
+            return null;
+        }
+        try {
+            return WorkerAvatarResizeUrl.absoluteUrl(avatarConfig, UUID.fromString(recipientUserId), senderAvatarFileId);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     private void postWebhook(MessageWorkerEvent event, List<DeviceRow> devices) throws Exception {

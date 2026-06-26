@@ -10,6 +10,8 @@ class FileRetentionH2Test {
     @Test
     void candidateSql_excludesReferencedFilesAndLegalHold() {
         var sql = FileRetentionJanitor.candidateSelectSql();
+        assertTrue(sql.contains("plugin_instances"));
+        assertTrue(sql.contains("logo_file_id"));
         assertTrue(sql.contains("legal_hold_files"));
         assertTrue(sql.contains("attachment_file_id"));
         assertTrue(sql.contains("file_public_links"));

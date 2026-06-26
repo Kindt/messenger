@@ -77,6 +77,14 @@
     return o && o.type === "presence" && o.user_id;
   }
 
+  function isAvatarEvent(o) {
+    return o && o.type === "avatar" && typeof o.user_id === "string";
+  }
+
+  function isChatAvatarEvent(o) {
+    return o && o.type === "chat.avatar" && typeof o.chat_id === "string";
+  }
+
   function isReadReceiptEvent(o) {
     return o && o.type === "read_receipt" && o.chat_id && o.user_id;
   }
@@ -90,6 +98,8 @@
     isConferenceChangeEvent: isConferenceChangeEvent,
     isTypingEvent: isTypingEvent,
     isPresenceEvent: isPresenceEvent,
+    isAvatarEvent: isAvatarEvent,
+    isChatAvatarEvent: isChatAvatarEvent,
     isReadReceiptEvent: isReadReceiptEvent,
   };
 })(typeof window !== "undefined" ? window : globalThis);

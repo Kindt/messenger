@@ -78,7 +78,8 @@ public final class WebPushDelivery {
             var payload = MAPPER.writeValueAsString(Map.of(
                 "title", preview.title(),
                 "body", preview.body(),
-                "url", preview.url()
+                "url", preview.url(),
+                "icon", preview.iconUrl() != null ? preview.iconUrl() : "/icon.svg"
             ));
             var notification = new Notification(subscription.get(), payload);
             pushService.send(notification);

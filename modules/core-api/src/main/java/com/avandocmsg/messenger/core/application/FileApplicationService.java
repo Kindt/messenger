@@ -8,6 +8,7 @@ import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.FileMetadataPort;
 import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.port.ObjectStoragePort;
+import com.avandocmsg.messenger.core.port.AvatarAccessPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 
 import java.io.IOException;
@@ -22,6 +23,7 @@ public final class FileApplicationService {
     private final FileMetadataPort fileMetadataPort;
     private final MessageQueryPort messageQueryPort;
     private final ObjectStoragePort objectStoragePort;
+    private final AvatarAccessPort avatarAccessPort;
     private final UuidGenerator uuidGenerator;
     private final long maxUploadBytes;
     private final boolean fileDedupEnabled;
@@ -33,13 +35,25 @@ public final class FileApplicationService {
                                   UuidGenerator uuidGenerator,
                                   long maxUploadBytes,
                                   boolean fileDedupEnabled) {
-        this(fileMetadataPort, messageQueryPort, objectStoragePort, uuidGenerator,
+        this(fileMetadataPort, messageQueryPort, objectStoragePort, null, uuidGenerator,
             maxUploadBytes, fileDedupEnabled, 20);
     }
 
     public FileApplicationService(FileMetadataPort fileMetadataPort,
                                   MessageQueryPort messageQueryPort,
                                   ObjectStoragePort objectStoragePort,
+                                  AvatarAccessPort avatarAccessPort,
+                                  UuidGenerator uuidGenerator,
+                                  long maxUploadBytes,
+                                  boolean fileDedupEnabled) {
+        this(fileMetadataPort, messageQueryPort, objectStoragePort, avatarAccessPort, uuidGenerator,
+            maxUploadBytes, fileDedupEnabled, 20);
+    }
+
+    public FileApplicationService(FileMetadataPort fileMetadataPort,
+                                  MessageQueryPort messageQueryPort,
+                                  ObjectStoragePort objectStoragePort,
+                                  AvatarAccessPort avatarAccessPort,
                                   UuidGenerator uuidGenerator,
                                   long maxUploadBytes,
                                   boolean fileDedupEnabled,
@@ -47,6 +61,7 @@ public final class FileApplicationService {
         this.fileMetadataPort = fileMetadataPort;
         this.messageQueryPort = messageQueryPort;
         this.objectStoragePort = objectStoragePort;
+        this.avatarAccessPort = avatarAccessPort;
         this.uuidGenerator = uuidGenerator;
         this.maxUploadBytes = maxUploadBytes;
         this.fileDedupEnabled = fileDedupEnabled;
@@ -249,6 +264,10 @@ public final class FileApplicationService {
 
     public boolean mayView(StoredFile file, UserId viewerId) {
         if (file.uploadedBy().equals(viewerId)) {
+            return true;
+        }
+        if (avatarAccessPort != null
+            && avatarAccessPort.viewerMayAccessAsAvatar(viewerId, file.id())) {
             return true;
         }
         if (messageQueryPort == null) {

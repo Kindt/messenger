@@ -180,7 +180,7 @@
     const j = stats.jvm || {};
     const d = stats.dependencies || {};
     const c = stats.counts || {};
-    addCard("Версия API", String(stats.api_version || "—"));
+    addCard(LT("Версия API"), String(stats.api_version || "—"));
     addCard(LT("Uptime JVM"), formatDuration(j.uptime_ms));
     addCard(
       LT("PostgreSQL"),
@@ -211,41 +211,41 @@
       LT("Heap (used / max)"),
       formatBytes(j.heap_used_bytes) + " / " + formatBytes(j.heap_max_bytes)
     );
-    addRow("Процессоры", String(j.processors != null ? j.processors : "—"));
+    addRow(LT("Процессоры"), String(j.processors != null ? j.processors : "—"));
     if (c.counts_available) {
-      addRow("Пользователи", String(c.users));
-      addRow("Чаты", String(c.chats));
-      addRow("Сообщения", String(c.messages));
+      addRow(LT("Пользователи"), String(c.users));
+      addRow(LT("Чаты"), String(c.chats));
+      addRow(LT("Сообщения"), String(c.messages));
     } else {
-      addRow("Счётчики БД", "недоступны");
+      addRow(LT("Счётчики БД"), LT("недоступны"));
     }
     const ec = stats.export_compliance || {};
     if (ec.available) {
-      addRow("Экспорт: задачи (всего)", String(ec.jobs_total));
+      addRow(LT("Экспорт: задачи (всего)"), String(ec.jobs_total));
       addRow(
-        "Экспорт: queued / processing",
+        LT("Экспорт: queued / processing"),
         String(ec.jobs_queued) + " / " + String(ec.jobs_processing)
       );
       if (ec.jobs_processing_stale > 0) {
         addRow(
-          "Экспорт: processing stale",
+          LT("Экспорт: processing stale"),
           String(ec.jobs_processing_stale) + " (>" + String(ec.processing_stale_minutes) + " мин)"
         );
       }
       addRow(
-        "Экспорт: завершено / ошибка",
+        LT("Экспорт: завершено / ошибка"),
         String(ec.jobs_completed) + " / " + String(ec.jobs_failed)
       );
-      addRow("Экспорт: отменено", String(ec.jobs_cancelled));
-      addRow("Аудит export.* (7 дн.)", String(ec.audit_export_events_7d));
-      addRow("Аудит export cancel (7 дн.)", String(ec.audit_export_cancelled_7d));
+      addRow(LT("Экспорт: отменено"), String(ec.jobs_cancelled));
+      addRow(LT("Аудит export.* (7 дн.)"), String(ec.audit_export_events_7d));
+      addRow(LT("Аудит export cancel (7 дн.)"), String(ec.audit_export_cancelled_7d));
     } else {
-      addRow("Экспорт (compliance)", "недоступен");
+      addRow(LT("Экспорт (compliance)"), LT("недоступен"));
     }
     container.appendChild(table);
     const cap = document.createElement("p");
     cap.className = "muted small";
-    cap.textContent = "Полный JSON ниже.";
+    cap.textContent = LT("Полный JSON ниже.");
     container.appendChild(cap);
   }
 
@@ -403,20 +403,20 @@
       table.appendChild(tr);
     };
     if (ec.available) {
-      addRow("Задачи export_jobs", String(ec.jobs_total));
-      addRow("queued / processing", String(ec.jobs_queued) + " / " + String(ec.jobs_processing));
+      addRow(LT("Задачи export_jobs"), String(ec.jobs_total));
+      addRow(LT("queued / processing"), String(ec.jobs_queued) + " / " + String(ec.jobs_processing));
       if (ec.jobs_processing_stale > 0) {
         addRow(
-          "processing stale",
+          LT("processing stale"),
           String(ec.jobs_processing_stale) + " (>" + String(ec.processing_stale_minutes) + " мин)"
         );
       }
-      addRow("завершено / ошибка", String(ec.jobs_completed) + " / " + String(ec.jobs_failed));
-      addRow("отменено", String(ec.jobs_cancelled));
-      addRow("Аудит export.* (7 дн.)", String(ec.audit_export_events_7d));
-      addRow("аудит cancel (7 дн.)", String(ec.audit_export_cancelled_7d));
+      addRow(LT("завершено / ошибка"), String(ec.jobs_completed) + " / " + String(ec.jobs_failed));
+      addRow(LT("отменено"), String(ec.jobs_cancelled));
+      addRow(LT("Аудит export.* (7 дн.)"), String(ec.audit_export_events_7d));
+      addRow(LT("аудит cancel (7 дн.)"), String(ec.audit_export_cancelled_7d));
     } else {
-      addRow("Счётчики", "недоступны");
+      addRow(LT("Счётчики"), LT("недоступны"));
     }
     container.appendChild(table);
 
@@ -785,6 +785,63 @@
       }
     });
     box.appendChild(lbl);
+    box.appendChild(btn);
+    box.appendChild(msg);
+    container.appendChild(box);
+  }
+
+  function appendOrgLogoToolbar(container, onUpdated) {
+    if (document.getElementById("orgLogoOrgId")) {
+      return;
+    }
+    const box = document.createElement("div");
+    box.className = "admin-toolbar";
+    const lOrg = document.createElement("label");
+    lOrg.className = "small";
+    lOrg.textContent = LT("org_id");
+    const inOrg = document.createElement("input");
+    inOrg.type = "text";
+    inOrg.id = "orgLogoOrgId";
+    inOrg.placeholder = "UUID организации";
+    lOrg.appendChild(inOrg);
+    const lLogo = document.createElement("label");
+    lLogo.className = "small";
+    lLogo.textContent = "logo_file_id";
+    const inLogo = document.createElement("input");
+    inLogo.type = "text";
+    inLogo.id = "orgLogoFileId";
+    inLogo.placeholder = "UUID файла или пусто";
+    lLogo.appendChild(inLogo);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "Логотип";
+    btn.setAttribute("data-testid", "admin-org-logo-patch");
+    const msg = document.createElement("span");
+    msg.id = "orgLogoMsg";
+    msg.className = "muted small";
+    btn.addEventListener("click", async () => {
+      msg.textContent = "";
+      const oid = inOrg.value.trim();
+      if (!oid) {
+        msg.textContent = "Нужен org_id";
+        return;
+      }
+      const body = { logo_file_id: inLogo.value.trim() || null };
+      try {
+        const data = await apiFetch("/admin/organizations/" + encodeURIComponent(oid), {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        pre.textContent = JSON.stringify(data, null, 2);
+        msg.textContent = "Готово.";
+        await onUpdated();
+      } catch (e) {
+        msg.textContent = e.message || String(e);
+      }
+    });
+    box.appendChild(lOrg);
+    box.appendChild(lLogo);
     box.appendChild(btn);
     box.appendChild(msg);
     container.appendChild(box);
@@ -2434,6 +2491,7 @@
           };
           appendOrgCreateToolbar(summary, reloadOrgs);
           appendOrgDeleteToolbar(summary, reloadOrgs);
+          appendOrgLogoToolbar(summary, reloadOrgs);
           appendJsonPanelReload(summary, reloadOrgs);
           await reloadOrgs();
         } else if (section.id === "core-user-organization") {

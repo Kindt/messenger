@@ -64,6 +64,30 @@ class AuthServiceTest {
     }
 
     @Test
+    void register_usesUsernameWhenDisplayNameBlank() {
+        var userPort = new StubUserRepositoryPort();
+        var service = new TestingAuthService(keycloakUserId, userPort);
+        var outcome = service.register(new RegisterRequest("newuser", "password123", "   "));
+
+        assertInstanceOf(RegisterOutcome.Success.class, outcome);
+        var response = ((RegisterOutcome.Success) outcome).response();
+        assertEquals("newuser", response.displayName());
+        assertEquals("newuser", userPort.lastDisplayName);
+    }
+
+    @Test
+    void register_usesUsernameWhenDisplayNameNull() {
+        var userPort = new StubUserRepositoryPort();
+        var service = new TestingAuthService(keycloakUserId, userPort);
+        var outcome = service.register(new RegisterRequest("newuser", "password123", null));
+
+        assertInstanceOf(RegisterOutcome.Success.class, outcome);
+        var response = ((RegisterOutcome.Success) outcome).response();
+        assertEquals("newuser", response.displayName());
+        assertEquals("newuser", userPort.lastDisplayName);
+    }
+
+    @Test
     void register_usernameExistsInKeycloak() {
         var service = new TestingAuthService(keycloakUserId, true);
         var outcome = service.register(new RegisterRequest("taken", "password123", "Taken"));
@@ -132,6 +156,7 @@ class AuthServiceTest {
 
     static class StubUserRepositoryPort implements UserRepositoryPort {
         final Map<String, UUID> created = new HashMap<>();
+        String lastDisplayName;
         boolean failOnCreate = false;
 
         @Override
@@ -166,6 +191,11 @@ class AuthServiceTest {
         }
 
         @Override
+        public boolean updateAvatar(UserId id, UUID avatarFileId) {
+            return false;
+        }
+
+        @Override
         public boolean touchHeartbeat(UserId id) {
             return false;
         }
@@ -179,6 +209,7 @@ class AuthServiceTest {
             if (failOnCreate) {
                 return false;
             }
+            lastDisplayName = displayName;
             created.put(username, id.value());
             return true;
         }

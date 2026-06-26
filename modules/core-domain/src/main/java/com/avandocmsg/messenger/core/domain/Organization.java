@@ -6,5 +6,10 @@ import java.time.Instant;
 public record Organization(
     OrganizationId id,
     String name,
-    Instant createdAt
-) {}
+    Instant createdAt,
+    FileId logoFileId
+) {
+    public Organization(OrganizationId id, String name, Instant createdAt) {
+        this(id, name, createdAt, null);
+    }
+}

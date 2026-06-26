@@ -81,6 +81,7 @@
     "membersInvited": "参与者已添加到会议聊天",
     "inviteMembersFailed": "无法邀请参与者",
     "jitsiHint": "Jitsi（{host}）。将链接发送给访客或邀请同事加入会议聊天。",
+    "participantsBadge": " · {count} 人",
     "participantsTitle": "通话中",
     "refreshParticipants": "刷新参与者列表",
     "noParticipants": "暂无参与者",
@@ -154,7 +155,8 @@
     "pushRegisterFailed": "无法注册 Web Push",
     "enableFirst": "请先启用通知",
     "showFailed": "无法显示通知",
-    "testLocalBody": "测试：本地通知"
+    "testLocalBody": "测试：本地通知",
+    "enableHint": "点击右侧 🔔 — 浏览器将请求通知权限。"
   },
   "contacts": {
     "hashRequired": "请至少输入一个电话哈希（SHA-256，hex）",
@@ -319,7 +321,19 @@
     },
     "search": {
       "emptyTitle": "没有匹配结果",
-      "emptyHint": "请修改搜索词或检查拼写。"
+      "emptyHint": "请修改搜索词或检查拼写。",
+      "globalTitle": "搜索",
+      "filterAll": "全部",
+      "filterChats": "聊天",
+      "filterMessages": "消息",
+      "noResults": "未找到结果。",
+      "globalPlaceholder": "搜索所有聊天（至少 2 个字符，不含 E2EE）…",
+      "chatPlaceholder": "在此聊天中搜索（至少 2 个字符，不含 E2EE）…",
+      "scopeGlobal": "全部聊天",
+      "scopeChat": "当前聊天",
+      "scopeAutoGlobal": "自动：全部",
+      "scopeAutoChat": "自动：聊天",
+      "scopeCycleTitle": "切换搜索范围"
     },
     "auth": {
       "username": "用户名",
@@ -390,16 +404,20 @@
         "archive": "归档"
       },
       "filter": {
-        "all": "All chats",
-        "unread": "Unread",
-        "mentions": "Mentions"
+        "all": "全部聊天",
+        "unread": "未读",
+        "mentions": "提及"
       },
+      "filterPanelTitle": "聊天筛选",
+      "filterPanelFolders": "文件夹",
+      "filterPanelShow": "显示",
       "marketplaceSearch": "Search integrations…",
       "marketplaceAll": "All categories",
       "noChatsUnread": "No unread chats.",
       "noChatsMentions": "No chats with mentions.",
       "pinChat": "Pin chat",
-      "unpinChat": "Unpin chat"
+      "unpinChat": "Unpin chat",
+      "resizeTitle": "Drag to resize chat list"
     },
     "thread": {
       "empty": "请选择聊天或创建群组。",
@@ -415,6 +433,7 @@
       "exportCancel": "取消导出",
       "refresh": "刷新聊天",
       "copyChatLink": "复制此聊天链接",
+      "directChat": "私聊",
       "confLive": "🎥 {title}",
       "confLiveDefault": "视频会议进行中",
       "searchPlaceholder": "在此聊天中搜索（至少 2 个字符，不含 E2EE）…",
@@ -428,7 +447,10 @@
       "fileBtn": "文件",
       "loadOlder": "更早的消息",
       "you": "您",
-      "composerPlaceholder": "消息…（Shift+Enter 换行，可拖放文件）",
+      "composerPlaceholder": "消息…",
+      "composerHint": "Enter 发送，Shift+Enter 换行，可拖放文件",
+      "composerMore": "更多",
+      "chatMore": "聊天操作",
       "cancelReply": "取消回复",
       "bold": "粗体",
       "italic": "斜体",
@@ -464,8 +486,8 @@
       "whiteboardFailed": "无法保存白板。",
       "stickersTitle": "GIF 与贴纸",
       "stickersEmpty": "目录为空 — 请通过 API 添加 pack。",
-      "federationTitle": "联邦 — partner orgs",
-      "federationEmpty": "信任图中无 partner orgs。",
+      "federationTitle": "联邦",
+      "federationEmpty": "没有可信组织。",
       "confTools": "ADR 工具",
       "recordStart": "录制",
       "recordStarted": "已开始录制（脚手架）。",
@@ -486,17 +508,18 @@
       "aiAssistTitle": "AI chat assist",
       "aiAssistPlaceholder": "Ask a question about this chat…",
       "aiAssistRun": "Run",
-      "aiAssistEmpty": "No reply from AI gateway.",
+      "aiAssistEmpty": "AI 无回复。",
+      "aiAssistUnavailable": "AI 助手不可用（未配置 gateway）。",
       "aiAssistFailed": "AI assist failed.",
       "aiInsert": "Insert into composer",
       "kanbanMoveBack": "Move to previous column",
       "kanbanMoveForward": "Move to next column",
       "kanbanDelete": "Delete task",
       "kanbanDeleted": "Task deleted.",
-      "passkeysTitle": "Passkeys (scaffold)",
-      "passkeysEmpty": "No passkeys registered.",
-      "passkeysRegister": "Register scaffold credential",
-      "passkeysRegistered": "Passkey scaffold registered.",
+      "passkeysTitle": "Passkey 密钥",
+      "passkeysEmpty": "未注册密钥。",
+      "passkeysRegister": "添加 Passkey",
+      "passkeysRegistered": "Passkey 已注册。",
       "passkeysFailed": "Passkey registration failed.",
       "guestExpired": "Guest link expired.",
       "guestRedeemed": "Guest link accepted.",
@@ -683,18 +706,29 @@
       "tabLinks": "链接",
       "tabSecurity": "安全",
       "appearance": "外观",
+      "theme": "主题",
       "appearanceKorus": "KORUS Consulting 外观（#7949F4，korusconsulting.ru）。",
       "cache": "应用缓存",
       "resetCache": "清除 UI 缓存",
       "cacheHint": "服务器更新后仍看到旧界面时（Opera、PWA）。",
+      "sectionOffline": "离线",
+      "sectionAbout": "关于",
       "apiVersion": "API 版本",
+      "kbdTitle": "键盘快捷键",
       "kbdHint": "<kbd>Ctrl+K</kbd> 或 <kbd>/</kbd> — 搜索 · <kbd>Alt+↑</kbd><kbd>Alt+↓</kbd> — 聊天 · <kbd>M</kbd> — 消息 · <kbd>Esc</kbd> — 关闭 · <kbd>Ctrl+,</kbd> — 设置",
       "status": "状态",
+      "presence": "在线状态",
+      "sectionAccount": "账户",
+      "sectionPresence": "在线状态",
+      "usernameHint": "用户名在注册时设定，此处不可修改。",
+      "displayNameHint": "其他参与者在聊天中看到的名称。",
       "presenceOnline": "在线",
       "presenceAway": "离开",
       "presenceDnd": "请勿打扰",
       "presenceOffline": "离线",
-      "customStatus": "状态",
+      "customStatus": "状态文字",
+      "customStatusPlaceholder": "例如：开会至 15:00",
+      "customStatusHint": "显示在姓名旁的简短说明，联系人可见。",
       "dndSchedule": "勿扰至",
       "dndSeeNotificationsTab": "勿扰时长请在「通知」选项卡中设置。",
       "dndUntilManual": "直到我关闭",
@@ -704,6 +738,7 @@
       "dndUntilTomorrow": "至明天 9:00",
       "dndUntilActive": "生效至 {until}",
       "name": "名称",
+      "email": "电子邮箱",
       "notifications": "通知",
       "sound": "通知声音",
       "lastPublicLink": "最近的公开链接",
@@ -715,7 +750,18 @@
       "noDevices": "没有已注册的设备。",
       "disconnect": "断开",
       "testNotification": "测试通知",
-      "showTest": "显示",
+      "showTest": "发送测试",
+      "sectionBrowserNotif": "浏览器",
+      "sectionDnd": "请勿打扰",
+      "sectionPush": "推送 (Web Push)",
+      "sectionPlanner": "提醒与定时",
+      "pendingReminders": "待处理提醒",
+      "permissionStatus": "浏览器权限",
+      "permissionGranted": "已允许",
+      "permissionDefault": "未请求",
+      "dndQuickEnable": "开启至",
+      "dndOffHint": "「请勿打扰」已关闭。在线状态请在「个人资料」选项卡中更改。",
+      "pushDevicesHint": "已为此账户启用 Web Push 订阅的设备。",
       "pushSyncUpdate": "更新订阅",
       "newKeyPackage": "新建 key package",
       "create": "创建",
@@ -731,7 +777,7 @@
       "pwaInstall": "安装应用",
       "pwaInstallBtn": "安装",
       "offlineHint": "离线：静态资源由 Service Worker 缓存；API 需要网络。",
-      "e2eeKeyPackages": "E2EE key packages",
+      "e2eeKeyPackages": "服务器上的 MLS 密钥",
       "webPush": "Web Push",
       "localKeySaved": "已保存：{prefix}",
       "localKeySavedYes": "是",
@@ -779,16 +825,20 @@
     "integration": {
       "close": "Close panel"
     },
-    "search": {
-      "globalTitle": "Search",
-      "filterAll": "All",
-      "filterChats": "Chats",
-      "filterMessages": "Messages",
-      "noResults": "No results."
-    },
     "profile": {
       "bioHint": "Short bio visible to contacts",
-      "avatarChange": "Change avatar"
+      "avatarChange": "Change avatar",
+      "avatarRemove": "Remove avatar",
+      "avatarUploadFailed": "Could not upload avatar",
+      "avatarHidden": "Hide my avatar",
+      "avatarHiddenHint": "Others will see initials instead of your photo"
+    },
+    "avatar": {
+      "altUser": "Avatar of {name}",
+      "altChat": "Chat avatar for {name}",
+      "cropTitle": "Crop avatar",
+      "cropHint": "Drag to reposition. Minimum 128×128 px.",
+      "cropApply": "Apply"
     },
     "mobile": {
       "back": "Back to list",
@@ -809,7 +859,7 @@
       "disconnectFailed": "Could not disconnect integration."
     },
     "federation": {
-      "directoryHint": "Trusted orgs for cross-org chats (MVP).",
+      "directoryHint": "跨单元聊天中的合作伙伴组织。",
       "trustActive": "Active",
       "trustPending": "Pending",
       "trustLevel": {
@@ -839,6 +889,10 @@
       "title": "Edit message",
       "save": "Save",
       "failed": "Could not edit message."
+    },
+    "profileCard": {
+      "title": "Profile",
+      "message": "Message"
     }
   },
   "push": {

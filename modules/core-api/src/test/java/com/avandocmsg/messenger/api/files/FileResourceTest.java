@@ -16,14 +16,14 @@ class FileResourceTest {
 
     @Test
     void getInfo_invalidFileId_throwsInvalidUuidParameterException() {
-        var resource = new FileResource(null, null, null, null, null, null, I18nTestFixtures.messagesEn());
+        var resource = new FileResource(null, null, null, null, null, null, null, null, I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.getInfo("not-a-uuid", userSecurityContext()));
     }
 
     @Test
     void revokePublicLink_invalidLinkId_throwsInvalidUuidParameterException() {
-        var resource = new FileResource(null, null, null, null, null, null, I18nTestFixtures.messagesEn());
+        var resource = new FileResource(null, null, null, null, null, null, null, null, I18nTestFixtures.messagesEn());
         var fileId = UUID.randomUUID().toString();
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.revokePublicLink(fileId, "bad-link-id", userSecurityContext()));
@@ -31,7 +31,7 @@ class FileResourceTest {
 
     @Test
     void revokePublicLink_invalidFileId_throwsInvalidUuidParameterException() {
-        var resource = new FileResource(null, null, null, null, null, null, I18nTestFixtures.messagesEn());
+        var resource = new FileResource(null, null, null, null, null, null, null, null, I18nTestFixtures.messagesEn());
         var linkId = UUID.randomUUID().toString();
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.revokePublicLink("not-a-uuid", linkId, userSecurityContext()));
@@ -39,16 +39,16 @@ class FileResourceTest {
 
     @Test
     void listPublicLinks_invalidFileId_throwsInvalidUuidParameterException() {
-        var resource = new FileResource(null, null, null, null, null, null, I18nTestFixtures.messagesEn());
+        var resource = new FileResource(null, null, null, null, null, null, null, null, I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.listPublicLinks("not-a-uuid", userSecurityContext()));
     }
 
     @Test
     void resize_invalidFileId_throwsInvalidUuidParameterException() {
-        var resource = new FileResource(null, null, null, null, null, null, I18nTestFixtures.messagesEn());
+        var resource = new FileResource(null, null, null, null, null, null, null, null, I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
-            () -> resource.resize("not-a-uuid", 200, 200, userSecurityContext()));
+            () -> resource.resize("not-a-uuid", 200, 200, null, userSecurityContext()));
     }
 
     private static SecurityContext userSecurityContext() {

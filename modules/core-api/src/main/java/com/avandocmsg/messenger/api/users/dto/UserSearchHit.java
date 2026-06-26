@@ -6,5 +6,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public record UserSearchHit(
     @JsonProperty("user_id") String userId,
     String username,
-    @JsonProperty("display_name") String displayName
-) {}
+    @JsonProperty("display_name") String displayName,
+    @JsonProperty("avatar_url") String avatarUrl
+) {
+    public UserSearchHit(String userId, String username, String displayName) {
+        this(userId, username, displayName, null);
+    }
+}

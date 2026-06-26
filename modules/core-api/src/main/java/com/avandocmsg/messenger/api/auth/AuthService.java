@@ -6,8 +6,10 @@ import com.avandocmsg.messenger.api.auth.dto.LoginResponse;
 import com.avandocmsg.messenger.api.auth.dto.RegisterRequest;
 import com.avandocmsg.messenger.api.auth.dto.RegisterResponse;
 import com.avandocmsg.messenger.api.config.AppConfig;
-import com.avandocmsg.messenger.core.port.UserLookupPort;
+import com.avandocmsg.messenger.core.application.AvatarApplicationService;
+import com.avandocmsg.messenger.core.application.FileApplicationService;
 import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.UserLookupPort;
 import com.avandocmsg.messenger.core.port.SavedChatPort;
 import com.avandocmsg.messenger.core.port.UserRepositoryPort;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,6 +34,8 @@ public class AuthService {
     private final UserLookupPort userLookupPort;
     private final UserRepositoryPort userRepositoryPort;
     private final SavedChatPort savedChatPort;
+    private final FileApplicationService fileApplicationService;
+    private final AvatarApplicationService avatarApplicationService;
     private final HttpClient httpClient;
 
     public AuthService(
@@ -40,10 +44,23 @@ public class AuthService {
         UserRepositoryPort userRepositoryPort,
         SavedChatPort savedChatPort
     ) {
+        this(appConfig, userLookupPort, userRepositoryPort, savedChatPort, null, null);
+    }
+
+    public AuthService(
+        AppConfig appConfig,
+        UserLookupPort userLookupPort,
+        UserRepositoryPort userRepositoryPort,
+        SavedChatPort savedChatPort,
+        FileApplicationService fileApplicationService,
+        AvatarApplicationService avatarApplicationService
+    ) {
         this.appConfig = appConfig;
         this.userLookupPort = userLookupPort;
         this.userRepositoryPort = userRepositoryPort;
         this.savedChatPort = savedChatPort;
+        this.fileApplicationService = fileApplicationService;
+        this.avatarApplicationService = avatarApplicationService;
         this.httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .build();
@@ -86,6 +103,7 @@ public class AuthService {
     }
 
     public RegisterOutcome register(RegisterRequest request) {
+        request = withDisplayNameDefaultingToUsername(request);
         final UUID keycloakUserId;
         try {
             keycloakUserId = provisionKeycloakUser(request);
@@ -256,6 +274,8 @@ public class AuthService {
             }
             var name = claims.getStringClaim("name");
             userRepositoryPort.upsertFromKeycloak(UserId.of(sub), username, name);
+            KeycloakAvatarImporter.maybeImport(accessToken, appConfig, userRepositoryPort, fileApplicationService,
+                avatarApplicationService, httpClient);
             ensureSavedVault(sub);
         } catch (Exception e) {
             log.warn("Could not sync user from access token: {}", e.getMessage());
@@ -332,6 +352,14 @@ public class AuthService {
             log.warn("Cannot get admin token: {}", e.getMessage());
         }
         return null;
+    }
+
+    private static RegisterRequest withDisplayNameDefaultingToUsername(RegisterRequest request) {
+        var display = request.displayName();
+        if (display == null || display.isBlank()) {
+            display = request.username();
+        }
+        return new RegisterRequest(request.username(), request.password(), display);
     }
 
     private static String urlEncode(String value) {

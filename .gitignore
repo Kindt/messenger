@@ -39,10 +39,14 @@ scripts/__pycache__/
 !.cursor/rules/git-push-proxy-bypass.mdc
 .specify/
 .opencode/
-specs/
+specs/*
+!specs/068-entity-avatars/
+!specs/068-entity-avatars/**
 docs/*
 !docs/index.html
 !docs/runtime-startup-keycloak-audit.md
+!docs/user/
+!docs/user/avatars.md
 tests/e2e-web/
 !tests/e2e-web/
 tests/e2e-web/*
@@ -53,6 +57,7 @@ tests/e2e-web/fixtures/*
 tests/e2e-web/specs/*
 !tests/e2e-web/specs/ui-interaction-audit.spec.ts
 !tests/e2e-web/specs/settings-cross-tab.spec.ts
+!tests/e2e-web/specs/ui-avatar.spec.ts
 !tests/e2e-web/specs/ui-visual-regression.spec.ts
 !tests/e2e-web/specs/ui-visual-regression.spec.ts-snapshots/
 !tests/e2e-web/specs/ui-visual-regression.spec.ts-snapshots/**

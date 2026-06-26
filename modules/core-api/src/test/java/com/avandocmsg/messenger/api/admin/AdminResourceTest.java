@@ -42,6 +42,7 @@ class AdminResourceTest {
         var chatRepo = new EmptyChatPersistencePort();
         var resource = new AdminResource(cfg, audit,
             CoreModule.organizationApplicationService(null, UuidGenerator.standard()),
+            null,
             new JdbcRetentionPolicyAdapter((javax.sql.DataSource) null),
             chatRepo,
             new JdbcChatRetentionPolicyAdapter((javax.sql.DataSource) null),
@@ -171,6 +172,7 @@ class AdminResourceTest {
         var audit = new JdbcAuditAdapter((javax.sql.DataSource) null);
         return new AdminResource(cfg, audit,
             CoreModule.organizationApplicationService(null, UuidGenerator.standard()),
+            null,
             new JdbcRetentionPolicyAdapter((javax.sql.DataSource) null),
             new EmptyChatPersistencePort(),
             new JdbcChatRetentionPolicyAdapter((javax.sql.DataSource) null),

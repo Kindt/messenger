@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BotWebhookOutboxTest {
@@ -154,6 +155,12 @@ class BotWebhookOutboxTest {
 
         assertEquals(2, outbox.purgeFailed(7, 2));
         assertEquals(3, outbox.purgeFailed(7, 10));
+    }
+
+    @Test
+    void enqueue_rejectsPayloadAboveMaxBytes() {
+        var huge = "a".repeat(com.avandocmsg.messenger.common.federation.FederationDeliveryPolicy.MAX_PAYLOAD_BYTES + 1);
+        assertThrows(java.sql.SQLException.class, () -> outbox.enqueue(BOT_ID, CHAT_ID, EVENT_ID, WEBHOOK, huge));
     }
 
     @Test

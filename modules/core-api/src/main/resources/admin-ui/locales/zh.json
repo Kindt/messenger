@@ -2,6 +2,15 @@
   "admin": {
     "documentTitle": "管理 — Korus Messenger",
     "locale": "语言",
+    "brandTitle": "管理控制台",
+    "loginLabel": "用户名",
+    "passwordLabel": "密码",
+    "signIn": "登录",
+    "signOut": "退出",
+    "navHint": "分区将从已连接的模块加载。",
+    "orgLabel": "组织",
+    "apply": "应用",
+    "welcomeTitle": "欢迎",
     "welcomeText": "请使用具有 realm 角色 admin 的账号登录，然后在左侧菜单中选择分区。",
     "signedIn": "已以 {user} 登录 (sessionStorage)。"
   },
@@ -229,6 +238,21 @@
     "После создания — тест invoke": "After creation — test invoke",
     "Создано: {name}": "Created: {name}",
     "API ": "API ",
-    "Keycloak: {msg} — локальная сессия сброшена.": "Keycloak: {msg} — local session cleared."
+    "Keycloak: {msg} — локальная сессия сброшена.": "Keycloak: {msg} — local session cleared.",
+    "Экспорт: задачи (всего)": "Export: jobs (total)",
+    "Экспорт: queued / processing": "Export: queued / processing",
+    "Экспорт: processing stale": "Export: processing stale",
+    "Экспорт: завершено / ошибка": "Export: completed / failed",
+    "Экспорт: отменено": "Export: cancelled",
+    "Аудит export.* (7 дн.)": "Audit export.* (7 d.)",
+    "Аудит export cancel (7 дн.)": "Audit export cancel (7 d.)",
+    "Экспорт (compliance)": "Export (compliance)",
+    "Задачи export_jobs": "export_jobs tasks",
+    "queued / processing": "queued / processing",
+    "processing stale": "processing stale",
+    "завершено / ошибка": "completed / failed",
+    "отменено": "cancelled",
+    "аудит cancel (7 дн.)": "audit cancel (7 d.)",
+    "Счётчики": "Counters"
   }
 }

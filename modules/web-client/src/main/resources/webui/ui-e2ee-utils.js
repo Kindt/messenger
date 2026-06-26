@@ -15,6 +15,9 @@
     async function loadE2eePlaintext(chatId, msgId) {
       var state = getState();
       if (!chatId || !msgId) return null;
+      if (!state.e2eePlaintextCache) {
+        state.e2eePlaintextCache = {};
+      }
       if (state.e2eePlaintextCache[msgId]) {
         return state.e2eePlaintextCache[msgId];
       }

@@ -2,6 +2,9 @@ package com.avandocmsg.messenger.api.contacts;
 
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.core.port.UserLookupPort;
+import com.avandocmsg.messenger.core.application.AvatarApplicationService;
+import com.avandocmsg.messenger.core.domain.FileId;
+import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.api.search.MessageSearchService;
 import com.avandocmsg.messenger.api.users.dto.UserSearchHit;
 import com.avandocmsg.messenger.common.dto.ApiError;
@@ -30,13 +33,16 @@ public class SearchResource {
 
     private final UserLookupPort userLookupPort;
     private final MessageSearchService messageSearchService;
+    private final AvatarApplicationService avatarApplicationService;
     private final UserMessageSource messages;
 
     @Inject
     public SearchResource(UserLookupPort userLookupPort, MessageSearchService messageSearchService,
+                          AvatarApplicationService avatarApplicationService,
                           UserMessageSource messages) {
         this.userLookupPort = userLookupPort;
         this.messageSearchService = messageSearchService;
+        this.avatarApplicationService = avatarApplicationService;
         this.messages = messages;
     }
 
@@ -61,7 +67,20 @@ public class SearchResource {
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
-        var results = userLookupPort.searchForViewer(userId, query, 20);
+        var viewerId = UserId.of(userId);
+        var results = userLookupPort.searchForViewer(userId, query, 20).stream()
+            .map(hit -> {
+                if (avatarApplicationService == null) {
+                    return hit;
+                }
+                var avatarFileId = userLookupPort.findById(java.util.UUID.fromString(hit.userId()))
+                    .map(u -> u.avatarFileId())
+                    .filter(id -> id != null && !id.isBlank())
+                    .map(id -> FileId.of(java.util.UUID.fromString(id)))
+                    .orElse(null);
+                return avatarApplicationService.enrichUserSearchHit(hit, viewerId, avatarFileId);
+            })
+            .toList();
         return Response.ok(results).build();
     }
 

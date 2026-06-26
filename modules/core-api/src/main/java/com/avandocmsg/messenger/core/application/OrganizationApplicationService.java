@@ -7,6 +7,7 @@ import com.avandocmsg.messenger.core.port.OrganizationRepositoryPort;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /** Hexagonal application service for organization reads and writes (Phase 2e / US2). */
 public final class OrganizationApplicationService {
@@ -38,5 +39,9 @@ public final class OrganizationApplicationService {
 
     public boolean setUserOrg(UserId userId, OrganizationId orgId) {
         return organizationRepositoryPort.setUserOrg(userId, orgId);
+    }
+
+    public boolean updateLogo(OrganizationId orgId, UUID logoFileId) {
+        return organizationRepositoryPort.updateLogo(orgId, logoFileId);
     }
 }

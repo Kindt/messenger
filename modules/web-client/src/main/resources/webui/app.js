@@ -182,6 +182,10 @@
   const PENDING_CONF_KEY = "korus_pending_conf";
   const LAST_PUBLIC_LINK_KEY = "korus_last_public_link";
   const DRAFT_KEY_PREFIX = "korus_draft_";
+  const SIDEBAR_WIDTH_KEY = "korus-sidebar-width";
+  const SIDEBAR_WIDTH_MIN = 220;
+  const SIDEBAR_WIDTH_MAX = 520;
+  const SIDEBAR_WIDTH_DEFAULT = 280;
   const SOUND_NOTIF_KEY = "korus_sound_notify";
 
   const state = {
@@ -247,17 +251,17 @@
     threadHasMore: false,
     threadLoading: false,
     threadLoadingMore: false,
+    threadLoadGeneration: 0,
     chatsLoading: false,
     uploadProgress: null,
     virtualFocusMessageId: null,
-    threadSearch: "",
-    threadSearchHits: null,
-    threadSearchBusy: false,
+    messageSearch: "",
+    messageSearchHits: null,
+    messageSearchBusy: false,
+    messageSearchScope: "auto",
+    uiPaneFocus: "sidebar",
     composerTtl: "",
     forwardPick: null,
-    globalSearch: "",
-    globalSearchHits: null,
-    globalSearchBusy: false,
     appearance: "dark",
     palette: "korus",
     notifyPref: false,
@@ -284,6 +288,7 @@
     sidebarMode: "chats",
     sidebarFolder: "all",
     sidebarChatFilter: "all",
+    sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
     mentionPendingChats: {},
     integrationPanel: null,
     discussionThreadRootId: null,
@@ -296,8 +301,15 @@
     contacts: null,
     contactsBusy: false,
     myDisplayName: "",
+    myUsername: "",
     myProfilePhone: "",
     myProfileEmail: "",
+    myAvatarUrl: null,
+    myAvatarFileId: null,
+    myAvatarHidden: false,
+    avatarByUserId: {},
+    displayAvatarByChatId: {},
+    profileCardUserId: null,
     exportBusy: false,
     exportJobId: null,
     exportJobChatId: null,
@@ -307,6 +319,8 @@
     chatMembers: null,
     chatBans: null,
     chatMembersBusy: false,
+    chatHeaderMembers: null,
+    chatHeaderMembersChatId: null,
     incomingRtcCall: null,
     messageVersionsOpen: false,
     messageVersions: null,
@@ -334,8 +348,7 @@
     stickerGifs: [],
     stickerPacks: [],
     sipGateway: null,
-    phase5KanbanOpen: false,
-    phase5WhiteboardOpen: false,
+    threadExtrasTab: null,
     phase5StickersOpen: false,
     phase5AiOpen: false,
     phase5AiReply: null,
@@ -358,8 +371,7 @@
   var typingNotifyTimer = null;
   var typingSidebarTimer = null;
   var renderScheduled = false;
-  var threadSearchTimer = null;
-  var globalSearchTimer = null;
+  var messageSearchTimer = null;
   var draftSaveTimer = null;
   var incomingRingTimer = null;
   var exportPollGeneration = 0;
@@ -429,6 +441,20 @@
     },
     formatTimeLeft: function () {
       return L("time.expired");
+    },
+  };
+  var uiAvatar = window.KorusUiAvatar || {
+    renderAvatar: function (opts) {
+      var d = document.createElement("div");
+      d.className = "chat-avatar";
+      d.textContent = (opts.title || "?").charAt(0).toUpperCase();
+      return d;
+    },
+  };
+  var uiAvatarCrop = window.KorusUiAvatarCrop || null;
+  var uiProfileCard = window.KorusUiProfileCard || {
+    mountProfileCardOverlay: function () {
+      return null;
     },
   };
   var uiShellUtils = window.KorusUiShellUtils || {
@@ -606,6 +632,8 @@
     throw new Error("KorusUiPhase5Ext required — load ui-phase5-ext.js before app.js");
   }
   var uiPhase5Ext = window.KorusUiPhase5Ext;
+  var uiThreadExtras = window.KorusUiThreadExtras || null;
+  var uiNoticeToast = window.KorusUiNoticeToast || null;
   if (!window.KorusUiCallAdr) {
     throw new Error("KorusUiCallAdr required — load ui-call-adr.js before app.js");
   }
@@ -653,6 +681,8 @@
     isConferenceChangeEvent: function () { return false; },
     isTypingEvent: function () { return false; },
     isPresenceEvent: function () { return false; },
+    isAvatarEvent: function () { return false; },
+    isChatAvatarEvent: function () { return false; },
     isReadReceiptEvent: function () { return false; },
   };
   var uiRtcUtils = window.KorusUiRtcUtils || {
@@ -818,6 +848,52 @@
 
   function composerDraftPreview(chatId) {
     return uiShellUtils.composerDraftPreview(DRAFT_KEY_PREFIX, chatId);
+  }
+
+  function loadSidebarWidth() {
+    try {
+      var n = parseInt(localStorage.getItem(SIDEBAR_WIDTH_KEY), 10);
+      if (n >= SIDEBAR_WIDTH_MIN && n <= SIDEBAR_WIDTH_MAX) return n;
+    } catch (e) {}
+    return SIDEBAR_WIDTH_DEFAULT;
+  }
+
+  function saveSidebarWidth(px) {
+    try {
+      localStorage.setItem(SIDEBAR_WIDTH_KEY, String(px));
+    } catch (e) {}
+  }
+
+  function applySidebarWidthCss() {
+    if (typeof document === "undefined") return;
+    document.documentElement.style.setProperty("--sidebar-width", state.sidebarWidth + "px");
+  }
+
+  function bindSidebarResizer(handle) {
+    if (!handle || handle.dataset.bound === "1") return;
+    handle.dataset.bound = "1";
+    handle.addEventListener("mousedown", function (e) {
+      e.preventDefault();
+      var startX = e.clientX;
+      var startW = state.sidebarWidth;
+      handle.classList.add("dragging");
+      function onMove(ev) {
+        var w = Math.min(
+          SIDEBAR_WIDTH_MAX,
+          Math.max(SIDEBAR_WIDTH_MIN, startW + ev.clientX - startX)
+        );
+        state.sidebarWidth = w;
+        applySidebarWidthCss();
+      }
+      function onUp() {
+        handle.classList.remove("dragging");
+        saveSidebarWidth(state.sidebarWidth);
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+      }
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    });
   }
 
   function loadLastPublicLink() {
@@ -1013,7 +1089,7 @@
       var note = new Notification(title, {
         body: L("ui.mention.notificationBody"),
         tag: "korus-mention-" + data.message_id,
-        icon: "/webui/favicon.ico",
+        icon: notificationIconUrl(data.chat_id, null),
       });
       note.onclick = function () {
         window.focus();
@@ -1036,7 +1112,7 @@
       var note = new Notification(title, {
         body: body,
         tag: "korus-msg-" + data.messageId,
-        icon: "/webui/favicon.ico",
+        icon: notificationIconUrl(data.chatId, data.senderId),
       });
       note.onclick = function () {
         window.focus();
@@ -1144,8 +1220,10 @@
         if (p.custom_status_text) state.myCustomStatus = p.custom_status_text;
         state.myDndUntil = p.dnd_until != null ? p.dnd_until : null;
         state.myDisplayName = p.display_name || p.username || "";
+        state.myUsername = p.username || "";
         state.myProfilePhone = p.phone || "";
         state.myProfileEmail = p.email || "";
+        applyMyProfileAvatar(p);
         if (opts.applyLocale) {
           await applyProfileLocale(p);
         }
@@ -1238,6 +1316,7 @@
     try {
       var rows = await apiJson("/contacts", { method: "GET" });
       state.contacts = Array.isArray(rows) ? rows : [];
+      ingestAvatarRecords(state.contacts, "id");
     } catch (e) {
       state.contacts = null;
     } finally {
@@ -1415,18 +1494,36 @@
       clearTimeout(userSearchTimer);
       userSearchTimer = null;
     }
-    if (threadSearchTimer) {
-      clearTimeout(threadSearchTimer);
-      threadSearchTimer = null;
-    }
-    if (globalSearchTimer) {
-      clearTimeout(globalSearchTimer);
-      globalSearchTimer = null;
+    if (messageSearchTimer) {
+      clearTimeout(messageSearchTimer);
+      messageSearchTimer = null;
     }
     if (chatPreviewMoreTimer) {
       clearTimeout(chatPreviewMoreTimer);
       chatPreviewMoreTimer = null;
     }
+    if (uiNoticeToast) uiNoticeToast.reset();
+  }
+
+  function dismissNotice() {
+    if (uiNoticeToast) {
+      uiNoticeToast.dismiss({ state: state, render: scheduleRender });
+      return;
+    }
+    state.error = null;
+    state.phase5Toast = null;
+    state.statusMessage = null;
+    scheduleRender();
+  }
+
+  function mountAppNotice(host) {
+    if (!uiNoticeToast || !host) return;
+    uiNoticeToast.mount(host, {
+      el: el,
+      state: state,
+      dismissNotice: dismissNotice,
+      render: scheduleRender,
+    });
   }
 
   async function saveMyProfile() {
@@ -1440,6 +1537,127 @@
         jsonBody: { display_name: state.myDisplayName.trim() || null, phone: null },
       });
       if (p && p.display_name) state.myDisplayName = p.display_name;
+    } catch (e) {
+      state.error = e.message || L("profile.saveFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  function openAvatarCropThen(file, onBlob) {
+    if (!file) return;
+    if (uiAvatarCrop && uiAvatarCrop.open) {
+      uiAvatarCrop.open({
+        file: file,
+        L: L,
+        el: el,
+        iconBtn: iconBtn,
+        modalCardHead: modalCardHead,
+        onApply: onBlob,
+      });
+      return;
+    }
+    onBlob(file);
+  }
+
+  async function uploadMyAvatar(file) {
+    if (!file || !state.tokens) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      var uploadFile =
+        file instanceof Blob && !(file instanceof File)
+          ? new File([file], "avatar.jpg", { type: "image/jpeg" })
+          : file;
+      var parsed = await uploadChatFile(uploadFile);
+      var fileId = parsed && (parsed.id || parsed.file_id);
+      if (!fileId) throw new Error(L("ui.profile.avatarUploadFailed"));
+      var p = await apiJson("/users/me", {
+        method: "PATCH",
+        jsonBody: { avatar_file_id: fileId },
+      });
+      applyMyProfileAvatar(p);
+      state.statusMessage = L("ui.profile.avatarChange");
+    } catch (e) {
+      state.error = e.message || L("ui.profile.avatarUploadFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function removeMyAvatar() {
+    if (!state.tokens) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      var p = await apiJson("/users/me", {
+        method: "PATCH",
+        jsonBody: { remove_avatar: true },
+      });
+      applyMyProfileAvatar(p);
+      state.statusMessage = L("ui.profile.avatarRemove");
+    } catch (e) {
+      state.error = e.message || L("profile.saveFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function uploadGroupAvatar(file) {
+    var chat = currentChat();
+    if (!file || !chat || chat.type !== "group" || !state.tokens) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      var uploadFile =
+        file instanceof Blob && !(file instanceof File)
+          ? new File([file], "avatar.jpg", { type: "image/jpeg" })
+          : file;
+      var parsed = await uploadChatFile(uploadFile);
+      var fileId = parsed && (parsed.id || parsed.file_id);
+      if (!fileId) throw new Error(L("ui.profile.avatarUploadFailed"));
+      var updated = await apiJson("/chats/" + chat.id, {
+        method: "PATCH",
+        jsonBody: { avatar_file_id: fileId },
+      });
+      if (updated) {
+        if (updated.display_avatar_url != null) {
+          chat.display_avatar_url = updated.display_avatar_url;
+          if (!state.displayAvatarByChatId) state.displayAvatarByChatId = {};
+          state.displayAvatarByChatId[chat.id] = updated.display_avatar_url;
+        }
+        if (updated.avatar_url != null) chat.avatar_url = updated.avatar_url;
+      }
+      await refreshChats();
+      state.statusMessage = L("ui.profile.avatarChange");
+    } catch (e) {
+      state.error = e.message || L("ui.profile.avatarUploadFailed");
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  async function saveAvatarHidden(hidden) {
+    if (!state.tokens) return;
+    state.busy = true;
+    state.error = null;
+    render();
+    try {
+      var p = await apiJson("/users/me", {
+        method: "PATCH",
+        jsonBody: { avatar_hidden: !!hidden },
+      });
+      if (p) {
+        state.myAvatarHidden = !!p.avatar_hidden;
+        applyMyProfileAvatar(p);
+      }
     } catch (e) {
       state.error = e.message || L("profile.saveFailed");
     } finally {
@@ -1678,6 +1896,7 @@
     try {
       var members = await apiJson("/chats/" + state.selectedId + "/members", { method: "GET" });
       state.chatMembers = Array.isArray(members) ? members : [];
+      ingestAvatarRecords(state.chatMembers, "user_id");
       var role = myChatRole(state.chatMembers);
       if (canManageChatBans(role)) {
         try {
@@ -1760,8 +1979,7 @@
 
   function conferenceParticipantsLabel(count) {
     if (typeof count !== "number" || count < 1) return "";
-    if (count === 1) return " · 1 уч.";
-    return " · " + count + " уч.";
+    return L("conference.participantsBadge", { count: count });
   }
 
   function conferenceParticipantLabel(p) {
@@ -2225,6 +2443,7 @@
     try {
       var rows = await apiJson("/blocks", { method: "GET" });
       state.blockedUsers = Array.isArray(rows) ? rows : [];
+      ingestAvatarRecords(state.blockedUsers, "user_id");
     } catch (e) {
       state.blockedUsers = null;
     }
@@ -2686,7 +2905,25 @@
     persistCurrentComposerDraft();
     state.selectedId = null;
     state.discussionThreadRootId = null;
+    state.uiPaneFocus = "sidebar";
     render();
+  }
+
+  function bumpThreadLoadGeneration() {
+    state.threadLoadGeneration = (state.threadLoadGeneration || 0) + 1;
+    return state.threadLoadGeneration;
+  }
+
+  function isThreadLoadStale(chatId, generation, discussionRoot) {
+    return (
+      state.selectedId !== chatId ||
+      (state.discussionThreadRootId || null) !== (discussionRoot || null) ||
+      state.threadLoadGeneration !== generation
+    );
+  }
+
+  function threadNavStillActive(chatId, generation) {
+    return state.selectedId === chatId && state.threadLoadGeneration === generation;
   }
 
   function openChatById(chatId, options) {
@@ -2708,11 +2945,16 @@
     state.error = null;
     clearMentionPending(chatId);
     clearReplyTo();
-    state.threadSearch = "";
-    state.threadSearchHits = null;
     state.chatPolls = [];
+    state.messageSearchHits = null;
     state.pollCreateOpen = false;
+    state.threadExtrasTab = null;
+    state.messageSearchScope = "auto";
+    state.uiPaneFocus = "thread";
     state.scheduleSendOpen = false;
+    if ((state.messageSearch || "").trim().length >= 2) {
+      scheduleMessageSearch();
+    }
     state.reminderPick = null;
     state.contactShareOpen = false;
     state.threadOfflineCached = false;
@@ -2736,34 +2978,47 @@
           render();
         });
     }
+    var loadGen = bumpThreadLoadGeneration();
     state.messages = [];
     state.threadLoading = true;
     render();
-    return loadThread(chatId)
+    return loadThread(chatId, { loadGeneration: loadGen })
       .then(function () {
+        if (!threadNavStillActive(chatId, loadGen)) return;
+        scheduleRender();
         return markChatRead(chatId);
       })
       .then(function () {
+        if (!threadNavStillActive(chatId, loadGen)) return;
         return refreshChatMeta(chatId);
       })
       .then(function () {
+        if (!threadNavStillActive(chatId, loadGen)) return;
+        loadChatHeaderMembers(chatId).then(scheduleRender).catch(function () {});
+      })
+      .then(function () {
+        if (!threadNavStillActive(chatId, loadGen)) return;
         if (state.callPanelOpen) {
           return loadChatConferences();
         }
       })
       .then(function () {
+        if (!threadNavStillActive(chatId, loadGen)) return;
         openWs();
         if (uiDeepLinkUtils.syncChatUrl) {
           uiDeepLinkUtils.syncChatUrl(chatId);
         }
-        render();
+        scheduleRender();
       })
       .catch(function (err) {
+        if (!threadNavStillActive(chatId, loadGen)) return;
         state.error = err.message;
-        render();
+        scheduleRender();
       })
       .finally(function () {
+        if (!threadNavStillActive(chatId, loadGen)) return;
         state.threadLoading = false;
+        scheduleRender();
       });
   }
 
@@ -3343,7 +3598,10 @@
       return state;
     },
     setStateField: function (cacheKey, msgId, text) {
-      if (cacheKey === "e2eePlaintextCache") state.e2eePlaintextCache[msgId] = text;
+      if (cacheKey === "e2eePlaintextCache") {
+        if (!state.e2eePlaintextCache) state.e2eePlaintextCache = {};
+        state.e2eePlaintextCache[msgId] = text;
+      }
     },
     apiJson: apiJson,
     isMlsActive: isMlsCapabilitiesActive,
@@ -4261,6 +4519,14 @@
     return wsEvents.isPresenceEvent(o);
   }
 
+  function isAvatarEvent(o) {
+    return wsEvents.isAvatarEvent(o);
+  }
+
+  function isChatAvatarEvent(o) {
+    return wsEvents.isChatAvatarEvent(o);
+  }
+
   function isReadReceiptEvent(o) {
     return wsEvents.isReadReceiptEvent(o);
   }
@@ -4278,14 +4544,36 @@
     if (!rootId) return;
     state.discussionThreadRootId = rootId;
     if (state.selectedId) {
-      loadThread(state.selectedId).then(render).catch(function () {});
+      var loadGen = bumpThreadLoadGeneration();
+      state.threadLoading = true;
+      render();
+      loadThread(state.selectedId, { loadGeneration: loadGen })
+        .then(function () {
+          state.threadLoading = false;
+          render();
+        })
+        .catch(function () {
+          state.threadLoading = false;
+          render();
+        });
     }
   }
 
   function closeDiscussionThread() {
     state.discussionThreadRootId = null;
     if (state.selectedId) {
-      loadThread(state.selectedId).then(render).catch(function () {});
+      var loadGen = bumpThreadLoadGeneration();
+      state.threadLoading = true;
+      render();
+      loadThread(state.selectedId, { loadGeneration: loadGen })
+        .then(function () {
+          state.threadLoading = false;
+          render();
+        })
+        .catch(function () {
+          state.threadLoading = false;
+          render();
+        });
     }
   }
 
@@ -4376,7 +4664,11 @@
     if (data.chat_id === state.selectedId) {
       loadChatConferences().catch(function () {});
       if (data.change === "updated" || data.change === "created") {
-        loadConferenceParticipants(data.conference_id).then(render).catch(function () {});
+        loadConferenceParticipants(data.conference_id)
+          .then(function () {
+            if (state.selectedId === data.chat_id) scheduleRender();
+          })
+          .catch(function () {});
       }
     }
     if (
@@ -4384,12 +4676,24 @@
       state.activeConference &&
       state.activeConference.conference_id === data.conference_id
     ) {
-      loadConferenceParticipants(data.conference_id).then(render).catch(function () {});
+      loadConferenceParticipants(data.conference_id)
+        .then(function () {
+          if (
+            state.activeConference &&
+            state.activeConference.conference_id === data.conference_id
+          ) {
+            scheduleRender();
+          }
+        })
+        .catch(function () {});
     }
   }
 
   function applyReactionChangeEvent(data) {
     if (data.chatId !== state.selectedId) return;
+    if (!state.reactionsByMsg) {
+      state.reactionsByMsg = {};
+    }
     var rows = state.reactionsByMsg[data.messageId] || [];
     state.reactionsByMsg[data.messageId] = uiMessagesUtils.applyReactionChangeEventRows(
       rows,
@@ -4463,7 +4767,58 @@
     }
   }
 
+  function applyAvatarEvent(ev) {
+    if (!ev || !ev.user_id) return;
+    rememberUserAvatar(ev.user_id, ev.avatar_url, null);
+    var meId = state.tokens ? jwtSub(state.tokens.access_token) : null;
+    if (meId && ev.user_id === meId) {
+      state.myAvatarUrl = ev.avatar_url || null;
+      state.myAvatarFileId = ev.avatar_file_id || null;
+    }
+  }
+
+  function applyChatAvatarEvent(ev) {
+    if (!ev || !ev.chat_id) return;
+    if (!state.displayAvatarByChatId) state.displayAvatarByChatId = {};
+    if (ev.display_avatar_url !== undefined) {
+      state.displayAvatarByChatId[ev.chat_id] = ev.display_avatar_url || null;
+    }
+    var chat = state.chats.find(function (c) {
+      return c.id === ev.chat_id;
+    });
+    if (!chat) return;
+    if (ev.avatar_file_id !== undefined) chat.avatar_file_id = ev.avatar_file_id;
+    if (ev.display_avatar_url !== undefined) {
+      chat.display_avatar_url = ev.display_avatar_url;
+      chat.avatar_url = ev.display_avatar_url;
+    }
+  }
+
+  function syncDisplayAvatarsFromChats() {
+    if (!state.displayAvatarByChatId) state.displayAvatarByChatId = {};
+    (state.chats || []).forEach(function (c) {
+      var url = c.display_avatar_url || c.avatar_url || null;
+      if (url) state.displayAvatarByChatId[c.id] = url;
+    });
+  }
+
+  function openProfileCard(userId) {
+    if (!userId) return;
+    var meId = state.tokens ? jwtSub(state.tokens.access_token) : null;
+    if (meId && userId === meId) return;
+    state.profileCardUserId = userId;
+    render();
+  }
+
+  function closeProfileCard() {
+    state.profileCardUserId = null;
+    render();
+  }
+
   function applyReadReceiptEvent(ev) {
+    if (!state.readReceiptsByMessage) {
+      state.readReceiptsByMessage = {};
+    }
     function bump(messageId, userId) {
       if (!messageId || !userId) return;
       if (!state.readReceiptsByMessage[messageId]) {
@@ -4506,7 +4861,8 @@
   }
 
   function findCachedMessage(chatId, msgId) {
-    var rows = state.messagesByChat[chatId] || state.messages || [];
+    var rows =
+      (state.messagesByChat && state.messagesByChat[chatId]) || state.messages || [];
     for (var i = 0; i < rows.length; i++) {
       if (rows[i] && rows[i].id === msgId) return rows[i];
     }
@@ -4559,10 +4915,65 @@
   }
 
   function chatTitleById(chatId) {
-    var c = state.chats.find(function (x) {
-      return x.id === chatId;
+    return displayTitleForChat(null, chatId);
+  }
+
+  function peerLabelFromMembers(members, myId) {
+    if (!members || !members.length) return null;
+    for (var i = 0; i < members.length; i++) {
+      var m = members[i];
+      if (m.user_id !== myId) {
+        var dn = m.display_name && String(m.display_name).trim();
+        return dn || m.username || m.user_id.slice(0, 8);
+      }
+    }
+    return null;
+  }
+
+  function displayTitleForChat(chat, chatId) {
+    chatId = chatId || (chat && chat.id);
+    if (!chatId) return L("ui.message.chatFallback");
+    if (!chat) {
+      chat = state.chats.find(function (x) {
+        return x.id === chatId;
+      });
+    }
+    if (chat && chat.title && String(chat.title).trim()) {
+      return String(chat.title).trim();
+    }
+    if (chat && chat.type === "p2p") {
+      var myId = state.tokens ? jwtSub(state.tokens.access_token) : null;
+      if (state.chatHeaderMembersChatId === chatId && state.chatHeaderMembers) {
+        var peer = peerLabelFromMembers(state.chatHeaderMembers, myId);
+        if (peer) return peer;
+      }
+    }
+    return chatId.slice(0, 8) + "…";
+  }
+
+  async function loadChatHeaderMembers(chatId) {
+    if (!chatId || !state.tokens) {
+      state.chatHeaderMembers = null;
+      state.chatHeaderMembersChatId = null;
+      return;
+    }
+    var chat = state.chats.find(function (c) {
+      return c.id === chatId;
     });
-    return (c && c.title) || (chatId ? chatId.slice(0, 8) + "…" : L("ui.message.chatFallback"));
+    if (!chat || chat.type !== "p2p") {
+      state.chatHeaderMembers = null;
+      state.chatHeaderMembersChatId = null;
+      return;
+    }
+    try {
+      var rows = await apiJson("/chats/" + chatId + "/members", { method: "GET" });
+      state.chatHeaderMembers = Array.isArray(rows) ? rows : [];
+      state.chatHeaderMembersChatId = chatId;
+      ingestAvatarRecords(state.chatHeaderMembers, "user_id");
+    } catch (e) {
+      state.chatHeaderMembers = null;
+      state.chatHeaderMembersChatId = null;
+    }
   }
 
   function formatPreviewText(type, content) {
@@ -4710,6 +5121,27 @@
     return !!(feature && feature.state === "enabled");
   }
 
+  var PLATFORM_BASE_UI_FEATURES = {
+    "chat.mute": true,
+    "chat.archive": true,
+    "chat.folders": true,
+    "chat.members.list": true,
+    "chat.read": true,
+    "message.send": true,
+    "file.upload": true,
+    "contacts.list": true,
+  };
+
+  function isPlatformFeatureVisible(featureKey) {
+    if (!featureKey) return false;
+    if (!state.platformCaps || !state.platformCaps.features) {
+      return !!PLATFORM_BASE_UI_FEATURES[featureKey];
+    }
+    var feature = state.platformCaps.features[featureKey];
+    if (!feature) return false;
+    return feature.state === "enabled";
+  }
+
   async function loadChats() {
     if (!state.tokens) return;
     state.chatsLoading = true;
@@ -4717,6 +5149,7 @@
     try {
       var list = await apiJson("/chats", { method: "GET" });
       state.chats = list;
+      syncDisplayAvatarsFromChats();
     } finally {
       state.chatsLoading = false;
     }
@@ -4741,6 +5174,8 @@
     );
     state.unreadByChat = map;
     updateDocumentTitle();
+    updateAppBadge();
+    scheduleRender();
   }
 
   function chatsWithoutPreview() {
@@ -4814,6 +5249,7 @@
   async function softRefreshChats() {
     await loadUnreadCounts();
     await loadActiveConferences();
+    scheduleRender();
   }
 
   async function markChatRead(chatId, upToMessageId) {
@@ -4837,6 +5273,8 @@
       if (res.ok) {
         state.unreadByChat[chatId] = 0;
         updateDocumentTitle();
+        updateAppBadge();
+        scheduleRender();
         var ids = (state.messages || [])
           .slice(-50)
           .map(function (m) {
@@ -4868,6 +5306,9 @@
 
   async function hydrateReadReceiptsForThread(chatId) {
     if (!state.tokens || !chatId || !state.messages || !state.messages.length) return;
+    if (!state.readReceiptsByMessage) {
+      state.readReceiptsByMessage = {};
+    }
     var myId = jwtSub(state.tokens.access_token);
     var own = state.messages.filter(function (m) {
       return m && m.id && m.sender_id === myId && !m.deleted;
@@ -4896,6 +5337,10 @@
   }
 
   function showReadReceiptPopup(messageId) {
+    if (!messageId) return;
+    if (!state.readReceiptsByMessage) {
+      state.readReceiptsByMessage = {};
+    }
     var rr = state.readReceiptsByMessage[messageId];
     if (!rr || !Object.keys(rr).length) {
       state.error = L("readReceipts.none");
@@ -4928,6 +5373,7 @@
         .then(function (hits) {
           if (state.sidebarSearch.trim() !== query) return;
           state.userSearchHits = Array.isArray(hits) ? hits : [];
+          ingestAvatarRecords(state.userSearchHits, "user_id");
           state.userSearchBusy = false;
           render();
         })
@@ -4942,6 +5388,12 @@
 
   async function loadThread(chatId, options) {
     options = options || {};
+    var generation =
+      options.loadGeneration != null ? options.loadGeneration : state.threadLoadGeneration || 0;
+    var discussionRoot = state.discussionThreadRootId || null;
+    function stale() {
+      return isThreadLoadStale(chatId, generation, discussionRoot);
+    }
     if (!state.tokens) return;
     if (!options.preserveBlobs) revokeBlobUrls();
     if (!options.preserveE2eeCache) state.e2eePlaintextCache = {};
@@ -4949,6 +5401,7 @@
       typeof navigator.onLine === "boolean" && !navigator.onLine && window.KorusOfflineCache;
     if (offline) {
       var cached = await window.KorusOfflineCache.getMessages(chatId);
+      if (stale()) return;
       if (cached && cached.length) {
         state.messages = sortMessagesAsc(cached);
         state.threadHasMore = false;
@@ -4966,27 +5419,60 @@
       q.set("thread_id", state.discussionThreadRootId);
     }
     var rows = await apiJson("/chats/" + chatId + "/messages?" + q, { method: "GET" });
+    if (stale()) return;
     state.messages = sortMessagesAsc(rows);
     state.threadHasMore = rows.length >= THREAD_PAGE;
     if (window.KorusOfflineCache) {
       window.KorusOfflineCache.putMessages(chatId, state.messages).catch(function () {});
     }
     syncPreviewFromThread(chatId);
-    await loadReactionsForThread(chatId);
-    await loadPinnedMessages(chatId);
-    await loadChatPolls(chatId);
-    await loadChatKanban(chatId);
-    await loadChatWhiteboard(chatId);
-    await hydrateReadReceiptsForThread(chatId);
-    var liveConf = activeConferenceInChat(chatId);
-    if (liveConf && liveConf.conference_id) {
-      loadConferenceParticipants(liveConf.conference_id).catch(function () {});
-    } else if (state.conferenceParticipantsConfId) {
-      clearConferenceParticipants();
-    }
     if (!options.keepScroll) {
       state.shouldScrollThread = true;
     }
+    loadThreadExtras(chatId, options);
+  }
+
+  function loadThreadExtras(chatId, options) {
+    options = options || {};
+    var generation =
+      options.loadGeneration != null ? options.loadGeneration : state.threadLoadGeneration || 0;
+    var discussionRoot = state.discussionThreadRootId || null;
+    function stale() {
+      return isThreadLoadStale(chatId, generation, discussionRoot);
+    }
+    (async function () {
+      try {
+        await loadReactionsForThread(chatId);
+        if (stale()) return;
+        await loadPinnedMessages(chatId);
+        if (stale()) return;
+        await hydrateReadReceiptsForThread(chatId);
+        if (stale()) return;
+        var liveConf = activeConferenceInChat(chatId);
+        if (liveConf && liveConf.conference_id) {
+          loadConferenceParticipants(liveConf.conference_id).catch(function () {});
+        } else if (state.conferenceParticipantsConfId) {
+          clearConferenceParticipants();
+        }
+        scheduleRender();
+        var c = (state.chats || []).find(function (x) {
+          return x.id === chatId;
+        });
+        if (c && c.type === "group") {
+          if (isPlatformFeatureVisible("productivity.polls.list")) {
+            loadChatPolls(chatId).catch(function () {});
+          }
+          if (isPlatformFeatureVisible("collaboration.kanban.list")) {
+            loadChatKanban(chatId).catch(function () {});
+          }
+          if (isPlatformFeatureVisible("collaboration.whiteboard.open")) {
+            loadChatWhiteboard(chatId).catch(function () {});
+          }
+        }
+      } catch (e) {
+        if (!stale()) scheduleRender();
+      }
+    })();
   }
 
   async function loadChatPolls(chatId) {
@@ -5006,6 +5492,10 @@
   }
 
   function openPollCreate() {
+    var chat = currentChat();
+    if (!chat || chat.type !== "group") {
+      return;
+    }
     state.pollCreateOpen = true;
     render();
   }
@@ -5026,6 +5516,10 @@
   }
 
   async function createChatPoll(question, options, allowMultiple) {
+    var chat = currentChat();
+    if (!chat || chat.type !== "group") {
+      return;
+    }
     if (!state.selectedId || !question || !options || !options.length) {
       state.error = L("ui.polls.createFailed");
       render();
@@ -5143,7 +5637,10 @@
       votePoll: voteChatPoll,
       closePoll: closeChatPoll,
       reloadChatPolls: function () {
-        if (state.selectedId) loadChatPolls(state.selectedId).then(render);
+        var c = currentChat();
+        if (c && c.type === "group" && state.selectedId) {
+          loadChatPolls(state.selectedId).then(render);
+        }
       },
       currentUserId: function () {
         return jwtSub(state.tokens && state.tokens.access_token);
@@ -5157,6 +5654,31 @@
     };
   }
 
+  function toggleThreadExtrasTab(tabId) {
+    var chat = currentChat();
+    if (!chat || chat.type !== "group") {
+      return;
+    }
+    if (tabId === "polls" && !isPlatformFeatureVisible("productivity.polls.list")) return;
+    if (tabId === "kanban" && !isPlatformFeatureVisible("collaboration.kanban.list")) return;
+    if (tabId === "whiteboard" && !isPlatformFeatureVisible("collaboration.whiteboard.open")) return;
+    if (state.threadExtrasTab === tabId) {
+      state.threadExtrasTab = null;
+      render();
+      return;
+    }
+    state.threadExtrasTab = tabId;
+    var loadP = Promise.resolve();
+    if (tabId === "polls" && state.selectedId) {
+      loadP = loadChatPolls(state.selectedId);
+    } else if (tabId === "kanban" && state.selectedId) {
+      loadP = loadChatKanban(state.selectedId);
+    } else if (tabId === "whiteboard" && state.selectedId) {
+      loadP = loadChatWhiteboard(state.selectedId);
+    }
+    loadP.then(render).catch(render);
+  }
+
   function getPhase5UiCtx() {
     return {
       el: el,
@@ -5167,8 +5689,7 @@
       apiJson: apiJson,
       openStickersPanel: openStickersPanel,
       closeStickersPanel: closeStickersPanel,
-      toggleKanbanPanel: toggleKanbanPanel,
-      toggleWhiteboardPanel: toggleWhiteboardPanel,
+      isPlatformFeatureVisible: isPlatformFeatureVisible,
       addKanbanTask: addKanbanTask,
       moveKanbanTask: moveKanbanTask,
       deleteKanbanTask: deleteKanbanTask,
@@ -5185,6 +5706,16 @@
       createStickerPack: createStickerPack,
       saveEditedMessage: saveEditedMessage,
     };
+  }
+
+  function getThreadExtrasUiCtx() {
+    var ctx = getPollsUiCtx();
+    var p5 = getPhase5UiCtx();
+    Object.keys(p5).forEach(function (k) {
+      ctx[k] = p5[k];
+    });
+    ctx.toggleThreadExtrasTab = toggleThreadExtrasTab;
+    return ctx;
   }
 
   async function loadChatKanban(chatId) {
@@ -5269,6 +5800,7 @@
   }
 
   function toggleAiAssistPanel() {
+    if (!isPlatformFeatureVisible("ai.assist.request")) return;
     state.phase5AiOpen = !state.phase5AiOpen;
     if (!state.phase5AiOpen) {
       state.phase5AiReply = null;
@@ -5292,7 +5824,16 @@
         method: "POST",
         jsonBody: { prompt: prompt },
       });
-      state.phase5AiReply = (data && data.reply) || L("ui.phase5.aiAssistEmpty");
+      var reply = data && data.reply;
+      if (reply && /gateway not configured|ai-chat-gateway preset/i.test(reply)) {
+        state.phase5AiReply = null;
+        state.error = L("ui.phase5.aiAssistUnavailable");
+      } else {
+        state.phase5AiReply = reply || null;
+        if (!state.phase5AiReply) {
+          state.error = L("ui.phase5.aiAssistEmpty");
+        }
+      }
     } catch (err) {
       state.error = err.message || L("ui.phase5.aiAssistFailed");
     } finally {
@@ -5402,6 +5943,7 @@
   }
 
   function openStickersPanel() {
+    if (!isPlatformFeatureVisible("productivity.stickers.use")) return;
     state.phase5StickersOpen = true;
     Promise.all([loadStickerGifs(), loadStickerPacks()])
       .then(render)
@@ -5411,24 +5953,6 @@
   function closeStickersPanel() {
     state.phase5StickersOpen = false;
     render();
-  }
-
-  function toggleKanbanPanel() {
-    state.phase5KanbanOpen = !state.phase5KanbanOpen;
-    if (state.phase5KanbanOpen && state.selectedId) {
-      loadChatKanban(state.selectedId).then(render).catch(render);
-    } else {
-      render();
-    }
-  }
-
-  function toggleWhiteboardPanel() {
-    state.phase5WhiteboardOpen = !state.phase5WhiteboardOpen;
-    if (state.phase5WhiteboardOpen && state.selectedId) {
-      loadChatWhiteboard(state.selectedId).then(render).catch(render);
-    } else {
-      render();
-    }
   }
 
   async function addKanbanTask(title) {
@@ -5520,6 +6044,13 @@
 
   function insertAiReplyToComposer() {
     if (!state.phase5AiReply) return;
+    var reply = String(state.phase5AiReply);
+    if (/gateway not configured|ai-chat-gateway preset/i.test(reply)) {
+      state.error = L("ui.phase5.aiAssistUnavailable");
+      state.phase5AiOpen = false;
+      render();
+      return;
+    }
     var ta = document.getElementById("msgdraft");
     if (ta) {
       var prefix = ta.value && !ta.value.endsWith("\n") ? "\n" : "";
@@ -5915,6 +6446,9 @@
 
   async function loadReactionsForMessageIds(chatId, messages) {
     if (!messages || !messages.length) return;
+    if (!state.reactionsByMsg) {
+      state.reactionsByMsg = {};
+    }
     await Promise.all(
       messages.map(function (m) {
         return apiJson("/chats/" + chatId + "/messages/" + m.id + "/reactions", {
@@ -6074,12 +6608,15 @@
     if (!chatId || chatId === state.selectedId) return;
     state.unreadByChat[chatId] = (state.unreadByChat[chatId] || 0) + 1;
     updateDocumentTitle();
+    updateAppBadge();
+    scheduleRender();
   }
 
   function markMentionPending(chatId) {
     if (!chatId) return;
     if (!state.mentionPendingChats) state.mentionPendingChats = {};
     state.mentionPendingChats[chatId] = true;
+    scheduleRender();
   }
 
   function clearMentionPending(chatId) {
@@ -6299,21 +6836,109 @@
     return n > 0 ? n : null;
   }
 
-  function scheduleThreadSearch() {
-    if (threadSearchTimer) clearTimeout(threadSearchTimer);
-    var q = (state.threadSearch || "").trim();
-    if (q.length < 2) {
-      state.threadSearchHits = null;
-      state.threadSearchBusy = false;
+  function effectiveMessageSearchScope() {
+    if (state.messageSearchScope === "global") return "global";
+    if (state.messageSearchScope === "chat") return "chat";
+    if (
+      state.selectedId &&
+      state.selectedId !== state.savedChatId &&
+      state.uiPaneFocus === "thread"
+    ) {
+      return "chat";
+    }
+    return "global";
+  }
+
+  function messageSearchScopeLabel() {
+    var scope = effectiveMessageSearchScope();
+    if (state.messageSearchScope === "auto") {
+      return L(scope === "chat" ? "ui.search.scopeAutoChat" : "ui.search.scopeAutoGlobal");
+    }
+    return L(scope === "chat" ? "ui.search.scopeChat" : "ui.search.scopeGlobal");
+  }
+
+  function messageSearchPlaceholder() {
+    return effectiveMessageSearchScope() === "chat"
+      ? L("ui.search.chatPlaceholder")
+      : L("ui.search.globalPlaceholder");
+  }
+
+  function setUiPaneFocus(pane) {
+    if (state.uiPaneFocus === pane) return;
+    state.uiPaneFocus = pane;
+    if (state.messageSearchScope === "auto" && (state.messageSearch || "").trim().length >= 2) {
+      scheduleMessageSearch();
+    }
+    render();
+  }
+
+  function cycleMessageSearchScope() {
+    if (!state.selectedId || state.selectedId === state.savedChatId) {
+      state.messageSearchScope = "global";
+      render();
       return;
     }
-    state.threadSearchBusy = true;
-    threadSearchTimer = setTimeout(function () {
-      threadSearchTimer = null;
-      var query = state.threadSearch.trim();
+    var order = ["auto", "chat", "global"];
+    var idx = order.indexOf(state.messageSearchScope);
+    if (idx < 0) idx = 0;
+    state.messageSearchScope = order[(idx + 1) % order.length];
+    scheduleMessageSearch();
+    render();
+  }
+
+  function appendMessageSearchBar(parent, opts) {
+    opts = opts || {};
+    var wrap = el(
+      "div",
+      "global-search-wrap" + (opts.mobile ? " thread-message-search" : "")
+    );
+    var row = el("div", "message-search-row");
+    var inp = document.createElement("input");
+    inp.type = "search";
+    inp.className = "global-search-input";
+    inp.setAttribute("data-testid", opts.testId || "message-search-input");
+    inp.placeholder = messageSearchPlaceholder();
+    inp.value = state.messageSearch;
+    inp.oninput = function () {
+      state.messageSearch = inp.value;
+      scheduleMessageSearch();
+      render();
+    };
+    inp.onfocus = function () {
+      if (opts.paneFocus) state.uiPaneFocus = opts.paneFocus;
+    };
+    row.appendChild(inp);
+    if (state.selectedId && state.selectedId !== state.savedChatId) {
+      var scopeBtn = el("button", "message-search-scope");
+      scopeBtn.type = "button";
+      scopeBtn.setAttribute("data-testid", "message-search-scope");
+      scopeBtn.title = L("ui.search.scopeCycleTitle");
+      scopeBtn.textContent = messageSearchScopeLabel();
+      scopeBtn.onclick = function (e) {
+        e.preventDefault();
+        cycleMessageSearchScope();
+      };
+      row.appendChild(scopeBtn);
+    }
+    wrap.appendChild(row);
+    parent.appendChild(wrap);
+  }
+
+  function scheduleMessageSearch() {
+    if (messageSearchTimer) clearTimeout(messageSearchTimer);
+    var q = (state.messageSearch || "").trim();
+    if (q.length < 2) {
+      state.messageSearchHits = null;
+      state.messageSearchBusy = false;
+      return;
+    }
+    state.messageSearchBusy = true;
+    messageSearchTimer = setTimeout(function () {
+      messageSearchTimer = null;
+      var query = state.messageSearch.trim();
       if (query.length < 2) {
-        state.threadSearchHits = null;
-        state.threadSearchBusy = false;
+        state.messageSearchHits = null;
+        state.messageSearchBusy = false;
         render();
         return;
       }
@@ -6321,18 +6946,21 @@
         method: "GET",
       })
         .then(function (hits) {
-          if (state.threadSearch.trim() !== query) return;
-          var chatId = state.selectedId;
-          state.threadSearchHits = (Array.isArray(hits) ? hits : []).filter(function (h) {
-            return h.chat_id === chatId;
-          });
-          state.threadSearchBusy = false;
+          if (state.messageSearch.trim() !== query) return;
+          var rows = Array.isArray(hits) ? hits : [];
+          if (effectiveMessageSearchScope() === "chat" && state.selectedId) {
+            rows = rows.filter(function (h) {
+              return h.chat_id === state.selectedId;
+            });
+          }
+          state.messageSearchHits = rows;
+          state.messageSearchBusy = false;
           render();
         })
         .catch(function () {
-          if (state.threadSearch.trim() !== query) return;
-          state.threadSearchHits = [];
-          state.threadSearchBusy = false;
+          if (state.messageSearch.trim() !== query) return;
+          state.messageSearchHits = [];
+          state.messageSearchBusy = false;
           render();
         });
     }, 350);
@@ -6341,8 +6969,8 @@
   async function openSearchHit(hit) {
     if (!hit || !hit.id || !state.selectedId) return;
     if (hit.chat_id !== state.selectedId) return;
-    state.threadSearch = "";
-    state.threadSearchHits = null;
+    state.messageSearch = "";
+    state.messageSearchHits = null;
     try {
       await scrollToMessageId(hit.id);
     } catch (e) {
@@ -6409,45 +7037,13 @@
   }
 
   function scheduleGlobalSearch() {
-    if (globalSearchTimer) clearTimeout(globalSearchTimer);
-    var q = (state.globalSearch || "").trim();
-    if (q.length < 2) {
-      state.globalSearchHits = null;
-      state.globalSearchBusy = false;
-      return;
-    }
-    state.globalSearchBusy = true;
-    globalSearchTimer = setTimeout(function () {
-      globalSearchTimer = null;
-      var query = state.globalSearch.trim();
-      if (query.length < 2) {
-        state.globalSearchHits = null;
-        state.globalSearchBusy = false;
-        render();
-        return;
-      }
-      apiJson("/search/messages?q=" + encodeURIComponent(query) + "&limit=30", {
-        method: "GET",
-      })
-        .then(function (hits) {
-          if (state.globalSearch.trim() !== query) return;
-          state.globalSearchHits = Array.isArray(hits) ? hits : [];
-          state.globalSearchBusy = false;
-          render();
-        })
-        .catch(function () {
-          if (state.globalSearch.trim() !== query) return;
-          state.globalSearchHits = [];
-          state.globalSearchBusy = false;
-          render();
-        });
-    }, 350);
+    scheduleMessageSearch();
   }
 
   async function openGlobalSearchHit(hit) {
     if (!hit || !hit.id || !hit.chat_id) return;
-    state.globalSearch = "";
-    state.globalSearchHits = null;
+    state.messageSearch = "";
+    state.messageSearchHits = null;
     closeForwardPicker();
     await openChatById(hit.chat_id);
     await openSearchHit(hit);
@@ -6527,6 +7123,10 @@
       scheduleTypingSidebarRefresh: scheduleTypingSidebarRefresh,
       isPresenceEvent: isPresenceEvent,
       applyPresenceEvent: applyPresenceEvent,
+      isAvatarEvent: isAvatarEvent,
+      applyAvatarEvent: applyAvatarEvent,
+      isChatAvatarEvent: isChatAvatarEvent,
+      applyChatAvatarEvent: applyChatAvatarEvent,
       isReadReceiptEvent: isReadReceiptEvent,
       applyReadReceiptEvent: applyReadReceiptEvent,
       isMessageChangeEvent: isMessageChangeEvent,
@@ -6720,7 +7320,6 @@
   var SIDEBAR_FOLDER_I18N = {
     all: "ui.sidebar.folderAll",
     work: "ui.sidebar.folderWorkChip",
-    personal: "ui.sidebar.folderPersonal",
     archive: "ui.sidebar.folderArchive",
   };
 
@@ -6732,14 +7331,14 @@
   };
 
   function sidebarFolderLabel(fid) {
+    var nestedKey = "ui.sidebar.folder." + fid;
+    var nested = L(nestedKey);
+    if (nested !== nestedKey) return nested;
     var flatKey = SIDEBAR_FOLDER_I18N[fid];
     if (flatKey) {
       var flat = L(flatKey);
       if (flat !== flatKey) return flat;
     }
-    var nestedKey = "ui.sidebar.folder." + fid;
-    var nested = L(nestedKey);
-    if (nested !== nestedKey) return nested;
     return fid;
   }
 
@@ -6789,6 +7388,88 @@
     return t.charAt(0).toUpperCase();
   }
 
+  function rememberUserAvatar(userId, url, title) {
+    if (!userId) return;
+    if (!state.avatarByUserId) state.avatarByUserId = {};
+    var prev = state.avatarByUserId[userId] || {};
+    state.avatarByUserId[userId] = {
+      url: url != null && url !== "" ? url : prev.url || null,
+      title: title != null && title !== "" ? title : prev.title || null,
+    };
+  }
+
+  function ingestAvatarRecords(records, idKey) {
+    if (!Array.isArray(records)) return;
+    idKey = idKey || "user_id";
+    records.forEach(function (r) {
+      if (!r) return;
+      var id = r[idKey] || r.user_id || r.id;
+      if (!id) return;
+      rememberUserAvatar(id, r.avatar_url, r.display_name || r.username);
+    });
+  }
+
+  function avatarUrlForUser(userId) {
+    if (!userId || !state.avatarByUserId) return null;
+    var entry = state.avatarByUserId[userId];
+    return entry && entry.url ? entry.url : null;
+  }
+
+  function avatarTitleForUser(userId) {
+    if (!userId || !state.avatarByUserId) return userId ? userId.slice(0, 8) : "?";
+    var entry = state.avatarByUserId[userId];
+    return (entry && entry.title) || (userId ? userId.slice(0, 8) : "?");
+  }
+
+  function applyMyProfileAvatar(p) {
+    if (!p) return;
+    state.myAvatarUrl = p.avatar_url || null;
+    state.myAvatarFileId = p.avatar_file_id || null;
+    state.myAvatarHidden = !!p.avatar_hidden;
+    var meId = state.tokens ? jwtSub(state.tokens.access_token) : null;
+    if (meId) {
+      rememberUserAvatar(meId, p.avatar_url, p.display_name || p.username);
+    }
+  }
+
+  function chatAvatarUrl(chat) {
+    if (!chat) return null;
+    if (state.displayAvatarByChatId && state.displayAvatarByChatId[chat.id]) {
+      return state.displayAvatarByChatId[chat.id];
+    }
+    return chat.display_avatar_url || chat.avatar_url || null;
+  }
+
+  function renderAvatarNode(opts) {
+    var alt =
+      opts.alt != null
+        ? opts.alt
+        : L("ui.avatar.altUser", { name: opts.title || "?" });
+    return uiAvatar.renderAvatar({
+      url: opts.url,
+      title: opts.title,
+      userId: opts.userId,
+      size: opts.size,
+      testId: opts.testId,
+      alt: alt,
+    });
+  }
+
+  function notificationIconUrl(chatId, senderId) {
+    if (chatId) {
+      var chat = state.chats.find(function (c) {
+        return c.id === chatId;
+      });
+      var curl = chatAvatarUrl(chat);
+      if (curl) return curl;
+    }
+    if (senderId) {
+      var uurl = avatarUrlForUser(senderId);
+      if (uurl) return uurl;
+    }
+    return "/webui/favicon.ico";
+  }
+
   function markBrandNoTranslate(node) {
     if (node) node.setAttribute("translate", "no");
   }
@@ -6802,6 +7483,88 @@
     if (translated && translated !== key) return translated;
     var locale = i18n && i18n.getLocale ? i18n.getLocale() : "ru";
     return locale === "ru" ? ruFallback : fallback;
+  }
+
+  function mountSidebarFiltersPanel() {
+    var panel = el("div", "sidebar-filters-panel");
+    panel.setAttribute("data-testid", "sidebar-filters-panel");
+    panel.setAttribute("aria-label", L("ui.sidebar.filterPanelTitle"));
+
+    if (isPlatformFeatureVisible("chat.folders")) {
+      var folderSec = el("div", "sidebar-filters-section");
+      folderSec.appendChild(el("div", "sidebar-filters-label", L("ui.sidebar.filterPanelFolders")));
+      var folderRow = el("div", "sidebar-filters-row sidebar-filters-row-4");
+      ["all", "work", "personal", "archive"].forEach(function (fid) {
+        folderRow.appendChild(
+          sidebarChipButton(
+            SIDEBAR_FOLDER_ICONS[fid],
+            sidebarFolderLabel(fid),
+            state.sidebarFolder === fid,
+            "sidebar-folder-" + fid,
+            "sidebar-folder-chip",
+            function () {
+              state.sidebarFolder = fid;
+              render();
+            }
+          )
+        );
+      });
+      folderSec.appendChild(folderRow);
+      panel.appendChild(folderSec);
+    }
+
+    var showSec = el("div", "sidebar-filters-section");
+    showSec.appendChild(el("div", "sidebar-filters-label", L("ui.sidebar.filterPanelShow")));
+    var showRow = el("div", "sidebar-filters-row sidebar-filters-row-3");
+    var filterIcons = { all: "≡", unread: "●", mentions: "@" };
+    ["all", "unread", "mentions"].forEach(function (fid) {
+      showRow.appendChild(
+        sidebarChipButton(
+          filterIcons[fid] || "·",
+          sidebarFilterLabel(fid),
+          state.sidebarChatFilter === fid,
+          "sidebar-filter-" + fid,
+          "sidebar-filter-chip",
+          function () {
+            state.sidebarChatFilter = fid;
+            render();
+          }
+        )
+      );
+    });
+    showSec.appendChild(showRow);
+    panel.appendChild(showSec);
+
+    var actRow = el("div", "sidebar-filters-actions");
+    actRow.appendChild(
+      sidebarChipButton("🔒", L("ui.sidebar.vaultTitle"), false, "sidebar-vault", "", function () {
+        openSavedVault();
+      })
+    );
+    actRow.appendChild(
+      sidebarChipButton("✓", L("ui.sidebar.readAllTitle"), false, "sidebar-read-all", "", function () {
+        markAllChatsRead();
+      })
+    );
+    panel.appendChild(actRow);
+    return panel;
+  }
+
+  function sidebarIconChip(icon, title, active, testId, onClick) {
+    var extra =
+      testId && testId.indexOf("sidebar-folder-") === 0
+        ? " sidebar-folder-icon"
+        : testId && testId.indexOf("sidebar-filter-") === 0
+          ? " sidebar-filter-icon"
+          : "";
+    var btn = el("button", "sidebar-icon-chip" + extra + (active ? " active" : ""));
+    btn.type = "button";
+    btn.title = title;
+    btn.setAttribute("aria-label", title);
+    btn.setAttribute("data-testid", testId);
+    btn.textContent = icon;
+    btn.onclick = onClick;
+    return btn;
   }
 
   function sidebarTabButton(icon, labelKey, ruFallback, enFallback, active, testId, onClick) {
@@ -6847,6 +7610,7 @@
   }
 
   function readReceiptUserLabel(userId) {
+    if (!userId) return "?";
     if (state.chatMembers && state.chatMembers.length) {
       for (var i = 0; i < state.chatMembers.length; i++) {
         var m = state.chatMembers[i];
@@ -6972,9 +7736,6 @@
         authContent.appendChild(ssoWrap);
       }
     }
-    if (state.error) {
-      authContent.appendChild(el("div", "error-banner auth-error", state.error));
-    }
     var showPasswordForm =
       (state.authTab === "login" && authPasswordAllowed()) ||
       (state.authTab === "register" && showRegister);
@@ -7008,6 +7769,7 @@
     card.appendChild(authContent);
     card.appendChild(el("p", "auth-foot", L("auth.hint")));
     shell.appendChild(card);
+    mountAppNotice(shell);
     root.appendChild(shell);
   }
 
@@ -7137,12 +7899,10 @@
     state.threadLoadingMore = false;
     state.chatsLoading = false;
     state.uploadProgress = null;
-    state.threadSearch = "";
-    state.threadSearchHits = null;
+    state.messageSearch = "";
+    state.messageSearchHits = null;
     state.composerTtl = "";
     state.forwardPick = null;
-    state.globalSearch = "";
-    state.globalSearchHits = null;
     state.e2eeKeyCount = null;
     state.settingsOpen = false;
     state.e2eePlaintextCache = {};
@@ -7155,6 +7915,8 @@
     state.membersModalOpen = false;
     state.chatMembers = null;
     state.chatBans = null;
+    state.chatHeaderMembers = null;
+    state.chatHeaderMembersChatId = null;
     state.callMode = "jitsi";
     state.activeConference = null;
     state.activeConferenceByChat = {};
@@ -7713,7 +8475,14 @@
         state.conferenceParticipantsConfId !== state.activeConference.conference_id
       ) {
         loadConferenceParticipants(state.activeConference.conference_id)
-          .then(render)
+          .then(function () {
+            if (
+              state.activeConference &&
+              state.activeConference.conference_id === state.conferenceParticipantsConfId
+            ) {
+              scheduleRender();
+            }
+          })
           .catch(function () {});
       }
       if (conferenceIsTracked(state.activeConference)) {
@@ -7832,8 +8601,14 @@
     var mainVid = el("div", "call-main-wrap");
     mainVid.id = "callLocalStage";
     var localName = state.myDisplayName || jwtSub(state.tokens && state.tokens.access_token) || "?";
+    var localMeId = jwtSub(state.tokens && state.tokens.access_token);
     if (window.KorusUiCallMesh && typeof KorusUiCallMesh.createAvatarNode === "function") {
-      var localAv = KorusUiCallMesh.createAvatarNode(localName, localName, "call-local-avatar");
+      var localAv = KorusUiCallMesh.createAvatarNode(
+        localName,
+        localMeId || localName,
+        "call-local-avatar",
+        state.myAvatarUrl || avatarUrlForUser(localMeId)
+      );
       localAv.setAttribute("data-testid", "call-local-avatar");
       mainVid.appendChild(localAv);
     }
@@ -7885,7 +8660,9 @@
         slot.appendChild(
           KorusUiCallMesh.createAvatarNode(
             (state.rtcPeerMeta[pid] && state.rtcPeerMeta[pid].displayName) || pid,
-            pid
+            pid,
+            null,
+            avatarUrlForUser(pid)
           )
         );
       }
@@ -7985,7 +8762,7 @@
     }
     var remBox = el("div", "settings-reminders");
     remBox.setAttribute("data-testid", "settings-reminders");
-    remBox.appendChild(el("h3", "settings-subtitle", L("ui.reminders.listTitle")));
+    remBox.appendChild(el("h4", "settings-subsection-title", L("ui.settings.pendingReminders")));
     var pendingRem = (state.myReminders || []).filter(function (r) {
       return !r.status || r.status === "pending";
     });
@@ -8022,7 +8799,7 @@
 
     var schedBox = el("div", "settings-scheduled");
     schedBox.setAttribute("data-testid", "settings-scheduled");
-    schedBox.appendChild(el("h3", "settings-subtitle", L("ui.settings.scheduledTitle")));
+    schedBox.appendChild(el("h4", "settings-subsection-title", L("ui.settings.scheduledTitle")));
     var pendingSched = state.myScheduledMessages || [];
     if (!pendingSched.length) {
       schedBox.appendChild(el("p", "settings-hint", L("ui.schedule.emptyList")));
@@ -8054,15 +8831,25 @@
     panel.appendChild(schedBox);
   }
 
-  function appendSettingsDndSection(panel) {
-    if (state.myPresence !== "dnd") {
-      return;
+  function notificationPermissionLabel() {
+    if (typeof Notification === "undefined") {
+      return L("notifications.unsupported");
     }
-    panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.dndSchedule")));
+    if (Notification.permission === "granted") {
+      return L("ui.settings.permissionGranted");
+    }
+    if (Notification.permission === "denied") {
+      return L("notifications.denied");
+    }
+    return L("ui.settings.permissionDefault");
+  }
+
+  function appendSettingsDndDurationSelect(panel, opts) {
+    opts = opts || {};
     var rowDnd = el("div", "settings-row");
     var dndLabel = document.createElement("label");
     dndLabel.setAttribute("for", "settings-dnd-duration");
-    dndLabel.textContent = L("ui.settings.dndSchedule");
+    dndLabel.textContent = opts.label || L("ui.settings.dndSchedule");
     rowDnd.appendChild(dndLabel);
     var dndSel = document.createElement("select");
     dndSel.id = "settings-dnd-duration";
@@ -8084,11 +8871,16 @@
     });
     dndSel.disabled = state.busy;
     dndSel.onchange = function () {
+      if (state.myPresence !== "dnd") {
+        state.myDndDurationPreset = dndSel.value;
+        updatePresence("dnd");
+        return;
+      }
       updateDndSchedule(dndSel.value);
     };
     rowDnd.appendChild(dndSel);
     panel.appendChild(rowDnd);
-    if (state.myDndUntil) {
+    if (state.myPresence === "dnd" && state.myDndUntil) {
       panel.appendChild(
         el(
           "p",
@@ -8099,9 +8891,19 @@
     }
   }
 
+  function appendSettingsDndSection(panel) {
+    if (state.myPresence !== "dnd") {
+      return;
+    }
+    panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.dndSchedule")));
+    appendSettingsDndDurationSelect(panel);
+  }
+
   function appendSettingsGeneralPanel(panel) {
+    panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.appearance")));
+
     var rowTheme = el("div", "settings-row");
-    rowTheme.appendChild(el("span", null, L("ui.settings.appearance")));
+    rowTheme.appendChild(el("span", null, L("ui.settings.theme")));
     rowTheme.appendChild(
       iconBtn(state.appearance === "light" ? "🌙" : "☀️", state.appearance === "light" ? L("ui.common.darkTheme") : L("ui.common.lightTheme"), {
         onClick: function () {
@@ -8122,7 +8924,7 @@
       var labelKey = LOCALE_LABEL_KEYS[code] || "settings.localeEn";
       var bLoc = el(
         "button",
-        "btn btn-ghost btn-sm" + (currentLocale === code ? " active" : ""),
+        "btn btn-sm settings-locale-btn" + (currentLocale === code ? " active" : ""),
         L(labelKey)
       );
       bLoc.type = "button";
@@ -8144,10 +8946,12 @@
     });
     rowLocale.appendChild(localePicker);
     panel.appendChild(rowLocale);
-    panel.appendChild(el("p", "settings-hint", L("ui.settings.appearanceKorus")));
+    panel.appendChild(el("p", "settings-hint settings-hint-subtle", L("ui.settings.appearanceKorus")));
 
+    panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.cache")));
+    panel.appendChild(el("p", "settings-hint", L("ui.settings.cacheHint")));
     var rowCache = el("div", "settings-row");
-    rowCache.appendChild(el("span", null, L("ui.settings.cache")));
+    rowCache.appendChild(el("span", null, L("ui.settings.resetCache")));
     rowCache.appendChild(
       iconBtn("🗑", L("ui.settings.resetCache"), {
         disabled: state.busy,
@@ -8157,8 +8961,31 @@
       })
     );
     panel.appendChild(rowCache);
-    panel.appendChild(el("p", "settings-hint", L("ui.settings.cacheHint")));
 
+    if ("serviceWorker" in navigator) {
+      panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.sectionOffline")));
+      panel.appendChild(el("p", "settings-hint", L("ui.settings.offlineHint")));
+      panel.appendChild(el("p", "settings-hint", L("ui.offline.quotaHint")));
+      var rowOfflineCache = el("div", "settings-row");
+      rowOfflineCache.appendChild(el("span", null, L("ui.offline.clearCache")));
+      rowOfflineCache.appendChild(
+        iconBtn("🗑", L("ui.offline.clearCache"), {
+          testId: "settings-offline-clear",
+          disabled: state.busy,
+          onClick: function () {
+            if (global.KorusOfflineCache && global.KorusOfflineCache.clearAll) {
+              global.KorusOfflineCache.clearAll().then(function () {
+                state.statusMessage = L("ui.offline.clearCacheOk");
+                render();
+              });
+            }
+          },
+        })
+      );
+      panel.appendChild(rowOfflineCache);
+    }
+
+    panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.sectionAbout")));
     if (state.serverVersion) {
       var rowVer = el("div", "settings-row");
       rowVer.appendChild(el("span", null, L("ui.settings.apiVersion")));
@@ -8166,6 +8993,7 @@
       panel.appendChild(rowVer);
     }
 
+    panel.appendChild(el("h3", "settings-subtitle settings-subtitle-kbd", L("ui.settings.kbdTitle")));
     var kbdHint = document.createElement("p");
     kbdHint.className = "settings-hint settings-kbd-hint";
     kbdHint.innerHTML = L("ui.settings.kbdHint");
@@ -8184,34 +9012,131 @@
       );
       panel.appendChild(rowPwa);
     }
-
-    if ("serviceWorker" in navigator) {
-      panel.appendChild(el("p", "settings-hint", L("ui.settings.offlineHint")));
-      panel.appendChild(el("p", "settings-hint", L("ui.offline.quotaHint")));
-      var clearRow = el("div", "settings-row");
-      clearRow.appendChild(
-        iconBtn("🗑", L("ui.offline.clearCache"), {
-          testId: "settings-offline-clear",
-          disabled: state.busy,
-          onClick: function () {
-            if (global.KorusOfflineCache && global.KorusOfflineCache.clearAll) {
-              global.KorusOfflineCache.clearAll().then(function () {
-                state.statusMessage = L("ui.offline.clearCacheOk");
-                render();
-              });
-            }
-          },
-        })
-      );
-      panel.appendChild(clearRow);
-    }
   }
 
   function appendSettingsProfilePanel(panel) {
+    var meId = state.tokens ? jwtSub(state.tokens.access_token) : null;
+
+    panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.sectionAccount")));
+
+    var avRow = el("div", "settings-row settings-avatar-row");
+    avRow.appendChild(
+      renderAvatarNode({
+        url: state.myAvatarUrl,
+        title: state.myDisplayName || state.myUsername || "?",
+        userId: meId,
+        size: "lg",
+        testId: "settings-profile-avatar",
+      })
+    );
+    var avActs = el("div", "settings-avatar-actions");
+    var avFile = document.createElement("input");
+    avFile.type = "file";
+    avFile.accept = "image/*";
+    avFile.hidden = true;
+    avFile.onchange = function () {
+      var f = avFile.files && avFile.files[0];
+      avFile.value = "";
+      if (f) {
+        openAvatarCropThen(f, function (blob) {
+          uploadMyAvatar(blob);
+        });
+      }
+    };
+    avActs.appendChild(avFile);
+    avActs.appendChild(
+      iconBtn("🖼", L("ui.profile.avatarChange"), {
+        disabled: state.busy,
+        testId: "settings-avatar-change",
+        onClick: function () {
+          avFile.click();
+        },
+      })
+    );
+    if (state.myAvatarUrl || state.myAvatarFileId) {
+      avActs.appendChild(
+        iconBtn("🗑", L("ui.profile.avatarRemove"), {
+          disabled: state.busy,
+          testId: "settings-avatar-remove",
+          onClick: function () {
+            removeMyAvatar();
+          },
+        })
+      );
+    }
+    avRow.appendChild(avActs);
+    panel.appendChild(avRow);
+
+    var rowHideAv = el("div", "settings-row settings-avatar-hidden-row");
+    var hideLbl = document.createElement("label");
+    hideLbl.className = "settings-row-label";
+    var hideChk = document.createElement("input");
+    hideChk.type = "checkbox";
+    hideChk.setAttribute("data-testid", "settings-avatar-hidden");
+    hideChk.checked = !!state.myAvatarHidden;
+    hideChk.disabled = state.busy;
+    hideChk.onchange = function () {
+      saveAvatarHidden(hideChk.checked);
+    };
+    hideLbl.appendChild(hideChk);
+    hideLbl.appendChild(document.createTextNode(" " + L("ui.profile.avatarHidden")));
+    rowHideAv.appendChild(hideLbl);
+    panel.appendChild(rowHideAv);
+    panel.appendChild(el("p", "settings-hint", L("ui.profile.avatarHiddenHint")));
+
+    if (state.myUsername) {
+      var rowUser = el("div", "settings-row");
+      rowUser.appendChild(el("span", null, L("ui.auth.username")));
+      rowUser.appendChild(el("span", "settings-value settings-value-mono", state.myUsername));
+      panel.appendChild(rowUser);
+      panel.appendChild(el("p", "settings-hint", L("ui.settings.usernameHint")));
+    }
+
+    var rowProf = el("div", "settings-row settings-row-stack");
+    var nameLabel = document.createElement("label");
+    nameLabel.setAttribute("for", "settings-display-name");
+    nameLabel.className = "settings-row-label";
+    nameLabel.textContent = L("ui.settings.name");
+    rowProf.appendChild(nameLabel);
+    var nameWrap = el("div", "settings-inline-controls");
+    var nameInp = document.createElement("input");
+    nameInp.type = "text";
+    nameInp.id = "settings-display-name";
+    nameInp.name = "displayName";
+    nameInp.setAttribute("autocomplete", "name");
+    nameInp.className = "settings-text-input";
+    nameInp.value = state.myDisplayName || "";
+    nameInp.disabled = state.busy;
+    nameInp.oninput = function () {
+      state.myDisplayName = nameInp.value;
+    };
+    nameWrap.appendChild(nameInp);
+    nameWrap.appendChild(
+      iconBtn("💾", L("ui.common.save"), {
+        disabled: state.busy,
+        testId: "settings-display-name-save",
+        onClick: function () {
+          saveMyProfile();
+        },
+      })
+    );
+    rowProf.appendChild(nameWrap);
+    panel.appendChild(rowProf);
+    panel.appendChild(el("p", "settings-hint", L("ui.settings.displayNameHint")));
+
+    if (state.myProfileEmail) {
+      var rowEmail = el("div", "settings-row");
+      rowEmail.appendChild(el("span", null, L("ui.settings.email")));
+      rowEmail.appendChild(el("span", "settings-value", state.myProfileEmail));
+      panel.appendChild(rowEmail);
+    }
+
+    panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.sectionPresence")));
+
     var rowPres = el("div", "settings-row");
     var presLabel = document.createElement("label");
     presLabel.setAttribute("for", "settings-presence");
-    presLabel.textContent = L("ui.settings.status");
+    presLabel.textContent = L("ui.settings.presence");
     rowPres.appendChild(presLabel);
     var presSel = document.createElement("select");
     presSel.id = "settings-presence";
@@ -8241,61 +9166,53 @@
       panel.appendChild(dndHint);
     }
 
-    var rowCustom = el("div", "settings-row");
+    var rowCustom = el("div", "settings-row settings-row-stack");
     var customLabel = document.createElement("label");
     customLabel.setAttribute("for", "settings-custom-status");
+    customLabel.className = "settings-row-label";
     customLabel.textContent = L("ui.settings.customStatus");
     rowCustom.appendChild(customLabel);
+    var customWrap = el("div", "settings-inline-controls");
     var customInp = document.createElement("input");
     customInp.type = "text";
     customInp.id = "settings-custom-status";
-    customInp.className = "settings-input";
+    customInp.className = "settings-text-input";
     customInp.maxLength = 128;
+    customInp.placeholder = L("ui.settings.customStatusPlaceholder");
     customInp.value = state.myCustomStatus || "";
     customInp.disabled = state.busy;
-    customInp.onchange = function () {
+    customInp.oninput = function () {
       state.myCustomStatus = customInp.value;
-      saveCustomStatus();
     };
-    rowCustom.appendChild(customInp);
-    panel.appendChild(rowCustom);
-
-    var rowProf = el("div", "settings-row");
-    var nameLabel = document.createElement("label");
-    nameLabel.setAttribute("for", "settings-display-name");
-    nameLabel.textContent = L("ui.settings.name");
-    rowProf.appendChild(nameLabel);
-    var nameInp = document.createElement("input");
-    nameInp.type = "text";
-    nameInp.id = "settings-display-name";
-    nameInp.name = "displayName";
-    nameInp.setAttribute("autocomplete", "name");
-    nameInp.className = "settings-text-input";
-    nameInp.value = state.myDisplayName || "";
-    nameInp.disabled = state.busy;
-    nameInp.oninput = function () {
-      state.myDisplayName = nameInp.value;
-    };
-    rowProf.appendChild(nameInp);
-    rowProf.appendChild(
+    customWrap.appendChild(customInp);
+    customWrap.appendChild(
       iconBtn("💾", L("ui.common.save"), {
         disabled: state.busy,
+        testId: "settings-custom-status-save",
         onClick: function () {
-          saveMyProfile();
+          saveCustomStatus();
         },
       })
     );
-    panel.appendChild(rowProf);
+    rowCustom.appendChild(customWrap);
+    panel.appendChild(rowCustom);
+    panel.appendChild(el("p", "settings-hint", L("ui.settings.customStatusHint")));
 
     if (state.blockedUsers && state.blockedUsers.length) {
-      var rowBl = el("div", "settings-row");
-      rowBl.appendChild(
-        el("span", null, L("ui.settings.blockedUsers", { count: state.blockedUsers.length }))
+      panel.appendChild(
+        el("h3", "settings-subtitle", L("ui.settings.blockedUsers", { count: state.blockedUsers.length }))
       );
-      panel.appendChild(rowBl);
       state.blockedUsers.forEach(function (bu) {
         var rowBu = el("div", "settings-row settings-row-sub");
         var buLabel = bu.display_name || bu.username || bu.user_id;
+        rowBu.appendChild(
+          renderAvatarNode({
+            url: bu.avatar_url || avatarUrlForUser(bu.user_id),
+            title: buLabel,
+            userId: bu.user_id,
+            size: "sm",
+          })
+        );
         rowBu.appendChild(el("span", "settings-value", buLabel));
         rowBu.appendChild(
           iconBtn("✓", L("ui.settings.unblockShort"), {
@@ -8311,10 +9228,18 @@
   }
 
   function appendSettingsNotificationsPanel(panel) {
+    panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.sectionBrowserNotif")));
+
+    var rowPerm = el("div", "settings-row");
+    rowPerm.appendChild(el("span", null, L("ui.settings.permissionStatus")));
+    rowPerm.appendChild(el("span", "settings-value", notificationPermissionLabel()));
+    panel.appendChild(rowPerm);
+
     var rowNotif = el("div", "settings-row");
-    rowNotif.appendChild(el("span", null, L("ui.settings.notifications")));
+    rowNotif.appendChild(el("span", null, L("ui.settings.notificationPush")));
     rowNotif.appendChild(
       iconBtn(notificationsAllowed() ? "🔕" : "🔔", notificationsAllowed() ? L("ui.common.off") : L("ui.common.on"), {
+        testId: "settings-notifications-toggle",
         onClick: function () {
           if (notificationsAllowed()) {
             state.notifyPref = false;
@@ -8328,15 +9253,19 @@
     );
     panel.appendChild(rowNotif);
 
-    if (!notificationsAllowed() && typeof Notification !== "undefined" && Notification.permission !== "denied") {
-      var hint = el("p", "settings-hint text-muted text-sm mt-1", L("notifications.enableHint"));
-      panel.appendChild(hint);
+    if (!notificationsAllowed()) {
+      if (typeof Notification !== "undefined" && Notification.permission === "denied") {
+        panel.appendChild(el("p", "settings-hint settings-hint-error", L("notifications.denied")));
+      } else if (typeof Notification !== "undefined") {
+        panel.appendChild(el("p", "settings-hint", L("notifications.enableHint")));
+      }
     }
 
     var rowSound = el("div", "settings-row");
     rowSound.appendChild(el("span", null, L("ui.settings.sound")));
     rowSound.appendChild(
       iconBtn(state.soundNotify ? "🔇" : "🔊", state.soundNotify ? L("ui.common.off") : L("ui.common.on"), {
+        testId: "settings-sound-toggle",
         onClick: function () {
           state.soundNotify = !state.soundNotify;
           localStorage.setItem(SOUND_NOTIF_KEY, state.soundNotify ? "1" : "0");
@@ -8351,13 +9280,12 @@
     );
     panel.appendChild(rowSound);
 
-    appendSettingsDndSection(panel);
-
     if (notificationsAllowed()) {
       var rowTestN = el("div", "settings-row");
       rowTestN.appendChild(el("span", null, L("ui.settings.testNotification")));
       rowTestN.appendChild(
         iconBtn("🔔", L("ui.settings.showTest"), {
+          testId: "settings-notification-test",
           onClick: function () {
             testLocalNotification();
           },
@@ -8366,21 +9294,48 @@
       panel.appendChild(rowTestN);
     }
 
-    if (vapidPublicKey() && notificationsAllowed()) {
-      var rowPush = el("div", "settings-row");
-      rowPush.appendChild(el("span", null, L("ui.settings.webPush")));
-      rowPush.appendChild(
-        iconBtn("↻", L("ui.settings.pushSyncUpdate"), {
-          disabled: state.busy,
-          onClick: function () {
-            resyncWebPush();
-          },
-        })
-      );
-      panel.appendChild(rowPush);
+    panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.sectionDnd")));
+    if (state.myPresence === "dnd") {
+      appendSettingsDndDurationSelect(panel);
+    } else {
+      panel.appendChild(el("p", "settings-hint", L("ui.settings.dndOffHint")));
+      appendSettingsDndDurationSelect(panel, { label: L("ui.settings.dndQuickEnable") });
+    }
+
+    panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.sectionPush")));
+
+    if (vapidPublicKey()) {
+      if (notificationsAllowed()) {
+        var rowPush = el("div", "settings-row");
+        rowPush.appendChild(el("span", null, L("ui.settings.pushSyncUpdate")));
+        rowPush.appendChild(
+          iconBtn("↻", L("ui.settings.pushSyncUpdate"), {
+            disabled: state.busy,
+            testId: "settings-push-resync",
+            onClick: function () {
+              resyncWebPush();
+            },
+          })
+        );
+        panel.appendChild(rowPush);
+        panel.appendChild(
+          el(
+            "p",
+            "settings-hint",
+            state.webPushRegistered
+              ? L("ui.settings.webPushHintRegistered")
+              : L("ui.settings.webPushHintDefault")
+          )
+        );
+      } else {
+        panel.appendChild(el("p", "settings-hint", L("ui.settings.webPushHintDefault")));
+      }
+    } else {
+      panel.appendChild(el("p", "settings-hint", L("ui.settings.webPushNoVapid")));
     }
 
     if (state.myDevices && state.myDevices.length) {
+      panel.appendChild(el("p", "settings-hint", L("ui.settings.pushDevicesHint")));
       var rowDev = el("div", "settings-row");
       rowDev.appendChild(
         el("span", null, L("ui.settings.devicesCount", { count: state.myDevices.length }))
@@ -8412,6 +9367,7 @@
       panel.appendChild(el("p", "settings-hint settings-hint-error", state.webPushError));
     }
 
+    panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.sectionPlanner")));
     appendSettingsRemindersAndScheduledSections(panel);
   }
 
@@ -8532,7 +9488,8 @@
 
     var rowKeyIo = el("div", "settings-row");
     rowKeyIo.appendChild(el("span", null, L("ui.settings.localKey")));
-    rowKeyIo.appendChild(
+    var keyActs = el("div", "settings-inline-controls");
+    keyActs.appendChild(
       iconBtn("📤", L("ui.settings.exportKey"), {
         disabled: !state.localKeyPackageMeta,
         onClick: function () {
@@ -8540,49 +9497,39 @@
         },
       })
     );
-    rowKeyIo.appendChild(
+    keyActs.appendChild(
       iconBtn("📥", L("ui.settings.importKey"), {
         onClick: function () {
           importLocalKeyPackage();
         },
       })
     );
-    panel.appendChild(rowKeyIo);
-
     if (state.localKeyPackageMeta) {
-      var rowLoc = el("div", "settings-row");
-      rowLoc.appendChild(
-        el(
-          "span",
-          null,
-          L("ui.settings.localKeySaved", {
-            prefix:
-              state.localKeyPackageMeta.public_key_prefix || L("ui.settings.localKeySavedYes"),
-          })
-        )
-      );
-      rowLoc.appendChild(
+      keyActs.appendChild(
         iconBtn("🗑", L("ui.actions.delete"), {
           onClick: function () {
             wipeLocalKeyPackage();
           },
         })
       );
-      panel.appendChild(rowLoc);
+    }
+    rowKeyIo.appendChild(keyActs);
+    panel.appendChild(rowKeyIo);
+
+    if (state.localKeyPackageMeta) {
+      panel.appendChild(
+        el(
+          "p",
+          "settings-hint",
+          L("ui.settings.localKeySaved", {
+            prefix:
+              state.localKeyPackageMeta.public_key_prefix || L("ui.settings.localKeySavedYes"),
+          })
+        )
+      );
     }
 
-    var privateHint = el("p", "settings-hint");
-    privateHint.setAttribute("translate", "no");
-    var pushHint = L("ui.settings.privateKeyHint");
-    if (vapidPublicKey()) {
-      pushHint += state.webPushRegistered
-        ? L("ui.settings.webPushHintRegistered")
-        : L("ui.settings.webPushHintDefault");
-    } else {
-      pushHint += L("ui.settings.webPushNoVapid");
-    }
-    privateHint.textContent = pushHint;
-    panel.appendChild(privateHint);
+    panel.appendChild(el("p", "settings-hint", L("ui.settings.privateKeyHint")));
     uiPhase5Ext.mountFederationDirectory(getPhase5UiCtx(), panel);
     uiPhase5Ext.mountPasskeysSection(getPhase5UiCtx(), panel);
     uiPhase5Ext.mountSipGatewaySection(getPhase5UiCtx(), panel);
@@ -8742,19 +9689,7 @@
     var header = el("header", "app-header");
     var hl = el("div", "app-header-left");
     appendAppTitle(hl);
-    var gSearchWrap = el("div", "global-search-wrap");
-    var gSearch = document.createElement("input");
-    gSearch.type = "search";
-    gSearch.className = "global-search-input";
-    gSearch.placeholder = L("ui.shell.globalSearchPlaceholder");
-    gSearch.value = state.globalSearch;
-    gSearch.oninput = function () {
-      state.globalSearch = gSearch.value;
-      scheduleGlobalSearch();
-      render();
-    };
-    gSearchWrap.appendChild(gSearch);
-    hl.appendChild(gSearchWrap);
+    appendMessageSearchBar(hl, { testId: "message-search-header", paneFocus: "sidebar" });
     header.appendChild(hl);
     var hdrR = el("div", "app-header-right");
     var callTip = state.callPanelOpen ? L("ui.shell.hideVideo") : L("ui.shell.showVideo");
@@ -8826,12 +9761,15 @@
     hdrR.appendChild(lo);
     header.appendChild(hdrR);
     shell.appendChild(header);
-    if (state.globalSearch.trim().length >= 2) {
+    if (
+      effectiveMessageSearchScope() === "global" &&
+      state.messageSearch.trim().length >= 2
+    ) {
       var gPanel = el("div", "global-search-panel");
-      if (state.globalSearchBusy) {
+      if (state.messageSearchBusy) {
         gPanel.appendChild(el("div", "global-search-hint", L("ui.common.searching")));
-      } else if (state.globalSearchHits && state.globalSearchHits.length) {
-        state.globalSearchHits.forEach(function (hit) {
+      } else if (state.messageSearchHits && state.messageSearchHits.length) {
+        state.messageSearchHits.forEach(function (hit) {
           var gb = el("button", "global-search-hit");
           gb.type = "button";
           var chatLbl = chatTitleById(hit.chat_id);
@@ -8841,7 +9779,7 @@
           };
           gPanel.appendChild(gb);
         });
-      } else if (state.globalSearchHits) {
+      } else if (state.messageSearchHits) {
         var gEmpty = el("div", "global-search-empty");
         gEmpty.setAttribute("data-testid", "global-search-empty");
         gEmpty.setAttribute("role", "status");
@@ -8883,48 +9821,17 @@
       incWrap.appendChild(incActs);
       shell.appendChild(incWrap);
     }
-    if (state.phase5Toast) {
-      var p5Wrap = el("div", "banner-wrap banner-wrap-ok");
-      var p5Banner = el("div", "info-banner");
-      p5Banner.setAttribute("data-testid", "phase5-toast");
-      p5Banner.textContent = state.phase5Toast;
-      var p5Dismiss = el("button", "banner-dismiss", "×");
-      p5Dismiss.type = "button";
-      p5Dismiss.title = L("ui.common.close");
-      p5Dismiss.onclick = function () {
-        state.phase5Toast = null;
-        render();
-      };
-      p5Wrap.appendChild(p5Banner);
-      p5Wrap.appendChild(p5Dismiss);
-      shell.appendChild(p5Wrap);
-    }
-    if (state.statusMessage) {
-      var okWrap = el("div", "banner-wrap banner-wrap-ok");
-      var okBanner = el("div", "info-banner");
-      okBanner.textContent = state.statusMessage;
-      var okDismiss = el("button", "banner-dismiss", "×");
-      okDismiss.type = "button";
-      okDismiss.title = L("ui.common.close");
-      okDismiss.onclick = function () {
-        state.statusMessage = null;
-        render();
-      };
-      okWrap.appendChild(okBanner);
-      okWrap.appendChild(okDismiss);
-      shell.appendChild(okWrap);
-    }
-    if (state.error) {
-      var wrap = el("div", "banner-wrap");
-      wrap.appendChild(el("div", "error-banner", state.error));
-      shell.appendChild(wrap);
-    }
     var main = el(
       "div",
       "messenger" + (state.selectedId ? " has-selection" : "")
     );
+    applySidebarWidthCss();
     var side = el("aside", "sidebar");
+    side.onmousedown = function () {
+      setUiPaneFocus("sidebar");
+    };
     var sh = el("div", "sidebar-header");
+    var topRow = el("div", "sidebar-top-row");
     var search = el("input");
     search.type = "search";
     search.className = "sidebar-search";
@@ -8935,38 +9842,20 @@
       scheduleUserSearch();
       render();
     };
-    sh.appendChild(search);
-    var sideToolbar = el("div", "sidebar-toolbar");
-    var sideActs = el("div", "sidebar-actions");
-    sideActs.appendChild(
+    topRow.appendChild(search);
+    topRow.appendChild(
       iconBtn("✚", L("ui.sidebar.newGroup"), {
         primary: true,
         disabled: state.busy,
-        cls: "sidebar-action-btn",
+        cls: "sidebar-new-chat-btn",
+        testId: "sidebar-new-group",
         onClick: function () {
           newGroup();
         },
       })
     );
-    sideActs.appendChild(
-      iconBtn("🔒", L("ui.sidebar.vaultTitle"), {
-        disabled: state.busy,
-        cls: "sidebar-action-btn",
-        onClick: function () {
-          openSavedVault();
-        },
-      })
-    );
-    sideActs.appendChild(
-      iconBtn("✓", L("ui.sidebar.readAllTitle"), {
-        disabled: state.busy,
-        cls: "sidebar-action-btn",
-        onClick: function () {
-          markAllChatsRead();
-        },
-      })
-    );
-    sideToolbar.appendChild(sideActs);
+    sh.appendChild(topRow);
+    var modeBar = el("div", "sidebar-mode-bar");
     var tabs = el("div", "sidebar-tabs");
     tabs.appendChild(
       sidebarTabButton(
@@ -9016,8 +9905,8 @@
     } else if (state.sidebarMode === "integrations") {
       state.sidebarMode = "chats";
     }
-    sideToolbar.appendChild(tabs);
-    sh.appendChild(sideToolbar);
+    modeBar.appendChild(tabs);
+    sh.appendChild(modeBar);
     side.appendChild(sh);
     var sidebarContent = el("div", "sidebar-content");
     var qTrim = state.sidebarSearch.trim();
@@ -9029,15 +9918,25 @@
       } else if (state.userSearchHits && state.userSearchHits.length) {
         state.userSearchHits.forEach(function (u) {
           var row = el("div", "user-search-item-row");
+          var label = u.display_name || u.username || u.user_id;
+          var main = el("div", "user-search-item-main");
+          main.appendChild(
+            renderAvatarNode({
+              url: u.avatar_url || avatarUrlForUser(u.user_id),
+              title: label,
+              userId: u.user_id,
+              size: "sm",
+            })
+          );
           var ub = el("button", "user-search-item");
           ub.type = "button";
           ub.disabled = state.busy;
-          var label = u.display_name || u.username || u.user_id;
           ub.textContent = label + " · " + (u.username || u.user_id.slice(0, 8));
           ub.onclick = function () {
             openP2pChat(u.user_id);
           };
-          row.appendChild(ub);
+          main.appendChild(ub);
+          row.appendChild(main);
           var bBlock = el("button", "btn btn-ghost btn-sm user-search-block-btn", "⛔");
           bBlock.type = "button";
           bBlock.title = L("ui.sidebar.blockUser");
@@ -9082,10 +9981,18 @@
       } else if (state.contacts && state.contacts.length) {
         state.contacts.forEach(function (ct) {
           var row = el("div", "contact-item-row");
+          var label = ct.display_name || ct.username || ct.id;
+          row.appendChild(
+            renderAvatarNode({
+              url: ct.avatar_url || avatarUrlForUser(ct.id),
+              title: label,
+              userId: ct.id,
+              size: "md",
+            })
+          );
           var cb = el("button", "chat-item contact-item-btn");
           cb.type = "button";
           cb.disabled = state.busy;
-          var label = ct.display_name || ct.username || ct.id;
           cb.textContent = label + (ct.username ? " · @" + ct.username : "");
           cb.onclick = function () {
             openP2pChat(ct.id);
@@ -9265,43 +10172,6 @@
       }
       sidebarContent.appendChild(iList);
     } else {
-    var folderBar = el("div", "sidebar-folder-bar");
-    ["all", "work", "personal", "archive"].forEach(function (fid) {
-      var tip = sidebarFolderLabel(fid);
-      folderBar.appendChild(
-        sidebarChipButton(
-          SIDEBAR_FOLDER_ICONS[fid],
-          tip,
-          state.sidebarFolder === fid,
-          "sidebar-folder-" + fid,
-          "sidebar-folder-icon sidebar-folder-chip",
-          function () {
-            state.sidebarFolder = fid;
-            render();
-          }
-        )
-      );
-    });
-    sidebarContent.appendChild(folderBar);
-    var filterBar = el("div", "sidebar-filter-bar");
-    var filterIcons = { all: "≡", unread: "●", mentions: "@" };
-    ["all", "unread", "mentions"].forEach(function (fid) {
-      var flabel = sidebarFilterLabel(fid);
-      filterBar.appendChild(
-        sidebarChipButton(
-          filterIcons[fid] || "·",
-          flabel,
-          state.sidebarChatFilter === fid,
-          "sidebar-filter-" + fid,
-          "sidebar-filter-chip",
-          function () {
-            state.sidebarChatFilter = fid;
-            render();
-          }
-        )
-      );
-    });
-    sidebarContent.appendChild(filterBar);
     var list = el("div", "chat-list");
     list.addEventListener("scroll", function () {
       if (list.scrollTop + list.clientHeight >= list.scrollHeight - 48) {
@@ -9324,16 +10194,32 @@
       list.appendChild(el("div", "chat-list-empty", L(emptyKey)));
     }
     fc.forEach(function (c) {
-      var b = el("button", "chat-item" + (c.id === state.selectedId ? " active" : ""));
+      var unread = state.unreadByChat[c.id] || 0;
+      var isUnread = unread > 0 && c.id !== state.selectedId;
+      var mentionPending = !!(state.mentionPendingChats && state.mentionPendingChats[c.id]);
+      var b = el(
+        "button",
+        "chat-item" +
+          (c.id === state.selectedId ? " active" : "") +
+          (isUnread ? " chat-item-has-unread" : "")
+      );
       b.type = "button";
+      b.setAttribute("data-testid", "chat-item-" + c.id);
       b.onclick = function () {
         openChatById(c.id);
       };
       var row = el("div", "chat-item-row");
-      var av = el("div", "chat-avatar", chatInitial(c.title || c.id));
+      var chatTitle = displayTitleForChat(c, c.id);
+      var av = renderAvatarNode({
+        url: chatAvatarUrl(c),
+        title: chatTitle,
+        userId: c.id,
+        size: "md",
+        testId: "chat-row-avatar",
+      });
+      if (isUnread) av.classList.add("chat-avatar-unread");
       row.appendChild(av);
       var txt = el("div", "chat-item-text");
-      var unread = state.unreadByChat[c.id] || 0;
       var titleRow = el("div", "chat-item-title-row");
       if (c.type === "channel") {
         titleRow.appendChild(el("span", "chat-type-badge channel", L("ui.chat.channel")));
@@ -9341,8 +10227,8 @@
       titleRow.appendChild(
         el(
           "div",
-          "chat-item-title",
-          (c.title || c.id.slice(0, 8)) +
+          "chat-item-title" + (isUnread ? " chat-item-title-unread" : ""),
+          displayTitleForChat(c, c.id) +
             (c.muted ? " 🔕" : "") +
             (c.personal_filter_active ? " 🔍" : "")
         )
@@ -9365,7 +10251,7 @@
         txt.appendChild(el("div", "chat-preview chat-preview-typing", typingSide));
       } else if (prev && prev.text) {
         var prevCls = "chat-preview";
-        if (unread > 0 && c.id !== state.selectedId) prevCls += " chat-preview-unread";
+        if (isUnread) prevCls += " chat-preview-unread";
         txt.appendChild(el("div", prevCls, prev.text));
       } else {
         var draftPrev = composerDraftPreview(c.id);
@@ -9378,14 +10264,20 @@
         }
       }
       row.appendChild(txt);
-      if (unread > 0 && c.id !== state.selectedId) {
-        var badge = el(
-          "span",
-          "chat-unread-badge",
-          unread > 99 ? "99+" : String(unread)
-        );
-        row.appendChild(badge);
+      var badges = el("div", "chat-item-badges");
+      if (mentionPending && c.id !== state.selectedId) {
+        badges.appendChild(el("span", "chat-mention-badge", "@"));
       }
+      if (isUnread) {
+        badges.appendChild(
+          el(
+            "span",
+            "chat-unread-badge",
+            unread > 99 ? "99+" : String(unread)
+          )
+        );
+      }
+      if (badges.childNodes.length) row.appendChild(badges);
       b.appendChild(row);
       list.appendChild(b);
     });
@@ -9393,8 +10285,19 @@
     sidebarContent.appendChild(list);
     }
     side.appendChild(sidebarContent);
+    if (state.sidebarMode === "chats") {
+      side.appendChild(mountSidebarFiltersPanel());
+    }
     main.appendChild(side);
+    var sideResizer = el("div", "sidebar-resizer");
+    sideResizer.setAttribute("data-testid", "sidebar-resizer");
+    sideResizer.title = L("ui.sidebar.resizeTitle");
+    bindSidebarResizer(sideResizer);
+    main.appendChild(sideResizer);
     var thread = el("section", "thread");
+    thread.onmousedown = function () {
+      if (state.selectedId) setUiPaneFocus("thread");
+    };
     if (!state.selectedId) {
       thread.appendChild(el("div", "empty-thread", L("ui.thread.empty")));
     } else {
@@ -9414,10 +10317,31 @@
         );
       }
       var thMain = el("div", "thread-header-main");
-      thMain.appendChild(el("div", "thread-title", (sel && sel.title) || state.selectedId));
-      if ((state.federationDirectory || []).length) {
+      var titleRow = el("div", "thread-header-title-row");
+      if (sel) {
+        titleRow.appendChild(
+          renderAvatarNode({
+            url: chatAvatarUrl(sel),
+            title: displayTitleForChat(sel, state.selectedId),
+            userId: state.selectedId,
+            size: "md",
+            testId: "thread-header-avatar",
+          })
+        );
+      }
+      titleRow.appendChild(
+        el("div", "thread-title", displayTitleForChat(sel, state.selectedId))
+      );
+      thMain.appendChild(titleRow);
+      if (sel && sel.type === "p2p" && !(sel.title && String(sel.title).trim())) {
+        thMain.appendChild(el("div", "thread-subtitle", L("ui.thread.directChat")));
+      } else if (sel && sel.type === "group" && sel.member_count) {
         thMain.appendChild(
-          el("span", "thread-federation-badge", L("ui.federation.badgeThread"))
+          el(
+            "div",
+            "thread-subtitle",
+            L("ui.sidebar.membersMeta", { type: sel.type, count: sel.member_count })
+          )
         );
       }
       if (state.discussionThreadRootId) {
@@ -9454,61 +10378,86 @@
         thMain.appendChild(el("div", "thread-typing", typingHdr));
       }
       th.appendChild(thMain);
+      var thSearchHost = el("div", "thread-header-search-host");
+      appendMessageSearchBar(thSearchHost, {
+        mobile: true,
+        testId: "message-search-thread",
+        paneFocus: "thread",
+      });
+      th.appendChild(thSearchHost);
       var thActs = el("div", "thread-header-actions");
       if (sel && sel.type !== "saved") {
-        var bMute = iconBtn(sel.muted ? "🔊" : "🔇", sel.muted ? L("ui.thread.unmute") : L("ui.thread.mute"), {
-          disabled: state.busy,
-          onClick: function () {
-            toggleChatMute();
-          },
+        var moreWrap = el("div", "thread-more-wrap");
+        var moreOpen = false;
+        var morePop = el("div", "thread-more-pop");
+        morePop.style.display = "none";
+        morePop.setAttribute("data-testid", "thread-more-pop");
+        var moreIcons = el("div", "thread-more-icons composer-more-icons");
+        function closeThreadMoreMenu() {
+          moreOpen = false;
+          morePop.style.display = "none";
+        }
+        function wrapThreadMoreAction(handler) {
+          return function () {
+            closeThreadMoreMenu();
+            handler();
+          };
+        }
+        function threadMoreBtn(featureKey, buildBtn) {
+          if (featureKey && !isPlatformFeatureVisible(featureKey)) return;
+          moreIcons.appendChild(buildBtn());
+        }
+        threadMoreBtn("chat.mute", function () {
+          return iconBtn(sel.muted ? "🔊" : "🔇", sel.muted ? L("ui.thread.unmute") : L("ui.thread.mute"), {
+            disabled: state.busy,
+            onClick: wrapThreadMoreAction(function () {
+              toggleChatMute();
+            }),
+          });
         });
-        thActs.appendChild(bMute);
-        var bFilter = iconBtn(
-          sel.personal_filter_active ? "🔎" : "🔍",
-          L("ui.thread.filterTitle"),
-          {
+        threadMoreBtn("chat.read", function () {
+          return iconBtn(sel.personal_filter_active ? "🔎" : "🔍", L("ui.thread.filterTitle"), {
             disabled: state.busy,
-            onClick: function () {
+            onClick: wrapThreadMoreAction(function () {
               togglePersonalFilter();
-            },
-          }
-        );
-        thActs.appendChild(bFilter);
-        thActs.appendChild(
-          iconBtn(sel.archived ? "📂" : "🗄", L("ui.sidebar.archiveToggle"), {
+            }),
+          });
+        });
+        threadMoreBtn("chat.archive", function () {
+          return iconBtn(sel.archived ? "📂" : "🗄", L("ui.sidebar.archiveToggle"), {
             disabled: state.busy,
-            onClick: function () {
+            onClick: wrapThreadMoreAction(function () {
               toggleChatArchive();
-            },
-          })
-        );
-        thActs.appendChild(
-          iconBtn("🏷", L("ui.sidebar.folderWork"), {
+            }),
+          });
+        });
+        threadMoreBtn("chat.folders", function () {
+          return iconBtn("🏷", L("ui.sidebar.folderWork"), {
             disabled: state.busy,
-            onClick: function () {
+            onClick: wrapThreadMoreAction(function () {
               setChatFolder(sel.folder_tag === "work" ? null : "work");
-            },
-          })
-        );
-        thActs.appendChild(
-          iconBtn("👤", L("ui.sidebar.folderPersonal"), {
+            }),
+          });
+        });
+        threadMoreBtn("chat.folders", function () {
+          return iconBtn("👤", L("ui.sidebar.folderPersonal"), {
             testId: "chat-folder-personal",
             disabled: state.busy,
-            onClick: function () {
+            onClick: wrapThreadMoreAction(function () {
               setChatFolder(sel.folder_tag === "personal" ? null : "personal");
-            },
-          })
-        );
+            }),
+          });
+        });
         if (sel.type === "group") {
-          thActs.appendChild(
-            iconBtn("👥", L("ui.common.members"), {
+          threadMoreBtn("chat.members.list", function () {
+            return iconBtn("👥", L("ui.common.members"), {
               testId: "chat-members-button",
               disabled: state.busy,
-              onClick: function () {
+              onClick: wrapThreadMoreAction(function () {
                 openMembersModal();
-              },
-            })
-          );
+              }),
+            });
+          });
         }
         var exportThisChat =
           state.exportBusy && state.exportJobChatId === state.selectedId;
@@ -9517,34 +10466,67 @@
           : state.exportBusy
             ? L("common.exportBusy")
             : L("ui.thread.export");
-        var bExp = iconBtn(exportThisChat ? "⏹" : "📤", exportTip, {
-          testId: "chat-export-button",
-          disabled: state.busy || (state.exportBusy && !exportThisChat),
-          onClick: function () {
-            if (exportThisChat) {
-              cancelChatExport();
-            } else {
-              startChatExport();
-            }
-          },
+        threadMoreBtn("export.job.create", function () {
+          return iconBtn(exportThisChat ? "⏹" : "📤", exportTip, {
+            testId: "chat-export-button",
+            disabled: state.busy || (state.exportBusy && !exportThisChat),
+            onClick: wrapThreadMoreAction(function () {
+              if (exportThisChat) {
+                cancelChatExport();
+              } else {
+                startChatExport();
+              }
+            }),
+          });
         });
-        thActs.appendChild(bExp);
-        thActs.appendChild(
-          iconBtn("↻", L("ui.thread.refresh"), {
+        threadMoreBtn("chat.read", function () {
+          return iconBtn("↻", L("ui.thread.refresh"), {
             disabled: state.busy,
-            onClick: function () {
+            onClick: wrapThreadMoreAction(function () {
               refreshCurrentThread();
-            },
-          })
-        );
-        thActs.appendChild(
-          iconBtn("🔗", L("ui.thread.copyChatLink"), {
+            }),
+          });
+        });
+        threadMoreBtn("chat.read", function () {
+          return iconBtn("🔗", L("ui.thread.copyChatLink"), {
             disabled: state.busy,
-            onClick: function () {
+            onClick: wrapThreadMoreAction(function () {
               copyChatDeepLink();
-            },
-          })
-        );
+            }),
+          });
+        });
+        if (sel.type === "group") {
+          threadMoreBtn("productivity.polls.list", function () {
+            return iconBtn("📊", L("ui.polls.title"), {
+              testId: "poll-create-header",
+              disabled: state.busy,
+              onClick: wrapThreadMoreAction(function () {
+                toggleThreadExtrasTab("polls");
+              }),
+            });
+          });
+        }
+        var phase5Tools = uiPhase5Ext.mountThreadTools(getPhase5UiCtx());
+        if (phase5Tools) {
+          while (phase5Tools.firstChild) {
+            moreIcons.appendChild(phase5Tools.firstChild);
+          }
+        }
+        if (moreIcons.childNodes.length) {
+          morePop.appendChild(moreIcons);
+          var bThreadMore = el("button", "btn btn-ghost btn-icon thread-more-toggle");
+          bThreadMore.type = "button";
+          bThreadMore.title = L("ui.thread.chatMore");
+          bThreadMore.setAttribute("data-testid", "thread-more-toggle");
+          bThreadMore.textContent = "⋯";
+          bThreadMore.onclick = function () {
+            moreOpen = !moreOpen;
+            morePop.style.display = moreOpen ? "flex" : "none";
+          };
+          moreWrap.appendChild(bThreadMore);
+          moreWrap.appendChild(morePop);
+          thActs.appendChild(moreWrap);
+        }
       }
       th.appendChild(thActs);
       thread.appendChild(th);
@@ -9572,9 +10554,15 @@
               el("span", "conference-live-banner-names", namesLine)
             );
           }
-        } else if (threadLiveConf.conference_id) {
+        } else if (
+          threadLiveConf.conference_id &&
+          state.conferenceParticipantsConfId !== threadLiveConf.conference_id
+        ) {
+          var confChatId = state.selectedId;
           loadConferenceParticipants(threadLiveConf.conference_id)
-            .then(render)
+            .then(function () {
+              if (state.selectedId === confChatId) scheduleRender();
+            })
             .catch(function () {});
         }
         confBanner.appendChild(
@@ -9588,46 +10576,50 @@
         );
         threadBody.appendChild(confBanner);
       }
-      var phase5Tools = uiPhase5Ext.mountThreadTools(getPhase5UiCtx());
-      if (phase5Tools) {
-        threadBody.appendChild(phase5Tools);
-      }
-      var tSearchRow = el("div", "thread-search-row");
-      var tSearch = el("input");
-      tSearch.type = "search";
-      tSearch.className = "thread-search-input";
-      tSearch.placeholder = L("ui.thread.searchPlaceholder");
-      tSearch.value = state.threadSearch;
-      tSearch.oninput = function () {
-        state.threadSearch = tSearch.value;
-        scheduleThreadSearch();
-        render();
-      };
-      tSearchRow.appendChild(tSearch);
-      threadBody.appendChild(tSearchRow);
-      if (state.threadSearchBusy) {
-        threadBody.appendChild(el("div", "thread-search-hint", L("ui.common.searching")));
-      } else if (state.threadSearchHits && state.threadSearch.trim().length >= 2) {
-        var hitsBox = el("div", "thread-search-hits");
-        if (!state.threadSearchHits.length) {
-          var tEmpty = el("div", "thread-search-empty");
-          tEmpty.setAttribute("data-testid", "thread-search-empty");
-          tEmpty.setAttribute("role", "status");
-          tEmpty.appendChild(el("div", "thread-search-empty-title", L("ui.thread.searchEmptyTitle")));
-          tEmpty.appendChild(el("div", "thread-search-hint", L("ui.thread.searchEmptyHint")));
-          hitsBox.appendChild(tEmpty);
-        } else {
-          state.threadSearchHits.forEach(function (hit) {
-            var hb = el("button", "thread-search-hit");
-            hb.type = "button";
-            hb.textContent = formatPreviewText(hit.type, hit.content);
-            hb.onclick = function () {
-              openSearchHit(hit);
-            };
-            hitsBox.appendChild(hb);
-          });
+      if (
+        effectiveMessageSearchScope() === "chat" &&
+        state.messageSearch.trim().length >= 2
+      ) {
+        if (state.messageSearchBusy) {
+          threadBody.appendChild(el("div", "thread-search-hint", L("ui.common.searching")));
+        } else if (state.messageSearchHits) {
+          var hitsBox = el("div", "thread-search-hits");
+          if (!state.messageSearchHits.length) {
+            var tEmpty = el("div", "thread-search-empty");
+            tEmpty.setAttribute("data-testid", "thread-search-empty");
+            tEmpty.setAttribute("role", "status");
+            tEmpty.appendChild(el("div", "thread-search-empty-title", L("ui.thread.searchEmptyTitle")));
+            tEmpty.appendChild(el("div", "thread-search-hint", L("ui.thread.searchEmptyHint")));
+            hitsBox.appendChild(tEmpty);
+          } else {
+            state.messageSearchHits.forEach(function (hit) {
+              var hb = el("button", "thread-search-hit");
+              hb.type = "button";
+              if (hit.sender_id) {
+                var hitRow = el("div", "thread-search-hit-row");
+                hitRow.appendChild(
+                  renderAvatarNode({
+                    url: hit.sender_avatar_url || avatarUrlForUser(hit.sender_id),
+                    title: avatarTitleForUser(hit.sender_id),
+                    userId: hit.sender_id,
+                    size: "sm",
+                  })
+                );
+                var hitTxt = el("span", "thread-search-hit-text");
+                hitTxt.textContent = formatPreviewText(hit.type, hit.content);
+                hitRow.appendChild(hitTxt);
+                hb.appendChild(hitRow);
+              } else {
+                hb.textContent = formatPreviewText(hit.type, hit.content);
+              }
+              hb.onclick = function () {
+                openSearchHit(hit);
+              };
+              hitsBox.appendChild(hb);
+            });
+          }
+          threadBody.appendChild(hitsBox);
         }
-        threadBody.appendChild(hitsBox);
       }
       if (state.pinnedMessages.length) {
         var pinsBar = el("div", "thread-pins");
@@ -9645,17 +10637,11 @@
         });
         threadBody.appendChild(pinsBar);
       }
-      var pollsSection = uiPolls.mountPollsSection(getPollsUiCtx());
-      if (pollsSection) {
-        threadBody.appendChild(pollsSection);
-      }
-      var kanbanSection = uiPhase5Ext.mountKanbanSection(getPhase5UiCtx());
-      if (kanbanSection) {
-        threadBody.appendChild(kanbanSection);
-      }
-      var whiteboardSection = uiPhase5Ext.mountWhiteboardSection(getPhase5UiCtx());
-      if (whiteboardSection) {
-        threadBody.appendChild(whiteboardSection);
+      if (uiThreadExtras) {
+        var extrasSection = uiThreadExtras.mountThreadExtras(getThreadExtrasUiCtx());
+        if (extrasSection) {
+          threadBody.appendChild(extrasSection);
+        }
       }
       var msgs = el("div", "messages");
       if (state.threadLoading) {
@@ -9710,6 +10696,10 @@
         editMessagePrompt: editMessagePrompt,
         deleteMessageConfirm: deleteMessageConfirm,
         quickReactions: QUICK_REACTIONS,
+        renderAvatar: renderAvatarNode,
+        avatarUrlForUser: avatarUrlForUser,
+        avatarTitleForUser: avatarTitleForUser,
+        openProfileCard: openProfileCard,
       };
       function buildMessageArticle(m) {
         return uiMessageArticle.buildMessageArticle(m, messageArticleCtx);
@@ -9751,6 +10741,7 @@
           iconBtn: iconBtn,
           L: L,
           state: state,
+          isGroupChat: !!(sel && sel.type === "group"),
           replyTo: state.replyTo,
           clearReplyTo: clearReplyTo,
           render: render,
@@ -9758,11 +10749,18 @@
           sendLocationMessage: sendLocationMessage,
           sendFileMessage: sendFileMessage,
           sendVoiceMessage: sendVoiceMessage,
-          openPollCreate: openPollCreate,
-          openScheduleSend: openScheduleSend,
-          openContactShare: openContactShare,
+          openPollCreate:
+            sel && sel.type === "group" && isPlatformFeatureVisible("productivity.polls.create")
+              ? openPollCreate
+              : null,
+          openScheduleSend: isPlatformFeatureVisible("productivity.scheduled_messages.create")
+            ? openScheduleSend
+            : null,
+          openContactShare: isPlatformFeatureVisible("contacts.list") ? openContactShare : null,
+          isPlatformFeatureVisible: isPlatformFeatureVisible,
           sendVideoNoteMessage: sendVideoNoteMessage,
           loadComposerDraftForChat: loadComposerDraftForChat,
+          saveComposerDraftForChat: saveComposerDraftForChat,
           scheduleSaveComposerDraft: scheduleSaveComposerDraft,
           scheduleTypingNotify: scheduleTypingNotify,
           reactionPickerEmojis: REACTION_PICKER_EMOJIS,
@@ -9805,10 +10803,23 @@
           var fb = el("button", "forward-chat-item");
           fb.type = "button";
           fb.disabled = state.busy;
-          fb.textContent =
+          var fRow = el("div", "forward-chat-item-row");
+          fRow.appendChild(
+            renderAvatarNode({
+              url: chatAvatarUrl(c),
+              title: displayTitleForChat(c, c.id),
+              userId: c.id,
+              size: "sm",
+              alt: L("ui.avatar.altChat", { name: displayTitleForChat(c, c.id) }),
+            })
+          );
+          var fTxt = el("span", "forward-chat-item-label");
+          fTxt.textContent =
             (c.title || c.type) +
             " · " +
             L("ui.sidebar.membersMeta", { type: c.type, count: c.member_count });
+          fRow.appendChild(fTxt);
+          fb.appendChild(fRow);
           fb.onclick = function () {
             forwardMessageTo(c.id);
           };
@@ -9822,6 +10833,21 @@
       };
       shell.appendChild(fOv);
     }
+    var profileOv = uiProfileCard.mountProfileCardOverlay({
+      state: state,
+      myId: jwtSub(state.tokens && state.tokens.access_token),
+      el: el,
+      L: L,
+      iconBtn: iconBtn,
+      modalCardHead: modalCardHead,
+      renderAvatar: renderAvatarNode,
+      avatarUrlForUser: avatarUrlForUser,
+      avatarTitleForUser: avatarTitleForUser,
+      openP2pChat: openP2pChat,
+      blockUser: blockUser,
+      closeProfileCard: closeProfileCard,
+    });
+    if (profileOv) shell.appendChild(profileOv);
     var pollOv = uiPolls.mountPollCreateOverlay(getPollsUiCtx());
     if (pollOv) shell.appendChild(pollOv);
     var schedOv = uiPolls.mountScheduleOverlay(getPollsUiCtx());
@@ -9871,6 +10897,29 @@
               },
             })
           );
+          var grpAvFile = document.createElement("input");
+          grpAvFile.type = "file";
+          grpAvFile.accept = "image/*";
+          grpAvFile.hidden = true;
+          grpAvFile.onchange = function () {
+            var f = grpAvFile.files && grpAvFile.files[0];
+            grpAvFile.value = "";
+            if (f) {
+              openAvatarCropThen(f, function (blob) {
+                uploadGroupAvatar(blob);
+              });
+            }
+          };
+          mTools.appendChild(grpAvFile);
+          mTools.appendChild(
+            iconBtn("🖼", L("ui.profile.avatarChange"), {
+              disabled: state.busy,
+              testId: "group-avatar-change",
+              onClick: function () {
+                grpAvFile.click();
+              },
+            })
+          );
           mTools.appendChild(
             iconBtn("＋", L("ui.members.addMember"), {
               disabled: state.busy,
@@ -9888,7 +10937,17 @@
             " · " +
             memberRoleLabel(m.role) +
             (m.banned ? L("ui.members.banned") : "");
-          mRow.appendChild(el("span", "member-row-label", label));
+          var labelWrap = el("div", "member-row-label-wrap");
+          labelWrap.appendChild(
+            renderAvatarNode({
+              url: m.avatar_url || avatarUrlForUser(m.user_id),
+              title: m.display_name || m.username || m.user_id,
+              userId: m.user_id,
+              size: "sm",
+            })
+          );
+          labelWrap.appendChild(el("span", "member-row-label", label));
+          mRow.appendChild(labelWrap);
           if (myRole === "owner" && m.user_id !== meId && m.role !== "owner" && !m.banned) {
             var roleSel = document.createElement("select");
             roleSel.className = "member-role-select";
@@ -10072,7 +11131,7 @@
       });
       rrCard.appendChild(modalCardHead(L("readReceipts.title"), rrClose));
       var rrBody = el("div", "settings-body members-body");
-      var rr = state.readReceiptsByMessage[state.readReceiptPopupMessageId] || {};
+      var rr = (state.readReceiptsByMessage && state.readReceiptsByMessage[state.readReceiptPopupMessageId]) || {};
       var rrIds = Object.keys(rr).sort(function (a, b) {
         return (rr[b] || 0) - (rr[a] || 0);
       });
@@ -10097,6 +11156,7 @@
       };
       shell.appendChild(rrOv);
     }
+    mountAppNotice(shell);
     root.appendChild(shell);
   }
 
@@ -10289,6 +11349,8 @@
       });
     }
     applyStyleSet(loadStyleSet());
+    state.sidebarWidth = loadSidebarWidth();
+    applySidebarWidthCss();
     syncNotifyPref();
     startTtlRenderTicker();
     state.networkOnline =

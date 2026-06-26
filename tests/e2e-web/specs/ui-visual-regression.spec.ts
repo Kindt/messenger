@@ -69,6 +69,10 @@ test.describe("ui visual regression", () => {
       await page.getByTestId(`settings-tab-${tabId}`).click();
       const panel = page.locator(`#settings-panel-${tabId}`);
       await expect(panel).toBeVisible({ timeout: 10_000 });
+      if (tabId === "profile") {
+        await page.getByTestId("settings-presence").selectOption("online");
+        await expect(page.getByTestId("settings-dnd-profile-hint")).toHaveCount(0);
+      }
       await expect(panel).toHaveScreenshot(`settings-tab-${tabId}.png`, {
         animations: "disabled",
         maxDiffPixelRatio: 0.03,

@@ -147,6 +147,7 @@ class AdminExportEnqueueTest {
         return new AdminResource(cfg, auditPort,
             com.avandocmsg.messenger.core.bootstrap.CoreModule.organizationApplicationService(
                 null, UuidGenerator.standard()),
+            null,
             new JdbcRetentionPolicyAdapter((javax.sql.DataSource) null),
             chats,
             new JdbcChatRetentionPolicyAdapter((javax.sql.DataSource) null),

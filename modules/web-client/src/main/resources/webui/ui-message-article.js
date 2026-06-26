@@ -24,14 +24,41 @@
     if (m._failed) {
       art.setAttribute("data-testid", "message-send-failed");
     }
+    var senderUrl =
+      m.sender_avatar_url ||
+      (ctx.avatarUrlForUser ? ctx.avatarUrlForUser(m.sender_id) : null);
+    if (ctx.renderAvatar && m.sender_id && (!ctx.myId || m.sender_id !== ctx.myId)) {
+      var senderTitle =
+        (ctx.avatarTitleForUser && ctx.avatarTitleForUser(m.sender_id)) || m.sender_id.slice(0, 8);
+      var senderAv = ctx.renderAvatar({
+        url: senderUrl,
+        title: senderTitle,
+        userId: m.sender_id,
+        size: "sm",
+        alt: ctx.L("ui.avatar.altUser", { name: senderTitle }),
+      });
+      senderAv.classList.add("msg-sender-avatar");
+      art.appendChild(senderAv);
+    }
     var meta = ctx.el("div", "msg-meta");
-    meta.appendChild(
-      document.createTextNode(
-        ctx.myId && m.sender_id === ctx.myId
-          ? ctx.L("ui.thread.you")
-          : m.sender_id.slice(0, 8)
-      )
-    );
+    var senderLabel =
+      ctx.myId && m.sender_id === ctx.myId
+        ? ctx.L("ui.thread.you")
+        : m.sender_id.slice(0, 8);
+    if (ctx.openProfileCard && m.sender_id && (!ctx.myId || m.sender_id !== ctx.myId)) {
+      var senderBtn = ctx.el("button", "msg-sender-name");
+      senderBtn.type = "button";
+      senderBtn.textContent = senderLabel;
+      senderBtn.title = ctx.L("ui.profileCard.title");
+      senderBtn.setAttribute("data-testid", "message-sender-name");
+      senderBtn.onclick = function (ev) {
+        ev.stopPropagation();
+        ctx.openProfileCard(m.sender_id);
+      };
+      meta.appendChild(senderBtn);
+    } else {
+      meta.appendChild(document.createTextNode(senderLabel));
+    }
     var ts = ctx.el("span");
     ts.className = "msg-ts";
     ts.textContent = ctx.formatInstantLabel
@@ -71,7 +98,8 @@
       meta.appendChild(ed);
     }
     if (ctx.myId && m.sender_id === ctx.myId) {
-      var rr = ctx.state.readReceiptsByMessage[m.id];
+      var rrMap = ctx.state.readReceiptsByMessage || {};
+      var rr = rrMap[m.id];
       var rrCount = rr ? Object.keys(rr).length : 0;
       if (rrCount > 0) {
         var rrEl = ctx.el("span", "msg-read-receipt-double-check", " ✓✓");
@@ -79,7 +107,7 @@
         rrEl.style.cursor = "pointer";
         rrEl.onclick = function (ev) {
           ev.stopPropagation();
-          ctx.showReadReceiptPopup(m.id);
+          if (m && m.id) ctx.showReadReceiptPopup(m.id);
         };
         meta.appendChild(rrEl);
       }

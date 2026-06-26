@@ -32,7 +32,19 @@ final class FileRetentionJanitor {
           )
           AND NOT EXISTS (
             SELECT 1 FROM chats c
-            WHERE c.avatar_file_id IS NOT NULL AND c.avatar_file_id = fm.id::text
+            WHERE c.avatar_file_id = fm.id
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM users u
+            WHERE u.avatar_file_id = fm.id
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM plugin_instances pi
+            WHERE pi.avatar_file_id = fm.id
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM organizations o
+            WHERE o.logo_file_id = fm.id
           )
           AND NOT EXISTS (
             SELECT 1 FROM file_public_links fpl WHERE fpl.file_id = fm.id

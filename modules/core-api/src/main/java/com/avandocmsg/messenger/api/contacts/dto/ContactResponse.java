@@ -9,5 +9,10 @@ public record ContactResponse(
     String username,
     @JsonProperty("display_name") String displayName,
     String phone,
-    @JsonProperty("added_at") Instant addedAt
-) {}
+    @JsonProperty("added_at") Instant addedAt,
+    @JsonProperty("avatar_url") String avatarUrl
+) {
+    public ContactResponse(String id, String username, String displayName, String phone, Instant addedAt) {
+        this(id, username, displayName, phone, addedAt, null);
+    }
+}

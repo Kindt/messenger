@@ -6,6 +6,7 @@ import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PushNotificationPreviewTest {
@@ -36,5 +37,6 @@ class PushNotificationPreviewTest {
         assertEquals("Team chat", preview.title());
         assertEquals("Hi", preview.body());
         assertEquals("/?chat=aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee", preview.url());
+        assertNull(preview.iconUrl());
     }
 }

@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UserAvatarEvent",
+  "type": "object",
+  "required": ["type", "user_id", "ts"],
+  "properties": {
+    "type": { "const": "avatar" },
+    "user_id": { "type": "string", "format": "uuid" },
+    "avatar_file_id": { "type": ["string", "null"] },
+    "avatar_url": { "type": ["string", "null"] },
+    "ts": { "type": "integer" }
+  }
+}

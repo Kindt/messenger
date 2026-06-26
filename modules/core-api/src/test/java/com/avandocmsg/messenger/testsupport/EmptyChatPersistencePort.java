@@ -67,6 +67,11 @@ public class EmptyChatPersistencePort implements ChatPersistencePort {
     }
 
     @Override
+    public boolean updateAvatar(UUID chatId, UUID avatarFileId) {
+        return false;
+    }
+
+    @Override
     public boolean setMuted(UUID chatId, UUID userId, boolean muted) {
         return false;
     }

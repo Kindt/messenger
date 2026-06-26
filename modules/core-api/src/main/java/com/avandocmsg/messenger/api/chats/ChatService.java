@@ -78,6 +78,11 @@ public class ChatService {
         this.federationMemberGuard = federationMemberGuard;
     }
 
+    public boolean canManageChatSettings(UUID chatId, UUID userId) {
+        var role = chatPersistencePort.getMemberRole(chatId, userId);
+        return role != null && (role.equals("owner") || role.equals("admin"));
+    }
+
     public ChatResponse createGroup(String title, UUID ownerId, List<String> memberIds) {
         if (title == null || title.isBlank()) {
             return null;
@@ -178,8 +183,7 @@ public class ChatService {
     }
 
     public boolean updateTitle(UUID chatId, UUID userId, String title) {
-        var role = chatPersistencePort.getMemberRole(chatId, userId);
-        if (role == null || (!role.equals("owner") && !role.equals("admin"))) {
+        if (!canManageChatSettings(chatId, userId)) {
             log.warn("User {} not authorized to update chat {}", userId, chatId);
             return false;
         }

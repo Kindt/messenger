@@ -264,17 +264,11 @@ public class CoreApiComposition {
         var messageSearchService = new MessageSearchService(appConfig, messageQueryPort, chatPersistencePort,
             solrBinding.client(), solrBinding.cloudMode());
 
-        var authService = new AuthService(
-            appConfig,
-            CoreModule.userLookupPort(dataSource),
-            CoreModule.userRepositoryPort(dataSource),
-            CoreModule.savedChatPort(dataSource, this.uuidGenerator));
         var authRateLimiter = redisConfig != null
             ? AuthRateLimiter.redis(redisConfig.sync(), appConfig)
             : AuthRateLimiter.noop();
         this.readCachePort = CoreModule.readCachePort(
             redisConfig != null ? redisConfig.sync() : null, appConfig);
-        var contactService = new ContactService(contactRepositoryPort, userLookupPort, blockRepositoryPort);
         var natsOutbound = new NatsConnectionOutbound(natsConnection, jetStreamOptional());
         var adminManifest = AdminUiManifest.load(CoreApiComposition.class.getClassLoader());
         var adminStatsJdbc = new com.avandocmsg.messenger.core.adapter.persistence.JdbcAdminStatsJdbcRepository(dataSource);
@@ -304,9 +298,21 @@ public class CoreApiComposition {
         var chatApplicationService = CoreModule.chatApplicationService(dataSource);
         var userApplicationService = CoreModule.userApplicationService(
             dataSource, this.uuidGenerator, readCachePort, appConfig, natsOutbound);
+        var avatarAccessTokenService = CoreModule.avatarAccessTokenService(appConfig);
+        var avatarApplicationService = CoreModule.avatarApplicationService(
+            dataSource, appConfig, readCachePort, natsOutbound, chatPersistencePort);
+        var contactService = new ContactService(contactRepositoryPort, userLookupPort, blockRepositoryPort,
+            avatarApplicationService);
         var objectStoragePort = CoreModule.objectStoragePort(appConfig, minioClient, fileProxy);
         var fileApplicationService = CoreModule.fileApplicationService(
             dataSource, messageQueryPort, objectStoragePort, this.uuidGenerator, appConfig);
+        var authService = new AuthService(
+            appConfig,
+            CoreModule.userLookupPort(dataSource),
+            CoreModule.userRepositoryPort(dataSource),
+            CoreModule.savedChatPort(dataSource, this.uuidGenerator),
+            fileApplicationService,
+            avatarApplicationService);
         var organizationApplicationService = CoreModule.organizationApplicationService(dataSource, this.uuidGenerator);
         var publicLinkPort = CoreModule.publicLinkPort(dataSource, this.uuidGenerator);
         var purgeStatusService = new PurgeStatusService(adminStatsJdbc, auditPort);
@@ -370,7 +376,8 @@ public class CoreApiComposition {
 
         var botRepository = new BotRepository(dataSource);
         var botService = new BotService(botRepository, chatPersistencePort, messageApplicationService,
-            chatBanService, auditPort, this.uuidGenerator);
+            chatBanService, auditPort, this.uuidGenerator,
+            CoreModule.userRepositoryPort(dataSource), avatarApplicationService);
 
         var pluginOutboundService = new com.avandocmsg.messenger.api.plugins.PluginOutboundService(
             pluginRepository, messageApplicationService, userMessagesEarly);
@@ -410,6 +417,7 @@ public class CoreApiComposition {
                 userLookupPort, contactRepositoryPort, contactService,
                 chatService, readReceiptService, chatApplicationService,
                 messageApplicationService, userApplicationService, fileApplicationService,
+                avatarApplicationService, avatarAccessTokenService,
                 organizationApplicationService,
                 blockRepositoryPort,
                 messagePersistence, messagePersistence, natsConnection, natsOutbound,

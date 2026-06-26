@@ -36,6 +36,8 @@ One-shot on host (QEMU forwards `:18080` / `:19088`):
 
 Optional k6: omit `-SkipK6` when `k6` is on PATH.
 
+Push-worker `/metrics` on guest `:9194` after image drift: `.\scripts\perf\run-qemu-rebuild-push-worker.ps1 [-NoCache]`.
+
 ## Quick capture (QEMU lab)
 
 ```powershell

@@ -11,7 +11,7 @@
   <div class="brand">
     <div class="brand-mark" aria-hidden="true">K</div>
     <div class="brand-text">
-      <h1 class="brand-title">Админ-консоль</h1>
+      <h1 class="brand-title" data-i18n="admin.brandTitle">Админ-консоль</h1>
       <span id="apiVersionLabel" class="brand-version muted" hidden></span>
     </div>
   </div>
@@ -22,25 +22,25 @@
     </label>
     <div class="auth-fields" id="authFields">
       <label class="field">
-        <span class="field-label">Логин</span>
+        <span class="field-label" data-i18n="admin.loginLabel">Логин</span>
         <input type="text" id="username" autocomplete="username" data-testid="admin-login-user"/>
       </label>
       <label class="field">
-        <span class="field-label">Пароль</span>
+        <span class="field-label" data-i18n="admin.passwordLabel">Пароль</span>
         <input type="password" id="password" autocomplete="current-password" data-testid="admin-login-pass"/>
       </label>
-      <button type="button" id="btnLogin" class="btn btn-primary" data-testid="admin-login-btn">Войти</button>
+      <button type="button" id="btnLogin" class="btn btn-primary" data-testid="admin-login-btn" data-i18n="admin.signIn">Войти</button>
     </div>
     <div class="auth-session" id="authSession" hidden>
       <span id="authStatus" class="auth-status muted"></span>
-      <button type="button" id="btnLogout" class="btn btn-ghost" data-testid="admin-logout-btn">Выйти</button>
+      <button type="button" id="btnLogout" class="btn btn-ghost" data-testid="admin-logout-btn" data-i18n="admin.signOut">Выйти</button>
     </div>
   </div>
 </header>
 
 <main class="app-shell" id="appShell">
   <aside class="nav" id="sidebar" aria-label="Разделы администрирования">
-    <p class="nav-hint muted" id="navHint">Разделы подгружаются из подключённых модулей.</p>
+    <p class="nav-hint muted" id="navHint" data-i18n="admin.navHint">Разделы подгружаются из подключённых модулей.</p>
     <div id="sectionList" class="nav-groups"></div>
   </aside>
 
@@ -54,10 +54,10 @@
 
     <div class="org-context" id="orgContextBar" hidden data-testid="admin-org-bar">
       <label class="field field-inline">
-        <span class="field-label">Организация</span>
+        <span class="field-label" data-i18n="admin.orgLabel">Организация</span>
         <input type="text" id="globalOrgId" placeholder="UUID организации" spellcheck="false"/>
       </label>
-      <button type="button" id="btnApplyOrg" class="btn btn-secondary">Применить</button>
+      <button type="button" id="btnApplyOrg" class="btn btn-secondary" data-i18n="admin.apply">Применить</button>
       <span id="orgContextMsg" class="muted small"></span>
     </div>
 
@@ -65,7 +65,7 @@
       <div class="admin-panel-content">
       <div class="welcome-card" id="panelHint">
         <div class="welcome-icon" aria-hidden="true">⚙</div>
-        <h2>Добро пожаловать</h2>
+        <h2 data-i18n="admin.welcomeTitle">Добро пожаловать</h2>
         <p class="muted" data-i18n="admin.welcomeText">Войдите под учётной записью с realm-ролью admin, затем выберите раздел в меню слева.</p>
         <ul class="welcome-list muted">
           <li>Статистика сервера и состояние зависимостей</li>

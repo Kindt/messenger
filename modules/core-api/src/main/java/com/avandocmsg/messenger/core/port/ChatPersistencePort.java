@@ -31,6 +31,8 @@ public interface ChatPersistencePort {
 
     boolean updateTitle(UUID chatId, String title);
 
+    boolean updateAvatar(UUID chatId, UUID avatarFileId);
+
     boolean setMuted(UUID chatId, UUID userId, boolean muted);
 
     boolean setArchived(UUID chatId, UUID userId, boolean archived);

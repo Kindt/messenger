@@ -35,7 +35,9 @@ class JdbcOrganizationLookupAdapterFindByIdsH2Test {
                   id UUID PRIMARY KEY,
                   name VARCHAR(128) NOT NULL,
                   slug VARCHAR(64),
-                  created_at TIMESTAMP NOT NULL
+                  created_at TIMESTAMP NOT NULL,
+                  logo_file_id UUID,
+                  avatar_policy VARCHAR(32) NOT NULL DEFAULT 'visible'
                 )
                 """);
         }

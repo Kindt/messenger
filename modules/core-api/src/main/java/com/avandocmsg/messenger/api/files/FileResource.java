@@ -19,6 +19,8 @@ import com.avandocmsg.messenger.core.port.PublicLinkPort;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.core.application.FileApplicationService;
+import com.avandocmsg.messenger.core.application.AvatarApplicationService;
+import com.avandocmsg.messenger.core.application.AvatarAccessTokenService;
 import com.avandocmsg.messenger.core.application.FileDomainMapper;
 import com.avandocmsg.messenger.core.application.ImageResizeService;
 import com.avandocmsg.messenger.core.domain.FileId;
@@ -88,6 +90,8 @@ public class FileResource {
 
     private final FileService fileService;
     private final FileApplicationService fileApplicationService;
+    private final AvatarApplicationService avatarApplicationService;
+    private final AvatarAccessTokenService avatarAccessTokenService;
     private final AppConfig appConfig;
     private final PublicLinkPort publicLinkPort;
     private final AuditPort auditPort;
@@ -96,11 +100,15 @@ public class FileResource {
 
     @Inject
     public FileResource(FileService fileService, FileApplicationService fileApplicationService,
+                          AvatarApplicationService avatarApplicationService,
+                          AvatarAccessTokenService avatarAccessTokenService,
                           AppConfig appConfig,
                           PublicLinkPort publicLinkPort,
                           AuditPort auditPort, Clock clock, UserMessageSource messages) {
         this.fileService = fileService;
         this.fileApplicationService = fileApplicationService;
+        this.avatarApplicationService = avatarApplicationService;
+        this.avatarAccessTokenService = avatarAccessTokenService;
         this.appConfig = appConfig;
         this.publicLinkPort = publicLinkPort;
         this.auditPort = auditPort;
@@ -422,6 +430,7 @@ public class FileResource {
     public Response resize(@PathParam("fileId") String fileId,
                            @QueryParam("w") @DefaultValue("200") int width,
                            @QueryParam("h") @DefaultValue("200") int height,
+                           @QueryParam("avt") String avtToken,
                            @Context SecurityContext securityContext) {
         var fid = UuidParams.required(fileId, "file_id");
         if (!appConfig.fileResizeEnabled()) {
@@ -430,9 +439,19 @@ public class FileResource {
                 .type(MediaType.APPLICATION_JSON)
                 .build();
         }
-        var userId = CurrentUserId.uuid(securityContext);
         var fileIdDomain = FileId.of(fid);
-        var meta = fileApplicationService.getMetadataForUser(UserId.of(userId), fileIdDomain);
+        var targetW = AvatarAccessTokenService.clampDimension(width);
+        var targetH = AvatarAccessTokenService.clampDimension(height);
+        java.util.Optional<com.avandocmsg.messenger.core.domain.StoredFile> meta = java.util.Optional.empty();
+        if (securityContext.getUserPrincipal() != null) {
+            var userId = CurrentUserId.uuid(securityContext);
+            meta = fileApplicationService.getMetadataForUser(UserId.of(userId), fileIdDomain);
+        } else if (avtToken != null && !avtToken.isBlank()) {
+            if (avatarApplicationService.verifyAvatarTokenAccess(
+                avatarAccessTokenService, avtToken, fileIdDomain, targetW, targetH)) {
+                meta = fileApplicationService.findById(fileIdDomain);
+            }
+        }
         if (meta.isEmpty()) {
             if (fileApplicationService.findById(fileIdDomain).isEmpty()) {
                 return Response.status(Response.Status.NOT_FOUND)
@@ -455,8 +474,8 @@ public class FileResource {
         }
         var maxW = appConfig.fileResizeMaxWidth();
         var maxH = appConfig.fileResizeMaxHeight();
-        var targetW = Math.min(Math.max(width, 1), maxW);
-        var targetH = Math.min(Math.max(height, 1), maxH);
+        var resizeW = Math.min(Math.max(targetW, 1), maxW);
+        var resizeH = Math.min(Math.max(targetH, 1), maxH);
         var stream = fileApplicationService.download(fileIdDomain);
         if (stream == null) {
             return Response.status(Response.Status.NOT_FOUND)
@@ -466,7 +485,7 @@ public class FileResource {
         }
         try (stream) {
             var resized = ImageResizeService.resizeToJpeg(
-                stream, targetW, targetH, appConfig.fileResizeMaxSourcePixels());
+                stream, resizeW, resizeH, appConfig.fileResizeMaxSourcePixels());
             if (resized.isEmpty()) {
                 return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new ApiError(400, messages.get("error.file.resize_failed")))
@@ -479,6 +498,7 @@ public class FileResource {
             return Response.ok(resized.get())
                 .header("Content-Disposition", "inline; filename=\"" + thumbName + "\"")
                 .header("Content-Type", "image/jpeg")
+                .header("Referrer-Policy", "no-referrer")
                 .build();
         } catch (IOException e) {
             return Response.status(Response.Status.BAD_REQUEST)

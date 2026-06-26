@@ -129,6 +129,11 @@ class CoreApiBenchmarkTest {
             }
 
             @Override
+            public boolean updateAvatar(UserId id, UUID avatarFileId) {
+                return false;
+            }
+
+            @Override
             public boolean touchHeartbeat(UserId id) {
                 return false;
             }
@@ -329,6 +334,11 @@ class CoreApiBenchmarkTest {
 
             @Override
             public boolean setUserOrg(UserId userId, OrganizationId organizationId) {
+                return false;
+            }
+
+            @Override
+            public boolean updateLogo(OrganizationId organizationId, UUID logoFileId) {
                 return false;
             }
         };

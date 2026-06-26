@@ -8,6 +8,7 @@ import com.avandocmsg.messenger.api.admin.dto.AdminExportCompliancePrepResponse;
 import com.avandocmsg.messenger.api.admin.dto.AdminExportSuggestRequest;
 import com.avandocmsg.messenger.api.admin.dto.AdminSessionResponse;
 import com.avandocmsg.messenger.api.admin.dto.CreateOrganizationRequest;
+import com.avandocmsg.messenger.api.admin.dto.UpdateOrganizationRequest;
 import com.avandocmsg.messenger.api.admin.dto.ChatRetentionPolicyResponse;
 import com.avandocmsg.messenger.api.admin.dto.RetentionPolicyResponse;
 import com.avandocmsg.messenger.api.admin.dto.SetUserOrganizationRequest;
@@ -39,6 +40,7 @@ import com.avandocmsg.messenger.api.export.dto.ExportCancelResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportJobListResponse;
 import com.avandocmsg.messenger.api.export.dto.ExportJobStatusResponse;
 import com.avandocmsg.messenger.common.dto.ApiError;
+import com.avandocmsg.messenger.core.application.AvatarApplicationService;
 import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
 import com.avandocmsg.messenger.core.domain.OrganizationId;
 import com.avandocmsg.messenger.core.domain.UserId;
@@ -88,6 +90,7 @@ public class AdminResource {
     private final AppConfig appConfig;
     private final AuditPort auditPort;
     private final OrganizationApplicationService organizationApplicationService;
+    private final AvatarApplicationService avatarApplicationService;
     private final RetentionPolicyPort retentionPolicyPort;
     private final ChatPersistencePort chatPersistencePort;
     private final ChatRetentionPolicyPort chatRetentionPolicyPort;
@@ -103,6 +106,7 @@ public class AdminResource {
     @Inject
     public AdminResource(AppConfig appConfig, AuditPort auditPort,
                          OrganizationApplicationService organizationApplicationService,
+                         AvatarApplicationService avatarApplicationService,
                          RetentionPolicyPort retentionPolicyPort,
                          ChatPersistencePort chatPersistencePort,
                          ChatRetentionPolicyPort chatRetentionPolicyPort,
@@ -122,6 +126,7 @@ public class AdminResource {
         this.appConfig = appConfig;
         this.auditPort = auditPort;
         this.organizationApplicationService = organizationApplicationService;
+        this.avatarApplicationService = avatarApplicationService;
         this.retentionPolicyPort = retentionPolicyPort;
         this.chatPersistencePort = chatPersistencePort;
         this.chatRetentionPolicyPort = chatRetentionPolicyPort;
@@ -754,11 +759,20 @@ public class AdminResource {
     @GET
     @Path("organizations")
     @Operation(summary = "Список организаций (multi-tenant, ТЗ п. 23)", security = @SecurityRequirement(name = "bearerAuth"))
-    public Response listOrganizations() {
+    public Response listOrganizations(@Context SecurityContext securityContext) {
         var rows = organizationApplicationService.listAll();
+        var viewerId = UserId.of(CurrentUserId.uuid(securityContext));
         var out = new ArrayList<OrganizationJson>();
         for (var o : rows) {
-            out.add(new OrganizationJson(o.id().value().toString(), o.name(), o.createdAt()));
+            String logoFileId = null;
+            String logoUrl = null;
+            if (o.logoFileId() != null) {
+                logoFileId = o.logoFileId().value().toString();
+                if (viewerId != null && avatarApplicationService != null) {
+                    logoUrl = avatarApplicationService.mintOrgLogoUrl(viewerId, o.logoFileId());
+                }
+            }
+            out.add(new OrganizationJson(o.id().value().toString(), o.name(), o.createdAt(), logoFileId, logoUrl));
         }
         return Response.ok(out).build();
     }
@@ -784,6 +798,43 @@ public class AdminResource {
         return Response.status(Response.Status.CREATED)
             .entity(new OrganizationJson(created.id().value().toString(), created.name(), created.createdAt()))
             .build();
+    }
+
+    @PATCH
+    @Path("organizations/{orgId}")
+    @Operation(summary = "Обновить организацию (логотип)", security = @SecurityRequirement(name = "bearerAuth"))
+    public Response patchOrganization(@PathParam("orgId") String orgIdStr,
+                                      UpdateOrganizationRequest request,
+                                      @Context SecurityContext securityContext) {
+        if (request == null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ApiError(400, messages.get("error.admin.body_required"))).build();
+        }
+        var orgId = UuidParams.required(orgIdStr, "org_id");
+        if (organizationApplicationService.findById(OrganizationId.of(orgId)).isEmpty()) {
+            return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.org_not_found"))).build();
+        }
+        UUID logoUuid = null;
+        if (request.logoFileId() != null && !request.logoFileId().isBlank()) {
+            logoUuid = UuidParams.required(request.logoFileId(), "logo_file_id");
+        }
+        if (!organizationApplicationService.updateLogo(OrganizationId.of(orgId), logoUuid)) {
+            return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.org_not_found"))).build();
+        }
+        var actor = CurrentUserId.uuid(securityContext);
+        auditPort.record(actor, "organization.logo.set", "organization", orgIdStr,
+            organizationLogoAuditDetails(logoUuid));
+        var updated = organizationApplicationService.findById(OrganizationId.of(orgId)).orElseThrow();
+        var viewerId = UserId.of(actor);
+        String logoFileId = null;
+        String logoUrl = null;
+        if (updated.logoFileId() != null) {
+            logoFileId = updated.logoFileId().value().toString();
+            if (avatarApplicationService != null) {
+                logoUrl = avatarApplicationService.mintOrgLogoUrl(viewerId, updated.logoFileId());
+            }
+        }
+        return Response.ok(new OrganizationJson(
+            updated.id().value().toString(), updated.name(), updated.createdAt(), logoFileId, logoUrl)).build();
     }
 
     @DELETE
@@ -862,6 +913,16 @@ public class AdminResource {
         return organizationNameAuditJson(name);
     }
 
+    static String organizationLogoAuditDetails(java.util.UUID logoFileId) {
+        var n = ADMIN_AUDIT_JSON.createObjectNode();
+        if (logoFileId == null) {
+            n.putNull("logo_file_id");
+        } else {
+            n.put("logo_file_id", logoFileId.toString());
+        }
+        return writeAdminAuditJson(n);
+    }
+
     /** JSON for retention PATCH audit; null ages → JSON null. Package-visible for tests. */
     static String retentionPolicyPatchAuditDetails(
         Integer hotMessageBodyMaxAgeDays,
@@ -900,6 +961,12 @@ public class AdminResource {
     public record OrganizationJson(
         String id,
         String name,
-        @JsonProperty("created_at") Instant createdAt
-    ) {}
+        @JsonProperty("created_at") Instant createdAt,
+        @JsonProperty("logo_file_id") String logoFileId,
+        @JsonProperty("logo_url") String logoUrl
+    ) {
+        public OrganizationJson(String id, String name, Instant createdAt) {
+            this(id, name, createdAt, null, null);
+        }
+    }
 }

@@ -81,6 +81,7 @@
     "membersInvited": "Participants added to the meeting chat",
     "inviteMembersFailed": "Could not invite participants",
     "jitsiHint": "Jitsi ({host}). Share the link with guests or invite colleagues to the meeting chat.",
+    "participantsBadge": " · {count} mem.",
     "participantsTitle": "In call",
     "refreshParticipants": "Refresh participants",
     "noParticipants": "No one yet",
@@ -154,7 +155,8 @@
     "pushRegisterFailed": "Could not register Web Push",
     "enableFirst": "Enable notifications first",
     "showFailed": "Could not show notification",
-    "testLocalBody": "Test: local notification"
+    "testLocalBody": "Test: local notification",
+    "enableHint": "Tap 🔔 on the right — the browser will ask for notification permission."
   },
   "contacts": {
     "hashRequired": "Enter at least one phone hash (SHA-256, hex)",
@@ -319,7 +321,19 @@
     },
     "search": {
       "emptyTitle": "No matches",
-      "emptyHint": "Try a different query or check spelling."
+      "emptyHint": "Try a different query or check spelling.",
+      "globalTitle": "Search",
+      "filterAll": "All",
+      "filterChats": "Chats",
+      "filterMessages": "Messages",
+      "noResults": "No results.",
+      "globalPlaceholder": "Search all chats (2+ chars, no E2EE)…",
+      "chatPlaceholder": "Search in this chat (2+ chars, no E2EE)…",
+      "scopeGlobal": "All chats",
+      "scopeChat": "In chat",
+      "scopeAutoGlobal": "Auto: all",
+      "scopeAutoChat": "Auto: chat",
+      "scopeCycleTitle": "Change search scope"
     },
     "auth": {
       "username": "Username",
@@ -348,7 +362,7 @@
       "reloadLater": "Later"
     },
     "sidebar": {
-      "searchPlaceholder": "Chats or users (2+ chars)…",
+      "searchPlaceholder": "Search chats…",
       "newGroup": "New group",
       "vault": "📁 Vault",
       "vaultTitle": "Personal saved chat (notes and files)",
@@ -394,12 +408,16 @@
         "unread": "Unread",
         "mentions": "Mentions"
       },
+      "filterPanelTitle": "Chat filters",
+      "filterPanelFolders": "Folders",
+      "filterPanelShow": "Show",
       "marketplaceSearch": "Search integrations…",
       "marketplaceAll": "All categories",
       "noChatsUnread": "No unread chats.",
       "noChatsMentions": "No chats with mentions.",
       "pinChat": "Pin chat",
-      "unpinChat": "Unpin chat"
+      "unpinChat": "Unpin chat",
+      "resizeTitle": "Drag to resize chat list"
     },
     "thread": {
       "empty": "Select a chat or create a group.",
@@ -415,6 +433,7 @@
       "exportCancel": "Cancel export",
       "refresh": "Refresh chat",
       "copyChatLink": "Copy link to this chat",
+      "directChat": "Direct chat",
       "confLive": "🎥 {title}",
       "confLiveDefault": "Video conference in progress",
       "searchPlaceholder": "Search in this chat (2+ chars, no E2EE)…",
@@ -428,7 +447,10 @@
       "fileBtn": "File",
       "loadOlder": "Earlier messages",
       "you": "You",
-      "composerPlaceholder": "Message… (Shift+Enter — new line, drag a file)",
+      "composerPlaceholder": "Write a message…",
+      "composerHint": "Enter to send, Shift+Enter for a new line, drag a file to attach",
+      "composerMore": "More actions",
+      "chatMore": "Chat actions",
       "cancelReply": "Cancel reply",
       "bold": "Bold",
       "italic": "Italic",
@@ -464,8 +486,8 @@
       "whiteboardFailed": "Could not save whiteboard.",
       "stickersTitle": "GIFs and stickers",
       "stickersEmpty": "Catalog empty — add packs via API.",
-      "federationTitle": "Federation — partner orgs",
-      "federationEmpty": "No partner orgs in trust graph.",
+      "federationTitle": "Federation",
+      "federationEmpty": "No trusted organizations.",
       "confTools": "ADR tools",
       "recordStart": "Record",
       "recordStarted": "Recording started (scaffold).",
@@ -486,16 +508,17 @@
       "aiAssistTitle": "AI chat assist",
       "aiAssistPlaceholder": "Ask a question about this chat…",
       "aiAssistRun": "Run",
-      "aiAssistEmpty": "No reply from AI gateway.",
+      "aiAssistEmpty": "No reply from AI.",
+      "aiAssistUnavailable": "AI assist is unavailable (gateway not configured).",
       "aiAssistFailed": "AI assist failed.",
       "aiInsert": "Insert into composer",
       "kanbanMoveBack": "Move to previous column",
       "kanbanMoveForward": "Move to next column",
       "kanbanDelete": "Delete task",
       "kanbanDeleted": "Task deleted.",
-      "passkeysTitle": "Passkeys (scaffold)",
+      "passkeysTitle": "Passkeys",
       "passkeysEmpty": "No passkeys registered.",
-      "passkeysRegister": "Register scaffold credential",
+      "passkeysRegister": "Add passkey",
       "passkeysRegistered": "Passkey scaffold registered.",
       "passkeysFailed": "Passkey registration failed.",
       "guestExpired": "Guest link expired.",
@@ -683,18 +706,29 @@
       "tabLinks": "Links",
       "tabSecurity": "Security",
       "appearance": "Appearance",
+      "theme": "Theme",
       "appearanceKorus": "Korus Consulting theme (#7949F4, korusconsulting.ru).",
       "cache": "App cache",
       "resetCache": "Reset UI cache",
       "cacheHint": "If you see an old UI after server update (Opera, PWA).",
+      "sectionOffline": "Offline",
+      "sectionAbout": "About",
       "apiVersion": "API version",
+      "kbdTitle": "Keyboard shortcuts",
       "kbdHint": "<kbd>Ctrl+K</kbd> or <kbd>/</kbd> — search · <kbd>Alt+↑</kbd><kbd>Alt+↓</kbd> — chats · <kbd>M</kbd> — message · <kbd>Esc</kbd> — close · <kbd>Ctrl+,</kbd> — settings",
       "status": "Status",
+      "presence": "Presence",
+      "sectionAccount": "Account",
+      "sectionPresence": "Presence",
+      "usernameHint": "Username is set at registration and cannot be changed here.",
+      "displayNameHint": "How others see you in chats.",
       "presenceOnline": "Online",
       "presenceAway": "Away",
       "presenceDnd": "Do not disturb",
       "presenceOffline": "Offline",
-      "customStatus": "Status text",
+      "customStatus": "Status message",
+      "customStatusPlaceholder": "e.g. In a meeting until 3 PM",
+      "customStatusHint": "Short line shown next to your name for contacts.",
       "dndSchedule": "Do not disturb until",
       "dndSeeNotificationsTab": "DND duration is on the Notifications tab.",
       "dndUntilManual": "Until I turn off",
@@ -704,6 +738,7 @@
       "dndUntilTomorrow": "Until 9:00 tomorrow",
       "dndUntilActive": "Active until {until}",
       "name": "Name",
+      "email": "Email",
       "notifications": "Notifications",
       "sound": "Notification sound",
       "lastPublicLink": "Last public link",
@@ -715,7 +750,18 @@
       "noDevices": "No registered devices.",
       "disconnect": "Disconnect",
       "testNotification": "Test notification",
-      "showTest": "Show",
+      "showTest": "Send test",
+      "sectionBrowserNotif": "Browser",
+      "sectionDnd": "Do not disturb",
+      "sectionPush": "Delivery (Web Push)",
+      "sectionPlanner": "Reminders & scheduled",
+      "pendingReminders": "Pending reminders",
+      "permissionStatus": "Browser permission",
+      "permissionGranted": "Allowed",
+      "permissionDefault": "Not requested",
+      "dndQuickEnable": "Enable until",
+      "dndOffHint": "Do not disturb is off. Change presence on the Profile tab.",
+      "pushDevicesHint": "Devices with an active Web Push subscription for this account.",
       "pushSyncUpdate": "Refresh subscription",
       "newKeyPackage": "New key package",
       "create": "Create",
@@ -731,7 +777,7 @@
       "pwaInstall": "Install app",
       "pwaInstallBtn": "Install",
       "offlineHint": "Offline: static assets cached by Service Worker; API needs network.",
-      "e2eeKeyPackages": "E2EE key packages",
+      "e2eeKeyPackages": "MLS keys on server",
       "webPush": "Web Push",
       "localKeySaved": "Saved: {prefix}",
       "localKeySavedYes": "yes",
@@ -779,16 +825,20 @@
     "integration": {
       "close": "Close panel"
     },
-    "search": {
-      "globalTitle": "Search",
-      "filterAll": "All",
-      "filterChats": "Chats",
-      "filterMessages": "Messages",
-      "noResults": "No results."
-    },
     "profile": {
       "bioHint": "Short bio visible to contacts",
-      "avatarChange": "Change avatar"
+      "avatarChange": "Change avatar",
+      "avatarRemove": "Remove avatar",
+      "avatarUploadFailed": "Could not upload avatar",
+      "avatarHidden": "Hide my avatar",
+      "avatarHiddenHint": "Others will see initials instead of your photo"
+    },
+    "avatar": {
+      "altUser": "Avatar of {name}",
+      "altChat": "Chat avatar for {name}",
+      "cropTitle": "Crop avatar",
+      "cropHint": "Drag to reposition. Minimum 128×128 px.",
+      "cropApply": "Apply"
     },
     "mobile": {
       "back": "Back to list",
@@ -809,7 +859,7 @@
       "disconnectFailed": "Could not disconnect integration."
     },
     "federation": {
-      "directoryHint": "Trusted orgs for cross-org chats (MVP).",
+      "directoryHint": "Partner organizations for cross-cell chats.",
       "trustActive": "Active",
       "trustPending": "Pending",
       "trustLevel": {
@@ -839,6 +889,10 @@
       "title": "Edit message",
       "save": "Save",
       "failed": "Could not edit message."
+    },
+    "profileCard": {
+      "title": "Profile",
+      "message": "Message"
     }
   },
   "push": {

@@ -212,9 +212,15 @@ class ChatServiceTest {
             if (chat != null) {
                 chats.put(chatId, new ChatResponse(chat.id(), title, chat.type(), chat.ownerId(),
                     chat.memberCount(), chat.muted(), chat.personalFilterActive(),
-                    chat.ttlSeconds(), chat.createdAt()));
+                    chat.ttlSeconds(), chat.createdAt(), chat.archived(), chat.folderTag(),
+                    chat.channelPostPolicy(), chat.avatarFileId(), chat.avatarUrl(), chat.displayAvatarUrl()));
                 return true;
             }
+            return false;
+        }
+
+        @Override
+        public boolean updateAvatar(UUID chatId, UUID avatarFileId) {
             return false;
         }
 

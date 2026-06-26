@@ -10,7 +10,9 @@ import com.avandocmsg.messenger.api.users.dto.UpdateProfileRequest;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.core.application.UserApplicationService;
+import com.avandocmsg.messenger.core.application.AvatarApplicationService;
 import com.avandocmsg.messenger.core.application.UserDomainMapper;
+import com.avandocmsg.messenger.core.domain.FileId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,12 +39,25 @@ public class UserResource {
     private static final Set<String> UI_LOCALES_ALLOWED = Set.of("ru", "en", "be", "kk", "zh", "ko");
 
     private final UserApplicationService userApplicationService;
+    private final AvatarApplicationService avatarApplicationService;
     private final UserMessageSource messages;
 
     @Inject
-    public UserResource(UserApplicationService userApplicationService, UserMessageSource messages) {
+    public UserResource(UserApplicationService userApplicationService,
+                        AvatarApplicationService avatarApplicationService,
+                        UserMessageSource messages) {
         this.userApplicationService = userApplicationService;
+        this.avatarApplicationService = avatarApplicationService;
         this.messages = messages;
+    }
+
+    private com.avandocmsg.messenger.api.users.dto.UserProfile mapProfile(
+            java.util.Optional<com.avandocmsg.messenger.core.domain.UserProfile> domain,
+            UserId viewerId) {
+        return domain.map(p -> {
+            var api = UserDomainMapper.toResponse(p);
+            return avatarApplicationService.enrichUserProfile(api, viewerId, p.avatarFileId());
+        }).orElse(null);
     }
 
     @GET
@@ -62,10 +77,9 @@ public class UserResource {
     @Operation(summary = "Текущий профиль")
     public Response me(@Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var profile = userApplicationService
-            .getProfileForViewer(UserId.of(userId), UserId.of(userId))
-            .map(UserDomainMapper::toResponse)
-            .orElse(null);
+        var profile = mapProfile(
+            userApplicationService.getProfileForViewer(UserId.of(userId), UserId.of(userId)),
+            UserId.of(userId));
         if (profile == null) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.user.not_found")))
@@ -79,10 +93,9 @@ public class UserResource {
     public Response getById(@PathParam("id") String id, @Context SecurityContext securityContext) {
         var viewerId = CurrentUserId.uuid(securityContext);
         var targetId = UuidParams.required(id, "user_id");
-        var profile = userApplicationService
-            .getProfileForViewer(UserId.of(viewerId), UserId.of(targetId))
-            .map(UserDomainMapper::toResponse)
-            .orElse(null);
+        var profile = mapProfile(
+            userApplicationService.getProfileForViewer(UserId.of(viewerId), UserId.of(targetId)),
+            UserId.of(viewerId));
         if (profile == null) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.user.not_found")))
@@ -96,11 +109,54 @@ public class UserResource {
     @Operation(summary = "Обновить профиль")
     public Response updateProfile(UpdateProfileRequest request,
                                    @Context SecurityContext securityContext) {
+        if (request == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.user.profile_update_failed")))
+                .build();
+        }
         var userId = CurrentUserId.uuid(securityContext);
-        var profile = userApplicationService
-            .updateProfile(UserId.of(userId), request.displayName(), request.phone())
-            .map(UserDomainMapper::toResponse)
-            .orElse(null);
+        var uid = UserId.of(userId);
+        com.avandocmsg.messenger.core.domain.UserProfile updated = null;
+        if (request.displayName() != null || request.phone() != null) {
+            updated = userApplicationService
+                .updateProfile(uid, request.displayName(), request.phone())
+                .orElse(null);
+        }
+        if (Boolean.TRUE.equals(request.removeAvatar())) {
+            if (!avatarApplicationService.userMayUploadAvatar(uid)) {
+                return Response.status(Response.Status.FORBIDDEN)
+                    .entity(new ApiError(403, messages.get("error.user.profile_update_failed")))
+                    .build();
+            }
+            updated = avatarApplicationService.clearUserAvatar(uid).orElse(updated);
+        } else if (request.avatarFileId() != null && !request.avatarFileId().isBlank()) {
+            if (!avatarApplicationService.userMayUploadAvatar(uid)) {
+                return Response.status(Response.Status.FORBIDDEN)
+                    .entity(new ApiError(403, messages.get("error.user.profile_update_failed")))
+                    .build();
+            }
+            var fileId = UuidParams.required(request.avatarFileId(), "avatar_file_id");
+            updated = avatarApplicationService.setUserAvatar(uid, FileId.of(fileId)).orElse(null);
+        }
+        if (request.avatarHidden() != null) {
+            updated = avatarApplicationService.updateUserAvatarHidden(uid, request.avatarHidden()).orElse(updated);
+        }
+        if (updated == null && (request.displayName() != null || request.phone() != null
+            || request.avatarFileId() != null || Boolean.TRUE.equals(request.removeAvatar())
+            || request.avatarHidden() != null)) {
+            if (!avatarApplicationService.avatarsEnabled()
+                && (request.avatarFileId() != null || Boolean.TRUE.equals(request.removeAvatar()))) {
+                return Response.status(Response.Status.FORBIDDEN)
+                    .entity(new ApiError(403, messages.get("error.user.profile_update_failed")))
+                    .build();
+            }
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new ApiError(500, messages.get("error.user.profile_update_failed")))
+                .build();
+        }
+        var profile = mapProfile(
+            userApplicationService.getProfileForViewer(uid, uid),
+            uid);
         if (profile != null) {
             return Response.ok(profile).build();
         }
@@ -134,9 +190,9 @@ public class UserResource {
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
-        return userApplicationService
-            .updateUserStatus(UserId.of(userId), request)
-            .map(UserDomainMapper::toResponse)
+        var uid = UserId.of(userId);
+        return userApplicationService.updateUserStatus(uid, request)
+            .flatMap(p -> java.util.Optional.ofNullable(mapProfile(java.util.Optional.of(p), uid)))
             .map(p -> Response.ok(p).build())
             .orElse(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(new ApiError(500, messages.get("error.user.presence_failed")))
@@ -154,9 +210,9 @@ public class UserResource {
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
-        return userApplicationService
-            .updatePrivacy(UserId.of(userId), request.privacyDisableReadReceipts())
-            .map(UserDomainMapper::toResponse)
+        var uid = UserId.of(userId);
+        return userApplicationService.updatePrivacy(uid, request.privacyDisableReadReceipts())
+            .flatMap(p -> java.util.Optional.ofNullable(mapProfile(java.util.Optional.of(p), uid)))
             .map(p -> Response.ok(p).build())
             .orElse(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(new ApiError(500, messages.get("error.user.privacy_update_failed")))
@@ -175,9 +231,9 @@ public class UserResource {
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
-        return userApplicationService
-            .updateUiLocale(UserId.of(userId), request.uiLocale())
-            .map(UserDomainMapper::toResponse)
+        var uid = UserId.of(userId);
+        return userApplicationService.updateUiLocale(uid, request.uiLocale())
+            .flatMap(p -> java.util.Optional.ofNullable(mapProfile(java.util.Optional.of(p), uid)))
             .map(p -> Response.ok(p).build())
             .orElse(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(new ApiError(500, messages.get("error.user.locale_update_failed")))

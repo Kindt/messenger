@@ -19,6 +19,8 @@
     or korus_minio_secret_key is defined
     or korus_keycloak_admin_password is defined
     or korus_jwt_secret is defined
+    or korus_avatar_token_hmac_secret is defined
+    or korus_api_public_base_url is defined
     or korus_coturn_secret is defined
     or korus_vapid_public_key is defined
     or korus_vapid_private_key is defined

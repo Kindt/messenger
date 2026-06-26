@@ -6,15 +6,21 @@ import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 /**
  * Visible push text derived from {@link MessageWorkerEvent} metadata (no extra DB body fetch).
  */
-public record PushNotificationPreview(String title, String body, String url) {
+public record PushNotificationPreview(String title, String body, String url, String iconUrl) {
 
     public static PushNotificationPreview forEvent(MessageWorkerEvent event, String chatTitle,
                                                      UserMessageSource messages) {
-        return forEvent(event, chatTitle, messages, false);
+        return forEvent(event, chatTitle, messages, false, null);
     }
 
     public static PushNotificationPreview forEvent(MessageWorkerEvent event, String chatTitle,
                                                      UserMessageSource messages, boolean mentioned) {
+        return forEvent(event, chatTitle, messages, mentioned, null);
+    }
+
+    public static PushNotificationPreview forEvent(MessageWorkerEvent event, String chatTitle,
+                                                     UserMessageSource messages, boolean mentioned,
+                                                     String iconUrl) {
         var title = (chatTitle != null && !chatTitle.isBlank())
             ? chatTitle.trim()
             : messages.get("worker.push.preview.default_title");
@@ -26,7 +32,7 @@ public record PushNotificationPreview(String title, String body, String url) {
         if (event.chatId() != null && !event.chatId().isBlank()) {
             url = "/?chat=" + event.chatId();
         }
-        return new PushNotificationPreview(title, body, url);
+        return new PushNotificationPreview(title, body, url, iconUrl);
     }
 
     static String bodyFor(MessageWorkerEvent event, UserMessageSource messages) {

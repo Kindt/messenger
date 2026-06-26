@@ -11,5 +11,18 @@ public record ChatMemberResponse(
     String role,
     boolean muted,
     boolean banned,
-    @JsonProperty("joined_at") Instant joinedAt
-) {}
+    @JsonProperty("joined_at") Instant joinedAt,
+    @JsonProperty("avatar_url") String avatarUrl
+) {
+    public ChatMemberResponse(
+        String userId,
+        String username,
+        String displayName,
+        String role,
+        boolean muted,
+        boolean banned,
+        Instant joinedAt
+    ) {
+        this(userId, username, displayName, role, muted, banned, joinedAt, null);
+    }
+}

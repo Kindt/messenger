@@ -144,6 +144,29 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
     }
 
     @Override
+    public boolean updateAvatar(UserId id, java.util.UUID avatarFileId) {
+        if (dataSource == null) {
+            return false;
+        }
+        var sql = """
+            UPDATE users SET avatar_file_id = ?, updated_at = now() WHERE id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
+            if (avatarFileId == null) {
+                stmt.setObject(1, null);
+            } else {
+                stmt.setObject(1, avatarFileId);
+            }
+            stmt.setObject(2, id.value());
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
     public boolean touchHeartbeat(UserId id) {
         if (dataSource == null) {
             return false;
@@ -176,6 +199,9 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
     }
 
     private static UserProfile toDomain(com.avandocmsg.messenger.api.users.dto.UserProfile profile) {
+        var avatarId = profile.avatarFileId() != null && !profile.avatarFileId().isBlank()
+            ? com.avandocmsg.messenger.core.domain.FileId.of(java.util.UUID.fromString(profile.avatarFileId()))
+            : null;
         return new UserProfile(
             UserId.of(java.util.UUID.fromString(profile.id())),
             profile.username(),
@@ -189,6 +215,27 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
             profile.privacyDisableReadReceipts(),
             profile.uiLocale(),
             profile.customStatusText(),
-            profile.dndUntil());
+            profile.dndUntil(),
+            profile.avatarHidden(),
+            avatarId);
+    }
+
+    @Override
+    public boolean updateAvatarHidden(UserId id, boolean avatarHidden) {
+        if (dataSource == null) {
+            return false;
+        }
+        var sql = """
+            UPDATE users SET avatar_hidden = ?, updated_at = now() WHERE id = ?
+            """;
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+                 JdbcQuerySupport.applyDefaultTimeout(stmt);
+            stmt.setBoolean(1, avatarHidden);
+            stmt.setObject(2, id.value());
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

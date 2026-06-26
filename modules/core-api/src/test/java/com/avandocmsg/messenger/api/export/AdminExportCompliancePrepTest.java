@@ -79,6 +79,7 @@ class AdminExportCompliancePrepTest {
         return new AdminResource(cfg, audit,
             com.avandocmsg.messenger.core.bootstrap.CoreModule.organizationApplicationService(
                 null, UuidGenerator.standard()),
+            null,
             new JdbcRetentionPolicyAdapter((javax.sql.DataSource) null),
             chatRepo,
             new JdbcChatRetentionPolicyAdapter((javax.sql.DataSource) null),

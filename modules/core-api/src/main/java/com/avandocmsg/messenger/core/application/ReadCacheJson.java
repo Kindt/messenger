@@ -34,6 +34,10 @@ public final class ReadCacheJson {
             if (profile.dndUntil() != null) {
                 node.put("dndUntil", profile.dndUntil().toString());
             }
+            if (profile.avatarFileId() != null) {
+                node.put("avatarFileId", profile.avatarFileId().value().toString());
+            }
+            node.put("avatarHidden", profile.avatarHidden());
             return Optional.of(MAPPER.writeValueAsString(node));
         } catch (Exception e) {
             return Optional.empty();
@@ -50,6 +54,11 @@ public final class ReadCacheJson {
                 ? java.time.Instant.parse(node.get("lastSeenAt").asText()) : null;
             var dndUntil = node.hasNonNull("dndUntil")
                 ? java.time.Instant.parse(node.get("dndUntil").asText()) : null;
+            com.avandocmsg.messenger.core.domain.FileId avatarFileId = null;
+            if (node.hasNonNull("avatarFileId")) {
+                avatarFileId = com.avandocmsg.messenger.core.domain.FileId.of(
+                    java.util.UUID.fromString(node.get("avatarFileId").asText()));
+            }
             return Optional.of(new UserProfile(
                 id,
                 textOrNull(node, "username"),
@@ -63,7 +72,9 @@ public final class ReadCacheJson {
                 node.path("privacyDisableReadReceipts").asBoolean(false),
                 textOrNull(node, "uiLocale"),
                 textOrNull(node, "customStatusText"),
-                dndUntil));
+                dndUntil,
+                node.path("avatarHidden").asBoolean(false),
+                avatarFileId));
         } catch (Exception e) {
             return Optional.empty();
         }

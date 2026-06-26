@@ -245,7 +245,7 @@ public final class JdbcChatJdbcRepository {
 
     public List<ChatResponse> listByUser(UUID userId) {
         var sql = """
-            SELECT c.id, c.title, c.type, c.owner_id, cm.muted, cm.personal_filter_active,
+            SELECT c.id, c.title, c.type, c.owner_id, c.avatar_file_id, cm.muted, cm.personal_filter_active,
                    c.ttl_seconds, c.created_at, c.channel_post_policy, cm.archived_at, cm.folder_tag,
                    (SELECT COUNT(*) FROM chat_members WHERE chat_id = c.id) AS member_count
             FROM chats c
@@ -310,7 +310,7 @@ public final class JdbcChatJdbcRepository {
 
     public Optional<ChatResponse> findById(UUID chatId, UUID userId) {
         var sql = """
-            SELECT c.id, c.title, c.type, c.owner_id, cm.muted, cm.personal_filter_active,
+            SELECT c.id, c.title, c.type, c.owner_id, c.avatar_file_id, cm.muted, cm.personal_filter_active,
                    c.ttl_seconds, c.created_at, c.channel_post_policy, cm.archived_at, cm.folder_tag,
                    (SELECT COUNT(*) FROM chat_members WHERE chat_id = c.id) AS member_count
             FROM chats c
@@ -357,6 +357,20 @@ public final class JdbcChatJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
             log.error("Failed to update chat title {}", chatId, e);
+            return false;
+        }
+    }
+
+    public boolean updateAvatar(UUID chatId, UUID avatarFileId) {
+        var sql = "UPDATE chats SET avatar_file_id = ?, updated_at = now() WHERE id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
+            stmt.setObject(1, avatarFileId);
+            stmt.setObject(2, chatId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            log.error("Failed to update chat avatar {}", chatId, e);
             return false;
         }
     }
@@ -710,6 +724,8 @@ public final class JdbcChatJdbcRepository {
         }
         String folderTag = hasColumn(rs, "folder_tag") ? rs.getString("folder_tag") : null;
         String channelPolicy = hasColumn(rs, "channel_post_policy") ? rs.getString("channel_post_policy") : null;
+        var avatarUuid = hasColumn(rs, "avatar_file_id") ? rs.getObject("avatar_file_id", UUID.class) : null;
+        var avatarFileId = avatarUuid != null ? avatarUuid.toString() : null;
         return new ChatResponse(
             rs.getObject("id", UUID.class).toString(),
             rs.getString("title"),
@@ -722,7 +738,10 @@ public final class JdbcChatJdbcRepository {
             rs.getTimestamp("created_at").toInstant(),
             archived,
             folderTag,
-            channelPolicy);
+            channelPolicy,
+            avatarFileId,
+            null,
+            null);
     }
 
     private static boolean hasColumn(ResultSet rs, String column) {

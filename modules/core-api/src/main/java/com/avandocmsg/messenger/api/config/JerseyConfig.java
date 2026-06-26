@@ -97,6 +97,8 @@ import com.avandocmsg.messenger.core.application.FileApplicationService;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
 import com.avandocmsg.messenger.core.application.UserApplicationService;
+import com.avandocmsg.messenger.core.application.AvatarApplicationService;
+import com.avandocmsg.messenger.core.application.AvatarAccessTokenService;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import com.avandocmsg.messenger.core.port.ChatPollPort;
 import com.avandocmsg.messenger.core.port.MessageReminderPort;
@@ -107,6 +109,7 @@ import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.api.users.MeIntegrationsResource;
 import com.avandocmsg.messenger.api.users.MeSettingsResource;
+import com.avandocmsg.messenger.api.users.DefaultAvatarResource;
 import com.avandocmsg.messenger.api.users.UserResource;
 import com.avandocmsg.messenger.core.adapter.messaging.NatsConnectionOutbound;
 import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
@@ -142,6 +145,8 @@ public class JerseyConfig extends ResourceConfig {
                         MessageApplicationService messageApplicationService,
                         UserApplicationService userApplicationService,
                         FileApplicationService fileApplicationService,
+                        AvatarApplicationService avatarApplicationService,
+                        AvatarAccessTokenService avatarAccessTokenService,
                         OrganizationApplicationService organizationApplicationService,
                         BlockRepositoryPort blockRepositoryPort,
                         MessageRepositoryPort messageRepositoryPort,
@@ -220,6 +225,8 @@ public class JerseyConfig extends ResourceConfig {
                 bind(messageApplicationService).to(MessageApplicationService.class);
                 bind(userApplicationService).to(UserApplicationService.class);
                 bind(fileApplicationService).to(FileApplicationService.class);
+                bind(avatarApplicationService).to(AvatarApplicationService.class);
+                bind(avatarAccessTokenService).to(AvatarAccessTokenService.class);
                 bind(organizationApplicationService).to(OrganizationApplicationService.class);
                 bind(blockRepositoryPort).to(BlockRepositoryPort.class);
                 bind(messageRepositoryPort).to(MessageRepositoryPort.class);
@@ -303,6 +310,7 @@ public class JerseyConfig extends ResourceConfig {
         register(AdminConsoleRedirectResource.class);
         register(AdminUiResource.class);
         register(UserResource.class);
+        register(DefaultAvatarResource.class);
         register(BlocksResource.class);
         register(ContactResource.class);
         register(SearchResource.class);

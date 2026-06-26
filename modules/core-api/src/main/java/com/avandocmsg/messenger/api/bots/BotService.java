@@ -11,6 +11,9 @@ import com.avandocmsg.messenger.api.chats.bans.ChatBanService;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.common.concurrent.InterruptibleWait;
+import com.avandocmsg.messenger.core.application.AvatarApplicationService;
+import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.UserRepositoryPort;
 import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
@@ -35,17 +38,31 @@ public class BotService {
     private final ChatBanService chatBanService;
     private final AuditPort auditPort;
     private final UuidGenerator uuidGenerator;
+    private final UserRepositoryPort userRepositoryPort;
+    private final AvatarApplicationService avatarApplicationService;
 
     public BotService(BotRepository botRepository, ChatPersistencePort chatPersistencePort,
                       MessageApplicationService messageApplicationService,
                       ChatBanService chatBanService,
                       AuditPort auditPort, UuidGenerator uuidGenerator) {
+        this(botRepository, chatPersistencePort, messageApplicationService, chatBanService, auditPort, uuidGenerator,
+            null, null);
+    }
+
+    public BotService(BotRepository botRepository, ChatPersistencePort chatPersistencePort,
+                      MessageApplicationService messageApplicationService,
+                      ChatBanService chatBanService,
+                      AuditPort auditPort, UuidGenerator uuidGenerator,
+                      UserRepositoryPort userRepositoryPort,
+                      AvatarApplicationService avatarApplicationService) {
         this.botRepository = botRepository;
         this.chatPersistencePort = chatPersistencePort;
         this.messageApplicationService = messageApplicationService;
         this.chatBanService = chatBanService;
         this.auditPort = auditPort;
         this.uuidGenerator = uuidGenerator;
+        this.userRepositoryPort = userRepositoryPort;
+        this.avatarApplicationService = avatarApplicationService;
     }
 
     public enum CreateOutcome { SUCCESS, INVALID_NAME, INVALID_WEBHOOK, INVALID_LISTEN_MODE, NAME_TAKEN, PERSISTENCE_FAILED }
@@ -87,13 +104,17 @@ public class BotService {
     }
 
     public List<BotResponse> listOwned(UUID ownerId) {
-        return botRepository.listByOwner(ownerId).stream().map(this::toResponse).toList();
+        var viewer = UserId.of(ownerId);
+        return botRepository.listByOwner(ownerId).stream()
+            .map(row -> toResponse(row, viewer))
+            .toList();
     }
 
     public Optional<BotResponse> getOwned(UUID ownerId, UUID botId) {
+        var viewer = UserId.of(ownerId);
         return botRepository.findById(botId)
             .filter(b -> b.ownerId().equals(ownerId))
-            .map(this::toResponse);
+            .map(row -> toResponse(row, viewer));
     }
 
     public boolean updateWebhook(UUID ownerId, UUID botId, String webhookUrl) {
@@ -225,14 +246,21 @@ public class BotService {
         return new BotUpdatesResponse(events, next);
     }
 
-    private BotResponse toResponse(BotRepository.BotRow row) {
+    private BotResponse toResponse(BotRepository.BotRow row, UserId viewerId) {
+        String avatarUrl = null;
+        if (avatarApplicationService != null && userRepositoryPort != null && viewerId != null) {
+            avatarUrl = userRepositoryPort.findById(UserId.of(row.id()))
+                .map(profile -> avatarApplicationService.mintUserAvatarUrl(viewerId, profile.avatarFileId()))
+                .orElse(null);
+        }
         return new BotResponse(
             row.id().toString(),
             row.botName(),
             row.displayName(),
             row.listenMode(),
             row.defaultWebhookUrl(),
-            row.createdAt().toEpochMilli());
+            row.createdAt().toEpochMilli(),
+            avatarUrl);
     }
 
     static String normalizeListenMode(String raw) {

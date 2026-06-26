@@ -122,6 +122,9 @@ public class AuthResource {
         var username = request.username() != null ? request.username().trim() : null;
         var password = request.password();
         var displayName = request.displayName() != null ? request.displayName().trim() : null;
+        if (displayName != null && displayName.isBlank()) {
+            displayName = null;
+        }
         if (username == null || username.isEmpty() || password == null) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(new ApiError(400, messages.get("error.auth.username_password_required")))

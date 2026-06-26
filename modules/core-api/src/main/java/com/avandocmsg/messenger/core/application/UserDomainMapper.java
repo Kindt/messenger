@@ -7,6 +7,7 @@ public final class UserDomainMapper {
     }
 
     public static com.avandocmsg.messenger.api.users.dto.UserProfile toResponse(UserProfile profile) {
+        var avatarFileId = profile.avatarFileId() != null ? profile.avatarFileId().value().toString() : null;
         return new com.avandocmsg.messenger.api.users.dto.UserProfile(
             profile.id().value().toString(),
             profile.username(),
@@ -22,6 +23,9 @@ public final class UserDomainMapper {
             profile.privacyDisableReadReceipts(),
             profile.uiLocale(),
             profile.customStatusText(),
-            profile.dndUntil());
+            profile.dndUntil(),
+            profile.avatarHidden(),
+            avatarFileId,
+            null);
     }
 }

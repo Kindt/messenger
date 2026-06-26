@@ -81,6 +81,7 @@
     "membersInvited": "참가자가 회의 채팅에 추가되었습니다",
     "inviteMembersFailed": "참가자를 초대하지 못했습니다",
     "jitsiHint": "Jitsi ({host}). 게스트에게 링크를 보내거나 동료를 회의 채팅에 초대하세요.",
+    "participantsBadge": " · {count}명",
     "participantsTitle": "통화 중",
     "refreshParticipants": "참가자 목록 새로고침",
     "noParticipants": "아직 없음",
@@ -154,7 +155,8 @@
     "pushRegisterFailed": "Web Push를 등록하지 못했습니다",
     "enableFirst": "먼저 알림을 켜세요",
     "showFailed": "알림을 표시하지 못했습니다",
-    "testLocalBody": "테스트: 로컬 알림"
+    "testLocalBody": "테스트: 로컬 알림",
+    "enableHint": "오른쪽 🔔 을 누르면 브라우저에서 알림 권한을 요청합니다."
   },
   "contacts": {
     "hashRequired": "전화번호 해시를 하나 이상 입력하세요(SHA-256, hex)",
@@ -319,7 +321,19 @@
     },
     "search": {
       "emptyTitle": "일치하는 결과 없음",
-      "emptyHint": "검색어를 바꾸거나 철자를 확인하세요."
+      "emptyHint": "검색어를 바꾸거나 철자를 확인하세요.",
+      "globalTitle": "검색",
+      "filterAll": "전체",
+      "filterChats": "채팅",
+      "filterMessages": "메시지",
+      "noResults": "결과가 없습니다.",
+      "globalPlaceholder": "모든 채팅에서 검색(2자 이상, E2EE 제외)…",
+      "chatPlaceholder": "이 채팅에서 검색(2자 이상, E2EE 제외)…",
+      "scopeGlobal": "모든 채팅",
+      "scopeChat": "이 채팅",
+      "scopeAutoGlobal": "자동: 전체",
+      "scopeAutoChat": "자동: 채팅",
+      "scopeCycleTitle": "검색 범위 변경"
     },
     "auth": {
       "username": "사용자 이름",
@@ -390,16 +404,20 @@
         "archive": "보관"
       },
       "filter": {
-        "all": "All chats",
-        "unread": "Unread",
-        "mentions": "Mentions"
+        "all": "모든 채팅",
+        "unread": "읽지 않음",
+        "mentions": "멘션"
       },
+      "filterPanelTitle": "채팅 필터",
+      "filterPanelFolders": "폴더",
+      "filterPanelShow": "표시",
       "marketplaceSearch": "Search integrations…",
       "marketplaceAll": "All categories",
       "noChatsUnread": "No unread chats.",
       "noChatsMentions": "No chats with mentions.",
       "pinChat": "Pin chat",
-      "unpinChat": "Unpin chat"
+      "unpinChat": "Unpin chat",
+      "resizeTitle": "Drag to resize chat list"
     },
     "thread": {
       "empty": "채팅을 선택하거나 그룹을 만드세요.",
@@ -415,6 +433,7 @@
       "exportCancel": "내보내기 취소",
       "refresh": "채팅 새로고침",
       "copyChatLink": "이 채팅 링크 복사",
+      "directChat": "1:1 채팅",
       "confLive": "🎥 {title}",
       "confLiveDefault": "화상 회의 진행 중",
       "searchPlaceholder": "이 채팅에서 검색(2자 이상, E2EE 제외)…",
@@ -428,7 +447,10 @@
       "fileBtn": "파일",
       "loadOlder": "이전 메시지",
       "you": "나",
-      "composerPlaceholder": "메시지… (Shift+Enter — 줄 바꿈, 파일 끌어다 놓기)",
+      "composerPlaceholder": "메시지를 입력하세요…",
+      "composerHint": "Enter — 보내기, Shift+Enter — 줄 바꿈, 파일 끌어다 놓기",
+      "composerMore": "더보기",
+      "chatMore": "채팅 작업",
       "cancelReply": "답장 취소",
       "bold": "굵게",
       "italic": "기울임",
@@ -464,8 +486,8 @@
       "whiteboardFailed": "화이트보드를 저장하지 못했습니다.",
       "stickersTitle": "GIF 및 스티커",
       "stickersEmpty": "카탈로그가 비어 있습니다 — API로 pack을 추가하세요.",
-      "federationTitle": "연합 — partner orgs",
-      "federationEmpty": "trust graph에 partner orgs가 없습니다.",
+      "federationTitle": "연합",
+      "federationEmpty": "신뢰할 수 있는 조직이 없습니다.",
       "confTools": "ADR 도구",
       "recordStart": "녹화",
       "recordStarted": "녹화가 시작되었습니다 (scaffold).",
@@ -486,17 +508,18 @@
       "aiAssistTitle": "AI chat assist",
       "aiAssistPlaceholder": "Ask a question about this chat…",
       "aiAssistRun": "Run",
-      "aiAssistEmpty": "No reply from AI gateway.",
+      "aiAssistEmpty": "AI 응답이 없습니다.",
+      "aiAssistUnavailable": "AI 도우미를 사용할 수 없습니다(gateway 미설정).",
       "aiAssistFailed": "AI assist failed.",
       "aiInsert": "Insert into composer",
       "kanbanMoveBack": "Move to previous column",
       "kanbanMoveForward": "Move to next column",
       "kanbanDelete": "Delete task",
       "kanbanDeleted": "Task deleted.",
-      "passkeysTitle": "Passkeys (scaffold)",
-      "passkeysEmpty": "No passkeys registered.",
-      "passkeysRegister": "Register scaffold credential",
-      "passkeysRegistered": "Passkey scaffold registered.",
+      "passkeysTitle": "Passkey",
+      "passkeysEmpty": "등록된 키가 없습니다.",
+      "passkeysRegister": "Passkey 추가",
+      "passkeysRegistered": "Passkey가 등록되었습니다.",
       "passkeysFailed": "Passkey registration failed.",
       "guestExpired": "Guest link expired.",
       "guestRedeemed": "Guest link accepted.",
@@ -683,18 +706,29 @@
       "tabLinks": "링크",
       "tabSecurity": "보안",
       "appearance": "모양",
+      "theme": "테마",
       "appearanceKorus": "KORUS Consulting 테마(#7949F4, korusconsulting.ru).",
       "cache": "앱 캐시",
       "resetCache": "UI 캐시 초기화",
       "cacheHint": "서버 업데이트 후 이전 UI가 보이는 경우(Opera, PWA).",
+      "sectionOffline": "오프라인",
+      "sectionAbout": "정보",
       "apiVersion": "API 버전",
+      "kbdTitle": "키보드 단축키",
       "kbdHint": "<kbd>Ctrl+K</kbd> 또는 <kbd>/</kbd> — 검색 · <kbd>Alt+↑</kbd><kbd>Alt+↓</kbd> — 채팅 · <kbd>M</kbd> — 메시지 · <kbd>Esc</kbd> — 닫기 · <kbd>Ctrl+,</kbd> — 설정",
       "status": "상태",
+      "presence": "접속 상태",
+      "sectionAccount": "계정",
+      "sectionPresence": "접속 상태",
+      "usernameHint": "로그인은 가입 시 정해지며 여기서는 변경할 수 없습니다.",
+      "displayNameHint": "채팅에서 다른 사람에게 보이는 이름입니다.",
       "presenceOnline": "온라인",
       "presenceAway": "자리 비움",
       "presenceDnd": "방해 금지",
       "presenceOffline": "오프라인",
-      "customStatus": "상태",
+      "customStatus": "상태 메시지",
+      "customStatusPlaceholder": "예: 회의 중 (~15:00)",
+      "customStatusHint": "이름 옆에 연락처에게 보이는 짧은 문구입니다.",
       "dndSchedule": "방해 금지 종료",
       "dndSeeNotificationsTab": "방해 금지 시간은 «알림» 탭에서 설정합니다.",
       "dndUntilManual": "내가 끌 때까지",
@@ -704,6 +738,7 @@
       "dndUntilTomorrow": "내일 9:00까지",
       "dndUntilActive": "{until}까지 활성",
       "name": "이름",
+      "email": "이메일",
       "notifications": "알림",
       "sound": "알림 소리",
       "lastPublicLink": "마지막 공개 링크",
@@ -715,7 +750,18 @@
       "noDevices": "등록된 장치가 없습니다.",
       "disconnect": "연결 해제",
       "testNotification": "알림 테스트",
-      "showTest": "표시",
+      "showTest": "테스트 보내기",
+      "sectionBrowserNotif": "브라우저",
+      "sectionDnd": "방해 금지",
+      "sectionPush": "전달 (Web Push)",
+      "sectionPlanner": "알림 및 예약",
+      "pendingReminders": "대기 중인 알림",
+      "permissionStatus": "브라우저 권한",
+      "permissionGranted": "허용됨",
+      "permissionDefault": "요청 안 됨",
+      "dndQuickEnable": "다음까지 켜기",
+      "dndOffHint": "방해 금지가 꺼져 있습니다. 접속 상태는 «프로필» 탭에서 변경하세요.",
+      "pushDevicesHint": "이 계정의 활성 Web Push 구독이 있는 기기입니다.",
       "pushSyncUpdate": "구독 업데이트",
       "newKeyPackage": "새 key package",
       "create": "만들기",
@@ -731,7 +777,7 @@
       "pwaInstall": "앱 설치",
       "pwaInstallBtn": "설치",
       "offlineHint": "오프라인: 정적 파일은 Service Worker로 캐시됨; API는 네트워크 필요.",
-      "e2eeKeyPackages": "E2EE key packages",
+      "e2eeKeyPackages": "서버의 MLS 키",
       "webPush": "Web Push",
       "localKeySaved": "저장됨: {prefix}",
       "localKeySavedYes": "예",
@@ -779,16 +825,20 @@
     "integration": {
       "close": "Close panel"
     },
-    "search": {
-      "globalTitle": "Search",
-      "filterAll": "All",
-      "filterChats": "Chats",
-      "filterMessages": "Messages",
-      "noResults": "No results."
-    },
     "profile": {
       "bioHint": "Short bio visible to contacts",
-      "avatarChange": "Change avatar"
+      "avatarChange": "Change avatar",
+      "avatarRemove": "Remove avatar",
+      "avatarUploadFailed": "Could not upload avatar",
+      "avatarHidden": "Hide my avatar",
+      "avatarHiddenHint": "Others will see initials instead of your photo"
+    },
+    "avatar": {
+      "altUser": "Avatar of {name}",
+      "altChat": "Chat avatar for {name}",
+      "cropTitle": "Crop avatar",
+      "cropHint": "Drag to reposition. Minimum 128×128 px.",
+      "cropApply": "Apply"
     },
     "mobile": {
       "back": "Back to list",
@@ -809,7 +859,7 @@
       "disconnectFailed": "Could not disconnect integration."
     },
     "federation": {
-      "directoryHint": "Trusted orgs for cross-org chats (MVP).",
+      "directoryHint": "셀 간 채팅을 위한 파트너 조직.",
       "trustActive": "Active",
       "trustPending": "Pending",
       "trustLevel": {
@@ -839,6 +889,10 @@
       "title": "Edit message",
       "save": "Save",
       "failed": "Could not edit message."
+    },
+    "profileCard": {
+      "title": "Profile",
+      "message": "Message"
     }
   },
   "push": {

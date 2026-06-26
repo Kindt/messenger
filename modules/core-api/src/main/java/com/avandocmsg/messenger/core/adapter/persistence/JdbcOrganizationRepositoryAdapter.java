@@ -68,10 +68,17 @@ public final class JdbcOrganizationRepositoryAdapter implements OrganizationRepo
         return jdbc.setUserOrg(userId.value(), orgId.value());
     }
 
+    @Override
+    public boolean updateLogo(OrganizationId orgId, UUID logoFileId) {
+        return orgId != null && jdbc.updateLogo(orgId.value(), logoFileId);
+    }
+
     private static Organization mapRow(JdbcOrganizationJdbcRepository.OrgRow row) {
+        var logo = row.logoFileId() != null ? com.avandocmsg.messenger.core.domain.FileId.of(row.logoFileId()) : null;
         return new Organization(
             OrganizationId.of(UUID.fromString(row.id())),
             row.name(),
-            row.createdAt());
+            row.createdAt(),
+            logo);
     }
 }

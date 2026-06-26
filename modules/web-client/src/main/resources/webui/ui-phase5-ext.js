@@ -15,44 +15,34 @@
 
   function mountThreadTools(ctx) {
     if (!ctx.state.selectedId || ctx.state.selectedId === ctx.state.savedChatId) return null;
+    var visible = ctx.isPlatformFeatureVisible || function () {
+      return true;
+    };
     var bar = ctx.el("div", "thread-phase5-tools");
     bar.setAttribute("data-testid", "thread-phase5-tools");
-    bar.appendChild(
-      ctx.iconBtn("🎨", ctx.L("ui.phase5.stickers"), {
-        testId: "phase5-stickers-open",
-        disabled: ctx.state.busy,
-        onClick: function () {
-          ctx.openStickersPanel();
-        },
-      })
-    );
-    bar.appendChild(
-      ctx.iconBtn("📋", ctx.L("ui.phase5.kanban"), {
-        testId: "phase5-kanban-toggle",
-        disabled: ctx.state.busy,
-        onClick: function () {
-          ctx.toggleKanbanPanel();
-        },
-      })
-    );
-    bar.appendChild(
-      ctx.iconBtn("🖊", ctx.L("ui.phase5.whiteboard"), {
-        testId: "phase5-whiteboard-toggle",
-        disabled: ctx.state.busy,
-        onClick: function () {
-          ctx.toggleWhiteboardPanel();
-        },
-      })
-    );
-    bar.appendChild(
-      ctx.iconBtn("✨", ctx.L("ui.phase5.aiAssist"), {
-        testId: "phase5-ai-assist-open",
-        disabled: ctx.state.busy,
-        onClick: function () {
-          ctx.toggleAiAssistPanel();
-        },
-      })
-    );
+    if (visible("productivity.stickers.use")) {
+      bar.appendChild(
+        ctx.iconBtn("🎨", ctx.L("ui.phase5.stickers"), {
+          testId: "phase5-stickers-open",
+          disabled: ctx.state.busy,
+          onClick: function () {
+            ctx.openStickersPanel();
+          },
+        })
+      );
+    }
+    if (visible("ai.assist.request")) {
+      bar.appendChild(
+        ctx.iconBtn("✨", ctx.L("ui.phase5.aiAssist"), {
+          testId: "phase5-ai-assist-open",
+          disabled: ctx.state.busy,
+          onClick: function () {
+            ctx.toggleAiAssistPanel();
+          },
+        })
+      );
+    }
+    if (!bar.firstChild) return null;
     return bar;
   }
 
@@ -96,11 +86,10 @@
     taskEl.appendChild(delBtn);
   }
 
-  function mountKanbanSection(ctx) {
-    if (!ctx.state.phase5KanbanOpen || !ctx.state.selectedId) return null;
-    var wrap = ctx.el("div", "thread-kanban");
+  function mountKanbanBody(ctx) {
+    if (!ctx.state.selectedId) return null;
+    var wrap = ctx.el("div", "thread-extras-kanban");
     wrap.setAttribute("data-testid", "thread-kanban");
-    wrap.appendChild(ctx.el("div", "thread-kanban-title", ctx.L("ui.phase5.kanbanTitle")));
     var labels = {
       todo: ctx.L("ui.phase5.colTodo"),
       doing: ctx.L("ui.phase5.colDoing"),
@@ -147,11 +136,10 @@
     return wrap;
   }
 
-  function mountWhiteboardSection(ctx) {
-    if (!ctx.state.phase5WhiteboardOpen || !ctx.state.selectedId) return null;
-    var wrap = ctx.el("div", "thread-whiteboard");
+  function mountWhiteboardBody(ctx) {
+    if (!ctx.state.selectedId) return null;
+    var wrap = ctx.el("div", "thread-extras-whiteboard");
     wrap.setAttribute("data-testid", "thread-whiteboard");
-    wrap.appendChild(ctx.el("div", "thread-whiteboard-title", ctx.L("ui.phase5.whiteboardTitle")));
     var editorHost = ctx.el("div", "whiteboard-editor-host");
     var initial =
       (ctx.state.chatWhiteboard && ctx.state.chatWhiteboard.snapshot_json) ||
@@ -339,26 +327,15 @@
     if (!panel) return;
     var wrap = ctx.el("div", "federation-settings-panel");
     wrap.setAttribute("data-testid", "federation-settings-panel");
-    var head = ctx.el("div", "settings-row");
-    head.appendChild(ctx.el("h3", "settings-subtitle", ctx.L("ui.phase5.federationTitle")));
+    wrap.appendChild(ctx.el("h3", "settings-subtitle", ctx.L("ui.phase5.federationTitle")));
+    var head = ctx.el("div", "federation-settings-head");
     if ((ctx.state.federationDirectory || []).length) {
       head.appendChild(
         ctx.el("span", "federation-trust-badge", ctx.L("ui.federation.trustActive"))
       );
     }
-    head.appendChild(
-      ctx.el("p", "phase5-hint federation-directory-hint", ctx.L("ui.federation.directoryHint"))
-    );
-    head.appendChild(
-      ctx.iconBtn("↻", ctx.L("ui.common.refresh"), {
-        testId: "federation-refresh",
-        disabled: ctx.state.busy,
-        onClick: function () {
-          ctx.loadFederationDirectory().then(ctx.render).catch(ctx.render);
-        },
-      })
-    );
     wrap.appendChild(head);
+    wrap.appendChild(ctx.el("p", "settings-hint", ctx.L("ui.federation.directoryHint")));
     var list = ctx.el("div", "federation-directory-list");
     list.setAttribute("data-testid", "federation-directory-list");
     (ctx.state.federationDirectory || []).forEach(function (p) {
@@ -371,7 +348,7 @@
       list.appendChild(row);
     });
     if (!(ctx.state.federationDirectory || []).length) {
-      list.appendChild(ctx.el("p", "phase5-hint", ctx.L("ui.phase5.federationEmpty")));
+      list.appendChild(ctx.el("p", "settings-hint", ctx.L("ui.phase5.federationEmpty")));
     }
     wrap.appendChild(list);
     panel.appendChild(wrap);
@@ -383,15 +360,16 @@
     var list = ctx.el("div", "passkeys-list");
     list.setAttribute("data-testid", "passkeys-list");
     (ctx.state.myPasskeys || []).forEach(function (pk) {
-      var row = ctx.el("div", "passkeys-row");
+      var row = ctx.el("div", "passkeys-row settings-value-mono");
       row.textContent = (pk.credential_id || pk.id || "").slice(0, 24);
       list.appendChild(row);
     });
     if (!(ctx.state.myPasskeys || []).length) {
-      list.appendChild(ctx.el("p", "phase5-hint", ctx.L("ui.phase5.passkeysEmpty")));
+      list.appendChild(ctx.el("p", "settings-hint", ctx.L("ui.phase5.passkeysEmpty")));
     }
     panel.appendChild(list);
     var row = ctx.el("div", "settings-row");
+    row.appendChild(ctx.el("span", null, ctx.L("ui.phase5.passkeysRegister")));
     row.appendChild(
       ctx.iconBtn("＋", ctx.L("ui.phase5.passkeysRegister"), {
         testId: "passkey-register-scaffold",
@@ -407,23 +385,30 @@
   function mountSipGatewaySection(ctx, panel) {
     if (!panel) return;
     panel.appendChild(ctx.el("h3", "settings-subtitle", ctx.L("ui.phase5.sipTitle")));
-    var row = ctx.el("div", "settings-row sip-gateway-row");
+    var enableRow = ctx.el("div", "settings-row sip-gateway-row");
     var enabled = ctx.el("input");
     enabled.type = "checkbox";
     enabled.id = "sip-enabled";
+    enabled.setAttribute("data-testid", "sip-enabled");
     enabled.checked = !!(ctx.state.sipGateway && ctx.state.sipGateway.enabled);
-    row.appendChild(enabled);
-    row.appendChild(ctx.el("label", "sip-label", ctx.L("ui.phase5.sipEnabled")));
-    panel.appendChild(row);
-    var uriRow = ctx.el("div", "settings-row");
+    enableRow.appendChild(enabled);
+    var enableLabel = ctx.el("label", "sip-label");
+    enableLabel.setAttribute("for", "sip-enabled");
+    enableLabel.textContent = ctx.L("ui.phase5.sipEnabled");
+    enableRow.appendChild(enableLabel);
+    panel.appendChild(enableRow);
+    var uriBlock = ctx.el("div", "settings-row settings-row-stack");
+    uriBlock.appendChild(ctx.el("span", "settings-row-label", ctx.L("ui.phase5.sipUri")));
+    var uriWrap = ctx.el("div", "settings-inline-controls");
     var uriInp = document.createElement("input");
     uriInp.type = "text";
-    uriInp.className = "sip-uri-input";
+    uriInp.className = "settings-text-input";
+    uriInp.id = "sip-uri-input";
     uriInp.setAttribute("data-testid", "sip-uri-input");
-    uriInp.placeholder = ctx.L("ui.phase5.sipUri");
+    uriInp.placeholder = "sip:gw.example.local";
     uriInp.value = (ctx.state.sipGateway && ctx.state.sipGateway.gateway_uri) || "";
-    uriRow.appendChild(uriInp);
-    uriRow.appendChild(
+    uriWrap.appendChild(uriInp);
+    uriWrap.appendChild(
       ctx.iconBtn("💾", ctx.L("ui.phase5.sipSave"), {
         testId: "sip-save",
         disabled: ctx.state.busy,
@@ -432,13 +417,16 @@
         },
       })
     );
-    panel.appendChild(uriRow);
+    uriBlock.appendChild(uriWrap);
+    panel.appendChild(uriBlock);
   }
 
   global.KorusUiPhase5Ext = {
     mountThreadTools: mountThreadTools,
-    mountKanbanSection: mountKanbanSection,
-    mountWhiteboardSection: mountWhiteboardSection,
+    mountKanbanBody: mountKanbanBody,
+    mountWhiteboardBody: mountWhiteboardBody,
+    mountKanbanSection: mountKanbanBody,
+    mountWhiteboardSection: mountWhiteboardBody,
     mountStickersOverlay: mountStickersOverlay,
     mountAiAssistOverlay: mountAiAssistOverlay,
     mountFederationDirectory: mountFederationDirectory,

@@ -21,7 +21,13 @@ public record ChatResponse(
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonProperty("folder_tag") String folderTag,
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    @JsonProperty("channel_post_policy") String channelPostPolicy
+    @JsonProperty("channel_post_policy") String channelPostPolicy,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("avatar_file_id") String avatarFileId,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("avatar_url") String avatarUrl,
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonProperty("display_avatar_url") String displayAvatarUrl
 ) {
     public ChatResponse(
         String id,
@@ -35,6 +41,24 @@ public record ChatResponse(
         Instant createdAt
     ) {
         this(id, title, type, ownerId, memberCount, muted, personalFilterActive, ttlSeconds, createdAt,
-            null, null, null);
+            null, null, null, null, null, null);
+    }
+
+    public ChatResponse(
+        String id,
+        String title,
+        String type,
+        String ownerId,
+        int memberCount,
+        boolean muted,
+        boolean personalFilterActive,
+        Integer ttlSeconds,
+        Instant createdAt,
+        Boolean archived,
+        String folderTag,
+        String channelPostPolicy
+    ) {
+        this(id, title, type, ownerId, memberCount, muted, personalFilterActive, ttlSeconds, createdAt,
+            archived, folderTag, channelPostPolicy, null, null, null);
     }
 }

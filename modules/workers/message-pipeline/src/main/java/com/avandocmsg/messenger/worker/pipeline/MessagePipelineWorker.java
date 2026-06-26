@@ -7,9 +7,12 @@ import com.avandocmsg.messenger.common.dto.LiveSessionChangeEvent;
 import com.avandocmsg.messenger.common.dto.PinChangeEvent;
 import com.avandocmsg.messenger.common.dto.ReadReceiptEvent;
 import com.avandocmsg.messenger.common.dto.ReactionChangeEvent;
+import com.avandocmsg.messenger.common.avatar.WorkerAvatarResizeUrl;
 import com.avandocmsg.messenger.common.dto.MessageSendEvent;
 import com.avandocmsg.messenger.common.dto.RtcSignalEvent;
 import com.avandocmsg.messenger.common.dto.TypingEvent;
+import com.avandocmsg.messenger.common.dto.ChatAvatarEvent;
+import com.avandocmsg.messenger.common.dto.UserAvatarEvent;
 import com.avandocmsg.messenger.common.dto.UserPresenceEvent;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.avandocmsg.messenger.common.i18n.WorkerMessageSources;
@@ -67,6 +70,7 @@ public class MessagePipelineWorker {
     private final PipelineReadCacheInvalidator readCacheInvalidator;
     private final TypingFanoutDebouncer typingDebouncer;
     private final MessageDownstreamPublisher.Config downstreamPublishConfig;
+    private final WorkerAvatarResizeUrl.Config avatarConfig;
     private WorkerHealthHttpServer metricsServer;
 
     public MessagePipelineWorker(String natsUrl, DataSource dataSource, boolean jetStreamEnabled,
@@ -116,6 +120,7 @@ public class MessagePipelineWorker {
         this.typingDebouncer = typingDebouncer != null ? typingDebouncer : new TypingFanoutDebouncer();
         this.downstreamPublishConfig = downstreamPublishConfig != null
             ? downstreamPublishConfig : MessageDownstreamPublisher.Config.fromEnv();
+        this.avatarConfig = WorkerAvatarResizeUrl.Config.fromEnv();
         var options = NatsConnectionOptions.clientBuilder(natsUrl, "message-pipeline-worker").build();
         this.natsConnection = Nats.connect(options);
         log.info(workerMessages.format("worker.common.connected_nats_jetstream", natsUrl, jetStreamEnabled));
@@ -534,7 +539,14 @@ public class MessagePipelineWorker {
     }
 
     private void handleUserPresencePayload(byte[] raw) throws Exception {
-        var evt = MAPPER.readValue(raw, UserPresenceEvent.class);
+        var root = MAPPER.readTree(raw);
+        var type = root.path("type").asText("");
+        if (UserAvatarEvent.TYPE.equals(type) || ChatAvatarEvent.TYPE.equals(type)) {
+            PipelineAvatarFanout.dispatch(raw, root, dataSource, natsConnection, deliverConfig, fanoutDedup,
+                avatarConfig, workerMessages);
+            return;
+        }
+        var evt = MAPPER.treeToValue(root, UserPresenceEvent.class);
         if (!UserPresenceEvent.TYPE.equals(evt.type())) {
             return;
         }

@@ -149,6 +149,8 @@ services:
       KORUS_PRODUCT_ADDONS: ${KORUS_PRODUCT_ADDONS:-}
       EXTERNAL_STACK_MANIFEST_PATH: /config/${EXTERNAL_STACK_MANIFEST_FILE:-external-stack-manifest.yaml}
       WEB_PUBLIC_BASE_URL: "http://127.0.0.1:19088/"
+      API_PUBLIC_BASE_URL: ${API_PUBLIC_BASE_URL:-http://127.0.0.1:18080}
+      AVATAR_TOKEN_HMAC_SECRET: ${AVATAR_TOKEN_HMAC_SECRET:-korus-dev-avatar-hmac-secret-32b}
     depends_on:
       postgres-hot:
         condition: service_healthy

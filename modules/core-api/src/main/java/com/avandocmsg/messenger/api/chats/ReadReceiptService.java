@@ -86,29 +86,7 @@ public class ReadReceiptService {
     }
 
     public MarkResult markMessageRead(UUID chatId, UUID userId, UUID messageId) {
-        if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
-            return MarkResult.NOT_MEMBER;
-        }
-        var msg = messageRepositoryPort.findById(MessageId.of(messageId)).orElse(null);
-        if (msg == null || !msg.chatId().value().equals(chatId)) {
-            return MarkResult.MESSAGE_NOT_FOUND;
-        }
-        if (userLookupPort.isReadReceiptsDisabled(userId)) {
-            chatReadStatePort.upsertLastRead(userId, chatId, messageId);
-            ReadCacheCoordinator.invalidateChatUnread(readCache, userId);
-            return MarkResult.OK;
-        }
-        var now = clock.instant();
-        var inserted = readReceiptPort.insert(messageId, userId, now);
-        chatReadStatePort.upsertLastRead(userId, chatId, messageId);
-        if (inserted) {
-            ReadReceiptMetrics.insertRecorded();
-            auditPort.record(userId, "message.read", "message", messageId.toString(), null);
-            publishReceipt(ReadReceiptEvent.single(chatId.toString(), messageId.toString(), userId.toString(),
-                now.toEpochMilli()));
-        }
-        ReadCacheCoordinator.invalidateChatUnread(readCache, userId);
-        return MarkResult.OK;
+        return markBatchRead(chatId, userId, List.of(messageId));
     }
 
     public MarkResult markBatchRead(UUID chatId, UUID userId, List<UUID> messageIds) {

@@ -1,6 +1,7 @@
 package com.avandocmsg.messenger.worker.botdelivery;
 
 import com.avandocmsg.messenger.common.dto.MessageWorkerEvent;
+import com.avandocmsg.messenger.common.federation.FederationDeliveryPolicy;
 import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.health.WorkerDependencyHealth;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
@@ -229,7 +230,7 @@ public class BotDeliveryWorker {
             return;
         }
         try {
-            for (var pending : outbox.fetchDue(20)) {
+            for (var pending : outbox.fetchDue(FederationDeliveryPolicy.OUTBOX_FETCH_BATCH)) {
                 retryOutboxRow(pending);
             }
         } catch (Exception e) {

@@ -8,6 +8,7 @@ import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.domain.StoredFile;
 import com.avandocmsg.messenger.core.domain.UserId;
+import com.avandocmsg.messenger.core.port.AvatarAccessPort;
 import com.avandocmsg.messenger.core.port.FileMetadataPort;
 import com.avandocmsg.messenger.core.port.ObjectStoragePort;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,26 @@ class FileApplicationServiceTest {
         messageQuery.mayAccess = false;
 
         assertTrue(service.getMetadataForUser(UserId.of(viewerId), FileId.of(fileId)).isEmpty());
+    }
+
+    @Test
+    void mayView_allowsAvatarAccessPort() {
+        filePort.file = sampleFile();
+        messageQuery.mayAccess = false;
+        var avatarService = new FileApplicationService(
+            filePort, messageQuery, storage, new StubAvatarAccessPort(true), () -> fileId, 1024, false);
+
+        assertTrue(avatarService.mayView(sampleFile(), UserId.of(viewerId)));
+    }
+
+    @Test
+    void mayView_deniesWhenAvatarAccessPortFalse() {
+        filePort.file = sampleFile();
+        messageQuery.mayAccess = false;
+        var avatarService = new FileApplicationService(
+            filePort, messageQuery, storage, new StubAvatarAccessPort(false), () -> fileId, 1024, false);
+
+        assertFalse(avatarService.mayView(sampleFile(), UserId.of(viewerId)));
     }
 
     @Test
@@ -236,6 +257,29 @@ class FileApplicationServiceTest {
         @Override
         public Optional<String> presignedPutUrl(String objectName, int ttlSeconds, String contentType) {
             return Optional.of("https://minio.test/upload/" + objectName + "?ttl=" + ttlSeconds);
+        }
+    }
+
+    static final class StubAvatarAccessPort implements AvatarAccessPort {
+        private final boolean allow;
+
+        StubAvatarAccessPort(boolean allow) {
+            this.allow = allow;
+        }
+
+        @Override
+        public boolean viewerMayAccessAsAvatar(UserId viewerId, FileId fileId) {
+            return allow;
+        }
+
+        @Override
+        public Optional<UserId> findUserIdByAvatarFile(FileId fileId) {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<com.avandocmsg.messenger.core.domain.ChatId> findChatIdByAvatarFile(FileId fileId) {
+            return Optional.empty();
         }
     }
 

@@ -108,5 +108,10 @@ class OrganizationApplicationServiceTest {
         public boolean setUserOrg(UserId userId, OrganizationId orgId) {
             return setUserOrgOk;
         }
+
+        @Override
+        public boolean updateLogo(OrganizationId orgId, UUID logoFileId) {
+            return true;
+        }
     }
 }

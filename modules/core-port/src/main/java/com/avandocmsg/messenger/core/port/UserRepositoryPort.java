@@ -20,6 +20,12 @@ public interface UserRepositoryPort {
 
     boolean updateUiLocale(UserId id, String uiLocale);
 
+    boolean updateAvatar(UserId id, java.util.UUID avatarFileId);
+
+    default boolean updateAvatarHidden(UserId id, boolean avatarHidden) {
+        return false;
+    }
+
     boolean touchHeartbeat(UserId id);
 
     /** After Keycloak login: upsert local user row from JWT claims. */

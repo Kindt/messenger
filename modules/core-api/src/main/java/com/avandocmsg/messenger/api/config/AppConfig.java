@@ -153,6 +153,13 @@ public class AppConfig {
         override("KORUS_PRODUCT_ADDONS", "korus.product.addons");
         override("DIRECTORY_SYNC_INTERVAL_MINUTES", "directory.sync.interval.minutes");
         override("SCIM_BEARER_TOKEN", "scim.bearer.token");
+        override("AVATARS_ENABLED", "avatars.enabled");
+        override("AVATAR_TOKEN_HMAC_SECRET", "avatar.token.hmac.secret");
+        override("AVATAR_TOKEN_HMAC_SECRET_PREVIOUS", "avatar.token.hmac.secret.previous");
+        override("API_PUBLIC_BASE_URL", "api.public.base.url");
+        override("KEYCLOAK_AVATAR_IMPORT_ENABLED", "keycloak.avatar.import.enabled");
+        override("KEYCLOAK_AVATAR_IMPORT_MAX_BYTES", "keycloak.avatar.import.max.bytes");
+        override("FILE_RESIZE_ENABLED", "file.resize.enabled");
     }
 
     private void override(String envKey, String propKey) {
@@ -1167,5 +1174,35 @@ public class AppConfig {
             return Boolean.parseBoolean(env.trim());
         }
         return Boolean.parseBoolean(props.getProperty("org.ip.allowlist.enforce", "false"));
+    }
+
+    /** Entity avatars feature flag (spec 068). Env: {@code AVATARS_ENABLED}. */
+    public boolean avatarsEnabled() {
+        return Boolean.parseBoolean(props.getProperty("avatars.enabled", "true"));
+    }
+
+    /** HMAC secret for signed avatar resize tokens. Env: {@code AVATAR_TOKEN_HMAC_SECRET}. */
+    public String avatarTokenHmacSecret() {
+        return props.getProperty("avatar.token.hmac.secret", "").trim();
+    }
+
+    /** Previous HMAC secret for 24h rotation window. Env: {@code AVATAR_TOKEN_HMAC_SECRET_PREVIOUS}. */
+    public String avatarTokenHmacSecretPrevious() {
+        return props.getProperty("avatar.token.hmac.secret.previous", "").trim();
+    }
+
+    /** Public API base URL for absolute avatar/push links. Env: {@code API_PUBLIC_BASE_URL}. */
+    public String apiPublicBaseUrl() {
+        return props.getProperty("api.public.base.url", "").trim();
+    }
+
+    /** Import Keycloak {@code picture} claim on login when user has no avatar. Env: {@code KEYCLOAK_AVATAR_IMPORT_ENABLED}. */
+    public boolean keycloakAvatarImportEnabled() {
+        return Boolean.parseBoolean(props.getProperty("keycloak.avatar.import.enabled", "true"));
+    }
+
+    /** Max bytes when downloading Keycloak picture URL. Env: {@code KEYCLOAK_AVATAR_IMPORT_MAX_BYTES}. */
+    public int keycloakAvatarImportMaxBytes() {
+        return Integer.parseInt(props.getProperty("keycloak.avatar.import.max.bytes", "524288"));
     }
 }

@@ -38,6 +38,18 @@
         ctx.scheduleRender();
         return;
       }
+      if (ctx.isAvatarEvent(data)) {
+        ctx.sendHeartbeatThrottled();
+        ctx.applyAvatarEvent(data);
+        ctx.scheduleRender();
+        return;
+      }
+      if (ctx.isChatAvatarEvent(data)) {
+        ctx.sendHeartbeatThrottled();
+        ctx.applyChatAvatarEvent(data);
+        ctx.scheduleRender();
+        return;
+      }
       if (ctx.isReadReceiptEvent(data)) {
         ctx.sendHeartbeatThrottled();
         ctx.applyReadReceiptEvent(data);

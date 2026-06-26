@@ -44,7 +44,8 @@
         "specs/auth-session.spec.ts",
         "specs/auth-login-options.spec.ts",
         "specs/contacts-search.spec.ts",
-        "specs/settings-cross-tab.spec.ts"
+        "specs/settings-cross-tab.spec.ts",
+        "specs/ui-avatar.spec.ts"
       ],
       "grep": "login via UI|logout returns|locale switch|contacts list loads|login-options"
     },
@@ -116,6 +117,10 @@
     "ui-interaction-audit": {
       "description": "Aggressive client/admin desktop and mobile interaction audit for buttons, links, fields, layout, and runtime errors",
       "args": ["specs/ui-interaction-audit.spec.ts"]
+    },
+    "ui-tests": {
+      "description": "тесты UI — data-driven visual/UX/CLK/MED scenarios",
+      "args": ["specs/ui-tests.spec.ts"]
     },
     "ui-i18n-artifacts": {
       "description": "Visible translation artifact audit across web auth, messaging/settings, and admin UI",

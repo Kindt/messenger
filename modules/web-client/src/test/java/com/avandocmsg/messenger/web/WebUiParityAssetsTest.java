@@ -60,7 +60,7 @@ class WebUiParityAssetsTest {
         assertTrue(messageArticle.contains("message-edit-button"), "edit button testid");
         assertTrue(messageArticle.contains("message-link-button"), "link button testid");
         assertTrue(app.contains("integration-panel"), "integration iframe panel testid");
-        assertTrue(app.contains("sidebar-filter-bar"), "sidebar filter bar");
+        assertTrue(app.contains("sidebar-filters-panel"), "sidebar filters panel");
         assertTrue(app.contains("sidebar-filter-"), "sidebar filter testid prefix");
         assertTrue(app.contains("sidebarChatFilter"), "sidebar chat filter state");
         assertTrue(app.contains("openIntegration"), "integration launcher");
@@ -72,6 +72,7 @@ class WebUiParityAssetsTest {
         assertTrue(app.contains("KorusOpenMlsDevFactory"), "openmls dev factory selection");
         assertTrue(app.contains("chat-export-button"), "export button testid");
         assertTrue(app.contains("isPlatformFeatureEnabled"), "feature-level product module helper");
+        assertTrue(app.contains("isPlatformFeatureVisible"), "feature visibility helper");
         assertTrue(app.contains("integrations.sidebar.open"), "integrations tab gated by feature key");
         var mlsWasm = readResource("webui/korus-mls-wasm.js");
         assertTrue(mlsWasm.contains("/e2ee/mls/session/"), "mls session API for client encrypt");
@@ -106,6 +107,17 @@ class WebUiParityAssetsTest {
         var messageContent = readResource("webui/ui-message-content.js");
         assertTrue(messageContent.contains("message-voice-player"), "voice player testid");
         assertTrue(app.contains("KorusI18n") || app.contains("localErr"), "i18n error localization");
+        assertTrue(app.contains("KorusUiAvatar"), "avatar module delegation");
+        assertTrue(app.contains("KorusUiAvatarCrop"), "avatar crop module");
+        assertTrue(app.contains("avatarByUserId"), "avatar user cache state");
+        assertTrue(app.contains("displayAvatarByChatId"), "chat avatar cache state");
+        assertTrue(app.contains("applyAvatarEvent"), "avatar ws handler");
+        assertTrue(app.contains("KorusUiProfileCard"), "profile card module");
+        var avatarJs = readResource("webui/ui-avatar.js");
+        assertTrue(avatarJs.contains("renderAvatar"), "avatar render helper");
+        var wsEvents = readResource("webui/ui-ws-events.js");
+        assertTrue(wsEvents.contains("isAvatarEvent"), "avatar ws event type");
+        assertTrue(messageArticle.contains("msg-sender-avatar"), "sender avatar in message article");
         assertTrue(app.contains("/conferences") && app.contains("createConference"), "standalone conference flow");
     }
 

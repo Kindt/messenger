@@ -17,14 +17,14 @@ class BlocksResourceTest {
 
     @Test
     void unblock_invalidPathUserId_throwsInvalidUuidParameterException() {
-        var resource = new BlocksResource(null, null, null, I18nTestFixtures.messagesEn());
+        var resource = new BlocksResource(null, null, null, null, I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.unblock("not-a-uuid", securityContext()));
     }
 
     @Test
     void block_invalidBodyUserId_throwsInvalidUuidParameterException() {
-        var resource = new BlocksResource(null, null, null, I18nTestFixtures.messagesEn());
+        var resource = new BlocksResource(null, null, null, null, I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.block(new BlockUserRequest("bad-uuid"), securityContext()));
     }

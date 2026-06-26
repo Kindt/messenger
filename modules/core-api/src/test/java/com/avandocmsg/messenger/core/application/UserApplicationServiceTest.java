@@ -259,8 +259,14 @@ class UserApplicationServiceTest {
                 profile.privacyDisableReadReceipts(),
                 uiLocale,
                 profile.customStatusText(),
-                profile.dndUntil());
+                profile.dndUntil(),
+                profile.avatarFileId());
             return true;
+        }
+
+        @Override
+        public boolean updateAvatar(UserId id, UUID avatarFileId) {
+            return false;
         }
 
         @Override

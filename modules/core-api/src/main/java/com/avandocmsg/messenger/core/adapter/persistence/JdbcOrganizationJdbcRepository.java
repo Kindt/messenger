@@ -65,7 +65,7 @@ public final class JdbcOrganizationJdbcRepository {
     }
 
     public Optional<OrgRow> findById(UUID id) {
-        var sql = "SELECT id, name, slug, created_at FROM organizations WHERE id = ?";
+        var sql = "SELECT id, name, slug, created_at, logo_file_id FROM organizations WHERE id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
                  JdbcQuerySupport.applyDefaultTimeout(stmt);
@@ -74,11 +74,7 @@ public final class JdbcOrganizationJdbcRepository {
                 if (!rs.next()) {
                     return Optional.empty();
                 }
-                return Optional.of(new OrgRow(
-                    rs.getObject("id", UUID.class).toString(),
-                    rs.getString("name"),
-                    rs.getString("slug"),
-                    rs.getTimestamp("created_at").toInstant()));
+                return Optional.of(mapRow(rs));
             }
         } catch (Exception e) {
             log.error("find org by id failed", e);
@@ -94,7 +90,7 @@ public final class JdbcOrganizationJdbcRepository {
         if (unique.isEmpty()) {
             return Map.of();
         }
-        var sql = new StringBuilder("SELECT id, name, slug, created_at FROM organizations WHERE id IN (");
+        var sql = new StringBuilder("SELECT id, name, slug, created_at, logo_file_id FROM organizations WHERE id IN (");
         for (int i = 0; i < unique.size(); i++) {
             sql.append(i == 0 ? "?" : ", ?");
         }
@@ -142,7 +138,7 @@ public final class JdbcOrganizationJdbcRepository {
     }
 
     public List<OrgRow> listAll() {
-        var sql = "SELECT id, name, slug, created_at FROM organizations ORDER BY name LIMIT ?";
+        var sql = "SELECT id, name, slug, created_at, logo_file_id FROM organizations ORDER BY name LIMIT ?";
         var out = new ArrayList<OrgRow>();
         try (var conn = dataSource.getConnection()) {
             JdbcConnectionSupport.prepareRead(conn);
@@ -151,11 +147,7 @@ public final class JdbcOrganizationJdbcRepository {
                 stmt.setInt(1, JdbcListLimits.ORGANIZATIONS);
                 try (var rs = stmt.executeQuery()) {
                     while (rs.next()) {
-                        out.add(new OrgRow(
-                            rs.getObject("id", UUID.class).toString(),
-                            rs.getString("name"),
-                            rs.getString("slug"),
-                            rs.getTimestamp("created_at").toInstant()));
+                        out.add(mapRow(rs));
                     }
                 }
             }
@@ -183,7 +175,7 @@ public final class JdbcOrganizationJdbcRepository {
         if (slug == null || slug.isBlank()) {
             return Optional.empty();
         }
-        var sql = "SELECT id, name, slug, created_at FROM organizations WHERE lower(slug) = lower(?)";
+        var sql = "SELECT id, name, slug, created_at, logo_file_id FROM organizations WHERE lower(slug) = lower(?)";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
                  JdbcQuerySupport.applyDefaultTimeout(stmt);
@@ -225,13 +217,36 @@ public final class JdbcOrganizationJdbcRepository {
         }
     }
 
+    public boolean updateLogo(UUID orgId, UUID logoFileId) {
+        var sql = "UPDATE organizations SET logo_file_id = ? WHERE id = ?";
+        try (var conn = dataSource.getConnection();
+             var stmt = conn.prepareStatement(sql)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
+            if (logoFileId != null) {
+                stmt.setObject(1, logoFileId);
+            } else {
+                stmt.setObject(1, null);
+            }
+            stmt.setObject(2, orgId);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            log.error("update org logo failed", e);
+            return false;
+        }
+    }
+
     private static OrgRow mapRow(java.sql.ResultSet rs) throws Exception {
         return new OrgRow(
             rs.getObject("id", UUID.class).toString(),
             rs.getString("name"),
             rs.getString("slug"),
-            rs.getTimestamp("created_at").toInstant());
+            rs.getTimestamp("created_at").toInstant(),
+            rs.getObject("logo_file_id", UUID.class));
     }
 
-    public record OrgRow(String id, String name, String slug, Instant createdAt) {}
+    public record OrgRow(String id, String name, String slug, Instant createdAt, UUID logoFileId) {
+        public OrgRow(String id, String name, String slug, Instant createdAt) {
+            this(id, name, slug, createdAt, null);
+        }
+    }
 }

@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.worker.botdelivery;
 
+import com.avandocmsg.messenger.common.federation.FederationDeliveryPolicy;
 import com.avandocmsg.messenger.common.jdbc.HikariDataSources;
 
 import javax.sql.DataSource;
@@ -13,10 +14,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Persisted bot webhook retries (spec 019 US7). */
+/** Persisted bot webhook retries (spec 019 US7). Delivery limits aligned with {@link FederationDeliveryPolicy} (FR-176). */
 final class BotWebhookOutbox {
-    static final int MAX_ATTEMPTS = 5;
-    static final Duration BASE_BACKOFF = Duration.ofSeconds(30);
+    static final int MAX_ATTEMPTS = FederationDeliveryPolicy.MAX_ATTEMPTS;
+    static final Duration BASE_BACKOFF = FederationDeliveryPolicy.BASE_BACKOFF;
     static final int DEFAULT_FAILED_RETENTION_DAYS = 7;
     static final int DEFAULT_FAILED_PURGE_BATCH = 500;
 
@@ -40,15 +41,17 @@ final class BotWebhookOutbox {
     }
 
     static Duration backoffForAttempt(int attemptsAfterFailure) {
-        var exponent = Math.min(attemptsAfterFailure, 8);
-        return BASE_BACKOFF.multipliedBy(1L << Math.max(0, exponent - 1));
+        return FederationDeliveryPolicy.backoffForAttempt(attemptsAfterFailure);
     }
 
     static Instant nextRetryAt(Clock clock, int attemptsAfterFailure) {
-        return clock.instant().plus(backoffForAttempt(attemptsAfterFailure));
+        return FederationDeliveryPolicy.nextRetryAt(clock.instant(), attemptsAfterFailure);
     }
 
     void enqueue(UUID botId, UUID chatId, String eventId, String webhookUrl, String payloadJson) throws SQLException {
+        if (!FederationDeliveryPolicy.isPayloadAcceptable(payloadJson)) {
+            throw new SQLException("webhook payload exceeds max bytes " + FederationDeliveryPolicy.MAX_PAYLOAD_BYTES);
+        }
         var id = UUID.randomUUID();
         var sql = """
             INSERT INTO bot_webhook_outbox (id, bot_id, chat_id, event_id, webhook_url, payload_json, attempts, next_retry_at, status)
