@@ -93,7 +93,7 @@
         "e2ee": "MLS (приёмка)",
         "vks": "WebRTC",
         "mobile": "отдельный проект",
-        "superapp": "◐ marketplace + iframe + M365 bridges",
+        "superapp": "◐ vitrine + bots + M365 bridges",
         "fstec": "в процессе",
         "sizing": "✓ gate + профили",
         "pricing": "КП",
@@ -102,7 +102,7 @@
         "bots": "✓ L0–L3 platform",
         "retention": "dual-TTL",
         "multitenant": "org-shard ADR",
-        "federation": "◐ trust + directory",
+        "federation": "✓ trust scaffold",
         "ops": "Java monolith + workers"
       },
       "scenario_fit": {
@@ -441,7 +441,7 @@
         "Платформа ботов L0–L3: sidecars, bridges, admin policy — отдельный узел интеграций",
         "В контуре заказчика: мультитenant, путь Пробник → Стандарт → Корпоративный",
         "Пилот отделён от production-матрицы — честный TCO с 10 тыс. рег.",
-        "Инженерный эталон: health p95 11 мс, REST ~250 запр/с (QEMU, июнь 2026)"
+        "Инженерный lab-baseline (QEMU, июнь 2026): health p95 ~12 мс; formal load soak — отложено до стенда заказчика"
       ],
       "cons": [
         "Меньше готового супераппа (SmartApps, почта, ВКС 500)",

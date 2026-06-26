@@ -93,6 +93,9 @@ def test_block0_uses_external_status_language():
     assert "лабораторном стенде" in html
     assert "версия для пилота и доработок" in html
     assert "статус:</span> рабочий прототип" in html
+    assert "автотесты web-клиента" in html
+    assert "302" in html
+    assert "не заменяет приёмку на стенде" in html
     assert "dev-стенд" not in html
     assert "рабочая болванка" not in html
 
@@ -219,6 +222,14 @@ def test_user_tab_mentions_six_interface_languages():
     assert "Интерфейс подготовлен на 6 языках" in html
     for token in ("русский", "английский", "белорусский", "казахский", "китайский", "корейский"):
         assert token in html
+    assert "фирменные цвета" in html.lower()
+
+
+def test_profile_group_reflects_avatars_and_branding():
+    html = render_user_feature_groups_html()
+    assert "Аватар с обрезкой" in html
+    assert "Фирменные цвета, логотип" in html
+    assert "Богатая кастомизация аватара" not in html
 
 
 def test_user_feature_gaps_do_not_hide_existing_phase5_work():
@@ -236,6 +247,7 @@ def test_user_feature_gaps_do_not_hide_existing_phase5_work():
 def test_calls_gaps_reflect_live_recording_and_reminders_progress():
     html = render_user_feature_groups_html()
     assert "Live-сессии, гостевой вход, ожидание допуска и запись" in html
+    assert "Запись личного звонка" in html
     assert "Запланированные сообщения и напоминания по сообщениям" in html
     assert "Сотни участников и студийные вебинары" not in html
     assert "Запись разговора для участника «в один клик»" not in html
@@ -243,6 +255,12 @@ def test_calls_gaps_reflect_live_recording_and_reminders_progress():
     assert "Подтверждённые сотни участников на контуре заказчика" in html
     assert "Самостоятельный доступ зрителя к архиву записей" in html
     assert "Запись эфира для зрителя в один клик" not in html
+
+
+def test_user_walkthrough_mentions_optional_call_recording():
+    html = render_deck_html()
+    assert "запись звонка на панели" in html.lower()
+    assert "запись разговора по умолчанию не ведётся" not in html.lower()
 
 
 def test_files_gap_reflects_dlp_addon_progress():

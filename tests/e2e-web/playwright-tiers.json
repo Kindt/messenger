@@ -18,8 +18,10 @@
     "ui-admin-extended",
     "ui-interaction-audit",
     "ui-branding",
+    "ui-shell-layouts",
     "ui-i18n-artifacts",
     "ui-avatar",
+    "ui-push",
     "e2ee-openmls-interop"
   ],
   "tiers": {

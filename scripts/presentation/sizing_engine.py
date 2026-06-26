@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from scripts.presentation import module_sizing as ms
 
-PRICE_AS_OF = "2026-06-15"
+PRICE_AS_OF = "2026-06-26"
 PRICE_VAT = "Без НДС"
 
 # Якоря RAM (log interp) — для headroom badge и RAM-bar, согласованы с load-моделью
@@ -79,7 +79,7 @@ PROVIDERS: tuple[ProviderRate, ...] = (
         "regru",
         "REG.RU",
         "https://www.reg.ru/vps/tariffs",
-        "VPS/VDS: тарифы «Эконом» и «SSD» на reg.ru/vps/tariffs, снимок 2026-06-15",
+        "VPS/VDS: тарифы «Эконом» и «SSD» на reg.ru/vps/tariffs, снимок 2026-06-26",
         rub_per_gb_ram_month=1_750,
         rub_per_vcpu_month=2_200,
         rub_per_tb_ssd_month=3_500,
@@ -92,7 +92,7 @@ PROVIDERS: tuple[ProviderRate, ...] = (
         "yandex",
         "Yandex Cloud",
         "https://cloud.yandex.ru/docs/compute/pricing",
-        "Compute: standard-v3, RAM и vCPU по прайсу cloud.yandex.ru, снимок 2026-06-15",
+        "Compute: standard-v3, RAM и vCPU по прайсу cloud.yandex.ru, снимок 2026-06-26",
         rub_per_gb_ram_month=720,
         rub_per_vcpu_month=2_040,
         rub_per_tb_ssd_month=4_200,
@@ -105,7 +105,7 @@ PROVIDERS: tuple[ProviderRate, ...] = (
         "timeweb",
         "Timeweb Cloud",
         "https://timeweb.cloud/prices",
-        "Облачные серверы timeweb.cloud/prices — бюджетный сегмент, снимок 2026-06-15",
+        "Облачные серверы timeweb.cloud/prices — бюджетный сегмент, снимок 2026-06-26",
         rub_per_gb_ram_month=1_120,
         rub_per_vcpu_month=1_680,
         rub_per_tb_ssd_month=2_900,

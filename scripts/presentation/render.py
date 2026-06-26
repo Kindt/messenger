@@ -74,11 +74,18 @@ def render_block0() -> str:
         def _public_name(feature: tuple[str, str, str, str]) -> str:
             fid, name, _st, _note = feature
             names = {
+                "web_client": "Веб-клиент",
+                "ui_layout_zones": "Зоны компоновки интерфейса",
+                "ui_branding": "Персонализация интерфейса",
+                "shell_layouts": "Раскладки экрана входа и оболочки",
+                "entity_avatars": "Аватары пользователей и чатов",
+                "admin_i18n": "Локализация админ-консоли",
                 "platform_modules": "Состав продукта и расширения",
                 "container_portability": "Варианты поставки сервера",
                 "auth": "Вход в систему",
                 "chats": "Чаты, сообщения, файлы и экспорт",
                 "mentions": "Упоминания и уведомления",
+                "read_receipts": "Отметки прочтения",
                 "smartapps_ui": "Каталог подключаемых сервисов",
                 "migration_import": "Импорт переписки",
                 "fleet_ops": "Мониторинг контура",
@@ -110,7 +117,6 @@ def render_block0() -> str:
                 "phase5_whiteboard": "Доска в чате",
                 "phase5_conf_adr": "Расширенные сценарии конференций",
                 "chat_polls": "Опросы в чате",
-                "phase5_polls": "Опросы в чате",
                 "phase5_sip_passkeys": "Телефония и вход без пароля",
                 "phase5_ai": "AI-помощник в чате",
             }
@@ -137,6 +143,13 @@ def render_block0() -> str:
         )
         return f"<table class='feature-table'><tr><th>Модуль</th><th>Статус</th><th>Комментарий для пилота</th></tr>{body}</table>"
 
+    qa_inventory = (
+        f'<p class="small qa-inventory">Автотесты web-клиента: '
+        f"<strong>{ps.PLAYWRIGHT_TOTAL}</strong> сценариев в репозитории, "
+        f"<strong>{ps.PLAYWRIGHT_INNER_TIERS}</strong> acceptance-тира "
+        f"(инвентаризация {escape(ps.PLAYWRIGHT_DATE)}; не заменяет приёмку на стенде).</p>"
+    )
+
     return f"""
 <section id="block-0" class="block-0 hero-warning" aria-label="Статус продукта">
   <div class="hero-inner">
@@ -147,6 +160,7 @@ def render_block0() -> str:
     <h1>Корпоративный мессенджер</h1>
     <p class="disclaimer">Продукт <strong>не готов</strong> к промышленной эксплуатации. Демонстрация возможностей на <strong>лабораторном стенде</strong>.</p>
     <p class="small version-note">Сборка <strong>{escape(ps.PRODUCT_VERSION)}</strong> — версия для пилота и доработок, не релиз.</p>
+    {qa_inventory}
     {cnt.executive_summary_cards()}
     <div class="block0-grid">
       <div>{donut}</div>
@@ -465,6 +479,7 @@ def _calc_infra_dual_html(
 ) -> str:
     cap_form = (
         _calc_product_addon_panel()
+        + _calc_host_layout_presets(prefix)
         + '<div class="calc-section-label">Серверные модули и экземпляры</div>'
         + _calc_tech_module_table()
         + '<div class="calc-section-label">Хранилище и бэкап</div>'
@@ -612,10 +627,41 @@ def _calc_product_addon_panel() -> str:
     )
 
 
+def _calc_host_layout_presets(prefix: str) -> str:
+    buttons = []
+    for pid, body in ms.HOST_LAYOUT_PRESETS.items():
+        buttons.append(
+            f'<button type="button" class="calc-preset calc-host-preset" data-prefix="{escape(prefix)}"'
+            f' data-host-preset="{escape(pid)}">{escape(str(body["label"]))}</button>'
+        )
+    return (
+        '<div class="calc-section-label">Раскладка по серверам</div>'
+        '<p class="small calc-mod-hint">Укажите, что <strong>ютится на одной VM</strong> (общий пул), '
+        "а что выносится <strong>на отдельный сервер</strong>. Смета считается как сумма VM-тиров по группам, "
+        "а не как «каждый контейнер = своя машина».</p>"
+        f'<p class="calc-backup-presets">Пресеты: {"".join(buttons)}</p>'
+        + cui.field_number(
+            f"{prefix}-host-overhead",
+            "Запас RAM на shared-пул, % (планирование, OS/Docker)",
+            int((ms.DEFAULT_COLOCATION_OVERHEAD - 1) * 100),
+            min_val=0,
+        )
+    )
+
+
 def _calc_tech_module_table() -> str:
     rows = []
     for m in ms.PRODUCTION_MODULES:
         req_attr = f' data-requires="{",".join(m.requires)}"' if m.requires else ""
+        host_val = ms.host_assignment_for_module(m.id, ms.DEFAULT_HOST_LAYOUT_ID)
+        opts = []
+        for pid, label in ms.HOST_POOL_OPTIONS:
+            sel = " selected" if pid == host_val else ""
+            opts.append(f'<option value="{escape(pid)}"{sel}>{escape(label)}</option>')
+        host_cell = (
+            f'<select class="calc-mod-host" data-mod="{escape(m.id)}" title="Сервер / пул colocation">'
+            f'{"".join(opts)}</select>'
+        )
         if m.required:
             check_cell = (
                 f"<input type='checkbox' class='calc-mod calc-mod-locked' data-mod='{escape(m.id)}'"
@@ -641,15 +687,16 @@ def _calc_tech_module_table() -> str:
         rows.append(
             f"<tr><td>{check_cell}</td>"
             f"<td>{escape(m.label)}</td><td>{m.ram_gb} ГБ</td><td>{m.vcpu} vCPU</td><td>{rep_cell}</td>"
+            f"<td>{host_cell}</td>"
             f"<td class='muted'>{mode_hint}</td></tr>"
         )
     return (
         '<p class="small calc-mod-hint"><strong>База</strong> (серые галки) — обязательные серверные компоненты из каталога продукта. '
         '<strong>Дополнения</strong> — галки выше; серверные строки подтягиваются автоматически. '
-        '<strong>LiveKit</strong> — серверная часть live-сценариев; mesh/Jitsi — базовые звонки. '
+        'Колонка <strong>Сервер</strong>: один пул = одна VM в смете; «отдельный сервер» — своя VM на компонент. '
         'Зависимости: indexer→Solr, archiver→archive PG, ZooKeeper→Solr.</p>'
         '<div class="table-wrap calc-mod-table-wrap"><table class="feature-table calc-mod-table">'
-        "<thead><tr><th></th><th>Модуль</th><th>RAM/экз.</th><th>vCPU/экз.</th><th>Экз.</th><th>Реплика</th></tr></thead>"
+        "<thead><tr><th></th><th>Модуль</th><th>RAM/экз.</th><th>vCPU/экз.</th><th>Экз.</th><th>Сервер</th><th>Реплика</th></tr></thead>"
         f"<tbody>{''.join(rows)}</tbody></table></div>"
     )
 
@@ -839,7 +886,8 @@ def _user_help_html() -> str:
                 "Откройте личный или групповой чат",
                 "Нажмите иконку звонка (аудио или видео)",
                 "Разрешите микрофон и камеру в браузере",
-                "Завершите звонок той же кнопкой — запись разговора по умолчанию не ведётся",
+                "При необходимости включите запись звонка на панели — если это разрешено политикой организации",
+                "Завершите звонок кнопкой «Завершить»",
             ),
         ),
         (
@@ -849,6 +897,7 @@ def _user_help_html() -> str:
                 "Включите/выключите микрофон и камеру на панели звонка",
                 "При большом числе участников IT может включить сервер конференций (SFU)",
                 "Демонстрация экрана — если разрешено политикой браузера и организации",
+                "Запись конференции для участников — отдельный сценарий live/конференций, не автоматическая для каждого звонка",
             ),
         ),
         (
@@ -942,6 +991,10 @@ def deck_data_json() -> dict[str, Any]:
             k: {"disk_mult": v[0], "ram_gb": v[1], "ops_mult": v[2], "label": v[3]}
             for k, v in ms.BACKUP_PROFILES.items()
         },
+        "host_layout_presets": ms.host_layout_presets_json(),
+        "host_pool_options": ms.host_pool_options_json(),
+        "host_layout_default": ms.DEFAULT_HOST_LAYOUT_ID,
+        "host_colocation_default": ms.DEFAULT_COLOCATION_OVERHEAD,
     }
 
 
@@ -1159,6 +1212,8 @@ body {
 .calc-mod-table-wrap { margin: 8px 0 12px; max-height: 480px; overflow: auto; }
 .calc-mod-table { font-size: 12px; }
 .calc-mod-table input.calc-mod-rep { width: 52px; padding: 4px 6px; font-size: 12px; border-radius: 6px; border: 1px solid #cbd5e1; }
+.calc-mod-table select.calc-mod-host { max-width: 168px; width: 100%; padding: 3px 4px; font-size: 11px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; }
+.calc-host-preset { margin-bottom: 4px; }
 .calc-backup-presets { margin: 4px 0 10px; }
 .calc-backup-presets .calc-preset { margin-right: 6px; padding: 2px 8px; font-size: 11px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; cursor: pointer; }
 .calc-backup-presets .calc-preset:hover { background: #e2e8f0; }
@@ -1718,6 +1773,77 @@ def _deck_js() -> str:
     else label='RAM +'+ram+' ГБ · диск ×'+disk+' · ops ×'+ops;
     return {disk_mult:disk, ram_gb:ram, ops_mult:ops, label:label};
   }
+  function collectHostAssignments(scope){
+    const out={};
+    (scope||document).querySelectorAll('.calc-mod-host').forEach(sel=>{
+      out[sel.dataset.mod]=sel.value||'pool-1';
+    });
+    return out;
+  }
+  function readColocationOverhead(prefix){
+    const pct=+document.getElementById(prefix+'-host-overhead')?.value;
+    if(Number.isFinite(pct) && pct>=0) return 1+pct/100;
+    return data.host_colocation_default||1.1;
+  }
+  function resolveHostKey(moduleId, assignment){
+    return assignment==='dedicated' ? ('vm-'+moduleId) : assignment;
+  }
+  function hostPoolLabel(hostKey){
+    const opts=data.host_pool_options||[];
+    if(hostKey.startsWith('vm-')) return 'VM · '+hostKey.slice(3);
+    const hit=opts.find(o=>o.id===hostKey);
+    return hit?hit.label:hostKey;
+  }
+  function aggregateHostsFromModules(modules, hostAssignments, overhead){
+    const buckets={};
+    (modules||[]).forEach(m=>{
+      const assign=hostAssignments[m.id]||'pool-1';
+      const key=resolveHostKey(m.id, assign);
+      if(!buckets[key]) buckets[key]={ids:[], ram:0, vcpu:0, dedicated:assign==='dedicated'};
+      buckets[key].ids.push(m.id);
+      buckets[key].ram+=m.ramGb;
+      buckets[key].vcpu+=m.vcpu;
+    });
+    const hosts=Object.keys(buckets).sort().map(key=>{
+      const b=buckets[key];
+      const oh=b.dedicated?1:Math.max(1, overhead||1.1);
+      const containerSum=Math.ceil(b.ram);
+      const ramRaw=Math.ceil(containerSum*oh);
+      const vcpu=Math.ceil(b.vcpu);
+      const ramBilled=vmTier(b.dedicated?ramRaw:containerSum);
+      return {
+        hostId:key,
+        label:hostPoolLabel(key),
+        moduleIds:b.ids,
+        ramRaw,
+        vcpu,
+        ramBilled,
+        dedicated:b.dedicated
+      };
+    });
+    const ramBilled=hosts.reduce((s,h)=>s+h.ramBilled,0);
+    const vcpu=hosts.reduce((s,h)=>s+h.vcpu,0);
+    return {hosts, ramBilled, vcpu, vmCount:hosts.length};
+  }
+  function applyHostPreset(scope, presetId){
+    const preset=(data.host_layout_presets||{})[presetId];
+    if(!preset||!scope) return;
+    scope.querySelectorAll('.calc-mod-host').forEach(sel=>{
+      const mod=sel.dataset.mod;
+      const val=(preset.assignments&&preset.assignments[mod])||(preset.assignments&&preset.assignments.__default__)||'pool-1';
+      sel.value=val;
+    });
+  }
+  function renderHostTable(hostAgg){
+    if(!hostAgg||!hostAgg.hosts||!hostAgg.hosts.length) return '';
+    const rows=hostAgg.hosts.map(h=>'<tr><td>'+h.label+'</td><td>'+h.moduleIds.length+
+      '</td><td>'+h.ramRaw+' → '+h.ramBilled+'</td><td>'+h.vcpu+'</td></tr>').join('');
+    return '<div class="calc-section-label">Физические VM (группы colocation)</div>'+
+      '<div class="table-wrap"><table class="feature-table"><thead><tr><th>VM / пул</th><th>Модулей</th><th>RAM raw → billed</th><th>vCPU</th></tr></thead><tbody>'+
+      rows+'</tbody></table></div>'+
+      '<p class="small calc-mod-hint">Смета «Серверы»: '+hostAgg.vmCount+' VM · billed RAM '+hostAgg.ramBilled+
+      ' ГБ · vCPU '+hostAgg.vcpu+' (сумма по группам).</p>';
+  }
   function collectModuleReplicas(scope){
     const reps={};
     (scope||document).querySelectorAll('.calc-mod-rep').forEach(el=>{
@@ -1733,6 +1859,8 @@ def _deck_js() -> str:
       prefix,
       enabled: enabledModulesFromScope(scope),
       replicas: collectModuleReplicas(scope),
+      hostAssignments: collectHostAssignments(scope),
+      colocationOverhead: readColocationOverhead(prefix),
       plugins: +document.getElementById(prefix+'-mod-plugins')?.value||0,
       ssdTb: +document.getElementById(prefix+'-mod-ssd')?.value||0,
       hddTb: +document.getElementById(prefix+'-mod-hdd')?.value||0,
@@ -1942,7 +2070,8 @@ def _deck_js() -> str:
       ssdTb:stor.ssd, hddTb:stor.hdd, backupRam:bp.ram_gb,
       backupLabel: bp.label,
       backupParams: bp,
-      channel, appNodes:appN, webNodes:webN
+      channel, appNodes:appN, webNodes:webN,
+      hostAgg: aggregateHostsFromModules(instances, inp.hostAssignments||{}, inp.colocationOverhead)
     };
   }
   function loadInpFromForm(prefix){
@@ -1958,14 +2087,18 @@ def _deck_js() -> str:
       plugins: ctx.plugins,
       enabled: ctx.enabled,
       replicas: ctx.replicas,
-      backupParams: ctx.backupParams
+      backupParams: ctx.backupParams,
+      hostAssignments: ctx.hostAssignments,
+      colocationOverhead: ctx.colocationOverhead
     };
   }
   function quoteProviderLoad(inp, p){
     const le=estimateFromLoad(inp);
-    const ramBilled=vmTier(le.totalRam);
+    const hostAgg=le.hostAgg||aggregateHostsFromModules(le.modules, inp.hostAssignments||{}, inp.colocationOverhead);
+    const ramBilled=hostAgg.ramBilled;
+    const vcpuBill=hostAgg.vcpu;
     const ramCost=ramBilled*p.ram_rub_gb;
-    const vcpuCost=le.totalVcpu*p.vcpu_rub;
+    const vcpuCost=vcpuBill*p.vcpu_rub;
     const vmCompute=ramCost+vcpuCost;
     const disk=Math.round(le.ssdTb*p.ssd_tb_rub + le.hddTb*p.hdd_tb_rub);
     const channel= le.channel<=200?p.channel_200:p.channel_1g;
@@ -1978,12 +2111,14 @@ def _deck_js() -> str:
       ['Backup / мониторинг', ops]
     ];
     const monthly=lines.reduce((s,x)=>s+x[1],0);
-    return {provider:p, monthly, yearly:monthly*12, lines, load:le, ramBilled, ramCost, vcpuCost};
+    return {provider:p, monthly, yearly:monthly*12, lines, load:le, hostAgg, ramBilled, ramCost, vcpuCost};
   }
   function quoteProviderFixedResources(resource, p){
-    const ramBilled=vmTier(resource.totalRam);
+    const hostAgg=resource.hostAgg||aggregateHostsFromModules(resource.modules||[], resource.hostAssignments||{}, resource.colocationOverhead);
+    const ramBilled=hostAgg.ramBilled;
+    const vcpuBill=hostAgg.vcpu;
     const ramCost=ramBilled*p.ram_rub_gb;
-    const vcpuCost=resource.totalVcpu*p.vcpu_rub;
+    const vcpuCost=vcpuBill*p.vcpu_rub;
     const vmCompute=ramCost+vcpuCost;
     const disk=Math.round(resource.ssdTb*p.ssd_tb_rub + resource.hddTb*p.hdd_tb_rub);
     const channel= resource.channel<=200?p.channel_200:p.channel_1g;
@@ -2052,7 +2187,7 @@ def _deck_js() -> str:
       const tot=moduleResourceTotals(ram, vcpu, count);
       totalRam+=tot.ramGb;
       totalVcpu+=tot.vcpu;
-      modulesOut.push({label:s.label, count, ramGb:tot.ramGb, vcpu:tot.vcpu, mode:s.replica_mode});
+      modulesOut.push({id:s.id, label:s.label, count, ramGb:tot.ramGb, vcpu:tot.vcpu, mode:s.replica_mode});
       const cap=mergeCapacity(capacityFromRam(s, count, ram), capacityFromVcpu(s, count, vcpu));
       if(cap.po) maxPo=Math.min(maxPo, cap.po);
       if(cap.pms) maxPms=Math.min(maxPms, cap.pms);
@@ -2147,15 +2282,16 @@ def _deck_js() -> str:
     const quotes=quotesForPrefix(prefix, inp);
     const med=median(publicQuotes(quotes).map(q=>q.monthly));
     const le=quotes[0].load;
+    const ha=le.hostAgg||{};
     const heroStats= showProviderCards ? [
       {val:le.ru.toLocaleString('ru-RU'), label:'пользователей'},
-      {val:le.totalRam+' ГБ', label:'оперативная память'},
-      {val:String(le.totalVcpu), label:'vCPU'},
+      {val:(ha.ramBilled||le.totalRam)+' ГБ', label:'RAM billed (VM)'},
+      {val:String(ha.vmCount||1), label:'физических VM'},
       {val:fmt(med), label:'медиана / мес'}
     ] : [
-      {val:le.totalRam+' ГБ', label:'RAM суммарно'},
-      {val:String(le.totalVcpu), label:'vCPU'},
-      {val:le.appNodes+' app · '+le.webNodes+' web', label:'узлы'},
+      {val:(ha.ramBilled||le.totalRam)+' ГБ', label:'RAM billed · контейнеры '+le.totalRam+' ГБ'},
+      {val:String(ha.vmCount||1), label:'физических VM'},
+      {val:le.appNodes+' app · '+le.webNodes+' web', label:'логические узлы'},
       {val:le.ssdTb+' / '+le.hddTb+' ТБ', label:'SSD / HDD'}
     ];
     let html=renderHero(heroStats)+
@@ -2164,7 +2300,7 @@ def _deck_js() -> str:
     ' · активных в день ~'+le.dau+' · пик онлайн '+le.peakOnline+' · пик сообщений/с '+le.peakMsgS+
     ' · канал '+le.channel+' Мбит/с · SSD/HDD '+le.ssdTb+' / '+le.hddTb+' ТБ · бэкап '+le.backupLabel+
     (le.backupRam?(' (+'+le.backupRam+' ГБ RAM)'):'')+'</p></div>'+
-    renderModuleTable(le.modules)+'</div>'+renderCostRail(quotes)+'</div>';
+    renderModuleTable(le.modules)+renderHostTable(ha)+'</div>'+renderCostRail(quotes)+'</div>';
     if(showProviderCards){
       html+=renderProviderCards(quotes)+
         '<p class="small">Полный промышленный состав, модель нагрузки. На 1 пользователя: ~'+(med/le.ru).toFixed(2)+
@@ -2175,12 +2311,17 @@ def _deck_js() -> str:
   function runInfraModules(prefix){
     const ctx=infraCapContext(prefix);
     const cap=estimateCapacityFromModules(ctx.enabled, ctx.plugins, ctx.ssdTb, ctx.hddTb, ctx.backupParams, ctx.replicas, ctx.ha);
+    const hostAgg=aggregateHostsFromModules(cap.modules, ctx.hostAssignments, ctx.colocationOverhead);
     const quoteRu=+document.getElementById(ctx.prefix+'-cap-quote-ru')?.value||0;
     const ruForQuote= quoteRu>0 ? quoteRu : cap.maxRu;
     const fixedResource={
       ru: ruForQuote,
       totalRam: cap.totalRam,
       totalVcpu: cap.totalVcpu,
+      modules: cap.modules,
+      hostAssignments: ctx.hostAssignments,
+      colocationOverhead: ctx.colocationOverhead,
+      hostAgg,
       ssdTb: cap.ssdTb,
       hddTb: ctx.hddTb,
       channel: cap.maxPo<8000?200:1000,
@@ -2203,7 +2344,7 @@ def _deck_js() -> str:
       '<p class="small"><strong>Смета при пользователях:</strong> '+ruForQuote.toLocaleString('ru-RU')+
       (quoteRu>0?' (задано)':' (макс. по модулям)')+' · бэкап: '+cap.backupLabel+'</p>'+
       '<p class="small"><strong>Узкое место:</strong> '+cap.bottleneck+'</p></div>'+
-      modTable+'</div>'+renderCostRail(quotes)+'</div>';
+      modTable+renderHostTable(hostAgg)+'</div>'+renderCostRail(quotes)+'</div>';
   }
   function bindInfraCalcLive(prefix){
     let t=null;
@@ -2211,13 +2352,19 @@ def _deck_js() -> str:
     [prefix+'-cap', prefix+'-res'].forEach(id=>{
       const el=document.getElementById(id);
       if(!el) return;
-      el.querySelectorAll('input').forEach(n=>{
+      el.querySelectorAll('input, select').forEach(n=>{
         n.addEventListener('input', rerun);
         n.addEventListener('change', rerun);
       });
     });
     const capEl=document.getElementById(prefix+'-cap');
-    capEl?.querySelectorAll('.calc-preset').forEach(btn=>{
+    capEl?.querySelectorAll('.calc-host-preset').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        applyHostPreset(capEl, btn.dataset.hostPreset);
+        rerun();
+      });
+    });
+    capEl?.querySelectorAll('.calc-preset:not(.calc-host-preset)').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         document.getElementById(prefix+'-mod-backup-ram').value=btn.dataset.ram;
         document.getElementById(prefix+'-mod-backup-disk').value=btn.dataset.disk;

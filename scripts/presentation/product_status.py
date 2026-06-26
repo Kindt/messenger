@@ -5,18 +5,20 @@ from __future__ import annotations
 from html import escape
 
 PRODUCT_VERSION = "0.0.1-SNAPSHOT"
-PRODUCT_DATE = "21 июня 2026"
+PRODUCT_DATE = "26 июня 2026"
 # Deck footer uses PRODUCT_VERSION (not a separate marketing semver).
 DECK_VERSION = PRODUCT_VERSION
-BUILD_DATE = "2026-06-21"
+BUILD_DATE = "2026-06-26"
 
 PRODUCT_STAGE = "working_prototype"
 PRODUCT_STAGE_LABEL = "Рабочий прототип"
 PRODUCTION_READY = False
 
-PLAYWRIGHT_PASSED = 50
-PLAYWRIGHT_TOTAL = 50
-PLAYWRIGHT_DATE = "2026-06-20"
+# Inventory in tests/e2e-web (`npx playwright test --list`); not a live-stack pass claim.
+PLAYWRIGHT_PASSED = 302
+PLAYWRIGHT_TOTAL = 302
+PLAYWRIGHT_INNER_TIERS = 23
+PLAYWRIGHT_DATE = "2026-06-26"
 
 PRODUCTION_BLOCKERS: tuple[str, ...] = (
     "Нет промышленного стенда: нагрузочные проверки и финальная эксплуатационная приёмка переносятся на контур заказчика",
@@ -31,9 +33,19 @@ PRODUCTION_BLOCKERS: tuple[str, ...] = (
 )
 
 FEATURES: tuple[tuple[str, str, str, str], ...] = (
-    ("web_client", "Веб-клиент (браузер, PWA)", "done", "основные сценарии; адаптив phone/tablet; sidebar unread/@mentions"),
+    ("web_client", "Веб-клиент (браузер, PWA)", "done", "основные сценарии; адаптив phone/tablet; sidebar unread/@mentions; layout zones"),
+    ("ui_layout_zones", "Layout / overlay zones (client+admin)", "done", "webui-build layout-zones + overlay-zones smoke"),
+    ("ui_branding", "UI branding / персонализация (027)", "done", "demo palettes + platform/org API + admin + PWA manifest"),
+    ("shell_layouts", "Раскладки shell auth/post-login (028)", "done", "default/compact/auth-split + org_slug public branding"),
+    (
+        "entity_avatars",
+        "Аватары сущностей (068)",
+        "partial",
+        "user/chat/group crop+WS+policy ✓; live QEMU tier soak — guest smokes",
+    ),
+    ("admin_i18n", "Локализация админ-консоли", "done", "6 locales, nav refresh, tier ui-i18n-artifacts"),
     ("server", "Сервер и фоновые службы", "done", ""),
-    ("admin", "Админ-консоль (/admin/)", "done", "orgs/users/audit/retention, auth-policy, fleet, migration, plugins, product-modules"),
+    ("admin", "Админ-консоль (/admin/)", "done", "orgs/users/audit/retention, auth-policy, fleet, migration, plugins, product-modules, branding"),
     (
         "platform_modules",
         "Product Modules (Base + add-ons)",
@@ -49,6 +61,7 @@ FEATURES: tuple[tuple[str, str, str, str], ...] = (
     ("auth", "Вход и login-options", "done", "dynamic login, org policy, default org (V042)"),
     ("chats", "Чаты, сообщения, файлы, export", "done", "reply/actions/pin, threads, @mentions, voice, location/contact cards"),
     ("mentions", "@mentions + push", "done", "V047, NATS msg.mention, push «Mention in…», webui highlight"),
+    ("read_receipts", "Read receipts (доставлено/прочитано)", "done", "WS events + overlay «кто прочитал» в групповых чатах"),
     ("threads", "Треды обсуждений", "done", "V046 thread_id, export thread_id, webui discussion panel"),
     ("voice_msgs", "Голосовые сообщения", "done", "V048 duration_ms, audio bubble, smokes"),
     ("channels", "Каналы broadcast", "done", "type channel, read-only post для участников"),
@@ -64,7 +77,7 @@ FEATURES: tuple[tuple[str, str, str, str], ...] = (
     ("retention", "Ретенция, deep-archive, legal hold", "done", "сжатие архива zstd"),
     ("security_eng", "Безопасность (инженерия)", "done", "headers, rate limit, timing, WS origin; CI security-gate"),
     ("e2ee", "E2EE / hybrid MLS + OpenMLS", "partial", "wire parity + *Mls* tests ✓; sign-off ИБ — LSO-015/016"),
-    ("calls", "Видеозвонки WebRTC (mesh + LiveKit SFU)", "partial", "mesh + SFU ✓; screen-share watermark dev overlay; TURN prod — ops"),
+    ("calls", "Видеозвонки WebRTC (mesh + LiveKit SFU)", "partial", "mesh + SFU ✓; запись mesh-звонка lab ✓; TURN prod + масштаб — ops"),
     ("push", "Web Push / PWA", "partial", "UI/worker + tier ui-push ✓; prod VAPID — ops"),
     ("tls", "Prod HTTPS / TLS", "partial", "Ansible/TLS в поставке ✓; stage host — с сентября 2026"),
     ("gdpr_export", "Export GDPR completeness", "partial", "JSON/ZIP + package-manifest.json ✓; legal strict — ops"),
@@ -95,7 +108,7 @@ FEATURES: tuple[tuple[str, str, str, str], ...] = (
     ("mobile", "Мобильные iOS/Android", "out", "вне текущей поставки"),
     ("desktop", "Desktop-клиент", "out", "отдельный проект"),
     ("dlp", "DLP", "partial", "mock L2 bridge dlp-mock + pre-send gate ✓; live vendor — LSO-067"),
-    ("chat_polls", "Опросы в чате", "done", "REST + webui create/vote panel"),
+    ("chat_polls", "Опросы в чате", "done", "REST create/vote/close + webui panel + Playwright tier"),
     ("scheduled_send", "Отложенная отправка", "done", "scheduler + POST + composer modal"),
     ("message_reminders", "Напоминания о сообщении", "done", "API + scheduler + message action + settings list"),
     ("offline_web", "Offline web (IndexedDB)", "done", "ui-offline-cache.js + offline/cached thread banner"),
@@ -110,7 +123,6 @@ FEATURES: tuple[tuple[str, str, str, str], ...] = (
     ("phase5_conf_adr", "Conference ADR (record/guest/breakout)", "done", "REST + guest waiting/admit + recording complete + captions; prom record — LSO-068/070"),
     ("phase5_sip_passkeys", "SIP / passkeys scaffold", "done", "REST + settings SIP/passkey scaffold UX; live WebAuthn — LSO-073/076"),
     ("phase5_stickers", "Stickers / GIF (ADR)", "done", "REST + packs/GIF preview + marketplace connect UX"),
-    ("phase5_polls", "In-chat polls", "done", "REST vote/close + webui results + creator close"),
     ("phase5_ai", "AI chat assist (ADR)", "done", "POST /ai/assist + webui overlay; live gateway — customer profile"),
     ("fstec", "ФСТЭК / реестр", "planned", "charter draft; expert review LSO-071"),
 )

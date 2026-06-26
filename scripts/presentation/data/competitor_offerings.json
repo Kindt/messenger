@@ -11,9 +11,9 @@
       "price_period": "year",
       "deployment": "on_prem",
       "source": "3 000 ₽/рег. пользов./год — Enterprise on-prem",
-      "source_url": "https://express.ms/pricing",
+      "source_url": "https://express.ms/prices/",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": true
     },
@@ -30,7 +30,7 @@
       "source": "3 000 ₽/рег. пользов./год — таблица sizing до 1 000",
       "source_url": "https://docs.express.ms/",
       "source_type": "public_docs",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": true
     },
@@ -45,9 +45,9 @@
       "price_period": "month",
       "deployment": "saas",
       "source": "399 ₽/акт. пользов./мес при оплате за год",
-      "source_url": "https://pachca.ru/pricing",
+      "source_url": "https://pachca.com/prices",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": false
     },
@@ -62,9 +62,9 @@
       "price_period": "month",
       "deployment": "saas",
       "source": "499 ₽/акт. пользов./мес при помесячной оплате",
-      "source_url": "https://pachca.ru/pricing",
+      "source_url": "https://pachca.com/prices",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": false
     },
@@ -81,7 +81,7 @@
       "source": "207 ₽/рег. пользов./мес при оплате за год",
       "source_url": "https://biz.mail.ru/docs/saas/workspace-price/index.html",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": true
     },
@@ -98,7 +98,7 @@
       "source": "259 ₽/рег. пользов./мес при помесячной оплате",
       "source_url": "https://biz.mail.ru/docs/saas/workspace-price/index.html",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": true
     },
@@ -115,7 +115,7 @@
       "source": "199 ₽/акт. пользов./мес — тариф Pro",
       "source_url": "https://loop.ru/pricing",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": false
     },
@@ -132,7 +132,7 @@
       "source": "119 ₽/акт. пользов./мес — тариф Start",
       "source_url": "https://loop.ru/pricing",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": false
     },
@@ -149,7 +149,7 @@
       "source": "On-prem — цена по КП, публичного per-user прайса нет",
       "source_url": "https://loop.ru/pricing",
       "source_type": "no_public_price",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": false,
       "tco_comparable": false
     },
@@ -163,10 +163,10 @@
       "price_rub": 390,
       "price_period": "month",
       "deployment": "saas",
-      "source": "390 ₽/рег. пользов./мес — облачный тариф",
-      "source_url": "https://getcompass.ru/pricing",
+      "source": "390 ₽/рег. пользов./мес — облачный тариф (getcompass.ru)",
+      "source_url": "https://getcompass.ru/",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": true
     },
@@ -180,10 +180,10 @@
       "price_rub": 490,
       "price_period": "month",
       "deployment": "on_prem",
-      "source": "490 ₽/рег. пользов./мес — on-prem",
-      "source_url": "https://getcompass.ru/pricing",
+      "source": "490 ₽/рег. пользов./мес — on-prem (getcompass.ru)",
+      "source_url": "https://getcompass.ru/",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": true
     },
@@ -200,7 +200,7 @@
       "source": "от 23 000 ₽/год — базовая лицензия Server",
       "source_url": "https://trueconf.ru/price/server/",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": true
     },
@@ -217,7 +217,7 @@
       "source": "Median infra prod full 2 787 996 ₽/год — sizing_engine @10k RU, не лицензия",
       "source_url": "https://github.com/kumekay/korus_messenger/blob/main/docs/DEV_STACK_PROFILES.md",
       "source_type": "public_docs",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": false
     },
@@ -234,7 +234,7 @@
       "source": "Median infra prod full 7 288 800 ₽/год — sizing_engine @100k RU, не лицензия",
       "source_url": "https://github.com/kumekay/korus_messenger/blob/main/docs/DEV_STACK_PROFILES.md",
       "source_type": "public_docs",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": false
     },
@@ -251,7 +251,7 @@
       "source": "Per-user on-prem — по КП, публичного прайса нет",
       "source_url": "https://mts-link.ru/chats/",
       "source_type": "no_public_price",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": false,
       "tco_comparable": false
     },
@@ -268,7 +268,7 @@
       "source": "EE pricing — по КП",
       "source_url": "https://www.rocket.chat/pricing",
       "source_type": "no_public_price",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": false,
       "tco_comparable": false
     },
@@ -285,7 +285,7 @@
       "source": "Enterprise — по КП",
       "source_url": "https://mattermost.com/pricing/",
       "source_type": "no_public_price",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": false,
       "tco_comparable": false
     },
@@ -302,7 +302,7 @@
       "source": "On-prem workspace — инд. КП",
       "source_url": "https://workspace.vk.ru/",
       "source_type": "no_public_price",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": false,
       "tco_comparable": false
     },
@@ -317,9 +317,9 @@
       "price_period": "year",
       "deployment": "on_prem",
       "source": "3 000 ₽/рег. пользов./год × 100 000",
-      "source_url": "https://express.ms/pricing",
+      "source_url": "https://express.ms/prices/",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": true
     },
@@ -334,9 +334,9 @@
       "price_period": "month",
       "deployment": "on_prem",
       "source": "490 ₽/рег. пользов./мес × 1 000",
-      "source_url": "https://getcompass.ru/pricing",
+      "source_url": "https://getcompass.ru/",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": true
     },
@@ -351,9 +351,9 @@
       "price_period": "month",
       "deployment": "saas",
       "source": "399 ₽/акт. пользов./мес — масштабирование по активным",
-      "source_url": "https://pachca.ru/pricing",
+      "source_url": "https://pachca.com/prices",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": false
     },
@@ -370,7 +370,7 @@
       "source": "207 ₽/рег. пользов./мес при оплате за год",
       "source_url": "https://biz.mail.ru/docs/saas/workspace-price/index.html",
       "source_type": "public_pricing",
-      "source_accessed_at": "2026-06-15",
+      "source_accessed_at": "2026-06-26",
       "price_is_public": true,
       "tco_comparable": true
     }

@@ -1,6 +1,7 @@
 """Tests for module-based production sizing."""
 
 from scripts.presentation import module_sizing as ms
+from scripts.presentation import sizing_engine as se
 
 
 def test_load_estimate_includes_all_required_modules():
@@ -177,3 +178,29 @@ def test_infra_from_addons_search_bundle():
     assert "solr" in infra
     assert "zookeeper" in infra
     assert "worker-indexer" in infra
+
+
+def test_host_aggregate_lab_single_one_vm():
+    est = ms.estimate_from_load(ms.LoadInputs(registered_users=10_000))
+    base = set(ms.load_product_catalog()["base"]["core_infra"])
+    est_base = ms.estimate_from_load(
+        ms.LoadInputs(registered_users=10_000),
+        enabled_ids=ms.normalize_enabled(base),
+    )
+    mods = tuple((m.module_id, m.ram_gb, m.vcpu) for m in est_base.modules)
+    assign = {m.module_id: "pool-1" for m in est_base.modules}
+    groups = ms.aggregate_module_hosts(mods, assign, colocation_overhead=1.1)
+    assert len(groups) == 1
+    billed, vcpu, vm_count = ms.bill_host_groups(groups)
+    assert vm_count == 1
+    assert billed == se.round_vm_tier(est_base.total_ram_gb)
+    assert vcpu == est_base.total_vcpu
+
+
+def test_host_aggregate_dedicated_all_many_vms():
+    est = ms.estimate_from_load(ms.LoadInputs(registered_users=1_000))
+    mods = tuple((m.module_id, m.ram_gb, m.vcpu) for m in est.modules[:5])
+    assign = {mid: "dedicated" for mid, _, _ in mods}
+    groups = ms.aggregate_module_hosts(mods, assign)
+    assert len(groups) == 5
+    assert sum(g.ram_gb_billed for g in groups) >= sum(g.ram_gb_raw for g in groups)

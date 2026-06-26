@@ -818,3 +818,166 @@ def modules_catalog_json() -> list[dict[str, object]]:
         }
         for m in PRODUCTION_MODULES
     ]
+
+
+HOST_POOL_OPTIONS: tuple[tuple[str, str], ...] = (
+    ("pool-1", "Пул 1 — общий"),
+    ("pool-2", "Пул 2 — общий"),
+    ("pool-data", "Data (БД, брокеры, объектное)"),
+    ("pool-app", "App (API, WS, workers)"),
+    ("pool-edge", "Edge (web/LB)"),
+    ("pool-idp", "IdP (Keycloak)"),
+    ("dedicated", "Отдельный сервер"),
+)
+
+DEFAULT_HOST_LAYOUT_ID = "lab_single"
+DEFAULT_COLOCATION_OVERHEAD = 1.10
+
+# __default__ — для модулей без явной строки в assignments.
+HOST_LAYOUT_PRESETS: dict[str, dict[str, object]] = {
+    "lab_single": {
+        "label": "Lab: один сервер",
+        "hint": "Все контейнеры на одной VM — как QEMU lean/full guest.",
+        "default": True,
+        "assignments": {"__default__": "pool-1"},
+    },
+    "two_tier": {
+        "label": "App + data",
+        "hint": "Данные отдельно от приложения; Keycloak на app-узле.",
+        "assignments": {
+            "__default__": "pool-app",
+            "postgres-hot": "pool-data",
+            "postgres-archive": "pool-data",
+            "redis": "pool-data",
+            "nats": "pool-data",
+            "minio": "pool-data",
+            "zookeeper": "pool-data",
+            "solr": "pool-data",
+            "web-lb": "pool-edge",
+            "keycloak": "pool-idp",
+        },
+    },
+    "three_tier": {
+        "label": "Data + app + edge",
+        "hint": "Три группы + отдельный IdP при необходимости.",
+        "assignments": {
+            "__default__": "pool-app",
+            "postgres-hot": "pool-data",
+            "postgres-archive": "pool-data",
+            "redis": "pool-data",
+            "nats": "pool-data",
+            "minio": "pool-data",
+            "zookeeper": "pool-data",
+            "solr": "pool-data",
+            "web-lb": "pool-edge",
+            "keycloak": "pool-idp",
+        },
+    },
+    "dedicated_all": {
+        "label": "Каждый компонент — своя VM",
+        "hint": "Консервативный бюджет: сумма тарифов по каждой роли (старая модель).",
+        "assignments": {"__default__": "dedicated"},
+    },
+}
+
+
+@dataclass(frozen=True)
+class HostGroupAggregate:
+    host_id: str
+    label: str
+    module_ids: tuple[str, ...]
+    ram_gb_raw: int
+    vcpu: int
+    ram_gb_billed: int
+    dedicated: bool
+
+
+def host_assignment_for_module(module_id: str, preset_id: str = DEFAULT_HOST_LAYOUT_ID) -> str:
+    preset = HOST_LAYOUT_PRESETS.get(preset_id, HOST_LAYOUT_PRESETS[DEFAULT_HOST_LAYOUT_ID])
+    assignments = preset.get("assignments") or {}
+    return str(assignments.get(module_id) or assignments.get("__default__") or "pool-1")
+
+
+def resolve_host_key(module_id: str, assignment: str) -> str:
+    if assignment == "dedicated":
+        return f"vm-{module_id}"
+    return assignment
+
+
+def host_layout_presets_json() -> dict[str, object]:
+    return {
+        pid: {
+            "id": pid,
+            "label": str(body["label"]),
+            "hint": str(body.get("hint", "")),
+            "default": bool(body.get("default")),
+            "assignments": dict(body.get("assignments") or {}),
+        }
+        for pid, body in HOST_LAYOUT_PRESETS.items()
+    }
+
+
+def host_pool_options_json() -> list[dict[str, str]]:
+    return [{"id": pid, "label": label} for pid, label in HOST_POOL_OPTIONS]
+
+
+def aggregate_module_hosts(
+    modules: tuple[tuple[str, float, float], ...],
+    host_assignments: dict[str, str],
+    *,
+    colocation_overhead: float = DEFAULT_COLOCATION_OVERHEAD,
+) -> tuple[HostGroupAggregate, ...]:
+    """Группировка модулей по серверам: shared-пулы суммируют RAM/vCPU, dedicated — отдельная VM."""
+    from scripts.presentation import sizing_engine as se
+
+    buckets: dict[str, dict[str, object]] = {}
+    for module_id, ram_gb, vcpu in modules:
+        assignment = host_assignments.get(module_id, "pool-1")
+        host_key = resolve_host_key(module_id, assignment)
+        entry = buckets.setdefault(
+            host_key,
+            {"ids": [], "ram": 0.0, "vcpu": 0.0, "dedicated": assignment == "dedicated"},
+        )
+        entry["ids"].append(module_id)
+        entry["ram"] += ram_gb
+        entry["vcpu"] += vcpu
+
+    pool_labels = {pid: label for pid, label in HOST_POOL_OPTIONS}
+    out: list[HostGroupAggregate] = []
+    for host_key in sorted(buckets.keys()):
+        entry = buckets[host_key]
+        dedicated = bool(entry["dedicated"])
+        container_sum = math.ceil(float(entry["ram"]))
+        overhead_mult = 1.0 if dedicated else max(1.0, colocation_overhead)
+        raw_ram = math.ceil(container_sum * overhead_mult)
+        raw_vcpu = math.ceil(float(entry["vcpu"]))
+        billed = se.round_vm_tier(container_sum if not dedicated else raw_ram)
+        if host_key.startswith("vm-"):
+            label = f"VM · {host_key[3:]}"
+        else:
+            label = pool_labels.get(host_key, host_key)
+        out.append(
+            HostGroupAggregate(
+                host_id=host_key,
+                label=label,
+                module_ids=tuple(entry["ids"]),
+                ram_gb_raw=raw_ram,
+                vcpu=raw_vcpu,
+                ram_gb_billed=billed,
+                dedicated=dedicated,
+            )
+        )
+    return tuple(out)
+
+
+def bill_host_groups(
+    groups: tuple[HostGroupAggregate, ...],
+) -> tuple[int, int, int]:
+    """Суммарные billed RAM, vCPU и число VM для сметы провайдеров."""
+    if not groups:
+        return 0, 0, 0
+    return (
+        sum(g.ram_gb_billed for g in groups),
+        sum(g.vcpu for g in groups),
+        len(groups),
+    )

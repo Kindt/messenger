@@ -49,3 +49,19 @@ def test_capability_cards_use_public_terms():
     assert "правила хранения" in html
     assert "ярлык «как приложение»" in html
     assert "интерфейс подготовлен на 6 языках" in html.lower()
+
+
+def test_capability_cards_include_personalization():
+    html = cap.render_capability_cards()
+    assert "Персонализация интерфейса" in html
+    assert "интерфейс консоли подготовлен на 6 языках" in html.lower()
+    assert "промышленная приёмка" in html.lower()
+    assert "Новые сценарии для команд" in html
+    assert "подключаемые возможности" in html.lower()
+
+
+def test_capability_team_scenarios_marked_done():
+    html = cap.render_capability_cards()
+    idx = html.index("Новые сценарии для команд")
+    chunk = html[idx : idx + 400]
+    assert "Реализовано" in chunk

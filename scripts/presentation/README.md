@@ -7,6 +7,7 @@ python scripts/presentation/build.py
 python scripts/presentation/export_gaps_table.py
 python scripts/presentation/smoke_deck.py
 python scripts/presentation/analyze_deck.py
+python scripts/presentation/verify_offerings_urls.py
 ```
 
 ## Tests

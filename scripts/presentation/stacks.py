@@ -6,6 +6,7 @@ from html import escape
 
 from .data_loader import load_competitors
 from . import anchors as anc
+from . import product_status as ps
 
 # Узлы production full (docker-compose.full-server.yml)
 NODE_STACK: tuple[tuple[str, str, str], ...] = (
@@ -114,7 +115,8 @@ COMPETENCIES: tuple[tuple[str, str, str], ...] = (
     ),
     (
         "QA",
-        "JUnit, Playwright tiers, smoke scripts, QEMU acceptance",
+        f"JUnit, {ps.PLAYWRIGHT_TOTAL} Playwright-сценариев, {ps.PLAYWRIGHT_INNER_TIERS} inner-тиров, "
+        "data-driven ui-tests, smoke/QEMU",
         "US9 inner/outer gate",
     ),
 )

@@ -82,6 +82,25 @@ def test_deck_data_exports_calculation_fields():
     assert "tco_comparable" in sample
 
 
+def test_offerings_source_accessed_matches_price_as_of():
+    from scripts.presentation.sizing_engine import PRICE_AS_OF
+
+    for o in load_offerings():
+        assert o["source_accessed_at"] == PRICE_AS_OF, o["id"]
+
+
+def test_offerings_avoid_stale_pricing_paths():
+    stale = (
+        "express.ms/pricing",
+        "pachca.ru/pricing",
+        "getcompass.ru/pricing",
+    )
+    for o in load_offerings():
+        url = o["source_url"]
+        for frag in stale:
+            assert frag not in url, f"{o['id']} still uses {frag}"
+
+
 def test_no_public_price_skips_tco():
     from scripts.presentation.compare_engine import build_compare_row
     from scripts.presentation.data_loader import offering_by_id
