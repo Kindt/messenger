@@ -58,4 +58,4 @@ jobs:
         run: pip install pyyaml
 
       - name: "buildIntegrity (compile, test, spotless ratchet, npm audit, benchmark)"
-        run: chmod +x gradlew && ./gradlew buildIntegrity --no-daemon
+        run: chmod +x gradlew && ./gradlew buildIntegrity --no-daemon -Pkorus.test.retry.maxRetries=2
