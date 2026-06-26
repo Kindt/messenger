@@ -24,8 +24,15 @@ python -m pytest scripts/presentation/ -q
 - Обновление `data/competitor_offerings.json` (`source_accessed_at`, `billing_unit`, `tco_comparable`)
 - Новый счётчик Playwright
 - Константы pricing в `sizing_pricing.py`
+- Host colocation / composition presets в `module_sizing.py` (`HOST_LAYOUT_PRESETS`, `COMPOSITION_PRESETS`, `COMPOSE_MEM_LIMIT_GB`)
 
-## Commit
+## Host colocation в калькуляторе
+
+- Колонка **Сервер** у каждого модуля: shared-пул или отдельная VM.
+- **Раскладка VM** — пресеты одной кнопкой; **Состав + модель** — addons + host + `planning` / `compose_caps`.
+- TCO-таблица/график = prod-full без colocation; интерактивный калькулятор — base + addons + colocation.
+
+См. [`METRIC_POLICY.md`](METRIC_POLICY.md) § Host colocation.
 
 Коммитить вместе: `docs/index.html` + `scripts/presentation/*`.
 

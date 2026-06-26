@@ -96,6 +96,8 @@ def test_block0_uses_external_status_language():
     assert "автотесты web-клиента" in html
     assert "302" in html
     assert "не заменяет приёмку на стенде" in html
+    assert "dev-min и prod-full compose" in html
+    assert "профили развёртывания" not in html
     assert "dev-стенд" not in html
     assert "рабочая болванка" not in html
 
@@ -206,6 +208,9 @@ def test_server_calculator_js_uses_custom_provider_quote():
 def test_calculators_are_labeled_as_estimates():
     assert "оценочная модель" in _calc_tech_html().lower()
     assert "оценка занятости команды" in _calc_pm_html().lower()
+    assert "раскладка по серверам" in _calc_tech_html().lower()
+    assert "cgroup caps" in _calc_tech_html().lower()
+    assert "название своего прайса" in _calc_tech_html().lower()
 
 
 def test_user_adoption_block_is_plain_language():

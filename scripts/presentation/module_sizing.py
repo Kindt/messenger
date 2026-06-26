@@ -218,6 +218,54 @@ DEFAULT_RETENTION_YEARS = 3
 MSG_BYTES = 2048
 PEAK_MSG_BURST = 3.5
 
+# docker-compose.resource-limits.yml (+ web-lb оценка) — режим «Lab: cgroup caps».
+COMPOSE_MEM_LIMIT_GB: dict[str, float] = {
+    "postgres-hot": 0.512,
+    "postgres-archive": 0.512,
+    "redis": 0.128,
+    "nats": 0.256,
+    "minio": 0.512,
+    "zookeeper": 0.384,
+    "solr": 0.896,
+    "keycloak": 0.768,
+    "core-api": 0.768,
+    "ws-gateway": 0.384,
+    "web-lb": 0.256,
+    "worker-message-pipeline": 0.384,
+    "worker-retention": 0.384,
+    "worker-export-replay": 0.384,
+    "worker-deep-archiver": 0.384,
+    "worker-archiver": 0.384,
+    "worker-indexer": 0.384,
+    "worker-push": 0.384,
+    "worker-preview": 0.384,
+    "worker-bot-delivery": 0.384,
+    "livekit": 0.512,
+    "integrations": 0.384,
+}
+COMPOSE_VCPU_LIMIT: dict[str, float] = {
+    "postgres-hot": 1.0,
+    "postgres-archive": 1.0,
+    "redis": 0.5,
+    "nats": 0.5,
+    "minio": 0.5,
+    "keycloak": 1.0,
+    "core-api": 2.0,
+    "ws-gateway": 1.0,
+    "web-lb": 0.5,
+    "worker-message-pipeline": 1.0,
+    "worker-retention": 0.5,
+    "worker-export-replay": 0.5,
+    "worker-deep-archiver": 0.5,
+    "worker-archiver": 0.5,
+    "worker-indexer": 0.5,
+    "worker-push": 0.5,
+    "worker-preview": 0.5,
+    "worker-bot-delivery": 0.5,
+    "livekit": 1.0,
+    "integrations": 0.5,
+}
+
 SPEC_MAP = {m.id: m for m in PRODUCTION_MODULES}
 
 # Типичный потолок одного VM/pod в prod full — сверх него scale-out (×), не «монолит».
@@ -343,6 +391,7 @@ class LoadInputs:
     integration_plugins: int = 0
     module_replicas: dict[str, int] = field(default_factory=dict)
     backup: str = "none"
+    sizing_mode: str = "planning"  # planning | compose_caps
 
 
 @dataclass(frozen=True)
@@ -477,8 +526,10 @@ def _web_node_count(peak_online: int, ha: bool) -> int:
     return min(n, 4)
 
 
-def _scale_module_vcpu(spec: ModuleSpec, ru: int, peak_online: int, peak_msg_s: float) -> float:
+def _scale_module_vcpu(spec: ModuleSpec, ru: int, peak_online: int, peak_msg_s: float, *, sizing_mode: str = "planning") -> float:
     """vCPU растёт с нагрузкой на CPU-bound модулях (prod full / docker limits)."""
+    if sizing_mode == "compose_caps":
+        return COMPOSE_VCPU_LIMIT.get(spec.id, 0.5)
     base = spec.vcpu
     if spec.id == "core-api":
         return max(base, 2.0 + peak_msg_s / 12.0 + peak_online / 2_500.0)
@@ -497,7 +548,9 @@ def _scale_module_vcpu(spec: ModuleSpec, ru: int, peak_online: int, peak_msg_s: 
     return base
 
 
-def _scale_module_ram(spec: ModuleSpec, ru: int, peak_online: int, peak_msg_s: float) -> float:
+def _scale_module_ram(spec: ModuleSpec, ru: int, peak_online: int, peak_msg_s: float, *, sizing_mode: str = "planning") -> float:
+    if sizing_mode == "compose_caps":
+        return COMPOSE_MEM_LIMIT_GB.get(spec.id, 0.384)
     base = spec.ram_gb
     if spec.id == "postgres-hot":
         return base + ru / 8_000 + peak_msg_s / 8
@@ -559,8 +612,8 @@ def _build_modules(
         if spec.per_plugin and base_count == 0:
             continue
 
-        ram_demand = _scale_module_ram(spec, ru, peak_online, peak_msg_s)
-        vcpu_demand = _scale_module_vcpu(spec, ru, peak_online, peak_msg_s)
+        ram_demand = _scale_module_ram(spec, ru, peak_online, peak_msg_s, sizing_mode=inp.sizing_mode)
+        vcpu_demand = _scale_module_vcpu(spec, ru, peak_online, peak_msg_s, sizing_mode=inp.sizing_mode)
         count, ram_unit, vcpu_unit = _split_instances(
             spec, ram_demand, vcpu_demand, base_count, ha=inp.ha
         )
@@ -880,6 +933,31 @@ HOST_LAYOUT_PRESETS: dict[str, dict[str, object]] = {
     },
 }
 
+# Пресеты «состав продукта + раскладка + модель RAM» (кнопки над калькулятором).
+COMPOSITION_PRESETS: dict[str, dict[str, object]] = {
+    "prom_baseline": {
+        "label": "Prom: типовые дополнения",
+        "hint": "Solr, archive, retention, export, push/preview + App+data.",
+        "addons": [
+            "addon-search",
+            "addon-archive",
+            "addon-retention",
+            "addon-deep-archive",
+            "addon-export",
+            "addon-engage",
+        ],
+        "host_layout": "two_tier",
+        "sizing_mode": "planning",
+    },
+    "lab_compose": {
+        "label": "Lab: cgroup caps",
+        "hint": "Лимиты docker-compose.resource-limits.yml; один сервер (QEMU guest).",
+        "addons": [],
+        "host_layout": "lab_single",
+        "sizing_mode": "compose_caps",
+    },
+}
+
 
 @dataclass(frozen=True)
 class HostGroupAggregate:
@@ -919,6 +997,27 @@ def host_layout_presets_json() -> dict[str, object]:
 
 def host_pool_options_json() -> list[dict[str, str]]:
     return [{"id": pid, "label": label} for pid, label in HOST_POOL_OPTIONS]
+
+
+def composition_presets_json() -> dict[str, object]:
+    return {
+        pid: {
+            "id": pid,
+            "label": str(body["label"]),
+            "hint": str(body.get("hint", "")),
+            "addons": list(body.get("addons") or []),
+            "host_layout": str(body.get("host_layout", DEFAULT_HOST_LAYOUT_ID)),
+            "sizing_mode": str(body.get("sizing_mode", "planning")),
+        }
+        for pid, body in COMPOSITION_PRESETS.items()
+    }
+
+
+def compose_limits_json() -> dict[str, object]:
+    return {
+        "mem_limit_gb": dict(COMPOSE_MEM_LIMIT_GB),
+        "vcpu_limit": dict(COMPOSE_VCPU_LIMIT),
+    }
 
 
 def aggregate_module_hosts(

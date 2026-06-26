@@ -21,7 +21,8 @@
 
 ## Sizing в deck
 
-- **Prod full** — единственный контур для калькулятора и TCO (`full-server.yml`, `--profile full`).
+- **Prod full** — контур для **TCO-таблицы и диаграммы** (`full-server.yml`, `--profile full`).
+- **Интерактивный калькулятор** — base + add-ons, colocation, режим `planning` или `compose_caps` (см. § Host colocation).
 - **Ядро** (locked): postgres-hot, redis, nats, minio, keycloak, core-api, ws-gateway, web-lb, worker-message-pipeline.
 - **Опции baseline** (галка, по умолчанию вкл.): postgres-archive, solr, zookeeper, workers retention/export/deep-archiver/archiver/indexer/push/preview.
 - **Опции по запросу** (галка, по умолчанию выкл.): livekit, worker-bot-delivery, integrations (L1–L3).
@@ -29,9 +30,23 @@
 - **Dev-min** — только QEMU/разработка; **не** использовать в product deck sizing.
 - **Base + add-ons** — единственная модель продукта в deck; никаких product-tier labels.
 
-## Sizing gate (spec 021 Phase 8.2)
+## Host colocation (раскладка по VM)
 
-Единая методика для deck `#tech-s4` и `module_sizing.py`:
+Интерактивный калькулятор `#tech-s4` / `#sales-s4`:
+
+| Элемент | Поведение |
+|---------|-----------|
+| **Пул / отдельный сервер** | Модули в одном пуле → одна billed VM (сумма RAM/vCPU); `dedicated` → своя VM на модуль |
+| **Пресеты раскладки** | `lab_single`, `two_tier`, `three_tier`, `dedicated_all` — см. `HOST_LAYOUT_PRESETS` |
+| **Пресеты состава** | `prom_baseline` (типовые addons + two_tier), `lab_compose` (cgroup caps + один сервер) |
+| **Режим RAM** | `planning` — масштаб по нагрузке (`ModuleSpec`); `compose_caps` — `docker-compose.resource-limits.yml` |
+| **Overhead %** | Запас OS/Docker на shared-пул (planning raw); billed tier — от суммы контейнеров на VM |
+
+**TCO-таблица и диаграмма** (`compare_engine`, `sales_tco`) — всегда **prod-full**, **без** colocation: консервативный якорь для сравнения с конкурентами. Не смешивать с интерактивным калькулятором без пояснения.
+
+Rebuild: `python scripts/presentation/build.py`.
+
+## Sizing gate (spec 021 Phase 8.2)
 
 | Правило | Источник |
 |---------|----------|

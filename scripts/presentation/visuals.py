@@ -61,6 +61,10 @@ def render_tco_chart_html(rows: list[CompareRow], limit: int = 6) -> str:
         '<span><i class="swatch swatch-comp"></i> Лицензия/облако конкурента, ₽/год</span>'
         '<span><i class="swatch swatch-korus"></i> Серверы Korus (медиана 3 провайдеров), ₽/год на тот же масштаб</span>'
         "</div>",
+        '<p class="small tco-chart-note">'
+        "<strong>Korus (зелёный):</strong> prod-full, mediana 3 провайдеров, "
+        "<em>без</em> colocation — для сравнения с конкурентом на том же RU. "
+        "Интерактивный калькулятор: base + дополнения, раскладка VM, режим planning / compose caps.</p>",
     ]
     for row in tco_rows:
         label = escape(row.offering["label"])

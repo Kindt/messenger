@@ -98,7 +98,7 @@ def render_block0() -> str:
                 "tls": "HTTPS и сертификаты",
                 "gdpr_export": "Юридически строгий экспорт",
                 "batch_replay": "Пакетная обработка экспорта",
-                "fr_opt": "Профили развёртывания",
+                "fr_opt": "Dev-min и prod-full compose",
                 "fr_opt_shard": "Масштабирование по организациям",
                 "federation_scaffold": "Доверенные организации",
                 "load_test": "Нагрузочная проверка",
@@ -263,6 +263,9 @@ def render_compare_table(limit: int | None = None) -> str:
         "<th scope='col'>Источник</th></tr></thead><tbody>"
         f"{''.join(rows_html)}</tbody></table></div>"
         "<p class='footnote tco-tier-expl'>"
+        "<strong>Модель Korus в таблице и на диаграмме:</strong> "
+        "prod-full (все baseline-модули промышленного compose), <em>без</em> colocation и без галочек калькулятора. "
+        "Интерактивный калькулятор ниже — base + дополнения, раскладка по VM и режим planning / compose caps. "
         "<strong>Почему при 50 и 5&nbsp;000 пользователях похожая серверная смета:</strong> "
         "минимальный промышленный набор сервисов уже требует около 84&nbsp;ГБ RAM по модели; "
         "в прайсе облака это <em>тир 128&nbsp;ГБ</em> (следующий стандартный размер). "
@@ -576,7 +579,7 @@ def _calc_server_price_panel(prefix: str) -> str:
         + cui.field_checkbox(f"{prefix}-custom-enabled", "Добавить свой прайс", False)
         + f"""
 <div class="calc-field calc-field-wide">
-  <label for="{escape(prefix)}-custom-label">Название своего профиля</label>
+  <label for="{escape(prefix)}-custom-label">Название своего прайса</label>
   <input type="text" id="{escape(prefix)}-custom-label" value="Пользовательский прайс"/>
 </div>"""
         + cui.field_number(f"{prefix}-custom-ram", "RAM, ₽/ГБ/мес", 900, min_val=0)
@@ -628,18 +631,34 @@ def _calc_product_addon_panel() -> str:
 
 
 def _calc_host_layout_presets(prefix: str) -> str:
-    buttons = []
+    host_buttons = []
     for pid, body in ms.HOST_LAYOUT_PRESETS.items():
-        buttons.append(
+        host_buttons.append(
             f'<button type="button" class="calc-preset calc-host-preset" data-prefix="{escape(prefix)}"'
             f' data-host-preset="{escape(pid)}">{escape(str(body["label"]))}</button>'
+        )
+    comp_buttons = []
+    for pid, body in ms.COMPOSITION_PRESETS.items():
+        comp_buttons.append(
+            f'<button type="button" class="calc-preset calc-composition-preset" data-prefix="{escape(prefix)}"'
+            f' data-composition-preset="{escape(pid)}">{escape(str(body["label"]))}</button>'
         )
     return (
         '<div class="calc-section-label">Раскладка по серверам</div>'
         '<p class="small calc-mod-hint">Укажите, что <strong>ютится на одной VM</strong> (общий пул), '
-        "а что выносится <strong>на отдельный сервер</strong>. Смета считается как сумма VM-тиров по группам, "
-        "а не как «каждый контейнер = своя машина».</p>"
-        f'<p class="calc-backup-presets">Пресеты: {"".join(buttons)}</p>'
+        "а что выносится <strong>на отдельный сервер</strong>. Смета — сумма VM-тиров по группам. "
+        "Пресеты <strong>состава</strong> ниже также включают типовые дополнения и режим RAM.</p>"
+        f'<p class="calc-backup-presets">Раскладка VM: {"".join(host_buttons)}</p>'
+        f'<p class="calc-backup-presets">Состав + модель: {"".join(comp_buttons)}</p>'
+        + cui.field_select(
+            f"{prefix}-sizing-mode",
+            "Модель RAM/vCPU модулей",
+            [
+                ("planning", "Planning (prom, масштаб по нагрузке)"),
+                ("compose_caps", "Lab: cgroup caps (docker-compose.resource-limits)"),
+            ],
+            selected="planning",
+        )
         + cui.field_number(
             f"{prefix}-host-overhead",
             "Запас RAM на shared-пул, % (планирование, OS/Docker)",
@@ -995,6 +1014,8 @@ def deck_data_json() -> dict[str, Any]:
         "host_pool_options": ms.host_pool_options_json(),
         "host_layout_default": ms.DEFAULT_HOST_LAYOUT_ID,
         "host_colocation_default": ms.DEFAULT_COLOCATION_OVERHEAD,
+        "composition_presets": ms.composition_presets_json(),
+        "compose_limits": ms.compose_limits_json(),
     }
 
 
@@ -1737,7 +1758,11 @@ def _deck_js() -> str:
     const avg=(dau*mpd)/86400;
     return Math.max(0.5, avg*(data.load_defaults?.peak_burst||3.5));
   }
-  function scaleModVcpu(id, base, ru, po, pms){
+  function scaleModVcpu(id, base, ru, po, pms, sizingMode){
+    if(sizingMode==='compose_caps'){
+      const caps=data.compose_limits?.vcpu_limit||{};
+      return caps[id]!=null ? caps[id] : 0.5;
+    }
     if(id==='core-api') return Math.max(base, 2+pms/12+po/2500);
     if(id==='worker-message-pipeline') return Math.max(base, 2+pms/18);
     if(id==='livekit') return Math.max(base, 2+po/5000);
@@ -1747,7 +1772,11 @@ def _deck_js() -> str:
     if(id==='solr') return Math.max(base, 1+ru/20000);
     return base;
   }
-  function scaleModRam(id, base, ru, po, pms){
+  function scaleModRam(id, base, ru, po, pms, sizingMode){
+    if(sizingMode==='compose_caps'){
+      const caps=data.compose_limits?.mem_limit_gb||{};
+      return caps[id]!=null ? caps[id] : 0.384;
+    }
     if(id==='postgres-hot') return base+ru/8000+pms/8;
     if(id==='core-api') return base+po/400+pms/1.5;
     if(id==='ws-gateway') return base+po/800;
@@ -1825,6 +1854,10 @@ def _deck_js() -> str:
     const vcpu=hosts.reduce((s,h)=>s+h.vcpu,0);
     return {hosts, ramBilled, vcpu, vmCount:hosts.length};
   }
+  function readSizingMode(prefix){
+    const el=document.getElementById(prefix+'-sizing-mode');
+    return el&&el.value==='compose_caps' ? 'compose_caps' : 'planning';
+  }
   function applyHostPreset(scope, presetId){
     const preset=(data.host_layout_presets||{})[presetId];
     if(!preset||!scope) return;
@@ -1833,6 +1866,20 @@ def _deck_js() -> str:
       const val=(preset.assignments&&preset.assignments[mod])||(preset.assignments&&preset.assignments.__default__)||'pool-1';
       sel.value=val;
     });
+  }
+  function applyCompositionPreset(scope, prefix, presetId){
+    const preset=(data.composition_presets||{})[presetId];
+    if(!preset||!scope) return;
+    const addonSet=new Set(preset.addons||[]);
+    scope.querySelectorAll('.calc-addon-opt').forEach(cb=>{
+      cb.checked=addonSet.has(cb.dataset.addon);
+    });
+    syncAddonsToInfra(scope);
+    if(preset.host_layout) applyHostPreset(scope, preset.host_layout);
+    if(preset.sizing_mode){
+      const modeEl=document.getElementById(prefix+'-sizing-mode');
+      if(modeEl) modeEl.value=preset.sizing_mode;
+    }
   }
   function renderHostTable(hostAgg){
     if(!hostAgg||!hostAgg.hosts||!hostAgg.hosts.length) return '';
@@ -1861,6 +1908,7 @@ def _deck_js() -> str:
       replicas: collectModuleReplicas(scope),
       hostAssignments: collectHostAssignments(scope),
       colocationOverhead: readColocationOverhead(prefix),
+      sizingMode: readSizingMode(prefix),
       plugins: +document.getElementById(prefix+'-mod-plugins')?.value||0,
       ssdTb: +document.getElementById(prefix+'-mod-ssd')?.value||0,
       hddTb: +document.getElementById(prefix+'-mod-hdd')?.value||0,
@@ -2038,6 +2086,7 @@ def _deck_js() -> str:
     const enabledNorm=normalizeEnabledIds(inp.enabled||defaultEnabledModuleIds());
     const reps=inp.replicas||{};
     const bp=inp.backupParams||backupProfile(inp.backup||'none');
+    const sizingMode=inp.sizingMode||'planning';
     let appN=appNodeCount(pms, po, inp.ha, ru);
     let webN=webNodeCount(po, inp.ha);
     const instances=[];
@@ -2046,8 +2095,8 @@ def _deck_js() -> str:
       if(!enabledNorm.has(spec.id)) continue;
       const baseCount=resolveReplicaCount(spec, reps, inp.ha, appN, webN, inp.plugins||0);
       if(spec.per_plugin && baseCount===0) continue;
-      const ramDemand=scaleModRam(spec.id, spec.ram_gb, ru, po, pms);
-      const vcpuDemand=scaleModVcpu(spec.id, spec.vcpu, ru, po, pms);
+      const ramDemand=scaleModRam(spec.id, spec.ram_gb, ru, po, pms, sizingMode);
+      const vcpuDemand=scaleModVcpu(spec.id, spec.vcpu, ru, po, pms, sizingMode);
       const split=splitInstances(spec, ramDemand, vcpuDemand, baseCount, inp.ha);
       let ram=split.ramUnit;
       let vcpu=split.vcpuUnit;
@@ -2070,7 +2119,7 @@ def _deck_js() -> str:
       ssdTb:stor.ssd, hddTb:stor.hdd, backupRam:bp.ram_gb,
       backupLabel: bp.label,
       backupParams: bp,
-      channel, appNodes:appN, webNodes:webN,
+      channel, appNodes:appN, webNodes:webN, sizingMode,
       hostAgg: aggregateHostsFromModules(instances, inp.hostAssignments||{}, inp.colocationOverhead)
     };
   }
@@ -2089,7 +2138,8 @@ def _deck_js() -> str:
       replicas: ctx.replicas,
       backupParams: ctx.backupParams,
       hostAssignments: ctx.hostAssignments,
-      colocationOverhead: ctx.colocationOverhead
+      colocationOverhead: ctx.colocationOverhead,
+      sizingMode: ctx.sizingMode
     };
   }
   function quoteProviderLoad(inp, p){
@@ -2364,7 +2414,13 @@ def _deck_js() -> str:
         rerun();
       });
     });
-    capEl?.querySelectorAll('.calc-preset:not(.calc-host-preset)').forEach(btn=>{
+    capEl?.querySelectorAll('.calc-composition-preset').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        applyCompositionPreset(capEl, prefix, btn.dataset.compositionPreset);
+        rerun();
+      });
+    });
+    capEl?.querySelectorAll('.calc-preset:not(.calc-host-preset):not(.calc-composition-preset)').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         document.getElementById(prefix+'-mod-backup-ram').value=btn.dataset.ram;
         document.getElementById(prefix+'-mod-backup-disk').value=btn.dataset.disk;

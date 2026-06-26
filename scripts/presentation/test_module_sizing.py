@@ -204,3 +204,24 @@ def test_host_aggregate_dedicated_all_many_vms():
     groups = ms.aggregate_module_hosts(mods, assign)
     assert len(groups) == 5
     assert sum(g.ram_gb_billed for g in groups) >= sum(g.ram_gb_raw for g in groups)
+
+
+def test_compose_caps_mode_uses_lower_ram_than_planning():
+    base = set(ms.load_product_catalog()["base"]["core_infra"])
+    planning = ms.estimate_from_load(
+        ms.LoadInputs(registered_users=10_000),
+        enabled_ids=ms.normalize_enabled(base),
+    )
+    caps = ms.estimate_from_load(
+        ms.LoadInputs(registered_users=10_000, sizing_mode="compose_caps"),
+        enabled_ids=ms.normalize_enabled(base),
+    )
+    assert caps.total_ram_gb < planning.total_ram_gb
+    assert caps.total_ram_gb <= 12  # QEMU full+Solr guest ~12 GB
+
+
+def test_composition_presets_include_prom_and_lab():
+    presets = ms.composition_presets_json()
+    assert "prom_baseline" in presets
+    assert "lab_compose" in presets
+    assert "addon-search" in presets["prom_baseline"]["addons"]
