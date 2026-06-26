@@ -12,7 +12,28 @@
     "apply": "Применить",
     "welcomeTitle": "Добро пожаловать",
     "welcomeText": "Войдите под учётной записью с realm-ролью admin, затем выберите раздел в меню слева.",
-    "signedIn": "Вошли как {user} (sessionStorage)."
+    "signedIn": "Вошли как {user} (sessionStorage).",
+    "branding": {
+      "scopeLabel": "Область",
+      "scopeGlobal": "Global",
+      "scopeOrg": "Organization",
+      "paletteLabel": "Палитра",
+      "titleLabel": "Заголовок бренда",
+      "titlePlaceholder": "Korus Messenger",
+      "tokenPlaceholder": "например #7949f4",
+      "customCssLabel": "Custom CSS",
+      "customCssPlaceholder": "дополнительные CSS-правила",
+      "demoSkinsLabel": "demo_skins_enabled",
+      "save": "Сохранить",
+      "reset": "Сбросить",
+      "preview": "Предпросмотр",
+      "previewApplied": "Предпросмотр применён.",
+      "saved": "Сохранено.",
+      "resetDone": "Значения сброшены.",
+      "orgRequired": "Для Organization укажите UUID в панели «Организация».",
+      "orgCurrent": "Organization: {org}",
+      "globalCurrent": "Global scope"
+    }
   },
   "text": {
     "Админ-консоль": "Админ-консоль",
@@ -253,6 +274,7 @@
     "завершено / ошибка": "завершено / ошибка",
     "отменено": "отменено",
     "аудит cancel (7 дн.)": "аудит cancel (7 дн.)",
-    "Счётчики": "Счётчики"
+    "Счётчики": "Счётчики",
+    "Персонализация UI": "Персонализация UI"
   }
 }

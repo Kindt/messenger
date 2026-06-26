@@ -17,7 +17,9 @@
     "ui-admin",
     "ui-admin-extended",
     "ui-interaction-audit",
+    "ui-branding",
     "ui-i18n-artifacts",
+    "ui-avatar",
     "e2ee-openmls-interop"
   ],
   "tiers": {
@@ -44,10 +46,13 @@
         "specs/auth-session.spec.ts",
         "specs/auth-login-options.spec.ts",
         "specs/contacts-search.spec.ts",
-        "specs/settings-cross-tab.spec.ts",
-        "specs/ui-avatar.spec.ts"
+        "specs/settings-cross-tab.spec.ts"
       ],
       "grep": "login via UI|logout returns|locale switch|contacts list loads|login-options"
+    },
+    "ui-avatar": {
+      "description": "Spec 068 entity avatars — API avt token, crop UI, cross-user visibility, profile card",
+      "args": ["specs/ui-avatar.spec.ts"]
     },
     "ui-mobile": {
       "description": "Responsive shell: single-pane navigation, back button, settings modal (390/768/1280 viewports)",
@@ -118,8 +123,24 @@
       "description": "Aggressive client/admin desktop and mobile interaction audit for buttons, links, fields, layout, and runtime errors",
       "args": ["specs/ui-interaction-audit.spec.ts"]
     },
+    "ui-branding": {
+      "description": "Spec 027 UI branding — public branding API, demo login palettes, post-login server override",
+      "args": ["specs/ui-branding.spec.ts"]
+    },
     "ui-tests": {
-      "description": "тесты UI — data-driven visual/UX/CLK/MED scenarios",
+      "description": "тесты UI — data-driven visual/UX/CLK/MED scenarios (default smoke profile)",
+      "args": ["specs/ui-tests.spec.ts"]
+    },
+    "ui-ux-smoke": {
+      "description": "тесты UI smoke profile (~130 scenarios, PR gate)",
+      "args": ["specs/ui-tests.spec.ts"]
+    },
+    "ui-ux-pr": {
+      "description": "тесты UI pr profile (~400 scenarios, pre-merge)",
+      "args": ["specs/ui-tests.spec.ts"]
+    },
+    "ui-ux-full": {
+      "description": "тесты UI full manifest (~1400 scenarios, nightly)",
       "args": ["specs/ui-tests.spec.ts"]
     },
     "ui-i18n-artifacts": {
@@ -140,7 +161,7 @@
     },
     "all-inner": {
       "description": "Run all inner tiers sequentially",
-      "sequential": ["api", "ui-auth", "ui-mobile", "ui-visual", "ui-visual-regression", "ui-conversation", "ui-messaging", "ui-messaging-extended", "ui-files", "ui-conference", "ui-call-flows", "ui-live", "ui-e2ee", "ui-bot", "ui-admin", "ui-admin-extended", "ui-i18n-artifacts", "ui-push", "e2ee-openmls-interop"]
+      "sequential": ["api", "ui-auth", "ui-mobile", "ui-visual", "ui-visual-regression", "ui-conversation", "ui-messaging", "ui-messaging-extended", "ui-files", "ui-conference", "ui-call-flows", "ui-live", "ui-e2ee", "ui-bot", "ui-admin", "ui-admin-extended", "ui-i18n-artifacts", "ui-branding", "ui-avatar", "ui-push", "e2ee-openmls-interop", "ui-tests"]
     }
   },
   "tierRequirements": {
@@ -155,7 +176,13 @@
     "ui-conversation": [],
     "ui-call-flows": [],
     "ui-interaction-audit": [],
+    "ui-branding": [],
     "ui-i18n-artifacts": [],
+    "ui-avatar": [],
+    "ui-tests": [],
+    "ui-ux-smoke": [],
+    "ui-ux-pr": [],
+    "ui-ux-full": [],
     "api": []
   }
 }

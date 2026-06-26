@@ -62,6 +62,84 @@
 
   function ensureCallPanelOpen() {
     state.callPanelOpen = true;
+    state.callMode = "mesh";
+  }
+
+  function ensureMeetingsOpen() {
+    if (state.sidebarMode !== "meetings") {
+      state.sidebarMode = "meetings";
+      loadActiveConferences()
+        .then(function () {
+          return loadChatConferences();
+        })
+        .catch(function () {});
+    }
+  }
+
+  function openMeetingsSection() {
+    if (state.sidebarMode === "meetings") {
+      loadActiveConferences()
+        .then(function () {
+          return loadChatConferences();
+        })
+        .then(function () {
+          if (window.KorusUiLiveSession) {
+            return KorusUiLiveSession.loadChatLiveSessions(state, apiJson);
+          }
+        })
+        .then(render)
+        .catch(render);
+      return;
+    }
+    state.sidebarMode = "meetings";
+    loadActiveConferences()
+      .then(function () {
+        return loadChatConferences();
+      })
+      .then(function () {
+        if (window.KorusUiLiveSession) {
+          return KorusUiLiveSession.loadChatLiveSessions(state, apiJson);
+        }
+      })
+      .then(render)
+      .catch(render);
+  }
+
+  function getMeetingsUiCtx() {
+    return {
+      state: state,
+      el: el,
+      iconBtn: iconBtn,
+      L: L,
+      render: render,
+      apiJson: apiJson,
+      uiLabelFallback: uiLabelFallback,
+      localErr: localErr,
+      scheduleRender: scheduleRender,
+      loadActiveConferences: loadActiveConferences,
+      loadChatConferences: loadChatConferences,
+      createConference: createConference,
+      createConferenceInChat: createConferenceInChat,
+      joinConferenceByLink: joinConferenceByLink,
+      joinJitsiConference: joinJitsiConference,
+      listUserActiveConferences: listUserActiveConferences,
+      safeConferenceDisplayTitle: safeConferenceDisplayTitle,
+      conferenceParticipantsLabel: conferenceParticipantsLabel,
+      chatTitleById: chatTitleById,
+      conferenceIsTracked: conferenceIsTracked,
+      loadConferenceParticipants: loadConferenceParticipants,
+      conferenceParticipantLabel: conferenceParticipantLabel,
+      getOrCreateJitsiIframe: getOrCreateJitsiIframe,
+      reloadJitsiIframe: reloadJitsiIframe,
+      copyConferenceLink: copyConferenceLink,
+      leaveActiveConference: leaveActiveConference,
+      endActiveConference: endActiveConference,
+      inviteMembersToMeetingChat: inviteMembersToMeetingChat,
+      postMeetingInviteMessage: postMeetingInviteMessage,
+      switchMeetingsMode: switchMeetingsMode,
+      getPhase5UiCtx: getPhase5UiCtx,
+      uiCallAdr: uiCallAdr,
+    };
   }
 
   function parseMemberIdList(raw) {
@@ -174,6 +252,14 @@
   const THEME_KEY = "korus_web_theme";
   const STYLE_KEY = "korus_web_style";
   const KORUS_PALETTE = "korus";
+  const DEMO_PALETTES = [
+    { id: "korus", labelKey: "auth.skin.korus", swatch: "#7949F4" },
+    { id: "vtb", labelKey: "auth.skin.vtb", swatch: "#0A2896" },
+    { id: "alfa", labelKey: "auth.skin.alfa", swatch: "#EF3124" },
+    { id: "rzd", labelKey: "auth.skin.rzd", swatch: "#E4002B" },
+    { id: "sfr", labelKey: "auth.skin.sfr", swatch: "#005BBB" },
+    { id: "sberbank", labelKey: "auth.skin.sberbank", swatch: "#21A038" },
+  ];
   const NOTIF_KEY = "korus_web_notify";
   const PENDING_CHAT_KEY = "korus_pending_chat";
   const PENDING_MSG_KEY = "korus_pending_msg";
@@ -206,7 +292,8 @@
     wsReconnectAttempt: 0,
     sidebarSearch: "",
     callPanelOpen: false,
-    callMode: "jitsi",
+    callMode: "mesh",
+    meetingsMode: "jitsi",
     activeConference: null,
     activeConferenceByChat: {},
     chatConferences: null,
@@ -233,6 +320,10 @@
     rtcSharingPeers: {},
     rtcPeers: {},
     rtcPendingCandidates: {},
+    meshCallSessionId: null,
+    meshAuditRecordingId: null,
+    meshUserRecordingId: null,
+    meshUserRecordingActive: false,
     callPanelToggleBusy: false,
     mediaCaps: null,
     platformCaps: null,
@@ -264,6 +355,7 @@
     forwardPick: null,
     appearance: "dark",
     palette: "korus",
+    branding: null,
     notifyPref: false,
     e2eeKeyCount: null,
     serverKeyPackages: null,
@@ -374,6 +466,7 @@
   var messageSearchTimer = null;
   var draftSaveTimer = null;
   var incomingRingTimer = null;
+  var incomingCallNotification = null;
   var exportPollGeneration = 0;
   var chatPreviewHydrateGen = 0;
   var CHAT_PREVIEW_HYDRATE_MAX = 24;
@@ -458,13 +551,20 @@
     },
   };
   var uiShellUtils = window.KorusUiShellUtils || {
+    VALID_PALETTES: ["korus", "vtb", "alfa", "rzd", "sfr", "sberbank"],
+    normalizePalette: function (p) {
+      return p || "korus";
+    },
     loadStyleSet: function (styleKey, themeKey, palette) {
       try {
         var raw = localStorage.getItem(styleKey);
         if (raw) {
           var parsed = JSON.parse(raw);
           if (parsed && (parsed.appearance === "light" || parsed.appearance === "dark")) {
-            return { appearance: parsed.appearance, palette: palette };
+            return {
+              appearance: parsed.appearance,
+              palette: parsed.palette || palette || "korus",
+            };
           }
         }
       } catch (e) {}
@@ -483,8 +583,12 @@
         localStorage.setItem(themeKey, appearance);
       } catch (e) {}
     },
-    applyStyleSet: function (doc, set, palette) {
+    applyStyleSet: function (doc, set) {
       var appearance = set && set.appearance === "light" ? "light" : "dark";
+      var palette =
+        set && set.palette
+          ? set.palette
+          : "korus";
       doc.documentElement.setAttribute("data-appearance", appearance);
       doc.documentElement.setAttribute("data-palette", palette);
       doc.documentElement.removeAttribute("data-theme");
@@ -640,21 +744,82 @@
   var uiCallAdr = window.KorusUiCallAdr;
   var callMeshImportPromise = null;
   var callLivekitImportPromise = null;
+  /** Bump when ui-lazy-call.mjs or call lazy-load contract changes (cache-bust after MIME fix). */
+  var lazyCallModuleUrl = "/ui-lazy-call.mjs?v=3";
 
   function ensureCallMeshModule() {
     if (window.KorusUiCallMesh) return Promise.resolve(window.KorusUiCallMesh);
     if (!callMeshImportPromise) {
-      callMeshImportPromise = import("/ui-lazy-call.mjs").then(function (m) {
-        return m.loadCallMesh();
+      callMeshImportPromise = import(lazyCallModuleUrl).then(function (m) {
+        return m.loadCallMesh().then(function (mesh) {
+          return m.loadCallMeshRecord().then(function () {
+            return mesh;
+          });
+        });
       });
     }
     return callMeshImportPromise;
   }
 
+  function getMeshRecordCtx() {
+    return {
+      state: state,
+      L: L,
+      apiJson: apiJson,
+      uploadChatFile: uploadChatFile,
+      render: render,
+    };
+  }
+
+  async function startMeshCallSession(mediaMode) {
+    if (!state.selectedId || state.meshCallSessionId) return;
+    var data = await apiJson("/chats/" + state.selectedId + "/mesh-calls/sessions", {
+      method: "POST",
+      jsonBody: { media_mode: mediaMode === "video" ? "video" : "audio" },
+    });
+    state.meshCallSessionId = data && (data.session_id || data.id);
+    state.meshAuditRecordingId = data && data.audit_recording_id;
+    if (window.KorusUiCallMeshRecord) {
+      await KorusUiCallMeshRecord.startAuditRecording(getMeshRecordCtx());
+    }
+    broadcastMeshSession();
+  }
+
+  async function joinMeshCallSession(sessionId) {
+    if (!state.selectedId || !sessionId || state.meshCallSessionId) return;
+    var data = await apiJson(
+      "/chats/" + state.selectedId + "/mesh-calls/sessions/" + sessionId + "/join",
+      { method: "POST" }
+    );
+    state.meshCallSessionId = sessionId;
+    state.meshAuditRecordingId = data && data.audit_recording_id;
+    if (window.KorusUiCallMeshRecord) {
+      await KorusUiCallMeshRecord.startAuditRecording(getMeshRecordCtx());
+    }
+  }
+
+  function broadcastMeshSession() {
+    if (!state.meshCallSessionId || !state.ws || state.ws.readyState !== WebSocket.OPEN) return;
+    state.rtcPeerIds.forEach(function (pid) {
+      sendRtcSignal({
+        kind: "mesh_session",
+        targetUserId: pid,
+        session_id: state.meshCallSessionId,
+      });
+    });
+  }
+
+  function rtcSignalPayload(base) {
+    if (state.meshCallSessionId) {
+      base.session_id = state.meshCallSessionId;
+    }
+    return base;
+  }
+
   function ensureCallLivekitModule() {
     if (window.KorusUiCallLivekit) return Promise.resolve(window.KorusUiCallLivekit);
     if (!callLivekitImportPromise) {
-      callLivekitImportPromise = import("/ui-lazy-call.mjs").then(function (m) {
+      callLivekitImportPromise = import(lazyCallModuleUrl).then(function (m) {
         return m.loadCallLivekit();
       });
     }
@@ -796,6 +961,16 @@
     },
   };
 
+  var uiBranding = window.KorusUiBranding || {
+    applyOrgBranding: function () {
+      return null;
+    },
+    clearOrgBranding: function () {},
+    normalizeConfig: function (raw) {
+      return raw;
+    },
+  };
+
   function loadStyleSet() {
     return uiShellUtils.loadStyleSet(STYLE_KEY, THEME_KEY, KORUS_PALETTE);
   }
@@ -805,20 +980,163 @@
       STYLE_KEY,
       THEME_KEY,
       state.appearance,
-      KORUS_PALETTE
+      state.palette
     );
   }
 
   function applyStyleSet(set) {
-    var applied = uiShellUtils.applyStyleSet(document, set, KORUS_PALETTE);
+    var applied = uiShellUtils.applyStyleSet(document, set);
     state.appearance = applied.appearance;
     state.palette = applied.palette;
+  }
+
+  function demoSkinsEnabled() {
+    var env = window.__WEB_CLIENT__ && window.__WEB_CLIENT__.demoSkinsEnabled;
+    if (env === false) return false;
+    if (state.branding && state.branding.demo_skins_enabled === false) return false;
+    return true;
+  }
+
+  function setDemoPalette(paletteId) {
+    if (state.tokens || !demoSkinsEnabled()) return;
+    var normalized =
+      uiShellUtils.normalizePalette ?
+        uiShellUtils.normalizePalette(paletteId) :
+        paletteId || KORUS_PALETTE;
+    applyStyleSet({ appearance: state.appearance, palette: normalized });
+    saveStyleSet();
+    applyBrandChrome();
+    render();
+  }
+
+  function brandDisplayTitle() {
+    if (state.branding && state.branding.brand_title) {
+      return state.branding.brand_title;
+    }
+    return L("ui.brand.title");
+  }
+
+  function brandLogoFallbackLetter() {
+    var palette =
+      state.palette ||
+      (state.branding && state.branding.palette) ||
+      KORUS_PALETTE;
+    if (palette === KORUS_PALETTE) return "K";
+    return palette.charAt(0).toUpperCase();
+  }
+
+  function resolveBrandIconUrl() {
+    if (state.branding && state.branding.logo_url) {
+      return state.branding.logo_url;
+    }
+    var palette =
+      state.palette ||
+      (state.branding && state.branding.palette) ||
+      KORUS_PALETTE;
+    if (uiShellUtils.paletteIconUrl) {
+      return uiShellUtils.paletteIconUrl(palette);
+    }
+    return uiShellUtils.DEFAULT_BRAND_ICON || "/icon.svg";
+  }
+
+  function applyBrandChrome() {
+    var iconUrl = resolveBrandIconUrl();
+    if (uiBranding.applyFavicon) {
+      uiBranding.applyFavicon(document, iconUrl);
+    }
+    document.querySelectorAll(".app-title-logo, .auth-brand-logo").forEach(function (el) {
+      fillBrandLogo(el);
+    });
+    updateDocumentTitle();
+  }
+
+  function fillBrandLogo(logoEl) {
+    logoEl.innerHTML = "";
+    if (state.branding && state.branding.logo_url) {
+      var img = document.createElement("img");
+      img.src = state.branding.logo_url;
+      img.alt = "";
+      img.className = "brand-logo-img";
+      logoEl.appendChild(img);
+    } else {
+      logoEl.textContent = brandLogoFallbackLetter();
+      markBrandNoTranslate(logoEl);
+    }
+  }
+
+  function savedDemoPalette() {
+    if (!demoSkinsEnabled()) return null;
+    var set = loadStyleSet();
+    var raw = set && set.palette ? set.palette : null;
+    var normalized =
+      raw && uiShellUtils.normalizePalette ?
+        uiShellUtils.normalizePalette(raw) :
+        raw;
+    if (normalized && normalized !== KORUS_PALETTE) return normalized;
+    return null;
+  }
+
+  function applyBrandingConfig(config) {
+    if (!config) return;
+    var cfg = uiBranding.normalizeConfig ? uiBranding.normalizeConfig(config) : config;
+    state.branding = cfg;
+    var demoPalette = savedDemoPalette();
+    var authenticated = !!state.tokens;
+    var platformDefault =
+      uiBranding.isPlatformDefaultBranding ?
+        uiBranding.isPlatformDefaultBranding(cfg) :
+        false;
+    var applyDemoPalette =
+      demoPalette && (!authenticated || platformDefault);
+
+    if (applyDemoPalette) {
+      var mergedPalette =
+        authenticated && uiBranding.resolveMergedPalette ?
+          uiBranding.resolveMergedPalette(cfg, demoPalette) :
+          demoPalette;
+      cfg = Object.assign({}, cfg, { palette: mergedPalette });
+      uiBranding.applyOrgBranding(document, cfg, { applyPalette: true });
+      applyStyleSet({ appearance: state.appearance, palette: mergedPalette });
+      saveStyleSet();
+    } else {
+      uiBranding.applyOrgBranding(document, cfg, { applyPalette: true });
+      if (cfg.palette) {
+        applyStyleSet({ appearance: state.appearance, palette: cfg.palette });
+        saveStyleSet();
+      }
+    }
+    applyBrandChrome();
+  }
+
+  function refreshBrandingPublic() {
+    return apiJson("/branding")
+      .then(function (cfg) {
+        applyBrandingConfig(cfg);
+        return cfg;
+      })
+      .catch(function () {
+        return null;
+      });
+  }
+
+  function refreshBrandingMe() {
+    if (!state.tokens) {
+      return refreshBrandingPublic();
+    }
+    return apiJson("/branding/me")
+      .then(function (cfg) {
+        applyBrandingConfig(cfg);
+        return cfg;
+      })
+      .catch(function () {
+        return refreshBrandingPublic();
+      });
   }
 
   function toggleAppearance() {
     applyStyleSet({
       appearance: state.appearance === "dark" ? "light" : "dark",
-      palette: KORUS_PALETTE,
+      palette: state.palette || KORUS_PALETTE,
     });
     saveStyleSet();
     render();
@@ -951,16 +1269,50 @@
     } catch (e) {}
   }
 
+  function dismissIncomingCallNotification() {
+    if (incomingCallNotification) {
+      try {
+        incomingCallNotification.close();
+      } catch (e) {}
+      incomingCallNotification = null;
+    }
+  }
+
   function stopIncomingCallRing() {
     if (incomingRingTimer) {
       clearInterval(incomingRingTimer);
       incomingRingTimer = null;
     }
+    dismissIncomingCallNotification();
+  }
+
+  function showIncomingCallNotification(inc) {
+    dismissIncomingCallNotification();
+    if (!inc || !notificationsAllowed() || typeof Notification === "undefined") return;
+    try {
+      var label = L("ui.shell.incomingCall", {
+        chat: chatTitleById(inc.chatId),
+        user: inc.fromUserId.slice(0, 8),
+      });
+      incomingCallNotification = new Notification(L("ui.brand.title"), {
+        body: label,
+        icon: "/icon.svg",
+        tag: "korus-incoming-rtc-call",
+        requireInteraction: true,
+      });
+      incomingCallNotification.onclick = function () {
+        try {
+          window.focus();
+        } catch (e) {}
+      };
+    } catch (e) {}
   }
 
   function syncIncomingCallRing() {
     stopIncomingCallRing();
-    if (!state.incomingRtcCall || !state.soundNotify) return;
+    if (!state.incomingRtcCall) return;
+    showIncomingCallNotification(state.incomingRtcCall);
+    if (!state.soundNotify) return;
     playIncomingCallChime();
     incomingRingTimer = setInterval(playIncomingCallChime, 2800);
   }
@@ -1060,7 +1412,7 @@
   }
 
   function updateDocumentTitle() {
-    var base = L("ui.brand.title");
+    var base = brandDisplayTitle();
     var u = totalUnreadCount();
     document.title = u > 0 ? "(" + u + ") " + base : base;
     updateAppBadge(u);
@@ -2110,28 +2462,39 @@
 
   async function joinConferenceFromBanner(conf) {
     if (!conf) return;
-    state.callPanelOpen = true;
+    ensureMeetingsOpen();
     await joinJitsiConference(conf);
   }
 
   function stopMeshCallMedia() {
-    Object.keys(state.rtcPeers).forEach(function (pid) {
-      var pc = state.rtcPeers[pid];
-      if (pc) {
-        try {
-          pc.close();
-        } catch (e) {}
-      }
-    });
-    state.rtcPeers = {};
-    state.rtcPendingCandidates = {};
     stopCallMedia();
+  }
+
+  async function endChatCall() {
+    if (state.callPanelToggleBusy) return;
+    if (!state.callPanelOpen) return;
+    state.callPanelOpen = false;
+    state.callPanelToggleBusy = true;
+    try {
+      if (window.KorusUiCallMeshRecord) {
+        await KorusUiCallMeshRecord.finishAll(getMeshRecordCtx());
+      } else {
+        state.meshCallSessionId = null;
+        state.meshAuditRecordingId = null;
+        state.meshUserRecordingId = null;
+        state.meshUserRecordingActive = false;
+      }
+      stopMeshCallMedia();
+      render();
+    } finally {
+      state.callPanelToggleBusy = false;
+    }
   }
 
   async function joinJitsiConference(conf) {
     if (!conf) return;
-    ensureCallPanelOpen();
-    state.callMode = "jitsi";
+    ensureMeetingsOpen();
+    state.meetingsMode = "jitsi";
     if (conf.conference_id) {
       state.conferenceBusy = true;
       state.error = null;
@@ -2140,7 +2503,6 @@
         await apiJson("/conferences/" + conf.conference_id + "/join", { method: "POST" });
         stopMeshCallMedia();
         state.activeConference = conf;
-        state.callMode = "jitsi";
         await loadActiveConferences();
         if (state.selectedId) await loadChatConferences();
         await loadConferenceParticipants(conf.conference_id);
@@ -2155,7 +2517,6 @@
     if (conf.join_url) {
       stopMeshCallMedia();
       state.activeConference = conf;
-      state.callMode = "jitsi";
       render();
     }
   }
@@ -2166,7 +2527,7 @@
     var parsed = parseConferenceLinkInput(raw);
     if (!parsed.uuid && !parsed.slug) return;
     state.error = null;
-    ensureCallPanelOpen();
+    ensureMeetingsOpen();
     state.conferenceBusy = true;
     render();
     try {
@@ -2225,8 +2586,8 @@
     try {
       await apiJson("/conferences/" + id + "/leave", { method: "POST" });
     } catch (e) {}
-    if (state.callMode === "jitsi") {
-      state.callMode = "jitsi";
+    if (state.meetingsMode === "jitsi") {
+      state.meetingsMode = "jitsi";
     }
     await loadChatConferences();
     await loadActiveConferences();
@@ -2246,7 +2607,7 @@
     try {
       await apiJson("/conferences/" + id + "/end", { method: "POST" });
       state.activeConference = null;
-      state.callMode = "jitsi";
+      state.meetingsMode = "jitsi";
       clearConferenceParticipants();
       clearJitsiIframe();
       if (state.selectedId) setActiveConferenceForChat(state.selectedId, null);
@@ -2265,7 +2626,7 @@
     var title = window.prompt(L("conference.titlePrompt")) || "";
     state.conferenceBusy = true;
     state.error = null;
-    ensureCallPanelOpen();
+    ensureMeetingsOpen();
     render();
     try {
       var conf = await apiJson("/chats/" + state.selectedId + "/conferences", {
@@ -2294,7 +2655,7 @@
     var memberIds = parseMemberIdList(memberRaw);
     state.conferenceBusy = true;
     state.error = null;
-    ensureCallPanelOpen();
+    ensureMeetingsOpen();
     render();
     try {
       var conf = await apiJson("/conferences", {
@@ -2330,12 +2691,11 @@
     }
   }
 
-  async function switchCallMode(mode) {
-    if (mode === state.callMode) return;
+  async function switchMeetingsMode(mode) {
+    if (mode === state.meetingsMode) return;
     if (mode === "jitsi") {
       if (window.KorusUiCallLivekit) KorusUiCallLivekit.disconnectRoom(state);
-      stopMeshCallMedia();
-      state.callMode = "jitsi";
+      state.meetingsMode = "jitsi";
       render();
       return;
     }
@@ -2360,39 +2720,52 @@
       if (state.activeConference) {
         await leaveActiveConference();
       }
-      stopMeshCallMedia();
-      state.callMode = "livekit";
+      state.meetingsMode = "livekit";
       state.callPanelToggleBusy = true;
       render();
       try {
         await KorusUiCallLivekit.joinGroupCall(state, apiJson);
       } catch (e) {
         state.error = localErr(e.message) || L("conference.livekitJoinFailed");
-        state.callMode = "jitsi";
+        state.meetingsMode = "jitsi";
         KorusUiCallLivekit.disconnectRoom(state);
       } finally {
         state.callPanelToggleBusy = false;
       }
       render();
+    }
+  }
+
+  async function startChatCall(mediaMode) {
+    if (!state.selectedId || state.selectedId === state.savedChatId) {
+      state.error = L("conference.selectChat");
+      render();
       return;
     }
-    if (window.KorusUiCallLivekit) KorusUiCallLivekit.disconnectRoom(state);
     if (!meshCallChatReady()) {
       state.error = L("conference.meshNeedsChat");
       render();
       return;
     }
-    if (state.activeConference) {
-      await leaveActiveConference();
-    }
     state.callMode = "mesh";
+    state.callPanelOpen = true;
+    state.callPanelToggleBusy = true;
+    render();
     try {
+      if (state.activeConference) {
+        await leaveActiveConference();
+      }
+      if (window.KorusUiCallLivekit) KorusUiCallLivekit.disconnectRoom(state);
       await ensureCallMeshModule();
       await ensureCallAudio();
-      await loadRtcPeerIds();
-      if (state.callCamOn) {
+      if (mediaMode === "video") {
         await addCallVideoTrack();
+      } else {
+        state.callMediaMode = "audio";
+        state.callCamOn = false;
       }
+      await loadRtcPeerIds();
+      await startMeshCallSession(mediaMode);
       startThumbCapture();
       attachLocalVideo();
       if (window.KorusUiCallMesh) {
@@ -2400,12 +2773,24 @@
         KorusUiCallMesh.syncAllSlots(state);
       }
       setTimeout(function () {
-        beginRtcMesh();
+        beginRtcMesh(true);
+        broadcastMeshSession();
       }, 120);
     } catch (e) {
       state.error = localErr(e.message) || L("conference.meshUnavailable");
+    } finally {
+      state.callPanelToggleBusy = false;
+      render();
     }
-    render();
+  }
+
+  /** @deprecated mesh-only; use startChatCall or switchMeetingsMode */
+  async function switchCallMode(mode) {
+    if (mode === "mesh") {
+      await startChatCall(state.callCamOn ? "video" : "audio");
+      return;
+    }
+    await switchMeetingsMode(mode);
   }
 
   async function saveMessageToVault(m) {
@@ -3756,8 +4141,14 @@
       state.callPanelOpen = true;
       state.callMode = "mesh";
       await loadChatConferences();
+      await ensureCallMeshModule();
       await ensureCallAudio();
       await loadRtcPeerIds();
+      if (inc.meshSessionId) {
+        await joinMeshCallSession(inc.meshSessionId);
+      } else {
+        await startMeshCallSession(state.callCamOn ? "video" : "audio");
+      }
       startThumbCapture();
       var from = inc.fromUserId;
       var pc = getOrCreatePeerConnection(from);
@@ -4150,6 +4541,9 @@
       if (window.KorusUiCallMesh) {
         KorusUiCallMesh.handleRemoteTrack(state, peerId, ev.track, ev.streams[0]);
       }
+      if (window.KorusUiCallMeshRecord) {
+        KorusUiCallMeshRecord.refreshMixIfRecording(getMeshRecordCtx());
+      }
     };
     pc.onconnectionstatechange = function () {
       if (pc.connectionState !== "failed") return;
@@ -4169,7 +4563,7 @@
     var pc = getOrCreatePeerConnection(peerId);
     var offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    sendRtcSignal({ kind: "offer", targetUserId: peerId, sdp: offer.sdp });
+    sendRtcSignal(rtcSignalPayload({ kind: "offer", targetUserId: peerId, sdp: offer.sdp }));
   }
 
   async function rtcRenegotiateMesh() {
@@ -4181,7 +4575,7 @@
       try {
         var offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        sendRtcSignal({ kind: "offer", targetUserId: pid, sdp: offer.sdp });
+        sendRtcSignal(rtcSignalPayload({ kind: "offer", targetUserId: pid, sdp: offer.sdp }));
       } catch (e) {}
     }
   }
@@ -4232,11 +4626,11 @@
     }
   }
 
-  function beginRtcMesh() {
+  function beginRtcMesh(outgoing) {
     var me = jwtSub(state.tokens && state.tokens.access_token);
     if (!me || !state.callPanelOpen) return;
     state.rtcPeerIds.forEach(function (pid) {
-      if (me < pid) {
+      if (outgoing || me < pid) {
         createOfferTo(pid).catch(function () {});
       }
     });
@@ -4250,6 +4644,13 @@
     var p = env.payload;
     if (p.targetUserId && p.targetUserId !== me) return;
     try {
+      if (p.kind === "mesh_session" && p.session_id) {
+        if (env.chatId !== state.selectedId) return;
+        if (state.callPanelOpen && !state.meshCallSessionId) {
+          await joinMeshCallSession(p.session_id);
+        }
+        return;
+      }
       if (p.kind === "hangup") {
         if (
           state.incomingRtcCall &&
@@ -4272,6 +4673,7 @@
             chatId: env.chatId,
             fromUserId: from,
             sdp: p.sdp,
+            meshSessionId: p.session_id || null,
           };
           syncIncomingCallRing();
           render();
@@ -4316,69 +4718,18 @@
 
   async function toggleCallPanel() {
     if (state.callPanelToggleBusy) return;
-    state.callPanelOpen = !state.callPanelOpen;
-    if (!state.callPanelOpen) {
-      state.callPanelToggleBusy = true;
-      try {
-        if (state.activeConference && conferenceIsTracked(state.activeConference)) {
-          await leaveActiveConference();
-        } else if (state.activeConference) {
-          state.activeConference = null;
-          clearJitsiIframe();
-        }
-        stopMeshCallMedia();
-        if (window.KorusUiLiveSession) {
-          KorusUiLiveSession.disconnectLiveKitRoom(state);
-          state.activeLiveSession = null;
-        }
-        render();
-      } finally {
-        state.callPanelToggleBusy = false;
-      }
+    if (state.callPanelOpen) {
+      await endChatCall();
       return;
     }
-    render();
-    state.callPanelToggleBusy = true;
-    try {
-      await loadActiveConferences();
-      await loadChatConferences();
-      if (window.KorusUiLiveSession) {
-        await KorusUiLiveSession.loadChatLiveSessions(state, apiJson);
-      }
-      if (!meshCallChatReady() && state.callMode === "mesh") {
-        state.callMode = "jitsi";
-      }
-      if (state.callMode === "jitsi") {
-        render();
-        return;
-      }
-      if (!meshCallChatReady()) {
-        state.callMode = "jitsi";
-        render();
-        return;
-      }
-      await ensureCallMeshModule();
-      await ensureCallAudio();
-      await loadRtcPeerIds();
-      startThumbCapture();
+    state.callPanelOpen = true;
+    if (!meshCallChatReady()) {
+      state.callPanelOpen = false;
+      state.error = L("conference.meshNeedsChat");
       render();
-      attachLocalVideo();
-      if (window.KorusUiCallMesh) {
-        KorusUiCallMesh.ensureSpeakerMonitor(state);
-        KorusUiCallMesh.syncAllSlots(state);
-      }
-      setTimeout(function () {
-        beginRtcMesh();
-      }, 120);
-    } catch (e) {
-      state.error = (e && e.message) || L("conference.meshUnavailable");
-      if (state.callMode === "mesh") {
-        state.callMode = "jitsi";
-      }
-      render();
-    } finally {
-      state.callPanelToggleBusy = false;
+      return;
     }
+    await startChatCall(state.callCamOn ? "video" : "audio");
   }
 
   function attachLocalVideo() {
@@ -4808,6 +5159,16 @@
     if (meId && userId === meId) return;
     state.profileCardUserId = userId;
     render();
+    if (!avatarUrlForUser(userId) && state.tokens) {
+      apiJson("/users/" + userId, { method: "GET" })
+        .then(function (p) {
+          if (p && state.profileCardUserId === userId) {
+            rememberUserAvatar(userId, p.avatar_url, p.display_name || p.username);
+            scheduleRender();
+          }
+        })
+        .catch(function () {});
+    }
   }
 
   function closeProfileCard() {
@@ -4960,7 +5321,7 @@
     var chat = state.chats.find(function (c) {
       return c.id === chatId;
     });
-    if (!chat || chat.type !== "p2p") {
+    if (!chat || (chat.type !== "p2p" && chat.type !== "group")) {
       state.chatHeaderMembers = null;
       state.chatHeaderMembersChatId = null;
       return;
@@ -5933,7 +6294,6 @@
         try {
           var conf = await apiJson("/conferences/" + data.conference_id, { method: "GET" });
           await joinJitsiConference(conf);
-          ensureCallPanelOpen();
         } catch (e) {}
       }
       state.phase5Toast = L("ui.phase5.guestRedeemed");
@@ -7485,23 +7845,18 @@
     return locale === "ru" ? ruFallback : fallback;
   }
 
-  function mountSidebarFiltersPanel() {
-    var panel = el("div", "sidebar-filters-panel");
-    panel.setAttribute("data-testid", "sidebar-filters-panel");
-    panel.setAttribute("aria-label", L("ui.sidebar.filterPanelTitle"));
+  function mountSidebarChipsBar() {
+    var chipsBar = el("div", "sidebar-chips-bar");
+    chipsBar.setAttribute("data-testid", "sidebar-chips-bar");
 
     if (isPlatformFeatureVisible("chat.folders")) {
-      var folderSec = el("div", "sidebar-filters-section");
-      folderSec.appendChild(el("div", "sidebar-filters-label", L("ui.sidebar.filterPanelFolders")));
-      var folderRow = el("div", "sidebar-filters-row sidebar-filters-row-4");
       ["all", "work", "personal", "archive"].forEach(function (fid) {
-        folderRow.appendChild(
-          sidebarChipButton(
+        chipsBar.appendChild(
+          sidebarIconChip(
             SIDEBAR_FOLDER_ICONS[fid],
             sidebarFolderLabel(fid),
             state.sidebarFolder === fid,
             "sidebar-folder-" + fid,
-            "sidebar-folder-chip",
             function () {
               state.sidebarFolder = fid;
               render();
@@ -7509,9 +7864,26 @@
           )
         );
       });
-      folderSec.appendChild(folderRow);
-      panel.appendChild(folderSec);
+      chipsBar.appendChild(el("span", "sidebar-chips-sep", ""));
     }
+
+    chipsBar.appendChild(
+      sidebarIconChip("🔒", L("ui.sidebar.vaultTitle"), false, "sidebar-vault", function () {
+        openSavedVault();
+      })
+    );
+    chipsBar.appendChild(
+      sidebarIconChip("✓", L("ui.sidebar.readAllTitle"), false, "sidebar-read-all", function () {
+        markAllChatsRead();
+      })
+    );
+    return chipsBar;
+  }
+
+  function mountSidebarFiltersPanel() {
+    var panel = el("div", "sidebar-filters-panel");
+    panel.setAttribute("data-testid", "sidebar-filters-panel");
+    panel.setAttribute("aria-label", L("ui.sidebar.filterPanelShow"));
 
     var showSec = el("div", "sidebar-filters-section");
     showSec.appendChild(el("div", "sidebar-filters-label", L("ui.sidebar.filterPanelShow")));
@@ -7534,19 +7906,6 @@
     });
     showSec.appendChild(showRow);
     panel.appendChild(showSec);
-
-    var actRow = el("div", "sidebar-filters-actions");
-    actRow.appendChild(
-      sidebarChipButton("🔒", L("ui.sidebar.vaultTitle"), false, "sidebar-vault", "", function () {
-        openSavedVault();
-      })
-    );
-    actRow.appendChild(
-      sidebarChipButton("✓", L("ui.sidebar.readAllTitle"), false, "sidebar-read-all", "", function () {
-        markAllChatsRead();
-      })
-    );
-    panel.appendChild(actRow);
     return panel;
   }
 
@@ -7629,8 +7988,10 @@
 
   function appendAppTitle(parent) {
     var row = el("div", "app-title-row");
-    row.appendChild(el("div", "app-title-logo", "K"));
-    var h1 = el("h1", null, L("ui.brand.title"));
+    var logo = el("div", "app-title-logo");
+    fillBrandLogo(logo);
+    row.appendChild(logo);
+    var h1 = el("h1", null, brandDisplayTitle());
     markBrandNoTranslate(h1);
     row.appendChild(h1);
     parent.appendChild(row);
@@ -7683,11 +8044,11 @@
     var card = el("div", "auth-card");
     var head = el("div", "auth-card-head");
     var brandRow = el("div", "auth-card-brand");
-    var brandLogo = el("div", "auth-brand-logo", "K");
-    markBrandNoTranslate(brandLogo);
+    var brandLogo = el("div", "auth-brand-logo");
+    fillBrandLogo(brandLogo);
     brandRow.appendChild(brandLogo);
     var brandText = el("div", "auth-card-brand-text");
-    var brandTitle = el("div", "auth-card-brand-title", L("ui.brand.title"));
+    var brandTitle = el("div", "auth-card-brand-title", brandDisplayTitle());
     markBrandNoTranslate(brandTitle);
     brandText.appendChild(brandTitle);
     brandText.appendChild(el("p", "auth-card-brand-tag", brandTagline()));
@@ -7768,6 +8129,57 @@
     }
     card.appendChild(authContent);
     card.appendChild(el("p", "auth-foot", L("auth.hint")));
+    if (demoSkinsEnabled()) {
+      var demoSkins = el("div", "auth-demo-skins");
+      demoSkins.setAttribute("data-testid", "auth-demo-skins");
+      var demoHead = el("div", "auth-demo-skins-head");
+      demoHead.appendChild(el("p", "auth-demo-skins-label", L("auth.demoSkins")));
+      var appearanceBtn = el(
+        "button",
+        "auth-appearance-btn",
+        state.appearance === "light" ? "🌙" : "☀️"
+      );
+      appearanceBtn.type = "button";
+      appearanceBtn.setAttribute("data-testid", "auth-appearance-toggle");
+      appearanceBtn.setAttribute(
+        "aria-label",
+        state.appearance === "light" ? L("ui.common.darkTheme") : L("ui.common.lightTheme")
+      );
+      appearanceBtn.onclick = function () {
+        toggleAppearance();
+      };
+      demoHead.appendChild(appearanceBtn);
+      demoSkins.appendChild(demoHead);
+      var demoRow = el("div", "auth-demo-skins-row");
+      demoRow.setAttribute("role", "group");
+      demoRow.setAttribute("aria-label", L("auth.demoSkins"));
+      DEMO_PALETTES.forEach(function (item) {
+        var active = state.palette === item.id;
+        var btn = el(
+          "button",
+          "auth-demo-skin-btn" + (active ? " active" : ""),
+          ""
+        );
+        btn.type = "button";
+        btn.setAttribute("data-testid", "auth-skin-" + item.id);
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+        var swatch = el("span", "auth-demo-skin-swatch");
+        swatch.style.background = item.swatch;
+        btn.appendChild(swatch);
+        var label = el("span", null, L(item.labelKey));
+        markBrandNoTranslate(label);
+        btn.appendChild(label);
+        btn.onclick = (function (paletteId) {
+          return function () {
+            setDemoPalette(paletteId);
+          };
+        })(item.id);
+        demoRow.appendChild(btn);
+      });
+      demoSkins.appendChild(demoRow);
+      demoSkins.appendChild(el("p", "auth-demo-skins-disclaimer", L("auth.demoSkinsDisclaimer")));
+      card.appendChild(demoSkins);
+    }
     shell.appendChild(card);
     mountAppNotice(shell);
     root.appendChild(shell);
@@ -7917,7 +8329,8 @@
     state.chatBans = null;
     state.chatHeaderMembers = null;
     state.chatHeaderMembersChatId = null;
-    state.callMode = "jitsi";
+    state.callMode = "mesh";
+    state.meetingsMode = "jitsi";
     state.activeConference = null;
     state.activeConferenceByChat = {};
     state.chatConferences = null;
@@ -7937,8 +8350,13 @@
     state.myPublicLinks = null;
     state.myPublicLinksBusy = false;
     closeWs();
-    document.title = L("ui.brand.title");
-    render();
+    uiBranding.clearOrgBranding(document);
+    state.branding = null;
+    applyStyleSet(loadStyleSet());
+    document.title = brandDisplayTitle();
+    refreshBrandingPublic().finally(function () {
+      render();
+    });
   }
 
   async function newGroup() {
@@ -8290,17 +8708,14 @@
     var panel = el("aside", "call-panel");
     var ph = el("div", "call-panel-head");
     var callTitleKey =
-      state.callMode === "mesh" && state.callMediaMode === "audio" && !state.callCamOn
-        ? "ui.call.titleAudio"
-        : "ui.call.title";
+      state.callMediaMode === "audio" && !state.callCamOn ? "ui.call.titleAudio" : "ui.call.title";
     var titleSpan = el("span", "call-panel-title", L(callTitleKey));
     titleSpan.setAttribute(
       "data-testid",
-      state.callMode === "mesh" && state.callMediaMode === "audio" && !state.callCamOn
-        ? "call-panel-title-audio"
-        : "call-panel-title"
+      state.callMediaMode === "audio" && !state.callCamOn ? "call-panel-title-audio" : "call-panel-title"
     );
     ph.appendChild(titleSpan);
+    ph.appendChild(el("span", "call-panel-audit-hint", L("ui.call.auditNotice")));
     var cl = iconBtn("✕", L("ui.call.collapse"), {
       onClick: function () {
         toggleCallPanel();
@@ -8308,292 +8723,11 @@
     });
     ph.appendChild(cl);
     panel.appendChild(ph);
-    var modeBar = el("div", "call-mode-bar");
-    function callModeButton(btn, label) {
-      btn.className += " call-mode-tab";
-      btn.appendChild(el("span", "call-mode-label", label));
-      return btn;
-    }
-    function callModeLabel(key, ruFallback, fallback) {
-      return uiLabelFallback(key, ruFallback, fallback);
-    }
-    var bMesh = callModeButton(iconBtn("📡", callModeLabel("ui.call.modeMesh", "Звонок", "Call"), {
-      primary: state.callMode === "mesh",
-      testId: "mesh-webrtc-button",
-      disabled: state.conferenceBusy,
-      onClick: function () {
-        switchCallMode("mesh");
-      },
-    }), callModeLabel("ui.call.modeMesh", "Звонок", "Call"));
-    var bJitsi = callModeButton(iconBtn("🎥", callModeLabel("ui.call.modeJitsi", "Встреча", "Meeting"), {
-      primary: state.callMode === "jitsi",
-      disabled: state.conferenceBusy || state.busy,
-      onClick: function () {
-        switchCallMode("jitsi");
-      },
-    }), callModeLabel("ui.call.modeJitsi", "Встреча", "Meeting"));
-    modeBar.appendChild(bMesh);
-    modeBar.appendChild(bJitsi);
-    if (window.KorusUiCallLivekit && KorusUiCallLivekit.groupCallSfuEnabled(state)) {
-      modeBar.appendChild(
-        callModeButton(iconBtn("☁", callModeLabel("ui.call.modeLivekit", "Эфир", "Live"), {
-          primary: state.callMode === "livekit",
-          testId: "livekit-sfu-button",
-          disabled: state.conferenceBusy || state.callPanelToggleBusy,
-          onClick: function () {
-            switchCallMode("livekit");
-          },
-        }), callModeLabel("ui.call.modeLivekit", "Эфир", "Live"))
-      );
-    }
-    panel.appendChild(modeBar);
     var panelContent = el("div", "call-panel-content");
-    var callLobby = el("section", "call-lobby");
     var callLiveStage = el("section", "call-live-stage");
     panel.appendChild(panelContent);
-    if (state.tokens) {
-      var confSec = el("div", "call-conferences");
-      var confHead = el("div", "call-conferences-head");
-      var confTitle = el("div", "call-conferences-title");
-      confTitle.textContent = L("conference.sectionTitle");
-      confHead.appendChild(confTitle);
-      confHead.appendChild(
-        iconBtn("↻", L("conference.refreshList"), {
-          disabled: state.conferenceBusy || state.busy,
-          onClick: function () {
-            loadActiveConferences()
-              .then(function () {
-                return loadChatConferences();
-              })
-              .then(render)
-              .catch(function () {
-                render();
-              });
-          },
-        })
-      );
-      confSec.appendChild(confHead);
-      confSec.appendChild(el("p", "call-hint", L("conference.inviteHint")));
-      var confActions = el("div", "call-conferences-actions");
-      var bNewConf = iconBtn("＋", state.conferenceBusy ? L("conference.creating") : L("conference.create"), {
-        primary: true,
-        disabled: state.conferenceBusy || state.busy,
-        onClick: function () {
-          createConference();
-        },
-      });
-      var bJoinLink = iconBtn("🔗", L("conference.joinByLink"), {
-        disabled: state.conferenceBusy || state.busy,
-        onClick: function () {
-          joinConferenceByLink();
-        },
-      });
-      confActions.appendChild(bNewConf);
-      if (state.selectedId && state.selectedId !== state.savedChatId) {
-        confActions.appendChild(
-          iconBtn("🎬", L("conference.startInChat"), {
-            disabled: state.conferenceBusy || state.busy,
-            onClick: function () {
-              createConferenceInChat();
-            },
-          })
-        );
-      }
-      confActions.appendChild(bJoinLink);
-      confSec.appendChild(confActions);
-      var confList = listUserActiveConferences();
-      if (confList.length) {
-        confList.forEach(function (c) {
-          var row = el("div", "call-conf-row");
-          var chatLabel = c.chat_id ? chatTitleById(c.chat_id) : "";
-          var baseTitle =
-            safeConferenceDisplayTitle(c) +
-            (chatLabel ? " · " + chatLabel : "") +
-            conferenceParticipantsLabel(c.participant_count) +
-            (state.activeConference &&
-            state.activeConference.conference_id === c.conference_id
-              ? " · " + L("conference.live")
-              : "");
-          row.appendChild(el("span", "call-conf-label", baseTitle));
-          row.appendChild(
-            iconBtn("▶", L("conference.join"), {
-              disabled: state.conferenceBusy,
-              onClick: function () {
-                joinJitsiConference(c);
-              },
-            })
-          );
-          confSec.appendChild(row);
-        });
-      } else {
-        confSec.appendChild(el("p", "call-conf-empty", L("conference.noneActive")));
-      }
-      callLobby.appendChild(confSec);
-      if (window.KorusUiLiveSession) {
-        KorusUiLiveSession.renderLiveSection(callLobby, state, {
-          el: el,
-          iconBtn: iconBtn,
-          L: L,
-          apiJson: apiJson,
-          render: render,
-        });
-      }
-      if (window.KorusUiCallLivekit && state.callMode === "livekit") {
-        KorusUiCallLivekit.renderLiveKitSection(callLiveStage, state, {
-          el: el,
-          iconBtn: iconBtn,
-          L: L,
-          switchCallMode: switchCallMode,
-          render: render,
-        });
-      }
-    }
-    if (callLobby.childNodes.length && state.callMode !== "mesh") {
-      panelContent.appendChild(callLobby);
-    }
-    if (state.callMode === "mesh" && !meshCallChatReady()) {
+    if (!meshCallChatReady()) {
       panelContent.appendChild(el("p", "call-hint call-hint-warn", L("conference.meshNeedsChatHint")));
-    }
-    if (state.activeConference && conferenceIsTracked(state.activeConference)) {
-      var confAdrBar = uiCallAdr.mountConfAdrBar(getPhase5UiCtx(), state.activeConference);
-      if (confAdrBar) {
-        callLiveStage.appendChild(confAdrBar);
-      }
-    }
-    if (state.callMode === "jitsi" && state.activeConference && state.activeConference.join_url) {
-      var jHint = el("p", "call-hint");
-      jHint.textContent = L("conference.jitsiHint", {
-        host:
-          state.mediaCaps && state.mediaCaps.jitsi_base_url
-            ? state.mediaCaps.jitsi_base_url
-            : "meet.jit.si",
-      });
-      callLiveStage.appendChild(jHint);
-      if (
-        conferenceIsTracked(state.activeConference) &&
-        state.activeConference.conference_id &&
-        state.conferenceParticipantsConfId !== state.activeConference.conference_id
-      ) {
-        loadConferenceParticipants(state.activeConference.conference_id)
-          .then(function () {
-            if (
-              state.activeConference &&
-              state.activeConference.conference_id === state.conferenceParticipantsConfId
-            ) {
-              scheduleRender();
-            }
-          })
-          .catch(function () {});
-      }
-      if (conferenceIsTracked(state.activeConference)) {
-        var partSec = el("div", "call-participants");
-        var partHead = el("div", "call-participants-head");
-        partHead.appendChild(el("span", "call-participants-title", L("conference.participantsTitle")));
-        partHead.appendChild(
-          iconBtn("↻", L("conference.refreshParticipants"), {
-            onClick: function () {
-              loadConferenceParticipants(state.activeConference.conference_id)
-                .then(render)
-                .catch(function () {
-                  render();
-                });
-            },
-          })
-        );
-        partSec.appendChild(partHead);
-        var partList = el("ul", "call-participants-list");
-        var participants = state.conferenceParticipantsList;
-        if (participants && participants.length) {
-          participants.forEach(function (p) {
-            var li = el("li", "call-participant-row", conferenceParticipantLabel(p));
-            partList.appendChild(li);
-          });
-        } else if (participants && !participants.length) {
-          partList.appendChild(
-            el("li", "call-participant-row call-participant-empty", L("conference.noParticipants"))
-          );
-        } else {
-          partList.appendChild(el("li", "call-participant-row call-participant-empty", "…"));
-        }
-        partSec.appendChild(partList);
-        callLiveStage.appendChild(partSec);
-      }
-      var jWrap = el("div", "call-jitsi-wrap");
-      var iframe = getOrCreateJitsiIframe();
-      if (iframe.src !== state.activeConference.join_url) {
-        iframe.src = state.activeConference.join_url;
-      }
-      jWrap.appendChild(iframe);
-      callLiveStage.appendChild(jWrap);
-      var jBar = el("div", "call-toolbar");
-      jBar.appendChild(
-        iconBtn("📋", L("conference.copyLinkHint"), {
-          onClick: function () {
-            copyConferenceLink();
-          },
-        })
-      );
-      jBar.appendChild(
-        iconBtn("↻", L("conference.reloadJitsiHint"), {
-          onClick: function () {
-            reloadJitsiIframe();
-          },
-        })
-      );
-      if (conferenceIsTracked(state.activeConference)) {
-        jBar.appendChild(
-          iconBtn("➕", L("conference.inviteMembers"), {
-            disabled: state.busy,
-            onClick: function () {
-              inviteMembersToMeetingChat(state.activeConference);
-            },
-          })
-        );
-        jBar.appendChild(
-          iconBtn("📢", L("conference.repostInvite"), {
-            disabled: state.busy,
-            onClick: function () {
-              postMeetingInviteMessage(state.activeConference.chat_id, state.activeConference)
-                .then(function () {
-                  state.statusMessage = L("conference.invitePosted");
-                  render();
-                })
-                .catch(function (e) {
-                  state.error = localErr(e.message) || L("conference.invitePostFailed");
-                  render();
-                });
-            },
-          })
-        );
-      }
-      jBar.appendChild(
-        iconBtn("🚪", L("conference.leave"), {
-          onClick: function () {
-            leaveActiveConference();
-          },
-        })
-      );
-      jBar.appendChild(
-        iconBtn("⏹", L("conference.endAll"), {
-          disabled: state.busy || !conferenceIsTracked(state.activeConference),
-          onClick: function () {
-            endActiveConference();
-          },
-        })
-      );
-      if (!conferenceIsTracked(state.activeConference)) {
-        jBar.lastChild.title = L("conference.endGuestHint");
-        jBar.lastChild.setAttribute("aria-label", L("conference.endGuestHint"));
-      }
-      panelContent.appendChild(callLiveStage);
-      panel.appendChild(jBar);
-      shell.appendChild(panel);
-      return;
-    }
-    if (state.callMode !== "mesh") {
-      if (callLiveStage.childNodes.length) {
-        panelContent.appendChild(callLiveStage);
-      }
       shell.appendChild(panel);
       return;
     }
@@ -8717,6 +8851,69 @@
     bar.appendChild(bMic);
     bar.appendChild(bCam);
     bar.appendChild(bScr);
+    bar.appendChild(
+      iconBtn("📼", L("ui.call.recordList"), {
+        size: "md",
+        testId: "mesh-record-list",
+        onClick: function () {
+          if (!window.KorusUiCallMeshRecord) return;
+          KorusUiCallMeshRecord.listUserRecordings(getMeshRecordCtx())
+            .then(function (rows) {
+              var body =
+                rows && rows.length
+                  ? rows
+                      .map(function (r) {
+                        var fid = r.file_id || "";
+                        var dur = r.duration_ms ? Math.round(r.duration_ms / 1000) + "s" : "";
+                        return (r.recording_id || r.id || "?") + " · " + (r.status || "") + (dur ? " · " + dur : "") + (fid ? "\nfile: " + fid : "");
+                      })
+                      .join("\n\n")
+                  : L("ui.call.recordListEmpty");
+              state.phase5Modal = { title: L("ui.call.recordList"), body: body };
+              render();
+            })
+            .catch(function (err) {
+              state.error = (err && err.message) || L("ui.call.recordFailed");
+              render();
+            });
+        },
+      })
+    );
+    bar.appendChild(
+      iconBtn(state.meshUserRecordingActive ? "⏹" : "⏺", state.meshUserRecordingActive ? L("ui.call.recordStop") : L("ui.call.recordStart"), {
+        size: "md",
+        primary: !!state.meshUserRecordingActive,
+        testId: state.meshUserRecordingActive ? "mesh-record-stop" : "mesh-record-start",
+        onClick: function () {
+          if (!window.KorusUiCallMeshRecord) return;
+          var ctx = getMeshRecordCtx();
+          if (state.meshUserRecordingActive) {
+            KorusUiCallMeshRecord.stopUserRecording(ctx).then(function () {
+              render();
+            }).catch(function (err) {
+              state.error = (err && err.message) || L("ui.call.recordFailed");
+              render();
+            });
+            return;
+          }
+          KorusUiCallMeshRecord.startUserRecording(ctx).then(function () {
+            render();
+          }).catch(function (err) {
+            state.error = (err && err.message) || L("ui.call.recordFailed");
+            render();
+          });
+        },
+      })
+    );
+    bar.appendChild(
+      iconBtn("📵", uiLabelFallback("ui.call.endCall", "Завершить звонок", "End call"), {
+        size: "md",
+        testId: "call-hangup",
+        onClick: function () {
+          endChatCall();
+        },
+      })
+    );
     panel.appendChild(bar);
     shell.appendChild(panel);
     setTimeout(function () {
@@ -8946,7 +9143,17 @@
     });
     rowLocale.appendChild(localePicker);
     panel.appendChild(rowLocale);
-    panel.appendChild(el("p", "settings-hint settings-hint-subtle", L("ui.settings.appearanceKorus")));
+    if (state.branding && state.branding.palette) {
+      panel.appendChild(
+        el(
+          "p",
+          "settings-hint settings-hint-subtle",
+          L("ui.settings.appearanceOrg", { palette: L("auth.skin." + state.branding.palette) })
+        )
+      );
+    } else {
+      panel.appendChild(el("p", "settings-hint settings-hint-subtle", L("ui.settings.appearanceKorus")));
+    }
 
     panel.appendChild(el("h3", "settings-subtitle", L("ui.settings.cache")));
     panel.appendChild(el("p", "settings-hint", L("ui.settings.cacheHint")));
@@ -9692,14 +9899,22 @@
     appendMessageSearchBar(hl, { testId: "message-search-header", paneFocus: "sidebar" });
     header.appendChild(hl);
     var hdrR = el("div", "app-header-right");
-    var callTip = state.callPanelOpen ? L("ui.shell.hideVideo") : L("ui.shell.showVideo");
-    var callBtn = iconBtn(state.callPanelOpen ? "📵" : "📹", callTip, {
-      testId: "call-panel-toggle",
+    var meetingsBtn = iconBtn(
+      "🎥",
+      uiLabelFallback("ui.shell.openMeetings", "Видеовстречи", "Video meetings"),
+      {
+      testId: "meetings-section-toggle",
+      primary: state.sidebarMode === "meetings",
       onClick: function () {
-        toggleCallPanel();
+        if (state.sidebarMode === "meetings") {
+          state.sidebarMode = "chats";
+          render();
+        } else {
+          openMeetingsSection();
+        }
       },
     });
-    hdrR.appendChild(callBtn);
+    hdrR.appendChild(meetingsBtn);
     if (state.tokens && state.myPresence) {
       var presPill = el("button", "presence-pill presence-" + state.myPresence);
       presPill.type = "button";
@@ -9886,6 +10101,20 @@
         }
       )
     );
+    tabs.appendChild(
+      sidebarTabButton(
+        "🎥",
+        "ui.sidebar.meetings",
+        "Встречи",
+        "Meetings",
+        state.sidebarMode === "meetings",
+        "sidebar-tab-meetings",
+        function () {
+          if (state.sidebarMode === "meetings") return;
+          openMeetingsSection();
+        }
+      )
+    );
     if (isPlatformFeatureEnabled("integrations.sidebar.open")) {
       tabs.appendChild(
         sidebarTabButton(
@@ -9907,6 +10136,9 @@
     }
     modeBar.appendChild(tabs);
     sh.appendChild(modeBar);
+    if (state.sidebarMode === "chats") {
+      sh.appendChild(mountSidebarChipsBar());
+    }
     side.appendChild(sh);
     var sidebarContent = el("div", "sidebar-content");
     var qTrim = state.sidebarSearch.trim();
@@ -10171,6 +10403,12 @@
         });
       }
       sidebarContent.appendChild(iList);
+    } else if (state.sidebarMode === "meetings") {
+      if (window.KorusUiMeetings) {
+        KorusUiMeetings.renderSidebarList(sidebarContent, getMeetingsUiCtx());
+      } else {
+        sidebarContent.appendChild(el("div", "chat-list-empty", L("ui.meetings.unavailable")));
+      }
     } else {
     var list = el("div", "chat-list");
     list.addEventListener("scroll", function () {
@@ -10298,7 +10536,13 @@
     thread.onmousedown = function () {
       if (state.selectedId) setUiPaneFocus("thread");
     };
-    if (!state.selectedId) {
+    if (state.sidebarMode === "meetings") {
+      if (window.KorusUiMeetings) {
+        KorusUiMeetings.renderWorkspace(thread, getMeetingsUiCtx());
+      } else {
+        thread.appendChild(el("div", "empty-thread", L("ui.meetings.unavailable")));
+      }
+    } else if (!state.selectedId) {
       thread.appendChild(el("div", "empty-thread", L("ui.thread.empty")));
     } else {
       var sel = state.chats.find(function (x) {
@@ -10386,6 +10630,26 @@
       });
       th.appendChild(thSearchHost);
       var thActs = el("div", "thread-header-actions");
+      if (sel && sel.type !== "saved") {
+        thActs.appendChild(
+          iconBtn("📞", uiLabelFallback("ui.thread.audioCall", "Аудиозвонок", "Audio call"), {
+            testId: "thread-audio-call",
+            disabled: state.busy || state.callPanelToggleBusy,
+            onClick: function () {
+              startChatCall("audio");
+            },
+          })
+        );
+        thActs.appendChild(
+          iconBtn("📹", uiLabelFallback("ui.thread.videoCall", "Видеозвонок", "Video call"), {
+            testId: "mesh-webrtc-button",
+            disabled: state.busy || state.callPanelToggleBusy,
+            onClick: function () {
+              startChatCall("video");
+            },
+          })
+        );
+      }
       if (sel && sel.type !== "saved") {
         var moreWrap = el("div", "thread-more-wrap");
         var moreOpen = false;
@@ -10506,6 +10770,16 @@
             });
           });
         }
+        threadMoreBtn(null, function () {
+          return iconBtn("🎥", L("ui.thread.scheduleMeeting"), {
+            testId: "thread-schedule-meeting",
+            disabled: state.busy || state.conferenceBusy,
+            onClick: wrapThreadMoreAction(function () {
+              openMeetingsSection();
+              createConferenceInChat();
+            }),
+          });
+        });
         var phase5Tools = uiPhase5Ext.mountThreadTools(getPhase5UiCtx());
         if (phase5Tools) {
           while (phase5Tools.firstChild) {
@@ -11264,7 +11538,7 @@
       sessionStorage.removeItem(PENDING_CONF_KEY);
     } catch (e) {}
     if (!meet && !confId) return;
-    ensureCallPanelOpen();
+    ensureMeetingsOpen();
     if (confId) {
       try {
         var byId = await apiJson("/conferences/" + confId, { method: "GET" });
@@ -11295,6 +11569,7 @@
       state.lastPublicLink = loadLastPublicLink();
       var pendingMsgId = openChatFromUrlParam();
       await loadMyProfile({ applyLocale: true });
+      await refreshBrandingMe();
       await loadMediaCaps();
       await loadPlatformCaps();
       await loadServerVersion();
@@ -11349,47 +11624,54 @@
       });
     }
     applyStyleSet(loadStyleSet());
-    state.sidebarWidth = loadSidebarWidth();
-    applySidebarWidthCss();
-    syncNotifyPref();
-    startTtlRenderTicker();
-    state.networkOnline =
-      typeof navigator.onLine === "boolean" ? navigator.onLine : true;
-    setupConnectivityHandlers();
-    setupEscapeHandler();
-    setupKeyboardShortcuts();
-    setupServiceWorkerMessages();
-    setupPwaInstallCapture();
-    registerServiceWorker();
-    state.tokens = loadTokens();
-    if (state.tokens) {
-      ensureSessionFresh()
-        .then(function (ok) {
-          if (!ok) {
+    refreshBrandingPublic().finally(function () {
+      state.sidebarWidth = loadSidebarWidth();
+      applySidebarWidthCss();
+      syncNotifyPref();
+      startTtlRenderTicker();
+      state.networkOnline =
+        typeof navigator.onLine === "boolean" ? navigator.onLine : true;
+      setupConnectivityHandlers();
+      setupEscapeHandler();
+      setupKeyboardShortcuts();
+      setupServiceWorkerMessages();
+      setupPwaInstallCapture();
+      registerServiceWorker();
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible") {
+          refreshBrandingMe();
+        }
+      });
+      state.tokens = loadTokens();
+      if (state.tokens) {
+        ensureSessionFresh()
+          .then(function (ok) {
+            if (!ok) {
+              clearTokens();
+              state.error = L("errors.sessionExpired");
+              updateDocumentTitle();
+              render();
+              return;
+            }
+            return initAfterLogin();
+          })
+          .catch(function () {
             clearTokens();
             state.error = L("errors.sessionExpired");
-            updateDocumentTitle();
             render();
-            return;
-          }
-          return initAfterLogin();
-        })
-        .catch(function () {
-          clearTokens();
-          state.error = L("errors.sessionExpired");
+          });
+      } else {
+        var pendingUrl = stripDeepLinkFromUrl();
+        if (pendingUrl.chatId || pendingUrl.msgId) {
+          stashPendingDeepLink(pendingUrl.chatId, pendingUrl.msgId);
+        }
+        stashPendingMeetingDeepLink(pendingUrl);
+        fetchLoginOptions().finally(function () {
+          updateDocumentTitle();
           render();
         });
-    } else {
-      var pendingUrl = stripDeepLinkFromUrl();
-      if (pendingUrl.chatId || pendingUrl.msgId) {
-        stashPendingDeepLink(pendingUrl.chatId, pendingUrl.msgId);
       }
-      stashPendingMeetingDeepLink(pendingUrl);
-      fetchLoginOptions().finally(function () {
-        updateDocumentTitle();
-        render();
-      });
-    }
+    });
   }
 
   if (document.readyState === "loading") {

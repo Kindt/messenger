@@ -28,6 +28,7 @@ final class WebClientEnvServlet extends HttpServlet {
         String watermarkRaw = envOrDefault(getenv, "APP_WATERMARK_TEXT", "");
         String watermarkJs = watermarkRaw.isEmpty() ? "null" : jsonQuote(watermarkRaw);
         boolean disableServiceWorker = envFlag(getenv, "WEB_CLIENT_DISABLE_SW");
+        boolean demoSkinsEnabled = demoSkinsEnabled(getenv);
         return "window.__WEB_CLIENT__ = { wsUrl: "
             + jsonQuote(wsUrl)
             + ", iceServersJson: "
@@ -38,6 +39,8 @@ final class WebClientEnvServlet extends HttpServlet {
             + watermarkJs
             + ", disableServiceWorker: "
             + disableServiceWorker
+            + ", demoSkinsEnabled: "
+            + demoSkinsEnabled
             + " };\n";
     }
 
@@ -66,5 +69,15 @@ final class WebClientEnvServlet extends HttpServlet {
     private static boolean envFlag(Function<String, String> getenv, String key) {
         String value = getenv.apply(key);
         return value != null && ("1".equals(value.trim()) || "true".equalsIgnoreCase(value.trim()));
+    }
+
+    /** {@code WEB_CLIENT_DEMO_SKINS=false|0|no} disables demo skin buttons on login. */
+    static boolean demoSkinsEnabled(Function<String, String> getenv) {
+        String value = getenv.apply("WEB_CLIENT_DEMO_SKINS");
+        if (value == null || value.isBlank()) {
+            return true;
+        }
+        var v = value.trim();
+        return !("0".equals(v) || "false".equalsIgnoreCase(v) || "no".equalsIgnoreCase(v));
     }
 }

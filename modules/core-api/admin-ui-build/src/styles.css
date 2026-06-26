@@ -1,23 +1,15 @@
 :root {
   color-scheme: dark;
-  --bg: #0a0d12;
-  --bg-subtle: #0f131a;
-  --surface: #151b24;
-  --surface-hover: #1a2230;
-  --surface-raised: #1e2736;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --text: #eef2f8;
-  --muted: #8b97a8;
-  --accent: #6ea8fe;
-  --accent-hover: #8bb9ff;
-  --accent-soft: rgba(110, 168, 254, 0.12);
-  --accent-ring: rgba(110, 168, 254, 0.35);
-  --success: #4ade80;
-  --success-soft: rgba(74, 222, 128, 0.12);
-  --danger: #f87171;
-  --danger-soft: rgba(248, 113, 113, 0.12);
-  --warning: #fbbf24;
+  --bg-subtle: var(--panel2, #0f131a);
+  --surface: var(--panel, #151b24);
+  --surface-hover: var(--panel2, #1a2230);
+  --surface-raised: var(--panel2, #1e2736);
+  --border-strong: color-mix(in srgb, var(--border, rgba(255, 255, 255, 0.07)) 68%, transparent);
+  --accent-soft: var(--accent-dim, rgba(110, 168, 254, 0.12));
+  --accent-ring: color-mix(in srgb, var(--accent, #6ea8fe) 35%, transparent);
+  --success-soft: color-mix(in srgb, var(--success, #4ade80) 18%, transparent);
+  --danger-soft: color-mix(in srgb, var(--danger, #f87171) 18%, transparent);
+  --text-on-accent: var(--bg, #0a1628);
   --radius: 10px;
   --radius-sm: 6px;
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
@@ -25,6 +17,18 @@
   --mono: "Cascadia Code", "Consolas", "Courier New", monospace;
   --header-h: 3.5rem;
   --nav-w: 17.5rem;
+}
+
+:root:not([data-palette]) {
+  --bg: #0a0d12;
+  --border: rgba(255, 255, 255, 0.07);
+  --text: #eef2f8;
+  --muted: #8b97a8;
+  --accent: #6ea8fe;
+  --accent-hover: #8bb9ff;
+  --success: #4ade80;
+  --danger: #f87171;
+  --warning: #fbbf24;
 }
 
 *,
@@ -86,13 +90,13 @@ code {
   width: 2.25rem;
   height: 2.25rem;
   border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, var(--accent) 0%, #4f7fd4 100%);
-  color: #0a1628;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  color: var(--text-on-accent);
   font-weight: 700;
   font-size: 1.1rem;
   display: grid;
   place-items: center;
-  box-shadow: 0 2px 12px rgba(110, 168, 254, 0.25);
+  box-shadow: 0 2px 12px var(--accent-soft);
 }
 
 .brand-title {
@@ -199,7 +203,7 @@ textarea:focus {
 
 .btn-primary {
   background: var(--accent);
-  color: #0a1628;
+  color: var(--text-on-accent);
 }
 
 .btn-primary:hover {
@@ -235,7 +239,7 @@ textarea:focus {
 
 button:not(.btn):not(.nav-item) {
   background: var(--accent);
-  color: #0a1628;
+  color: var(--text-on-accent);
   border: none;
   padding: 0.45rem 0.85rem;
   border-radius: var(--radius-sm);
@@ -325,7 +329,7 @@ button:not(.btn):not(.nav-item):hover {
 
 .nav-list li.active .nav-item {
   background: var(--accent-soft);
-  border-color: rgba(110, 168, 254, 0.35);
+  border-color: var(--accent-ring);
   color: var(--accent-hover);
 }
 

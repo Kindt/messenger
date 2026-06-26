@@ -24,7 +24,7 @@ WORKDIR /app
 COPY . .
 COPY --from=tailwind /app/modules/web-client/src/main/resources/webui/tailwind.css modules/web-client/src/main/resources/webui/tailwind.css
 COPY --from=tailwind /app/modules/web-client/src/main/resources/webui/locales modules/web-client/src/main/resources/webui/locales
-RUN gradle --console=plain :modules:web-client:distTar --no-daemon -x test -x buildTailwindCss -x buildLocales
+RUN gradle --console=plain :modules:web-client:distTar --no-daemon -x test -x testMessageListUi -x buildTailwindCss -x buildLocales
 
 FROM eclipse-temurin:25-jre
 WORKDIR /app

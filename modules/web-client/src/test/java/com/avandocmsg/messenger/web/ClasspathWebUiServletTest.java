@@ -48,6 +48,11 @@ class ClasspathWebUiServletTest {
     }
 
     @Test
+    void contentType_mjs() {
+        assertEquals("application/javascript;charset=UTF-8", ClasspathWebUiServlet.contentType("ui-lazy-call.mjs"));
+    }
+
+    @Test
     void cacheControl_htmlNoStore() {
         assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("index.html"));
     }
@@ -60,6 +65,7 @@ class ClasspathWebUiServletTest {
     @Test
     void cacheControl_appAndThemesNoStore() {
         assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("app.js"));
+        assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("ui-lazy-call.mjs"));
         assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("themes.css"));
         assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("styles.css"));
         assertEquals("no-store, max-age=0", ClasspathWebUiServlet.cacheControl("tailwind.css"));

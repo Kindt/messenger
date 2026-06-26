@@ -12,7 +12,28 @@
     "apply": "Ужыць",
     "welcomeTitle": "Сардэчна запрашаем",
     "welcomeText": "Увайдзіце з уліковым запісам з realm-роляй admin, затым выберыце раздзел у меню злева.",
-    "signedIn": "Уваход выкананы як {user} (sessionStorage)."
+    "signedIn": "Уваход выкананы як {user} (sessionStorage).",
+    "branding": {
+      "scopeLabel": "Scope",
+      "scopeGlobal": "Global",
+      "scopeOrg": "Organization",
+      "paletteLabel": "Palette",
+      "titleLabel": "Brand title",
+      "titlePlaceholder": "Korus Messenger",
+      "tokenPlaceholder": "for example #7949f4",
+      "customCssLabel": "Custom CSS",
+      "customCssPlaceholder": "additional CSS rules",
+      "demoSkinsLabel": "demo_skins_enabled",
+      "save": "Save",
+      "reset": "Reset",
+      "preview": "Preview",
+      "previewApplied": "Preview applied.",
+      "saved": "Saved.",
+      "resetDone": "Values reset.",
+      "orgRequired": "For Organization scope set UUID in the Organization bar.",
+      "orgCurrent": "Organization: {org}",
+      "globalCurrent": "Global scope"
+    }
   },
   "text": {
     "Админ-консоль": "Адмін-кансоль",
@@ -253,6 +274,7 @@
     "завершено / ошибка": "completed / failed",
     "отменено": "cancelled",
     "аудит cancel (7 дн.)": "audit cancel (7 d.)",
-    "Счётчики": "Counters"
+    "Счётчики": "Counters",
+    "Персонализация UI": "UI personalization"
   }
 }

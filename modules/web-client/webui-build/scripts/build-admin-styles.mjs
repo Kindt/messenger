@@ -13,13 +13,25 @@ const srcPath = path.resolve(
   __dirname,
   "../../../core-api/admin-ui-build/src/styles.css"
 );
+const themesSrcPath = path.resolve(
+  __dirname,
+  "../../src/main/resources/webui/themes-palettes.css"
+);
 const outPath = path.resolve(
   __dirname,
   "../../../core-api/src/main/resources/admin-ui/styles.css"
 );
+const themesOutPath = path.resolve(
+  __dirname,
+  "../../../core-api/src/main/resources/admin-ui/themes-palettes.css"
+);
 
 if (!fs.existsSync(srcPath)) {
   console.error("Missing admin styles source: " + srcPath);
+  process.exit(1);
+}
+if (!fs.existsSync(themesSrcPath)) {
+  console.error("Missing shared palettes source: " + themesSrcPath);
   process.exit(1);
 }
 
@@ -33,6 +45,8 @@ const { code } = transform({
 
 fs.mkdirSync(path.dirname(outPath), { recursive: true });
 fs.writeFileSync(outPath, code, "utf8");
+fs.copyFileSync(themesSrcPath, themesOutPath);
 
 const kb = (code.length / 1024).toFixed(1);
 console.log("OK admin styles.css (" + kb + " KB minified) -> " + outPath);
+console.log("OK admin themes-palettes.css copy -> " + themesOutPath);

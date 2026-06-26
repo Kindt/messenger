@@ -35,6 +35,10 @@ export function loadCallMesh() {
   return loadClassicScript("/ui-call-mesh.js", "KorusUiCallMesh");
 }
 
+export function loadCallMeshRecord() {
+  return loadClassicScript("/ui-call-mesh-record.js", "KorusUiCallMeshRecord");
+}
+
 export function loadCallLivekit() {
   return loadClassicScript("/ui-call-livekit.js", "KorusUiCallLivekit");
 }

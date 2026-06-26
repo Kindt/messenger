@@ -12,6 +12,8 @@ import com.avandocmsg.messenger.api.chats.ChatService;
 import com.avandocmsg.messenger.api.chats.ReadReceiptService;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanResource;
 import com.avandocmsg.messenger.api.chats.bans.ChatBanService;
+import com.avandocmsg.messenger.api.branding.BrandingResource;
+import com.avandocmsg.messenger.api.branding.UiBrandingAdminResource;
 import com.avandocmsg.messenger.api.config.openapi.OpenApiConfig;
 import com.avandocmsg.messenger.api.contacts.ContactResource;
 import com.avandocmsg.messenger.api.contacts.ContactService;
@@ -99,6 +101,7 @@ import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
 import com.avandocmsg.messenger.core.application.UserApplicationService;
 import com.avandocmsg.messenger.core.application.AvatarApplicationService;
 import com.avandocmsg.messenger.core.application.AvatarAccessTokenService;
+import com.avandocmsg.messenger.core.application.UiBrandingService;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import com.avandocmsg.messenger.core.port.ChatPollPort;
 import com.avandocmsg.messenger.core.port.MessageReminderPort;
@@ -199,7 +202,9 @@ public class JerseyConfig extends ResourceConfig {
                         ChatPollService chatPollService,
                         ScheduledMessagePort scheduledMessagePort,
                         MessageReminderPort messageReminderPort,
-                        com.avandocmsg.messenger.api.phase5.Phase5AdrService phase5AdrService) {
+                        com.avandocmsg.messenger.api.phase5.Phase5AdrService phase5AdrService,
+                        com.avandocmsg.messenger.api.meshcall.MeshCallRecordingService meshCallRecordingService,
+                        UiBrandingService uiBrandingService) {
         register(new AbstractBinder() {
             @Override
             protected void configure() {
@@ -287,6 +292,8 @@ public class JerseyConfig extends ResourceConfig {
                 bind(scheduledMessagePort).to(ScheduledMessagePort.class);
                 bind(messageReminderPort).to(MessageReminderPort.class);
                 bind(phase5AdrService).to(com.avandocmsg.messenger.api.phase5.Phase5AdrService.class);
+                bind(meshCallRecordingService).to(com.avandocmsg.messenger.api.meshcall.MeshCallRecordingService.class);
+                bind(uiBrandingService).to(UiBrandingService.class);
                 bind(CoreModule.scimGroupRepositoryPort(dataSource)).to(ScimGroupRepositoryPort.class);
                 bind(BotRateLimiter.fromEnv()).to(BotRateLimiter.class);
                 bind(new com.avandocmsg.messenger.api.security.OrgIpAllowlistService(
@@ -329,6 +336,7 @@ public class JerseyConfig extends ResourceConfig {
         register(com.avandocmsg.messenger.api.users.MeIntegrationsMarketplaceResource.class);
         register(com.avandocmsg.messenger.api.phase5.StickerCatalogResource.class);
         register(com.avandocmsg.messenger.api.phase5.ChatConferenceAdrResource.class);
+        register(com.avandocmsg.messenger.api.meshcall.ChatMeshCallResource.class);
         register(com.avandocmsg.messenger.api.phase5.ConferenceGuestRedeemResource.class);
         register(com.avandocmsg.messenger.api.phase5.ChatKanbanAdrResource.class);
         register(com.avandocmsg.messenger.api.phase5.ChatWhiteboardAdrResource.class);
@@ -344,7 +352,9 @@ public class JerseyConfig extends ResourceConfig {
         register(PlatformCapabilitiesResource.class);
         register(ExternalStackStatusResource.class);
         register(FederationStatusResource.class);
+        register(BrandingResource.class);
         register(AdminProductModulesResource.class);
+        register(UiBrandingAdminResource.class);
         register(BotResource.class);
         register(com.avandocmsg.messenger.api.plugins.PluginAdminResource.class);
         register(com.avandocmsg.messenger.api.plugins.PluginOutboundResource.class);

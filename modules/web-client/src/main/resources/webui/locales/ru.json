@@ -23,7 +23,17 @@
     "passwordMinLength": "Пароль: не менее 8 символов",
     "registerUnavailable": "Регистрация недоступна (Keycloak). Попробуйте позже или обратитесь к администратору.",
     "registerLoginFailed": "Аккаунт создан, но вход не удался. Проверьте пароль (политика Keycloak) или войдите вручную.",
-    "invalidCredentials": "Неверные имя пользователя или пароль"
+    "invalidCredentials": "Неверные имя пользователя или пароль",
+    "demoSkins": "Демо-оформление",
+    "demoSkinsDisclaimer": "Демонстрационные стили. Не связано с указанными организациями.",
+    "skin": {
+      "korus": "КОРУС",
+      "vtb": "ВТБ",
+      "alfa": "Альфа-Банк",
+      "rzd": "РЖД",
+      "sfr": "СФР",
+      "sberbank": "Сбербанк"
+    }
   },
   "settings": {
     "locale": "Язык",
@@ -343,6 +353,7 @@
     "shell": {
       "swUpdate": "Доступна новая версия приложения",
       "globalSearchPlaceholder": "Поиск по всем чатам (от 2 симв., без E2EE)…",
+      "openMeetings": "Видеовстречи",
       "hideVideo": "Скрыть видео",
       "showVideo": "Видео / конференция",
       "e2eeTitle": "Key packages на сервере (MLS). Текст e2ee-* расшифровывается на сервере для превью в чате.",
@@ -386,6 +397,7 @@
       "draft": "Черновик: {text}",
       "membersMeta": "{type} · {count} уч.",
       "integrations": "Интеграции",
+      "meetings": "Встречи",
       "noIntegrations": "Нет интеграций.",
       "vitrine": "Витрина",
       "externalStackSummary": "External stack: {passed}/{total} OK",
@@ -451,6 +463,9 @@
       "composerHint": "Enter — отправить, Shift+Enter — новая строка, можно перетащить файл",
       "composerMore": "Ещё действия",
       "chatMore": "Действия чата",
+      "audioCall": "Аудиозвонок",
+      "videoCall": "Видеозвонок",
+      "scheduleMeeting": "Запланировать встречу",
       "cancelReply": "Отменить ответ",
       "bold": "Жирный",
       "italic": "Курсив",
@@ -677,9 +692,18 @@
       "delete": "Удалить"
     },
     "call": {
-      "title": "Видео / конференция",
-      "titleAudio": "Аудиозвонок / конференция",
+      "title": "Звонок",
+      "titleAudio": "Аудиозвонок",
       "collapse": "Свернуть",
+      "endCall": "Завершить звонок",
+      "auditNotice": "Звонок записывается для аудита",
+      "recordStart": "Запись",
+      "recordStop": "Стоп",
+      "recordStarted": "Ваша запись начата",
+      "recordCompleted": "Фрагмент записи сохранён",
+      "recordFailed": "Не удалось сохранить запись",
+      "recordList": "Мои записи",
+      "recordListEmpty": "Нет сохранённых фрагментов",
       "modeMesh": "Звонок",
       "modeJitsi": "Встреча",
       "modeLivekit": "Эфир",
@@ -697,6 +721,11 @@
       "screenSharing": "Вы демонстрируете экран",
       "stopScreen": "Стоп экрана"
     },
+    "meetings": {
+      "title": "Видеовстречи",
+      "subtitle": "Планирование, ссылки для гостей и администрирование — отдельно от быстрых звонков в чатах.",
+      "unavailable": "Раздел встреч недоступен."
+    },
     "settings": {
       "title": "Настройки",
       "tabListLabel": "Разделы настроек",
@@ -706,6 +735,7 @@
       "tabLinks": "Ссылки",
       "tabSecurity": "Безопасность",
       "appearance": "Оформление",
+      "appearanceOrg": "Оформление задаётся администратором организации.",
       "theme": "Тема",
       "appearanceKorus": "Оформление КОРУС Консалтинг (#7949F4, korusconsulting.ru).",
       "cache": "Кэш приложения",

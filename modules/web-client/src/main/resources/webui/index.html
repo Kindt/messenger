@@ -22,6 +22,24 @@
 
     <title>Korus Messenger</title>
 
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem("korus_web_style");
+          if (!raw) return;
+          var parsed = JSON.parse(raw);
+          if (!parsed) return;
+          var html = document.documentElement;
+          if (parsed.appearance === "light" || parsed.appearance === "dark") {
+            html.setAttribute("data-appearance", parsed.appearance);
+          }
+          if (parsed.palette) {
+            html.setAttribute("data-palette", parsed.palette);
+          }
+        } catch (e) {}
+      })();
+    </script>
+
     <link rel="manifest" href="/manifest.json" />
 
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
@@ -58,4 +76,3 @@
   </body>
 
 </html>
-

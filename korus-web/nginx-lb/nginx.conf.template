@@ -9,6 +9,7 @@ events {
 
 http {
     include /etc/nginx/mime.types;
+    include /etc/nginx/includes/mime-mjs.conf;
     default_type application/octet-stream;
     access_log /var/log/nginx/access.log combined;
     sendfile on;

@@ -60,6 +60,7 @@ class WebUiParityAssetsTest {
         assertTrue(messageArticle.contains("message-edit-button"), "edit button testid");
         assertTrue(messageArticle.contains("message-link-button"), "link button testid");
         assertTrue(app.contains("integration-panel"), "integration iframe panel testid");
+        assertTrue(app.contains("sidebar-chips-bar"), "sidebar top chips bar");
         assertTrue(app.contains("sidebar-filters-panel"), "sidebar filters panel");
         assertTrue(app.contains("sidebar-filter-"), "sidebar filter testid prefix");
         assertTrue(app.contains("sidebarChatFilter"), "sidebar chat filter state");
@@ -67,6 +68,14 @@ class WebUiParityAssetsTest {
         assertTrue(app.contains("getMessageReplyCtx"), "reply ctx builder in app");
         assertTrue(app.contains("reply_preview"), "reply_preview from API");
         assertTrue(app.contains("mesh-webrtc-button"), "mesh webrtc testid");
+        assertTrue(app.contains("KorusUiMeetings"), "meetings workspace module");
+        assertTrue(app.contains("startChatCall"), "chat call launcher");
+        assertTrue(app.contains("call-hangup"), "call hangup testid");
+        assertTrue(app.contains("endChatCall"), "end chat call helper");
+        assertTrue(app.contains("mesh-record-start"), "mesh user record button");
+        assertTrue(app.contains("mesh-calls/sessions"), "mesh call session API");
+        assertTrue(app.contains("mesh-record-list"), "mesh record list button");
+        assertTrue(app.contains("joinMeshCallSession"), "mesh session join");
         assertTrue(app.contains("KorusMlsWasmFactory"), "mls wasm factory");
         assertTrue(app.contains("e2ee_openmls_dev"), "openmls dev flag");
         assertTrue(app.contains("KorusOpenMlsDevFactory"), "openmls dev factory selection");
@@ -177,5 +186,33 @@ class WebUiParityAssetsTest {
         var transport = readResource("webui/ui-transport-utils.js");
         assertTrue(transport.contains("nextWsReconnectDelay"), "reconnect backoff helper");
         assertTrue(transport.contains("translateError") || transport.contains("KorusI18n"), "i18n in transport");
+    }
+
+    @Test
+    void brandingAssets_wiredInWebui() throws Exception {
+        var palettes = readResource("webui/themes-palettes.css");
+        var themes = readResource("webui/themes.css");
+        var branding = readResource("webui/ui-branding.js");
+        var bundle = readResource("webui/app.bundle.js");
+        var html = readResource("webui/index.html");
+        var app = readResource("webui/app.js");
+
+        assertTrue(palettes.contains("[data-palette=\"vtb\"]"), "vtb palette block");
+        assertTrue(palettes.contains("[data-palette=\"sberbank\"]"), "sberbank palette block");
+        assertTrue(themes.contains("themes-palettes.css"), "themes imports palettes");
+        assertTrue(branding.contains("KorusUiBranding"), "branding module export");
+        assertTrue(branding.contains("applyOrgBranding"), "branding apply helper");
+        assertTrue(branding.contains("applyFavicon"), "branding favicon helper");
+        assertTrue(branding.contains("resolveMergedPalette"), "branding palette merge helper");
+        assertTrue(app.contains("applyBrandChrome"), "brand chrome sync helper");
+        assertTrue(app.contains("resolveMergedPalette"), "authenticated demo palette merge");
+        assertTrue(
+            app.contains("applyStyleSet({ appearance: state.appearance, palette: mergedPalette })"),
+            "post-login palette sync via applyStyleSet");
+        assertTrue(bundle.contains("resolveMergedPalette"), "bundle includes palette merge helper");
+        assertTrue(html.contains("korus_web_style"), "FOUC inline palette script");
+        assertTrue(app.contains("refreshBrandingPublic"), "public branding boot");
+        assertTrue(app.contains("refreshBrandingMe"), "authenticated branding refresh");
+        assertTrue(app.contains("auth-demo-skins"), "demo skins markup");
     }
 }

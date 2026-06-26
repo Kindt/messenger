@@ -23,7 +23,17 @@
     "passwordMinLength": "비밀번호: 8자 이상",
     "registerUnavailable": "회원가입을 사용할 수 없습니다(Keycloak). 나중에 다시 시도하거나 관리자에게 문의하세요.",
     "registerLoginFailed": "계정이 생성되었지만 로그인에 실패했습니다. 비밀번호 정책(Keycloak)을 확인하거나 수동으로 로그인하세요.",
-    "invalidCredentials": "잘못된 사용자 이름 또는 비밀번호"
+    "invalidCredentials": "잘못된 사용자 이름 또는 비밀번호",
+    "demoSkins": "데모 테마",
+    "demoSkinsDisclaimer": "데모용 스타일입니다. 표시된 기관과 무관합니다.",
+    "skin": {
+      "korus": "Korus",
+      "vtb": "VTB",
+      "alfa": "Alfa-Bank",
+      "rzd": "RZD",
+      "sfr": "SFR",
+      "sberbank": "Sberbank"
+    }
   },
   "settings": {
     "locale": "Язык",
@@ -359,7 +369,8 @@
       "presenceTitle": "Click to change status",
       "updateReady": "A new version is available",
       "reloadNow": "Reload",
-      "reloadLater": "Later"
+      "reloadLater": "Later",
+      "openMeetings": "Video meetings"
     },
     "sidebar": {
       "searchPlaceholder": "채팅 또는 사용자(2자 이상)…",
@@ -417,7 +428,8 @@
       "noChatsMentions": "No chats with mentions.",
       "pinChat": "Pin chat",
       "unpinChat": "Unpin chat",
-      "resizeTitle": "Drag to resize chat list"
+      "resizeTitle": "Drag to resize chat list",
+      "meetings": "Meetings"
     },
     "thread": {
       "empty": "채팅을 선택하거나 그룹을 만드세요.",
@@ -466,7 +478,10 @@
       "scheduleSend": "예약 전송",
       "shareContact": "연락처 공유",
       "voiceRecord": "음성 메시지",
-      "emoji": "Emoji"
+      "emoji": "Emoji",
+      "audioCall": "Audio call",
+      "videoCall": "Video call",
+      "scheduleMeeting": "Schedule meeting"
     },
     "phase5": {
       "stickers": "스티커",
@@ -680,6 +695,15 @@
       "title": "비디오 / 회의",
       "titleAudio": "음성 통화 / 회의",
       "collapse": "접기",
+      "endCall": "통화 종료",
+      "auditNotice": "감사용 통화 녹음 중",
+      "recordStart": "녹음",
+      "recordStop": "중지",
+      "recordStarted": "녹음이 시작되었습니다",
+      "recordCompleted": "녹음이 저장되었습니다",
+      "recordFailed": "녹음 저장 실패",
+      "recordList": "내 녹음",
+      "recordListEmpty": "저장된 클립 없음",
       "modeMesh": "통화",
       "modeJitsi": "회의",
       "modeLivekit": "라이브",
@@ -706,6 +730,7 @@
       "tabLinks": "링크",
       "tabSecurity": "보안",
       "appearance": "모양",
+      "appearanceOrg": "모양은 조직 관리자가 설정합니다.",
       "theme": "테마",
       "appearanceKorus": "KORUS Consulting 테마(#7949F4, korusconsulting.ru).",
       "cache": "앱 캐시",
@@ -893,6 +918,11 @@
     "profileCard": {
       "title": "Profile",
       "message": "Message"
+    },
+    "meetings": {
+      "title": "Video meetings",
+      "subtitle": "Planning, guest links, and admin tools — separate from quick in-chat calls.",
+      "unavailable": "Meetings section is unavailable."
     }
   },
   "push": {

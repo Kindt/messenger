@@ -18,14 +18,26 @@ const css = readFileSync(
 if (!appJs.includes("function sidebarIconChip")) {
   throw new Error("app.js must define sidebarIconChip");
 }
+if (!appJs.includes("mountSidebarChipsBar")) {
+  throw new Error("app.js must define mountSidebarChipsBar");
+}
+if (!appJs.includes("sidebar-chips-bar")) {
+  throw new Error("sidebar must use top sidebar-chips-bar for folders/actions");
+}
 if (!appJs.includes("mountSidebarFiltersPanel")) {
   throw new Error("app.js must define mountSidebarFiltersPanel");
 }
 if (!appJs.includes("sidebar-filters-panel")) {
-  throw new Error("sidebar must use bottom sidebar-filters-panel");
+  throw new Error("sidebar must use bottom sidebar-filters-panel for show filters");
+}
+if (!appJs.includes("sidebarIconChip(")) {
+  throw new Error("top chips bar must use sidebarIconChip");
 }
 if (!appJs.includes("sidebarChipButton(")) {
-  throw new Error("filter panel must use sidebarChipButton");
+  throw new Error("bottom filter panel must use sidebarChipButton");
+}
+if (!css.includes(".sidebar-chips-bar")) {
+  throw new Error("styles.css must style sidebar-chips-bar");
 }
 if (!css.includes(".sidebar-filters-panel")) {
   throw new Error("styles.css must style sidebar-filters-panel");

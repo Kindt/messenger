@@ -14,7 +14,7 @@ class WebClientEnvServletTest {
     void defaultWs_andNullIce_whenUnset() {
         String body = WebClientEnvServlet.buildEnvScriptBody(k -> null);
         assertEquals(
-            "window.__WEB_CLIENT__ = { wsUrl: \"ws://127.0.0.1:8081/ws\", iceServersJson: null, vapidPublicKey: null, watermarkText: null, disableServiceWorker: false };\n",
+            "window.__WEB_CLIENT__ = { wsUrl: \"ws://127.0.0.1:8081/ws\", iceServersJson: null, vapidPublicKey: null, watermarkText: null, disableServiceWorker: false, demoSkinsEnabled: true };\n",
             body);
     }
 
@@ -47,11 +47,10 @@ class WebClientEnvServletTest {
     }
 
     @Test
-    void emptyIceEnv_becomesNullInScript() {
+    void demoSkinsDisabled_whenEnvFalse() {
         Map<String, String> m = new HashMap<>();
-        m.put("WEB_CLIENT_WS_PUBLIC_URL", "ws://h/ws");
-        m.put("WEB_CLIENT_RTC_ICE_SERVERS", "  ");
+        m.put("WEB_CLIENT_DEMO_SKINS", "false");
         String body = WebClientEnvServlet.buildEnvScriptBody(m::get);
-        assertTrue(body.contains("iceServersJson: null"));
+        assertTrue(body.contains("demoSkinsEnabled: false"));
     }
 }

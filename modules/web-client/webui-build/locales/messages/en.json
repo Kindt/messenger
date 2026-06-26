@@ -23,7 +23,17 @@
     "passwordMinLength": "Password: at least 8 characters",
     "registerUnavailable": "Registration is unavailable (Keycloak). Try again later or contact an administrator.",
     "registerLoginFailed": "Account created but sign-in failed. Check password policy or sign in manually.",
-    "invalidCredentials": "Invalid username or password"
+    "invalidCredentials": "Invalid username or password",
+    "demoSkins": "Demo appearance",
+    "demoSkinsDisclaimer": "Demonstration styles only. Not affiliated with the named organizations.",
+    "skin": {
+      "korus": "Korus",
+      "vtb": "VTB",
+      "alfa": "Alfa-Bank",
+      "rzd": "RZD",
+      "sfr": "SFR",
+      "sberbank": "Sberbank"
+    }
   },
   "settings": {
     "locale": "Language",
@@ -343,6 +353,7 @@
     "shell": {
       "swUpdate": "A new version is available",
       "globalSearchPlaceholder": "Search all chats (2+ chars, no E2EE)…",
+      "openMeetings": "Video meetings",
       "hideVideo": "Hide video",
       "showVideo": "Video / conference",
       "e2eeTitle": "Key packages on server (MLS). e2ee-* text is decrypted on server for chat preview.",
@@ -386,6 +397,7 @@
       "draft": "Draft: {text}",
       "membersMeta": "{type} · {count} mem.",
       "integrations": "Integrations",
+      "meetings": "Meetings",
       "noIntegrations": "No integrations.",
       "vitrine": "Featured",
       "externalStackSummary": "External stack: {passed}/{total} OK",
@@ -451,6 +463,9 @@
       "composerHint": "Enter to send, Shift+Enter for a new line, drag a file to attach",
       "composerMore": "More actions",
       "chatMore": "Chat actions",
+      "audioCall": "Audio call",
+      "videoCall": "Video call",
+      "scheduleMeeting": "Schedule meeting",
       "cancelReply": "Cancel reply",
       "bold": "Bold",
       "italic": "Italic",
@@ -677,9 +692,18 @@
       "delete": "Delete"
     },
     "call": {
-      "title": "Video / conference",
-      "titleAudio": "Audio call / conference",
+      "title": "Call",
+      "titleAudio": "Audio call",
       "collapse": "Collapse",
+      "endCall": "End call",
+      "auditNotice": "Call is recorded for audit",
+      "recordStart": "Record",
+      "recordStop": "Stop",
+      "recordStarted": "Your recording started",
+      "recordCompleted": "Recording clip saved",
+      "recordFailed": "Failed to save recording",
+      "recordList": "My recordings",
+      "recordListEmpty": "No saved clips",
       "modeMesh": "Call",
       "modeJitsi": "Meeting",
       "modeLivekit": "Live",
@@ -697,6 +721,11 @@
       "screenSharing": "You are sharing your screen",
       "stopScreen": "Stop screen"
     },
+    "meetings": {
+      "title": "Video meetings",
+      "subtitle": "Planning, guest links, and admin tools — separate from quick in-chat calls.",
+      "unavailable": "Meetings section is unavailable."
+    },
     "settings": {
       "title": "Settings",
       "tabListLabel": "Settings sections",
@@ -706,6 +735,7 @@
       "tabLinks": "Links",
       "tabSecurity": "Security",
       "appearance": "Appearance",
+      "appearanceOrg": "Appearance is managed by your organization administrator.",
       "theme": "Theme",
       "appearanceKorus": "Korus Consulting theme (#7949F4, korusconsulting.ru).",
       "cache": "App cache",

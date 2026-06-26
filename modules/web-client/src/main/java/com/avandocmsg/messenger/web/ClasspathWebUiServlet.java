@@ -74,7 +74,7 @@ public final class ClasspathWebUiServlet extends HttpServlet {
         if (lower.endsWith(".css")) {
             return "text/css;charset=UTF-8";
         }
-        if (lower.endsWith(".js")) {
+        if (lower.endsWith(".mjs") || lower.endsWith(".js")) {
             return "application/javascript;charset=UTF-8";
         }
         if (lower.endsWith(".json")) {
@@ -95,6 +95,7 @@ public final class ClasspathWebUiServlet extends HttpServlet {
             || "sw.js".equals(lower)
             || "app.js".equals(lower)
             || "app.bundle.js".equals(lower)
+            || "ui-lazy-call.mjs".equals(lower)
             || "themes.css".equals(lower)
             || "styles.css".equals(lower)
             || "tailwind.css".equals(lower)) {

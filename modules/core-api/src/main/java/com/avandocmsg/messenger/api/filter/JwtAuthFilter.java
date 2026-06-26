@@ -53,7 +53,8 @@ public class JwtAuthFilter implements ContainerRequestFilter {
     @Override
     public void filter(ContainerRequestContext request) {
         var path = request.getUriInfo().getPath();
-        if (isPublic(path)) {
+        var avt = request.getUriInfo().getQueryParameters().getFirst("avt");
+        if (allowsAnonymousAccess(path, request.getMethod(), avt)) {
             return;
         }
 
@@ -130,11 +131,26 @@ public class JwtAuthFilter implements ContainerRequestFilter {
         if (p.endsWith("openapi.json") || p.endsWith("openapi.yaml")) {
             return true;
         }
+        if ("v1/branding".equals(p) || p.startsWith("v1/branding/manifest")) {
+            return true;
+        }
         return PUBLIC_JERSEY_PREFIXES.stream()
             .anyMatch(pub -> p.equals(pub) || p.startsWith(pub + "/"));
     }
 
-    private boolean isPublic(String path) {
-        return isPublicJerseyPath(path);
+    /** Signed avatar resize for {@code <img src>} without Bearer (spec 068). */
+    static boolean isAvatarResizeWithAvtToken(String path, String method, String avtQuery) {
+        if (avtQuery == null || avtQuery.isBlank()) {
+            return false;
+        }
+        if (method != null && !"GET".equalsIgnoreCase(method)) {
+            return false;
+        }
+        var p = normalizeJerseyPath(path);
+        return p.matches("v1/files/[0-9a-fA-F\\-]{36}/resize");
+    }
+
+    static boolean allowsAnonymousAccess(String path, String method, String avtQuery) {
+        return isPublicJerseyPath(path) || isAvatarResizeWithAvtToken(path, method, avtQuery);
     }
 }

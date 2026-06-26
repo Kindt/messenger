@@ -1343,6 +1343,309 @@
     summary.appendChild(wrap);
   }
 
+  function renderBrandingPanel(summary, pre, cap) {
+    const palettes = ["korus", "vtb", "alfa", "rzd", "sfr", "sberbank"];
+    const tokenKeys = ["--accent", "--bg", "--text"];
+    const previewStyleId = "adminBrandingPreviewStyle";
+    let lastLoaded = null;
+
+    const row = document.createElement("div");
+    row.className = "admin-toolbar";
+    row.setAttribute("data-testid", "admin-branding-toolbar");
+
+    const scopeLabel = document.createElement("label");
+    scopeLabel.className = "small";
+    scopeLabel.textContent = L("admin.branding.scopeLabel");
+    const scopeSelect = document.createElement("select");
+    scopeSelect.id = "brandingScope";
+    [
+      { value: "global", text: L("admin.branding.scopeGlobal") },
+      { value: "org", text: L("admin.branding.scopeOrg") },
+    ].forEach((o) => {
+      const opt = document.createElement("option");
+      opt.value = o.value;
+      opt.textContent = o.text;
+      scopeSelect.appendChild(opt);
+    });
+    scopeLabel.appendChild(scopeSelect);
+    row.appendChild(scopeLabel);
+
+    const paletteLabel = document.createElement("label");
+    paletteLabel.className = "small";
+    paletteLabel.textContent = L("admin.branding.paletteLabel");
+    const paletteSelect = document.createElement("select");
+    paletteSelect.id = "brandingPalette";
+    palettes.forEach((palette) => {
+      const opt = document.createElement("option");
+      opt.value = palette;
+      opt.textContent = palette;
+      paletteSelect.appendChild(opt);
+    });
+    paletteLabel.appendChild(paletteSelect);
+    row.appendChild(paletteLabel);
+
+    const titleLabel = document.createElement("label");
+    titleLabel.className = "small";
+    titleLabel.textContent = L("admin.branding.titleLabel");
+    const titleInput = document.createElement("input");
+    titleInput.type = "text";
+    titleInput.id = "brandingBrandTitle";
+    titleInput.placeholder = L("admin.branding.titlePlaceholder");
+    titleLabel.appendChild(titleInput);
+    row.appendChild(titleLabel);
+
+    const orgInfo = document.createElement("span");
+    orgInfo.className = "muted small";
+    orgInfo.id = "brandingOrgInfo";
+    row.appendChild(orgInfo);
+
+    summary.appendChild(row);
+
+    const tokenGrid = document.createElement("div");
+    tokenGrid.className = "form-grid";
+    const tokenInputs = {};
+    tokenKeys.forEach((tokenKey) => {
+      const label = document.createElement("label");
+      label.className = "field";
+      const capEl = document.createElement("span");
+      capEl.className = "field-label";
+      capEl.textContent = tokenKey;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.id = "brandingToken" + tokenKey.replace(/[^a-z0-9]/gi, "");
+      input.placeholder = L("admin.branding.tokenPlaceholder");
+      label.appendChild(capEl);
+      label.appendChild(input);
+      tokenGrid.appendChild(label);
+      tokenInputs[tokenKey] = input;
+    });
+    summary.appendChild(tokenGrid);
+
+    const cssLabel = document.createElement("label");
+    cssLabel.className = "field";
+    const cssCaption = document.createElement("span");
+    cssCaption.className = "field-label";
+    cssCaption.textContent = L("admin.branding.customCssLabel");
+    const cssArea = document.createElement("textarea");
+    cssArea.id = "brandingCustomCss";
+    cssArea.rows = 8;
+    cssArea.className = "json-editor";
+    cssArea.placeholder = "/* " + L("admin.branding.customCssPlaceholder") + " */";
+    cssArea.spellcheck = false;
+    cssLabel.appendChild(cssCaption);
+    cssLabel.appendChild(cssArea);
+    summary.appendChild(cssLabel);
+
+    const demoRow = document.createElement("div");
+    demoRow.className = "admin-toolbar";
+    const demoLabel = document.createElement("label");
+    demoLabel.className = "small";
+    const demoCheckbox = document.createElement("input");
+    demoCheckbox.type = "checkbox";
+    demoCheckbox.id = "brandingDemoSkinsEnabled";
+    demoLabel.appendChild(demoCheckbox);
+    demoLabel.appendChild(document.createTextNode(" " + L("admin.branding.demoSkinsLabel")));
+    demoRow.appendChild(demoLabel);
+    summary.appendChild(demoRow);
+
+    const actions = document.createElement("div");
+    actions.className = "admin-toolbar";
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.textContent = L("admin.branding.save");
+    saveBtn.setAttribute("data-testid", "admin-branding-save");
+    const resetBtn = document.createElement("button");
+    resetBtn.type = "button";
+    resetBtn.textContent = L("admin.branding.reset");
+    resetBtn.setAttribute("data-testid", "admin-branding-reset");
+    const previewBtn = document.createElement("button");
+    previewBtn.type = "button";
+    previewBtn.textContent = L("admin.branding.preview");
+    previewBtn.setAttribute("data-testid", "admin-branding-preview");
+    const msg = document.createElement("span");
+    msg.className = "muted small";
+    msg.id = "brandingMsg";
+    actions.appendChild(saveBtn);
+    actions.appendChild(resetBtn);
+    actions.appendChild(previewBtn);
+    actions.appendChild(msg);
+    summary.appendChild(actions);
+
+    function orgIdFromContext() {
+      const orgEl = document.getElementById("globalOrgId");
+      return orgEl ? orgEl.value.trim() : "";
+    }
+
+    function currentScope() {
+      return scopeSelect.value === "org" ? "org" : "global";
+    }
+
+    function resolveTarget(showErrors) {
+      if (currentScope() === "org") {
+        const orgId = orgIdFromContext();
+        if (!orgId) {
+          if (showErrors) {
+            msg.textContent = L("admin.branding.orgRequired");
+          }
+          return null;
+        }
+        return {
+          path: "/admin/branding/orgs/" + encodeURIComponent(orgId),
+          kind: "org",
+          orgId: orgId,
+        };
+      }
+      return { path: "/admin/branding/platform", kind: "global", orgId: null };
+    }
+
+    function normalizeForm() {
+      const payload = {
+        palette: paletteSelect.value,
+        token_overrides: {},
+        custom_css: cssArea.value.trim() || null,
+        brand_title: titleInput.value.trim() || null,
+      };
+      tokenKeys.forEach((tokenKey) => {
+        const v = tokenInputs[tokenKey].value.trim();
+        if (v) {
+          payload.token_overrides[tokenKey] = v;
+        }
+      });
+      if (currentScope() === "global") {
+        payload.demo_skins_enabled = !!demoCheckbox.checked;
+      }
+      return payload;
+    }
+
+    function fillForm(data) {
+      const obj = data && typeof data === "object" ? data : {};
+      paletteSelect.value = obj.palette && palettes.includes(obj.palette) ? obj.palette : "korus";
+      tokenKeys.forEach((tokenKey) => {
+        tokenInputs[tokenKey].value =
+          obj.token_overrides && typeof obj.token_overrides === "object"
+            ? String(obj.token_overrides[tokenKey] || "")
+            : "";
+      });
+      cssArea.value = obj.custom_css || "";
+      titleInput.value = obj.brand_title || "";
+      demoCheckbox.checked = !!obj.demo_skins_enabled;
+      lastLoaded = obj;
+    }
+
+    function applyPreview(payload) {
+      const root = document.documentElement;
+      root.setAttribute("data-palette", payload.palette || "korus");
+      tokenKeys.forEach((tokenKey) => {
+        const v = payload.token_overrides && payload.token_overrides[tokenKey];
+        if (v) {
+          root.style.setProperty(tokenKey, v);
+        } else {
+          root.style.removeProperty(tokenKey);
+        }
+      });
+      let styleEl = document.getElementById(previewStyleId);
+      if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = previewStyleId;
+        document.head.appendChild(styleEl);
+      }
+      styleEl.textContent = payload.custom_css || "";
+      const brandTitleNode = document.querySelector(".brand-title");
+      if (brandTitleNode) {
+        if (!brandTitleNode.dataset.defaultTitle) {
+          brandTitleNode.dataset.defaultTitle = brandTitleNode.textContent || "";
+        }
+        brandTitleNode.textContent =
+          payload.brand_title && payload.brand_title.trim()
+            ? payload.brand_title.trim()
+            : brandTitleNode.dataset.defaultTitle;
+      }
+      msg.textContent = L("admin.branding.previewApplied");
+    }
+
+    function refreshScopeUi() {
+      const target = resolveTarget(false);
+      if (target && target.kind === "org") {
+        orgInfo.textContent = L("admin.branding.orgCurrent", { org: target.orgId });
+      } else {
+        orgInfo.textContent = L("admin.branding.globalCurrent");
+      }
+      demoRow.hidden = currentScope() !== "global";
+    }
+
+    async function loadCurrent() {
+      msg.textContent = "";
+      const target = resolveTarget(true);
+      refreshScopeUi();
+      if (!target) {
+        pre.textContent = L("admin.branding.orgRequired");
+        return;
+      }
+      try {
+        const data = await apiFetch(target.path);
+        lastLoaded = data || null;
+        fillForm(data || {});
+        if (cap) {
+          cap.textContent = "Источник: GET " + API + target.path;
+        }
+        pre.textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        pre.textContent = "Ошибка: " + (e.message || String(e));
+        msg.textContent = e.message || String(e);
+      }
+    }
+
+    scopeSelect.addEventListener("change", () => {
+      loadCurrent();
+    });
+
+    previewBtn.addEventListener("click", () => {
+      applyPreview(normalizeForm());
+    });
+
+    saveBtn.addEventListener("click", async () => {
+      msg.textContent = "";
+      const target = resolveTarget(true);
+      if (!target) {
+        return;
+      }
+      const payload = normalizeForm();
+      try {
+        const data = await apiFetch(target.path, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        lastLoaded = data || null;
+        fillForm(data || payload);
+        if (cap) {
+          cap.textContent = "Источник: PUT " + API + target.path;
+        }
+        pre.textContent = JSON.stringify(data, null, 2);
+        msg.textContent = L("admin.branding.saved");
+      } catch (e) {
+        msg.textContent = e.message || String(e);
+        pre.textContent = "Ошибка: " + (e.message || String(e));
+      }
+    });
+
+    resetBtn.addEventListener("click", async () => {
+      await loadCurrent();
+      if (lastLoaded) {
+        applyPreview({
+          palette: lastLoaded.palette || "korus",
+          token_overrides: lastLoaded.token_overrides || {},
+          custom_css: lastLoaded.custom_css || "",
+          brand_title: lastLoaded.brand_title || "",
+        });
+      }
+      msg.textContent = L("admin.branding.resetDone");
+    });
+
+    refreshScopeUi();
+    loadCurrent();
+  }
+
   function renderFlatObjectTable(obj, container) {
     if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
       const p = document.createElement("p");
@@ -1585,7 +1888,8 @@
         (section.data_path ||
           section.id === "core-retention" ||
           section.id === "core-user-organization" ||
-          section.id === "core-auth-policy")
+          section.id === "core-auth-policy" ||
+          section.id === "core-ui-branding")
       ) {
         summary.hidden = false;
         summary.innerHTML = "";
@@ -2494,6 +2798,11 @@
           appendOrgLogoToolbar(summary, reloadOrgs);
           appendJsonPanelReload(summary, reloadOrgs);
           await reloadOrgs();
+        } else if (section.id === "core-ui-branding") {
+          cap.textContent = LT(
+            "GET/PUT /api/v1/admin/branding/platform и /api/v1/admin/branding/orgs/{orgId}."
+          );
+          renderBrandingPanel(summary, pre, cap);
         } else if (section.id === "core-user-organization") {
           cap.textContent =
             "PATCH " +

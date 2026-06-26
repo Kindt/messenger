@@ -1,74 +1,5 @@
-/* КОРУС Консалтинг — единственная палитра (korusconsulting.ru)
- * Акцент #7949F4, hover #4514C2, текст #000 / #8E8E8E, границы #DEDEDE
- * Шрифт Source Sans 3 */
-
-[data-appearance="dark"] {
-  color-scheme: dark;
-  --danger: #ff9f9f;
-  --danger-bg: rgba(255, 159, 159, 0.12);
-  --danger-border: rgba(255, 159, 159, 0.35);
-  --success: #6ecf8f;
-  --success-bg: rgba(110, 207, 143, 0.12);
-  --success-border: rgba(110, 207, 143, 0.35);
-  --warning: #ffe0cc;
-  --bg: #0c0b10;
-  --panel: #16151c;
-  --panel2: #1e1d26;
-  --border: #2e2c38;
-  --text: #f4f3f7;
-  --muted: #8e8e8e;
-  --accent: #7949f4;
-  --accent-hover: #9568ff;
-  --accent-dim: rgba(121, 73, 244, 0.22);
-  --accent-secondary: #4514c2;
-  --theme-color-meta: #7949f4;
-  --auth-gradient: radial-gradient(
-      ellipse 90% 70% at 85% 8%,
-      rgba(121, 73, 244, 0.42),
-      transparent 55%
-    ),
-    radial-gradient(
-      ellipse 70% 60% at 8% 92%,
-      rgba(69, 20, 194, 0.28),
-      transparent 58%
-    ),
-    linear-gradient(165deg, #14101f 0%, var(--bg) 52%);
-  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
-}
-
-[data-appearance="light"] {
-  color-scheme: light;
-  --danger: #c62828;
-  --danger-bg: rgba(198, 40, 40, 0.08);
-  --danger-border: rgba(198, 40, 40, 0.3);
-  --success: #2e7d32;
-  --success-bg: rgba(46, 125, 50, 0.1);
-  --success-border: rgba(46, 125, 50, 0.28);
-  --warning: #e65100;
-  --bg: #f5f5f7;
-  --panel: #ffffff;
-  --panel2: #fafafa;
-  --border: #dedede;
-  --text: #000000;
-  --muted: #8e8e8e;
-  --accent: #7949f4;
-  --accent-hover: #4514c2;
-  --accent-dim: rgba(121, 73, 244, 0.14);
-  --accent-secondary: #cebcff;
-  --theme-color-meta: #7949f4;
-  --auth-gradient: radial-gradient(
-      ellipse 90% 70% at 88% 10%,
-      rgba(121, 73, 244, 0.16),
-      transparent 55%
-    ),
-    radial-gradient(
-      ellipse 70% 60% at 6% 88%,
-      rgba(69, 20, 194, 0.1),
-      transparent 58%
-    ),
-    linear-gradient(165deg, #ece6ff 0%, var(--bg) 50%);
-  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
-}
+/* Messenger theme — palette tokens + component hooks */
+@import url("./themes-palettes.css");
 
 [data-appearance="light"] .msg-body.md pre {
   background: #f0f0f2;
@@ -100,7 +31,7 @@
 
 .auth-brand-logo {
   background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
-  box-shadow: 0 6px 18px rgba(121, 73, 244, 0.35);
+  box-shadow: var(--auth-logo-shadow, 0 6px 18px color-mix(in srgb, var(--accent) 35%, transparent));
 }
 
 .auth-shell {
@@ -145,6 +76,13 @@
   font-size: 1rem;
   font-weight: 800;
   color: #fff;
+}
+
+.app-title-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
 }
 
 .settings-kbd-hint {

@@ -313,6 +313,7 @@ public class CoreApiComposition {
             CoreModule.savedChatPort(dataSource, this.uuidGenerator),
             fileApplicationService,
             avatarApplicationService);
+        var uiBrandingService = CoreModule.uiBrandingService(dataSource);
         var organizationApplicationService = CoreModule.organizationApplicationService(dataSource, this.uuidGenerator);
         var publicLinkPort = CoreModule.publicLinkPort(dataSource, this.uuidGenerator);
         var purgeStatusService = new PurgeStatusService(adminStatsJdbc, auditPort);
@@ -412,6 +413,10 @@ public class CoreApiComposition {
             pluginRepository,
             pluginPlatformService,
             appConfig);
+        var meshCallRecordingService = new com.avandocmsg.messenger.api.meshcall.MeshCallRecordingService(
+            new com.avandocmsg.messenger.api.meshcall.MeshCallRecordingRepository(dataSource),
+            chatPersistencePort,
+            auditPort);
 
         var jerseyConfig = new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
                 userLookupPort, contactRepositoryPort, contactService,
@@ -435,7 +440,9 @@ public class CoreApiComposition {
                 authPolicyService, directorySyncService, migrationImportJobPort, devicePort, orgUserDirectory,
                 platformModuleRegistry, platformModuleOverrideRepository,
                 federationTrustPort, federationStatusService, dlpBridgeGate,
-                chatPollPort, chatPollService, scheduledMessagePort, messageReminderPort, phase5AdrService);
+                chatPollPort, chatPollService, scheduledMessagePort, messageReminderPort, phase5AdrService,
+                meshCallRecordingService,
+                uiBrandingService);
         var jerseyServlet = new ServletContainer(jerseyConfig);
 
         registration.register(SERVLET_NAME, jerseyServlet, new ClasspathAdminStaticServlet());

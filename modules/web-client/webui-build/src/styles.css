@@ -1309,8 +1309,8 @@ button {
 }
 
 .sidebar-tab.active {
-  background: var(--brand-soft, rgba(121, 73, 244, 0.12));
-  border-color: var(--brand, #7949f4);
+  background: var(--brand-soft);
+  border-color: var(--brand, var(--accent));
   color: var(--text);
 }
 
@@ -1353,8 +1353,8 @@ button {
 }
 
 .sidebar-icon-chip.active {
-  background: var(--brand-soft, rgba(121, 73, 244, 0.12));
-  border-color: var(--brand, #7949f4);
+  background: var(--brand-soft);
+  border-color: var(--brand, var(--accent));
   color: var(--text);
 }
 
@@ -1424,8 +1424,8 @@ button {
 }
 
 .sidebar-filters-panel .sidebar-chip.active {
-  background: var(--brand-soft, rgba(121, 73, 244, 0.12));
-  border-color: var(--brand, #7949f4);
+  background: var(--brand-soft);
+  border-color: var(--brand, var(--accent));
   color: var(--text);
 }
 
@@ -1464,8 +1464,8 @@ button {
 .sidebar-chip.active,
 .sidebar-folder-chip.active,
 .sidebar-filter-chip.active {
-  background: var(--brand-soft, rgba(121, 73, 244, 0.12));
-  border-color: var(--brand, #7949f4);
+  background: var(--brand-soft);
+  border-color: var(--brand, var(--accent));
   color: var(--text);
 }
 
@@ -2050,11 +2050,11 @@ button {
 }
 
 .chat-item-has-unread {
-  background: rgba(121, 73, 244, 0.07);
+  background: var(--brand-soft);
 }
 
 .chat-item-has-unread:hover {
-  background: rgba(121, 73, 244, 0.11);
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
 }
 
 .chat-item-title-unread {
@@ -2226,7 +2226,7 @@ button {
 
 .thread-extras {
   border-bottom: 1px solid var(--border);
-  background: rgba(121, 73, 244, 0.04);
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
 }
 
 .thread-extras-tabs {
@@ -2298,14 +2298,14 @@ button {
   gap: 6px;
   padding: 6px 12px;
   border-bottom: 1px solid var(--border);
-  background: rgba(121, 73, 244, 0.04);
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
 }
 
 .thread-kanban,
 .thread-whiteboard {
   border-bottom: 1px solid var(--border);
   padding: 10px 12px 12px;
-  background: rgba(121, 73, 244, 0.05);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
 .thread-extras-kanban,
@@ -2523,7 +2523,7 @@ button {
   margin: 8px 0;
   border: 1px dashed var(--border);
   border-radius: var(--radius);
-  background: rgba(121, 73, 244, 0.06);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 
 .conf-adr-label {
@@ -3614,7 +3614,7 @@ button {
   height: min(420px, 70vw);
   top: -12%;
   right: -8%;
-  background: radial-gradient(circle, rgba(121, 73, 244, 0.45) 0%, transparent 70%);
+  background: var(--auth-glow-a);
 }
 
 .auth-shell-glow-b {
@@ -3622,7 +3622,7 @@ button {
   height: min(320px, 55vw);
   bottom: -10%;
   left: -6%;
-  background: radial-gradient(circle, rgba(69, 20, 194, 0.35) 0%, transparent 72%);
+  background: var(--auth-glow-b);
 }
 
 .auth-card {
@@ -3693,7 +3693,7 @@ button {
   font-size: 1.25rem;
   font-weight: 800;
   color: #fff;
-  box-shadow: 0 6px 18px rgba(121, 73, 244, 0.35);
+  box-shadow: var(--auth-logo-shadow);
 }
 
 .auth-tabs {
@@ -4133,6 +4133,68 @@ button {
   font-size: 0.9rem;
 }
 
+.call-panel-audit-hint {
+  flex: 1;
+  margin: 0 8px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.meetings-workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.meetings-workspace-head {
+  padding: 14px 16px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.meetings-workspace-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.meetings-workspace-sub {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.meetings-workspace-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meetings-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meetings-sidebar-item {
+  text-align: left;
+}
+
+.meetings-mode-bar {
+  margin: 0 12px;
+}
+
+.meetings-toolbar {
+  margin-top: auto;
+}
+
 .call-hint {
   margin: 0;
   padding: 8px 12px;
@@ -4480,4 +4542,103 @@ button {
 .composer-format .btn.active {
   background: var(--accent);
   color: #fff;
+}
+
+.auth-demo-skins {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  text-align: center;
+}
+
+.auth-demo-skins-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.auth-demo-skins-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.auth-demo-skins-disclaimer {
+  margin: 8px 0 0;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.auth-demo-skins-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.auth-demo-skin-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel2);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.auth-demo-skin-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.auth-demo-skin-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent-hover);
+}
+
+.auth-demo-skin-swatch {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.auth-appearance-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel2);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.auth-appearance-btn:hover {
+  border-color: var(--accent);
+}
+
+.brand-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
 }

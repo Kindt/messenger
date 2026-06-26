@@ -9,6 +9,7 @@ events {
 
 http {
     include /etc/nginx/mime.types;
+    include /etc/nginx/includes/mime-mjs.conf;
     default_type application/octet-stream;
     access_log /var/log/nginx/access.log combined;
     sendfile on;
@@ -76,18 +77,23 @@ http {
         }
 
         # Content-hashed build assets (Vite/ESBuild: *.abc12345.js / /assets/*).
-        location ~* \.[0-9a-f]{8,}\.(js|css|mjs|woff2?)$ {
+        location ~* \.[0-9a-f]+\.(js|css|mjs|woff2?)$ {
             try_files $uri =404;
             add_header Cache-Control "public, max-age=31536000, immutable" always;
         }
 
-        location ~* ^/assets/.+\.[0-9a-f]{8,}\.(js|css|mjs|woff2?)$ {
+        location ~* ^/assets/.+\.[0-9a-f]+\.(js|css|mjs|woff2?)$ {
             try_files $uri =404;
             add_header Cache-Control "public, max-age=31536000, immutable" always;
         }
 
         # Service worker and HTML shell — always revalidate on deploy.
         location = /sw.js {
+            try_files $uri =404;
+            add_header Cache-Control "no-store, max-age=0" always;
+        }
+
+        location = /ui-lazy-call.mjs {
             try_files $uri =404;
             add_header Cache-Control "no-store, max-age=0" always;
         }

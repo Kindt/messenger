@@ -1,0 +1,411 @@
+/* Shared palette tokens — messenger + admin-ui (build copy)
+ * IDs: korus | vtb | alfa | rzd | sfr | sberbank
+ * Selectors: [data-palette="…"][data-appearance="dark|light"] */
+
+/* --- korus dark --- */
+[data-palette="korus"][data-appearance="dark"] {
+  color-scheme: dark;
+  --danger: #ff9f9f;
+  --danger-bg: rgba(255, 159, 159, 0.12);
+  --danger-border: rgba(255, 159, 159, 0.35);
+  --success: #6ecf8f;
+  --success-bg: rgba(110, 207, 143, 0.12);
+  --success-border: rgba(110, 207, 143, 0.35);
+  --warning: #ffe0cc;
+  --bg: #0c0b10;
+  --panel: #16151c;
+  --panel2: #1e1d26;
+  --border: #2e2c38;
+  --text: #f4f3f7;
+  --muted: #8e8e8e;
+  --accent: #7949f4;
+  --accent-hover: #9568ff;
+  --accent-dim: rgba(121, 73, 244, 0.22);
+  --accent-secondary: #4514c2;
+  --brand: #7949f4;
+  --brand-soft: rgba(121, 73, 244, 0.12);
+  --theme-color-meta: #7949f4;
+  --avatar-gradient-from: #7949f4;
+  --avatar-gradient-to: #7c5cff;
+  --auth-glow-a: radial-gradient(circle, rgba(121, 73, 244, 0.45) 0%, transparent 70%);
+  --auth-glow-b: radial-gradient(circle, rgba(69, 20, 194, 0.35) 0%, transparent 72%);
+  --auth-logo-shadow: 0 6px 18px rgba(121, 73, 244, 0.35);
+  --auth-gradient: radial-gradient(ellipse 90% 70% at 85% 8%, rgba(121, 73, 244, 0.42), transparent 55%),
+    radial-gradient(ellipse 70% 60% at 8% 92%, rgba(69, 20, 194, 0.28), transparent 58%),
+    linear-gradient(165deg, #14101f 0%, var(--bg) 52%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+[data-palette="korus"][data-appearance="light"] {
+  color-scheme: light;
+  --danger: #c62828;
+  --danger-bg: rgba(198, 40, 40, 0.08);
+  --danger-border: rgba(198, 40, 40, 0.3);
+  --success: #2e7d32;
+  --success-bg: rgba(46, 125, 50, 0.1);
+  --success-border: rgba(46, 125, 50, 0.28);
+  --warning: #e65100;
+  --bg: #f5f5f7;
+  --panel: #ffffff;
+  --panel2: #fafafa;
+  --border: #dedede;
+  --text: #000000;
+  --muted: #8e8e8e;
+  --accent: #7949f4;
+  --accent-hover: #4514c2;
+  --accent-dim: rgba(121, 73, 244, 0.14);
+  --accent-secondary: #cebcff;
+  --brand: #7949f4;
+  --brand-soft: rgba(121, 73, 244, 0.12);
+  --theme-color-meta: #7949f4;
+  --avatar-gradient-from: #7949f4;
+  --avatar-gradient-to: #4514c2;
+  --auth-glow-a: radial-gradient(circle, rgba(121, 73, 244, 0.28) 0%, transparent 70%);
+  --auth-glow-b: radial-gradient(circle, rgba(69, 20, 194, 0.18) 0%, transparent 72%);
+  --auth-logo-shadow: 0 6px 18px rgba(121, 73, 244, 0.25);
+  --auth-gradient: radial-gradient(ellipse 90% 70% at 88% 10%, rgba(121, 73, 244, 0.16), transparent 55%),
+    radial-gradient(ellipse 70% 60% at 6% 88%, rgba(69, 20, 194, 0.1), transparent 58%),
+    linear-gradient(165deg, #ece6ff 0%, var(--bg) 50%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+/* --- vtb --- */
+[data-palette="vtb"][data-appearance="dark"] {
+  color-scheme: dark;
+  --danger: #ff9f9f;
+  --danger-bg: rgba(255, 159, 159, 0.12);
+  --danger-border: rgba(255, 159, 159, 0.35);
+  --success: #6ecf8f;
+  --success-bg: rgba(110, 207, 143, 0.12);
+  --success-border: rgba(110, 207, 143, 0.35);
+  --warning: #ffe0cc;
+  --bg: #0c0b10;
+  --panel: #16151c;
+  --panel2: #1e1d26;
+  --border: #2e2c38;
+  --text: #f4f3f7;
+  --muted: #8e8e8e;
+  --accent: #0a2896;
+  --accent-hover: #1e88e5;
+  --accent-dim: rgba(10, 40, 150, 0.28);
+  --accent-secondary: #009fdf;
+  --brand: #0a2896;
+  --brand-soft: rgba(10, 40, 150, 0.14);
+  --theme-color-meta: #0a2896;
+  --avatar-gradient-from: #0a2896;
+  --avatar-gradient-to: #009fdf;
+  --auth-glow-a: radial-gradient(circle, rgba(10, 40, 150, 0.45) 0%, transparent 70%);
+  --auth-glow-b: radial-gradient(circle, rgba(0, 159, 223, 0.3) 0%, transparent 72%);
+  --auth-logo-shadow: 0 6px 18px rgba(10, 40, 150, 0.35);
+  --auth-gradient: radial-gradient(ellipse 90% 70% at 85% 8%, rgba(10, 40, 150, 0.4), transparent 55%),
+    radial-gradient(ellipse 70% 60% at 8% 92%, rgba(227, 6, 19, 0.15), transparent 58%),
+    linear-gradient(165deg, #0a1628 0%, var(--bg) 52%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+[data-palette="vtb"][data-appearance="light"] {
+  color-scheme: light;
+  --danger: #e30613;
+  --danger-bg: rgba(227, 6, 19, 0.08);
+  --danger-border: rgba(227, 6, 19, 0.28);
+  --success: #2e7d32;
+  --success-bg: rgba(46, 125, 50, 0.1);
+  --success-border: rgba(46, 125, 50, 0.28);
+  --warning: #e65100;
+  --bg: #f4f7fc;
+  --panel: #ffffff;
+  --panel2: #eef3fa;
+  --border: #d4deef;
+  --text: #0a1628;
+  --muted: #5a6b85;
+  --accent: #0a2896;
+  --accent-hover: #009fdf;
+  --accent-dim: rgba(10, 40, 150, 0.12);
+  --accent-secondary: #009fdf;
+  --brand: #0a2896;
+  --brand-soft: rgba(10, 40, 150, 0.1);
+  --theme-color-meta: #0a2896;
+  --avatar-gradient-from: #0a2896;
+  --avatar-gradient-to: #009fdf;
+  --auth-glow-a: radial-gradient(circle, rgba(10, 40, 150, 0.22) 0%, transparent 70%);
+  --auth-glow-b: radial-gradient(circle, rgba(0, 159, 223, 0.15) 0%, transparent 72%);
+  --auth-logo-shadow: 0 6px 18px rgba(10, 40, 150, 0.22);
+  --auth-gradient: radial-gradient(ellipse 90% 70% at 88% 10%, rgba(10, 40, 150, 0.12), transparent 55%),
+    linear-gradient(165deg, #e8f0ff 0%, var(--bg) 50%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+/* --- alfa --- */
+[data-palette="alfa"][data-appearance="dark"] {
+  color-scheme: dark;
+  --danger: #ff9f9f;
+  --danger-bg: rgba(255, 159, 159, 0.12);
+  --danger-border: rgba(255, 159, 159, 0.35);
+  --success: #6ecf8f;
+  --success-bg: rgba(110, 207, 143, 0.12);
+  --success-border: rgba(110, 207, 143, 0.35);
+  --warning: #ffe0cc;
+  --bg: #0c0b10;
+  --panel: #16151c;
+  --panel2: #1e1d26;
+  --border: #2e2c38;
+  --text: #f4f3f7;
+  --muted: #8e8e8e;
+  --accent: #ef3124;
+  --accent-hover: #ff5248;
+  --accent-dim: rgba(239, 49, 36, 0.22);
+  --accent-secondary: #000000;
+  --brand: #ef3124;
+  --brand-soft: rgba(239, 49, 36, 0.14);
+  --theme-color-meta: #ef3124;
+  --avatar-gradient-from: #ef3124;
+  --avatar-gradient-to: #ff5248;
+  --auth-glow-a: radial-gradient(circle, rgba(239, 49, 36, 0.4) 0%, transparent 70%);
+  --auth-glow-b: radial-gradient(circle, rgba(0, 0, 0, 0.25) 0%, transparent 72%);
+  --auth-logo-shadow: 0 6px 18px rgba(239, 49, 36, 0.35);
+  --auth-gradient: radial-gradient(ellipse 90% 70% at 85% 8%, rgba(239, 49, 36, 0.35), transparent 55%),
+    linear-gradient(165deg, #1a0a0a 0%, var(--bg) 52%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+[data-palette="alfa"][data-appearance="light"] {
+  color-scheme: light;
+  --danger: #c62828;
+  --danger-bg: rgba(198, 40, 40, 0.08);
+  --danger-border: rgba(198, 40, 40, 0.3);
+  --success: #2e7d32;
+  --success-bg: rgba(46, 125, 50, 0.1);
+  --success-border: rgba(46, 125, 50, 0.28);
+  --warning: #e65100;
+  --bg: #fafafa;
+  --panel: #ffffff;
+  --panel2: #f5f5f5;
+  --border: #e0e0e0;
+  --text: #000000;
+  --muted: #757575;
+  --accent: #ef3124;
+  --accent-hover: #d42a1f;
+  --accent-dim: rgba(239, 49, 36, 0.12);
+  --accent-secondary: #000000;
+  --brand: #ef3124;
+  --brand-soft: rgba(239, 49, 36, 0.1);
+  --theme-color-meta: #ef3124;
+  --avatar-gradient-from: #ef3124;
+  --avatar-gradient-to: #000000;
+  --auth-glow-a: radial-gradient(circle, rgba(239, 49, 36, 0.2) 0%, transparent 70%);
+  --auth-glow-b: radial-gradient(circle, rgba(0, 0, 0, 0.06) 0%, transparent 72%);
+  --auth-logo-shadow: 0 6px 18px rgba(239, 49, 36, 0.22);
+  --auth-gradient: radial-gradient(ellipse 90% 70% at 88% 10%, rgba(239, 49, 36, 0.1), transparent 55%),
+    linear-gradient(165deg, #fff5f4 0%, var(--bg) 50%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+/* --- rzd --- */
+[data-palette="rzd"][data-appearance="dark"] {
+  color-scheme: dark;
+  --danger: #ff9f9f;
+  --danger-bg: rgba(255, 159, 159, 0.12);
+  --danger-border: rgba(255, 159, 159, 0.35);
+  --success: #6ecf8f;
+  --success-bg: rgba(110, 207, 143, 0.12);
+  --success-border: rgba(110, 207, 143, 0.35);
+  --warning: #ffe0cc;
+  --bg: #0c0b10;
+  --panel: #16151c;
+  --panel2: #1e1d26;
+  --border: #2e2c38;
+  --text: #f4f3f7;
+  --muted: #8e8e8e;
+  --accent: #e4002b;
+  --accent-hover: #ff3355;
+  --accent-dim: rgba(228, 0, 43, 0.22);
+  --accent-secondary: #1a1a1a;
+  --brand: #e4002b;
+  --brand-soft: rgba(228, 0, 43, 0.14);
+  --theme-color-meta: #e4002b;
+  --avatar-gradient-from: #e4002b;
+  --avatar-gradient-to: #1a1a1a;
+  --auth-glow-a: radial-gradient(circle, rgba(228, 0, 43, 0.4) 0%, transparent 70%);
+  --auth-glow-b: radial-gradient(circle, rgba(26, 26, 26, 0.35) 0%, transparent 72%);
+  --auth-logo-shadow: 0 6px 18px rgba(228, 0, 43, 0.35);
+  --auth-gradient: radial-gradient(ellipse 90% 70% at 85% 8%, rgba(228, 0, 43, 0.32), transparent 55%),
+    linear-gradient(165deg, #1a1012 0%, var(--bg) 52%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+[data-palette="rzd"][data-appearance="light"] {
+  color-scheme: light;
+  --danger: #c62828;
+  --danger-bg: rgba(198, 40, 40, 0.08);
+  --danger-border: rgba(198, 40, 40, 0.3);
+  --success: #2e7d32;
+  --success-bg: rgba(46, 125, 50, 0.1);
+  --success-border: rgba(46, 125, 50, 0.28);
+  --warning: #e65100;
+  --bg: #f5f5f5;
+  --panel: #ffffff;
+  --panel2: #fafafa;
+  --border: #dedede;
+  --text: #1a1a1a;
+  --muted: #666666;
+  --accent: #e4002b;
+  --accent-hover: #c40025;
+  --accent-dim: rgba(228, 0, 43, 0.12);
+  --accent-secondary: #1a1a1a;
+  --brand: #e4002b;
+  --brand-soft: rgba(228, 0, 43, 0.1);
+  --theme-color-meta: #e4002b;
+  --avatar-gradient-from: #e4002b;
+  --avatar-gradient-to: #1a1a1a;
+  --auth-glow-a: radial-gradient(circle, rgba(228, 0, 43, 0.2) 0%, transparent 70%);
+  --auth-glow-b: radial-gradient(circle, rgba(26, 26, 26, 0.08) 0%, transparent 72%);
+  --auth-logo-shadow: 0 6px 18px rgba(228, 0, 43, 0.22);
+  --auth-gradient: radial-gradient(ellipse 90% 70% at 88% 10%, rgba(228, 0, 43, 0.1), transparent 55%),
+    linear-gradient(165deg, #fff0f3 0%, var(--bg) 50%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+/* --- sfr --- */
+[data-palette="sfr"][data-appearance="dark"] {
+  color-scheme: dark;
+  --danger: #ff9f9f;
+  --danger-bg: rgba(255, 159, 159, 0.12);
+  --danger-border: rgba(255, 159, 159, 0.35);
+  --success: #6ecf8f;
+  --success-bg: rgba(110, 207, 143, 0.12);
+  --success-border: rgba(110, 207, 143, 0.35);
+  --warning: #ffe0cc;
+  --bg: #0c0b10;
+  --panel: #16151c;
+  --panel2: #1e1d26;
+  --border: #2e2c38;
+  --text: #f4f3f7;
+  --muted: #8e8e8e;
+  --accent: #005bbb;
+  --accent-hover: #0077ee;
+  --accent-dim: rgba(0, 91, 187, 0.24);
+  --accent-secondary: #00a0e3;
+  --brand: #005bbb;
+  --brand-soft: rgba(0, 91, 187, 0.14);
+  --theme-color-meta: #005bbb;
+  --avatar-gradient-from: #005bbb;
+  --avatar-gradient-to: #00a0e3;
+  --auth-glow-a: radial-gradient(circle, rgba(0, 91, 187, 0.42) 0%, transparent 70%);
+  --auth-glow-b: radial-gradient(circle, rgba(0, 160, 227, 0.28) 0%, transparent 72%);
+  --auth-logo-shadow: 0 6px 18px rgba(0, 91, 187, 0.35);
+  --auth-gradient: radial-gradient(ellipse 90% 70% at 85% 8%, rgba(0, 91, 187, 0.38), transparent 55%),
+    linear-gradient(165deg, #0a1420 0%, var(--bg) 52%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+[data-palette="sfr"][data-appearance="light"] {
+  color-scheme: light;
+  --danger: #c62828;
+  --danger-bg: rgba(198, 40, 40, 0.08);
+  --danger-border: rgba(198, 40, 40, 0.3);
+  --success: #2e7d32;
+  --success-bg: rgba(46, 125, 50, 0.1);
+  --success-border: rgba(46, 125, 50, 0.28);
+  --warning: #e65100;
+  --bg: #f4f8fc;
+  --panel: #ffffff;
+  --panel2: #eef6fc;
+  --border: #c8dff0;
+  --text: #0a2840;
+  --muted: #5a7088;
+  --accent: #005bbb;
+  --accent-hover: #00a0e3;
+  --accent-dim: rgba(0, 91, 187, 0.12);
+  --accent-secondary: #00a0e3;
+  --brand: #005bbb;
+  --brand-soft: rgba(0, 91, 187, 0.1);
+  --theme-color-meta: #005bbb;
+  --avatar-gradient-from: #005bbb;
+  --avatar-gradient-to: #00a0e3;
+  --auth-glow-a: radial-gradient(circle, rgba(0, 91, 187, 0.2) 0%, transparent 70%);
+  --auth-glow-b: radial-gradient(circle, rgba(0, 160, 227, 0.14) 0%, transparent 72%);
+  --auth-logo-shadow: 0 6px 18px rgba(0, 91, 187, 0.22);
+  --auth-gradient: radial-gradient(ellipse 90% 70% at 88% 10%, rgba(0, 91, 187, 0.1), transparent 55%),
+    linear-gradient(165deg, #e8f4ff 0%, var(--bg) 50%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+/* --- sberbank --- */
+[data-palette="sberbank"][data-appearance="dark"] {
+  color-scheme: dark;
+  --danger: #ff9f9f;
+  --danger-bg: rgba(255, 159, 159, 0.12);
+  --danger-border: rgba(255, 159, 159, 0.35);
+  --success: #6ecf8f;
+  --success-bg: rgba(110, 207, 143, 0.12);
+  --success-border: rgba(110, 207, 143, 0.35);
+  --warning: #ffe0cc;
+  --bg: #0c0b10;
+  --panel: #16151c;
+  --panel2: #1e1d26;
+  --border: #2e2c38;
+  --text: #f4f3f7;
+  --muted: #8e8e8e;
+  --accent: #21a038;
+  --accent-hover: #2ec04f;
+  --accent-dim: rgba(33, 160, 56, 0.22);
+  --accent-secondary: #00803a;
+  --brand: #21a038;
+  --brand-soft: rgba(33, 160, 56, 0.14);
+  --theme-color-meta: #21a038;
+  --avatar-gradient-from: #21a038;
+  --avatar-gradient-to: #00803a;
+  --auth-glow-a: radial-gradient(circle, rgba(33, 160, 56, 0.4) 0%, transparent 70%);
+  --auth-glow-b: radial-gradient(circle, rgba(0, 128, 58, 0.3) 0%, transparent 72%);
+  --auth-logo-shadow: 0 6px 18px rgba(33, 160, 56, 0.35);
+  --auth-gradient: radial-gradient(ellipse 90% 70% at 85% 8%, rgba(33, 160, 56, 0.32), transparent 55%),
+    linear-gradient(165deg, #0a140e 0%, var(--bg) 52%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+[data-palette="sberbank"][data-appearance="light"] {
+  color-scheme: light;
+  --danger: #c62828;
+  --danger-bg: rgba(198, 40, 40, 0.08);
+  --danger-border: rgba(198, 40, 40, 0.3);
+  --success: #2e7d32;
+  --success-bg: rgba(46, 125, 50, 0.1);
+  --success-border: rgba(46, 125, 50, 0.28);
+  --warning: #e65100;
+  --bg: #f4faf5;
+  --panel: #ffffff;
+  --panel2: #eef8f0;
+  --border: #c8e6cc;
+  --text: #0a2810;
+  --muted: #5a7058;
+  --accent: #21a038;
+  --accent-hover: #00803a;
+  --accent-dim: rgba(33, 160, 56, 0.12);
+  --accent-secondary: #00803a;
+  --brand: #21a038;
+  --brand-soft: rgba(33, 160, 56, 0.1);
+  --theme-color-meta: #21a038;
+  --avatar-gradient-from: #21a038;
+  --avatar-gradient-to: #00803a;
+  --auth-glow-a: radial-gradient(circle, rgba(33, 160, 56, 0.2) 0%, transparent 70%);
+  --auth-glow-b: radial-gradient(circle, rgba(0, 128, 58, 0.12) 0%, transparent 72%);
+  --auth-logo-shadow: 0 6px 18px rgba(33, 160, 56, 0.22);
+  --auth-gradient: radial-gradient(ellipse 90% 70% at 88% 10%, rgba(33, 160, 56, 0.1), transparent 55%),
+    linear-gradient(165deg, #e8f8eb 0%, var(--bg) 50%);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+
+/* Fallback when data-palette missing (legacy) */
+[data-appearance="dark"]:not([data-palette]) {
+  color-scheme: dark;
+  --accent: #7949f4;
+  --brand: #7949f4;
+  --brand-soft: rgba(121, 73, 244, 0.12);
+}
+
+[data-appearance="light"]:not([data-palette]) {
+  color-scheme: light;
+  --accent: #7949f4;
+  --brand: #7949f4;
+  --brand-soft: rgba(121, 73, 244, 0.12);
+}

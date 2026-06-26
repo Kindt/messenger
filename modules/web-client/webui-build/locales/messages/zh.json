@@ -23,7 +23,17 @@
     "passwordMinLength": "密码：至少 8 个字符",
     "registerUnavailable": "注册不可用（Keycloak）。请稍后重试或联系管理员。",
     "registerLoginFailed": "账户已创建，但登录失败。请检查密码策略（Keycloak）或手动登录。",
-    "invalidCredentials": "用户名或密码错误"
+    "invalidCredentials": "用户名或密码错误",
+    "demoSkins": "演示外观",
+    "demoSkinsDisclaimer": "仅为演示样式，与所列机构无关。",
+    "skin": {
+      "korus": "Korus",
+      "vtb": "VTB",
+      "alfa": "Alfa-Bank",
+      "rzd": "RZD",
+      "sfr": "SFR",
+      "sberbank": "Sberbank"
+    }
   },
   "settings": {
     "locale": "语言",
@@ -359,7 +369,8 @@
       "presenceTitle": "Click to change status",
       "updateReady": "A new version is available",
       "reloadNow": "Reload",
-      "reloadLater": "Later"
+      "reloadLater": "Later",
+      "openMeetings": "Video meetings"
     },
     "sidebar": {
       "searchPlaceholder": "聊天或用户（至少 2 个字符）…",
@@ -417,7 +428,8 @@
       "noChatsMentions": "No chats with mentions.",
       "pinChat": "Pin chat",
       "unpinChat": "Unpin chat",
-      "resizeTitle": "Drag to resize chat list"
+      "resizeTitle": "Drag to resize chat list",
+      "meetings": "Meetings"
     },
     "thread": {
       "empty": "请选择聊天或创建群组。",
@@ -466,7 +478,10 @@
       "scheduleSend": "定时发送",
       "shareContact": "分享联系人",
       "voiceRecord": "语音消息",
-      "emoji": "Emoji"
+      "emoji": "Emoji",
+      "audioCall": "Audio call",
+      "videoCall": "Video call",
+      "scheduleMeeting": "Schedule meeting"
     },
     "phase5": {
       "stickers": "贴纸",
@@ -680,6 +695,15 @@
       "title": "视频 / 会议",
       "titleAudio": "音频通话 / 会议",
       "collapse": "收起",
+      "endCall": "结束通话",
+      "auditNotice": "通话正在审计录制",
+      "recordStart": "录制",
+      "recordStop": "停止",
+      "recordStarted": "已开始录制",
+      "recordCompleted": "录制片段已保存",
+      "recordFailed": "保存录制失败",
+      "recordList": "我的录制",
+      "recordListEmpty": "没有已保存的片段",
       "modeMesh": "通话",
       "modeJitsi": "会议",
       "modeLivekit": "直播",
@@ -706,6 +730,7 @@
       "tabLinks": "链接",
       "tabSecurity": "安全",
       "appearance": "外观",
+      "appearanceOrg": "外观由组织管理员设置。",
       "theme": "主题",
       "appearanceKorus": "KORUS Consulting 外观（#7949F4，korusconsulting.ru）。",
       "cache": "应用缓存",
@@ -893,6 +918,11 @@
     "profileCard": {
       "title": "Profile",
       "message": "Message"
+    },
+    "meetings": {
+      "title": "Video meetings",
+      "subtitle": "Planning, guest links, and admin tools — separate from quick in-chat calls.",
+      "unavailable": "Meetings section is unavailable."
     }
   },
   "push": {

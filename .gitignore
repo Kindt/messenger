@@ -1,4 +1,4 @@
-.gradle/
+﻿.gradle/
 build/
 out/
 *.class
@@ -16,7 +16,7 @@ logs/
 /bin/
 **/bin/
 
-# Локальные overrides для Docker-стека веб-клиента
+# Р›РѕРєР°Р»СЊРЅС‹Рµ overrides РґР»СЏ Docker-СЃС‚РµРєР° РІРµР±-РєР»РёРµРЅС‚Р°
 korus-web/.env
 
 scripts/__pycache__/
@@ -24,7 +24,7 @@ scripts/__pycache__/
 **/*.pyo
 
 # =============================================================================
-# Не продукт: агенты, спеки, документация, презентации, E2E (только локально)
+# РќРµ РїСЂРѕРґСѓРєС‚: Р°РіРµРЅС‚С‹, СЃРїРµРєРё, РґРѕРєСѓРјРµРЅС‚Р°С†РёСЏ, РїСЂРµР·РµРЅС‚Р°С†РёРё, E2E (С‚РѕР»СЊРєРѕ Р»РѕРєР°Р»СЊРЅРѕ)
 # =============================================================================
 |.cursor/
 !.cursor/skills/korus-ui-*/
@@ -42,11 +42,17 @@ scripts/__pycache__/
 specs/*
 !specs/068-entity-avatars/
 !specs/068-entity-avatars/**
+!specs/027-ui-branding/
+!specs/027-ui-branding/**
+!specs/028-org-shell-layouts/
+!specs/028-org-shell-layouts/**
 docs/*
 !docs/index.html
 !docs/runtime-startup-keycloak-audit.md
 !docs/user/
 !docs/user/avatars.md
+!docs/db/
+!docs/db/FLYWAY_AND_SCHEMA.md
 tests/e2e-web/
 !tests/e2e-web/
 tests/e2e-web/*
@@ -58,6 +64,7 @@ tests/e2e-web/specs/*
 !tests/e2e-web/specs/ui-interaction-audit.spec.ts
 !tests/e2e-web/specs/settings-cross-tab.spec.ts
 !tests/e2e-web/specs/ui-avatar.spec.ts
+!tests/e2e-web/specs/ui-branding.spec.ts
 !tests/e2e-web/specs/ui-visual-regression.spec.ts
 !tests/e2e-web/specs/ui-visual-regression.spec.ts-snapshots/
 !tests/e2e-web/specs/ui-visual-regression.spec.ts-snapshots/**
@@ -115,6 +122,7 @@ deploy/ansible/playbooks/qemu-*.yml
 .cursor/rules/qemu-*.mdc
 scripts/qemu-*.ps1
 scripts/*qemu*.ps1
+!scripts/run-ui-branding-qemu.ps1
 scripts/ensure-qemu-images.ps1
 scripts/start-qemu-status-loop.ps1
 scripts/stop-qemu-status-loop.ps1
@@ -142,3 +150,4 @@ tests/e2e-web/blob-report/
 
 # Cursor superpowers vendor clone
 .cursor/superpowers/
+

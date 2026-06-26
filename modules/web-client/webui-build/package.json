@@ -27,10 +27,12 @@
     "test:layout-zones": "node scripts/test-layout-zones.mjs",
     "test:overlay-zones": "node scripts/test-overlay-zones.mjs",
     "test:sidebar-chips": "node scripts/test-sidebar-chips.mjs",
+    "test:ui-shell-utils": "node scripts/test-ui-shell-utils.mjs",
+    "test:ui-branding": "node scripts/test-ui-branding.mjs",
     "test:admin-i18n": "node scripts/test-admin-i18n.mjs",
     "test:live-session": "node scripts/test-live-session.mjs",
     "test:first-load": "node scripts/check-first-load.mjs",
-    "test:webui": "npm run test:message-list && npm run test:i18n-locale && npm run test:format-utils && npm run test:ws-events && npm run test:deep-link && npm run test:markdown && npm run test:message-reply && npm run test:composer && npm run test:call-layout && npm run test:call-screen-share && npm run test:call-mode-render && npm run test:layout-zones && npm run test:overlay-zones && npm run test:sidebar-chips && npm run test:admin-i18n && npm run test:live-session",
+    "test:webui": "npm run test:message-list && npm run test:i18n-locale && npm run test:format-utils && npm run test:ws-events && npm run test:deep-link && npm run test:markdown && npm run test:message-reply && npm run test:composer && npm run test:call-layout && npm run test:call-screen-share && npm run test:call-mode-render && npm run test:layout-zones && npm run test:overlay-zones && npm run test:sidebar-chips && npm run test:ui-shell-utils && npm run test:ui-branding && npm run test:admin-i18n && npm run test:live-session",
     "build:openmls": "node scripts/build-openmls.mjs",
     "build:assets": "npm run build:css && npm run build:fonts && npm run build:styles && npm run build:locales && npm run build:openmls && npm run build:js",
     "watch:css": "tailwindcss -i ./src/input.css -o ../src/main/resources/webui/tailwind.css --watch"

@@ -141,6 +141,7 @@ tasks.register<Exec>("buildAdminUiAssets") {
     val npm = if (System.getProperty("os.name").lowercase().contains("windows")) "npm.cmd" else "npm"
     commandLine(npm, "run", "build:admin")
     inputs.file(rootProject.file("modules/core-api/admin-ui-build/src/styles.css"))
+    inputs.file(rootProject.file("modules/web-client/src/main/resources/webui/themes-palettes.css"))
     inputs.file(rootProject.file("modules/core-api/src/main/resources/admin-ui/index.html"))
     inputs.files(
         rootProject.file("modules/core-api/src/main/resources/admin-ui/admin-i18n.js"),
@@ -150,6 +151,7 @@ tasks.register<Exec>("buildAdminUiAssets") {
     )
     inputs.dir(rootProject.file("modules/core-api/src/main/resources/admin-ui/locales"))
     outputs.file(rootProject.file("modules/core-api/src/main/resources/admin-ui/styles.css"))
+    outputs.file(rootProject.file("modules/core-api/src/main/resources/admin-ui/themes-palettes.css"))
     outputs.file(rootProject.file("modules/core-api/src/main/resources/admin-ui/admin.bundle.js"))
     outputs.file(rootProject.file("modules/core-api/src/main/resources/admin-ui/locales/manifest.json"))
 }

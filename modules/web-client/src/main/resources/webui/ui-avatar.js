@@ -23,6 +23,14 @@
 
   function gradientForUser(userId) {
     var pair = GRADIENT_PAIRS[hashUserId(userId) % GRADIENT_PAIRS.length];
+    if (typeof document !== "undefined" && document.documentElement) {
+      var rootStyle = getComputedStyle(document.documentElement);
+      var from = rootStyle.getPropertyValue("--avatar-gradient-from").trim();
+      var to = rootStyle.getPropertyValue("--avatar-gradient-to").trim();
+      if (from && to) {
+        pair = [from, to];
+      }
+    }
     return "linear-gradient(135deg, " + pair[0] + ", " + pair[1] + ")";
   }
 

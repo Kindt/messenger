@@ -25,6 +25,7 @@ import com.avandocmsg.messenger.core.adapter.persistence.JdbcMigrationImportJobA
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcOrganizationLookupAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcRetentionPolicyAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcUserLookupAdapter;
+import com.avandocmsg.messenger.core.adapter.persistence.JdbcUiBrandingAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcBlockRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcContactRepositoryAdapter;
 import com.avandocmsg.messenger.api.repository.ExportJobRepository;
@@ -55,6 +56,8 @@ import com.avandocmsg.messenger.core.application.ChatApplicationService;
 import com.avandocmsg.messenger.core.application.FileApplicationService;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.core.application.OrganizationApplicationService;
+import com.avandocmsg.messenger.core.application.CustomCssSanitizer;
+import com.avandocmsg.messenger.core.application.UiBrandingService;
 import com.avandocmsg.messenger.core.application.UserApplicationService;
 import com.avandocmsg.messenger.core.port.ChatPersistencePort;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
@@ -73,6 +76,7 @@ import com.avandocmsg.messenger.core.port.OrgUserDirectoryPort;
 import com.avandocmsg.messenger.core.port.ScimGroupRepositoryPort;
 import com.avandocmsg.messenger.core.port.SavedChatPort;
 import com.avandocmsg.messenger.core.port.UserRepositoryPort;
+import com.avandocmsg.messenger.core.port.UiBrandingPort;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 
 import io.lettuce.core.api.sync.RedisCommands;
@@ -462,5 +466,13 @@ public final class CoreModule {
     public static com.avandocmsg.messenger.core.port.DevicePort devicePort(DataSource dataSource, Clock clock,
                                                                            UuidGenerator uuidGenerator) {
         return new JdbcDeviceAdapter(dataSource, clock, uuidGenerator);
+    }
+
+    public static UiBrandingPort uiBrandingPort(DataSource dataSource) {
+        return new JdbcUiBrandingAdapter(dataSource);
+    }
+
+    public static UiBrandingService uiBrandingService(DataSource dataSource) {
+        return new UiBrandingService(uiBrandingPort(dataSource), new CustomCssSanitizer());
     }
 }

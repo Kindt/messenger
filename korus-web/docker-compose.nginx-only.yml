@@ -24,4 +24,4 @@ services:
       - ../scripts/generate_web_client_env.py:/opt/korus/generate-web-client-env.py:ro
     entrypoint: ["/docker-entrypoint-static.sh"]
     command: ["nginx", "-g", "daemon off;"]
-    depends_on: []
+    depends_on: !reset []

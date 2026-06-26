@@ -23,7 +23,17 @@
     "passwordMinLength": "Пароль: не менш за 8 сімвалаў",
     "registerUnavailable": "Рэгістрацыя недоступная (Keycloak). Паспрабуйце пазней або звярніцеся да адміністратара.",
     "registerLoginFailed": "Уліковы запіс створаны, але ўваход не ўдаўся. Праверце пароль (палітыка Keycloak) або ўвайдзіце ўручную.",
-    "invalidCredentials": "Нявернае імя карыстальніка або пароль"
+    "invalidCredentials": "Нявернае імя карыстальніка або пароль",
+    "demoSkins": "Дэма-афармленне",
+    "demoSkinsDisclaimer": "Дэманстрацыйныя стылі. Не звязаны з указанымі арганізацыямі.",
+    "skin": {
+      "korus": "KORUS",
+      "vtb": "VTB",
+      "alfa": "Alfa-Bank",
+      "rzd": "RZD",
+      "sfr": "SFR",
+      "sberbank": "Sberbank"
+    }
   },
   "settings": {
     "locale": "Мова",
@@ -359,7 +369,8 @@
       "presenceTitle": "Click to change status",
       "updateReady": "A new version is available",
       "reloadNow": "Reload",
-      "reloadLater": "Later"
+      "reloadLater": "Later",
+      "openMeetings": "Video meetings"
     },
     "sidebar": {
       "searchPlaceholder": "Чаты або карыстальнікі (ад 2 сімв.)…",
@@ -417,7 +428,8 @@
       "noChatsMentions": "No chats with mentions.",
       "pinChat": "Pin chat",
       "unpinChat": "Unpin chat",
-      "resizeTitle": "Drag to resize chat list"
+      "resizeTitle": "Drag to resize chat list",
+      "meetings": "Meetings"
     },
     "thread": {
       "empty": "Абярыце чат або стварыце групу.",
@@ -466,7 +478,10 @@
       "scheduleSend": "Адложаная адправка",
       "shareContact": "Падзяліцца кантактам",
       "voiceRecord": "Галасавое паведамленне",
-      "emoji": "Emoji"
+      "emoji": "Emoji",
+      "audioCall": "Audio call",
+      "videoCall": "Video call",
+      "scheduleMeeting": "Schedule meeting"
     },
     "phase5": {
       "stickers": "Стыкеры",
@@ -680,6 +695,15 @@
       "title": "Відэа / канферэнцыя",
       "titleAudio": "Аўдыязванок / канферэнцыя",
       "collapse": "Згарнуць",
+      "endCall": "Завяршыць званок",
+      "auditNotice": "Званок запісваецца для аудиту",
+      "recordStart": "Запіс",
+      "recordStop": "Стоп",
+      "recordStarted": "Ваш запіс пачаты",
+      "recordCompleted": "Фрагмент запісу захаваны",
+      "recordFailed": "Не ўдалося захаваць запіс",
+      "recordList": "Мае запісы",
+      "recordListEmpty": "Няма захаваных фрагментаў",
       "modeMesh": "Званок",
       "modeJitsi": "Сустрэча",
       "modeLivekit": "Эфір",
@@ -706,6 +730,7 @@
       "tabLinks": "Спасылкі",
       "tabSecurity": "Бяспека",
       "appearance": "Афармленне",
+      "appearanceOrg": "Афармленне задаецца адміністратарам арганізацыі.",
       "theme": "Тэма",
       "appearanceKorus": "Афармленне КОРУС Консалтинг (#7949F4, korusconsulting.ru).",
       "cache": "Кэш праграмы",
@@ -893,6 +918,11 @@
     "profileCard": {
       "title": "Profile",
       "message": "Message"
+    },
+    "meetings": {
+      "title": "Video meetings",
+      "subtitle": "Planning, guest links, and admin tools — separate from quick in-chat calls.",
+      "unavailable": "Meetings section is unavailable."
     }
   },
   "push": {

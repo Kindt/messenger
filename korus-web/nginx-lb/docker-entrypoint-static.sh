@@ -7,8 +7,16 @@ export KORUS_WS_GATEWAY_PORT="${KORUS_WS_GATEWAY_PORT:-8081}"
 _api_upstream="${WEB_CLIENT_API_UPSTREAM:-http://host.docker.internal:8080}"
 _api_upstream="${_api_upstream#http://}"
 _api_upstream="${_api_upstream#https://}"
-export WEB_CLIENT_API_UPSTREAM_HOST="${WEB_CLIENT_API_UPSTREAM_HOST:-${_api_upstream%%:*}}"
-export WEB_CLIENT_API_UPSTREAM_PORT="${WEB_CLIENT_API_UPSTREAM_PORT:-${_api_upstream##*:}}"
+case "$_api_upstream" in
+  *:*)
+    export WEB_CLIENT_API_UPSTREAM_HOST="${WEB_CLIENT_API_UPSTREAM_HOST:-${_api_upstream%%:*}}"
+    export WEB_CLIENT_API_UPSTREAM_PORT="${WEB_CLIENT_API_UPSTREAM_PORT:-${_api_upstream##*:}}"
+    ;;
+  *)
+    export WEB_CLIENT_API_UPSTREAM_HOST="${WEB_CLIENT_API_UPSTREAM_HOST:-$_api_upstream}"
+    export WEB_CLIENT_API_UPSTREAM_PORT="${WEB_CLIENT_API_UPSTREAM_PORT:-8080}"
+    ;;
+esac
 
 escape_sed() {
   printf '%s' "$1" | sed 's/[&/\]/\\&/g'

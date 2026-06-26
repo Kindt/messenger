@@ -1,35 +1,65 @@
 (function (global) {
   "use strict";
 
-  function loadStyleSet(styleKey, themeKey, palette) {
+  var VALID_PALETTES = ["korus", "vtb", "alfa", "rzd", "sfr", "sberbank"];
+  var DEFAULT_PALETTE = "korus";
+  var DEFAULT_BRAND_ICON = "/icon.svg";
+  var PALETTE_ICONS = {
+    korus: DEFAULT_BRAND_ICON,
+    vtb: DEFAULT_BRAND_ICON,
+    alfa: DEFAULT_BRAND_ICON,
+    rzd: DEFAULT_BRAND_ICON,
+    sfr: DEFAULT_BRAND_ICON,
+    sberbank: DEFAULT_BRAND_ICON,
+  };
+
+  function normalizePalette(palette) {
+    if (palette && VALID_PALETTES.indexOf(palette) >= 0) {
+      return palette;
+    }
+    return DEFAULT_PALETTE;
+  }
+
+  function paletteIconUrl(palette) {
+    var normalized = normalizePalette(palette);
+    return PALETTE_ICONS[normalized] || DEFAULT_BRAND_ICON;
+  }
+
+  function loadStyleSet(styleKey, themeKey, defaultPalette) {
+    var fallbackPalette = normalizePalette(defaultPalette || DEFAULT_PALETTE);
     try {
       var raw = localStorage.getItem(styleKey);
       if (raw) {
         var parsed = JSON.parse(raw);
         if (parsed && (parsed.appearance === "light" || parsed.appearance === "dark")) {
-          return { appearance: parsed.appearance, palette: palette };
+          return {
+            appearance: parsed.appearance,
+            palette: normalizePalette(parsed.palette || fallbackPalette),
+          };
         }
       }
     } catch (e) {}
     var legacyTheme = localStorage.getItem(themeKey);
     return {
       appearance: legacyTheme === "light" ? "light" : "dark",
-      palette: palette,
+      palette: fallbackPalette,
     };
   }
 
   function saveStyleSet(styleKey, themeKey, appearance, palette) {
+    var normalizedPalette = normalizePalette(palette);
     try {
       localStorage.setItem(
         styleKey,
-        JSON.stringify({ appearance: appearance, palette: palette })
+        JSON.stringify({ appearance: appearance, palette: normalizedPalette })
       );
       localStorage.setItem(themeKey, appearance);
     } catch (e) {}
   }
 
-  function applyStyleSet(doc, set, palette) {
+  function applyStyleSet(doc, set) {
     var appearance = set && set.appearance === "light" ? "light" : "dark";
+    var palette = normalizePalette(set && set.palette);
     doc.documentElement.setAttribute("data-appearance", appearance);
     doc.documentElement.setAttribute("data-palette", palette);
     doc.documentElement.removeAttribute("data-theme");
@@ -133,6 +163,11 @@
   }
 
   global.KorusUiShellUtils = {
+    VALID_PALETTES: VALID_PALETTES,
+    DEFAULT_PALETTE: DEFAULT_PALETTE,
+    DEFAULT_BRAND_ICON: DEFAULT_BRAND_ICON,
+    normalizePalette: normalizePalette,
+    paletteIconUrl: paletteIconUrl,
     loadStyleSet: loadStyleSet,
     saveStyleSet: saveStyleSet,
     applyStyleSet: applyStyleSet,

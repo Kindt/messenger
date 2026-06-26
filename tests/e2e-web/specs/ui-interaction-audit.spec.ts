@@ -111,7 +111,7 @@ test.describe("UI interaction audit", () => {
         requiredSelectors: ["[data-testid=auth-submit]"],
         maxActions: 16,
         maxWallClockMs: 45_000,
-        denyPatterns: [/auth-sso-/i, /locale-/i, /call-panel-toggle/i, /btn-icon-svg/i, /Без звука/i],
+        denyPatterns: [/auth-sso-/i, /auth-skin-/i, /auth-appearance-toggle/i, /locale-/i, /call-panel-toggle/i, /btn-icon-svg/i, /Без звука/i],
       });
 
       await page.goto("/");

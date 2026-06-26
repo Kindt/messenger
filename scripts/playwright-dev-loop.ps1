@@ -1,8 +1,11 @@
 # US9 inner loop: preflight + tiered Playwright against live QEMU stack (host browser OK).
 param(
-    [ValidateSet('api', 'ui-auth', 'ui-mobile', 'ui-visual', 'ui-visual-regression', 'ui-conversation', 'ui-messaging', 'ui-files', 'ui-conference', 'ui-call-flows', 'ui-live', 'ui-e2ee', 'ui-bot', 'ui-admin', 'ui-admin-extended', 'ui-interaction-audit', 'ui-i18n-artifacts', 'ui-tests', 'e2ee-openmls-interop', 'full', 'all-inner')]
+    [ValidateSet('api', 'ui-auth', 'ui-mobile', 'ui-visual', 'ui-visual-regression', 'ui-conversation', 'ui-messaging', 'ui-files', 'ui-conference', 'ui-call-flows', 'ui-live', 'ui-e2ee', 'ui-bot', 'ui-admin', 'ui-admin-extended', 'ui-interaction-audit', 'ui-branding', 'ui-i18n-artifacts', 'ui-avatar', 'ui-tests', 'e2ee-openmls-interop', 'full', 'all-inner')]
     [string]$Tier = 'api',
     [switch]$SkipPreflight,
+    [switch]$WaitForStack,
+    [int]$WaitTimeoutMinutes = 90,
+    [int]$WaitIntervalSec = 180,
     [switch]$SyncWebUi,
     [switch]$Help
 )
@@ -10,9 +13,11 @@ param(
 $ErrorActionPreference = "Stop"
 if ($Help) {
     Write-Host @"
-Usage: .\scripts\playwright-dev-loop.ps1 [-Tier api|...] [-SyncWebUi]
+Usage: .\scripts\playwright-dev-loop.ps1 [-Tier api|...] [-SyncWebUi] [-WaitForStack] [-WaitTimeoutMinutes 90]
 
 Fast Playwright against http://127.0.0.1:19088 / :18080 (QEMU must be up).
+-WaitForStack (default ON): poll VM/health until ready (ping every 3 min by default).
+-SkipPreflight skips wait and health checks (offline debug only).
 -SyncWebUi runs qemu-web-sync.ps1 first (~10s, requires hotswap enabled).
 Updates deploy/qemu/run/inner-tier-status.json and plan-failure-analysis.json on failure.
 
@@ -23,6 +28,7 @@ Examples:
   .\scripts\playwright-dev-loop.ps1 -Tier ui-call-flows
   .\scripts\playwright-dev-loop.ps1 -Tier ui-admin-extended
   .\scripts\playwright-dev-loop.ps1 -Tier ui-interaction-audit
+  .\scripts\playwright-dev-loop.ps1 -Tier ui-branding
   .\scripts\playwright-dev-loop.ps1 -Tier ui-i18n-artifacts
   .\scripts\playwright-dev-loop.ps1 -Tier ui-tests
   .\scripts\playwright-dev-loop.ps1 -Tier all-inner
@@ -37,6 +43,9 @@ if (-not (Test-Path $RunDir)) { New-Item -ItemType Directory -Path $RunDir -Forc
 
 . (Join-Path $Root "deploy\qemu\lib\Invoke-KorusPlanFailureAnalysis.ps1")
 . (Join-Path $Root "deploy\qemu\lib\Get-KorusInnerTierStatus.ps1")
+. (Join-Path $Root "deploy\qemu\lib\Wait-KorusPlanPlaywrightStack.ps1")
+
+$doWait = $WaitForStack.IsPresent -or (-not $SkipPreflight -and -not $PSBoundParameters.ContainsKey('WaitForStack'))
 
 $env:KORUS_WEB_URL = "http://127.0.0.1:19088"
 $env:PLAYWRIGHT_BASE_URL = $env:KORUS_WEB_URL
@@ -103,19 +112,36 @@ if ($SyncWebUi) {
 }
 
 if (-not $SkipPreflight) {
-    $pre = Test-KorusPlanPlaywrightPreflight -Root $Root -RunDir $RunDir
-    if (-not $pre.Ok) {
-        Write-Host 'FAIL preflight:' -ForegroundColor Red
-        $pre.Issues | ForEach-Object { Write-Host "  $_" }
+    try {
+        if ($doWait) {
+            Write-Host "Waiting for QEMU stack (timeout ${WaitTimeoutMinutes}m, interval ${WaitIntervalSec}s)..." -ForegroundColor Cyan
+            $pre = Wait-KorusPlanPlaywrightStack -Root $Root -RunDir $RunDir `
+                -TimeoutMinutes $WaitTimeoutMinutes -IntervalSec $WaitIntervalSec
+        } else {
+            $pre = Test-KorusPlanPlaywrightPreflight -Root $Root -RunDir $RunDir
+            if (-not $pre.Ok) {
+                Write-Host 'FAIL preflight:' -ForegroundColor Red
+                $pre.Issues | ForEach-Object { Write-Host "  $_" }
+                $analysis = Invoke-KorusPlanFailureAnalysis -Kind playwright -RunDir $RunDir -Root $Root `
+                    -LastError ("preflight: " + ($pre.Issues -join "; "))
+                if ($Tier -ne 'all-inner') {
+                    Set-KorusInnerTierResult -RunDir $RunDir -Root $Root -TierName $Tier -Pass $false `
+                        -LastError $analysis.summaryRu | Out-Null
+                }
+                exit 1
+            }
+        }
+        Write-Host "OK preflight web=$($pre.WebUrl) api=$($pre.ApiUrl)" -ForegroundColor Green
+    } catch {
+        Write-Host "FAIL stack wait: $($_.Exception.Message)" -ForegroundColor Red
         $analysis = Invoke-KorusPlanFailureAnalysis -Kind playwright -RunDir $RunDir -Root $Root `
-            -LastError ("preflight: " + ($pre.Issues -join "; "))
+            -LastError $_.Exception.Message
         if ($Tier -ne 'all-inner') {
             Set-KorusInnerTierResult -RunDir $RunDir -Root $Root -TierName $Tier -Pass $false `
                 -LastError $analysis.summaryRu | Out-Null
         }
         exit 1
     }
-    Write-Host "OK preflight web=$($pre.WebUrl) api=$($pre.ApiUrl)" -ForegroundColor Green
 }
 
 $manifest = Get-KorusPlaywrightTiersManifest -Root $Root
@@ -162,6 +188,13 @@ if (-not $tierDef) {
     Write-Error "unknown tier $Tier"
     exit 2
 }
+
+if ($Tier -eq 'ui-tests' -and -not $env:UI_TESTS_PROFILE) {
+    $env:UI_TESTS_PROFILE = 'smoke'
+}
+if ($Tier -eq 'ui-ux-smoke') { $env:UI_TESTS_PROFILE = 'smoke' }
+if ($Tier -eq 'ui-ux-pr') { $env:UI_TESTS_PROFILE = 'pr' }
+if ($Tier -eq 'ui-ux-full') { $env:UI_TESTS_PROFILE = 'full' }
 
 $ok = Invoke-TierPlaywright -TierName $Tier -TierDef $tierDef
 if ($ok) {

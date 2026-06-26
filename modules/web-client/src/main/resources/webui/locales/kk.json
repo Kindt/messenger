@@ -23,7 +23,17 @@
     "passwordMinLength": "Құпия сөз: кемінде 8 таңба",
     "registerUnavailable": "Тіркелу қолжетімді емес (Keycloak). Кейінірек қайталап көріңіз немесе әкімшіге хабарласыңыз.",
     "registerLoginFailed": "Тіркелгі жасалды, бірақ кіру сәтсіз аяқталды. Құпия сөз саясатын тексеріңіз (Keycloak) немесе қолмен кіріңіз.",
-    "invalidCredentials": "Пайдаланушы аты немесе құпия сөз дұрыс емес"
+    "invalidCredentials": "Пайдаланушы аты немесе құпия сөз дұрыс емес",
+    "demoSkins": "Демо-стиль",
+    "demoSkinsDisclaimer": "Демонстрациялық стильдер. Көрсетілген ұйымдармен байланысты емес.",
+    "skin": {
+      "korus": "KORUS",
+      "vtb": "VTB",
+      "alfa": "Alfa-Bank",
+      "rzd": "RZD",
+      "sfr": "SFR",
+      "sberbank": "Sberbank"
+    }
   },
   "settings": {
     "locale": "Тіл",
@@ -359,7 +369,8 @@
       "presenceTitle": "Click to change status",
       "updateReady": "A new version is available",
       "reloadNow": "Reload",
-      "reloadLater": "Later"
+      "reloadLater": "Later",
+      "openMeetings": "Video meetings"
     },
     "sidebar": {
       "searchPlaceholder": "Чаттар немесе пайдаланушылар (2 таңбадан)…",
@@ -417,7 +428,8 @@
       "noChatsMentions": "No chats with mentions.",
       "pinChat": "Pin chat",
       "unpinChat": "Unpin chat",
-      "resizeTitle": "Drag to resize chat list"
+      "resizeTitle": "Drag to resize chat list",
+      "meetings": "Meetings"
     },
     "thread": {
       "empty": "Чат таңдаңыз немесе топ жасаңыз.",
@@ -466,7 +478,10 @@
       "scheduleSend": "Кейінге жіберу",
       "shareContact": "Контактпен бөлісу",
       "voiceRecord": "Дыбысты хабарлама",
-      "emoji": "Emoji"
+      "emoji": "Emoji",
+      "audioCall": "Audio call",
+      "videoCall": "Video call",
+      "scheduleMeeting": "Schedule meeting"
     },
     "phase5": {
       "stickers": "Стикерлер",
@@ -680,6 +695,15 @@
       "title": "Бейне / конференция",
       "titleAudio": "Аудио қоңырау / конференция",
       "collapse": "Жию",
+      "endCall": "Қоңырауды аяқтау",
+      "auditNotice": "Қоңырау аудит үшін жазылуда",
+      "recordStart": "Жазба",
+      "recordStop": "Тоқтату",
+      "recordStarted": "Жазба басталды",
+      "recordCompleted": "Жазба сақталды",
+      "recordFailed": "Жазбаны сақтау сәтсіз",
+      "recordList": "Менің жазбаларым",
+      "recordListEmpty": "Сақталған үзінді жоқ",
       "modeMesh": "Қоңырау",
       "modeJitsi": "Кездесу",
       "modeLivekit": "Эфир",
@@ -706,6 +730,7 @@
       "tabLinks": "Сілтемелер",
       "tabSecurity": "Қауіпсіздік",
       "appearance": "Безендіру",
+      "appearanceOrg": "Безендіруді ұйым әкімшісі орнатады.",
       "theme": "Тақырып",
       "appearanceKorus": "КОРУС Консалтинг безендіруі (#7949F4, korusconsulting.ru).",
       "cache": "Қолданба кэші",
@@ -893,6 +918,11 @@
     "profileCard": {
       "title": "Profile",
       "message": "Message"
+    },
+    "meetings": {
+      "title": "Video meetings",
+      "subtitle": "Planning, guest links, and admin tools — separate from quick in-chat calls.",
+      "unavailable": "Meetings section is unavailable."
     }
   },
   "push": {
