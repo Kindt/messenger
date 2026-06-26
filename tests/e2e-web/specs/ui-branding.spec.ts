@@ -70,23 +70,44 @@ test.describe("UI branding demo skins (login)", () => {
     await expect(page.locator("html")).toHaveAttribute("data-palette", "sberbank");
   });
 
-  test("after login demo skins block is hidden", async ({ page, request }) => {
+  test("after login demo palette persists only on platform-default branding", async ({
+    page,
+    request,
+  }) => {
+    const token = await apiLogin(request, "csadmin", "csadmin");
+    const brandingRes = await request.get(`${apiBase()}/api/v1/branding`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(brandingRes.ok()).toBeTruthy();
+    const branding = await brandingRes.json();
+    const platformDefault =
+      (branding.palette || "korus") === "korus" &&
+      !branding.brand_title &&
+      !branding.logo_url &&
+      !(branding.custom_css && String(branding.custom_css).trim()) &&
+      !(branding.token_overrides && Object.keys(branding.token_overrides).length);
+
     await page.goto("/");
     await expect(page.locator("#u")).toBeVisible({ timeout: 15_000 });
 
-    const demoBefore = page.getByTestId("auth-demo-skins");
-    const demoVisible = await demoBefore.isVisible({ timeout: 3_000 }).catch(() => false);
-    if (demoVisible) {
-      await page.getByTestId("auth-skin-vtb").click();
-      await expect(page.locator("html")).toHaveAttribute("data-palette", "vtb");
+    const demo = page.getByTestId("auth-demo-skins");
+    const demoVisible = await demo.isVisible({ timeout: 8_000 }).catch(() => false);
+    if (!demoVisible) {
+      test.skip(true, "demo skins disabled");
+      return;
     }
+
+    await page.getByTestId("auth-skin-vtb").click();
+    await expect(page.locator("html")).toHaveAttribute("data-palette", "vtb");
 
     await uiLogin(page, "csadmin", "csadmin");
     await expect(page.getByTestId("auth-demo-skins")).toHaveCount(0);
-    if (demoVisible) {
+
+    if (platformDefault) {
       await expect(page.locator("html")).toHaveAttribute("data-palette", "vtb");
     } else {
-      await expect(page.locator("html")).toHaveAttribute("data-palette", /.+/);
+      const expected = branding.palette || "korus";
+      await expect(page.locator("html")).toHaveAttribute("data-palette", expected);
     }
   });
 });

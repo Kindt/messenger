@@ -20,12 +20,12 @@ Phases follow speckit: specify (this doc) → plan → implement → verify.
 
 | ID | Task | Status |
 |----|------|--------|
-| OSL-010 | Flyway V074 — `shell_layout` on `platform_ui_branding` / `org_ui_branding` | pending |
+| OSL-010 | Flyway V076 — `shell_layout` on `platform_ui_branding` / `org_ui_branding` | pending |
 | OSL-011 | Extend `UiBrandingPort`, JDBC adapter, `UiBrandingService` merge + validation | pending |
 | OSL-012 | `BrandingResource`: `?org_slug=` on public GET; include `shell_layout` in all branding responses | pending |
 | OSL-013 | Admin `UiBrandingAdminResource` GET/PUT — platform + org `shell_layout` | pending |
 | OSL-014 | H2 tests: merge precedence, invalid enum, org_slug public resolve | pending |
-| OSL-015 | `docs/db/FLYWAY_AND_SCHEMA.md` — V074 row | pending |
+| OSL-015 | `docs/db/FLYWAY_AND_SCHEMA.md` — V076 row | pending |
 
 ---
 

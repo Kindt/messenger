@@ -75,4 +75,47 @@ if (branding.resolveMergedPalette({ palette: "alfa", token_overrides: {} }, "vtb
   throw new Error("server palette must win when org/platform overrides");
 }
 
+if (
+  branding.isPlatformDefaultBranding({
+    palette: "korus",
+    token_overrides: {},
+    brand_title: "Acme",
+  })
+) {
+  throw new Error("brand_title must block platform default");
+}
+
+if (
+  branding.isPlatformDefaultBranding({
+    palette: "korus",
+    token_overrides: {},
+    logo_url: "/logo.svg",
+  })
+) {
+  throw new Error("logo_url must block platform default");
+}
+
+if (
+  branding.isPlatformDefaultBranding({
+    palette: "korus",
+    token_overrides: {},
+    custom_css: ".x{color:red}",
+  })
+) {
+  throw new Error("custom_css must block platform default");
+}
+
+if (branding.resolveMergedPalette(platformDefault, "korus") !== "korus") {
+  throw new Error("korus demo palette must not override platform default");
+}
+
+if (
+  branding.resolveMergedPalette(
+    { palette: "korus", token_overrides: {}, brand_title: "Org" },
+    "vtb"
+  ) !== "korus"
+) {
+  throw new Error("server branding must win over demo when brand_title set");
+}
+
 console.log("test-ui-branding: OK");
