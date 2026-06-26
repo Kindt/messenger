@@ -57,7 +57,10 @@ subprojects {
                     requested.group == "jakarta.xml.bind" && requested.name == "jakarta.xml.bind-api" ->
                         useVersion("4.0.2")
                     requested.group == "jakarta.validation" && requested.name == "jakarta.validation-api" ->
-                        useVersion("3.1.0")
+                        useVersion("3.1.1")
+                    requested.group == "org.bouncycastle"
+                        && requested.name in listOf("bcprov-jdk18on", "bcpkix-jdk18on") ->
+                        useVersion("1.84")
                     requested.group == "com.fasterxml.jackson.dataformat"
                         && requested.name == "jackson-dataformat-toml" ->
                         useVersion("2.21.3")
