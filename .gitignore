@@ -67,6 +67,7 @@ tests/e2e-web/specs/*
 !tests/e2e-web/specs/settings-cross-tab.spec.ts
 !tests/e2e-web/specs/ui-avatar.spec.ts
 !tests/e2e-web/specs/ui-branding.spec.ts
+!tests/e2e-web/specs/ui-shell-layouts.spec.ts
 !tests/e2e-web/specs/ui-visual-regression.spec.ts
 !tests/e2e-web/specs/ui-visual-regression.spec.ts-snapshots/
 !tests/e2e-web/specs/ui-visual-regression.spec.ts-snapshots/**
@@ -125,6 +126,7 @@ deploy/ansible/playbooks/qemu-*.yml
 scripts/qemu-*.ps1
 scripts/*qemu*.ps1
 !scripts/run-ui-branding-qemu.ps1
+!scripts/run-ui-shell-layouts-qemu.ps1
 scripts/ensure-qemu-images.ps1
 scripts/start-qemu-status-loop.ps1
 scripts/stop-qemu-status-loop.ps1
