@@ -5,22 +5,22 @@ from __future__ import annotations
 from html import escape
 
 PRODUCT_VERSION = "0.0.1-SNAPSHOT"
-PRODUCT_DATE = "26 июня 2026"
+PRODUCT_DATE = "29 июня 2026"
 # Deck footer uses PRODUCT_VERSION (not a separate marketing semver).
 DECK_VERSION = PRODUCT_VERSION
-BUILD_DATE = "2026-06-26"
+BUILD_DATE = "2026-06-29"
 
 PRODUCT_STAGE = "working_prototype"
 PRODUCT_STAGE_LABEL = "Рабочий прототип"
 PRODUCTION_READY = False
 
 # Inventory in tests/e2e-web (`npx playwright test --list`); not a live-stack pass claim.
-PLAYWRIGHT_PASSED = 302
-PLAYWRIGHT_TOTAL = 302
-PLAYWRIGHT_INNER_TIERS = 23
-PLAYWRIGHT_DATE = "2026-06-26"
-# Last VMA evidence manifest on QEMU lab (spec 029); empty until first green L2/L4 run.
-VMA_EVIDENCE_DATE = "2026-06-26"
+PLAYWRIGHT_PASSED = 322
+PLAYWRIGHT_TOTAL = 322
+PLAYWRIGHT_INNER_TIERS = 24
+PLAYWRIGHT_DATE = "2026-06-29"
+# Last VMA evidence manifest on QEMU lab (spec 029); VPP comprehensive run (spec 030).
+VMA_EVIDENCE_DATE = "2026-06-29"
 
 PRODUCTION_BLOCKERS: tuple[str, ...] = (
     "Нет промышленного стенда: нагрузочные проверки и финальная эксплуатационная приёмка переносятся на контур заказчика",
@@ -43,7 +43,7 @@ FEATURES: tuple[tuple[str, str, str, str], ...] = (
         "entity_avatars",
         "Аватары сущностей (068)",
         "partial",
-        "user/chat/group crop+WS+policy ✓; live QEMU tier soak — guest smokes",
+        "user/chat/group crop+WS+policy ✓; tier ui-avatar + vpp-ui-blocks",
     ),
     ("admin_i18n", "Локализация админ-консоли", "done", "6 locales, nav refresh, tier ui-i18n-artifacts"),
     ("server", "Сервер и фоновые службы", "done", ""),
@@ -77,9 +77,9 @@ FEATURES: tuple[tuple[str, str, str, str], ...] = (
     ("search_full", "Полнотекстовый поиск Solr", "done", "prod full"),
     ("search_sql", "Поиск SQL (fallback)", "done", "dev-min / малый контур"),
     ("retention", "Ретенция, deep-archive, legal hold", "done", "сжатие архива zstd"),
-    ("security_eng", "Безопасность (инженерия)", "done", "headers, rate limit, timing, WS origin; CI security-gate"),
+    ("security_eng", "Безопасность (инженерия)", "done", "headers, rate limit, timing, WS origin; VPP ~146 lab gates (spec 030); security-gate local"),
     ("e2ee", "E2EE / hybrid MLS + OpenMLS", "partial", "wire parity + *Mls* tests ✓; sign-off ИБ — LSO-015/016"),
-    ("calls", "Видеозвонки WebRTC (mesh + LiveKit SFU)", "partial", "mesh + SFU ✓; запись mesh-звонка lab ✓; TURN prod + масштаб — ops"),
+    ("calls", "Видеозвонки WebRTC (mesh + LiveKit SFU)", "partial", "mesh + SFU ✓; запись mesh lab + ui-call-flows ✓; TURN prod + масштаб — ops"),
     ("push", "Web Push / PWA", "partial", "UI/worker + tier ui-push ✓; prod VAPID — ops"),
     ("tls", "Prod HTTPS / TLS", "partial", "Ansible/TLS в поставке ✓; stage host — с сентября 2026"),
     ("gdpr_export", "Export GDPR completeness", "partial", "JSON/ZIP + package-manifest.json ✓; legal strict — ops"),

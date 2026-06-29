@@ -116,7 +116,7 @@ COMPETENCIES: tuple[tuple[str, str, str], ...] = (
     (
         "QA",
         f"JUnit, {ps.PLAYWRIGHT_TOTAL} Playwright-сценариев, {ps.PLAYWRIGHT_INNER_TIERS} inner-тиров, "
-        "data-driven ui-tests, smoke/QEMU",
+        "VPP comprehensive gates (~146), data-driven ui-tests, smoke/QEMU",
         "US9 inner/outer gate",
     ),
 )

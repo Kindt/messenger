@@ -94,7 +94,7 @@ def test_block0_uses_external_status_language():
     assert "версия для пилота и доработок" in html
     assert "статус:</span> рабочий прототип" in html
     assert "автотесты web-клиента" in html
-    assert "302" in html
+    assert "322" in html
     assert "не заменяет приёмку на стенде" in html
     assert "dev-min и prod-full compose" in html
     assert "профили развёртывания" not in html

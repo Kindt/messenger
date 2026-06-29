@@ -18,8 +18,8 @@ try {
         New-Item -ItemType File -Path docs/.nojekyll -Force | Out-Null
     }
     Write-Host ""
-    Write-Host "OK: docs/index.html rebuilt. Commit docs/ and push — GitHub Pages deploys committed artifact (no CI rebuild)." -ForegroundColor Green
-    Write-Host "Live: https://kindt.github.io/messenger/" -ForegroundColor Cyan
+    Write-Host "OK: docs/index.html rebuilt. Commit docs/ and push - GitHub Pages deploys committed artifact (no CI rebuild)." -ForegroundColor Green
+    Write-Host 'Live: https://kindt.github.io/messenger/' -ForegroundColor Cyan
 }
 finally {
     Pop-Location
