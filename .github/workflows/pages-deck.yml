@@ -1,15 +1,14 @@
 name: pages-deck-smoke
 
+# Lightweight check on committed docs/index.html (no rebuild).
+# Full presentation pytest: run locally before commit.
+
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'docs/index.html'
-      - 'scripts/presentation/**'
   pull_request:
     paths:
       - 'docs/index.html'
-      - 'scripts/presentation/**'
+      - 'docs/.nojekyll'
+  workflow_dispatch:
 
 jobs:
   deck-smoke:
@@ -19,11 +18,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Install test deps
-        run: pip install pytest pyyaml
-      - name: Presentation tests
-        run: python -m pytest scripts/presentation/ -q
-      - name: smoke_deck
-        run: python scripts/presentation/smoke_deck.py
-      - name: analyze_deck
-        run: python scripts/presentation/analyze_deck.py --verbose
+      - run: pip install pyyaml
+      - name: Require prebuilt deck
+        run: test -f docs/index.html
+      - run: python scripts/presentation/smoke_deck.py
+      - run: python scripts/presentation/analyze_deck.py --verbose

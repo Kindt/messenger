@@ -111,7 +111,7 @@
 
 ## Автоматические тесты в CI (GitHub)
 
-В репозитории включён workflow **`.github/workflows/ci.yml`**: на push в **`main`** / **`master`** / **`develop`**, на pull request и вручную (**Actions → CI → Run workflow**) выполняется **`./gradlew buildIntegrity`** (все модули: компиляция, тесты, **`jar`**; Ubuntu, JDK **25**, проверка целостности Gradle Wrapper). Dependabot (**`.github/dependabot.yml`**) — зависимости Gradle и экшены. Подробности: **`docs/CI_AND_REPO_HYGIENE.md`**.
+Workflow **`.github/workflows/ci.yml`**: **`buildIntegrity`** только вручную (**Actions → CI → Run workflow**). На push gate — **локально**: `.\gradlew.bat buildIntegrity`. Deck для https://kindt.github.io/messenger/ — `.\scripts\presentation\publish-deck.ps1`, коммит `docs/index.html`, deploy без CI-сборки (`.github/workflows/deploy-pages.yml`).
 
 ---
 

@@ -1,6 +1,12 @@
 # Presentation deck — rebuild runbook
 
-## Rebuild deck
+## Rebuild deck (local → GitHub Pages)
+
+```powershell
+.\scripts\presentation\publish-deck.ps1
+```
+
+Or step by step:
 
 ```powershell
 python scripts/presentation/build.py
@@ -43,9 +49,15 @@ python -m pytest scripts/presentation/ -q
 
 ## GitHub Pages
 
-**Option A (recommended):** Settings → Pages → **Source: GitHub Actions** → workflow `Deploy product deck to GitHub Pages` runs on push to `main`.
+**Модель:** deck собирается **локально**, в git коммитится `docs/index.html`; workflow только публикует `docs/` (без `build.py` в CI).
 
-**Option B:** Settings → Pages → **Deploy from branch** → `main` / **`/docs`**.
+1. `.\scripts\presentation\publish-deck.ps1`
+2. `git add docs/index.html docs/.nojekyll` (+ при необходимости `scripts/presentation/*`)
+3. push в `main` → workflow `Deploy product deck to GitHub Pages` (триггер: изменения в `docs/**`)
 
-Local rebuild still required before commit when editing data; CI rebuilds on deploy workflow too.
+**Settings → Pages → Source: GitHub Actions** (или branch `main` / `/docs`).
+
+Live: https://kindt.github.io/messenger/
+
+**CI `buildIntegrity`** на push отключён (только `workflow_dispatch`); gate — локально: `.\gradlew.bat buildIntegrity`.
 - Honesty gate: `honesty_check.py` (exit 1 при overclaim)

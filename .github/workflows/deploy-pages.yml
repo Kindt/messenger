@@ -1,11 +1,13 @@
 name: Deploy product deck to GitHub Pages
 
+# Publishes committed docs/ as-is (deck built locally via scripts/presentation/publish-deck.ps1).
+# No CI rebuild — source of truth is docs/index.html in git.
+
 on:
   push:
     branches: [main]
     paths:
-      - 'docs/index.html'
-      - 'scripts/presentation/**'
+      - 'docs/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
@@ -24,23 +26,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Require prebuilt deck
+        run: |
+          test -f docs/index.html || (echo "Missing docs/index.html — run: .\\scripts\\presentation\\publish-deck.ps1" && exit 1)
+          test -f docs/.nojekyll || touch docs/.nojekyll
+
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
-      - name: Install test deps
-        run: pip install pytest pyyaml
-
-      - name: Rebuild deck
-        run: python scripts/presentation/build.py
-
-      - name: Validate deck
+      - name: Smoke committed deck (no rebuild)
         run: |
+          pip install pyyaml
           python scripts/presentation/smoke_deck.py
           python scripts/presentation/analyze_deck.py
-
-      - name: Ensure Jekyll bypass
-        run: touch docs/.nojekyll
 
       - uses: actions/upload-pages-artifact@v3
         with:

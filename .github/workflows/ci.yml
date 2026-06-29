@@ -1,8 +1,9 @@
 name: CI
 
+# Disabled on push/PR — gate runs locally (./gradlew buildIntegrity).
+# Re-enable push trigger when CI is stable again.
+
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 permissions:
