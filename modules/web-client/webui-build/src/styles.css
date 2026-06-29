@@ -227,6 +227,10 @@ button {
     display: none;
   }
 
+  .sidebar-message-search .global-search-wrap {
+    display: block;
+  }
+
   .thread-header-search-host {
     display: block;
   }
@@ -525,6 +529,21 @@ button {
   flex: 1;
   min-width: 160px;
   max-width: 420px;
+}
+
+.sidebar-message-search {
+  min-width: 0;
+}
+
+.sidebar-message-search .global-search-wrap {
+  max-width: none;
+  width: 100%;
+}
+
+@media (min-width: 961px) {
+  .app-header-left > .global-search-wrap {
+    display: none;
+  }
 }
 
 .message-search-row {
@@ -1199,6 +1218,7 @@ button {
   display: flex;
   flex: 1;
   min-height: 0;
+  align-items: stretch;
 }
 
 .sidebar {
@@ -1209,6 +1229,8 @@ button {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  height: 100%;
+  align-self: stretch;
   background: var(--panel);
   flex-shrink: 0;
 }
@@ -1377,6 +1399,7 @@ button {
 
 .sidebar-filters-panel {
   flex-shrink: 0;
+  margin-top: auto;
   border-top: 1px solid var(--border);
   background: var(--panel);
   padding: 8px 8px max(8px, env(safe-area-inset-bottom, 0px));

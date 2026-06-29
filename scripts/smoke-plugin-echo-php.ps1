@@ -1,7 +1,7 @@
 # Spec 014 — smoke: echo PHP plugin sidecar (local or integrations VM)
 
 param(
-    [string]$BaseUrl = "http://127.0.0.1:8088"
+    [string]$BaseUrl = "http://127.0.0.1:18088"
 )
 
 $ErrorActionPreference = "Stop"

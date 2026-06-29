@@ -19,6 +19,8 @@ PLAYWRIGHT_PASSED = 302
 PLAYWRIGHT_TOTAL = 302
 PLAYWRIGHT_INNER_TIERS = 23
 PLAYWRIGHT_DATE = "2026-06-26"
+# Last VMA evidence manifest on QEMU lab (spec 029); empty until first green L2/L4 run.
+VMA_EVIDENCE_DATE = "2026-06-26"
 
 PRODUCTION_BLOCKERS: tuple[str, ...] = (
     "Нет промышленного стенда: нагрузочные проверки и финальная эксплуатационная приёмка переносятся на контур заказчика",

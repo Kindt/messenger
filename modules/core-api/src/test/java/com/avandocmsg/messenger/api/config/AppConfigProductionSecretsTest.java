@@ -19,6 +19,27 @@ class AppConfigProductionSecretsTest {
         assertThrows(IllegalStateException.class, cfg::validateProductionSecrets);
     }
 
+    @Test
+    void validateProductionSecrets_labAllowSkipsCheck() {
+        var cfg = new AppConfig() {
+            @Override
+            public String korusProductAddons() {
+                return "addon-engage";
+            }
+
+            @Override
+            public boolean korusLabAllowDevSecrets() {
+                return true;
+            }
+
+            @Override
+            public String dbPassword() {
+                return "avandocmsg";
+            }
+        };
+        assertDoesNotThrow(cfg::validateProductionSecrets);
+    }
+
     private static AppConfig configWithAddons(String addons) {
         return new AppConfig() {
             @Override

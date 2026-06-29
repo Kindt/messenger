@@ -1,4 +1,5 @@
-import { expect, Page, test } from "@playwright/test";
+import { Page } from "@playwright/test";
+import { expect, test } from "../fixtures/test-with-qemu-wait";
 import { ensureSmokeUsers } from "../fixtures/auth";
 import { uiLogin } from "../fixtures/ui";
 

@@ -152,6 +152,7 @@ public class AppConfig {
         override("MINIO_PRESIGN_TTL_SECONDS", "minio.presign.ttl.seconds");
         override("FILE_PRESIGN_REDIRECT_ENABLED", "file.presign.redirect.enabled");
         override("KORUS_PRODUCT_ADDONS", "korus.product.addons");
+        override("KORUS_LAB_ALLOW_DEV_SECRETS", "korus.lab.allow.dev.secrets");
         override("DIRECTORY_SYNC_INTERVAL_MINUTES", "directory.sync.interval.minutes");
         override("SCIM_BEARER_TOKEN", "scim.bearer.token");
         override("AVATARS_ENABLED", "avatars.enabled");
@@ -572,6 +573,10 @@ public class AppConfig {
         if (addons == null || addons.isBlank()) {
             return;
         }
+        if (korusLabAllowDevSecrets()) {
+            log.warn("KORUS_LAB_ALLOW_DEV_SECRETS=true: skipping production secret check (QEMU/lab only)");
+            return;
+        }
         var issues = new ArrayList<String>();
         if (isDevDefaultSecret(dbPassword(), "avandocmsg")) {
             issues.add("DB_PASSWORD");
@@ -608,6 +613,11 @@ public class AppConfig {
         if (nats == null || nats.isBlank()) {
             throw new IllegalStateException("nats.url must not be blank");
         }
+    }
+
+    /** QEMU/lab only: allow dev-default secrets when full addon matrix is enabled. */
+    public boolean korusLabAllowDevSecrets() {
+        return Boolean.parseBoolean(props.getProperty("korus.lab.allow.dev.secrets", "false"));
     }
 
     private boolean isDevDefaultSecret(String actual, String devDefault) {

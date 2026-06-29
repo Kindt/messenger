@@ -1,0 +1,55 @@
+---
+description: VPP until-green — fix inline, resume from failed gate/test, final full verify
+alwaysApply: true
+---
+
+# VPP until GREEN (spec 030)
+
+When **any** gate of **Всеобъемлющая проверка продукта** fails, the agent **must not** stop at first failure, declare product OK, or **restart the entire 145-gate run from gate 1** while a checkpoint exists.
+
+## Mandatory loop
+
+1. **Capture logs** — full error and artifacts:
+   - `deploy/qemu/run/vpp-failure-analysis.json`
+   - `deploy/qemu/run/vpp-evidence/vpp-checkpoint.json`
+   - `deploy/qemu/run/plan-failure-analysis.json`, `playwright-dev-loop.log`
+   - Playwright: `tests/e2e-web/test-results/`
+2. **Diagnose** — root cause per failed gate (`vpp-failure-remediation.json`)
+3. **Fix** — minimal repo diff or stack restart (QEMU, not host Docker)
+4. **Verify** — isolated gate: `.\scripts\vpp\Invoke-VppGateRunner.ps1 -GateId <id>`
+5. **Resume** — continue from checkpoint (PASS gates skipped; failed gate + Playwright test index retained)
+6. **Final verify** — after checkpoint resume reaches GREEN, **one full pass from gate 1** (no checkpoint) before `vpp-green.json`
+7. **Success** — `deploy/qemu/run/vpp-evidence/vpp-green.json` with `status: GREEN`, `full_coverage: true`
+
+## Entry points
+
+```powershell
+# Pause (keep checkpoint):
+.\scripts\vpp\Stop-VppLabRun.ps1 -Force
+.\scripts\qemu-down.ps1
+.\scripts\vpp\Save-VppCheckpoint.ps1 -Reason "pause"
+
+# Resume monitored run (skip PASS gates):
+$env:KORUS_QEMU_THREE_VM='1'
+.\scripts\qemu-up.ps1 -WithIntegrations
+.\scripts\vpp\Resume-VppMonitoredLabRun.ps1 -SkipStackPrep
+
+# Until GREEN (auto checkpoint on FAIL, final full verify):
+.\scripts\run-vpp-until-green.ps1 -Level full
+```
+
+## Anti-patterns (forbidden)
+
+- Re-running gates 1–N that already PASS when `vpp-checkpoint.json` exists
+- Declaring GREEN after checkpoint resume **without** final full verify pass
+- Waiting hours on STALLED without reading `playwright-dev-loop.log` / `vpp-realtime-feed.txt`
+- Ignoring `ParameterBindingValidationException` on Playwright tiers (fix ValidateSet, do not blind restart)
+- Status-only report without fix + checkpoint resume
+
+## Playwright mid-tier resume
+
+- Env: `UI_TESTS_START_AFTER_INDEX` (set by `playwright-dev-loop.ps1 -StartAfterTestIndex`)
+- Checkpoint field: `playwright_partial.test_index` for ui-ux-* tiers
+- On tier PASS after partial resume, index resets for next gate
+
+Spec: [`specs/030-vpp-product-verification/`](../../specs/030-vpp-product-verification/)

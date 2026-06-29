@@ -66,6 +66,7 @@ import com.avandocmsg.messenger.core.port.ExportJobPort;
 import com.avandocmsg.messenger.core.port.LegalHoldPort;
 import com.avandocmsg.messenger.core.port.MigrationImportJobPort;
 import com.avandocmsg.messenger.core.port.RetentionPolicyPort;
+import com.avandocmsg.messenger.core.port.OrganizationLookupPort;
 import com.avandocmsg.messenger.core.port.UserLookupPort;
 import com.avandocmsg.messenger.api.search.MessageSearchService;
 import com.avandocmsg.messenger.api.bots.BotRepository;
@@ -141,6 +142,7 @@ public class JerseyConfig extends ResourceConfig {
                         TokenValidator tokenValidator, AuthService authService,
                         AuthRateLimiter authRateLimiter,
                         UserLookupPort userLookupPort,
+                        OrganizationLookupPort organizationLookupPort,
                         ContactRepositoryPort contactRepositoryPort, ContactService contactService,
                         ChatService chatService,
                         ReadReceiptService readReceiptService,
@@ -222,6 +224,7 @@ public class JerseyConfig extends ResourceConfig {
                 bind(authService).to(AuthService.class);
                 bind(authRateLimiter).to(AuthRateLimiter.class);
                 bind(userLookupPort).to(UserLookupPort.class);
+                bind(organizationLookupPort).to(OrganizationLookupPort.class);
                 bind(contactRepositoryPort).to(ContactRepositoryPort.class);
                 bind(contactService).to(ContactService.class);
                 bind(chatService).to(ChatService.class);

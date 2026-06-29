@@ -220,11 +220,26 @@ export async function apiEnsureAbGroup(
   return { tokenA, tokenB, idA, idB, chatId, title };
 }
 
+async function dismissNoticeBackdrop(page: Page): Promise<void> {
+  const backdrop = page.getByTestId("notice-backdrop");
+  if (await backdrop.isVisible({ timeout: 500 }).catch(() => false)) {
+    await backdrop.click({ force: true }).catch(() => {});
+    await expect(backdrop).toHaveCount(0, { timeout: 5_000 }).catch(() => {});
+  }
+}
+
 export async function openSettingsProfile(page: Page): Promise<void> {
-  await page.getByTestId("settings-toggle").click();
-  await expect(page.locator(".settings-card")).toBeVisible({ timeout: 15_000 });
-  await page.getByTestId("settings-tab-profile").click();
-  await expect(page.locator("#settings-panel-profile")).toBeVisible({ timeout: 10_000 });
+  await dismissNoticeBackdrop(page);
+  const settingsCard = page.locator(".settings-card");
+  if (!(await settingsCard.isVisible({ timeout: 2_000 }).catch(() => false))) {
+    await page.getByTestId("settings-toggle").click({ force: true });
+  }
+  await expect(settingsCard).toBeVisible({ timeout: 15_000 });
+  const profilePanel = page.locator("#settings-panel-profile");
+  if (!(await profilePanel.isVisible().catch(() => false))) {
+    await page.getByTestId("settings-tab-profile").click();
+  }
+  await expect(profilePanel).toBeVisible({ timeout: 10_000 });
 }
 
 export async function uploadAvatarViaUiWithCrop(page: Page): Promise<void> {
@@ -239,6 +254,9 @@ export async function uploadAvatarViaUiWithCrop(page: Page): Promise<void> {
   await expect(page.getByTestId("avatar-crop-canvas")).toBeVisible();
   await page.getByTestId("avatar-crop-apply").click();
   await expect(page.getByTestId("avatar-crop-overlay")).toHaveCount(0, { timeout: 30_000 });
+  await expect(page.getByTestId("settings-profile-avatar").locator("img.chat-avatar-img")).toBeVisible({
+    timeout: 30_000,
+  });
 }
 
 export async function expectProfileAvatarImgWithAvt(page: Page): Promise<string> {

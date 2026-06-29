@@ -61,6 +61,18 @@ Or use the host runner (k6 or PowerShell fallback):
 .\scripts\run-k6-qemu-baseline.ps1
 ```
 
+## L4 VM acceptance (spec 029)
+
+L4 load wave (`smoke-vm-acceptance-matrix.ps1` W5):
+
+| Step | Script | Evidence |
+|------|--------|----------|
+| k6 health 30s | `run-k6-qemu-baseline.ps1` | `deploy/qemu/run/k6-pilot-baseline.json` |
+| WS soak | `load-ws-soak-qemu.ps1` | guest log |
+| SFU scaffold | `run-sfu-participant-load-qemu.ps1` | `SCaffold` in VMA manifest only |
+
+Threshold caps: `scripts/perf/baselines/qemu-l4-k6-thresholds.json` (p95 max 500ms lab; 2× regression vs stored baseline).
+
 Committed summary for presentations: `docs/benchmarks/qemu-nt-baseline-2026-06-15.json` (regenerate locally into `deploy/qemu/run/` when re-running).
 
 Stage prep checklist (T601–T607 artifacts — deferred ops):

@@ -1,0 +1,12 @@
+{
+  "spec": "029-qemu-vm-acceptance",
+  "level": "L4",
+  "description": "p95 caps for pilot-health on QEMU-forwarded API (lab only, not stage/prod)",
+  "thresholds": {
+    "health_p95_ms_max": 500,
+    "health_p95_regression_factor": 2.0,
+    "success_rate_min_pct": 99.0
+  },
+  "baseline_artifact": "deploy/qemu/run/k6-pilot-baseline.json",
+  "notes": "FAIL W5_load if measured p95 exceeds max or 2x stored baseline success_rate below min"
+}

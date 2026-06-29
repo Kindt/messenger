@@ -173,7 +173,7 @@ addons:
       - {key: engage.link_preview.store, label: "Хранение превью", owner: addon-engage, ui_behavior: internal}
       - {key: engage.link_preview.render, label: "Показ превью", owner: addon-engage, ui_behavior: hide}
     gates:
-      api: [{path: /v1/me/devices/push/**, methods: [POST, DELETE], feature: engage.push.subscribe, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.engage.disabled}]
+      api: [{path: /v1/me/devices/**, methods: [GET, POST, DELETE], feature: engage.push.subscribe, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.engage.disabled}]
       ui: [{feature: engage.push.subscribe, control: settings-web-push, behavior: hide}]
       jobs: [{job: push-delivery, feature: engage.push.deliver, disabled_behavior: drop, degraded_behavior: drop}]
       hooks: [{hook: message-link-preview, feature: engage.link_preview.extract, disabled_behavior: skip, degraded_behavior: skip}]
@@ -471,7 +471,7 @@ addons:
       - {key: e2ee.message_decrypt, label: "Decrypt message", owner: addon-e2ee, ui_behavior: hide_mls_ui}
       - {key: e2ee.admin_status, label: "E2EE admin status", owner: addon-e2ee, ui_behavior: hide_mls_ui}
       - {key: e2ee.migration_run, label: "E2EE migration", owner: addon-e2ee, ui_behavior: hide_mls_ui}
-    gates: {api: [{path: /v1/mls/**, methods: [GET, POST, DELETE], feature: e2ee.session.read, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.e2ee.disabled}], ui: [{feature: e2ee.message_encrypt, control: e2ee-controls, behavior: hide_mls_ui}], jobs: [{job: mls-migration, feature: e2ee.migration_run, disabled_behavior: stop, degraded_behavior: pause}], hooks: [{hook: message-e2ee-encrypt, feature: e2ee.message_encrypt, disabled_behavior: skip, degraded_behavior: skip}]}
+    gates: {api: [{path: /v1/e2ee/**, methods: [GET, POST, DELETE], feature: e2ee.session.read, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.e2ee.disabled}, {path: /v1/admin/e2ee/**, methods: [GET, POST], feature: e2ee.admin_status, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.e2ee.disabled}], ui: [{feature: e2ee.message_encrypt, control: e2ee-controls, behavior: hide_mls_ui}], jobs: [{job: mls-migration, feature: e2ee.migration_run, disabled_behavior: stop, degraded_behavior: pause}], hooks: [{hook: message-e2ee-encrypt, feature: e2ee.message_encrypt, disabled_behavior: skip, degraded_behavior: skip}]}
     acceptance: {positive: [e2ee-positive], disabled: [e2ee-disabled], degraded: [e2ee-wire-degraded]}
 
   - id: addon-bots
@@ -551,7 +551,7 @@ addons:
       - {key: federation.status.read, label: "Federation status", owner: addon-federation, ui_behavior: hide}
       - {key: federation.directory.read, label: "Federation directory", owner: addon-federation, ui_behavior: hide}
       - {key: federation.member_guard, label: "Federation member guard", owner: addon-federation, ui_behavior: internal}
-    gates: {api: [{path: /v1/federation/**, methods: [GET, POST, DELETE], feature: federation.trust.list, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.federation.disabled}], ui: [{feature: federation.trust.list, control: federation-panel, behavior: hide}], jobs: [], hooks: [{hook: federation-member-guard, feature: federation.member_guard, disabled_behavior: skip, degraded_behavior: skip}]}
+    gates: {api: [{path: /v1/federation/**, methods: [GET, POST, DELETE], feature: federation.trust.list, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.federation.disabled}, {path: /v1/admin/federation/**, methods: [GET, POST, DELETE], feature: federation.trust.list, disabled_behavior: reject, degraded_behavior: reject, installing_behavior: reject, http_code: 503, message_key: module.federation.disabled}], ui: [{feature: federation.trust.list, control: federation-panel, behavior: hide}], jobs: [], hooks: [{hook: federation-member-guard, feature: federation.member_guard, disabled_behavior: skip, degraded_behavior: skip}]}
     acceptance: {positive: [federation-positive], disabled: [federation-disabled], degraded: [federation-status-degraded]}
 
   - id: addon-dlp

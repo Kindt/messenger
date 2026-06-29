@@ -425,7 +425,7 @@ public class CoreApiComposition {
             this.uuidGenerator);
 
         var jerseyConfig = new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
-                userLookupPort, contactRepositoryPort, contactService,
+                userLookupPort, organizationLookupPort, contactRepositoryPort, contactService,
                 chatService, readReceiptService, chatApplicationService,
                 messageApplicationService, userApplicationService, fileApplicationService,
                 avatarApplicationService, avatarAccessTokenService,

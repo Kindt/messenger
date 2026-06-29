@@ -32,7 +32,38 @@
 | **Deploy acceptance (spec 003)** | `scripts/smoke-deploy-acceptance.sh` | `deploy-messaging-smoke.yml` | orchestrates ready, auth, messaging-e2e, parity-api |
 | **Platform W2 guest (optional)** | `scripts/guest-smoke-platform-w2.sh` | manual (QEMU server guest) | `verify-nats-queue-group`; `KORUS_RUN_EXPORT_PURGE_SMOKE=1` for export-replay |
 | **QEMU wsUrl probe (host)** | `scripts/test-korus-wsurl.ps1` | manual; outer gate preflight | expects `host-lan-ip.txt` + `:19088/web-client-env.js` |
-| **QEMU canonical regression** | `scripts/smoke-local-regression.ps1` | manual only (no CI) | local QEMU one-pass: ready/auth/web/parity/WS/messaging/workers/TURN/cell/container portability |
+| **QEMU canonical regression** | `scripts/smoke-local-regression.ps1` | manual only (no CI) | local QEMU one-pass: ready/auth/web/parity/WS/messaging/workers/TURN/cell/container portability; W1b voice/federation/bot/ip/scim (spec 029) |
+| **VMA L2/L4 orchestrator (spec 029)** | `scripts/smoke-vm-acceptance-matrix.ps1` | manual | `-Level L2|L4|L4-light`; evidence via `Write-VmaEvidence.ps1` → `deploy/qemu/run/vma-evidence/` |
+| **VPP — Всеобъемлющая проверка продукта (spec 030)** | `scripts/run-vpp-until-green.ps1` | manual | **canonical `-Level full` until GREEN**; coverage `Write-VppCoverageReport.ps1` |
+| **VPP single pass** | `scripts/run-vpp-full.ps1` | manual | `-UntilGreen`; default `-Level full` |
+| **VPP coverage audit (static)** | `scripts/vpp/Invoke-VppCoverageAudit.ps1` | manual | 100% catalog checks without QEMU |
+| **ui-ux-full UX gate** | `scripts/Assert-UiTestsUxFullGate.ps1` | auto after tier | rubric strict + CLK floor |
+| **ui-ux-full console gate** | `scripts/Assert-UiTestsConsoleGate.ps1` | auto after tier | `console-guard.ts` + `deploy/qemu/run/ui-console-guard-report.json` |
+| **VPP addon smokes (all)** | `scripts/smoke-vpp-addon-smokes.ps1` | manual | one smoke chain per addon (18 addons) |
+| **VPP media wave** | `scripts/smoke-vpp-media-wave.ps1` | manual | turn-qemu + turn-relay + voice-message |
+| **VPP admin smokes** | `scripts/smoke-vpp-admin-smokes.ps1` | manual | retention-purge + admin-export |
+| **VPP preflight** | `scripts/vpp/Invoke-VppPreflight.ps1` | auto | API/Web/SSH + all plugin ports (full run) |
+| **VPP extended gates (110%)** | `scripts/vpp/Invoke-VppWsSoakLight.ps1` + catalog `extended_gates_ordered` | auto in full | k6, WS soak, export metrics, wsUrl probe |
+| **VPP fortress gates (160%)** | `specs/030-vpp-product-verification/contracts/vpp-coverage-catalog.json` → `fortress_gates_ordered` | auto in full | +17 ironclad gates (load, lifecycle isolate, ui-ux-pr, WAR, …) |
+| **VPP fortress gap report** | `scripts/vpp/Invoke-VppFortressGapReport.ps1` | manual | static: covered vs policy-excluded surfaces |
+| **deploy-acceptance QEMU** | `scripts/smoke-deploy-acceptance-qemu.ps1` | VPP full | :18080/:18082/:19088 |
+| **export observability QEMU** | `scripts/smoke-export-observability-qemu.ps1` | VPP extended | Prometheus on :18080/:9193/:9192 |
+| **VPP failure analysis** | `scripts/Write-VppFailureAnalysis.ps1` | auto on FAIL | `deploy/qemu/run/vpp-failure-analysis.json` + remediation hints |
+| **VPP module lifecycle (full)** | `scripts/smoke-module-lifecycle.ps1` | manual | programmatic + physical modules + plugin bridges |
+| **VPP lifecycle programmatic (17 addons)** | `scripts/smoke-module-lifecycle-programmatic.ps1` | manual | `vpp-programmatic-override-matrix.json` - all override roundtrips |
+| **VPP lifecycle physical** | `scripts/smoke-module-lifecycle-physical.ps1` | manual | docker stop/start workers; KORUS_PRODUCT_ADDONS toggle |
+| **VPP plugin lifecycle** | `scripts/smoke-plugin-lifecycle.ps1` | manual | all 6 bridges mandatory; integrations VM required (no SKIP) |
+| **VPP platform capabilities** | `scripts/smoke-platform-capabilities.ps1` | manual | public `GET /platform/capabilities` vs catalog |
+| **VPP module interactions** | `scripts/smoke-module-interactions.ps1` | manual | cross-addon chains from `specs/030-vpp-product-verification/contracts/module-interaction-matrix.json` |
+| **VPP UI blocks (Playwright)** | `tests/e2e-web/specs/vpp-module-combo-ui.spec.ts` | manual | tier `vpp-ui-blocks`; manifest `specs/030-vpp-product-verification/contracts/ui-block-manifest.json` |
+| **VMA evidence manifest** | `scripts/Write-VmaEvidence.ps1` | manual | schema: `specs/029-qemu-vm-acceptance/contracts/vma-evidence.schema.json` |
+| **Export compliance chain (W6)** | `scripts/run-export-compliance-chain.ps1` | manual | flow → pack → openapi → gdpr → retention-gate |
+| **Smoke profile matrix** | `scripts/run-smoke-profile-matrix.ps1` | manual | iterates `smoke-profiles.json`; `-Quick` for L4 subset |
+| **Playwright QEMU matrix** | `scripts/run-playwright-qemu-matrix.ps1` | manual | profiles L4-light/L4/L4+/L4++ + spec 027/028/068 runners |
+| **Playwright admin QEMU** | `scripts/run-playwright-admin-qemu.ps1` | manual | admin tiers on `:18080/admin/` |
+| **IP allowlist smoke** | `scripts/smoke-ip-allowlist.ps1` | manual | `-RequireEnforce` with `ORG_IP_ALLOWLIST_ENFORCE=1` on core-api |
+| **SCIM lab token smoke** | `scripts/smoke-scim-lab-token.ps1` | manual | `SCIM_BEARER_TOKEN` env; SKIP if unset |
+| **Network profile catalog** | `scripts/smoke-network-profile-catalog.ps1` | manual | read-only parse of `product-modules.yaml` network profiles |
 | **Read replica env probe** | `scripts/smoke-read-replica-env.sh` | manual (guest) | after `replica-stack-up.sh` or `replica-lab-up.sh` |
 | **k6 pilot baseline** | `scripts/load/pilot-health.js` | manual (host :18080) | see `scripts/load/README.md` |
 | **k6 QEMU baseline (T604 substitute)** | `scripts/run-k6-qemu-baseline.ps1` | manual | writes `deploy/qemu/run/k6-pilot-baseline.json`; fallback if k6 absent |

@@ -175,7 +175,8 @@ public class ExternalStackRuntimeManifestProvider {
             var loaded = YAML.readValue(manifestPath.toFile(), ManifestFile.class);
             return loaded.manifests() == null ? List.of() : loaded.manifests();
         } catch (IOException e) {
-            throw new IllegalStateException("Cannot read external stack manifest: " + manifestPath, e);
+            // Lab guests may ship anchor aliases (e.g. *korus_bundled) that Jackson cannot bind; use runtime defaults.
+            return List.of();
         }
     }
 

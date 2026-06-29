@@ -1,28 +1,24 @@
-# Restore QEMU lab core-api: clear stale KORUS_PRODUCT_ADDONS + force recreate.
+# Restore QEMU lab core-api health without wiping regression addons.
 $ErrorActionPreference = "Stop"
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+
+$enableAddons = Join-Path $Root "scripts\qemu-enable-regression-addons.ps1"
+if (Test-Path $enableAddons) {
+  & $enableAddons
+  exit $LASTEXITCODE
+}
+
+# Fallback: minimal recreate (no addon wipe)
 . "$PSScriptRoot\lib\Invoke-QemuServerGuest.ps1"
 
 $script = @'
 set -euo pipefail
 cd /mnt/korus/docker
-ENV_FILE=.env.korus-server
-if [ -f "$ENV_FILE" ]; then
-  if grep -q '^KORUS_PRODUCT_ADDONS=' "$ENV_FILE"; then
-    sed -i 's/^KORUS_PRODUCT_ADDONS=.*/KORUS_PRODUCT_ADDONS=/' "$ENV_FILE"
-  else
-    echo KORUS_PRODUCT_ADDONS= >> "$ENV_FILE"
-  fi
-  set -a
-  # shellcheck source=/dev/null
-  source "$ENV_FILE"
-  set +a
+COMPOSE_ARGS=( -f docker-compose.full-server.yml )
+if [ -f docker-compose.fleet-lab.yml ] && [ -f docker-compose.qemu-regression-lab.yml ] && [ -f /tmp/korus-qemu-regress.env ]; then
+  COMPOSE_ARGS+=( -f docker-compose.fleet-lab.yml -f docker-compose.qemu-regression-lab.yml --env-file /tmp/korus-qemu-regress.env )
 fi
-export KORUS_PRODUCT_ADDONS=
-COMPOSE_FILES="-f docker-compose.full-server.yml"
-if [ -f docker-compose.qemu-lab.yml ]; then
-  COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.qemu-lab.yml"
-fi
-docker compose $COMPOSE_FILES up -d --force-recreate core-api
+sudo docker compose "${COMPOSE_ARGS[@]}" up -d --force-recreate core-api
 for i in $(seq 1 36); do
   code=$(curl -sS -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/v1/health || true)
   echo "health=$code"

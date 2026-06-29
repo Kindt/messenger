@@ -41,7 +41,7 @@ $apiUrl = $env:KORUS_API_URL
 try {
     $pub = Invoke-RestMethod -Uri "$apiUrl/api/v1/branding" -TimeoutSec 10
     if ($null -eq $pub.shell_layout) {
-        Write-Warning "shell_layout missing on public branding — guest needs V076 + core-api rebuild"
+        Write-Warning 'shell_layout missing on public branding - guest needs V076 + core-api rebuild'
         Write-Host "Run: .\scripts\qemu-sync-api-core.ps1 -NoCache ; .\scripts\qemu-guest-job.ps1 -Loop" -ForegroundColor Yellow
         exit 2
     }
@@ -51,5 +51,5 @@ try {
     exit 2
 }
 
-& (Join-Path $Root "scripts\playwright-dev-loop.ps1") -Tier ui-shell-layouts -SkipPreflight -SyncWebUi:$false
+& (Join-Path $Root "scripts\playwright-dev-loop.ps1") -Tier ui-shell-layouts -SkipPreflight -SyncWebUi $false
 exit $LASTEXITCODE

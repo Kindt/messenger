@@ -3,6 +3,7 @@ package com.avandocmsg.messenger.api.config;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
@@ -22,6 +23,9 @@ public class GeneralExceptionMapper implements ExceptionMapper<Throwable> {
 
     @Override
     public Response toResponse(Throwable e) {
+        if (e instanceof WebApplicationException wae) {
+            return wae.getResponse();
+        }
         log.error("Unhandled exception", e);
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
             .entity(new ApiError(500, messages.get("error.internal")))

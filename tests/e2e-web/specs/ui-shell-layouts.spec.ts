@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures/test-with-qemu-wait";
 import { adminBaseUrl, adminNavTo, adminUiLogin } from "../fixtures/admin-ui";
 import { apiBase, apiLogin, uiBase } from "../fixtures/auth";
 import { uiLogin } from "../fixtures/ui";

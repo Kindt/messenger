@@ -5,115 +5,152 @@
       "description": "Base only — minimal install",
       "smoke_scripts": ["scripts/smoke-ready.sh"]
     },
-    "base+engage": {
-      "korus_product_addons": ["addon-engage"],
-      "description": "Base + push/preview (see docs/runbooks/engage-lab-vapid.md)",
+    "base+productivity": {
+      "korus_product_addons": ["addon-productivity"],
+      "description": "Polls, scheduled, reminders, stickers",
       "smoke_scripts": [
         "scripts/smoke-ready.sh",
-        "scripts/smoke-preview-worker.ps1"
+        "scripts/smoke-phase5-messaging.ps1"
+      ]
+    },
+    "base+engage": {
+      "korus_product_addons": ["addon-engage"],
+      "description": "Push + preview workers",
+      "smoke_scripts": [
+        "scripts/smoke-ready.sh",
+        "scripts/smoke-preview-worker.ps1",
+        "scripts/smoke-push-worker-qemu.ps1"
       ]
     },
     "base+search": {
       "korus_product_addons": ["addon-search"],
-      "description": "Base + Solr indexer",
+      "description": "Solr indexer",
       "smoke_scripts": ["scripts/smoke-hotplug-indexer.sh"]
-    },
-    "base+productivity": {
-      "korus_product_addons": ["addon-productivity"],
-      "description": "Base + polls, scheduled messages, reminders, stickers and GIFs",
-      "smoke_scripts": ["scripts/smoke-ready.sh"]
     },
     "base+collaboration": {
       "korus_product_addons": ["addon-collaboration"],
-      "description": "Base + kanban and whiteboard",
-      "smoke_scripts": ["scripts/smoke-ready.sh"]
+      "description": "Kanban + whiteboard",
+      "smoke_scripts": [
+        "scripts/smoke-ready.sh",
+        "scripts/smoke-phase5-adr-scaffolds.ps1"
+      ]
     },
     "base+ai": {
       "korus_product_addons": ["addon-ai"],
-      "description": "Base + AI assist, speech recognition and captions",
-      "smoke_scripts": ["scripts/smoke-ready.sh"]
+      "description": "AI assist + STT mock",
+      "smoke_scripts": [
+        "scripts/smoke-ready.sh",
+        "scripts/smoke-plugin-ai-triage.ps1"
+      ]
     },
     "base+compliance-export": {
       "korus_product_addons": ["addon-export"],
-      "description": "Base + compliance export worker",
-      "smoke_scripts": ["scripts/smoke-export-compliance.sh"]
+      "description": "Export compliance worker",
+      "smoke_scripts": [
+        "scripts/smoke-export-compliance-flow.sh",
+        "scripts/smoke-export-compliance-pack.sh"
+      ]
     },
     "base+compliance-retention": {
       "korus_product_addons": ["addon-retention"],
-      "description": "Base + retention worker",
-      "smoke_scripts": ["scripts/smoke-retention.sh"]
+      "description": "Retention worker + purge",
+      "smoke_scripts": [
+        "scripts/smoke-retention-worker.ps1",
+        "scripts/smoke-retention-purge.ps1"
+      ]
+    },
+    "base+archive": {
+      "korus_product_addons": ["addon-archive"],
+      "description": "Message archive + archiver",
+      "smoke_scripts": ["scripts/smoke-ready.sh"]
+    },
+    "base+deep-archive": {
+      "korus_product_addons": ["addon-deep-archive"],
+      "description": "Deep archive chunks",
+      "smoke_scripts": ["scripts/smoke-deep-archive-chunks.ps1"]
     },
     "base+integrations": {
       "korus_product_addons": ["addon-integrations"],
-      "description": "Base + plugin platform",
-      "smoke_scripts": ["scripts/smoke-integrations-gate.sh"]
+      "description": "Plugin platform — needs integrations VM",
+      "smoke_scripts": ["scripts/smoke-integrations-gate.ps1"]
     },
     "base+live": {
       "korus_product_addons": ["addon-live"],
-      "description": "Base + LiveKit SFU/live (Playwright ui-live L2-L5; L6 soak LSO-040)",
-      "smoke_scripts": [
-        "scripts/smoke-live-session.sh"
-      ]
+      "description": "LiveKit SFU / live sessions",
+      "smoke_scripts": ["scripts/smoke-live-session.ps1"]
     },
     "base+live+turn": {
       "korus_product_addons": ["addon-live"],
-      "description": "Live + coturn lab (docs/runbooks/media-turn-lab.md)",
+      "description": "Live + coturn lab",
       "smoke_scripts": [
-        "scripts/smoke-live-session.sh",
+        "scripts/smoke-live-session.ps1",
         "scripts/smoke-turn-relay.ps1"
       ]
     },
     "base+e2ee": {
       "korus_product_addons": ["addon-e2ee"],
-      "description": "Base + MLS wire (buildIntegrity *Mls*)",
-      "smoke_scripts": []
+      "description": "MLS wire + browser roundtrip",
+      "smoke_scripts": ["scripts/smoke-openmls-migration.ps1"],
+      "playwright_tiers": ["ui-e2ee", "e2ee-openmls-interop"]
     },
     "base+enterprise-auth": {
       "korus_product_addons": ["addon-enterprise-auth"],
-      "description": "Base + enterprise auth policy, directory sync, SCIM, IP allowlist and passkeys",
-      "smoke_scripts": ["scripts/smoke-ready.sh"]
+      "description": "LDAP/SCIM/IP allowlist/passkeys scaffold",
+      "smoke_scripts": [
+        "scripts/smoke-ready.sh",
+        "scripts/smoke-ldap-auth.sh",
+        "scripts/smoke-ip-allowlist.ps1",
+        "scripts/smoke-scim-lab-token.ps1"
+      ],
+      "playwright_tiers": ["api", "admin-auth-policy"]
     },
     "base+bots": {
       "korus_product_addons": ["addon-bots"],
-      "description": "Base + Bot API",
-      "smoke_scripts": ["scripts/smoke-ready.sh"]
+      "description": "Bot API + delivery worker",
+      "smoke_scripts": [
+        "scripts/smoke-bot-api.ps1",
+        "scripts/smoke-bot-delivery-worker.ps1"
+      ]
     },
     "base+federation": {
       "korus_product_addons": ["addon-federation"],
-      "description": "Base + federation trust and directory",
-      "smoke_scripts": ["scripts/smoke-ready.sh"]
+      "description": "Federation trust + cross-org",
+      "smoke_scripts": [
+        "scripts/smoke-federation-trust.ps1",
+        "scripts/smoke-federation-cross-org.ps1"
+      ]
     },
     "base+dlp": {
       "korus_product_addons": ["addon-dlp"],
-      "description": "Base + DLP preflight and audit",
-      "smoke_scripts": ["scripts/smoke-ready.sh"]
+      "description": "DLP mock bridge",
+      "smoke_scripts": ["scripts/smoke-dlp-mock.ps1"]
     },
     "base+migration-import": {
       "korus_product_addons": ["addon-migration-import"],
-      "description": "Base + administrative migration import jobs",
-      "smoke_scripts": ["scripts/smoke-ready.sh"]
+      "description": "Telegram fixture import",
+      "smoke_scripts": ["scripts/smoke-migration-import.ps1"]
     },
     "reference-all": {
       "korus_product_addons": [
+        "addon-productivity",
         "addon-engage",
         "addon-search",
+        "addon-collaboration",
+        "addon-ai",
+        "addon-live",
         "addon-retention",
         "addon-archive",
         "addon-deep-archive",
         "addon-export",
-        "addon-live",
+        "addon-enterprise-auth",
+        "addon-e2ee",
         "addon-bots",
         "addon-integrations",
-        "addon-e2ee",
-        "addon-productivity",
-        "addon-collaboration",
-        "addon-ai",
-        "addon-enterprise-auth",
         "addon-federation",
         "addon-dlp",
         "addon-migration-import"
       ],
-      "description": "Manual presales / lab full — not nightly CI",
+      "description": "Full addon union — manual presales / L4 prep",
       "smoke_scripts": ["scripts/smoke-deploy-acceptance.sh"]
     }
   }

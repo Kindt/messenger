@@ -1,4 +1,5 @@
-import { expect, Page, test } from "@playwright/test";
+import { Page } from "@playwright/test";
+import { expect, test } from "../fixtures/test-with-qemu-wait";
 import { apiCreateGroup, apiLogin, apiMeId, ensureSmokeUsers } from "../fixtures/auth";
 import { adminBaseUrl, adminNavTo, adminUiLogin } from "../fixtures/admin-ui";
 import { uiLogin, uiOpenChatByTitle, uiSendMessage } from "../fixtures/ui";

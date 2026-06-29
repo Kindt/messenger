@@ -47,6 +47,9 @@ $csHeaders = @{ Authorization = "Bearer $csToken" }
 
 $adminId = Get-MeId $adminToken
 $csId = Get-MeId $csToken
+$csMe = Invoke-RestMethod -Method GET -Uri "$API/users/me" -Headers $csHeaders
+$csOrgBefore = $csMe.org_id
+if (-not $csOrgBefore) { $csOrgBefore = $csMe.organization_id }
 
 $suffix = [guid]::NewGuid().ToString("N").Substring(0, 6)
 $orgAObj = Invoke-RestMethod -Method POST -Uri "$API/admin/organizations" -Headers $csHeaders `
@@ -87,6 +90,12 @@ Invoke-RestMethod -Method POST -Uri "$API/admin/federation/trust" -Headers $admi
 $allowed = Invoke-ApiStatus "POST" "$API/chats/$chatId/members" $adminToken $addBody
 if ($allowed -ne 201 -and $allowed -ne 200) {
     throw "expected 201 with trust, got $allowed"
+}
+
+if ($csOrgBefore) {
+    $restoreBody = (@{ org_id = $csOrgBefore } | ConvertTo-Json -Compress)
+    Invoke-RestMethod -Method PATCH -Uri "$API/admin/users/$csId/organization" `
+      -Headers $csHeaders -ContentType "application/json" -Body $restoreBody | Out-Null
 }
 
 Write-Host "[OK] federation cross-org smoke orgA=$orgA orgB=$orgB chat=$chatId"

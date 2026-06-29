@@ -1,11 +1,11 @@
-﻿# С‚РµСЃС‚С‹ UI вЂ” data-driven Playwright scenarios (QEMU :19088 / :18080).
+# С‚РµСЃС‚С‹ UI вЂ” data-driven Playwright scenarios (QEMU :19088 / :18080).
 param(
     [ValidateSet("smoke", "pr", "full")]
     [string]$Profile = "smoke",
     [switch]$SkipPreflight,
     [switch]$SyncWebUi,
-    [int]$WaitTimeoutMinutes = 90,
-    [int]$WaitIntervalSec = 180,
+    [int]$WaitTimeoutMinutes = 0,
+    [int]$WaitIntervalSec = 0,
     [switch]$Help
 )
 
@@ -20,7 +20,7 @@ Usage: .\scripts\ui-tests.ps1 [-Profile smoke|pr|full] [-SyncWebUi] [-SkipPrefli
 Waits for QEMU VM/stack before run (default). Per-test wait in Playwright if stack drops mid-suite.
 Profiles: smoke ~138 | pr ~400+ | full 1400 scenarios.
 -SkipPreflight: skip host wait + health gate (debug only).
--WaitTimeoutMinutes / -WaitIntervalSec: host poll before first test (default ping every 3 min).
+-WaitTimeoutMinutes / -WaitIntervalSec: host poll before first test (default 45s; env KORUS_STACK_WAIT_INTERVAL_SEC).
 
 Profiles:
   smoke  ~138 scenarios (PR gate)
@@ -50,11 +50,19 @@ if (-not (Test-Path $runDir)) { New-Item -ItemType Directory -Path $runDir -Forc
 "=== ui-tests started $(Get-Date -Format o) profile=$Profile ===" | Set-Content -Path $runLog -Encoding UTF8
 
 $env:UI_TESTS_PROFILE = $Profile
+if ($Profile -eq "full") {
+    $env:UI_TESTS_UX_STRICT = "1"
+    $env:UI_CONSOLE_GUARD = "1"
+}
 
 $loopScript = Join-Path $PSScriptRoot "playwright-dev-loop.ps1"
+. (Join-Path $Root "deploy\qemu\lib\Get-KorusStackWaitParams.ps1")
+$waitParams = Get-KorusStackWaitParams -TimeoutMinutes $WaitTimeoutMinutes -IntervalSec $WaitIntervalSec
 $waitArgs = @{
-    WaitTimeoutMinutes = $WaitTimeoutMinutes
-    WaitIntervalSec    = $WaitIntervalSec
+    WaitTimeoutMinutes     = $waitParams.TimeoutMinutes
+    WaitIntervalSec        = $waitParams.IntervalSec
+    WaitBusyIntervalSec    = $waitParams.BusyIntervalSec
+    MaxMaintenanceMinutes  = $waitParams.MaxMaintenanceMinutes
 }
 if ($SyncWebUi -and $SkipPreflight) {
     & $loopScript -Tier ui-tests -SyncWebUi -SkipPreflight @waitArgs

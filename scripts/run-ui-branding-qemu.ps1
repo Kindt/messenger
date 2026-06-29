@@ -51,12 +51,12 @@ try {
     try {
         $null = Invoke-RestMethod -Uri "$apiUrl/api/v1/branding/manifest.webmanifest" -TimeoutSec 10
     } catch {
-        Write-Warning "manifest.webmanifest not ready — run: .\scripts\qemu-sync-api-core.ps1 -NoCache ; .\scripts\qemu-guest-job.ps1 -Loop"
+        Write-Warning 'manifest.webmanifest not ready - run: .\scripts\qemu-sync-api-core.ps1 -NoCache ; .\scripts\qemu-guest-job.ps1 -Loop'
         exit 2
     }
 } catch {
     Write-Warning "demo skins / branding setup skipped: $($_.Exception.Message)"
 }
 
-& (Join-Path $Root "scripts\playwright-dev-loop.ps1") -Tier ui-branding -SkipPreflight -SyncWebUi:$false
+& (Join-Path $Root "scripts\playwright-dev-loop.ps1") -Tier ui-branding -SkipPreflight -SyncWebUi $false
 exit $LASTEXITCODE

@@ -71,6 +71,7 @@ tests/e2e-web/specs/*
 !tests/e2e-web/specs/ui-visual-regression.spec.ts
 !tests/e2e-web/specs/ui-visual-regression.spec.ts-snapshots/
 !tests/e2e-web/specs/ui-visual-regression.spec.ts-snapshots/**
+!tests/e2e-web/specs/ui-tests.spec.ts
 !tests/e2e-web/playwright-tiers.json
 AGENTS.md
 CHANGELOG.md

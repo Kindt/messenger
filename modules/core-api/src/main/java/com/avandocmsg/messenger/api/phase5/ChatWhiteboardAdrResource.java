@@ -42,9 +42,7 @@ public class ChatWhiteboardAdrResource {
         var cid = UuidParams.required(chatId, "chat_id");
         return service.getWhiteboard(cid, userId)
             .map(row -> Response.ok(WhiteboardResponse.from(row)).build())
-            .orElse(Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.phase5.not_found")))
-                .build());
+            .orElse(Response.ok(new WhiteboardResponse(null, cid.toString(), "", "{}", null)).build());
     }
 
     @PUT

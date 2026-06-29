@@ -18,6 +18,8 @@
     },
   };
 
+  var localeSwitchSeq = 0;
+
   function L(key, params) {
     return i18n.t(key, params);
   }
@@ -412,6 +414,7 @@
     exportProgressLabel: null,
     serverVersion: null,
     membersModalOpen: false,
+    threadMoreOpen: false,
     chatMembers: null,
     chatBans: null,
     chatMembersBusy: false,
@@ -2277,7 +2280,6 @@
       }
     } catch (e) {
       state.error = e.message || L("chat.loadMembersFailed");
-      state.membersModalOpen = false;
     } finally {
       state.chatMembersBusy = false;
       render();
@@ -2286,6 +2288,7 @@
 
   function openMembersModal() {
     state.membersModalOpen = true;
+    render();
     loadChatMembersModal();
   }
 
@@ -3371,6 +3374,7 @@
     state.messageSearchHits = null;
     state.pollCreateOpen = false;
     state.threadExtrasTab = null;
+    state.threadMoreOpen = false;
     state.messageSearchScope = "auto";
     state.uiPaneFocus = "thread";
     state.scheduleSendOpen = false;
@@ -4772,7 +4776,6 @@
     }
     state.callPanelOpen = true;
     if (!meshCallChatReady()) {
-      state.callPanelOpen = false;
       state.error = L("conference.meshNeedsChat");
       render();
       return;
@@ -5512,7 +5515,7 @@
 
   async function loadPlatformCaps() {
     try {
-      state.platformCaps = await apiJson("/platform/capabilities", { method: "GET", noAuth: true });
+      state.platformCaps = await apiJson("/platform/capabilities", { method: "GET" });
     } catch (e) {
       state.platformCaps = null;
     }
@@ -5707,8 +5710,9 @@
   async function markMessageRead(chatId, messageId) {
     if (!state.tokens || !chatId || !messageId) return;
     try {
-      await apiFetch("/chats/" + chatId + "/messages/" + messageId + "/read", {
+      await apiJson("/chats/" + chatId + "/read-batch", {
         method: "POST",
+        jsonBody: { message_ids: [messageId] },
       });
     } catch (e) {}
   }
@@ -5874,9 +5878,6 @@
           if (isPlatformFeatureVisible("collaboration.kanban.list")) {
             loadChatKanban(chatId).catch(function () {});
           }
-          if (isPlatformFeatureVisible("collaboration.whiteboard.open")) {
-            loadChatWhiteboard(chatId).catch(function () {});
-          }
         }
       } catch (e) {
         if (!stale()) scheduleRender();
@@ -5948,6 +5949,7 @@
       });
       state.pollCreateOpen = false;
       await loadChatPolls(state.selectedId);
+      state.threadExtrasTab = "polls";
     } catch (err) {
       state.error = err.message || L("ui.polls.createFailed");
     } finally {
@@ -6739,13 +6741,30 @@
     render();
   }
 
+  function isEditableTextMessage(m) {
+    if (!m || m.deleted) return false;
+    if (m.type === "text") return true;
+    return isE2eeType(m.type) && e2eePlainType(m.type) === "text";
+  }
+
   async function editMessagePrompt(m) {
-    if (!state.selectedId || !m || m.deleted || m.type !== "text") return;
+    if (!state.selectedId || !m || !isEditableTextMessage(m)) return;
+    var body = m.content || "";
+    if (isE2eeType(m.type)) {
+      var cached = state.e2eePlaintextCache && state.e2eePlaintextCache[m.id];
+      if (cached) {
+        body = cached;
+      } else {
+        var loaded = await loadE2eePlaintext(state.selectedId, m.id);
+        body = loaded || "";
+      }
+    }
     state.phase5Modal = {
       mode: "edit",
       messageId: m.id,
+      messageType: m.type,
       title: L("ui.edit.title"),
-      body: m.content || "",
+      body: body,
     };
     render();
   }
@@ -6757,17 +6776,33 @@
     state.busy = true;
     render();
     try {
+      var contentToSend = text;
+      var existing = findCachedMessage(state.selectedId, modal.messageId);
+      var msgType = (existing && existing.type) || modal.messageType || "text";
+      if (isE2eeType(msgType) && preferredE2eeScheme() === "mls") {
+        await mlsEnsureKeyPackage();
+        var enc = await mlsClientEncrypt(text, state.selectedId);
+        if (!enc) {
+          throw new Error(
+            "MLS client encrypt failed — reload page or check browser crypto support"
+          );
+        }
+        contentToSend = enc;
+      }
       var updated = await apiJson(
         "/chats/" + state.selectedId + "/messages/" + modal.messageId,
         {
           method: "PATCH",
-          jsonBody: { content: text },
+          jsonBody: { content: contentToSend },
         }
       );
       state.phase5Modal = null;
       if (updated && updated.id) {
         mergeMessageIntoThread(updated);
-        if (isE2eeType(updated.type) && state.e2eePlaintextCache) {
+        if (isE2eeType(updated.type)) {
+          if (!state.e2eePlaintextCache) state.e2eePlaintextCache = {};
+          state.e2eePlaintextCache[updated.id] = text;
+        } else if (state.e2eePlaintextCache) {
           delete state.e2eePlaintextCache[updated.id];
         }
         syncPreviewIfLastMessage(state.selectedId, updated.id);
@@ -8253,6 +8288,10 @@
   }
 
   function renderAuth() {
+    var prevU = document.getElementById("u");
+    var prevP = document.getElementById("p");
+    var uDraft = prevU ? prevU.value : "";
+    var pDraft = prevP ? prevP.value : "";
     var root = document.getElementById("root");
     root.innerHTML = "";
     var layout = authLayoutMode();
@@ -8274,6 +8313,14 @@
     }
     mountAppNotice(shell);
     root.appendChild(shell);
+    if (uDraft) {
+      var uEl = document.getElementById("u");
+      if (uEl) uEl.value = uDraft;
+    }
+    if (pDraft) {
+      var pEl = document.getElementById("p");
+      if (pEl) pEl.value = pDraft;
+    }
   }
 
   function field(id, label, type, auto, required, minL, maxL) {
@@ -9230,12 +9277,15 @@
       bLoc.setAttribute("aria-pressed", currentLocale === code ? "true" : "false");
       bLoc.onclick = (function (localeCode) {
         return function () {
+          var seq = ++localeSwitchSeq;
           i18n
             .setLocale(localeCode)
             .then(function () {
+              if (seq !== localeSwitchSeq) return;
               return persistUiLocale(localeCode, { silent: false });
             })
             .then(function () {
+              if (seq !== localeSwitchSeq || !state.tokens) return;
               render();
             });
         };
@@ -9330,7 +9380,7 @@
     var avRow = el("div", "settings-row settings-avatar-row");
     avRow.appendChild(
       renderAvatarNode({
-        url: state.myAvatarUrl,
+        url: state.myAvatarHidden ? null : state.myAvatarUrl,
         title: state.myDisplayName || state.myUsername || "?",
         userId: meId,
         size: "lg",
@@ -9384,6 +9434,8 @@
     hideChk.checked = !!state.myAvatarHidden;
     hideChk.disabled = state.busy;
     hideChk.onchange = function () {
+      state.myAvatarHidden = !!hideChk.checked;
+      render();
       saveAvatarHidden(hideChk.checked);
     };
     hideLbl.appendChild(hideChk);
@@ -10016,6 +10068,18 @@
       },
     });
     hdrR.appendChild(meetingsBtn);
+    if (state.tokens) {
+      hdrR.appendChild(
+        iconBtn("📞", uiLabelFallback("ui.call.title", "Звонки", "Calls"), {
+          testId: "call-panel-toggle",
+          primary: state.callPanelOpen,
+          disabled: state.callPanelToggleBusy,
+          onClick: function () {
+            toggleCallPanel();
+          },
+        })
+      );
+    }
     if (state.tokens && state.myPresence) {
       var presPill = el("button", "presence-pill presence-" + state.myPresence);
       presPill.type = "button";
@@ -10171,6 +10235,15 @@
       })
     );
     sh.appendChild(topRow);
+    if (state.sidebarMode === "chats") {
+      var msgSearchHost = el("div", "sidebar-message-search");
+      msgSearchHost.setAttribute("data-testid", "sidebar-message-search");
+      appendMessageSearchBar(msgSearchHost, {
+        testId: "message-search-sidebar",
+        paneFocus: "sidebar",
+      });
+      sh.appendChild(msgSearchHost);
+    }
     var modeBar = el("div", "sidebar-mode-bar");
     var tabs = el("div", "sidebar-tabs");
     tabs.appendChild(
@@ -10753,13 +10826,12 @@
       }
       if (sel && sel.type !== "saved") {
         var moreWrap = el("div", "thread-more-wrap");
-        var moreOpen = false;
         var morePop = el("div", "thread-more-pop");
-        morePop.style.display = "none";
+        morePop.style.display = state.threadMoreOpen ? "flex" : "none";
         morePop.setAttribute("data-testid", "thread-more-pop");
         var moreIcons = el("div", "thread-more-icons composer-more-icons");
         function closeThreadMoreMenu() {
-          moreOpen = false;
+          state.threadMoreOpen = false;
           morePop.style.display = "none";
         }
         function wrapThreadMoreAction(handler) {
@@ -10895,8 +10967,8 @@
           bThreadMore.setAttribute("data-testid", "thread-more-toggle");
           bThreadMore.textContent = "⋯";
           bThreadMore.onclick = function () {
-            moreOpen = !moreOpen;
-            morePop.style.display = moreOpen ? "flex" : "none";
+            state.threadMoreOpen = !state.threadMoreOpen;
+            morePop.style.display = state.threadMoreOpen ? "flex" : "none";
           };
           moreWrap.appendChild(bThreadMore);
           moreWrap.appendChild(morePop);

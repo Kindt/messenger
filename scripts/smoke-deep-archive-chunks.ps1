@@ -186,7 +186,14 @@ function Resolve-ServerHostKey {
     param([string]$ExplicitHostKey)
     if ($ExplicitHostKey) { return $ExplicitHostKey }
     $scriptDir = $PSScriptRoot
-    $serverSerial = Join-Path (Join-Path $scriptDir "..\deploy\qemu\run") "server-serial.log"
+    $repoRoot = Split-Path -Parent $scriptDir
+    $serverSerial = Join-Path (Join-Path $repoRoot "deploy\qemu\run") "server-serial.log"
+    $lib = Join-Path $repoRoot "deploy\qemu\lib\Update-KorusGuestRepo.ps1"
+    if (Test-Path $lib) {
+        . $lib
+        $hk = Get-KorusEd25519HostKey -SerialPath $serverSerial -Role server -SshPort 12221
+        if ($hk) { return $hk }
+    }
     if (-not (Test-Path $serverSerial)) {
         throw "server serial log not found: $serverSerial (pass -SshHostKey to skip auto-detect)"
     }

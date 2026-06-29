@@ -3,10 +3,10 @@
 # Optional browser DOM/RTC gates: docs/parity/HANDOFF.md
 param(
     [string]$BaseUrl = "http://127.0.0.1:18080",
-    [string]$User = "csadmin",
-    [string]$Pass = "csadmin",
-    [string]$SecondUser = "admin",
-    [string]$SecondPass = "admin",
+    [string]$User = "smoke_user_a",
+    [string]$Pass = "smokepass123",
+    [string]$SecondUser = "smoke_user_b",
+    [string]$SecondPass = "smokepass123",
     [switch]$SkipExport
 )
 
@@ -19,13 +19,29 @@ function Fail([string]$Message) {
 }
 
 function Get-Token([string]$Username, [string]$Password) {
-    $login = Invoke-RestMethod -Uri "$BaseUrl/api/v1/auth/login" -Method Post `
-        -Body (@{ username = $Username; password = $Password } | ConvertTo-Json) `
-        -ContentType "application/json; charset=utf-8"
-    $t = $login.access_token
-    if (-not $t) { $t = $login.accessToken }
-    if (-not $t) { Fail "No token for $Username" }
-    return $t
+    $maxAttempts = 6
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        try {
+            $login = Invoke-RestMethod -Uri "$BaseUrl/api/v1/auth/login" -Method Post `
+                -Body (@{ username = $Username; password = $Password } | ConvertTo-Json) `
+                -ContentType "application/json; charset=utf-8"
+            $t = $login.access_token
+            if (-not $t) { $t = $login.accessToken }
+            if (-not $t) { Fail "No token for $Username" }
+            return $t
+        } catch {
+            $code = $null
+            if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
+            if ($code -eq 429 -and $attempt -lt $maxAttempts) {
+                $waitSec = [Math]::Min(20 * $attempt, 120)
+                Write-Host "login 429 for $Username - retry in ${waitSec}s ($attempt/$maxAttempts)" -ForegroundColor Yellow
+                Start-Sleep -Seconds $waitSec
+                continue
+            }
+            throw
+        }
+    }
+    Fail "No token for $Username after $maxAttempts attempts"
 }
 
 function Step([string]$Title, [scriptblock]$Action) {
@@ -155,7 +171,7 @@ if (-not $SkipExport) {
     }
 
     Step "T016: export request and status (API)" {
-        & (Join-Path $scriptDir "smoke-export-chat.ps1") -BaseUrl $BaseUrl -ChatId $chatId -SkipDownload
+        & (Join-Path $scriptDir "smoke-export-chat.ps1") -BaseUrl $BaseUrl -ChatId $chatId -User $User -Pass $Pass -SkipDownload
         if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) {
             Fail "smoke-export-chat.ps1 failed"
         }

@@ -50,6 +50,12 @@ class JwtAuthFilterPublicPathsTest {
     }
 
     @Test
+    void platformCapabilities_isPublic() {
+        assertTrue(JwtAuthFilter.isPublicJerseyPath("v1/platform/capabilities"));
+        assertTrue(JwtAuthFilter.isPublicJerseyPath("/api/v1/platform/capabilities"));
+    }
+
+    @Test
     void protectedPath_requiresAuth() {
         assertFalse(JwtAuthFilter.isPublicJerseyPath("v1/chats"));
         assertFalse(JwtAuthFilter.isPublicJerseyPath("/api/v1/users/me"));

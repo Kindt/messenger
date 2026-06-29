@@ -1,0 +1,18 @@
+# QEMU regression profile: full addons on dev secrets + SCIM lab token (spec 029).
+# Not for stage/prod — use Ansible vault secrets with real addon deploy.
+services:
+  core-api:
+    environment:
+      KORUS_LAB_ALLOW_DEV_SECRETS: "true"
+      SCIM_BEARER_TOKEN: korus-scim-lab-demo
+      FILE_PRESIGN_REDIRECT_ENABLED: "false"
+      EXPORT_ADMIN_SUGGEST_ENABLED: "true"
+      EXPORT_ADMIN_EXPORT_ENABLED: "true"
+      EXPORT_SUGGESTED_SUBSCRIBER_ENABLED: "true"
+  export-replay-worker:
+    environment:
+      EXPORT_REPLAY_INCLUDE_FILE_BODIES: "true"
+  deep-archiver-worker:
+    environment:
+      # Metadata-only deep-archive snapshots are ~400 B; threshold must be below that for chunk smoke.
+      DEEP_ARCHIVE_CHUNK_SIZE_BYTES: "256"

@@ -27,7 +27,15 @@ Write-Host "GET $healthUrl ..." -ForegroundColor Cyan
 try {
     $h = Invoke-WebRequest -Uri $healthUrl -Method Get -UseBasicParsing
     if ($h.StatusCode -ne 200) { Fail "health status $($h.StatusCode)" }
-    if ($h.Content.Trim() -ne "ok") { Fail "health body expected 'ok', got: $($h.Content)" }
+    $body = $h.Content.Trim()
+    $healthOk = ($body -eq "ok")
+    if (-not $healthOk -and $body.StartsWith("{")) {
+        try {
+            $parsed = $body | ConvertFrom-Json
+            $healthOk = ($parsed.status -eq "ok")
+        } catch { }
+    }
+    if (-not $healthOk) { Fail "health body expected ok, got: $body" }
 } catch {
     Fail "health: $_"
 }

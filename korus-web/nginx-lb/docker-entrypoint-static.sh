@@ -26,12 +26,41 @@ for _var in KORUS_WS_GATEWAY_HOST KORUS_WS_GATEWAY_PORT WEB_CLIENT_API_UPSTREAM_
   eval "export _escaped_$_var=\$(escape_sed \"\$_val\")"
 done
 
+json_quote() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g' | sed 's/^/"/; s/$/"/'
+}
+
+write_web_client_env_js() {
+  _ws_url="${WEB_CLIENT_WS_PUBLIC_URL:-ws://127.0.0.1:8081/ws}"
+  _ws_url="${_ws_url%/}"
+  _ice_raw="${WEB_CLIENT_RTC_ICE_SERVERS:-}"
+  _vapid_raw="${WEB_CLIENT_VAPID_PUBLIC_KEY:-}"
+  _disable_sw="${WEB_CLIENT_DISABLE_SW:-}"
+
+  if [ -n "$(printf '%s' "$_ice_raw" | tr -d '[:space:]')" ]; then
+    _ice_js="$(json_quote "$_ice_raw")"
+  else
+    _ice_js="null"
+  fi
+  if [ -n "$(printf '%s' "$_vapid_raw" | tr -d '[:space:]')" ]; then
+    _vapid_js="$(json_quote "$_vapid_raw")"
+  else
+    _vapid_js="null"
+  fi
+  case "$_disable_sw" in
+    1|true|TRUE|True) _sw_js="true" ;;
+    *) _sw_js="false" ;;
+  esac
+  printf 'window.__WEB_CLIENT__ = { wsUrl: %s, iceServersJson: %s, vapidPublicKey: %s, disableServiceWorker: %s };\n' \
+    "$(json_quote "$_ws_url")" "$_ice_js" "$_vapid_js" "$_sw_js" \
+    > /var/lib/korus/web-client-env.js
+}
+
 mkdir -p /var/lib/korus
 if command -v python3 >/dev/null 2>&1 && [ -f /opt/korus/generate-web-client-env.py ]; then
   python3 /opt/korus/generate-web-client-env.py -o /var/lib/korus/web-client-env.js
 else
-  echo 'window.__WEB_CLIENT__ = { wsUrl: "ws://127.0.0.1:8081/ws", iceServersJson: null, vapidPublicKey: null, disableServiceWorker: false };' \
-    > /var/lib/korus/web-client-env.js
+  write_web_client_env_js
 fi
 
 _template="${NGINX_CONF_TEMPLATE:-/etc/nginx/nginx.conf.static.template}"

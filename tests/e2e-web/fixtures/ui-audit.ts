@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { expect, Page, TestInfo } from "@playwright/test";
+import { attachConsoleGuard, type ConsoleGuard } from "./console-guard";
 import { expectNoHorizontalScroll } from "./mobile-ui";
 
 export type UiAuditViewport = {
@@ -52,35 +53,26 @@ export type UiAuditErrorCollector = {
   expectNoCollectedErrors: (surface: string) => void;
 };
 
-const DEFAULT_DANGEROUS_RE =
-  /(delete|remove|purge|revoke|destroy|wipe|drop|ban|block|unblock|logout|sign\s*out|end\s*call|retention|legal\s*hold|cancel\s+(?:scheduled|reminder)|удал|очист|отозв|заблок|выйти|заверш|ретенц|legal hold)/i;
-
-const HARMLESS_CONSOLE_RE =
-  /Failed to load resource: the server responded with a status of \d+|favicon|ResizeObserver loop limit exceeded/i;
 const ARTIFACT_RUN_ID = new Date().toISOString().replace(/[:.]/g, "-");
 const ARTIFACT_ROOT = process.env.UI_AUDIT_SCREENSHOT_DIR
   ? path.resolve(process.env.UI_AUDIT_SCREENSHOT_DIR)
   : path.join(process.cwd(), "artifacts", "ui-interaction-audit", ARTIFACT_RUN_ID);
 const diskArtifacts: UiAuditDiskArtifact[] = [];
 
+const DEFAULT_DANGEROUS_RE =
+  /(delete|remove|purge|revoke|destroy|wipe|drop|ban|block|unblock|logout|sign\s*out|end\s*call|retention|legal\s*hold|cancel\s+(?:scheduled|reminder)|удал|очист|отозв|заблок|выйти|заверш|ретенц|legal hold)/i;
+
 export function attachUiAuditErrorCollector(page: Page): UiAuditErrorCollector {
-  const errors: string[] = [];
-  page.on("pageerror", (err) => {
-    errors.push(`pageerror: ${err.message}`);
-  });
-  page.on("console", (msg) => {
-    if (msg.type() !== "error") return;
-    const text = msg.text();
-    if (HARMLESS_CONSOLE_RE.test(text)) return;
-    errors.push(`console.error: ${text}`);
-  });
+  const guard = attachConsoleGuard(page);
   page.on("dialog", (dialog) => {
     dialog.dismiss().catch(() => {});
   });
   return {
-    errors,
+    get errors() {
+      return guard.issues.map((i) => `${i.kind}: ${i.text}`);
+    },
     expectNoCollectedErrors(surface: string) {
-      expect(errors, `${surface} collected console/page errors:\n${errors.join("\n")}`).toEqual([]);
+      guard.assertClean(surface);
     },
   };
 }

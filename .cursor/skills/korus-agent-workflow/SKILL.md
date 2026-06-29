@@ -37,7 +37,7 @@ For **tracked features** in `specs/<NNN-feature>/`:
 3. **speckit-tasks** - `tasks.md`
 4. **speckit-implement** - execute tasks, update `tasks.md` checkboxes
 
-Current active plan: `specs/011-korus-cloud-platform/plan.md` (Phase 0–1 closed). **Live-server ops:** `specs/015-live-server-ops-backlog/` (deferred registry).
+Current active plan: `specs/011-korus-cloud-platform/plan.md` (Phase 0–1 closed). **Live-server ops:** `specs/015-live-server-ops-backlog/` (deferred registry). **VM lab acceptance:** `specs/029-qemu-vm-acceptance/` (VMA registry). **Product verification:** `specs/030-vpp-product-verification/` (VPP — всеобъемлющая проверка продукта, `run-vpp-until-green.ps1` until GREEN).
 
 Do **not** replace speckit with superpowers `writing-plans` for formal spec-kit features.
 
@@ -52,6 +52,7 @@ Do **not** replace speckit with superpowers `writing-plans` for formal spec-kit 
 | **Git push** | **Only** `.\scripts\git-push.ps1` (never raw `git push` — corporate proxy breaks GitHub). See `.cursor/rules/git-push-proxy-bypass.mdc` |
 | **Scope** | Minimal diff; do not refactor unrelated code |
 | **PR gate** | `./gradlew buildIntegrity` |
+| **Product gate** | VPP until GREEN — `.\scripts\run-vpp-until-green.ps1`; on FAIL: fix, **resume from `vpp-checkpoint.json`** (not full restart), then **one final full verify pass** (spec 030, `vpp-until-green.mdc`) |
 | **Live stack** | Docker Compose + Ansible — [`deploy/ansible/DEPLOY_QUICKSTART.md`](../../deploy/ansible/DEPLOY_QUICKSTART.md). QEMU scripts — **not in Git** (`.gitignore`, local optional) |
 | **QEMU long jobs** | **Do not block** on long IDE terminals (rebuild 15–90 min). Launch `qemu-sync-api-core.ps1 -NoCache`, poll `qemu-guest-job.ps1` or `-Loop` every **3 min**. See [`.cursor/rules/qemu-host-isolation.mdc`](../../.cursor/rules/qemu-host-isolation.mdc) |
 | **E2E** | Playwright — [`tests/e2e-web/README.md`](../../tests/e2e-web/README.md) against running API/UI |

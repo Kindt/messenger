@@ -22,6 +22,7 @@
     "ui-i18n-artifacts",
     "ui-avatar",
     "ui-push",
+    "vpp-ui-blocks",
     "e2ee-openmls-interop"
   ],
   "tiers": {
@@ -161,6 +162,10 @@
       "description": "Web Push device register + VAPID settings API",
       "args": ["specs/web-push.spec.ts"]
     },
+    "vpp-ui-blocks": {
+      "description": "Spec 030 VPP — individual UI blocks + addon combo visibility with UX rubric",
+      "args": ["specs/vpp-module-combo-ui.spec.ts"]
+    },
     "full": {
       "description": "All specs (outer gate only)",
       "args": []
@@ -168,6 +173,10 @@
     "all-inner": {
       "description": "Run all inner tiers sequentially",
       "sequential": ["api", "ui-auth", "ui-mobile", "ui-visual", "ui-visual-regression", "ui-conversation", "ui-messaging", "ui-messaging-extended", "ui-files", "ui-conference", "ui-call-flows", "ui-live", "ui-e2ee", "ui-bot", "ui-admin", "ui-admin-extended", "ui-i18n-artifacts", "ui-branding", "ui-shell-layouts", "ui-avatar", "ui-push", "e2ee-openmls-interop", "ui-tests"]
+    },
+    "all-inner-core": {
+      "description": "all-inner without ui-tests (ui-ux-full runs manifest separately in VPP full)",
+      "sequential": ["api", "ui-auth", "ui-mobile", "ui-visual", "ui-visual-regression", "ui-conversation", "ui-messaging", "ui-messaging-extended", "ui-files", "ui-conference", "ui-call-flows", "ui-live", "ui-e2ee", "ui-bot", "ui-admin", "ui-admin-extended", "ui-i18n-artifacts", "ui-branding", "ui-shell-layouts", "ui-avatar", "ui-push", "e2ee-openmls-interop"]
     }
   },
   "tierRequirements": {
@@ -190,6 +199,7 @@
     "ui-ux-smoke": [],
     "ui-ux-pr": [],
     "ui-ux-full": [],
+    "vpp-ui-blocks": [],
     "api": []
   }
 }

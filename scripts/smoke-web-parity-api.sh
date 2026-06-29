@@ -3,10 +3,10 @@
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://127.0.0.1:8080}"
-USER="${SMOKE_USER:-csadmin}"
-PASS="${SMOKE_PASS:-csadmin}"
-SECOND_USER="${SMOKE_SECOND_USER:-admin}"
-SECOND_PASS="${SMOKE_SECOND_PASS:-admin}"
+USER="${SMOKE_USER:-smoke_user_a}"
+PASS="${SMOKE_PASS:-smokepass123}"
+SECOND_USER="${SMOKE_SECOND_USER:-smoke_user_b}"
+SECOND_PASS="${SMOKE_SECOND_PASS:-smokepass123}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in

@@ -3,7 +3,8 @@
  * First baseline: npx playwright test specs/ui-visual-regression.spec.ts --update-snapshots
  * Tier: ui-visual-regression (playwright-tiers.json)
  */
-import { expect, Page, test } from "@playwright/test";
+import { Page } from "@playwright/test";
+import { expect, test } from "../fixtures/test-with-qemu-wait";
 import { apiCreateGroup, apiLogin, apiMeId, ensureSmokeUsers } from "../fixtures/auth";
 import { uiLogin, uiOpenChatByTitle } from "../fixtures/ui";
 

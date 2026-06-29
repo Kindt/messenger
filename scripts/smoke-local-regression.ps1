@@ -6,6 +6,8 @@ param(
     [int]$ServerSshPort = 12221,
     [switch]$NoPrepareProfile,
     [switch]$SkipContainerPortability,
+    [switch]$SkipW1b,
+    [switch]$WriteEvidence,
     [int]$ContainerPollSeconds = 20,
     [int]$ContainerPollCount = 20,
     [switch]$Help
@@ -19,6 +21,9 @@ Usage:
   .\scripts\smoke-local-regression.ps1
   .\scripts\smoke-local-regression.ps1 -SkipContainerPortability
   .\scripts\smoke-local-regression.ps1 -NoPrepareProfile
+  .\scripts\smoke-local-regression.ps1 -SkipW1b -WriteEvidence
+
+Runs W1b: voice message, federation trust/cross-org, bot-api (spec 029).
 
 Runs the canonical local QEMU smoke regression against:
   API: $ApiBaseUrl
@@ -74,7 +79,7 @@ function Invoke-ServerGuestScript {
 }
 
 function Prepare-RegressionProfile {
-    $addons = "addon-productivity,addon-engage,addon-search,addon-collaboration,addon-live,addon-retention,addon-archive,addon-deep-archive,addon-export,addon-enterprise-auth,addon-e2ee,addon-bots,addon-integrations,addon-migration-import"
+    $addons = "addon-productivity,addon-engage,addon-search,addon-collaboration,addon-ai,addon-live,addon-retention,addon-archive,addon-deep-archive,addon-export,addon-enterprise-auth,addon-e2ee,addon-bots,addon-integrations,addon-federation,addon-dlp,addon-migration-import"
     $script = @"
 set -e
 cd /mnt/korus
@@ -85,11 +90,12 @@ fleet = Path("docker/fleet-targets.qemu.json").read_text(encoding="utf-8").strip
 Path("/tmp/korus-qemu-regress.env").write_text(
     f"FLEET_TARGETS_JSON={fleet}\n"
     "FLEET_AGGREGATOR_NODE=core-api@qemu-server\n"
-    f"KORUS_PRODUCT_ADDONS={addons}\n",
+    f"KORUS_PRODUCT_ADDONS={addons}\n"
+    "SCIM_BEARER_TOKEN=korus-scim-lab-demo\n",
     encoding="utf-8",
 )
 PY
-sudo docker compose --env-file /tmp/korus-qemu-regress.env -f docker/docker-compose.full-server.yml -f docker/docker-compose.fleet-lab.yml up -d core-api
+sudo docker compose --env-file /tmp/korus-qemu-regress.env -f docker/docker-compose.full-server.yml -f docker/docker-compose.fleet-lab.yml -f docker/docker-compose.qemu-regression-lab.yml up -d core-api
 for i in `$(seq 1 40); do
   code=`$(curl -sS -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/v1/health || true)
   echo health=`$code
@@ -219,6 +225,29 @@ Invoke-RegressionStep "cell multi-org qemu" {
     & (Join-Path $PSScriptRoot "smoke-cell-multi-org-qemu.ps1") -BaseUrl $ApiBaseUrl
 }
 
+if (-not $SkipW1b) {
+    Invoke-RegressionStep "voice message" {
+        & (Join-Path $PSScriptRoot "smoke-voice-message.ps1") -BaseUrl $ApiBaseUrl -User "csadmin" -Pass "csadmin"
+    }
+    Invoke-RegressionStep "federation trust" {
+        & (Join-Path $PSScriptRoot "smoke-federation-trust.ps1") -BaseUrl $ApiBaseUrl
+    }
+    Invoke-RegressionStep "federation cross-org" {
+        & (Join-Path $PSScriptRoot "smoke-federation-cross-org.ps1") -BaseUrl $ApiBaseUrl
+    }
+    Invoke-RegressionStep "bot api" {
+        & (Join-Path $PSScriptRoot "smoke-bot-api.ps1") -BaseUrl $ApiBaseUrl
+    }
+    Invoke-RegressionStep "ip allowlist" {
+        $env:SCIM_BEARER_TOKEN = "korus-scim-lab-demo"
+        & (Join-Path $PSScriptRoot "smoke-ip-allowlist.ps1") -BaseUrl $ApiBaseUrl -RequireEnforce
+    }
+    Invoke-RegressionStep "scim lab token" {
+        $env:SCIM_BEARER_TOKEN = "korus-scim-lab-demo"
+        & (Join-Path $PSScriptRoot "smoke-scim-lab-token.ps1") -BaseUrl $ApiBaseUrl
+    }
+}
+
 if (-not $SkipContainerPortability) {
     Invoke-RegressionStep "container portability qemu" {
         Invoke-ContainerPortabilitySmoke
@@ -227,3 +256,13 @@ if (-not $SkipContainerPortability) {
 
 Write-Host ""
 Write-Host "[OK] QEMU one-pass regression green" -ForegroundColor Green
+
+if ($WriteEvidence) {
+    $addons = @(
+        "addon-productivity", "addon-engage", "addon-search", "addon-collaboration", "addon-ai",
+        "addon-live", "addon-retention", "addon-archive", "addon-deep-archive", "addon-export",
+        "addon-enterprise-auth", "addon-e2ee", "addon-bots", "addon-integrations",
+        "addon-federation", "addon-dlp", "addon-migration-import"
+    )
+    & (Join-Path $PSScriptRoot "Write-VmaEvidence.ps1") -Level L2 -Gates @{ W1_regression = "PASS"; buildIntegrity = "NOT_RUN" } -AddonsEnabled $addons
+}

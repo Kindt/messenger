@@ -323,7 +323,12 @@
           })
         );
       }
-      if (ctx.myId && m.sender_id === ctx.myId && m.type === "text") {
+      if (
+        ctx.myId &&
+        m.sender_id === ctx.myId &&
+        (m.type === "text" ||
+          (ctx.isE2eeType(m.type) && ctx.e2eePlainType(m.type) === "text"))
+      ) {
         actions.appendChild(
           ctx.iconBtn("✎", ctx.L("ui.actions.edit"), {
             testId: "message-edit-button",

@@ -1,23 +1,27 @@
 # US9 inner loop: preflight + tiered Playwright against live QEMU stack (host browser OK).
 param(
-    [ValidateSet('api', 'ui-auth', 'ui-mobile', 'ui-visual', 'ui-visual-regression', 'ui-conversation', 'ui-messaging', 'ui-files', 'ui-conference', 'ui-call-flows', 'ui-live', 'ui-e2ee', 'ui-bot', 'ui-admin', 'ui-admin-extended', 'ui-interaction-audit', 'ui-branding', 'ui-shell-layouts', 'ui-i18n-artifacts', 'ui-avatar', 'ui-tests', 'e2ee-openmls-interop', 'full', 'all-inner')]
+    [ValidateSet('api', 'ui-auth', 'ui-mobile', 'ui-visual', 'ui-visual-regression', 'ui-conversation', 'ui-messaging', 'ui-messaging-extended', 'ui-files', 'ui-conference', 'ui-call-flows', 'ui-live', 'ui-e2ee', 'ui-bot', 'ui-admin', 'ui-admin-extended', 'ui-interaction-audit', 'ui-branding', 'ui-shell-layouts', 'ui-i18n-artifacts', 'ui-avatar', 'ui-push', 'ui-tests', 'ui-ux-smoke', 'ui-ux-pr', 'ui-ux-full', 'vpp-ui-blocks', 'e2ee-openmls-interop', 'full', 'all-inner', 'all-inner-core')]
     [string]$Tier = 'api',
     [switch]$SkipPreflight,
     [switch]$WaitForStack,
-    [int]$WaitTimeoutMinutes = 90,
-    [int]$WaitIntervalSec = 180,
+    [int]$WaitTimeoutMinutes = 0,
+    [int]$WaitIntervalSec = 0,
+    [int]$WaitBusyIntervalSec = 0,
+    [int]$MaxMaintenanceMinutes = 0,
     [switch]$SyncWebUi,
+    [int]$StartAfterTestIndex = 0,
     [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 if ($Help) {
     Write-Host @"
-Usage: .\scripts\playwright-dev-loop.ps1 [-Tier api|...] [-SyncWebUi] [-WaitForStack] [-WaitTimeoutMinutes 90]
+Usage: .\scripts\playwright-dev-loop.ps1 [-Tier api|...] [-SyncWebUi] [-WaitForStack]
 
 Fast Playwright against http://127.0.0.1:19088 / :18080 (QEMU must be up).
--WaitForStack (default ON): poll VM/health until ready (ping every 3 min by default).
+-WaitForStack (default ON): poll VM/health until ready (default every 45s; maintenance every 15s).
 -SkipPreflight skips wait and health checks (offline debug only).
+Env: KORUS_STACK_WAIT_INTERVAL_SEC, KORUS_STACK_BUSY_INTERVAL_SEC, KORUS_STACK_MAX_MAINTENANCE_MIN (default 20, fail-fast on hung redeploy lock).
 -SyncWebUi runs qemu-web-sync.ps1 first (~10s, requires hotswap enabled).
 Updates deploy/qemu/run/inner-tier-status.json and plan-failure-analysis.json on failure.
 
@@ -43,7 +47,11 @@ if (-not (Test-Path $RunDir)) { New-Item -ItemType Directory -Path $RunDir -Forc
 
 . (Join-Path $Root "deploy\qemu\lib\Invoke-KorusPlanFailureAnalysis.ps1")
 . (Join-Path $Root "deploy\qemu\lib\Get-KorusInnerTierStatus.ps1")
+. (Join-Path $Root "deploy\qemu\lib\Get-KorusStackWaitParams.ps1")
 . (Join-Path $Root "deploy\qemu\lib\Wait-KorusPlanPlaywrightStack.ps1")
+
+$waitParams = Get-KorusStackWaitParams -TimeoutMinutes $WaitTimeoutMinutes -IntervalSec $WaitIntervalSec `
+    -BusyIntervalSec $WaitBusyIntervalSec -MaxMaintenanceMinutes $MaxMaintenanceMinutes
 
 $doWait = $WaitForStack.IsPresent -or (-not $SkipPreflight -and -not $PSBoundParameters.ContainsKey('WaitForStack'))
 
@@ -54,10 +62,18 @@ $env:KORUS_API_URL = "http://127.0.0.1:18080"
 function Invoke-TierPlaywright {
     param(
         [string]$TierName,
-        [object]$TierDef
+        [object]$TierDef,
+        [int]$ResumeAfterIndex = 0
     )
     $e2e = Join-Path $Root "tests\e2e-web"
     $log = Join-Path $RunDir "playwright-dev-loop.log"
+    $prevStartAfter = $env:UI_TESTS_START_AFTER_INDEX
+    if ($ResumeAfterIndex -gt 0) {
+        $env:UI_TESTS_START_AFTER_INDEX = "$ResumeAfterIndex"
+        Write-Host "[resume] UI_TESTS_START_AFTER_INDEX=$ResumeAfterIndex (tier=$TierName)" -ForegroundColor Yellow
+    } else {
+        Remove-Item Env:UI_TESTS_START_AFTER_INDEX -ErrorAction SilentlyContinue
+    }
     Push-Location $e2e
     try {
         if (-not (Test-Path node_modules)) {
@@ -88,6 +104,8 @@ function Invoke-TierPlaywright {
         }
         return ($exit -eq 0)
     } finally {
+        if ($null -ne $prevStartAfter) { $env:UI_TESTS_START_AFTER_INDEX = $prevStartAfter }
+        else { Remove-Item Env:UI_TESTS_START_AFTER_INDEX -ErrorAction SilentlyContinue }
         Pop-Location
     }
 }
@@ -114,9 +132,8 @@ if ($SyncWebUi) {
 if (-not $SkipPreflight) {
     try {
         if ($doWait) {
-            Write-Host "Waiting for QEMU stack (timeout ${WaitTimeoutMinutes}m, interval ${WaitIntervalSec}s)..." -ForegroundColor Cyan
-            $pre = Wait-KorusPlanPlaywrightStack -Root $Root -RunDir $RunDir `
-                -TimeoutMinutes $WaitTimeoutMinutes -IntervalSec $WaitIntervalSec
+            Write-Host "Waiting for QEMU stack (timeout $($waitParams.TimeoutMinutes)m, interval $($waitParams.IntervalSec)s, maint-limit $($waitParams.MaxMaintenanceMinutes)m)..." -ForegroundColor Cyan
+            $pre = Wait-KorusPlanPlaywrightStack -Root $Root -RunDir $RunDir @waitParams
         } else {
             $pre = Test-KorusPlanPlaywrightPreflight -Root $Root -RunDir $RunDir
             if (-not $pre.Ok) {
@@ -124,7 +141,7 @@ if (-not $SkipPreflight) {
                 $pre.Issues | ForEach-Object { Write-Host "  $_" }
                 $analysis = Invoke-KorusPlanFailureAnalysis -Kind playwright -RunDir $RunDir -Root $Root `
                     -LastError ("preflight: " + ($pre.Issues -join "; "))
-                if ($Tier -ne 'all-inner') {
+                if ($Tier -ne 'all-inner' -and $Tier -ne 'all-inner-core') {
                     Set-KorusInnerTierResult -RunDir $RunDir -Root $Root -TierName $Tier -Pass $false `
                         -LastError $analysis.summaryRu | Out-Null
                 }
@@ -146,12 +163,21 @@ if (-not $SkipPreflight) {
 
 $manifest = Get-KorusPlaywrightTiersManifest -Root $Root
 
-if ($Tier -eq 'all-inner') {
-    $seq = @($manifest.tiers.'all-inner'.sequential)
+if ($Tier -eq 'all-inner' -or $Tier -eq 'all-inner-core') {
+    $seqKey = if ($Tier -eq 'all-inner-core') { 'all-inner-core' } else { 'all-inner' }
+    $seq = @($manifest.tiers.$seqKey.sequential)
     $failed = @()
     foreach ($t in $seq) {
+        if ($t -eq 'ui-tests') { $env:UI_TESTS_PROFILE = 'smoke' }
+        if ($t -eq 'ui-ux-smoke') { $env:UI_TESTS_PROFILE = 'smoke' }
+        if ($t -eq 'ui-ux-pr') { $env:UI_TESTS_PROFILE = 'pr' }
+        if ($t -eq 'ui-ux-full') {
+            $env:UI_TESTS_PROFILE = 'full'
+            $env:UI_TESTS_UX_STRICT = '1'
+            $env:UI_CONSOLE_GUARD = '1'
+        }
         $def = $manifest.tiers.$t
-        $ok = Invoke-TierPlaywright -TierName $t -TierDef $def
+        $ok = Invoke-TierPlaywright -TierName $t -TierDef $def -ResumeAfterIndex $(if ($t -eq $Tier -and $StartAfterTestIndex -gt 0) { $StartAfterTestIndex } else { 0 })
         if ($ok) {
             Set-KorusInnerTierResult -RunDir $RunDir -Root $Root -TierName $t -Pass $true | Out-Null
             Write-Host "OK tier $t" -ForegroundColor Green
@@ -194,9 +220,33 @@ if ($Tier -eq 'ui-tests' -and -not $env:UI_TESTS_PROFILE) {
 }
 if ($Tier -eq 'ui-ux-smoke') { $env:UI_TESTS_PROFILE = 'smoke' }
 if ($Tier -eq 'ui-ux-pr') { $env:UI_TESTS_PROFILE = 'pr' }
-if ($Tier -eq 'ui-ux-full') { $env:UI_TESTS_PROFILE = 'full' }
+if ($Tier -eq 'ui-ux-full') {
+    $env:UI_TESTS_PROFILE = 'full'
+    $env:UI_TESTS_UX_STRICT = '1'
+    $env:UI_CONSOLE_GUARD = '1'
+}
 
-$ok = Invoke-TierPlaywright -TierName $Tier -TierDef $tierDef
+$ok = Invoke-TierPlaywright -TierName $Tier -TierDef $tierDef -ResumeAfterIndex $StartAfterTestIndex
+if ($ok -and $Tier -eq 'ui-ux-full') {
+    $uxGate = Join-Path $Root "scripts\Assert-UiTestsUxFullGate.ps1"
+    if (Test-Path $uxGate) {
+        Write-Host ""
+        Write-Host "=== ui-ux-full UX rubric gate ===" -ForegroundColor Cyan
+        & $uxGate
+        if ($LASTEXITCODE -ne 0) {
+            $ok = $false
+        }
+    }
+    $consoleGate = Join-Path $Root "scripts\Assert-UiTestsConsoleGate.ps1"
+    if ($ok -and (Test-Path $consoleGate)) {
+        Write-Host ""
+        Write-Host "=== ui-ux-full browser console gate ===" -ForegroundColor Cyan
+        & $consoleGate
+        if ($LASTEXITCODE -ne 0) {
+            $ok = $false
+        }
+    }
+}
 if ($ok) {
     Set-KorusInnerTierResult -RunDir $RunDir -Root $Root -TierName $Tier -Pass $true | Out-Null
     Write-Host "OK tier $Tier" -ForegroundColor Green

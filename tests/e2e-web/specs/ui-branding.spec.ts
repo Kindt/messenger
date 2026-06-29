@@ -1,7 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures/test-with-qemu-wait";
 import { adminBaseUrl, adminNavTo, adminUiLogin } from "../fixtures/admin-ui";
 import { apiBase, apiLogin } from "../fixtures/auth";
-import { uiLogin } from "../fixtures/ui";
 test.describe("UI branding API (spec 027)", () => {
   test("GET /api/v1/branding is public", async ({ request }) => {
     const res = await request.get(`${apiBase()}/api/v1/branding`);
@@ -101,7 +100,11 @@ test.describe("UI branding demo skins (login)", () => {
     await page.getByTestId("auth-skin-vtb").click();
     await expect(page.locator("html")).toHaveAttribute("data-palette", "vtb");
 
-    await uiLogin(page, "csadmin", "csadmin");
+    // Stay on page — uiLogin() goto would re-run init script and wipe korus_web_style.
+    await page.locator("#u").fill("csadmin");
+    await page.locator("#p").fill("csadmin");
+    await page.getByTestId("auth-submit").click();
+    await expect(page.getByTestId("logout")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId("auth-demo-skins")).toHaveCount(0);
 
     if (platformDefault) {

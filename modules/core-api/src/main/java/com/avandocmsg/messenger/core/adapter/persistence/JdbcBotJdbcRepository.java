@@ -33,7 +33,7 @@ public final class JdbcBotJdbcRepository {
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """;
         try (var conn = dataSource.getConnection()) {
-            JdbcConnectionSupport.prepareRead(conn);
+            JdbcConnectionSupport.prepareWrite(conn);
             conn.setAutoCommit(false);
             try (var userStmt = conn.prepareStatement(sqlUser);
                  var botStmt = conn.prepareStatement(sqlBot)) {
