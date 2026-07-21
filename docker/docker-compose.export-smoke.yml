@@ -5,7 +5,8 @@ services:
   core-api:
     environment:
       # Export admin/job APIs are gated by addon-export; CI/lab uses default secrets.
-      KORUS_LAB_ALLOW_DEV_SECRETS: "1"
+      # Must be the string "true" (Boolean.parseBoolean ignores "1").
+      KORUS_LAB_ALLOW_DEV_SECRETS: "true"
       KORUS_PRODUCT_ADDONS: "${KORUS_PRODUCT_ADDONS:-addon-export,addon-retention}"
       EXPORT_ADMIN_SUGGEST_ENABLED: "true"
       EXPORT_ADMIN_EXPORT_ENABLED: "true"
