@@ -94,8 +94,16 @@ fc = att.get("file_count", att.get("fileCount", 0))
 print(f"[OK] attachments zip_bundle=true total={total} page={fc}", file=sys.stderr)
 
 print("GET download?part=manifest ...", file=sys.stderr)
-manifest = get_json(f"{root}/download?part=manifest")
-files = manifest.get("files") or []
+raw_manifest, _ = get(f"{root}/download?part=manifest")
+if not raw_manifest.strip():
+    if int(total or 0) == 0 and int(fc or 0) == 0:
+        print("[OK] manifest empty (no attachments in bundle)", file=sys.stderr)
+        files = []
+    else:
+        sys.exit("manifest empty but attachments list reported files")
+else:
+    manifest = json.loads(raw_manifest.decode())
+    files = manifest.get("files") or []
 print(f"[OK] manifest entries={len(files)}", file=sys.stderr)
 
 file_id = ""
@@ -114,6 +122,8 @@ if file_id or fc > 0:
     if len(raw_bin) < 8:
         sys.exit(f"binary part too small ({len(raw_bin)} bytes)")
     print(f"[OK] binary part {len(raw_bin)} bytes", file=sys.stderr)
+elif require:
+    print("[OK] no attachment binaries to verify", file=sys.stderr)
 
 print("GET download?part=json ...", file=sys.stderr)
 raw, _ = get(f"{root}/download?part=json")

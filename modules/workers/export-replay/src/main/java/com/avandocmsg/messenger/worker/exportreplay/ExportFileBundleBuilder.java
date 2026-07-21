@@ -53,9 +53,8 @@ final class ExportFileBundleBuilder {
                 skipped = counts.skipped();
                 includedBytes = counts.includedBytes();
             }
-            if (!manifestEntries.isEmpty()) {
-                writeManifestEntry(zos, manifestEntries, included, skipped, includedBytes);
-            }
+            // Always write attachments/manifest.json so download?part=manifest is stable (even 0 files).
+            writeManifestEntry(zos, manifestEntries, included, skipped, includedBytes);
             var stats = new FileBundleStats(true, maxFiles, maxBytesPerFile, included, skipped, includedBytes);
             exportRoot.set("fileBodies", stats.toJsonNode());
             exportRoot.put("attachmentManifestPath", ExportOutputRef.ZIP_ATTACHMENTS_MANIFEST);
