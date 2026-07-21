@@ -89,8 +89,6 @@ scripts/profiling/
 scripts/publish-spec-001-branch.ps1
 scripts/playwright-staging-gate.ps1
 scripts/write-runtime-gate-report.ps1
-scripts/webui-locale-parity-audit.js
-scripts/webui-label-lint.js
 !.cursor/agents/
 !.cursor/agents/korus-ui-*.md
 
