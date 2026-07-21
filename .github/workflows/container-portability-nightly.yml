@@ -36,7 +36,9 @@ jobs:
           java-version: "25"
 
       - name: Build core-api and ws-gateway WAR artifacts
-        run: ./gradlew :modules:core-api:war :modules:ws-gateway:war --no-daemon -x test
+        run: |
+          chmod +x gradlew
+          ./gradlew :modules:core-api:war :modules:ws-gateway:war --no-daemon -x test
 
       - name: Note runtime WAR smoke
         run: |

@@ -10,8 +10,12 @@
   ansible.builtin.shell: |
     set -euo pipefail
     cd "{{ korus_repo_root }}"
-    # shellcheck source=/dev/null
-    . "{{ korus_repo_root }}/deploy/qemu/vm-bootstrap/korus-plain-build-env.sh"
+    # QEMU console plain build (ignored path); optional on CI/localhost checkout
+    _plain_env="{{ korus_repo_root }}/deploy/qemu/vm-bootstrap/korus-plain-build-env.sh"
+    if [[ -f "$_plain_env" ]]; then
+      # shellcheck source=/dev/null
+      . "$_plain_env"
+    fi
     export SKIP_KORUS_ENSURE=1
     export DOCKER_BUILDKIT={{ korus_docker_buildkit | default('1') }}
     export COMPOSE_BAKE={{ korus_compose_bake | default('1') }}

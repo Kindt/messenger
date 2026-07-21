@@ -29,6 +29,7 @@
     or korus_keycloak_issuer is defined
     or korus_keycloak_jwks_url is defined
     or korus_product_addons is defined
+    or korus_lab_allow_dev_secrets | default(false) | bool
     or korus_core_api_deploy_mode is defined
     or korus_external_stack_manifest_enabled | default(true) | bool
 
@@ -51,8 +52,12 @@
   ansible.builtin.shell: |
     set -euo pipefail
     cd "{{ korus_repo_root }}"
-    # shellcheck source=/dev/null
-    . "{{ korus_repo_root }}/deploy/qemu/vm-bootstrap/korus-plain-build-env.sh"
+    # QEMU console plain build (ignored path); optional on CI/localhost checkout
+    _plain_env="{{ korus_repo_root }}/deploy/qemu/vm-bootstrap/korus-plain-build-env.sh"
+    if [[ -f "$_plain_env" ]]; then
+      # shellcheck source=/dev/null
+      . "$_plain_env"
+    fi
     export SKIP_KORUS_ENSURE=1
     export DOCKER_BUILDKIT={{ korus_docker_buildkit | default('1') }}
     export COMPOSE_BAKE={{ korus_compose_bake | default('1') }}
