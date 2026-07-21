@@ -67,10 +67,12 @@ class MessageRepositoryReadRoutingTest {
 
         @Override
         public void setLogWriter(java.io.PrintWriter out) {
+        // intentional no-op: test stub
         }
 
         @Override
         public void setLoginTimeout(int seconds) {
+        // intentional no-op: test stub
         }
 
         @Override

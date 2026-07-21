@@ -23,7 +23,10 @@ public class NatsConfig {
                 appConfig.natsUrl(),
                 settings.reconnectWait().toMillis(),
                 settings.connectionTimeout().toMillis());
-        } catch (IOException | InterruptedException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Cannot connect to NATS at " + appConfig.natsUrl(), e);
+        } catch (IOException e) {
             throw new RuntimeException("Cannot connect to NATS at " + appConfig.natsUrl(), e);
         }
     }

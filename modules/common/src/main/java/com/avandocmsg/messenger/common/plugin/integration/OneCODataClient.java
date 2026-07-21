@@ -20,6 +20,7 @@ import java.util.List;
 public final class OneCODataClient {
     private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final HttpClient HTTP = HttpClientSupport.sharedClient();
+    private static final String ENV_ONEC_BASE_URL = "ONEC_BASE_URL";
 
     private OneCODataClient() {}
 
@@ -29,7 +30,7 @@ public final class OneCODataClient {
         if (IntegrationEnv.useMock(oneCLiveConfigured())) {
             return parseCatalog(fetchJson(IntegrationEnv.mockApiBase() + "/1c/odata/Catalog_Items.json"));
         }
-        var base = IntegrationEnv.trimSlash(IntegrationEnv.getenv("ONEC_BASE_URL"));
+        var base = IntegrationEnv.trimSlash(IntegrationEnv.getenv(ENV_ONEC_BASE_URL));
         var entity = IntegrationEnv.getenv("ONEC_CATALOG_ENTITY");
         if (entity.isBlank()) {
             entity = "Catalog_Номенклатура";
@@ -54,7 +55,7 @@ public final class OneCODataClient {
                 + "_" + URLEncoder.encode(number, StandardCharsets.UTF_8) + ".json";
             return fetchJson(IntegrationEnv.mockApiBase() + path);
         }
-        var base = IntegrationEnv.trimSlash(IntegrationEnv.getenv("ONEC_BASE_URL"));
+        var base = IntegrationEnv.trimSlash(IntegrationEnv.getenv(ENV_ONEC_BASE_URL));
         var url = base + "/odata/standard.odata/Document_" + docType + "?$filter=Number eq '" + number + "'&$top=1";
         var builder = HttpRequest.newBuilder()
             .uri(URI.create(url))
@@ -82,7 +83,7 @@ public final class OneCODataClient {
     }
 
     private static boolean oneCLiveConfigured() {
-        return IntegrationEnv.isSet("ONEC_BASE_URL");
+        return IntegrationEnv.isSet(ENV_ONEC_BASE_URL);
     }
 
     private static List<CatalogItem> parseCatalog(JsonNode root) {

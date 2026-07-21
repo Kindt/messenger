@@ -64,6 +64,14 @@ import java.util.UUID;
 public class FileResource {
 
     private static final ObjectMapper FILE_AUDIT_JSON = MessengerJson.mapper();
+    private static final String LINK_ID = "link_id";
+    private static final String FILE_ID = "file_id";
+    private static final String HEADER_CONTENT_TYPE = "Content-Type";
+    private static final String HEADER_CONTENT_DISPOSITION = "Content-Disposition";
+    private static final String ERR_EMPTY_FILE = "error.file.empty_file";
+    private static final String ERR_UPLOAD_FAILED = "error.file.upload_failed";
+    private static final String ERR_NOT_FOUND = "error.file.not_found";
+    private static final String ERR_NOT_ALLOWED = "error.file.not_allowed";
 
     private static String writeFileAuditJson(ObjectNode n) {
         try {
@@ -76,7 +84,7 @@ public class FileResource {
     /** Package-visible for tests. */
     static String publicLinkCreateAuditDetails(String linkId, char kind) {
         var n = FILE_AUDIT_JSON.createObjectNode();
-        n.put("link_id", linkId);
+        n.put(LINK_ID, linkId);
         n.put("kind", String.valueOf(kind));
         return writeFileAuditJson(n);
     }
@@ -84,7 +92,7 @@ public class FileResource {
     /** Package-visible for tests. */
     static String publicLinkRevokeAuditDetails(UUID linkId) {
         var n = FILE_AUDIT_JSON.createObjectNode();
-        n.put("link_id", linkId.toString());
+        n.put(LINK_ID, linkId.toString());
         return writeFileAuditJson(n);
     }
 
@@ -137,14 +145,14 @@ public class FileResource {
                            @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
         var filename = headers.getHeaderString("X-Filename");
-        var mimeType = headers.getHeaderString("Content-Type");
+        var mimeType = headers.getHeaderString(HEADER_CONTENT_TYPE);
         if (mimeType == null || mimeType.equals(MediaType.APPLICATION_OCTET_STREAM)) {
             var inferred = ImageResizeService.inferImageMimeFromFilename(filename);
             mimeType = inferred != null ? inferred : "application/octet-stream";
         }
         if (data == null) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, messages.get("error.file.empty_file")))
+                .entity(new ApiError(400, messages.get(ERR_EMPTY_FILE)))
                 .build();
         }
         long contentLength = -1;
@@ -158,7 +166,7 @@ public class FileResource {
         }
         if (contentLength == 0) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, messages.get("error.file.empty_file")))
+                .entity(new ApiError(400, messages.get(ERR_EMPTY_FILE)))
                 .build();
         }
         if (contentLength > fileService.maxUploadBytes()) {
@@ -181,7 +189,7 @@ public class FileResource {
             return Response.status(Response.Status.CREATED).entity(result).build();
         } catch (IOException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, messages.format("error.file.upload_failed", e.getMessage())))
+                .entity(new ApiError(400, messages.format(ERR_UPLOAD_FAILED, e.getMessage())))
                 .build();
         }
     }
@@ -237,7 +245,7 @@ public class FileResource {
             }
         } catch (IOException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, messages.format("error.file.upload_failed", e.getMessage())))
+                .entity(new ApiError(400, messages.format(ERR_UPLOAD_FAILED, e.getMessage())))
                 .build();
         }
     }
@@ -253,12 +261,12 @@ public class FileResource {
         content = @Content(schema = @Schema(implementation = ApiError.class)))
     public Response getInfo(@PathParam("fileId") String fileId,
                             @Context SecurityContext securityContext) {
-        var fid = UuidParams.required(fileId, "file_id");
+        var fid = UuidParams.required(fileId, FILE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         var fileIdDomain = FileId.of(fid);
         if (fileApplicationService.findById(fileIdDomain).isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.file.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_NOT_FOUND)))
                 .build();
         }
         var info = fileApplicationService
@@ -268,7 +276,7 @@ public class FileResource {
         if (info == null) {
             ApiDeniedMetrics.fileAccessDenied();
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.file.not_allowed")))
+                .entity(new ApiError(403, messages.get(ERR_NOT_ALLOWED)))
                 .build();
         }
         return Response.ok(info).build();
@@ -281,7 +289,7 @@ public class FileResource {
         content = @Content(schema = @Schema(implementation = FileMessageRefResponse.class)))
     public Response messageRef(@PathParam("fileId") String fileIdStr,
                                @Context SecurityContext securityContext) {
-        var fileId = UuidParams.required(fileIdStr, "file_id");
+        var fileId = UuidParams.required(fileIdStr, FILE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         var ref = fileService.findMessageRefForViewer(fileId, userId);
         if (ref.isEmpty()) {
@@ -311,7 +319,7 @@ public class FileResource {
         content = @Content(schema = @Schema(implementation = ApiError.class)))
     public Response download(@PathParam("fileId") String fileId,
                              @Context SecurityContext securityContext) {
-        var fid = UuidParams.required(fileId, "file_id");
+        var fid = UuidParams.required(fileId, FILE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         var fileIdDomain = FileId.of(fid);
         var meta = fileApplicationService.getMetadataForUser(UserId.of(userId), fileIdDomain);
@@ -321,7 +329,7 @@ public class FileResource {
             }
             ApiDeniedMetrics.fileAccessDenied();
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.file.not_allowed")))
+                .entity(new ApiError(403, messages.get(ERR_NOT_ALLOWED)))
                 .type(MediaType.APPLICATION_JSON)
                 .build();
         }
@@ -341,8 +349,8 @@ public class FileResource {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
         return Response.ok(stream)
-            .header("Content-Disposition", "attachment; filename=\"" + info.filename() + "\"")
-            .header("Content-Type", info.mimeType())
+            .header(HEADER_CONTENT_DISPOSITION, "attachment; filename=\"" + info.filename() + "\"")
+            .header(HEADER_CONTENT_TYPE, info.mimeType())
             .build();
     }
 
@@ -357,7 +365,7 @@ public class FileResource {
                                   @Context SecurityContext securityContext) {
         if (body == null || body.size() <= 0) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, messages.get("error.file.empty_file")))
+                .entity(new ApiError(400, messages.get(ERR_EMPTY_FILE)))
                 .build();
         }
         if (body.size() > fileService.maxUploadBytes()) {
@@ -371,7 +379,7 @@ public class FileResource {
             body.filename(), body.mimeType(), body.size(), UserId.of(userId), ttl);
         if (result.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, messages.get("error.file.upload_failed")))
+                .entity(new ApiError(400, messages.get(ERR_UPLOAD_FAILED)))
                 .build();
         }
         var r = result.get();
@@ -392,7 +400,7 @@ public class FileResource {
         content = @Content(schema = @Schema(implementation = FileUploadResponse.class)))
     public Response confirmPresignedUpload(@PathParam("fileId") String fileId,
                                            @Context SecurityContext securityContext) {
-        var fid = UuidParams.required(fileId, "file_id");
+        var fid = UuidParams.required(fileId, FILE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         var fileIdDomain = FileId.of(fid);
         if (!fileApplicationService.confirmPresignedUpload(fileIdDomain, UserId.of(userId))) {
@@ -400,7 +408,7 @@ public class FileResource {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, messages.get("error.file.upload_failed")))
+                .entity(new ApiError(400, messages.get(ERR_UPLOAD_FAILED)))
                 .build();
         }
         var info = fileApplicationService.findById(fileIdDomain)
@@ -433,7 +441,7 @@ public class FileResource {
                            @QueryParam("h") @DefaultValue("200") int height,
                            @QueryParam("avt") String avtToken,
                            @Context SecurityContext securityContext) {
-        var fid = UuidParams.required(fileId, "file_id");
+        var fid = UuidParams.required(fileId, FILE_ID);
         if (!appConfig.fileResizeEnabled()) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.file.resize_disabled")))
@@ -447,22 +455,21 @@ public class FileResource {
         if (securityContext.getUserPrincipal() != null) {
             var userId = CurrentUserId.uuid(securityContext);
             meta = fileApplicationService.getMetadataForUser(UserId.of(userId), fileIdDomain);
-        } else if (avtToken != null && !avtToken.isBlank()) {
-            if (avatarApplicationService.verifyAvatarTokenAccess(
+        } else if (avtToken != null && !avtToken.isBlank()
+            && avatarApplicationService.verifyAvatarTokenAccess(
                 avatarAccessTokenService, avtToken, fileIdDomain, targetW, targetH)) {
-                meta = fileApplicationService.findById(fileIdDomain);
-            }
+            meta = fileApplicationService.findById(fileIdDomain);
         }
         if (meta.isEmpty()) {
             if (fileApplicationService.findById(fileIdDomain).isEmpty()) {
                 return Response.status(Response.Status.NOT_FOUND)
-                    .entity(new ApiError(404, messages.get("error.file.not_found")))
+                    .entity(new ApiError(404, messages.get(ERR_NOT_FOUND)))
                     .type(MediaType.APPLICATION_JSON)
                     .build();
             }
             ApiDeniedMetrics.fileAccessDenied();
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.file.not_allowed")))
+                .entity(new ApiError(403, messages.get(ERR_NOT_ALLOWED)))
                 .type(MediaType.APPLICATION_JSON)
                 .build();
         }
@@ -480,7 +487,7 @@ public class FileResource {
         var stream = fileApplicationService.download(fileIdDomain);
         if (stream == null) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.file.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_NOT_FOUND)))
                 .type(MediaType.APPLICATION_JSON)
                 .build();
         }
@@ -497,8 +504,8 @@ public class FileResource {
             var dot = baseName.lastIndexOf('.');
             var thumbName = (dot > 0 ? baseName.substring(0, dot) : baseName) + "-thumb.jpg";
             return Response.ok(resized.get())
-                .header("Content-Disposition", "inline; filename=\"" + thumbName + "\"")
-                .header("Content-Type", "image/jpeg")
+                .header(HEADER_CONTENT_DISPOSITION, "inline; filename=\"" + thumbName + "\"")
+                .header(HEADER_CONTENT_TYPE, "image/jpeg")
                 .header("Referrer-Policy", "no-referrer")
                 .build();
         } catch (IOException e) {
@@ -519,23 +526,23 @@ public class FileResource {
         content = @Content(schema = @Schema(implementation = ApiError.class)))
     public Response delete(@PathParam("fileId") String fileId,
                            @Context SecurityContext securityContext) {
-        var fid = UuidParams.required(fileId, "file_id");
+        var fid = UuidParams.required(fileId, FILE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         var fileIdDomain = FileId.of(fid);
         var meta = fileApplicationService.findById(fileIdDomain);
         if (meta.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.file.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_NOT_FOUND)))
                 .build();
         }
         if (!meta.get().uploadedBy().value().equals(userId)) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.file.not_allowed")))
+                .entity(new ApiError(403, messages.get(ERR_NOT_ALLOWED)))
                 .build();
         }
         if (!fileApplicationService.delete(fileIdDomain)) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.file.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_NOT_FOUND)))
                 .build();
         }
         return Response.noContent().build();
@@ -563,12 +570,12 @@ public class FileResource {
         content = @Content(array = @ArraySchema(schema = @Schema(implementation = PublicLinkSummary.class))))
     public Response listPublicLinks(@PathParam("fileId") String fileIdStr,
                                     @Context SecurityContext securityContext) {
-        var fileId = UuidParams.required(fileIdStr, "file_id");
+        var fileId = UuidParams.required(fileIdStr, FILE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         var meta = fileService.getInfo(fileIdStr);
         if (meta == null || !meta.uploadedBy().equals(userId.toString())) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.file.not_allowed")))
+                .entity(new ApiError(403, messages.get(ERR_NOT_ALLOWED)))
                 .build();
         }
         var links = publicLinkPort.listByFileAndOwner(FileId.of(fileId), UserId.of(userId)).stream()
@@ -595,11 +602,11 @@ public class FileResource {
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
-        var fileId = UuidParams.required(fileIdStr, "file_id");
+        var fileId = UuidParams.required(fileIdStr, FILE_ID);
         var meta = fileService.getInfo(fileIdStr);
         if (meta == null || !meta.uploadedBy().equals(userId.toString())) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.file.not_allowed")))
+                .entity(new ApiError(403, messages.get(ERR_NOT_ALLOWED)))
                 .build();
         }
         long ttlSec = request.ttlSeconds() != null && request.ttlSeconds() > 0
@@ -627,12 +634,12 @@ public class FileResource {
     public Response revokePublicLink(@PathParam("fileId") String fileIdStr,
                                     @PathParam("linkId") String linkIdStr,
                                     @Context SecurityContext securityContext) {
-        var fileId = UuidParams.required(fileIdStr, "file_id");
-        var linkId = UuidParams.required(linkIdStr, "link_id");
+        var fileId = UuidParams.required(fileIdStr, FILE_ID);
+        var linkId = UuidParams.required(linkIdStr, LINK_ID);
         var userId = CurrentUserId.uuid(securityContext);
         var meta = fileService.getInfo(fileIdStr);
         if (meta == null || !meta.uploadedBy().equals(userId.toString())) {
-            return Response.status(Response.Status.FORBIDDEN).entity(new ApiError(403, messages.get("error.file.not_allowed"))).build();
+            return Response.status(Response.Status.FORBIDDEN).entity(new ApiError(403, messages.get(ERR_NOT_ALLOWED))).build();
         }
         if (!publicLinkPort.revokeLink(UserId.of(userId), FileId.of(fileId), linkId)) {
             return Response.status(Response.Status.NOT_FOUND)
@@ -706,8 +713,8 @@ public class FileResource {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
         return Response.ok(stream)
-            .header("Content-Disposition", "attachment; filename=\"" + info.filename() + "\"")
-            .header("Content-Type", info.mimeType())
+            .header(HEADER_CONTENT_DISPOSITION, "attachment; filename=\"" + info.filename() + "\"")
+            .header(HEADER_CONTENT_TYPE, info.mimeType())
             .build();
     }
 }

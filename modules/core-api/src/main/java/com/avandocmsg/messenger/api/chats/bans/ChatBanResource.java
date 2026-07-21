@@ -31,6 +31,8 @@ import jakarta.ws.rs.core.SecurityContext;
 @Tag(name = "Chat Bans", description = "Chat ban management (admin/owner only)")
 public class ChatBanResource {
 
+    private static final String PARAM_CHAT_ID = "chat_id";
+
     private final ChatBanService chatBanService;
     private final UserMessageSource messages;
 
@@ -55,7 +57,7 @@ public class ChatBanResource {
                 .build();
         }
         var actorId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         var targetUserId = UuidParams.required(request.userId(), "user_id");
         var ban = chatBanService.banUser(chatId, actorId, targetUserId, request.reason());
         if (ban == null) {
@@ -77,7 +79,7 @@ public class ChatBanResource {
                           @Context SecurityContext securityContext) {
         var actorId = CurrentUserId.uuid(securityContext);
         var ok = chatBanService.unbanUser(
-            UuidParams.required(chatIdStr, "chat_id"),
+            UuidParams.required(chatIdStr, PARAM_CHAT_ID),
             actorId,
             UuidParams.required(userIdStr, "user_id"));
         if (!ok) {
@@ -96,7 +98,7 @@ public class ChatBanResource {
         content = @Content(schema = @Schema(implementation = ApiError.class)))
     public Response listBans(@PathParam("chatId") String chatIdStr,
                            @Context SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         var viewerId = CurrentUserId.uuid(securityContext);
         return chatBanService.listBansForViewer(chatId, viewerId)
             .map(bans -> Response.ok(bans).build())

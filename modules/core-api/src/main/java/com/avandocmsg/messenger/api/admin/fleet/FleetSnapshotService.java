@@ -26,6 +26,10 @@ import java.util.concurrent.Executors;
 public final class FleetSnapshotService {
 
     private static final ObjectMapper MAPPER = MessengerJson.mapper();
+    private static final String DEPENDENCIES = "dependencies";
+    private static final String KEY_DATABASE_OK = "database_ok";
+    private static final String KEY_REDIS_OK = "redis_ok";
+    private static final String KEY_NATS_OK = "nats_ok";
 
     private final FleetTargetRegistry registry;
     private final AdminStatsPort localStats;
@@ -116,7 +120,7 @@ public final class FleetSnapshotService {
             List.copyOf(components),
             shared
         );
-        FleetSnapshotMetrics.record(response);
+        FleetSnapshotMetrics.recordSnapshot(response);
         return response;
     }
 
@@ -204,57 +208,89 @@ public final class FleetSnapshotService {
                     .build();
                 var resp = client.send(req, HttpResponse.BodyHandlers.ofString());
                 var latency = System.currentTimeMillis() - start;
-                var body = resp.body();
-                var ready = resp.statusCode() >= 200 && resp.statusCode() < 300;
-                Long uptime = null;
-                Long heap = null;
-                FleetSnapshotResponse.Dependencies deps = null;
-                if (body != null && !body.isBlank() && body.trim().startsWith("{")) {
-                    try {
-                        JsonNode node = MAPPER.readTree(body);
-                        if (node.has("status")) {
-                            var st = node.get("status").asText("");
-                            ready = ready && !"not ready".equalsIgnoreCase(st) && !"down".equalsIgnoreCase(st);
-                        }
-                        if (node.has("jvm") && node.get("jvm").isObject()) {
-                            var jvm = node.get("jvm");
-                            if (jvm.has("uptime_ms")) {
-                                uptime = jvm.get("uptime_ms").asLong();
-                            }
-                            if (jvm.has("heap_used_bytes")) {
-                                heap = jvm.get("heap_used_bytes").asLong();
-                            }
-                        }
-                        if (node.has("dependencies") && node.get("dependencies").isObject()) {
-                            var d = node.get("dependencies");
-                            deps = new FleetSnapshotResponse.Dependencies(
-                                boolOrNull(d, "database_ok"),
-                                boolOrNull(d, "redis_ok"),
-                                boolOrNull(d, "nats_ok")
-                            );
-                        } else {
-                            deps = new FleetSnapshotResponse.Dependencies(
-                                boolOrNull(node, "database_ok"),
-                                boolOrNull(node, "redis_ok"),
-                                boolOrNull(node, "nats_ok")
-                            );
-                        }
-                    } catch (Exception ignored) {
-                        // plain text health
-                    }
-                }
-                return new ProbeResult(true, ready, resp.statusCode(), latency, null, uptime, heap, deps);
+                var parsed = parseProbeBody(resp.body(), resp.statusCode() >= 200 && resp.statusCode() < 300);
+                return new ProbeResult(
+                    true,
+                    parsed.ready(),
+                    resp.statusCode(),
+                    latency,
+                    null,
+                    parsed.jvmUptimeMs(),
+                    parsed.heapUsedBytes(),
+                    parsed.dependencies()
+                );
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return ProbeResult.unreachable(
+                    e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
             } catch (Exception e) {
-                return ProbeResult.unreachable(e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+                return ProbeResult.unreachable(
+                    e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
             }
         }
 
-        private static Boolean boolOrNull(JsonNode node, String field) {
-            if (node == null || !node.has(field) || node.get(field).isNull()) {
+        private static ParsedProbeBody parseProbeBody(String body, boolean httpReady) {
+            var ready = httpReady;
+            Long uptime = null;
+            Long heap = null;
+            FleetSnapshotResponse.Dependencies deps = null;
+            if (body != null && !body.isBlank() && body.trim().startsWith("{")) {
+                try {
+                    JsonNode node = MAPPER.readTree(body);
+                    ready = applyReadyFromStatus(node, ready);
+                    uptime = readJvmLong(node, "uptime_ms");
+                    heap = readJvmLong(node, "heap_used_bytes");
+                    deps = parseDependencies(node);
+                } catch (Exception ignored) {
+                    // plain text health
+                }
+            }
+            return new ParsedProbeBody(ready, uptime, heap, deps);
+        }
+
+        private static boolean applyReadyFromStatus(JsonNode node, boolean ready) {
+            if (!node.has("status")) {
+                return ready;
+            }
+            var st = node.get("status").asText("");
+            return ready && !"not ready".equalsIgnoreCase(st) && !"down".equalsIgnoreCase(st);
+        }
+
+        private static Long readJvmLong(JsonNode node, String field) {
+            if (!node.has("jvm") || !node.get("jvm").isObject()) {
                 return null;
             }
-            return node.get(field).asBoolean();
+            var jvm = node.get("jvm");
+            if (!jvm.has(field)) {
+                return null;
+            }
+            return jvm.get(field).asLong();
         }
+
+        private static FleetSnapshotResponse.Dependencies parseDependencies(JsonNode node) {
+            JsonNode source = node.has(DEPENDENCIES) && node.get(DEPENDENCIES).isObject()
+                ? node.get(DEPENDENCIES)
+                : node;
+            return new FleetSnapshotResponse.Dependencies(
+                nullableBoolean(source, KEY_DATABASE_OK),
+                nullableBoolean(source, KEY_REDIS_OK),
+                nullableBoolean(source, KEY_NATS_OK)
+            );
+        }
+
+        private static Boolean nullableBoolean(JsonNode source, String field) {
+            if (!source.has(field) || source.get(field).isNull()) {
+                return null; // absent/null → unknown (do not force false)
+            }
+            return source.get(field).asBoolean();
+        }
+
+        private record ParsedProbeBody(
+            boolean ready,
+            Long jvmUptimeMs,
+            Long heapUsedBytes,
+            FleetSnapshotResponse.Dependencies dependencies
+        ) {}
     }
 
 }

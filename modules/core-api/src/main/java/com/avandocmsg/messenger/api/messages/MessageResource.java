@@ -51,6 +51,11 @@ import java.util.UUID;
 @Tag(name = "Messages", description = "Message send, receive, and management")
 public class MessageResource {
 
+    private static final String PARAM_CHAT_ID = "chat_id";
+    private static final String PARAM_MESSAGE_ID = "message_id";
+    private static final String ERR_MESSAGE_NOT_MEMBER = "error.message.not_member";
+    private static final String ERR_MESSAGE_NOT_FOUND = "error.message.not_found";
+
     private final MessageApplicationService messageApplicationService;
     private final AppConfig appConfig;
     private final UserMessageSource messages;
@@ -88,7 +93,7 @@ public class MessageResource {
                     .build();
             }
         }
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         UUID replyToMsgId = null;
         if (request.replyToMsgId() != null && !request.replyToMsgId().isBlank()) {
             replyToMsgId = UuidParams.required(request.replyToMsgId(), "reply_to_msg_id");
@@ -130,7 +135,7 @@ public class MessageResource {
                          @QueryParam("thread_id") String threadIdStr,
                          @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         var validation = ListPagination.validate(limit, null);
         var badRequest = ListPagination.badRequest(validation, messages);
         if (badRequest.isPresent()) {
@@ -138,7 +143,7 @@ public class MessageResource {
         }
         if (!messageApplicationService.canAccessChat(chatId, userId)) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.message.not_member")))
+                .entity(new ApiError(403, messages.get(ERR_MESSAGE_NOT_MEMBER)))
                 .build();
         }
         UUID before = null;
@@ -149,8 +154,8 @@ public class MessageResource {
         if (threadIdStr != null && !threadIdStr.isBlank()) {
             threadId = UuidParams.required(threadIdStr, "thread_id");
         }
-        var messages = messageApplicationService.listMessages(chatId, userId, limit, before, threadId);
-        return Response.ok(messages).build();
+        var messageList = messageApplicationService.listMessages(chatId, userId, limit, before, threadId);
+        return Response.ok(messageList).build();
     }
 
     @GET
@@ -168,13 +173,13 @@ public class MessageResource {
                 .entity(new ApiError(403, messages.get("error.message.plaintext_preview_disabled")))
                 .build();
         }
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var msgId = UuidParams.required(msgIdStr, "message_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var msgId = UuidParams.required(msgIdStr, PARAM_MESSAGE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         var plain = messageApplicationService.plaintextPreview(chatId, msgId, userId);
         if (plain == null) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.message.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_MESSAGE_NOT_FOUND)))
                 .build();
         }
         return Response.ok(new PlaintextPreviewResponse(plain)).build();
@@ -191,15 +196,15 @@ public class MessageResource {
                             @PathParam("msgId") String msgIdStr,
                             @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var msgId = UuidParams.required(msgIdStr, "message_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var msgId = UuidParams.required(msgIdStr, PARAM_MESSAGE_ID);
         var msg = messageApplicationService
             .getMessageForMember(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId))
             .map(MessageDomainMapper::toResponse)
             .orElse(null);
         if (msg == null) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.message.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_MESSAGE_NOT_FOUND)))
                 .build();
         }
         return Response.ok(msg).build();
@@ -222,13 +227,13 @@ public class MessageResource {
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var msgId = UuidParams.required(msgIdStr, "message_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var msgId = UuidParams.required(msgIdStr, PARAM_MESSAGE_ID);
         if (messageApplicationService
             .getMessageForMember(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId))
             .isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.message.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_MESSAGE_NOT_FOUND)))
                 .build();
         }
         var msg = messageApplicationService.editMessage(chatId, msgId, userId, request.content());
@@ -250,8 +255,8 @@ public class MessageResource {
                            @PathParam("msgId") String msgIdStr,
                            @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var msgId = UuidParams.required(msgIdStr, "message_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var msgId = UuidParams.required(msgIdStr, PARAM_MESSAGE_ID);
         var ok = messageApplicationService.deleteMessage(chatId, msgId, userId);
         if (!ok) {
             return Response.status(Response.Status.FORBIDDEN)
@@ -269,12 +274,12 @@ public class MessageResource {
     public Response versions(@PathParam("chatId") String chatIdStr,
                              @PathParam("msgId") String msgIdStr,
                              @Context SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var msgId = UuidParams.required(msgIdStr, "message_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var msgId = UuidParams.required(msgIdStr, PARAM_MESSAGE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         if (!messageApplicationService.canAccessChat(chatId, userId)) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.message.not_member")))
+                .entity(new ApiError(403, messages.get(ERR_MESSAGE_NOT_MEMBER)))
                 .build();
         }
         var versions = messageApplicationService.getMessageVersions(chatId, msgId, userId);
@@ -296,21 +301,21 @@ public class MessageResource {
                 .entity(new ApiError(400, messages.get("error.message.reaction_required")))
                 .build();
         }
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var msgId = UuidParams.required(msgIdStr, "message_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var msgId = UuidParams.required(msgIdStr, PARAM_MESSAGE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         if (messageApplicationService.getMessageForMember(
             com.avandocmsg.messenger.core.domain.ChatId.of(chatId),
             com.avandocmsg.messenger.core.domain.MessageId.of(msgId),
             com.avandocmsg.messenger.core.domain.UserId.of(userId)).isEmpty()) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.message.not_member")))
+                .entity(new ApiError(403, messages.get(ERR_MESSAGE_NOT_MEMBER)))
                 .build();
         }
         var ok = messageApplicationService.addReaction(chatId, msgId, userId, request.reaction());
         if (!ok) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.message.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_MESSAGE_NOT_FOUND)))
                 .build();
         }
         return Response.status(Response.Status.CREATED).build();
@@ -331,15 +336,15 @@ public class MessageResource {
                 .entity(new ApiError(400, messages.get("error.message.reaction_required")))
                 .build();
         }
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var msgId = UuidParams.required(msgIdStr, "message_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var msgId = UuidParams.required(msgIdStr, PARAM_MESSAGE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         if (messageApplicationService.getMessageForMember(
             com.avandocmsg.messenger.core.domain.ChatId.of(chatId),
             com.avandocmsg.messenger.core.domain.MessageId.of(msgId),
             com.avandocmsg.messenger.core.domain.UserId.of(userId)).isEmpty()) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.message.not_member")))
+                .entity(new ApiError(403, messages.get(ERR_MESSAGE_NOT_MEMBER)))
                 .build();
         }
         var ok = messageApplicationService.removeReaction(chatId, msgId, userId, request.reaction());
@@ -359,12 +364,12 @@ public class MessageResource {
     public Response listReactions(@PathParam("chatId") String chatIdStr,
                                   @PathParam("msgId") String msgIdStr,
                                   @Context SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var msgId = UuidParams.required(msgIdStr, "message_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var msgId = UuidParams.required(msgIdStr, PARAM_MESSAGE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         if (!messageApplicationService.canAccessChat(chatId, userId)) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.message.not_member")))
+                .entity(new ApiError(403, messages.get(ERR_MESSAGE_NOT_MEMBER)))
                 .build();
         }
         var reactions = messageApplicationService.getReactions(chatId, msgId, userId);
@@ -381,18 +386,18 @@ public class MessageResource {
     public Response pinMessage(@PathParam("chatId") String chatIdStr,
                                @PathParam("msgId") String msgIdStr,
                                @Context SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var msgId = UuidParams.required(msgIdStr, "message_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var msgId = UuidParams.required(msgIdStr, PARAM_MESSAGE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         if (!messageApplicationService.isChatMember(ChatId.of(chatId), UserId.of(userId))) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.message.not_member")))
+                .entity(new ApiError(403, messages.get(ERR_MESSAGE_NOT_MEMBER)))
                 .build();
         }
         var ok = messageApplicationService.pinMessage(chatId, msgId, userId);
         if (!ok) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.message.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_MESSAGE_NOT_FOUND)))
                 .build();
         }
         return Response.status(Response.Status.CREATED).build();
@@ -406,12 +411,12 @@ public class MessageResource {
     public Response unpinMessage(@PathParam("chatId") String chatIdStr,
                                  @PathParam("msgId") String msgIdStr,
                                  @Context SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var msgId = UuidParams.required(msgIdStr, "message_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var msgId = UuidParams.required(msgIdStr, PARAM_MESSAGE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         if (!messageApplicationService.isChatMember(ChatId.of(chatId), UserId.of(userId))) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.message.not_member")))
+                .entity(new ApiError(403, messages.get(ERR_MESSAGE_NOT_MEMBER)))
                 .build();
         }
         var ok = messageApplicationService.unpinMessage(chatId, msgId, userId);
@@ -430,11 +435,11 @@ public class MessageResource {
         content = @Content(array = @ArraySchema(schema = @Schema(implementation = PinnedMessageResponse.class))))
     public Response listPinned(@PathParam("chatId") String chatIdStr,
                                @Context SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         var userId = CurrentUserId.uuid(securityContext);
         if (!messageApplicationService.canAccessChat(chatId, userId)) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.message.not_member")))
+                .entity(new ApiError(403, messages.get(ERR_MESSAGE_NOT_MEMBER)))
                 .build();
         }
         var pinned = messageApplicationService.getPinnedMessages(chatId, userId);
@@ -457,8 +462,8 @@ public class MessageResource {
                 .entity(new ApiError(400, messages.get("error.message.target_chat_required")))
                 .build();
         }
-        var sourceChatId = UuidParams.required(chatIdStr, "chat_id");
-        var msgId = UuidParams.required(msgIdStr, "message_id");
+        var sourceChatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var msgId = UuidParams.required(msgIdStr, PARAM_MESSAGE_ID);
         var targetChatId = UuidParams.required(request.targetChatId(), "target_chat_id");
         var userId = CurrentUserId.uuid(securityContext);
         var msg = messageApplicationService.forwardMessage(sourceChatId, msgId, userId, targetChatId);

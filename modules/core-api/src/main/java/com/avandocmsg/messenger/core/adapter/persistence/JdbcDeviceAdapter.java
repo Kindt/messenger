@@ -48,7 +48,7 @@ public final class JdbcDeviceAdapter implements DevicePort {
             }
         } catch (Exception e) {
             log.error("upsertPushDevice update failed", e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
         var id = uuidGenerator.randomUuid();
@@ -68,7 +68,7 @@ public final class JdbcDeviceAdapter implements DevicePort {
             return new DeviceResponse(id.toString(), deviceName, pushProvider, true, clock.instant());
         } catch (Exception e) {
             log.error("upsertPushDevice insert failed", e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -138,6 +138,7 @@ public final class JdbcDeviceAdapter implements DevicePort {
             }
         } catch (Exception e) {
             log.error("findByUserAndName failed", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }

@@ -37,24 +37,21 @@ public final class ExportZipManifestReader {
         var index = new LinkedHashMap<String, ManifestEntry>();
         for (var file : files) {
             var fileId = file.path("fileId").asText(null);
-            if (fileId == null || fileId.isBlank()) {
-                continue;
-            }
             var zipPath = file.path("zipPath").asText(null);
-            if (zipPath == null || zipPath.isBlank() || zipPath.contains("..")) {
-                continue;
-            }
-            var filename = file.path("filename").asText("");
-            var mime = file.path("mimeType").asText("application/octet-stream");
-            index.put(
-                fileId,
-                new ManifestEntry(
+            if (fileId != null && !fileId.isBlank()
+                && zipPath != null && !zipPath.isBlank() && !zipPath.contains("..")) {
+                var filename = file.path("filename").asText("");
+                var mime = file.path("mimeType").asText("application/octet-stream");
+                index.put(
                     fileId,
-                    filename != null ? filename : "",
-                    mime,
-                    zipPath,
-                    file.path("sizeBytes").asLong(0),
-                    file.path("sha256").asText("")));
+                    new ManifestEntry(
+                        fileId,
+                        filename != null ? filename : "",
+                        mime,
+                        zipPath,
+                        file.path("sizeBytes").asLong(0),
+                        file.path("sha256").asText("")));
+            }
         }
         return Collections.unmodifiableMap(index);
     }

@@ -1,7 +1,7 @@
 # Verifies export-replay worker /metrics and (optional) counter bump after admin cancel.
 param(
     [string]$WorkerMetricsUrl = "http://localhost:9193/metrics",
-    [string]$CoreMetricsUrl = "http://localhost:8080/api/v1/metrics/prometheus",
+    [string]$CoreMetricsUrl = "",
     [string]$ChatId = "",
     [string]$BaseUrl = "http://localhost:8080",
     [switch]$SkipCancelFlow,
@@ -10,6 +10,11 @@ param(
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $scriptDir "lib\SmokePrometheus.ps1")
+. (Join-Path $scriptDir "lib\Resolve-QemuLabWorkerMetrics.ps1")
+
+$metrics = Resolve-QemuLabWorkerMetrics -ApiBaseUrl $BaseUrl -WorkerMetricsUrl $WorkerMetricsUrl -CoreMetricsUrl $CoreMetricsUrl
+$WorkerMetricsUrl = $metrics.WorkerMetricsUrl
+if (-not $CoreMetricsUrl) { $CoreMetricsUrl = $metrics.CoreMetricsUrl }
 
 function Get-MetricsText {
     param([string]$Url)

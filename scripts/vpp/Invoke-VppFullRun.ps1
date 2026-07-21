@@ -120,15 +120,16 @@ function Invoke-VppFullRun {
                         -TotalGates 145 -Detail "attempt $gateAttempt/$maxTries" | Out-Null
                 } catch { Write-Host "[warn] gate event RETRY: $_" -ForegroundColor DarkYellow }
             }
-            $global:LASTEXITCODE = 0
+            $gateExitCode = 0
             try {
                 & $Body
+                if ($null -ne $LASTEXITCODE) { $gateExitCode = [int]$LASTEXITCODE }
             } catch {
                 Write-Host "[FAIL] VPP gate $GateKey threw: $($_.Exception.Message)" -ForegroundColor Red
-                $global:LASTEXITCODE = 1
+                $gateExitCode = 1
                 if (-not $env:VPP_LAST_GATE_DETAIL) { $env:VPP_LAST_GATE_DETAIL = $_.Exception.Message }
             }
-            if ($LASTEXITCODE -ne 0) {
+            if ($gateExitCode -ne 0) {
                 $logTail = Join-Path $Root 'deploy\qemu\run\vpp-until-green.log'
                 if (Test-Path $logTail) {
                     $lastFail = @(Get-Content -LiteralPath $logTail -Tail 30 -ErrorAction SilentlyContinue |
@@ -136,31 +137,31 @@ function Invoke-VppFullRun {
                     if ($lastFail) { $env:VPP_LAST_GATE_DETAIL = [string]$lastFail }
                 }
             }
-            if ($LASTEXITCODE -eq 0) { break }
+            if ($gateExitCode -eq 0) { break }
             if ($gateAttempt -lt $maxTries -and (Test-Path $gateFix)) {
-                Write-Host "[VPP] gate $GateKey failed (exit $LASTEXITCODE) - auto-fix before retry..." -ForegroundColor Yellow
+                Write-Host "[VPP] gate $GateKey failed (exit $gateExitCode) - auto-fix before retry..." -ForegroundColor Yellow
                 & $gateFix -GateKey $GateKey
             }
         }
 
-        if ($LASTEXITCODE -ne 0) {
+        if ($gateExitCode -ne 0) {
             $script:LastFailedGate = $GateKey
-            $script:LastExitCode = $LASTEXITCODE
+            $script:LastExitCode = $gateExitCode
             $gates[$GateKey] = "FAIL"
             if (-not $dimensions.ContainsKey($Dim)) { $dimensions[$Dim] = @{ status = "FAIL"; gates = @{} } }
             $dimensions[$Dim].gates[$GateKey] = "FAIL"
-            Write-Host "[FAIL] VPP gate $GateKey (exit $LASTEXITCODE)" -ForegroundColor Red
+            Write-Host "[FAIL] VPP gate $GateKey (exit $gateExitCode)" -ForegroundColor Red
             $script:hardFail = $true
             Sync-VppLiveProgress -GateKey $GateKey -Status "FAIL" -Phase "failed"
             $saveCp = Join-Path $Root "scripts\vpp\Save-VppCheckpoint.ps1"
             if (Test-Path $saveCp) {
                 try {
-                    & $saveCp -Reason "gate FAIL: $GateKey (exit $LASTEXITCODE)" -ResumeGate $GateKey | Out-Null
+                    & $saveCp -Reason "gate FAIL: $GateKey (exit $gateExitCode)" -ResumeGate $GateKey | Out-Null
                 } catch { Write-Host "[warn] checkpoint save: $_" -ForegroundColor DarkYellow }
             }
             if (Test-Path $gateEvent) {
                 $passSoFar = @($gates.Values | Where-Object { $_ -eq 'PASS' }).Count
-                try { & $gateEvent -GateId $GateKey -Status FAIL -ExitCode $LASTEXITCODE -PassCount $passSoFar -TotalGates 145 | Out-Null } catch { Write-Host "[warn] gate event FAIL: $_" -ForegroundColor DarkYellow }
+                try { & $gateEvent -GateId $GateKey -Status FAIL -ExitCode $gateExitCode -PassCount $passSoFar -TotalGates 145 | Out-Null } catch { Write-Host "[warn] gate event FAIL: $_" -ForegroundColor DarkYellow }
             }
             return
         }

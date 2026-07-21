@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -18,7 +19,9 @@ import java.time.Duration;
 
 /** Bounded Keycloak {@code picture} claim import (spec 068 W8). */
 final class KeycloakAvatarImporter {
+
     private static final Logger log = LoggerFactory.getLogger(KeycloakAvatarImporter.class);
+    private static final byte[] EMPTY_BYTES = new byte[0];
 
     private KeycloakAvatarImporter() {
     }
@@ -44,9 +47,10 @@ final class KeycloakAvatarImporter {
                 return;
             }
             var bytes = downloadBounded(httpClient, picture.trim(), appConfig.keycloakAvatarImportMaxBytes());
-            if (bytes == null || bytes.length == 0) {
+            if (bytes.length == 0) {
                 return;
             }
+
             var mime = sniffImageMime(bytes);
             var ext = "jpg";
             if ("image/png".equals(mime)) {
@@ -62,13 +66,13 @@ final class KeycloakAvatarImporter {
                 sub);
             uploaded.ifPresent(result -> avatarApplicationService.setUserAvatarFromImport(sub, result.file().id()));
         } catch (Exception e) {
-            log.debug("keycloak avatar import skipped: {}", e.getMessage());
+            log.warn("Keycloak avatar import failed: {}", e.getMessage(), e);
         }
     }
 
     private static byte[] downloadBounded(HttpClient httpClient, String url, int maxBytes) {
         if (maxBytes <= 0) {
-            return null;
+            return EMPTY_BYTES;
         }
         try {
             var req = HttpRequest.newBuilder(URI.create(url))
@@ -78,15 +82,19 @@ final class KeycloakAvatarImporter {
                 .build();
             var resp = httpClient.send(req, HttpResponse.BodyHandlers.ofByteArray());
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
-                return null;
+                return EMPTY_BYTES;
             }
             var body = resp.body();
             if (body == null || body.length == 0 || body.length > maxBytes) {
-                return null;
+                return EMPTY_BYTES;
             }
             return body;
-        } catch (Exception e) {
-            return null;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return EMPTY_BYTES;
+        } catch (IOException e) {
+            log.warn("Keycloak avatar download failed: {}", e.getMessage());
+            return EMPTY_BYTES;
         }
     }
 

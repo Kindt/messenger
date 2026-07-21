@@ -41,10 +41,9 @@ public final class AvatarTokenVerifier {
     }
 
     private static boolean signatureValid(String payload, byte[] sigBytes, String current, String previous) {
-        if (current != null && !current.isBlank()) {
-            if (MessageDigest.isEqual(sigBytes, AvatarTokenMint.hmacSha256(current.trim(), payload))) {
-                return true;
-            }
+        if (current != null && !current.isBlank()
+            && MessageDigest.isEqual(sigBytes, AvatarTokenMint.hmacSha256(current.trim(), payload))) {
+            return true;
         }
         if (previous != null && !previous.isBlank()) {
             return MessageDigest.isEqual(sigBytes, AvatarTokenMint.hmacSha256(previous.trim(), payload));

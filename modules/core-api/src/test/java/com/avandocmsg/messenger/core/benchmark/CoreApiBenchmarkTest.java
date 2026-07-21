@@ -140,6 +140,7 @@ class CoreApiBenchmarkTest {
 
             @Override
             public void upsertFromKeycloak(UserId id, String username, String displayName) {
+                // no-op stub: Keycloak sync not part of benchmark path
             }
 
             @Override
@@ -218,7 +219,9 @@ class CoreApiBenchmarkTest {
         };
         ObjectStoragePort storage = new ObjectStoragePort() {
             @Override
-            public void put(String objectName, InputStream data, long size, String contentType) throws Exception {}
+            public void put(String objectName, InputStream data, long size, String contentType) throws Exception {
+                // no-op stub: upload not measured in metadata-read benchmark
+            }
 
             @Override
             public InputStream get(String objectName) throws Exception {
@@ -226,7 +229,9 @@ class CoreApiBenchmarkTest {
             }
 
             @Override
-            public void delete(String objectName) throws Exception {}
+            public void delete(String objectName) throws Exception {
+                // no-op stub: delete not measured in metadata-read benchmark
+            }
 
             @Override
             public java.util.Optional<String> presignedGetUrl(String objectName, int ttlSeconds) {

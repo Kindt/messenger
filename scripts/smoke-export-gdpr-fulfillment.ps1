@@ -35,7 +35,10 @@ if (-not $guide.gdpr_disclosures_reference) {
 }
 Write-Host "[OK] gdpr_disclosures_reference present"
 
-& (Join-Path $scriptDir "smoke-web-parity-api.ps1") -BaseUrl $BaseUrl -User $User -Pass $Pass
+. (Join-Path $scriptDir "lib\Reset-QemuLabOrgIpAllowlist.ps1")
+Reset-QemuLabOrgIpAllowlist -BaseUrl $BaseUrl | Out-Null
+
+& (Join-Path $scriptDir "smoke-web-parity-api.ps1") -BaseUrl $BaseUrl
 if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) { exit 1 }
 
 Write-Host "[OK] export GDPR fulfillment smoke" -ForegroundColor Green

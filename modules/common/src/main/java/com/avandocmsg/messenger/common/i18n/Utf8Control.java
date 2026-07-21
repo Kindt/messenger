@@ -15,19 +15,21 @@ import java.util.ResourceBundle;
  */
 public final class Utf8Control extends ResourceBundle.Control {
 
+    private static final String FORMAT_PROPERTIES = "properties";
+
     @Override
     public List<String> getFormats(String baseName) {
-        return List.of("properties");
+        return List.of(FORMAT_PROPERTIES);
     }
 
     @Override
     public ResourceBundle newBundle(String baseName, Locale locale, String format, ClassLoader loader, boolean reload)
         throws IllegalAccessException, InstantiationException, IOException {
-        if (!"properties".equals(format)) {
+        if (!FORMAT_PROPERTIES.equals(format)) {
             return null;
         }
         String bundleName = toBundleName(baseName, locale);
-        String resourceName = toResourceName(bundleName, "properties");
+        String resourceName = toResourceName(bundleName, FORMAT_PROPERTIES);
         try (InputStream stream = loader.getResourceAsStream(resourceName)) {
             if (stream == null) {
                 return null;

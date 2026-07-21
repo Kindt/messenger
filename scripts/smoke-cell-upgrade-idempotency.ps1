@@ -82,23 +82,27 @@ if (-not $hostKey) {
     exit 0
 }
 
-$guestCmd = @"
-set -e
-cd /opt/korus/repo/deploy/ansible
-ansible-playbook -i inventory/cells/$CellId/hosts.yml playbooks/cell-upgrade.yml -e cell_id=$CellId -e images_tag=$ImagesTag
-ansible-playbook -i inventory/cells/$CellId/hosts.yml playbooks/cell-upgrade.yml -e cell_id=$CellId -e images_tag=$ImagesTag
-echo CELL_UPGRADE_IDEMPOTENCY_OK
-"@
-
-Write-Host "[guest] cell-upgrade.yml x2 via plink"
-$plink = Get-Command plink -ErrorAction SilentlyContinue
-if (-not $plink) {
+$plinkExe = Join-Path ${env:ProgramFiles} "PuTTY\plink.exe"
+if (-not (Test-Path $plinkExe)) {
+    $plinkCmd = Get-Command plink -ErrorAction SilentlyContinue
+    if ($plinkCmd) { $plinkExe = $plinkCmd.Source }
+}
+if (-not (Test-Path $plinkExe)) {
     Write-Host "[SKIP] plink not found"
     exit 0
 }
-& $plink.Source -batch -ssh -P 12221 -hostkey $hostKey korus@127.0.0.1 $guestCmd
+
+$guestCmd = "cd /opt/korus/repo/deploy/ansible && ansible-playbook -i inventory/cells/$CellId/hosts.yml playbooks/cell-upgrade.yml -e cell_id=$CellId -e images_tag=$ImagesTag && ansible-playbook -i inventory/cells/$CellId/hosts.yml playbooks/cell-upgrade.yml -e cell_id=$CellId -e images_tag=$ImagesTag && echo CELL_UPGRADE_IDEMPOTENCY_OK"
+
+Write-Host "[guest] cell-upgrade.yml x2 via plink"
+$output = & $plinkExe -batch -ssh -P 12221 -hostkey $hostKey -pw korus korus@127.0.0.1 $guestCmd 2>&1 | Out-String
+Write-Host $output
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[FAIL] guest ansible exit $LASTEXITCODE"
     exit $LASTEXITCODE
+}
+if ($output -notmatch 'CELL_UPGRADE_IDEMPOTENCY_OK' -or $output -match '\[ERROR\]') {
+    Write-Host "[FAIL] guest cell-upgrade did not complete cleanly"
+    exit 1
 }
 Write-Host "[OK] guest cell-upgrade x2; formal 2-Cell LSO-020 deferred to Sep 2026+"

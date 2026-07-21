@@ -1,7 +1,6 @@
 package com.avandocmsg.messenger.api.conference;
 
 import com.avandocmsg.messenger.api.conference.dto.ConferenceParticipantResponse;
-import com.avandocmsg.messenger.api.conference.dto.ConferenceResponse;
 import com.avandocmsg.messenger.api.conference.dto.CreateConferenceRequest;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,13 +24,15 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 
-import java.util.UUID;
 
 @Path("/v1")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @Tag(name = "Conferences", description = "Групповые видеоконференции (комната Jitsi / WebRTC у клиента)")
 public class ConferenceResource {
+
+    private static final String ERR_NOT_FOUND = "error.conference.not_found";
+    private static final String CONFERENCE_ID = "conference_id";
 
     private final ConferenceService conferenceService;
     private final UserMessageSource messages;
@@ -68,7 +69,7 @@ public class ConferenceResource {
         return conferenceService.getByRoomSlug(userId, roomSlug)
             .map(c -> Response.ok(c).build())
             .orElse(Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.conference.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_NOT_FOUND)))
                 .build());
     }
 
@@ -86,11 +87,11 @@ public class ConferenceResource {
     public Response get(@PathParam("conferenceId") String conferenceId,
                         @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var id = UuidParams.required(conferenceId, "conference_id");
+        var id = UuidParams.required(conferenceId, CONFERENCE_ID);
         return conferenceService.get(id, userId)
             .map(c -> Response.ok(c).build())
             .orElse(Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.conference.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_NOT_FOUND)))
                 .build());
     }
 
@@ -102,12 +103,12 @@ public class ConferenceResource {
     public Response listParticipants(@PathParam("conferenceId") String conferenceId,
                                      @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var id = UuidParams.required(conferenceId, "conference_id");
+        var id = UuidParams.required(conferenceId, CONFERENCE_ID);
         var list = conferenceService.listParticipants(id, userId);
         return list.map(Response::ok)
             .map(b -> b.build())
             .orElse(Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.conference.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_NOT_FOUND)))
                 .build());
     }
 
@@ -117,7 +118,7 @@ public class ConferenceResource {
     public Response join(@PathParam("conferenceId") String conferenceId,
                          @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var id = UuidParams.required(conferenceId, "conference_id");
+        var id = UuidParams.required(conferenceId, CONFERENCE_ID);
         if (conferenceService.join(id, userId)) {
             return Response.noContent().build();
         }
@@ -132,7 +133,7 @@ public class ConferenceResource {
     public Response leave(@PathParam("conferenceId") String conferenceId,
                           @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var id = UuidParams.required(conferenceId, "conference_id");
+        var id = UuidParams.required(conferenceId, CONFERENCE_ID);
         conferenceService.leave(id, userId);
         return Response.noContent().build();
     }
@@ -143,7 +144,7 @@ public class ConferenceResource {
     public Response end(@PathParam("conferenceId") String conferenceId,
                         @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var id = UuidParams.required(conferenceId, "conference_id");
+        var id = UuidParams.required(conferenceId, CONFERENCE_ID);
         if (conferenceService.end(id, userId)) {
             return Response.noContent().build();
         }

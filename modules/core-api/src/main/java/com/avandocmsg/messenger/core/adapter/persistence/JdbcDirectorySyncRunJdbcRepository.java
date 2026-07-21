@@ -35,7 +35,7 @@ public final class JdbcDirectorySyncRunJdbcRepository {
             return new DirectorySyncRunRow(id, orgId, "running", 0, null, Instant.now(), null);
         } catch (Exception e) {
             log.error("startRun failed orgId={}", orgId, e);
-            return new DirectorySyncRunRow(id, orgId, "error", 0, e.getMessage(), Instant.now(), Instant.now());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -55,6 +55,7 @@ public final class JdbcDirectorySyncRunJdbcRepository {
             stmt.executeUpdate();
         } catch (Exception e) {
             log.error("finishRun failed runId={}", runId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -78,11 +79,11 @@ public final class JdbcDirectorySyncRunJdbcRepository {
             }
         } catch (Exception e) {
             log.error("findLatestByOrg failed orgId={}", orgId, e);
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
-    private static DirectorySyncRunRow mapRow(java.sql.ResultSet rs) throws Exception {
+    private static DirectorySyncRunRow mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         var finishedTs = rs.getTimestamp("finished_at");
         return new DirectorySyncRunRow(
             rs.getObject("id", UUID.class),

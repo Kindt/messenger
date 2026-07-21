@@ -5,8 +5,6 @@ import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.config.RedisProbe;
 import com.avandocmsg.messenger.core.port.AdminMetricsQueryPort;
 import com.avandocmsg.messenger.core.port.NatsConnectionStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.management.ManagementFactory;
 import java.time.Instant;
@@ -16,8 +14,6 @@ import java.time.temporal.ChronoUnit;
  * Сводная статистика для встроенной админ-панели «Статистика сервера».
  */
 public final class AdminServerStatsService implements AdminStatsPort {
-
-    private static final Logger log = LoggerFactory.getLogger(AdminServerStatsService.class);
 
     private final AdminMetricsQueryPort adminMetricsQueryPort;
     private final AppConfig appConfig;

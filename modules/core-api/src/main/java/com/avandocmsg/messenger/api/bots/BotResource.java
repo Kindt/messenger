@@ -36,6 +36,12 @@ import java.util.UUID;
 @Tag(name = "Bots", description = "Bot API MVP — register, webhook, sendMessage")
 public class BotResource {
 
+    private static final String KEY_BOT_ID = "bot_id";
+    private static final String KEY_CHAT_ID = "chat_id";
+    private static final String ERR_INVALID_WEBHOOK = "error.bot.invalid_webhook";
+    private static final String ERR_NOT_FOUND = "error.bot.not_found";
+    private static final String ERR_ACTION_DENIED = "error.bot.action_denied";
+
     private final BotService botService;
     private final UserMessageSource messages;
 
@@ -54,7 +60,7 @@ public class BotResource {
         return switch (result.outcome()) {
             case SUCCESS -> Response.status(Response.Status.CREATED).entity(result.response()).build();
             case INVALID_NAME -> badRequest("error.bot.invalid_name");
-            case INVALID_WEBHOOK -> badRequest("error.bot.invalid_webhook");
+            case INVALID_WEBHOOK -> badRequest(ERR_INVALID_WEBHOOK);
             case INVALID_LISTEN_MODE -> badRequest("error.bot.invalid_listen_mode");
             case NAME_TAKEN -> Response.status(Response.Status.CONFLICT)
                 .entity(new ApiError(409, messages.get("error.bot.name_taken"))).build();
@@ -76,11 +82,11 @@ public class BotResource {
     @Operation(summary = "Get owned bot")
     public Response get(@PathParam("botId") String botIdStr, @Context SecurityContext securityContext) {
         var ownerId = requireUserId(securityContext);
-        var botId = UuidParams.required(botIdStr, "bot_id");
+        var botId = UuidParams.required(botIdStr, KEY_BOT_ID);
         return botService.getOwned(ownerId, botId)
             .map(b -> Response.ok(b).build())
             .orElseGet(() -> Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.bot.not_found"))).build());
+                .entity(new ApiError(404, messages.get(ERR_NOT_FOUND))).build());
     }
 
     @PUT
@@ -90,13 +96,13 @@ public class BotResource {
                                   BotWebhookRequest request,
                                   @Context SecurityContext securityContext) {
         var ownerId = requireUserId(securityContext);
-        var botId = UuidParams.required(botIdStr, "bot_id");
+        var botId = UuidParams.required(botIdStr, KEY_BOT_ID);
         if (request == null || request.webhookUrl() == null || request.webhookUrl().isBlank()) {
-            return badRequest("error.bot.invalid_webhook");
+            return badRequest(ERR_INVALID_WEBHOOK);
         }
         if (!botService.updateWebhook(ownerId, botId, request.webhookUrl())) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.bot.not_found"))).build();
+                .entity(new ApiError(404, messages.get(ERR_NOT_FOUND))).build();
         }
         return Response.noContent().build();
     }
@@ -109,17 +115,17 @@ public class BotResource {
                               BotSubscribeRequest request,
                               @Context SecurityContext securityContext) {
         var ownerId = requireUserId(securityContext);
-        var botId = UuidParams.required(botIdStr, "bot_id");
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var botId = UuidParams.required(botIdStr, KEY_BOT_ID);
+        var chatId = UuidParams.required(chatIdStr, KEY_CHAT_ID);
         var overrideUrl = request != null ? request.webhookUrl() : null;
         return switch (botService.subscribe(ownerId, botId, chatId, overrideUrl)) {
             case SUCCESS -> Response.status(Response.Status.CREATED).build();
             case NOT_FOUND -> Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.bot.not_found"))).build();
+                .entity(new ApiError(404, messages.get(ERR_NOT_FOUND))).build();
             case NOT_MEMBER -> Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.bot.not_chat_member"))).build();
             case NO_WEBHOOK -> badRequest("error.bot.no_webhook");
-            case INVALID_WEBHOOK -> badRequest("error.bot.invalid_webhook");
+            case INVALID_WEBHOOK -> badRequest(ERR_INVALID_WEBHOOK);
             case PERSISTENCE_FAILED -> Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(new ApiError(500, messages.get("error.bot.subscribe_failed"))).build();
         };
@@ -132,8 +138,8 @@ public class BotResource {
                                 @PathParam("chatId") String chatIdStr,
                                 @Context SecurityContext securityContext) {
         var ownerId = requireUserId(securityContext);
-        var botId = UuidParams.required(botIdStr, "bot_id");
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var botId = UuidParams.required(botIdStr, KEY_BOT_ID);
+        var chatId = UuidParams.required(chatIdStr, KEY_CHAT_ID);
         if (!botService.unsubscribe(ownerId, botId, chatId)) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.bot.subscription_not_found"))).build();
@@ -146,11 +152,11 @@ public class BotResource {
     @Operation(summary = "Rotate bot access token", description = "Returns new kbt_ token once; invalidates previous token")
     public Response rotateToken(@PathParam("botId") String botIdStr, @Context SecurityContext securityContext) {
         var ownerId = requireUserId(securityContext);
-        var botId = UuidParams.required(botIdStr, "bot_id");
+        var botId = UuidParams.required(botIdStr, KEY_BOT_ID);
         return botService.rotateToken(ownerId, botId)
             .map(r -> Response.ok(r).build())
             .orElseGet(() -> Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.bot.not_found"))).build());
+                .entity(new ApiError(404, messages.get(ERR_NOT_FOUND))).build());
     }
 
     @GET
@@ -169,17 +175,17 @@ public class BotResource {
     @Path("/bot/messages/{messageId}")
     @Operation(summary = "Delete bot message", description = "Bot may delete its own messages only")
     public Response deleteBotMessage(@PathParam("messageId") String messageIdStr,
-                                     @QueryParam("chat_id") String chatIdStr,
+                                     @QueryParam(KEY_CHAT_ID) String chatIdStr,
                                      @Context SecurityContext securityContext) {
         var botId = requireBotId(securityContext);
         if (chatIdStr == null || chatIdStr.isBlank()) {
             return badRequest("error.bot.chat_id_required");
         }
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, KEY_CHAT_ID);
         var msgId = UuidParams.required(messageIdStr, "message_id");
         if (!botService.deleteMessage(botId, chatId, msgId)) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.bot.action_denied"))).build();
+                .entity(new ApiError(403, messages.get(ERR_ACTION_DENIED))).build();
         }
         return Response.noContent().build();
     }
@@ -191,11 +197,11 @@ public class BotResource {
                                   @PathParam("messageId") String messageIdStr,
                                   @Context SecurityContext securityContext) {
         var botId = requireBotId(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, KEY_CHAT_ID);
         var msgId = UuidParams.required(messageIdStr, "message_id");
         if (!botService.pinMessage(botId, chatId, msgId)) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.bot.action_denied"))).build();
+                .entity(new ApiError(403, messages.get(ERR_ACTION_DENIED))).build();
         }
         return Response.noContent().build();
     }
@@ -210,11 +216,11 @@ public class BotResource {
         if (request == null || request.userId() == null || request.userId().isBlank()) {
             return badRequest("error.bot.user_id_required");
         }
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, KEY_CHAT_ID);
         var targetId = UuidParams.required(request.userId(), "user_id");
         if (!botService.banUser(botId, chatId, targetId, request.reason())) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.bot.action_denied"))).build();
+                .entity(new ApiError(403, messages.get(ERR_ACTION_DENIED))).build();
         }
         return Response.status(Response.Status.CREATED).build();
     }
@@ -235,7 +241,7 @@ public class BotResource {
         if (request.content() == null || request.content().isBlank()) {
             return badRequest("error.message.content_required");
         }
-        var chatId = UuidParams.required(request.chatId(), "chat_id");
+        var chatId = UuidParams.required(request.chatId(), KEY_CHAT_ID);
         var botUserId = UUID.fromString(botPrincipal.botId());
         var sendRequest = new SendMessageRequest(
             request.type() != null && !request.type().isBlank() ? request.type() : "text",

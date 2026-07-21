@@ -14,6 +14,12 @@ public final class L0MenuConfigValidator {
 
     public static final String ERROR_KEY = "error.plugin.l0_config_invalid";
 
+    private static final String KEY_SLASH_COMMANDS = "slash_commands";
+    private static final String KEY_RESPONSE_TEXT = "response_text";
+    private static final String KEY_CHILDREN = "children";
+    private static final String KEY_TEXT_CONTAINS = "text_contains";
+    private static final String KEY_TEXT_EQUALS = "text_equals";
+
     private L0MenuConfigValidator() {}
 
     public static Optional<String> validate(JsonNode config) {
@@ -25,7 +31,7 @@ public final class L0MenuConfigValidator {
             "config_schema_version",
             "welcome_text",
             "vars",
-            "slash_commands",
+            KEY_SLASH_COMMANDS,
             "menu"
         )) {
             return Optional.of(ERROR_KEY);
@@ -37,7 +43,7 @@ public final class L0MenuConfigValidator {
         if (config.has("vars") && !validateVars(config.get("vars"))) {
             return Optional.of(ERROR_KEY);
         }
-        if (config.has("slash_commands") && !validateSlashCommands(config.get("slash_commands"))) {
+        if (config.has(KEY_SLASH_COMMANDS) && !validateSlashCommands(config.get(KEY_SLASH_COMMANDS))) {
             return Optional.of(ERROR_KEY);
         }
         if (!validateMenu(config.get("menu"))) {
@@ -65,10 +71,10 @@ public final class L0MenuConfigValidator {
             return false;
         }
         for (var cmd : commands) {
-            if (!cmd.isObject() || !hasOnlyKeys(cmd, "command", "response_text")) {
+            if (!cmd.isObject() || !hasOnlyKeys(cmd, "command", KEY_RESPONSE_TEXT)) {
                 return false;
             }
-            if (!nonEmptyText(cmd, "command") || !cmd.has("response_text") || !cmd.get("response_text").isTextual()) {
+            if (!nonEmptyText(cmd, "command") || !cmd.has(KEY_RESPONSE_TEXT) || !cmd.get(KEY_RESPONSE_TEXT).isTextual()) {
                 return false;
             }
         }
@@ -106,9 +112,9 @@ public final class L0MenuConfigValidator {
             button,
             "id",
             "label",
-            "response_text",
+            KEY_RESPONSE_TEXT,
             "url",
-            "children",
+            KEY_CHILDREN,
             "when"
         )) {
             return false;
@@ -120,37 +126,40 @@ public final class L0MenuConfigValidator {
         if (!buttonIds.add(id)) {
             return false;
         }
-        if (button.has("children")) {
-            var children = button.get("children");
-            if (!children.isArray()) {
+        return validateChildren(button) && validateWhenField(button);
+    }
+
+    private static boolean validateChildren(JsonNode button) {
+        if (!button.has(KEY_CHILDREN)) {
+            return true;
+        }
+        var children = button.get(KEY_CHILDREN);
+        if (!children.isArray()) {
+            return false;
+        }
+        for (var child : children) {
+            if (!child.isTextual() || child.asText().isBlank()) {
                 return false;
             }
-            for (var child : children) {
-                if (!child.isTextual() || child.asText().isBlank()) {
-                    return false;
-                }
-            }
-        }
-        if (button.has("when") && !validateWhen(button.get("when"))) {
-            return false;
         }
         return true;
     }
 
+    private static boolean validateWhenField(JsonNode button) {
+        return !button.has("when") || validateWhen(button.get("when"));
+    }
+
     private static boolean validateWhen(JsonNode when) {
-        if (!when.isObject() || !hasOnlyKeys(when, "type", "text_contains", "text_equals")) {
+        if (!when.isObject() || !hasOnlyKeys(when, "type", KEY_TEXT_CONTAINS, KEY_TEXT_EQUALS)) {
             return false;
         }
         if (when.has("type") && !when.get("type").isTextual()) {
             return false;
         }
-        if (when.has("text_contains") && !when.get("text_contains").isTextual()) {
+        if (when.has(KEY_TEXT_CONTAINS) && !when.get(KEY_TEXT_CONTAINS).isTextual()) {
             return false;
         }
-        if (when.has("text_equals") && !when.get("text_equals").isTextual()) {
-            return false;
-        }
-        return true;
+        return !when.has(KEY_TEXT_EQUALS) || when.get(KEY_TEXT_EQUALS).isTextual();
     }
 
     private static boolean nonEmptyText(JsonNode node, String field) {

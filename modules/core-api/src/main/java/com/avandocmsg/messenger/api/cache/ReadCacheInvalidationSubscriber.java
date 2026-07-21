@@ -3,6 +3,7 @@ package com.avandocmsg.messenger.api.cache;
 import com.avandocmsg.messenger.common.json.MessengerJson;
 import com.avandocmsg.messenger.common.dto.ReadCacheInvalidateEvent;
 import com.avandocmsg.messenger.common.nats.NatsSubjects;
+import com.avandocmsg.messenger.api.metrics.ReadCacheMetrics;
 import com.avandocmsg.messenger.core.application.ReadCacheCoordinator;
 import com.avandocmsg.messenger.core.port.ReadCachePort;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,9 +17,8 @@ import java.util.UUID;
 /**
  * Legacy NATS subscriber for read-cache invalidation (spec 006 T302).
  *
- * @deprecated spec 025 FR-009: pipeline invalidates Redis directly; kept for rollback only.
+ * Legacy rollback path (spec 025 FR-009): pipeline invalidates Redis directly; do not use in new code.
  */
-@Deprecated
 public final class ReadCacheInvalidationSubscriber implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(ReadCacheInvalidationSubscriber.class);
@@ -47,9 +47,19 @@ public final class ReadCacheInvalidationSubscriber implements AutoCloseable {
             return;
         }
         try {
-            apply(MAPPER.readValue(msg.getData(), ReadCacheInvalidateEvent.class));
+            var event = MAPPER.readValue(msg.getData(), ReadCacheInvalidateEvent.class);
+            if (event.userIds() == null) {
+                ReadCacheMetrics.invalidationFailure("invalid_event");
+                log.warn("Ignoring read-cache invalidate event without user_ids");
+                return;
+            }
+            apply(event);
+        } catch (java.io.IOException e) {
+            ReadCacheMetrics.invalidationFailure("malformed_event");
+            log.warn("Ignoring malformed read-cache invalidate event: {}", e.getMessage());
         } catch (Exception e) {
-            log.debug("read-cache invalidate event failed: {}", e.getMessage());
+            ReadCacheMetrics.invalidationFailure("processing_error");
+            log.error("Read-cache invalidate event processing failed", e);
         }
     }
 

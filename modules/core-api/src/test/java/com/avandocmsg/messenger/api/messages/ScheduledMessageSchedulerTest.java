@@ -200,8 +200,7 @@ class ScheduledMessageSchedulerTest {
         }
 
         @Override
-        public com.avandocmsg.messenger.api.mls.dto.EncryptedMessage encrypt(
-            UUID chatId, UUID senderId, String plaintext) {
+        public com.avandocmsg.messenger.api.mls.dto.EncryptedMessage encrypt(UUID chatId, String plaintext) {
             return null;
         }
     }
@@ -209,14 +208,17 @@ class ScheduledMessageSchedulerTest {
     static final class RecordingNats implements NatsOutboundPort {
         @Override
         public void publish(String subject, byte[] payload) {
+            // no-op stub for NatsOutboundPort in scheduler tests
         }
 
         @Override
         public void flush(java.time.Duration timeout) {
+            // no-op stub for NatsOutboundPort in scheduler tests
         }
 
         @Override
         public void publishPipelineMessageSend(byte[] payload, String userId) {
+            // no-op stub for NatsOutboundPort in scheduler tests
         }
     }
 }

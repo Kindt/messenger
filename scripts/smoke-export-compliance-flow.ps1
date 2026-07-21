@@ -18,16 +18,11 @@ param(
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $scriptDir "lib\SmokeExportInspect.ps1")
+. (Join-Path $scriptDir "lib\SmokeMessaging.ps1")
 
 function Get-Token {
     param($User, $Pass)
-    $login = Invoke-RestMethod -Uri "$BaseUrl/api/v1/auth/login" -Method Post `
-        -Body (@{ username = $User; password = $Pass } | ConvertTo-Json) `
-        -ContentType "application/json; charset=utf-8"
-    $t = $login.access_token
-    if (-not $t) { $t = $login.accessToken }
-    if (-not $t) { throw "No token for $User" }
-    return $t
+    return Get-SmokeApiToken -BaseUrl $BaseUrl -User $User -Pass $Pass -WaitForRateLimit -RateLimitWaitSec 180
 }
 
 $terminal = @("export_v1", "stub_written", "export_failed", "export_cancelled")

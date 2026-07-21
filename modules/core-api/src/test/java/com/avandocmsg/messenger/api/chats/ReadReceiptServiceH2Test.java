@@ -151,7 +151,9 @@ class ReadReceiptServiceH2Test {
             new JdbcUserLookupAdapter(ds),
             new AuditPort() {
                 @Override
-                public void record(UUID actorUserId, String action, String resourceType, String resourceId, String detailsJson) {
+                @SuppressWarnings("java:S6213") // AuditPort contract uses reserved name "record"
+                public void record(UUID actorUserId, String action, String resourceType, String resourceId, String detailsJson) { // NOSONAR S6213 — AuditPort.record
+                    // no-op stub: H2 tests do not assert audit writes for read receipts
                 }
 
                 @Override
@@ -225,14 +227,17 @@ class ReadReceiptServiceH2Test {
     static final class RecordingNats implements NatsOutboundPort {
         @Override
         public void publish(String subject, byte[] payload) {
+            // no-op: captures not needed; service only publishes side-effect events
         }
 
         @Override
         public void flush(Duration timeout) {
+            // no-op stub for NatsOutboundPort in unit tests
         }
 
         @Override
         public void publishPipelineMessageSend(byte[] payload, String userId) {
+            // no-op stub for NatsOutboundPort in unit tests
         }
     }
 }

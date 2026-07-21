@@ -30,6 +30,48 @@ public final class JdbcUserJdbcRepository {
         FROM users
         """;
 
+    private static final String COL_USERNAME = "username";
+    private static final String COL_DISPLAY_NAME = "display_name";
+    private static final String COL_U_USERNAME = "u.username";
+    private static final String COL_U_DISPLAY_NAME = "u.display_name";
+
+    private static final String SEARCH_PG = SELECT_USER
+        + " WHERE hidden = false AND (lower(username) LIKE lower(?) OR lower(display_name) LIKE lower(?))"
+        + " ORDER BY username LIMIT ?";
+    private static final String SEARCH_H2 = SELECT_USER
+        + " WHERE hidden = false AND ("
+        + "POSITION(lower(CAST (? AS text)) IN lower(coalesce(username, ''))) > 0"
+        + " OR POSITION(lower(CAST (? AS text)) IN lower(coalesce(display_name, ''))) > 0)"
+        + " ORDER BY username LIMIT ?";
+
+    private static final String SEARCH_VIEWER_PG = """
+        SELECT u.id, u.username, u.display_name
+        FROM users u
+        WHERE u.hidden = false AND u.id <> ?
+          AND (lower(u.username) LIKE lower(?) OR lower(u.display_name) LIKE lower(?))
+          AND NOT EXISTS (
+            SELECT 1 FROM blocks b
+            WHERE (b.blocker_id = ? AND b.blocked_id = u.id)
+               OR (b.blocker_id = u.id AND b.blocked_id = ?)
+          )
+        ORDER BY u.username
+        LIMIT ?
+        """;
+    private static final String SEARCH_VIEWER_H2 = """
+        SELECT u.id, u.username, u.display_name
+        FROM users u
+        WHERE u.hidden = false AND u.id <> ?
+          AND (POSITION(lower(CAST (? AS text)) IN lower(coalesce(u.username, ''))) > 0
+            OR POSITION(lower(CAST (? AS text)) IN lower(coalesce(u.display_name, ''))) > 0)
+          AND NOT EXISTS (
+            SELECT 1 FROM blocks b
+            WHERE (b.blocker_id = ? AND b.blocked_id = u.id)
+               OR (b.blocker_id = u.id AND b.blocked_id = ?)
+          )
+        ORDER BY u.username
+        LIMIT ?
+        """;
+
     public JdbcUserJdbcRepository(DataSource dataSource) {
         this.dataSource = dataSource;
     }
@@ -57,6 +99,7 @@ public final class JdbcUserJdbcRepository {
             stmt.executeUpdate();
         } catch (Exception e) {
             log.warn("upsertFromKeycloak failed for {}: {}", id, e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -73,7 +116,7 @@ public final class JdbcUserJdbcRepository {
             return true;
         } catch (Exception e) {
             log.error("Failed to create user: {}", username, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -90,6 +133,7 @@ public final class JdbcUserJdbcRepository {
             }
         } catch (Exception e) {
             log.error("Failed to find user: {}", id, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -107,6 +151,7 @@ public final class JdbcUserJdbcRepository {
             }
         } catch (Exception e) {
             log.error("Failed to find user by username: {}", username, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -127,6 +172,7 @@ public final class JdbcUserJdbcRepository {
             }
         } catch (Exception e) {
             log.error("Failed to find user by external_id: {}", externalId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -147,6 +193,7 @@ public final class JdbcUserJdbcRepository {
             }
         } catch (Exception e) {
             log.error("Failed to find user by email: {}", email, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -168,6 +215,7 @@ public final class JdbcUserJdbcRepository {
             }
         } catch (Exception e) {
             log.error("Failed to find user by org/externalId: org={} ext={}", orgId, externalId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -188,6 +236,7 @@ public final class JdbcUserJdbcRepository {
             }
         } catch (Exception e) {
             log.error("listByOrg failed orgId={}", orgId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return result;
     }
@@ -205,6 +254,7 @@ public final class JdbcUserJdbcRepository {
             }
         } catch (Exception e) {
             log.error("countByOrg failed orgId={}", orgId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return 0;
     }
@@ -238,7 +288,7 @@ public final class JdbcUserJdbcRepository {
                 return stmt.executeUpdate() > 0;
             } catch (Exception e) {
                 log.error("upsertFromDirectory update failed ext={}", externalId, e);
-                return false;
+                throw new IllegalStateException("JDBC operation failed", e);
             }
         }
         var sql = """
@@ -258,7 +308,7 @@ public final class JdbcUserJdbcRepository {
             return true;
         } catch (Exception e) {
             log.warn("upsertFromDirectory insert failed username={}: {}", un, e.getMessage());
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -292,7 +342,7 @@ public final class JdbcUserJdbcRepository {
             return true;
         } catch (Exception e) {
             log.error("insertFromScim failed id={}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -318,7 +368,7 @@ public final class JdbcUserJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("updateFromScim failed id={}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -332,7 +382,7 @@ public final class JdbcUserJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("setActive failed id={}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -361,6 +411,7 @@ public final class JdbcUserJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("isReadReceiptsDisabled failed for {}: {}", id, e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return false;
     }
@@ -370,10 +421,7 @@ public final class JdbcUserJdbcRepository {
         try (var conn = dataSource.getConnection()) {
             JdbcConnectionSupport.prepareRead(conn);
             var postgres = JdbcDialect.isPostgres(conn);
-            var clause = userSearchClause(postgres, "username", "display_name");
-            var sql = SELECT_USER +
-                      " WHERE hidden = false AND " + clause + " " +
-                      "ORDER BY username LIMIT ?";
+            var sql = postgres ? SEARCH_PG : SEARCH_H2;
             try (var stmt = conn.prepareStatement(sql)) {
                 JdbcQuerySupport.applyDefaultTimeout(stmt);
                 bindUserSearchParams(stmt, postgres, query, 1);
@@ -386,6 +434,7 @@ public final class JdbcUserJdbcRepository {
             }
         } catch (Exception e) {
             log.error("Failed to search users: {}", query, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return result;
     }
@@ -406,48 +455,46 @@ public final class JdbcUserJdbcRepository {
         try (var conn = dataSource.getConnection()) {
             JdbcConnectionSupport.prepareRead(conn);
             var postgres = JdbcDialect.isPostgres(conn);
-            var clause = userSearchClause(postgres, "u.username", "u.display_name");
-            var sql = """
-                SELECT u.id, u.username, u.display_name
-                FROM users u
-                WHERE u.hidden = false AND u.id <> ?
-                  AND """ + clause + """
-                  AND NOT EXISTS (
-                    SELECT 1 FROM blocks b
-                    WHERE (b.blocker_id = ? AND b.blocked_id = u.id)
-                       OR (b.blocker_id = u.id AND b.blocked_id = ?)
-                  )
-                ORDER BY u.username
-                LIMIT ?
-                """;
+            var sql = postgres ? SEARCH_VIEWER_PG : SEARCH_VIEWER_H2;
             try (var stmt = conn.prepareStatement(sql)) {
                 JdbcQuerySupport.applyDefaultTimeout(stmt);
-            stmt.setObject(1, viewerId);
-            bindUserSearchParams(stmt, postgres, safe, 2);
-            stmt.setObject(4, viewerId);
-            stmt.setObject(5, viewerId);
-            stmt.setInt(6, lim);
+                stmt.setObject(1, viewerId);
+                bindUserSearchParams(stmt, postgres, safe, 2);
+                stmt.setObject(4, viewerId);
+                stmt.setObject(5, viewerId);
+                stmt.setInt(6, lim);
                 try (var rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         result.add(new UserSearchHit(
                             rs.getObject("id", UUID.class).toString(),
-                            rs.getString("username"),
-                            rs.getString("display_name")));
+                            rs.getString(COL_USERNAME),
+                            rs.getString(COL_DISPLAY_NAME)));
                     }
                 }
             }
         } catch (Exception e) {
             log.error("searchForViewer failed", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return result;
     }
 
     static String userSearchClause(boolean postgres, String usernameCol, String displayNameCol) {
+        var userCol = whitelistSearchColumn(usernameCol);
+        var displayCol = whitelistSearchColumn(displayNameCol);
         if (postgres) {
-            return "(lower(" + usernameCol + ") LIKE lower(?) OR lower(" + displayNameCol + ") LIKE lower(?))";
+            return "(lower(" + userCol + ") LIKE lower(?) OR lower(" + displayCol + ") LIKE lower(?))";
         }
-        return "(POSITION(lower(CAST (? AS text)) IN lower(coalesce(" + usernameCol + ", ''))) > 0"
-            + " OR POSITION(lower(CAST (? AS text)) IN lower(coalesce(" + displayNameCol + ", ''))) > 0)";
+        return "(POSITION(lower(CAST (? AS text)) IN lower(coalesce(" + userCol + ", ''))) > 0"
+            + " OR POSITION(lower(CAST (? AS text)) IN lower(coalesce(" + displayCol + ", ''))) > 0)";
+    }
+
+    /** Whitelist of column identifiers allowed in search clause (never concatenate untrusted input). */
+    private static String whitelistSearchColumn(String column) {
+        return switch (column) {
+            case COL_USERNAME, COL_DISPLAY_NAME, COL_U_USERNAME, COL_U_DISPLAY_NAME -> column;
+            default -> throw new IllegalArgumentException("unsupported search column");
+        };
     }
 
     static String userSearchBindValue(boolean postgres, String query) {
@@ -466,7 +513,7 @@ public final class JdbcUserJdbcRepository {
         stmt.setString(startIndex + 1, val);
     }
 
-    private UserProfile mapRow(ResultSet rs) throws Exception {
+    private UserProfile mapRow(ResultSet rs) throws SQLException {
         var lastSeenTs = rs.getTimestamp("last_seen_at");
         Instant lastSeen = lastSeenTs != null ? lastSeenTs.toInstant() : null;
         var org = rs.getObject("org_id", UUID.class);
@@ -477,8 +524,8 @@ public final class JdbcUserJdbcRepository {
         var avatarHidden = hasColumn(rs, "avatar_hidden") && rs.getBoolean("avatar_hidden");
         return new UserProfile(
             rs.getObject("id", UUID.class).toString(),
-            rs.getString("username"),
-            rs.getString("display_name"),
+            rs.getString(COL_USERNAME),
+            rs.getString(COL_DISPLAY_NAME),
             rs.getString("phone"),
             rs.getString("email"),
             rs.getString("external_id"),
@@ -502,7 +549,7 @@ public final class JdbcUserJdbcRepository {
             rs.findColumn(column);
             return true;
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 }

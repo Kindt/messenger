@@ -35,6 +35,11 @@ public final class JdbcLiveSessionJdbcRepository {
         ) v ON v.session_id = ls.id
         """;
 
+    private static final String LIST_FOR_CHAT_ALL = SESSION_SELECT
+        + " WHERE ls.chat_id = ? ORDER BY ls.created_at DESC";
+    private static final String LIST_FOR_CHAT_ACTIVE = SESSION_SELECT
+        + " WHERE ls.chat_id = ? AND ls.status = 'active' ORDER BY ls.created_at DESC";
+
     private final DataSource dataSource;
     private final AppConfig appConfig;
     private final UuidGenerator uuidGenerator;
@@ -71,6 +76,7 @@ public final class JdbcLiveSessionJdbcRepository {
             }
         } catch (Exception e) {
             log.error("insert live session failed", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -88,14 +94,13 @@ public final class JdbcLiveSessionJdbcRepository {
             }
         } catch (Exception e) {
             log.error("find live session {}", sessionId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
 
     public List<LiveSessionResponse> listForChat(UUID chatId, boolean activeOnly) {
-        var sql = SESSION_SELECT + " WHERE ls.chat_id = ?"
-            + (activeOnly ? " AND ls.status = 'active' " : "")
-            + " ORDER BY ls.created_at DESC";
+        var sql = activeOnly ? LIST_FOR_CHAT_ACTIVE : LIST_FOR_CHAT_ALL;
         var list = new ArrayList<LiveSessionResponse>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
@@ -108,6 +113,7 @@ public final class JdbcLiveSessionJdbcRepository {
             }
         } catch (Exception e) {
             log.error("list live sessions chat {}", chatId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return list;
     }
@@ -118,8 +124,8 @@ public final class JdbcLiveSessionJdbcRepository {
             return countActiveViewersOnConnection(conn, sessionId);
         } catch (Exception e) {
             log.error("count viewers {}", sessionId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
-        return 0;
     }
 
     public Optional<String> viewerRole(UUID sessionId, UUID userId) {
@@ -139,6 +145,7 @@ public final class JdbcLiveSessionJdbcRepository {
             }
         } catch (Exception e) {
             log.error("viewerRole", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -165,7 +172,7 @@ public final class JdbcLiveSessionJdbcRepository {
             return true;
         } catch (Exception e) {
             log.error("join live session", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -186,7 +193,7 @@ public final class JdbcLiveSessionJdbcRepository {
             return true;
         } catch (Exception e) {
             log.error("leave live session", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -203,6 +210,7 @@ public final class JdbcLiveSessionJdbcRepository {
             }
         } catch (Exception e) {
             log.error("findCreatorId live", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -216,7 +224,7 @@ public final class JdbcLiveSessionJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("end live session", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -234,7 +242,7 @@ public final class JdbcLiveSessionJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("updateDvrPlaylist {}", sessionId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -254,7 +262,7 @@ public final class JdbcLiveSessionJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("recordModerationEvent {}", sessionId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -268,7 +276,7 @@ public final class JdbcLiveSessionJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("setModerationState {}", sessionId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -299,7 +307,7 @@ public final class JdbcLiveSessionJdbcRepository {
         return 0;
     }
 
-    private LiveSessionResponse mapRow(ResultSet rs) throws Exception {
+    private LiveSessionResponse mapRow(ResultSet rs) throws SQLException {
         var ended = rs.getTimestamp("ended_at");
         return new LiveSessionResponse(
             rs.getObject("id", UUID.class).toString(),

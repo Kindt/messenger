@@ -313,10 +313,12 @@ class MessageApplicationServiceWriteTest {
 
         @Override
         public void flush(Duration timeout) {
+            // no-op stub for NatsOutboundPort; flush not exercised in write tests
         }
 
         @Override
         public void publishPipelineMessageSend(byte[] payload, String userId) {
+            // no-op stub for NatsOutboundPort; pipeline publish not asserted here
         }
 
         record Published(String subject, byte[] payload) {
@@ -624,7 +626,7 @@ class MessageApplicationServiceWriteTest {
         }
 
         @Override
-        public com.avandocmsg.messenger.api.mls.dto.EncryptedMessage encrypt(UUID chatId, UUID senderId, String plaintext) {
+        public com.avandocmsg.messenger.api.mls.dto.EncryptedMessage encrypt(UUID chatId, String plaintext) {
             if (encryptResult != null) {
                 return new com.avandocmsg.messenger.api.mls.dto.EncryptedMessage(
                     encryptResult.getBytes(), UUID.randomUUID().toString(), 0);

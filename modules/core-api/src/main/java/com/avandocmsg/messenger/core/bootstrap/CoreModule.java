@@ -153,7 +153,50 @@ public final class CoreModule {
             editCoordinator, deleteCoordinator, reactionCoordinator, null);
     }
 
+    /** Coordinator wiring for {@link MessageApplicationService}. */
+    public record MessageCoordinatorWiring(
+        BlockRepositoryPort blockRepositoryPort,
+        MessageSendCoordinator sendCoordinator,
+        MessageEditCoordinator editCoordinator,
+        MessageDeleteCoordinator deleteCoordinator,
+        MessageReactionCoordinator reactionCoordinator,
+        MessagePinCoordinator pinCoordinator
+    ) {}
+
+    /** Query / MLS / DLP wiring for {@link MessageApplicationService}. */
+    public record MessageGatewayWiring(
+        MessageQueryPort messageQueryPort,
+        com.avandocmsg.messenger.api.mls.MlsService mlsService,
+        com.avandocmsg.messenger.api.compliance.DlpBridgeGate dlpBridgeGate
+    ) {}
+
+    /** Wiring bundle for {@link #messageApplicationService(DataSource, MessageApplicationWiring)}. */
+    public record MessageApplicationWiring(
+        MessageCoordinatorWiring coordinators,
+        MessageGatewayWiring gateways
+    ) {}
+
     public static MessageApplicationService messageApplicationService(DataSource dataSource,
+                                                                      MessageApplicationWiring wiring) {
+        var coordinators = wiring.coordinators();
+        var gateways = wiring.gateways();
+        return new MessageApplicationService(new MessageApplicationService.Dependencies(
+            new MessageApplicationService.Ports(
+                messageRepositoryPort(dataSource),
+                chatRepositoryPort(dataSource),
+                coordinators.blockRepositoryPort(),
+                gateways.messageQueryPort()),
+            new MessageApplicationService.Coordinators(
+                coordinators.sendCoordinator(),
+                coordinators.editCoordinator(),
+                coordinators.deleteCoordinator(),
+                coordinators.reactionCoordinator(),
+                coordinators.pinCoordinator()),
+            new MessageApplicationService.Gateways(gateways.mlsService(), gateways.dlpBridgeGate())));
+    }
+
+    /** Prefer {@link #messageApplicationService(DataSource, MessageApplicationWiring)}; flat overloads for composition roots. */
+    public static MessageApplicationService messageApplicationService(DataSource dataSource, // NOSONAR java:S107 — legacy flat overload for callers outside this batch
                                                                       BlockRepositoryPort blockRepositoryPort,
                                                                       MessageSendCoordinator sendCoordinator,
                                                                       MessageEditCoordinator editCoordinator,
@@ -162,11 +205,14 @@ public final class CoreModule {
                                                                       MessagePinCoordinator pinCoordinator,
                                                                       MessageQueryPort messageQueryPort,
                                                                       com.avandocmsg.messenger.api.mls.MlsService mlsService) {
-        return messageApplicationService(dataSource, blockRepositoryPort, sendCoordinator, editCoordinator,
-            deleteCoordinator, reactionCoordinator, pinCoordinator, messageQueryPort, mlsService, null);
+        return messageApplicationService(dataSource, new MessageApplicationWiring(
+            new MessageCoordinatorWiring(blockRepositoryPort, sendCoordinator, editCoordinator, deleteCoordinator,
+                reactionCoordinator, pinCoordinator),
+            new MessageGatewayWiring(messageQueryPort, mlsService, null)));
     }
 
-    public static MessageApplicationService messageApplicationService(DataSource dataSource,
+    /** Prefer {@link #messageApplicationService(DataSource, MessageApplicationWiring)}; flat overloads for composition roots. */
+    public static MessageApplicationService messageApplicationService(DataSource dataSource, // NOSONAR java:S107 — legacy flat overload for callers outside this batch
                                                                       BlockRepositoryPort blockRepositoryPort,
                                                                       MessageSendCoordinator sendCoordinator,
                                                                       MessageEditCoordinator editCoordinator,
@@ -176,10 +222,10 @@ public final class CoreModule {
                                                                       MessageQueryPort messageQueryPort,
                                                                       com.avandocmsg.messenger.api.mls.MlsService mlsService,
                                                                       com.avandocmsg.messenger.api.compliance.DlpBridgeGate dlpBridgeGate) {
-        return new MessageApplicationService(messageRepositoryPort(dataSource), chatRepositoryPort(dataSource),
-            blockRepositoryPort,
-            sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator,
-            messageQueryPort, mlsService, dlpBridgeGate);
+        return messageApplicationService(dataSource, new MessageApplicationWiring(
+            new MessageCoordinatorWiring(blockRepositoryPort, sendCoordinator, editCoordinator, deleteCoordinator,
+                reactionCoordinator, pinCoordinator),
+            new MessageGatewayWiring(messageQueryPort, mlsService, dlpBridgeGate)));
     }
 
     public static com.avandocmsg.messenger.core.port.FederationTrustPort federationTrustPort(DataSource dataSource) {
@@ -298,16 +344,18 @@ public final class CoreModule {
             ChatPersistencePort chatPersistencePort) {
         var tokenService = avatarAccessTokenService(appConfig);
         var urlBuilder = avatarUrlBuilder(tokenService, appConfig);
-        return new AvatarApplicationService(
-            appConfig,
-            avatarAccessPort(dataSource),
-            urlBuilder,
-            userRepositoryPort(dataSource),
-            chatPersistencePort,
-            fileMetadataPort(dataSource),
-            avatarUpdatePublisher(natsOutbound, urlBuilder),
-            readCachePort,
-            new JdbcAvatarHistoryAdapter(dataSource));
+        return new AvatarApplicationService(new AvatarApplicationService.Dependencies(
+            new AvatarApplicationService.Ports(
+                appConfig,
+                avatarAccessPort(dataSource),
+                urlBuilder,
+                userRepositoryPort(dataSource),
+                chatPersistencePort,
+                fileMetadataPort(dataSource)),
+            new AvatarApplicationService.SideEffects(
+                avatarUpdatePublisher(natsOutbound, urlBuilder),
+                readCachePort,
+                new JdbcAvatarHistoryAdapter(dataSource))));
     }
 
     public static AvatarHistoryPort avatarHistoryPort(DataSource dataSource) {
@@ -361,15 +409,17 @@ public final class CoreModule {
                                                                 UuidGenerator uuidGenerator,
                                                                 AppConfig appConfig,
                                                                 AvatarAccessPort avatarAccessPort) {
-        return new FileApplicationService(
-            fileMetadataPort(dataSource),
-            messageQueryPort,
-            objectStoragePort,
-            avatarAccessPort,
-            uuidGenerator,
-            appConfig.mediaMaxUploadBytes(),
-            appConfig.fileDedupEnabled(),
-            appConfig.fileUploadMaxConcurrent());
+        return new FileApplicationService(new FileApplicationService.Dependencies(
+            new FileApplicationService.Ports(
+                fileMetadataPort(dataSource),
+                messageQueryPort,
+                objectStoragePort,
+                avatarAccessPort,
+                uuidGenerator),
+            new FileApplicationService.UploadLimits(
+                appConfig.mediaMaxUploadBytes(),
+                appConfig.fileDedupEnabled(),
+                appConfig.fileUploadMaxConcurrent())));
     }
 
     public static OrganizationRepositoryPort organizationRepositoryPort(DataSource dataSource,

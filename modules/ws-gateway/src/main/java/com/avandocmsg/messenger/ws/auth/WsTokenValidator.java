@@ -15,7 +15,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WsTokenValidator {
@@ -51,7 +50,7 @@ public class WsTokenValidator {
             var claims = signedJWT.getJWTClaimsSet();
             if (!issuer.equals(claims.getIssuer())) return null;
             var exp = claims.getExpirationTime();
-            if (exp != null && exp.before(new Date())) return null;
+            if (exp != null && exp.toInstant().isBefore(Instant.now())) return null;
             return claims;
         } catch (Exception e) {
             log.warn("JWT validation failed: {}", e.getMessage());
@@ -60,8 +59,10 @@ public class WsTokenValidator {
     }
 
     private RSAKey resolveKey(String kid) {
-        if (kid != null && keyCache.containsKey(kid)) return keyCache.get(kid);
-        return keyCache.values().stream().findFirst().orElse(null);
+        if (kid == null || kid.isBlank()) {
+            return null;
+        }
+        return keyCache.get(kid);
     }
 
     private void refreshKeys() {
@@ -83,6 +84,9 @@ public class WsTokenValidator {
                 lastFetch = now;
                 log.info("JWKS refreshed: {} keys", keyCache.size());
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Failed to refresh JWKS (interrupted): {}", e.getMessage());
         } catch (Exception e) {
             log.warn("Failed to refresh JWKS: {}", e.getMessage());
         }

@@ -210,6 +210,10 @@ public class CoreApiComposition {
         return appConfig;
     }
 
+    private static final String ADMIN_UI_SERVLET = "adminUiStatic";
+    private static final String ADMIN_UI_MAPPING = "/admin/*";
+    private static final String API_MAPPING = "/api/*";
+
     @FunctionalInterface
     private interface HttpServletRegistration {
         void register(String jerseyName, ServletContainer jerseyServlet, ClasspathAdminStaticServlet adminServlet);
@@ -219,11 +223,11 @@ public class CoreApiComposition {
         wireApplicationStack((jerseyName, jerseyServlet, adminServlet) -> {
             var jerseyReg = servletContext.addServlet(jerseyName, jerseyServlet);
             if (jerseyReg != null) {
-                jerseyReg.addMapping("/api/*");
+                jerseyReg.addMapping(API_MAPPING);
             }
-            var adminReg = servletContext.addServlet("adminUiStatic", adminServlet);
+            var adminReg = servletContext.addServlet(ADMIN_UI_SERVLET, adminServlet);
             if (adminReg != null) {
-                adminReg.addMapping("/admin", "/admin/*");
+                adminReg.addMapping("/admin", ADMIN_UI_MAPPING);
             }
         });
     }
@@ -233,10 +237,10 @@ public class CoreApiComposition {
         wireApplicationStack((jerseyName, jerseyServlet, adminServlet) -> {
             var jerseyWrapper = Tomcat.addServlet(tomcatContext, jerseyName, jerseyServlet);
             jerseyWrapper.setLoadOnStartup(1);
-            tomcatContext.addServletMappingDecoded("/api/*", jerseyName);
-            var adminWrapper = Tomcat.addServlet(tomcatContext, "adminUiStatic", adminServlet);
+            tomcatContext.addServletMappingDecoded(API_MAPPING, jerseyName);
+            var adminWrapper = Tomcat.addServlet(tomcatContext, ADMIN_UI_SERVLET, adminServlet);
             adminWrapper.setLoadOnStartup(2);
-            tomcatContext.addServletMappingDecoded("/admin/*", "adminUiStatic");
+            tomcatContext.addServletMappingDecoded(ADMIN_UI_MAPPING, ADMIN_UI_SERVLET);
         });
     }
 
@@ -320,7 +324,7 @@ public class CoreApiComposition {
         java.util.function.BooleanSupplier indexerAvailable =
             () -> indexerHotPlugMonitor == null || indexerHotPlugMonitor.isIndexerPresent();
         var indexerEventPublisher = CoreModule.indexerEventPublisher(natsOutbound, indexerAvailable);
-        var messageSendCoordinator = new MessageSendCoordinator(
+        this.messageSendCoordinator = new MessageSendCoordinator(
             messagePersistence,
             CoreModule.chatRepositoryPort(dataSource),
             mlsService, mlsMigrationService, natsOutbound,
@@ -329,7 +333,6 @@ public class CoreApiComposition {
                 CoreModule.chatRepositoryPort(dataSource),
                 new JdbcMessageMentionRepositoryAdapter(dataSource),
                 natsOutbound));
-        this.messageSendCoordinator = messageSendCoordinator;
         var messageEditCoordinator = CoreModule.messageEditCoordinator(dataSource, indexerEventPublisher);
         var messageDeleteCoordinator = CoreModule.messageDeleteCoordinator(
             dataSource, natsOutbound, indexerEventPublisher);
@@ -349,7 +352,7 @@ public class CoreApiComposition {
         var dlpBridgeGate = new com.avandocmsg.messenger.api.compliance.DlpBridgeGate(
             pluginRepository, pluginPlatformService, userLookupPort);
         var messageApplicationService = CoreModule.messageApplicationService(
-            dataSource, blockRepositoryPort, messageSendCoordinator, messageEditCoordinator,
+            dataSource, blockRepositoryPort, this.messageSendCoordinator, messageEditCoordinator,
             messageDeleteCoordinator, messageReactionCoordinator, messagePinCoordinator,
             messageQueryPort, mlsService, dlpBridgeGate);
         var fileService = new FileService(fileApplicationService, messageQueryPort);
@@ -524,7 +527,7 @@ public class CoreApiComposition {
             messagePersistence);
 
         scheduledMessageScheduler = new com.avandocmsg.messenger.api.messages.ScheduledMessageScheduler(
-            appConfig, scheduledMessagePort, messageSendCoordinator, clock);
+            appConfig, scheduledMessagePort, this.messageSendCoordinator, clock);
         messageReminderScheduler = new com.avandocmsg.messenger.api.messages.MessageReminderScheduler(
             appConfig, messageReminderPort, clock);
     }

@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
-import java.time.Instant;
 
 /**
  * Applies inbound KMLS wire payloads from NATS {@code mls.*} subjects (multi-instance sync).
@@ -18,6 +17,7 @@ import java.time.Instant;
 public final class MlsWireHandler {
 
     private static final Logger log = LoggerFactory.getLogger(MlsWireHandler.class);
+    private static final String APPLIED_DEBUG = "Applied {} groupId={} epoch={}";
 
     private final MlsGroupStateRepository groupStateRepository;
     private final MlsService mlsService;
@@ -67,7 +67,7 @@ public final class MlsWireHandler {
         if (groupStateRepository.save(state)) {
             mlsService.ensureSession(welcome.chatId());
             mlsService.syncEpoch(welcome.chatId(), welcome.epoch(), state.treeData());
-            log.debug("Applied {} groupId={} epoch={}", NatsSubjects.MLS_WELCOME, welcome.groupId(), welcome.epoch());
+            log.debug(APPLIED_DEBUG, NatsSubjects.MLS_WELCOME, welcome.groupId(), welcome.epoch());
         }
     }
 
@@ -91,7 +91,7 @@ public final class MlsWireHandler {
             clock.instant());
         if (groupStateRepository.save(updated)) {
             mlsService.syncEpoch(group.chatId(), updated.epoch(), updated.treeData());
-            log.debug("Applied {} groupId={} epoch={}", NatsSubjects.MLS_COMMIT, commit.groupId(), commit.epoch());
+            log.debug(APPLIED_DEBUG, NatsSubjects.MLS_COMMIT, commit.groupId(), commit.epoch());
         }
     }
 
@@ -112,7 +112,7 @@ public final class MlsWireHandler {
             clock.instant());
         if (groupStateRepository.save(updated)) {
             mlsService.syncEpoch(group.chatId(), updated.epoch(), updated.treeData());
-            log.debug("Applied {} groupId={} epoch={}", NatsSubjects.MLS_EPOCH, epochPayload.groupId(), epochPayload.epoch());
+            log.debug(APPLIED_DEBUG, NatsSubjects.MLS_EPOCH, epochPayload.groupId(), epochPayload.epoch());
         }
     }
 }

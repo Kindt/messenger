@@ -38,11 +38,11 @@ class AuditRepositoryH2Test {
         }
         repo = new AuditRepository(ds);
         var u = UUID.randomUUID();
-        repo.record(u, "other.action", "x", "1", "{}");
-        repo.record(null, "message.retention.hot_body_cleared", "message", "m1", "{\"chat_id\":\"c\"}");
-        repo.record(null, "message.retention.hot_body_cleared", "message", "m2", "{}");
+        repo.recordEvent(u, "other.action", "x", "1", "{}");
+        repo.recordEvent(null, "message.retention.hot_body_cleared", "message", "m1", "{\"chat_id\":\"c\"}");
+        repo.recordEvent(null, "message.retention.hot_body_cleared", "message", "m2", "{}");
         var passId = UUID.randomUUID().toString();
-        repo.record(null, "message.retention.bulk_cleared", "retention_pass", passId, "{\"cleared\":2}");
+        repo.recordEvent(null, "message.retention.bulk_cleared", "retention_pass", passId, "{\"cleared\":2}");
     }
 
     @AfterEach

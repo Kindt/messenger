@@ -39,7 +39,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
                 }
             }
         } catch (Exception e) {
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -72,7 +72,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
             stmt.executeUpdate();
             return Optional.of(new StoredFile(id, filename, mimeType, size, uploadedBy, contentHash, storageKey));
         } catch (Exception e) {
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -88,7 +88,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
             stmt.setObject(1, id.value());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -112,7 +112,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
                 }
             }
         } catch (Exception e) {
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -135,7 +135,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
             stmt.setLong(3, blobSize);
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -151,7 +151,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
             stmt.setString(1, contentHash);
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -175,7 +175,7 @@ public final class JdbcFileMetadataAdapter implements FileMetadataPort {
                 }
             }
         } catch (Exception e) {
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }

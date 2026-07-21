@@ -63,10 +63,12 @@ class OrganizationRoutingDataSourceTest {
 
             @Override
             public void setLogWriter(java.io.PrintWriter out) {
+            // intentional no-op: test stub
             }
 
             @Override
             public void setLoginTimeout(int seconds) {
+            // intentional no-op: test stub
             }
 
             @Override
@@ -100,6 +102,7 @@ class OrganizationRoutingDataSourceTest {
 
         @Override
         public void close() {
+        // intentional no-op: test stub
         }
 
         @Override
@@ -129,6 +132,7 @@ class OrganizationRoutingDataSourceTest {
 
         @Override
         public void setAutoCommit(boolean autoCommit) {
+        // intentional no-op: test stub
         }
 
         @Override
@@ -138,10 +142,12 @@ class OrganizationRoutingDataSourceTest {
 
         @Override
         public void commit() {
+        // intentional no-op: test stub
         }
 
         @Override
         public void rollback() {
+        // intentional no-op: test stub
         }
 
         @Override
@@ -151,6 +157,7 @@ class OrganizationRoutingDataSourceTest {
 
         @Override
         public void setReadOnly(boolean readOnly) {
+        // intentional no-op: test stub
         }
 
         @Override
@@ -160,6 +167,7 @@ class OrganizationRoutingDataSourceTest {
 
         @Override
         public void setCatalog(String catalog) {
+        // intentional no-op: test stub
         }
 
         @Override
@@ -169,6 +177,7 @@ class OrganizationRoutingDataSourceTest {
 
         @Override
         public void setTransactionIsolation(int level) {
+        // intentional no-op: test stub
         }
 
         @Override
@@ -183,6 +192,7 @@ class OrganizationRoutingDataSourceTest {
 
         @Override
         public void clearWarnings() {
+        // intentional no-op: test stub
         }
 
         @Override
@@ -207,10 +217,12 @@ class OrganizationRoutingDataSourceTest {
 
         @Override
         public void setTypeMap(java.util.Map<String, Class<?>> map) {
+        // intentional no-op: test stub
         }
 
         @Override
         public void setHoldability(int holdability) {
+        // intentional no-op: test stub
         }
 
         @Override
@@ -230,10 +242,12 @@ class OrganizationRoutingDataSourceTest {
 
         @Override
         public void rollback(java.sql.Savepoint savepoint) {
+        // intentional no-op: test stub
         }
 
         @Override
         public void releaseSavepoint(java.sql.Savepoint savepoint) {
+        // intentional no-op: test stub
         }
 
         @Override
@@ -293,10 +307,12 @@ class OrganizationRoutingDataSourceTest {
 
         @Override
         public void setClientInfo(String name, String value) {
+        // intentional no-op: test stub
         }
 
         @Override
         public void setClientInfo(java.util.Properties properties) {
+        // intentional no-op: test stub
         }
 
         @Override
@@ -321,6 +337,7 @@ class OrganizationRoutingDataSourceTest {
 
         @Override
         public void setSchema(String schema) {
+        // intentional no-op: test stub
         }
 
         @Override
@@ -330,10 +347,12 @@ class OrganizationRoutingDataSourceTest {
 
         @Override
         public void abort(java.util.concurrent.Executor executor) {
+        // intentional no-op: test stub
         }
 
         @Override
         public void setNetworkTimeout(java.util.concurrent.Executor executor, int milliseconds) {
+        // intentional no-op: test stub
         }
 
         @Override

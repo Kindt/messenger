@@ -1,7 +1,6 @@
 package com.avandocmsg.messenger.api.mls;
 
 import com.avandocmsg.messenger.api.crypto.E2EEService;
-import com.avandocmsg.messenger.api.mls.dto.EncryptedMessage;
 import com.avandocmsg.messenger.api.mls.wire.MlsCommitPayload;
 import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +47,7 @@ class MlsGroupManagerTest {
 
         var body = java.util.Base64.getDecoder().decode(encrypted.ciphertextBase64());
         var nonce = java.util.Base64.getDecoder().decode(encrypted.nonceBase64());
-        var plain = manager.decrypt(groupId, encrypted.epoch(), body, nonce);
+        var plain = manager.decrypt(groupId, body, nonce);
         assertEquals("hello mls stub", plain);
     }
 

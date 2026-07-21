@@ -5,6 +5,8 @@ import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.FileId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.AvatarAccessPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.util.Optional;
@@ -12,6 +14,7 @@ import java.util.UUID;
 
 /** JDBC adapter for {@link AvatarAccessPort}. */
 public final class JdbcAvatarAccessRepository implements AvatarAccessPort {
+    private static final Logger log = LoggerFactory.getLogger(JdbcAvatarAccessRepository.class);
 
     private final DataSource dataSource;
 
@@ -66,8 +69,9 @@ public final class JdbcAvatarAccessRepository implements AvatarAccessPort {
                     return Optional.of(rs.getObject("id", UUID.class));
                 }
             }
-        } catch (Exception ignored) {
-            return Optional.empty();
+        } catch (Exception e) {
+            log.error("find user avatar owner failed for {}", fileId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -83,8 +87,9 @@ public final class JdbcAvatarAccessRepository implements AvatarAccessPort {
                     return Optional.of(rs.getObject("id", UUID.class));
                 }
             }
-        } catch (Exception ignored) {
-            return Optional.empty();
+        } catch (Exception e) {
+            log.error("find chat avatar owner failed for {}", fileId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -127,7 +132,7 @@ public final class JdbcAvatarAccessRepository implements AvatarAccessPort {
                 }
             }
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return !blockExists(viewerId, targetUserId);
     }
@@ -155,7 +160,7 @@ public final class JdbcAvatarAccessRepository implements AvatarAccessPort {
                 return policy == null || (!"disabled".equals(policy) && !"ldap_only".equals(policy));
             }
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -174,7 +179,7 @@ public final class JdbcAvatarAccessRepository implements AvatarAccessPort {
                 return rs.next();
             }
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -196,7 +201,7 @@ public final class JdbcAvatarAccessRepository implements AvatarAccessPort {
                 return rs.next();
             }
         } catch (Exception e) {
-            return true;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -211,8 +216,9 @@ public final class JdbcAvatarAccessRepository implements AvatarAccessPort {
                     return Optional.of(rs.getObject("id", UUID.class));
                 }
             }
-        } catch (Exception ignored) {
-            return Optional.empty();
+        } catch (Exception e) {
+            log.error("find organization logo owner failed for {}", fileId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -228,7 +234,7 @@ public final class JdbcAvatarAccessRepository implements AvatarAccessPort {
                 return rs.next();
             }
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 }

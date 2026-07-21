@@ -44,7 +44,7 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
             return id;
         } catch (Exception e) {
             log.error("migration import insert failed", e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -65,6 +65,7 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
             }
         } catch (Exception e) {
             log.error("migration import find failed {}", id, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -92,7 +93,7 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
             }
         } catch (Exception e) {
             log.error("migration import list failed org={}", orgId, e);
-            return List.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -118,7 +119,7 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
             }
         } catch (Exception e) {
             log.error("migration import listPending failed", e);
-            return List.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -138,7 +139,7 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("migration import status update failed {}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -159,7 +160,7 @@ public final class JdbcMigrationImportJobAdapter implements MigrationImportJobPo
         return product != null && product.toLowerCase(Locale.ROOT).contains("postgresql");
     }
 
-    private static JobRow mapRow(java.sql.ResultSet rs) throws Exception {
+    private static JobRow mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new JobRow(
             rs.getObject("id", UUID.class),
             rs.getObject("org_id", UUID.class),

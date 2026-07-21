@@ -5,6 +5,7 @@ import com.avandocmsg.messenger.common.http.HttpClientSupport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -75,7 +76,7 @@ public final class WebDavStorageClient {
         return out;
     }
 
-    private static List<StorageItem> propfindFilter(String query) throws Exception {
+    private static List<StorageItem> propfindFilter(String query) throws IOException, InterruptedException {
         var base = IntegrationEnv.trimSlash(IntegrationEnv.getenv("WEBDAV_BASE_URL"));
         var body = """
             <?xml version="1.0" encoding="utf-8" ?>
@@ -97,18 +98,13 @@ public final class WebDavStorageClient {
         var needle = query.isBlank() ? "" : query.toLowerCase(Locale.ROOT);
         var out = new ArrayList<StorageItem>();
         Matcher m = HREF.matcher(response.body());
-        while (m.find()) {
+        while (m.find() && out.size() < 10) {
             var href = m.group(1);
-            if (href.endsWith("/")) {
-                continue;
-            }
-            var name = href.contains("/") ? href.substring(href.lastIndexOf('/') + 1) : href;
-            if (!needle.isBlank() && !name.toLowerCase(Locale.ROOT).contains(needle)) {
-                continue;
-            }
-            out.add(new StorageItem(name, href));
-            if (out.size() >= 10) {
-                break;
+            if (!href.endsWith("/")) {
+                var name = href.contains("/") ? href.substring(href.lastIndexOf('/') + 1) : href;
+                if (needle.isBlank() || name.toLowerCase(Locale.ROOT).contains(needle)) {
+                    out.add(new StorageItem(name, href));
+                }
             }
         }
         return out;

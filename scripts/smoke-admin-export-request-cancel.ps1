@@ -1,7 +1,6 @@
 # Admin: POST export -> audit export.requested -> cancel -> audit export.admin_cancelled.
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$ChatId,
+    [string]$ChatId = "",
     [string]$BaseUrl = "http://localhost:8080",
     [string]$AdminUser = "csadmin",
     [string]$AdminPass = "csadmin",
@@ -14,6 +13,9 @@ param(
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $scriptDir "lib\SmokeExportAudit.ps1")
+. (Join-Path $scriptDir "lib\Invoke-ExportJobCancel.ps1")
+. (Join-Path $scriptDir "lib\Resolve-SmokeExportChatId.ps1")
+$ChatId = Resolve-SmokeExportChatId -ChatId $ChatId -BaseUrl $BaseUrl -ScriptDir $scriptDir
 
 function Get-Token {
     param($User, $Pass)
@@ -57,7 +59,11 @@ while ((Get-Date) -lt $deadline) {
     Write-Host "  status=$($st.status)" -ForegroundColor DarkGray
     if (Test-CancelTargetStatus -Status $st.status) {
         Write-Host "DELETE cancel ..." -ForegroundColor Cyan
-        Invoke-RestMethod -Uri $cancelUri -Headers $hdr -Method Delete | Out-Null
+        $r = Invoke-ExportJobCancel -CancelUri $cancelUri -Headers $hdr -StatusUri $statusUri -AllowFinishedEarly
+        if ($r.FinishedEarly) {
+            Write-Host "[WARN] Job finished before cancel (409, status=$($r.Status))" -ForegroundColor Yellow
+            exit 0
+        }
         $cancelled = $true
         break
     }
@@ -73,7 +79,11 @@ while ((Get-Date) -lt $deadline) {
 }
 
 if (-not $cancelled) {
-    Invoke-RestMethod -Uri $cancelUri -Headers $hdr -Method Delete | Out-Null
+    $r = Invoke-ExportJobCancel -CancelUri $cancelUri -Headers $hdr -StatusUri $statusUri -AllowFinishedEarly
+    if ($r.FinishedEarly) {
+        Write-Host "[WARN] Job finished before cancel (409, status=$($r.Status))" -ForegroundColor Yellow
+        exit 0
+    }
 }
 
 $final = Invoke-RestMethod -Uri $statusUri -Headers $hdr -Method Get

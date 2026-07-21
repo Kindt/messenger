@@ -17,6 +17,12 @@ import java.util.UUID;
 
 public class AppConfig {
     private static final Logger log = LoggerFactory.getLogger(AppConfig.class);
+    private static final String PROP_FILE_RESIZE_ENABLED = "file.resize.enabled";
+    private static final String PROP_HOTPLUG_HEARTBEAT_TTL_MS = "hotplug.heartbeat.ttl.ms";
+    private static final String ENV_FLEET_PROBE_TIMEOUT_MS = "FLEET_PROBE_TIMEOUT_MS";
+    private static final String DEFAULT_AVANDOCMSG = "avandocmsg";
+    private static final String STRING_FALSE = "false";
+    private static final String DEFAULT_ADMIN = "admin";
     private final Properties props;
 
     public AppConfig() {
@@ -85,7 +91,7 @@ public class AppConfig {
         override("FILE_PROXY_MODE", "file.proxy.mode");
         override("FILE_PROXY_URL", "file.proxy.url");
         override("FILE_PROXY_AUTH_TOKEN", "file.proxy.auth.token");
-        override("FILE_RESIZE_ENABLED", "file.resize.enabled");
+        override("FILE_RESIZE_ENABLED", PROP_FILE_RESIZE_ENABLED);
         override("FILE_RESIZE_MAX_WIDTH", "file.resize.max.width");
         override("FILE_RESIZE_MAX_HEIGHT", "file.resize.max.height");
         override("FILE_RESIZE_MAX_SOURCE_PIXELS", "file.resize.max.source.pixels");
@@ -131,12 +137,12 @@ public class AppConfig {
         override("EXPORT_AUTO_QUEUE_ON_SUGGESTED", "export.auto.queue.on.suggested.enabled");
         override("EXPORT_AUTO_QUEUE_ACTOR_USER_ID", "export.auto.queue.actor.user.id");
         override("EXPORT_AUTO_QUEUE_COOLDOWN_MINUTES", "export.auto.queue.cooldown.minutes");
-        override("HOTPLUG_HEARTBEAT_TTL_MS", "hotplug.heartbeat.ttl.ms");
-        override("SERVICE_HEARTBEAT_TTL_MS", "hotplug.heartbeat.ttl.ms");
+        override("HOTPLUG_HEARTBEAT_TTL_MS", PROP_HOTPLUG_HEARTBEAT_TTL_MS);
+        override("SERVICE_HEARTBEAT_TTL_MS", PROP_HOTPLUG_HEARTBEAT_TTL_MS);
         override("HOTPLUG_INDEXER_SERVICE_ID", "hotplug.indexer.service.id");
         override("HOTPLUG_INDEXER_PRESENCE_REQUIRED", "hotplug.indexer.presence.required");
         override("FLEET_TARGETS_JSON", "fleet.targets.json");
-        override("FLEET_PROBE_TIMEOUT_MS", "fleet.probe.timeout.ms");
+        override(ENV_FLEET_PROBE_TIMEOUT_MS, "fleet.probe.timeout.ms");
         override("FLEET_AGGREGATOR_NODE", "fleet.aggregator.node");
         override("MLS_STATUS", "mls.status");
         override("MLS_WIRE_ENABLED", "mls.wire.enabled");
@@ -161,7 +167,7 @@ public class AppConfig {
         override("API_PUBLIC_BASE_URL", "api.public.base.url");
         override("KEYCLOAK_AVATAR_IMPORT_ENABLED", "keycloak.avatar.import.enabled");
         override("KEYCLOAK_AVATAR_IMPORT_MAX_BYTES", "keycloak.avatar.import.max.bytes");
-        override("FILE_RESIZE_ENABLED", "file.resize.enabled");
+        override("FILE_RESIZE_ENABLED", PROP_FILE_RESIZE_ENABLED);
     }
 
     private void override(String envKey, String propKey) {
@@ -203,11 +209,11 @@ public class AppConfig {
     }
 
     public String dbUser() {
-        return props.getProperty("db.user", "avandocmsg");
+        return props.getProperty("db.user", DEFAULT_AVANDOCMSG);
     }
 
     public String dbPassword() {
-        return props.getProperty("db.password", "avandocmsg");
+        return props.getProperty("db.password", DEFAULT_AVANDOCMSG);
     }
 
     public int dbPoolSize() {
@@ -328,10 +334,12 @@ public class AppConfig {
         return Duration.ofMillis(Long.parseLong(props.getProperty("nats.ping.interval.ms", "120000")));
     }
 
-    /** When true, {@code msg.send} uses JetStream publish and requires pipeline with {@code NATS_JETSTREAM=true}. */
-    /** Env: {@code NATS_JETSTREAM}. Lab compose uses false; enable for FR-052 JetStream/DLQ features. */
+    /**
+     * When true, {@code msg.send} uses JetStream publish and requires pipeline with {@code NATS_JETSTREAM=true}.
+     * Env: {@code NATS_JETSTREAM}. Lab compose uses false; enable for FR-052 JetStream/DLQ features.
+     */
     public boolean natsJetstream() {
-        return Boolean.parseBoolean(props.getProperty("nats.jetstream", "false"));
+        return Boolean.parseBoolean(props.getProperty("nats.jetstream", STRING_FALSE));
     }
 
     public String keycloakIssuer() {
@@ -364,11 +372,11 @@ public class AppConfig {
 
     /** Учётная запись в realm {@code master} для password grant клиента {@code admin-cli}. */
     public String keycloakMasterUser() {
-        return props.getProperty("keycloak.master.user", "admin");
+        return props.getProperty("keycloak.master.user", DEFAULT_ADMIN);
     }
 
     public String keycloakMasterPassword() {
-        return props.getProperty("keycloak.master.password", "admin");
+        return props.getProperty("keycloak.master.password", DEFAULT_ADMIN);
     }
 
     /** База Admin REST для текущего realm: {@code .../admin/realms/avandocmsg}. */
@@ -409,7 +417,7 @@ public class AppConfig {
     }
 
     public String minioAccessKey() {
-        return props.getProperty("minio.access.key", "avandocmsg");
+        return props.getProperty("minio.access.key", DEFAULT_AVANDOCMSG);
     }
 
     public String minioSecretKey() {
@@ -417,7 +425,7 @@ public class AppConfig {
     }
 
     public String minioBucket() {
-        return props.getProperty("minio.bucket", "avandocmsg");
+        return props.getProperty("minio.bucket", DEFAULT_AVANDOCMSG);
     }
 
     public int minioConnectTimeoutMs() {
@@ -474,7 +482,7 @@ public class AppConfig {
 
     /** Embedded on-the-fly image resize in core-api (remote file-proxy sidecar — future). */
     public boolean fileResizeEnabled() {
-        return Boolean.parseBoolean(props.getProperty("file.resize.enabled", "true"));
+        return Boolean.parseBoolean(props.getProperty(PROP_FILE_RESIZE_ENABLED, "true"));
     }
 
     /** Upper bound for resize query param {@code w}. */
@@ -494,12 +502,12 @@ public class AppConfig {
 
     /** When true, Redis must be reachable (see {@link com.avandocmsg.messenger.api.config.RedisConfig}). */
     public boolean rateLimitAuthEnabled() {
-        return Boolean.parseBoolean(props.getProperty("rate.limit.auth.enabled", "false"));
+        return Boolean.parseBoolean(props.getProperty("rate.limit.auth.enabled", STRING_FALSE));
     }
 
     /** When false, Redis errors deny auth (fail-closed). Env: RATE_LIMIT_AUTH_FAIL_OPEN. */
     public boolean rateLimitAuthFailOpen() {
-        return Boolean.parseBoolean(props.getProperty("rate.limit.auth.fail.open", "false"));
+        return Boolean.parseBoolean(props.getProperty("rate.limit.auth.fail.open", STRING_FALSE));
     }
 
     public int rateLimitLoginMaxPerMinute() {
@@ -578,10 +586,10 @@ public class AppConfig {
             return;
         }
         var issues = new ArrayList<String>();
-        if (isDevDefaultSecret(dbPassword(), "avandocmsg")) {
+        if (isDevDefaultSecret(dbPassword(), DEFAULT_AVANDOCMSG)) {
             issues.add("DB_PASSWORD");
         }
-        if (isDevDefaultSecret(keycloakMasterPassword(), "admin")) {
+        if (isDevDefaultSecret(keycloakMasterPassword(), DEFAULT_ADMIN)) {
             issues.add("KEYCLOAK_MASTER_PASSWORD");
         }
         if (isDevDefaultSecret(minioSecretKey(), "avandocmsg123")) {
@@ -617,7 +625,7 @@ public class AppConfig {
 
     /** QEMU/lab only: allow dev-default secrets when full addon matrix is enabled. */
     public boolean korusLabAllowDevSecrets() {
-        return Boolean.parseBoolean(props.getProperty("korus.lab.allow.dev.secrets", "false"));
+        return Boolean.parseBoolean(props.getProperty("korus.lab.allow.dev.secrets", STRING_FALSE));
     }
 
     private boolean isDevDefaultSecret(String actual, String devDefault) {
@@ -748,7 +756,7 @@ public class AppConfig {
 
     /** Env: {@code RETENTION_DEFAULT_LEGAL_HOLD}. */
     public boolean retentionDefaultLegalHold() {
-        return Boolean.parseBoolean(props.getProperty("retention.default.legal_hold", "false"));
+        return Boolean.parseBoolean(props.getProperty("retention.default.legal_hold", STRING_FALSE));
     }
 
     /**
@@ -770,7 +778,7 @@ public class AppConfig {
      * По умолчанию {@code false} — безопасный деплой без фоновой очистки. Env: {@code RETENTION_WORKER_ENABLED}.
      */
     public boolean retentionWorkerEnabled() {
-        return Boolean.parseBoolean(props.getProperty("retention.worker.enabled", "false"));
+        return Boolean.parseBoolean(props.getProperty("retention.worker.enabled", STRING_FALSE));
     }
 
     /**
@@ -833,7 +841,7 @@ public class AppConfig {
      * Default {@code false} — pipeline invalidates Redis directly. Env: {@code READ_CACHE_NATS_INVALIDATE_ENABLED}.
      */
     public boolean readCacheNatsInvalidateEnabled() {
-        return Boolean.parseBoolean(props.getProperty("read.cache.nats.invalidate.enabled", "false"));
+        return Boolean.parseBoolean(props.getProperty("read.cache.nats.invalidate.enabled", STRING_FALSE));
     }
 
     /**
@@ -841,7 +849,7 @@ public class AppConfig {
      * {@code EXPORT_ADMIN_SUGGEST_ENABLED}; default {@code false}.
      */
     public boolean exportAdminSuggestEnabled() {
-        return Boolean.parseBoolean(props.getProperty("export.admin.suggest.enabled", "false"));
+        return Boolean.parseBoolean(props.getProperty("export.admin.suggest.enabled", STRING_FALSE));
     }
 
     /**
@@ -849,7 +857,7 @@ public class AppConfig {
      * {@code EXPORT_ADMIN_EXPORT_ENABLED}; default {@code false}.
      */
     public boolean exportAdminExportEnabled() {
-        return Boolean.parseBoolean(props.getProperty("export.admin.export.enabled", "false"));
+        return Boolean.parseBoolean(props.getProperty("export.admin.export.enabled", STRING_FALSE));
     }
 
     /**
@@ -857,7 +865,7 @@ public class AppConfig {
      * default {@code false}.
      */
     public boolean exportAutoQueueOnSuggestedEnabled() {
-        return Boolean.parseBoolean(props.getProperty("export.auto.queue.on.suggested.enabled", "false"));
+        return Boolean.parseBoolean(props.getProperty("export.auto.queue.on.suggested.enabled", STRING_FALSE));
     }
 
     /**
@@ -888,7 +896,7 @@ public class AppConfig {
 
     /** Heartbeat TTL for hot-plug service presence detection (milliseconds). */
     public long hotplugHeartbeatTtlMs() {
-        var raw = props.getProperty("hotplug.heartbeat.ttl.ms", "30000").trim();
+        var raw = props.getProperty(PROP_HOTPLUG_HEARTBEAT_TTL_MS, "30000").trim();
         try {
             return Math.max(1000L, Long.parseLong(raw));
         } catch (NumberFormatException e) {
@@ -903,7 +911,7 @@ public class AppConfig {
 
     /** When true, core-api skips index events if indexer heartbeat is missing. */
     public boolean hotplugIndexerPresenceRequired() {
-        return Boolean.parseBoolean(props.getProperty("hotplug.indexer.presence.required", "false"));
+        return Boolean.parseBoolean(props.getProperty("hotplug.indexer.presence.required", STRING_FALSE));
     }
 
     /** JSON array of {@link com.avandocmsg.messenger.api.admin.fleet.FleetTarget} for admin fleet snapshot. */
@@ -918,8 +926,8 @@ public class AppConfig {
     /** HTTP probe timeout for fleet snapshot (ms). Env: {@code FLEET_PROBE_TIMEOUT_MS}; default {@code 2000}. */
     public int fleetProbeTimeoutMs() {
         var raw = props.getProperty("fleet.probe.timeout.ms", "2000").trim();
-        if (System.getenv("FLEET_PROBE_TIMEOUT_MS") != null) {
-            raw = System.getenv("FLEET_PROBE_TIMEOUT_MS").trim();
+        if (System.getenv(ENV_FLEET_PROBE_TIMEOUT_MS) != null) {
+            raw = System.getenv(ENV_FLEET_PROBE_TIMEOUT_MS).trim();
         }
         try {
             return Math.min(10000, Math.max(500, Integer.parseInt(raw)));
@@ -1061,7 +1069,7 @@ public class AppConfig {
      * default {@code false}.
      */
     public boolean openmlsNativeEnabled() {
-        return Boolean.parseBoolean(props.getProperty("openmls.native.enabled", "false"));
+        return Boolean.parseBoolean(props.getProperty("openmls.native.enabled", STRING_FALSE));
     }
 
     /** Spec 014: connector-runtime base URL. Env: INTEGRATIONS_BASE_URL. */
@@ -1193,7 +1201,7 @@ public class AppConfig {
         if (env != null && !env.isBlank()) {
             return Boolean.parseBoolean(env.trim());
         }
-        return Boolean.parseBoolean(props.getProperty("org.ip.allowlist.enforce", "false"));
+        return Boolean.parseBoolean(props.getProperty("org.ip.allowlist.enforce", STRING_FALSE));
     }
 
     /** Entity avatars feature flag (spec 068). Env: {@code AVATARS_ENABLED}. */

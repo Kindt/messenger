@@ -1,13 +1,9 @@
 package com.avandocmsg.messenger.api.mls;
 
 import com.avandocmsg.messenger.api.crypto.E2EEService;
-import com.avandocmsg.messenger.core.port.UuidGenerator;
 import org.junit.jupiter.api.Test;
 
-import java.time.Clock;
-import java.time.Instant;
 import java.util.Base64;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,7 +17,7 @@ class MlsServiceDecryptContentTest {
         var sessions = new MlsGroupManagerTest.StubSessionRepository();
         var mls = new MlsService(sessions, new E2EEService());
         mls.ensureSession(chatId);
-        var enc = mls.encrypt(chatId, UUID.randomUUID(), "hello");
+        var enc = mls.encrypt(chatId, "hello");
         assertNotNull(enc);
         var nonce = Base64.getDecoder().decode(enc.nonceBase64());
         var body = Base64.getDecoder().decode(enc.ciphertextBase64());

@@ -14,12 +14,12 @@ final class MemoryFileProxy implements FileProxy {
     private final Map<String, byte[]> objects = new ConcurrentHashMap<>();
 
     @Override
-    public void upload(String objectName, InputStream data, long size, String contentType) throws Exception {
+    public void upload(String objectName, InputStream data, long size, String contentType) throws IOException {
         objects.put(objectName, data.readAllBytes());
     }
 
     @Override
-    public InputStream download(String objectName) throws Exception {
+    public InputStream download(String objectName) throws IOException {
         var bytes = objects.get(objectName);
         if (bytes == null) {
             throw new IOException("not found: " + objectName);
@@ -28,7 +28,7 @@ final class MemoryFileProxy implements FileProxy {
     }
 
     @Override
-    public void delete(String objectName) throws Exception {
+    public void delete(String objectName) throws IOException {
         objects.remove(objectName);
     }
 

@@ -4,9 +4,20 @@
 # http://localhost:9192 matches docker/docker-compose.dev-min.yml (host 9192 -> container 9191
 # when RETENTION_METRICS_PORT=9191 inside the container).
 param(
-    [string]$BaseUrl = "http://localhost:9192"
+    [string]$BaseUrl = "http://localhost:9192",
+    [string]$ApiBaseUrl = ""
 )
 $ErrorActionPreference = "Stop"
+
+if ($ApiBaseUrl -match ':18080') {
+    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+    . (Join-Path $scriptDir "lib\Resolve-QemuLabWorkerMetrics.ps1")
+    $BaseUrl = (Resolve-QemuLabWorkerMetrics -ApiBaseUrl $ApiBaseUrl).RetentionMetricsUrl -replace '/metrics$', ''
+} elseif ($BaseUrl -match ':18080') {
+    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+    . (Join-Path $scriptDir "lib\Resolve-QemuLabWorkerMetrics.ps1")
+    $BaseUrl = (Resolve-QemuLabWorkerMetrics -ApiBaseUrl $BaseUrl).RetentionMetricsUrl -replace '/metrics$', ''
+}
 
 function Fail([string]$msg) {
     Write-Host "[FAIL] $msg" -ForegroundColor Red

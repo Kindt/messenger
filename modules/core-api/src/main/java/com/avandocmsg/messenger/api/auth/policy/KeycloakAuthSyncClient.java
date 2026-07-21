@@ -23,6 +23,11 @@ import java.util.UUID;
 public class KeycloakAuthSyncClient {
     private static final Logger log = LoggerFactory.getLogger(KeycloakAuthSyncClient.class);
     private static final ObjectMapper MAPPER = MessengerJson.mapper();
+    private static final String ADMIN_TOKEN_UNAVAILABLE = "keycloak_admin_token_unavailable";
+    private static final String JSON_PROVIDER_ID = "providerId";
+    private static final String JSON_CONFIG = "config";
+    private static final String HEADER_AUTHORIZATION = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
 
     private final AppConfig appConfig;
     private final HttpClient httpClient;
@@ -41,7 +46,7 @@ public class KeycloakAuthSyncClient {
     public ApplyResult upsertLdap(String name, Map<String, String> settings) {
         var token = adminToken();
         if (token == null) {
-            return new ApplyResult(false, null, "keycloak_admin_token_unavailable");
+            return new ApplyResult(false, null, ADMIN_TOKEN_UNAVAILABLE);
         }
         try {
             var body = ldapBody(name, settings);
@@ -53,7 +58,7 @@ public class KeycloakAuthSyncClient {
                     return new ApplyResult(false, null, "ldap_provider_conflict");
                 }
                 code = put(base + "/" + existingId.get(), token, body);
-                var mapperError = maybeApplyAdminGroupMapper(token, existingId.get(), settings);
+                var mapperError = maybeApplyAdminGroupMapper(existingId.get(), settings);
                 if (mapperError != null) {
                     return new ApplyResult(false, existingId.get(), mapperError);
                 }
@@ -61,7 +66,7 @@ public class KeycloakAuthSyncClient {
             }
             if (code == 201 || code == 200 || code == 204) {
                 var id = findUserStorageId(token, name).orElse(null);
-                var mapperError = maybeApplyAdminGroupMapper(token, id, settings);
+                var mapperError = maybeApplyAdminGroupMapper(id, settings);
                 if (mapperError != null) {
                     return new ApplyResult(false, id, mapperError);
                 }
@@ -85,7 +90,7 @@ public class KeycloakAuthSyncClient {
         var realmRole = role != null && !role.isBlank() ? role : "admin";
         var token = adminToken();
         if (token == null) {
-            return new ApplyResult(false, null, "keycloak_admin_token_unavailable");
+            return new ApplyResult(false, null, ADMIN_TOKEN_UNAVAILABLE);
         }
         try {
             var mapperName = "admin-group-mapper-" + orgId;
@@ -105,7 +110,7 @@ public class KeycloakAuthSyncClient {
         }
     }
 
-    private String maybeApplyAdminGroupMapper(String token, String ldapComponentId, Map<String, String> settings) {
+    private String maybeApplyAdminGroupMapper(String ldapComponentId, Map<String, String> settings) {
         var groupDn = settings.get("admin_group_dn");
         if (groupDn == null || groupDn.isBlank()) {
             return null;
@@ -128,7 +133,7 @@ public class KeycloakAuthSyncClient {
     public ApplyResult upsertIdentityProvider(String alias, String providerId, Map<String, String> settings) {
         var token = adminToken();
         if (token == null) {
-            return new ApplyResult(false, null, "keycloak_admin_token_unavailable");
+            return new ApplyResult(false, null, ADMIN_TOKEN_UNAVAILABLE);
         }
         try {
             var body = idpBody(alias, providerId, settings);
@@ -183,9 +188,9 @@ public class KeycloakAuthSyncClient {
 
         var root = MAPPER.createObjectNode();
         root.put("name", name);
-        root.put("providerId", "ldap");
+        root.put(JSON_PROVIDER_ID, "ldap");
         root.put("providerType", "org.keycloak.storage.UserStorageProvider");
-        root.set("config", config);
+        root.set(JSON_CONFIG, config);
         return root;
     }
 
@@ -204,10 +209,10 @@ public class KeycloakAuthSyncClient {
 
         var root = MAPPER.createObjectNode();
         root.put("name", name);
-        root.put("providerId", "role-ldap-mapper");
+        root.put(JSON_PROVIDER_ID, "role-ldap-mapper");
         root.put("providerType", "org.keycloak.storage.ldap.mappers.LDAPStorageMapper");
         root.put("parentId", ldapComponentId);
-        root.set("config", config);
+        root.set(JSON_CONFIG, config);
         return root;
     }
 
@@ -215,7 +220,7 @@ public class KeycloakAuthSyncClient {
         var root = MAPPER.createObjectNode();
         root.put("alias", alias);
         root.put("displayName", s.getOrDefault("display_name", alias));
-        root.put("providerId", providerId);
+        root.put(JSON_PROVIDER_ID, providerId);
         root.put("enabled", true);
         root.put("trustEmail", true);
         root.put("storeToken", false);
@@ -241,7 +246,7 @@ public class KeycloakAuthSyncClient {
         } else {
             throw new IllegalArgumentException("unsupported_idp_type:" + providerId);
         }
-        root.set("config", config);
+        root.set(JSON_CONFIG, config);
         return root;
     }
 
@@ -271,7 +276,7 @@ public class KeycloakAuthSyncClient {
         var builder = HttpRequest.newBuilder()
             .uri(URI.create(url))
             .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer " + token)
+            .header(HEADER_AUTHORIZATION, BEARER_PREFIX + token)
             .timeout(Duration.ofSeconds(15));
         if ("PUT".equals(method)) {
             builder.PUT(HttpRequest.BodyPublishers.ofString(body.toString()));
@@ -289,7 +294,7 @@ public class KeycloakAuthSyncClient {
         var url = appConfig.keycloakAdminRealmBase() + "/user-storage";
         var req = HttpRequest.newBuilder()
             .uri(URI.create(url))
-            .header("Authorization", "Bearer " + token)
+            .header(HEADER_AUTHORIZATION, BEARER_PREFIX + token)
             .timeout(Duration.ofSeconds(10))
             .GET()
             .build();
@@ -313,7 +318,7 @@ public class KeycloakAuthSyncClient {
         var url = appConfig.keycloakAdminRealmBase() + "/components?parent=" + urlEncode(parentId);
         var req = HttpRequest.newBuilder()
             .uri(URI.create(url))
-            .header("Authorization", "Bearer " + token)
+            .header(HEADER_AUTHORIZATION, BEARER_PREFIX + token)
             .timeout(Duration.ofSeconds(10))
             .GET()
             .build();
@@ -349,6 +354,9 @@ public class KeycloakAuthSyncClient {
             if (response.statusCode() == 200) {
                 return MAPPER.readTree(response.body()).path("access_token").asText(null);
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("admin token interrupted: {}", e.getMessage());
         } catch (Exception e) {
             log.warn("admin token failed: {}", e.getMessage());
         }
@@ -363,6 +371,6 @@ public class KeycloakAuthSyncClient {
         if (body == null) {
             return "";
         }
-        return body.length() > 200 ? body.substring(0, 200) + "вЂ¦" : body;
+        return body.length() > 200 ? body.substring(0, 200) + "…" : body;
     }
 }

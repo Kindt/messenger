@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
@@ -20,7 +21,7 @@ public class JndiLdapDirectoryClient implements LdapDirectoryClient {
     private static final Logger log = LoggerFactory.getLogger(JndiLdapDirectoryClient.class);
 
     @Override
-    public List<LdapUserEntry> searchUsers(Map<String, String> settings) throws Exception {
+    public List<LdapUserEntry> searchUsers(Map<String, String> settings) throws javax.naming.NamingException {
         var vendor = settings.getOrDefault("vendor", "ad");
         var usernameAttr = "ad".equalsIgnoreCase(vendor) ? "sAMAccountName" : "uid";
         var uuidAttr = "ad".equalsIgnoreCase(vendor) ? "objectGUID" : "entryUUID";
@@ -77,7 +78,7 @@ public class JndiLdapDirectoryClient implements LdapDirectoryClient {
         return List.copyOf(out);
     }
 
-    private static String externalId(javax.naming.directory.Attributes attrs, String uuidAttr) throws Exception {
+    private static String externalId(javax.naming.directory.Attributes attrs, String uuidAttr) throws NamingException {
         var attr = attrs.get(uuidAttr);
         if (attr == null) {
             return null;
@@ -89,7 +90,7 @@ public class JndiLdapDirectoryClient implements LdapDirectoryClient {
         return value != null ? value.toString() : null;
     }
 
-    private static String attrString(javax.naming.directory.Attributes attrs, String name) throws Exception {
+    private static String attrString(javax.naming.directory.Attributes attrs, String name) throws NamingException {
         Attribute attr = attrs.get(name);
         if (attr == null) {
             return null;

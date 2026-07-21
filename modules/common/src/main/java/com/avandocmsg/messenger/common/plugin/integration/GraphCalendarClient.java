@@ -21,6 +21,7 @@ import java.util.List;
 public final class GraphCalendarClient {
     private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final HttpClient HTTP = HttpClientSupport.sharedClient();
+    private static final String ENV_GRAPH_ACCESS_TOKEN = "GRAPH_ACCESS_TOKEN";
 
     private GraphCalendarClient() {}
 
@@ -77,15 +78,15 @@ public final class GraphCalendarClient {
     }
 
     private static boolean graphLiveConfigured() {
-        return IntegrationEnv.isSet("GRAPH_ACCESS_TOKEN")
+        return IntegrationEnv.isSet(ENV_GRAPH_ACCESS_TOKEN)
             || (IntegrationEnv.isSet("GRAPH_TENANT_ID")
             && IntegrationEnv.isSet("GRAPH_CLIENT_ID")
             && IntegrationEnv.isSet("GRAPH_CLIENT_SECRET"));
     }
 
     private static String resolveAccessToken() throws Exception {
-        if (IntegrationEnv.isSet("GRAPH_ACCESS_TOKEN")) {
-            return IntegrationEnv.getenv("GRAPH_ACCESS_TOKEN");
+        if (IntegrationEnv.isSet(ENV_GRAPH_ACCESS_TOKEN)) {
+            return IntegrationEnv.getenv(ENV_GRAPH_ACCESS_TOKEN);
         }
         var tenant = IntegrationEnv.getenv("GRAPH_TENANT_ID");
         var clientId = IntegrationEnv.getenv("GRAPH_CLIENT_ID");

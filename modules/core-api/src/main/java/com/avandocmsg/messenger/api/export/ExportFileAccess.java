@@ -338,19 +338,10 @@ public class ExportFileAccess {
      */
     public boolean streamDownloadPart(ExportJobRow job, DownloadPart part, Consumer<InputStream> consumer)
         throws IOException {
-        return streamDownloadPart(job, part, null, consumer);
-    }
-
-    public boolean streamDownloadPart(
-        ExportJobRow job,
-        DownloadPart part,
-        UUID fileId,
-        Consumer<InputStream> consumer
-    ) throws IOException {
         if (job == null) {
             return false;
         }
-        if (part == DownloadPart.BINARY) {
+        if (part == DownloadPart.BINARY || part == DownloadPart.BINARIES) {
             return false;
         }
         if (part == DownloadPart.BUNDLE) {
@@ -402,8 +393,7 @@ public class ExportFileAccess {
             return Optional.empty();
         }
         var rootNorm = root.toAbsolutePath().normalize();
-        var downloadName = safeDownloadFileName(job);
-        var expected = rootNorm.resolve(downloadName).normalize();
+        var expected = rootNorm.resolve(safeDownloadFileName(job)).normalize();
         if (!expected.startsWith(rootNorm)) {
             return Optional.empty();
         }
@@ -416,22 +406,24 @@ public class ExportFileAccess {
             return Optional.of(jsonFallback);
         }
 
-        var stored = job.outputPath();
-        if (stored != null && !stored.isBlank() && !stored.startsWith(ExportOutputRef.MINIO_PREFIX)) {
-            var fromStored = Path.of(stored).normalize();
-            if (fromStored.isAbsolute() && fromStored.startsWith(rootNorm) && Files.isRegularFile(fromStored)) {
-                return Optional.of(fromStored);
-            }
-            var fileName = fromStored.getFileName();
-            if (fileName != null) {
-                var byName = rootNorm.resolve(fileName).normalize();
-                if (byName.startsWith(rootNorm) && Files.isRegularFile(byName)) {
-                    return Optional.of(byName);
-                }
-            }
+        return resolveFromStoredPath(rootNorm, job.outputPath());
+    }
+
+    private static Optional<Path> resolveFromStoredPath(Path rootNorm, String stored) {
+        if (stored == null || stored.isBlank() || stored.startsWith(ExportOutputRef.MINIO_PREFIX)) {
+            return Optional.empty();
         }
-        if (Files.isRegularFile(expected)) {
-            return Optional.of(expected);
+        var fromStored = Path.of(stored).normalize();
+        if (fromStored.isAbsolute() && fromStored.startsWith(rootNorm) && Files.isRegularFile(fromStored)) {
+            return Optional.of(fromStored);
+        }
+        var fileName = fromStored.getFileName();
+        if (fileName == null) {
+            return Optional.empty();
+        }
+        var byName = rootNorm.resolve(fileName).normalize();
+        if (byName.startsWith(rootNorm) && Files.isRegularFile(byName)) {
+            return Optional.of(byName);
         }
         return Optional.empty();
     }

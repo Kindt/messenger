@@ -70,7 +70,7 @@ public final class JdbcExportJobJdbcRepository {
 
             throw new IllegalStateException("export job insert failed", e);
 
-        }
+                }
 
     }
 
@@ -95,6 +95,7 @@ public final class JdbcExportJobJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("find latest export job chat {}: {}", chatId, e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -119,6 +120,7 @@ public final class JdbcExportJobJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("find latest completed export chat {}: {}", chatId, e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -181,7 +183,7 @@ public final class JdbcExportJobJdbcRepository {
         } catch (Exception e) {
 
             log.error("find export job {} chat {}", jobId, chatId, e);
-
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
         return Optional.empty();
@@ -224,6 +226,7 @@ public final class JdbcExportJobJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("list export jobs chat {}: {}", chatId, e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return List.copyOf(rows);
     }
@@ -235,37 +238,40 @@ public final class JdbcExportJobJdbcRepository {
         var lim = Math.min(Math.max(limit, 1), 100);
         var hasStatus = statusFilter != null && !statusFilter.isBlank();
         var hasChat = chatIdFilter != null;
-        var sql = hasStatus && hasChat
-            ? """
+        final String sql;
+        if (hasStatus && hasChat) {
+            sql = """
             SELECT id, chat_id, requested_by, status, output_path, message_ttl_filter_applied,
                    created_at, updated_at, completed_at
             FROM export_jobs WHERE status = ? AND chat_id = ?
             ORDER BY created_at DESC
             LIMIT ?
-            """
-            : hasStatus
-            ? """
+            """;
+        } else if (hasStatus) {
+            sql = """
             SELECT id, chat_id, requested_by, status, output_path, message_ttl_filter_applied,
                    created_at, updated_at, completed_at
             FROM export_jobs WHERE status = ?
             ORDER BY created_at DESC
             LIMIT ?
-            """
-            : hasChat
-            ? """
+            """;
+        } else if (hasChat) {
+            sql = """
             SELECT id, chat_id, requested_by, status, output_path, message_ttl_filter_applied,
                    created_at, updated_at, completed_at
             FROM export_jobs WHERE chat_id = ?
             ORDER BY created_at DESC
             LIMIT ?
-            """
-            : """
+            """;
+        } else {
+            sql = """
             SELECT id, chat_id, requested_by, status, output_path, message_ttl_filter_applied,
                    created_at, updated_at, completed_at
             FROM export_jobs
             ORDER BY created_at DESC
             LIMIT ?
             """;
+        }
         var rows = new ArrayList<ExportJobRow>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
@@ -285,6 +291,7 @@ public final class JdbcExportJobJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("list recent export jobs: {}", e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return List.copyOf(rows);
     }
@@ -305,7 +312,7 @@ public final class JdbcExportJobJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.warn("cancel export job {} chat {}: {}", jobId, chatId, e.getMessage());
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -325,7 +332,7 @@ public final class JdbcExportJobJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.warn("cancel export job {} chat {}: {}", jobId, chatId, e.getMessage());
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -413,9 +420,7 @@ public final class JdbcExportJobJdbcRepository {
         } catch (Exception e) {
 
             log.warn("export job complete sync failed jobId={} status={}: {}", jobId, status, e.getMessage());
-
-            return false;
-
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
     }
@@ -487,7 +492,7 @@ public final class JdbcExportJobJdbcRepository {
         } catch (Exception e) {
 
             log.warn("export job status update failed jobId={} status={}: {}", jobId, status, e.getMessage());
-
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
     }
@@ -547,7 +552,7 @@ public final class JdbcExportJobJdbcRepository {
             }
         } catch (Exception e) {
             log.error("Failed to check completed export for chat {}", chatId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 

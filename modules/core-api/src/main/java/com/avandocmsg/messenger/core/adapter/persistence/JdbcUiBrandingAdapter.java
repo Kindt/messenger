@@ -56,7 +56,7 @@ public final class JdbcUiBrandingAdapter implements UiBrandingPort {
             }
         } catch (Exception e) {
             log.error("load platform branding failed", e);
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -81,8 +81,7 @@ public final class JdbcUiBrandingAdapter implements UiBrandingPort {
                 1, palette, tokenOverrides, customCss, brandTitle, demoSkinsEnabled, layout, 1, null, null));
         } catch (Exception e) {
             log.error("upsert platform branding failed", e);
-            return getPlatform().orElseGet(() -> new PlatformBranding(
-                1, palette, tokenOverrides, customCss, brandTitle, demoSkinsEnabled, layout, 1, null, null));
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -116,7 +115,7 @@ public final class JdbcUiBrandingAdapter implements UiBrandingPort {
             }
         } catch (Exception e) {
             log.error("load org branding failed orgId={}", orgId, e);
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -141,8 +140,7 @@ public final class JdbcUiBrandingAdapter implements UiBrandingPort {
                 orgId, palette, tokenOverrides, customCss, brandTitle, layout, 1, null, null));
         } catch (Exception e) {
             log.error("upsert org branding failed orgId={}", orgId, e);
-            return getOrg(orgId).orElseGet(() -> new OrgBranding(
-                orgId, palette, tokenOverrides, customCss, brandTitle, layout, 1, null, null));
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -157,7 +155,7 @@ public final class JdbcUiBrandingAdapter implements UiBrandingPort {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("delete org branding failed orgId={}", orgId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -377,7 +375,7 @@ public final class JdbcUiBrandingAdapter implements UiBrandingPort {
         try {
             return MAPPER.writeValueAsString(tokenOverrides != null ? tokenOverrides : Map.of());
         } catch (Exception e) {
-            return "{}";
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -394,7 +392,7 @@ public final class JdbcUiBrandingAdapter implements UiBrandingPort {
             return parsed != null ? parsed : Map.of();
         } catch (Exception e) {
             log.warn("parse token_overrides failed: {}", e.getMessage());
-            return Map.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 }

@@ -31,6 +31,9 @@ import jakarta.ws.rs.core.SecurityContext;
 @Tag(name = "Conference ADR", description = "Recording, guest links, breakout, captions (T02307/09/10/17)")
 public class ChatConferenceAdrResource {
 
+    private static final String KEY_CHAT_ID = "chat_id";
+    private static final String KEY_CONFERENCE_ID = "conference_id";
+
     private final Phase5AdrService service;
     private final UserMessageSource messages;
 
@@ -47,8 +50,8 @@ public class ChatConferenceAdrResource {
                                    @PathParam("conferenceId") String conferenceId,
                                    @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var confId = UuidParams.required(conferenceId, "conference_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
+        var confId = UuidParams.required(conferenceId, KEY_CONFERENCE_ID);
         return service.startRecording(cid, confId, userId)
             .map(id -> Response.status(Response.Status.CREATED)
                 .entity(RecordingResponse.started(id.toString())).build())
@@ -63,8 +66,8 @@ public class ChatConferenceAdrResource {
                                       @PathParam("recordingId") String recordingId,
                                       @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var confId = UuidParams.required(conferenceId, "conference_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
+        var confId = UuidParams.required(conferenceId, KEY_CONFERENCE_ID);
         var recId = UuidParams.required(recordingId, "recording_id");
         return service.completeRecording(cid, confId, userId, recId)
             .map(ok -> Response.noContent().build())
@@ -78,8 +81,8 @@ public class ChatConferenceAdrResource {
                                    @PathParam("conferenceId") String conferenceId,
                                    @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var confId = UuidParams.required(conferenceId, "conference_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
+        var confId = UuidParams.required(conferenceId, KEY_CONFERENCE_ID);
         var rows = service.listRecordings(cid, confId, userId).stream().map(RecordingResponse::from).toList();
         return Response.ok(rows).build();
     }
@@ -93,8 +96,8 @@ public class ChatConferenceAdrResource {
                                     CreateGuestLinkRequest request,
                                     @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var confId = UuidParams.required(conferenceId, "conference_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
+        var confId = UuidParams.required(conferenceId, KEY_CONFERENCE_ID);
         var waiting = request == null || request.waitingRoom() == null || request.waitingRoom();
         return service.createGuestLink(cid, confId, userId, waiting)
             .map(row -> Response.status(Response.Status.CREATED).entity(GuestLinkResponse.from(row)).build())
@@ -109,8 +112,8 @@ public class ChatConferenceAdrResource {
                                @PathParam("linkId") String linkId,
                                @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var confId = UuidParams.required(conferenceId, "conference_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
+        var confId = UuidParams.required(conferenceId, KEY_CONFERENCE_ID);
         var lid = UuidParams.required(linkId, "link_id");
         return service.admitGuest(cid, confId, userId, lid)
             .map(ok -> Response.noContent().build())
@@ -124,8 +127,8 @@ public class ChatConferenceAdrResource {
                                         @PathParam("conferenceId") String conferenceId,
                                         @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var confId = UuidParams.required(conferenceId, "conference_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
+        var confId = UuidParams.required(conferenceId, KEY_CONFERENCE_ID);
         var rows = service.listWaitingGuests(cid, confId, userId).stream()
             .map(row -> new GuestWaitingLinkResponse(
                 row.id().toString(),
@@ -145,8 +148,8 @@ public class ChatConferenceAdrResource {
                                    CreateBreakoutRequest request,
                                    @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var confId = UuidParams.required(conferenceId, "conference_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
+        var confId = UuidParams.required(conferenceId, KEY_CONFERENCE_ID);
         var name = request != null && request.name() != null ? request.name() : "Breakout";
         return service.createBreakout(cid, confId, userId, name)
             .map(id -> Response.status(Response.Status.CREATED)
@@ -161,8 +164,8 @@ public class ChatConferenceAdrResource {
                                   @PathParam("conferenceId") String conferenceId,
                                   @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var confId = UuidParams.required(conferenceId, "conference_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
+        var confId = UuidParams.required(conferenceId, KEY_CONFERENCE_ID);
         var rows = service.listBreakouts(cid, confId, userId).stream().map(BreakoutRoomResponse::from).toList();
         return Response.ok(rows).build();
     }
@@ -176,8 +179,8 @@ public class ChatConferenceAdrResource {
                                   StartCaptionsRequest request,
                                   @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var confId = UuidParams.required(conferenceId, "conference_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
+        var confId = UuidParams.required(conferenceId, KEY_CONFERENCE_ID);
         var lang = request != null ? request.language() : "ru";
         var sample = request != null ? request.sampleText() : null;
         return service.startCaptions(cid, confId, userId, lang, sample)
@@ -192,8 +195,8 @@ public class ChatConferenceAdrResource {
                                 @PathParam("conferenceId") String conferenceId,
                                 @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var confId = UuidParams.required(conferenceId, "conference_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
+        var confId = UuidParams.required(conferenceId, KEY_CONFERENCE_ID);
         return service.getCaptions(cid, confId, userId)
             .map(row -> Response.ok(CaptionSessionResponse.from(row)).build())
             .orElse(Response.status(Response.Status.NOT_FOUND)

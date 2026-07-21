@@ -9,21 +9,29 @@ import java.util.List;
 /** Export job enqueue/cancel counters on the default Prometheus registry. */
 public final class ExportMetrics {
 
+    private static final String LABEL_SOURCE = "source";
+    private static final String SOURCE_ADMIN = "admin";
+    private static final String SOURCE_USER = "user";
+    private static final String SOURCE_UNKNOWN = "unknown";
+    private static final String SOURCE_AUTO = "auto";
+    private static final String TRIGGER_ADMIN_API = "admin_api";
+    private static final String TRIGGER_RETENTION = "retention_suggested";
+
     private static final Counter JOBS_ENQUEUED = Counter.build()
         .name("export_jobs_enqueued_total")
-        .labelNames("source")
+        .labelNames(LABEL_SOURCE)
         .help("Export jobs queued (export_jobs insert + msg.export.replay publish)")
         .register();
 
     private static final Counter JOBS_CANCELLED = Counter.build()
         .name("export_jobs_cancelled_total")
-        .labelNames("source", "previous_status")
+        .labelNames(LABEL_SOURCE, "previous_status")
         .help("Export jobs cancelled via DELETE (status export_cancelled)")
         .register();
 
     private static final Counter JOBS_CANCEL_REJECTED = Counter.build()
         .name("export_jobs_cancel_rejected_total")
-        .labelNames("source", "reason")
+        .labelNames(LABEL_SOURCE, "reason")
         .help("Export cancel rejected (409 — not cancellable or lost race)")
         .register();
 
@@ -44,15 +52,15 @@ public final class ExportMetrics {
         .register();
 
     static {
-        for (var source : List.of("user", "admin", "auto")) {
+        for (var source : List.of(SOURCE_USER, SOURCE_ADMIN, SOURCE_AUTO)) {
             JOBS_ENQUEUED.labels(source).inc(0);
         }
-        for (var source : List.of("user", "admin")) {
-            for (var status : List.of("queued", "processing", "other", "unknown")) {
+        for (var source : List.of(SOURCE_USER, SOURCE_ADMIN)) {
+            for (var status : List.of("queued", "processing", "other", SOURCE_UNKNOWN)) {
                 JOBS_CANCELLED.labels(source, status).inc(0);
             }
         }
-        for (var source : List.of("user", "admin")) {
+        for (var source : List.of(SOURCE_USER, SOURCE_ADMIN)) {
             for (var reason : List.of("not_cancellable", "db_race")) {
                 JOBS_CANCEL_REJECTED.labels(source, reason).inc(0);
             }
@@ -84,7 +92,7 @@ public final class ExportMetrics {
     }
 
     public static void completenessFailed(String reason) {
-        COMPLETENESS_FAILED.labels(reason == null || reason.isBlank() ? "unknown" : reason).inc();
+        COMPLETENESS_FAILED.labels(reason == null || reason.isBlank() ? SOURCE_UNKNOWN : reason).inc();
     }
 
     public static void observeCompletenessDuration(double seconds) {
@@ -93,25 +101,25 @@ public final class ExportMetrics {
 
     static String enqueueSource(String trigger) {
         if (trigger == null || trigger.isBlank()) {
-            return "user";
+            return SOURCE_USER;
         }
         return switch (trigger) {
-            case "admin_api" -> "admin";
-            case "retention_suggested" -> "auto";
-            default -> "user";
+            case TRIGGER_ADMIN_API -> SOURCE_ADMIN;
+            case TRIGGER_RETENTION -> SOURCE_AUTO;
+            default -> SOURCE_USER;
         };
     }
 
     static String cancelSource(String auditAction) {
         if (ExportJobCancelSupport.AUDIT_ADMIN_CANCEL.equals(auditAction)) {
-            return "admin";
+            return SOURCE_ADMIN;
         }
-        return "user";
+        return SOURCE_USER;
     }
 
     static String sanitizeStatus(String status) {
         if (status == null || status.isBlank()) {
-            return "unknown";
+            return SOURCE_UNKNOWN;
         }
         return switch (status) {
             case "queued", "processing" -> status;

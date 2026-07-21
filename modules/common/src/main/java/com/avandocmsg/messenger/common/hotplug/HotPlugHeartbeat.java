@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Publishes hot-plug heartbeat messages to NATS on a fixed interval.
@@ -27,7 +28,7 @@ public final class HotPlugHeartbeat implements AutoCloseable {
     private final ObjectMapper mapper;
     private final ScheduledExecutorService scheduler;
     private final long startedAtMs;
-    private volatile ScheduledFuture<?> task;
+    private final AtomicReference<ScheduledFuture<?>> task = new AtomicReference<>();
 
     public HotPlugHeartbeat(Connection nats, String serviceId, long intervalMs) {
         this(nats, serviceId, intervalMs, Clock.systemUTC(), MessengerJson.mapper());
@@ -48,17 +49,18 @@ public final class HotPlugHeartbeat implements AutoCloseable {
     }
 
     public synchronized void start() {
-        if (task != null && !task.isCancelled()) {
+        var current = task.get();
+        if (current != null && !current.isCancelled()) {
             return;
         }
-        task = ScheduledTaskSupport.scheduleAtFixedRateWithJitter(
-            scheduler, () -> publish("ACTIVE"), 0, intervalMs, intervalMs / 5, TimeUnit.MILLISECONDS);
+        task.set(ScheduledTaskSupport.scheduleAtFixedRateWithJitter(
+            scheduler, () -> publish("ACTIVE"), 0, intervalMs, intervalMs / 5, TimeUnit.MILLISECONDS));
     }
 
     public synchronized void stop() {
-        if (task != null) {
-            task.cancel(false);
-            task = null;
+        var current = task.getAndSet(null);
+        if (current != null) {
+            current.cancel(false);
         }
     }
 

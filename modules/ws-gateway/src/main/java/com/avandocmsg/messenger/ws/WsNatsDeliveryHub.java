@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicReference;
 
 /** Single NATS dispatcher for user + chat deliver subjects (PS-1.1 / PS-1.3). */
 public final class WsNatsDeliveryHub implements AutoCloseable {
@@ -21,7 +22,7 @@ public final class WsNatsDeliveryHub implements AutoCloseable {
     private final WsSessionRegistry registry;
     private final Connection connection;
     private final Dispatcher dispatcher;
-    private volatile WsSessionKeepalive keepalive;
+    private final AtomicReference<WsSessionKeepalive> keepalive = new AtomicReference<>();
 
     public WsNatsDeliveryHub(Connection connection, WsSessionRegistry registry) {
         this.connection = connection;
@@ -32,13 +33,13 @@ public final class WsNatsDeliveryHub implements AutoCloseable {
     }
 
     public void attachKeepalive(WsSessionKeepalive keepalive) {
-        this.keepalive = keepalive;
+        this.keepalive.set(keepalive);
     }
 
     public WsSessionRegistry.RegisterResult tryRegister(Session session, String userId, Collection<String> chatIds) {
         var result = registry.register(session, userId, chatIds);
         if (result == WsSessionRegistry.RegisterResult.ACCEPTED) {
-            var ka = keepalive;
+            var ka = keepalive.get();
             if (ka != null) {
                 ka.onRegistered(session);
             }
@@ -48,7 +49,7 @@ public final class WsNatsDeliveryHub implements AutoCloseable {
     }
 
     public void unregister(Session session) {
-        var ka = keepalive;
+        var ka = keepalive.get();
         if (ka != null) {
             ka.onUnregistered(session);
         }

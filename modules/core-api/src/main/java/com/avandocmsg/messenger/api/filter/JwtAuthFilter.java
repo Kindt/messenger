@@ -23,8 +23,8 @@ public class JwtAuthFilter implements ContainerRequestFilter {
     /**
      * Без Bearer. {@code /files/pub} — kind A/C (анонимная выдача по токену); {@code /files/auth-link} — kind B, JWT обязателен, не публичный.
      * {@code v1/admin/console} и {@code /api/v1/admin/console} — редирект на встроенную веб-консоль {@code /admin/}.
+     * Paths relative to Jersey servlet mapping {@code /api/*} (see {@link #normalizeJerseyPath}).
      */
-    /** Paths relative to Jersey servlet mapping {@code /api/*} (see {@link #normalizeJerseyPath}). */
     private static final Set<String> PUBLIC_JERSEY_PREFIXES = Set.of(
         "v1/auth/login",
         "v1/auth/login-options",

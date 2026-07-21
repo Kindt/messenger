@@ -85,7 +85,7 @@ class OpenMlsInteropTest {
 
     @Test
     void wireLayout_validatesCombinedCiphertext() {
-        var encrypted = mlsService.encrypt(chatId, UUID.randomUUID(), "layout-check");
+        var encrypted = mlsService.encrypt(chatId, "layout-check");
         assertNotNull(encrypted);
         var combined = concat(
             Base64.getDecoder().decode(encrypted.nonceBase64()),

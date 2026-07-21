@@ -13,7 +13,7 @@ public record UserAvatarEvent(
     @JsonProperty("avatar_url") String avatarUrl,
     long ts
 ) {
-    public static final String TYPE = "avatar";
+    public static final String TYPE = "avatar"; // NOSONAR java:S1845 -- wire constant matches JSON field name type
 
     public static UserAvatarEvent of(String userId, String orgId, String avatarFileId, String avatarUrl, long ts) {
         return new UserAvatarEvent(TYPE, userId, orgId, avatarFileId, avatarUrl, ts);

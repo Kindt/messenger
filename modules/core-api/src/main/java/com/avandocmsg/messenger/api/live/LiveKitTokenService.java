@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -60,13 +60,13 @@ public class LiveKitTokenService {
                 video.put("roomRecord", true);
             }
 
-            var now = System.currentTimeMillis();
+            var now = Instant.now();
             var claims = new JWTClaimsSet.Builder()
                 .subject(identity)
                 .issuer(appConfig.livekitApiKey())
-                .issueTime(new Date(now))
-                .notBeforeTime(new Date(now))
-                .expirationTime(new Date(now + ttlSeconds * 1000L))
+                .issueTime(toJwtDate(now))
+                .notBeforeTime(toJwtDate(now))
+                .expirationTime(toJwtDate(now.plusSeconds(ttlSeconds)))
                 .claim("video", video)
                 .build();
 
@@ -77,5 +77,10 @@ public class LiveKitTokenService {
             log.error("LiveKit token sign failed for room {}", roomName, e);
             throw new IllegalStateException("LiveKit token failed", e);
         }
+    }
+
+    /** Nimbus {@link JWTClaimsSet.Builder} still requires {@link java.util.Date}. */
+    private static java.util.Date toJwtDate(Instant instant) {
+        return java.util.Date.from(instant); // NOSONAR java:S2143
     }
 }

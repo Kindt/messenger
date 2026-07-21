@@ -33,6 +33,10 @@ import java.util.UUID;
 @RolesAllowed("admin")
 public class AuthPolicyAdminResource {
 
+    private static final String ORG_ID_PARAM = "org_id";
+    private static final String MSG_INVALID_PARAMETER = "error.invalid_parameter";
+    private static final String MSG_ORG_NOT_FOUND = "error.admin.org_not_found";
+
     private final AuthPolicyService authPolicyService;
     private final UserMessageSource messages;
 
@@ -47,14 +51,14 @@ public class AuthPolicyAdminResource {
     public Response get(@PathParam("orgId") String orgIdStr) {
         UUID orgId;
         try {
-            orgId = UuidParams.required(orgIdStr, "org_id");
+            orgId = UuidParams.required(orgIdStr, ORG_ID_PARAM);
         } catch (Exception e) {
-            return Response.status(400).entity(new ApiError(400, messages.get("error.invalid_parameter"))).build();
+            return Response.status(400).entity(new ApiError(400, messages.get(MSG_INVALID_PARAMETER))).build();
         }
         return authPolicyService.getPolicy(orgId)
             .map(p -> Response.ok(p).build())
             .orElseGet(() -> Response.status(404)
-                .entity(new ApiError(404, messages.get("error.admin.org_not_found")))
+                .entity(new ApiError(404, messages.get(MSG_ORG_NOT_FOUND)))
                 .build());
     }
 
@@ -67,15 +71,15 @@ public class AuthPolicyAdminResource {
     ) {
         UUID orgId;
         try {
-            orgId = UuidParams.required(orgIdStr, "org_id");
+            orgId = UuidParams.required(orgIdStr, ORG_ID_PARAM);
         } catch (Exception e) {
-            return Response.status(400).entity(new ApiError(400, messages.get("error.invalid_parameter"))).build();
+            return Response.status(400).entity(new ApiError(400, messages.get(MSG_INVALID_PARAMETER))).build();
         }
         var actor = CurrentUserId.uuid(securityContext);
         return authPolicyService.updatePolicy(orgId, request, actor)
             .map(p -> Response.ok(p).build())
             .orElseGet(() -> Response.status(404)
-                .entity(new ApiError(404, messages.get("error.admin.org_not_found")))
+                .entity(new ApiError(404, messages.get(MSG_ORG_NOT_FOUND)))
                 .build());
     }
 
@@ -88,15 +92,15 @@ public class AuthPolicyAdminResource {
     ) {
         UUID orgId;
         try {
-            orgId = UuidParams.required(orgIdStr, "org_id");
+            orgId = UuidParams.required(orgIdStr, ORG_ID_PARAM);
         } catch (Exception e) {
-            return Response.status(400).entity(new ApiError(400, messages.get("error.invalid_parameter"))).build();
+            return Response.status(400).entity(new ApiError(400, messages.get(MSG_INVALID_PARAMETER))).build();
         }
         var providerId = request != null ? request.providerId() : null;
         return authPolicyService.testPolicy(orgId, providerId)
             .map(r -> Response.ok(new AuthPolicyTestResponse(r.ok(), r.message())).build())
             .orElseGet(() -> Response.status(404)
-                .entity(new ApiError(404, messages.get("error.admin.org_not_found")))
+                .entity(new ApiError(404, messages.get(MSG_ORG_NOT_FOUND)))
                 .build());
     }
 }

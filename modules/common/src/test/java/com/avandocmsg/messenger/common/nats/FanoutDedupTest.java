@@ -33,7 +33,7 @@ class FanoutDedupTest {
         var dedup = new FanoutDedup(1, 100);
         assertFalse(dedup.isDuplicate("msg-1", "user:u1"));
         assertTrue(dedup.isDuplicate("msg-1", "user:u1"));
-        Thread.sleep(1_100);
+        Thread.sleep(1_100); // NOSONAR java:S2925 -- wait for TTL expiry in unit test
         assertFalse(dedup.isDuplicate("msg-1", "user:u1"));
     }
 

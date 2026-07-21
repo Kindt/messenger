@@ -29,6 +29,9 @@ import jakarta.ws.rs.core.SecurityContext;
 @Tag(name = "Live streaming", description = "Прямые эфиры в чате (WebRTC SFU, spec 013 L2)")
 public class ChatLiveSessionResource {
 
+    private static final String KEY_CHAT_ID = "chat_id";
+    private static final String KEY_LIVE_SESSION_ID = "live_session_id";
+
     private final LiveSessionService liveSessionService;
     private final UserMessageSource messages;
 
@@ -50,7 +53,7 @@ public class ChatLiveSessionResource {
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
         var created = liveSessionService.create(cid, userId, request);
         return created.map(c -> Response.status(Response.Status.CREATED).entity(c).build())
             .orElse(Response.status(Response.Status.FORBIDDEN)
@@ -64,7 +67,7 @@ public class ChatLiveSessionResource {
                          @QueryParam("active_only") @DefaultValue("true") boolean activeOnly,
                          @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
         return Response.ok(liveSessionService.listForChat(cid, userId, activeOnly)).build();
     }
 
@@ -77,8 +80,8 @@ public class ChatLiveSessionResource {
                              LiveSessionModerationRequest request,
                              @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var sid = UuidParams.required(sessionId, "live_session_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
+        var sid = UuidParams.required(sessionId, KEY_LIVE_SESSION_ID);
         var action = request != null ? request.action() : null;
         var reason = request != null ? request.reason() : null;
         return liveSessionService.recordModeration(cid, sid, userId, action, reason)
@@ -97,8 +100,8 @@ public class ChatLiveSessionResource {
                              PatchLiveSessionDvrRequest request,
                              @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var sid = UuidParams.required(sessionId, "live_session_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
+        var sid = UuidParams.required(sessionId, KEY_LIVE_SESSION_ID);
         var url = request != null ? request.playlistUrl() : null;
         return liveSessionService.updateDvrPlaylist(cid, sid, userId, url)
             .map(s -> Response.ok(s).build())
@@ -119,8 +122,8 @@ public class ChatLiveSessionResource {
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var sid = UuidParams.required(sessionId, "live_session_id");
+        var cid = UuidParams.required(chatId, KEY_CHAT_ID);
+        var sid = UuidParams.required(sessionId, KEY_LIVE_SESSION_ID);
         return liveSessionService.ingressCredentials(cid, sid, userId)
             .map(c -> Response.ok(c).build())
             .orElse(Response.status(Response.Status.FORBIDDEN)

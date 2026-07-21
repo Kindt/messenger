@@ -25,7 +25,7 @@
     "base+search": {
       "korus_product_addons": ["addon-search"],
       "description": "Solr indexer",
-      "smoke_scripts": ["scripts/smoke-hotplug-indexer.sh"]
+      "smoke_scripts": ["scripts/smoke-hotplug-indexer.ps1"]
     },
     "base+collaboration": {
       "korus_product_addons": ["addon-collaboration"],
@@ -47,8 +47,8 @@
       "korus_product_addons": ["addon-export"],
       "description": "Export compliance worker",
       "smoke_scripts": [
-        "scripts/smoke-export-compliance-flow.sh",
-        "scripts/smoke-export-compliance-pack.sh"
+        "scripts/smoke-export-compliance-flow.ps1",
+        "scripts/smoke-export-compliance-pack.ps1"
       ]
     },
     "base+compliance-retention": {
@@ -151,7 +151,7 @@
         "addon-migration-import"
       ],
       "description": "Full addon union — manual presales / L4 prep",
-      "smoke_scripts": ["scripts/smoke-deploy-acceptance.sh"]
+      "smoke_scripts": ["scripts/smoke-deploy-acceptance-qemu.ps1"]
     }
   }
 }

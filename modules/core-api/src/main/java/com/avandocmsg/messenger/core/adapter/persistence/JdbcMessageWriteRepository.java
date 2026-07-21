@@ -42,7 +42,7 @@ public final class JdbcMessageWriteRepository {
         return dataSource;
     }
 
-    public MessageResponse insert(
+    public MessageResponse insert( // NOSONAR java:S107 - mirrors MessageRepositoryPort insert column arity
         UUID id,
         UUID chatId,
         UUID senderId,
@@ -112,47 +112,59 @@ public final class JdbcMessageWriteRepository {
         }
     }
 
-    public boolean updateContent(UUID msgId, UUID editedBy, String newContent) {
+    public boolean updateContent(UUID msgId, UUID editedBy, String newContent) { // NOSONAR java:S1141 — connection + txn callback
         var selectSql = "SELECT content FROM messages WHERE id = ?";
         try (var conn = dataSource.getConnection()) {
             JdbcConnectionSupport.prepareWrite(conn);
-            conn.setAutoCommit(false);
-            try {
-                String oldContent;
-                try (var stmt = conn.prepareStatement(selectSql)) {
-                    JdbcQuerySupport.applyDefaultTimeout(stmt);
-                    stmt.setObject(1, msgId);
-                    try (var rs = stmt.executeQuery()) {
-                        if (!rs.next()) {
-                            return false;
-                        }
-                        oldContent = rs.getString("content");
-                    }
+            return Boolean.TRUE.equals(JdbcConnectionSupport.callInTransaction(conn, () -> {
+                var oldContent = loadContentForUpdate(conn, selectSql, msgId);
+                if (oldContent == null) {
+                    return false;
                 }
-                var versionSql = "INSERT INTO message_versions (message_id, content, edited_by, created_at) VALUES (?, ?, ?, now())";
-                try (var stmt = conn.prepareStatement(versionSql)) {
-                    JdbcQuerySupport.applyDefaultTimeout(stmt);
-                    stmt.setObject(1, msgId);
-                    stmt.setString(2, oldContent);
-                    stmt.setObject(3, editedBy);
-                    stmt.executeUpdate();
-                }
-                var updateSql = "UPDATE messages SET content = ?, edited_at = now() WHERE id = ?";
-                try (var stmt = conn.prepareStatement(updateSql)) {
-                    JdbcQuerySupport.applyDefaultTimeout(stmt);
-                    stmt.setString(1, newContent);
-                    stmt.setObject(2, msgId);
-                    stmt.executeUpdate();
-                }
-                conn.commit();
+                insertVersion(conn, msgId, oldContent, editedBy);
+                applyContentUpdate(conn, msgId, newContent);
                 return true;
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            }
-        } catch (SQLException e) {
+            }));
+        } catch (Exception e) {
             log.error("Failed to update message {}", msgId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
+        }
+    }
+
+    private static String loadContentForUpdate(java.sql.Connection conn, String selectSql, UUID msgId)
+        throws SQLException {
+        try (var stmt = conn.prepareStatement(selectSql)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
+            stmt.setObject(1, msgId);
+            try (var rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+                return rs.getString("content");
+            }
+        }
+    }
+
+    private static void insertVersion(java.sql.Connection conn, UUID msgId, String oldContent, UUID editedBy)
+        throws SQLException {
+        var versionSql = "INSERT INTO message_versions (message_id, content, edited_by, created_at) VALUES (?, ?, ?, now())";
+        try (var stmt = conn.prepareStatement(versionSql)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
+            stmt.setObject(1, msgId);
+            stmt.setString(2, oldContent);
+            stmt.setObject(3, editedBy);
+            stmt.executeUpdate();
+        }
+    }
+
+    private static void applyContentUpdate(java.sql.Connection conn, UUID msgId, String newContent)
+        throws SQLException {
+        var updateSql = "UPDATE messages SET content = ?, edited_at = now() WHERE id = ?";
+        try (var stmt = conn.prepareStatement(updateSql)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
+            stmt.setString(1, newContent);
+            stmt.setObject(2, msgId);
+            stmt.executeUpdate();
         }
     }
 

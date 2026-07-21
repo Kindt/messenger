@@ -9,15 +9,11 @@ import com.avandocmsg.messenger.core.domain.FileId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.BlockRepositoryPort;
 import com.avandocmsg.messenger.core.port.ContactRepositoryPort;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.UUID;
 
 public class ContactService {
-    private static final Logger log = LoggerFactory.getLogger(ContactService.class);
-
     private final ContactRepositoryPort contactRepositoryPort;
     private final UserLookupPort userLookupPort;
     private final BlockRepositoryPort blockRepositoryPort;

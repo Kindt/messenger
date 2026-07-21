@@ -24,6 +24,9 @@ public record ExternalStackProfilePreflightReport(
         remediationActions = remediationActions == null ? List.of() : List.copyOf(remediationActions);
         missingPromotionEvidenceCount = missingPromotionEvidence.size();
         unsupportedModeCount = unsupportedModes.size();
-        passed = failures.isEmpty();
+        // Green only when support failures, promotion gaps, and unsupported modes are all clear
+        passed = failures.isEmpty()
+            && missingPromotionEvidence.isEmpty()
+            && unsupportedModes.isEmpty();
     }
 }

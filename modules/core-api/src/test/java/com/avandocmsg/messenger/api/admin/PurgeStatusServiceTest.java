@@ -63,8 +63,10 @@ class PurgeStatusServiceTest {
         };
         var audit = new AuditPort() {
             @Override
-            public void record(UUID actorUserId, String action, String resourceType, String resourceId,
+            @SuppressWarnings("java:S6213")
+            public void record(UUID actorUserId, String action, String resourceType, String resourceId, // NOSONAR
                                String detailsJson) {
+                // no-op stub: this test aggregates via countByAction / latestOccurredAtByAction only
             }
 
             @Override

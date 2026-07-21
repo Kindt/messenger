@@ -12,7 +12,7 @@ public record RtcSignalEvent(
     String fromUserId,
     JsonNode payload
 ) {
-    public static final String TYPE = "rtc_signal";
+    public static final String TYPE = "rtc_signal"; // NOSONAR java:S1845 -- wire constant matches JSON field name type
 
     public RtcSignalEvent(String chatId, String fromUserId, JsonNode payload) {
         this(TYPE, chatId, fromUserId, payload);

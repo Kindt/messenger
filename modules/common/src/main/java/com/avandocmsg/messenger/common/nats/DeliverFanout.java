@@ -74,13 +74,10 @@ public final class DeliverFanout {
             return;
         }
         for (var memberId : memberIds) {
-            if (memberId == null || memberId.isBlank()) {
-                continue;
+            if (memberId != null && !memberId.isBlank()
+                && (dedup == null || !dedup.isDuplicate(messageId, "user:" + memberId))) {
+                nats.publish(NatsSubjects.deliverUserSubject(memberId), payload);
             }
-            if (dedup != null && dedup.isDuplicate(messageId, "user:" + memberId)) {
-                continue;
-            }
-            nats.publish(NatsSubjects.deliverUserSubject(memberId), payload);
         }
     }
 }

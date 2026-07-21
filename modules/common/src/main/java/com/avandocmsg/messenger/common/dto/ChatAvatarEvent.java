@@ -12,7 +12,7 @@ public record ChatAvatarEvent(
     @JsonProperty("display_avatar_url") String displayAvatarUrl,
     long ts
 ) {
-    public static final String TYPE = "chat.avatar";
+    public static final String TYPE = "chat.avatar"; // NOSONAR java:S1845 -- wire constant matches JSON field name type
 
     public static ChatAvatarEvent of(String chatId, String avatarFileId, String displayAvatarUrl, long ts) {
         return new ChatAvatarEvent(TYPE, chatId, avatarFileId, displayAvatarUrl, ts);

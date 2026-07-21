@@ -11797,6 +11797,13 @@
       });
     }
     applyStyleSet(loadStyleSet());
+    if (window.KorusUiDeviceProfile) {
+      window.KorusUiDeviceProfile.install(document, {
+        onChange: function () {
+          render();
+        },
+      });
+    }
     refreshBrandingPublic().finally(function () {
       state.sidebarWidth = loadSidebarWidth();
       applySidebarWidthCss();

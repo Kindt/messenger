@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.common.i18n;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -12,7 +13,7 @@ public final class BundleParityTestUtil {
     private BundleParityTestUtil() {
     }
 
-    public static void assertSameKeys(ClassLoader loader, String resourceBasePath) throws Exception {
+    public static void assertSameKeys(ClassLoader loader, String resourceBasePath) throws IOException {
         var ruKeys = keys(loader, resourceBasePath + "_ru.properties");
         var enKeys = keys(loader, resourceBasePath + "_en.properties");
         if (!ruKeys.equals(enKeys)) {
@@ -25,7 +26,7 @@ public final class BundleParityTestUtil {
         }
     }
 
-    private static TreeSet<String> keys(ClassLoader loader, String resourcePath) throws Exception {
+    private static TreeSet<String> keys(ClassLoader loader, String resourcePath) throws IOException {
         try (InputStream is = loader.getResourceAsStream(resourcePath)) {
             if (is == null) {
                 throw new IllegalStateException("Classpath resource not found: " + resourcePath);

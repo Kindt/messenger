@@ -9,6 +9,8 @@ import java.util.UUID;
 /** Pure helpers for message send path (hex Phase 2b+). */
 public final class MessageSendSupport {
 
+    private static final String E2EE_PREFIX = "e2ee-";
+
     private MessageSendSupport() {
     }
 
@@ -47,14 +49,14 @@ public final class MessageSendSupport {
     }
 
     public static boolean isE2eeType(String type) {
-        return type != null && type.startsWith("e2ee-");
+        return type != null && type.startsWith(E2EE_PREFIX);
     }
 
     public static UUID parseAttachmentFileId(String type, String content) {
         if (content == null || content.isBlank() || type == null) {
             return null;
         }
-        var base = type.startsWith("e2ee-") ? type.substring(5) : type;
+        var base = type.startsWith(E2EE_PREFIX) ? type.substring(E2EE_PREFIX.length()) : type;
         if (!"file".equals(base) && !"image".equals(base) && !"video".equals(base)
             && !"voice".equals(base) && !"audio".equals(base)) {
             return null;
@@ -83,7 +85,7 @@ public final class MessageSendSupport {
 
     private static String e2eeType(String type) {
         var base = type != null && !type.isBlank() ? type : "text";
-        return base.startsWith("e2ee-") ? base : "e2ee-" + base;
+        return base.startsWith(E2EE_PREFIX) ? base : E2EE_PREFIX + base;
     }
 
     public static String combinedCiphertextBase64(com.avandocmsg.messenger.api.mls.dto.EncryptedMessage encrypted) {

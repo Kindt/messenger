@@ -45,7 +45,7 @@ public final class ChunkManifestWriter {
             client, bucket, objectPrefixDir, messageId, bytes, chunkSizeBytes, mapper);
     }
 
-    public static int writeChunkedSnapshot(
+    public static int writeChunkedSnapshot( // NOSONAR java:S107 -- facade mirrors ChunkedSnapshotWriter public API
         MinioClient client,
         String bucket,
         String objectPrefixDir,
@@ -75,7 +75,7 @@ public final class ChunkManifestWriter {
             client, bucket, objectPrefixDir, messageId, file, chunkSizeBytes, mapper);
     }
 
-    public static int writeChunkedSnapshotFromFile(
+    public static int writeChunkedSnapshotFromFile( // NOSONAR java:S107 -- facade mirrors ChunkedSnapshotWriter public API
         MinioClient client,
         String bucket,
         String objectPrefixDir,

@@ -38,10 +38,11 @@ public final class GracefulShutdown {
     ) {
         var sid = normalize(serviceId);
         var timeout = drainTimeout != null ? drainTimeout : Duration.ofSeconds(10);
-        Runnable before = beforeDrain != null ? beforeDrain : () -> { };
-        Runnable after = afterDrain != null ? afterDrain : () -> { };
+        Runnable before = beforeDrain != null ? beforeDrain : () -> { /* optional beforeDrain */ };
+        Runnable after = afterDrain != null ? afterDrain : () -> { /* optional afterDrain */ };
         boolean success = true;
         long started = System.nanoTime();
+        RuntimeException pending = null;
         try {
             before.run();
             if (nats != null) {
@@ -49,20 +50,26 @@ public final class GracefulShutdown {
             }
         } catch (RuntimeException e) {
             success = false;
-            throw e;
+            pending = e;
         } catch (Exception e) {
             success = false;
-            throw new IllegalStateException("Graceful shutdown drain failed", e);
-        } finally {
-            try {
-                after.run();
-            } catch (RuntimeException e) {
-                success = false;
-                throw e;
-            } finally {
-                double seconds = (System.nanoTime() - started) / 1_000_000_000.0;
-                HotPlugMetrics.observeDrainDurationSeconds(sid, seconds, success);
+            pending = new IllegalStateException("Graceful shutdown drain failed", e);
+        }
+        try {
+            after.run();
+        } catch (RuntimeException e) {
+            success = false;
+            if (pending != null) {
+                pending.addSuppressed(e);
+            } else {
+                pending = e;
             }
+        } finally {
+            double seconds = (System.nanoTime() - started) / 1_000_000_000.0;
+            HotPlugMetrics.observeDrainDurationSeconds(sid, seconds, success);
+        }
+        if (pending != null) {
+            throw pending;
         }
     }
 

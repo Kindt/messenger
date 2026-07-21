@@ -28,6 +28,41 @@ import java.util.UUID;
 public final class JdbcMessageReadRepository {
     private static final Logger log = LoggerFactory.getLogger(JdbcMessageReadRepository.class);
 
+    private static final String COL_MESSAGE_ID = "message_id";
+    private static final String COL_CREATED_AT = "created_at";
+
+    private static final String VISIBLE = MessageJdbcSql.MSG_VISIBILITY_TTL_VISIBLE;
+    private static final String SEARCH_PLAINTEXT_PG = """
+        SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at,
+            m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id
+        FROM messages m
+        WHERE m.chat_id = ANY (?)
+          AND m.deleted = false
+          AND """ + VISIBLE + """
+          AND m.type NOT LIKE 'e2ee-%'
+          AND to_tsvector('russian', coalesce(m.content, '')) @@ plainto_tsquery('russian', ?)
+          AND EXISTS (SELECT 1 FROM chat_members cm WHERE cm.chat_id = m.chat_id AND cm.user_id = ? AND cm.banned = false)
+          AND m.sender_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
+          AND m.sender_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)
+        ORDER BY m.created_at DESC
+        LIMIT ?
+        """;
+    private static final String SEARCH_PLAINTEXT_H2 = """
+        SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at,
+            m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id
+        FROM messages m
+        WHERE m.chat_id = ANY (?)
+          AND m.deleted = false
+          AND """ + VISIBLE + """
+          AND m.type NOT LIKE 'e2ee-%'
+          AND POSITION(lower(CAST (? AS text)) IN lower(coalesce(m.content, ''))) > 0
+          AND EXISTS (SELECT 1 FROM chat_members cm WHERE cm.chat_id = m.chat_id AND cm.user_id = ? AND cm.banned = false)
+          AND m.sender_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
+          AND m.sender_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)
+        ORDER BY m.created_at DESC
+        LIMIT ?
+        """;
+
     private static final String SQL_LIST_CONTENT_PROJECTION =
         "CASE WHEN m.type NOT LIKE 'e2ee-%' THEN m.content END AS content";
     private static final String SQL_LIST_REPLY_PREVIEW_CONTENT =
@@ -173,10 +208,10 @@ public final class JdbcMessageReadRepository {
                 while (rs.next()) {
                     result.add(new MessageVersionResponse(
                         rs.getLong("id"),
-                        rs.getObject("message_id", UUID.class).toString(),
+                        rs.getObject(COL_MESSAGE_ID, UUID.class).toString(),
                         rs.getString("content"),
                         rs.getObject("edited_by", UUID.class).toString(),
-                        rs.getTimestamp("created_at").toInstant()));
+                        rs.getTimestamp(COL_CREATED_AT).toInstant()));
                 }
             }
         } catch (SQLException e) {
@@ -197,10 +232,10 @@ public final class JdbcMessageReadRepository {
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     result.add(new ReactionResponse(
-                        rs.getObject("message_id", UUID.class).toString(),
+                        rs.getObject(COL_MESSAGE_ID, UUID.class).toString(),
                         rs.getObject("user_id", UUID.class).toString(),
                         rs.getString("reaction"),
-                        rs.getTimestamp("created_at").toInstant()));
+                        rs.getTimestamp(COL_CREATED_AT).toInstant()));
                 }
             }
         } catch (SQLException e) {
@@ -222,9 +257,9 @@ public final class JdbcMessageReadRepository {
                 while (rs.next()) {
                     result.add(new PinnedMessageResponse(
                         rs.getObject("chat_id", UUID.class).toString(),
-                        rs.getObject("message_id", UUID.class).toString(),
+                        rs.getObject(COL_MESSAGE_ID, UUID.class).toString(),
                         rs.getObject("pinned_by", UUID.class).toString(),
-                        rs.getTimestamp("created_at").toInstant()));
+                        rs.getTimestamp(COL_CREATED_AT).toInstant()));
                 }
             }
         } catch (SQLException e) {
@@ -306,22 +341,7 @@ public final class JdbcMessageReadRepository {
         var result = new ArrayList<MessageResponse>();
         try (var conn = read().getConnection()) {
             JdbcConnectionSupport.prepareRead(conn);
-            var searchClause = plaintextSearchClause(isPostgres(conn));
-            var sql = """
-                SELECT m.id, m.chat_id, m.sender_id, m.type, m.content, m.reply_to_msg_id, m.deleted, m.created_at,
-                    m.edited_at, m.visibility_ttl_seconds, m.attachment_file_id
-                FROM messages m
-                WHERE m.chat_id = ANY (?)
-                  AND m.deleted = false
-                  AND """ + MessageJdbcSql.MSG_VISIBILITY_TTL_VISIBLE + """
-                  AND m.type NOT LIKE 'e2ee-%'
-                  AND """ + searchClause + """
-                  AND EXISTS (SELECT 1 FROM chat_members cm WHERE cm.chat_id = m.chat_id AND cm.user_id = ? AND cm.banned = false)
-                  AND m.sender_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
-                  AND m.sender_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)
-                ORDER BY m.created_at DESC
-                LIMIT ?
-                """;
+            var sql = isPostgres(conn) ? SEARCH_PLAINTEXT_PG : SEARCH_PLAINTEXT_H2;
             try (var stmt = conn.prepareStatement(sql)) {
                 applyQueryTimeout(stmt);
                 var arr = conn.createArrayOf("uuid", chatIds.toArray(new UUID[0]));

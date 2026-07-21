@@ -30,13 +30,9 @@ public final class JdbcMessageReadReceiptAdapter implements MessageReadReceiptPo
         if (dataSource == null) {
             return false;
         }
-        var sql = """
-            INSERT INTO message_read_receipts (message_id, user_id, read_at)
-            VALUES (?, ?, ?)
-            ON CONFLICT (message_id, user_id) DO NOTHING
-            """;
         try (var conn = dataSource.getConnection()) {
             JdbcConnectionSupport.prepareWrite(conn);
+            var sql = insertSql(conn);
             try (var stmt = conn.prepareStatement(sql)) {
                 JdbcQuerySupport.applyDefaultTimeout(stmt);
                 stmt.setObject(1, messageId);
@@ -46,7 +42,7 @@ public final class JdbcMessageReadReceiptAdapter implements MessageReadReceiptPo
             }
         } catch (Exception e) {
             log.error("insert read receipt failed", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -55,20 +51,16 @@ public final class JdbcMessageReadReceiptAdapter implements MessageReadReceiptPo
         if (dataSource == null || messageIds == null || messageIds.isEmpty()) {
             return 0;
         }
-        var sql = """
-            INSERT INTO message_read_receipts (message_id, user_id, read_at)
-            VALUES (?, ?, ?)
-            ON CONFLICT (message_id, user_id) DO NOTHING
-            """;
         int inserted = 0;
         try (var conn = dataSource.getConnection()) {
             JdbcConnectionSupport.prepareWrite(conn);
+            var sql = insertSql(conn);
             try (var stmt = conn.prepareStatement(sql)) {
                 JdbcQuerySupport.applyDefaultTimeout(stmt);
+                stmt.setObject(2, userId);
+                stmt.setTimestamp(3, Timestamp.from(readAt));
                 for (var messageId : messageIds) {
                     stmt.setObject(1, messageId);
-                    stmt.setObject(2, userId);
-                    stmt.setTimestamp(3, Timestamp.from(readAt));
                     stmt.addBatch();
                 }
                 var counts = stmt.executeBatch();
@@ -82,8 +74,24 @@ public final class JdbcMessageReadReceiptAdapter implements MessageReadReceiptPo
             }
         } catch (Exception e) {
             log.error("insertBatch read receipts failed", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return inserted;
+    }
+
+    private static String insertSql(java.sql.Connection conn) throws java.sql.SQLException {
+        // ON CONFLICT is PostgreSQL; H2 (even MODE=PostgreSQL) does not parse it.
+        if (JdbcDialect.isPostgres(conn)) {
+            return """
+                INSERT INTO message_read_receipts (message_id, user_id, read_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT (message_id, user_id) DO NOTHING
+                """;
+        }
+        return """
+            INSERT INTO message_read_receipts (message_id, user_id, read_at)
+            VALUES (?, ?, ?)
+            """;
     }
 
     @Override
@@ -118,6 +126,7 @@ public final class JdbcMessageReadReceiptAdapter implements MessageReadReceiptPo
             }
         } catch (Exception e) {
             log.error("findByMessageId read receipts failed", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return rows;
     }
@@ -146,6 +155,7 @@ public final class JdbcMessageReadReceiptAdapter implements MessageReadReceiptPo
             }
         } catch (Exception e) {
             log.error("countAll read receipts failed", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return 0L;
     }
@@ -169,7 +179,7 @@ public final class JdbcMessageReadReceiptAdapter implements MessageReadReceiptPo
             }
         } catch (Exception e) {
             log.error("deleteOlderThanDays read receipts failed", e);
-            return 0;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 }

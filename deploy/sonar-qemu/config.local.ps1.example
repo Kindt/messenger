@@ -1,0 +1,7 @@
+# Optional local overrides for Sonar QEMU lab (gitignored).
+# Copy to config.local.ps1 and set values — do not commit.
+#
+# $script:SonarQemuGuestPassword = "..."
+# $script:SonarQemuAdminPassword = "..."
+# $script:SonarQemuDbPassword = "..."
+# $script:SonarQemuScannerImage = "sonarsource/sonar-scanner-cli:12.1.0.3233_8.0.1"

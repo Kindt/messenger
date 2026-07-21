@@ -9,7 +9,7 @@ public record PasskeyResponse(
     @JsonProperty("credential_id") String credentialId,
     @JsonProperty("created_at") Instant createdAt
 ) {
-    public static PasskeyResponse created(String id, String credentialId) {
+    public static PasskeyResponse created(String credentialId) {
         return new PasskeyResponse(credentialId, Instant.now());
     }
 

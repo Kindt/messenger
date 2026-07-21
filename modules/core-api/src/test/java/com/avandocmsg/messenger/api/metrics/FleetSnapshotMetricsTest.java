@@ -41,6 +41,6 @@ class FleetSnapshotMetricsTest {
                 new FleetSnapshotResponse.DatabaseCounts(1, 2, 3, true)
             )
         );
-        assertDoesNotThrow(() -> FleetSnapshotMetrics.record(snap));
+        assertDoesNotThrow(() -> FleetSnapshotMetrics.recordSnapshot(snap));
     }
 }

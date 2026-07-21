@@ -33,7 +33,7 @@ public final class JdbcBlockRepositoryAdapter implements BlockRepositoryPort {
                 return rs.next();
             }
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -47,7 +47,7 @@ public final class JdbcBlockRepositoryAdapter implements BlockRepositoryPort {
             stmt.setObject(2, blockedId.value());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -61,7 +61,7 @@ public final class JdbcBlockRepositoryAdapter implements BlockRepositoryPort {
             stmt.setObject(2, blockedId.value());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -95,7 +95,7 @@ public final class JdbcBlockRepositoryAdapter implements BlockRepositoryPort {
                 }
             }
         } catch (Exception e) {
-            return List.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return out;
     }

@@ -20,6 +20,9 @@ public final class JdbcOrgIpAllowlistJdbcRepository {
     }
 
     public Optional<OrgIpAllowlistRepository.Row> findByOrgId(UUID orgId) {
+        if (dataSource == null) {
+            return Optional.empty();
+        }
         var sql = "SELECT org_id, enabled, allowed_cidrs FROM org_ip_allowlist WHERE org_id = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
@@ -35,11 +38,15 @@ public final class JdbcOrgIpAllowlistJdbcRepository {
             }
         } catch (Exception e) {
             log.error("org ip allowlist find failed org={}", orgId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
 
     public OrgIpAllowlistRepository.Row upsert(UUID orgId, boolean enabled, String allowedCidrs) {
+        if (dataSource == null) {
+            throw new IllegalStateException("DataSource is required for org IP allowlist upsert");
+        }
         var sql = """
             INSERT INTO org_ip_allowlist (org_id, enabled, allowed_cidrs, updated_at)
             VALUES (?, ?, ?, now())
@@ -58,7 +65,7 @@ public final class JdbcOrgIpAllowlistJdbcRepository {
             return new OrgIpAllowlistRepository.Row(orgId, enabled, allowedCidrs != null ? allowedCidrs : "");
         } catch (Exception e) {
             log.error("org ip allowlist upsert failed org={}", orgId, e);
-            return new OrgIpAllowlistRepository.Row(orgId, false, "");
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 }

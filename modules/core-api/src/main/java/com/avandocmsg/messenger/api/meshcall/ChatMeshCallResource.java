@@ -26,6 +26,9 @@ import jakarta.ws.rs.core.SecurityContext;
 @Tag(name = "Mesh calls", description = "Mesh WebRTC call sessions and recordings")
 public class ChatMeshCallResource {
 
+    private static final String CHAT_ID = "chat_id";
+    private static final String SESSION_ID = "session_id";
+
     private final MeshCallRecordingService service;
     private final UserMessageSource messages;
 
@@ -45,7 +48,7 @@ public class ChatMeshCallResource {
         @Context SecurityContext securityContext
     ) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
         var mode = body != null ? body.mediaMode() : "audio";
         return service.startSession(cid, userId, mode)
             .map(resp -> Response.status(Response.Status.CREATED).entity(resp).build())
@@ -61,8 +64,8 @@ public class ChatMeshCallResource {
         @Context SecurityContext securityContext
     ) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var sid = UuidParams.required(sessionId, "session_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
+        var sid = UuidParams.required(sessionId, SESSION_ID);
         return service.joinSession(cid, userId, sid)
             .map(resp -> Response.ok(resp).build())
             .orElse(forbidden());
@@ -77,8 +80,8 @@ public class ChatMeshCallResource {
         @Context SecurityContext securityContext
     ) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var sid = UuidParams.required(sessionId, "session_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
+        var sid = UuidParams.required(sessionId, SESSION_ID);
         return service.endSession(cid, userId, sid)
             .map(ok -> Response.noContent().build())
             .orElse(forbidden());
@@ -95,8 +98,8 @@ public class ChatMeshCallResource {
         @Context SecurityContext securityContext
     ) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var sid = UuidParams.required(sessionId, "session_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
+        var sid = UuidParams.required(sessionId, SESSION_ID);
         var kind = body != null ? body.kind() : "user";
         if (!"user".equals(kind)) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -118,8 +121,8 @@ public class ChatMeshCallResource {
         @Context SecurityContext securityContext
     ) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var sid = UuidParams.required(sessionId, "session_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
+        var sid = UuidParams.required(sessionId, SESSION_ID);
         var rid = UuidParams.required(recordingId, "recording_id");
         return service.stopUserRecording(cid, userId, sid, rid)
             .map(ok -> Response.noContent().build())
@@ -138,8 +141,8 @@ public class ChatMeshCallResource {
         @Context SecurityContext securityContext
     ) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var sid = UuidParams.required(sessionId, "session_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
+        var sid = UuidParams.required(sessionId, SESSION_ID);
         var rid = UuidParams.required(recordingId, "recording_id");
         if (body == null || body.fileId() == null || body.fileId().isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -162,8 +165,8 @@ public class ChatMeshCallResource {
         @Context SecurityContext securityContext
     ) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var sid = UuidParams.required(sessionId, "session_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
+        var sid = UuidParams.required(sessionId, SESSION_ID);
         var rows = service.listRecordings(cid, userId, sid);
         return Response.ok(rows).build();
     }

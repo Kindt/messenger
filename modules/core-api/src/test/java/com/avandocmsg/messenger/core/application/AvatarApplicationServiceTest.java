@@ -48,9 +48,7 @@ class AvatarApplicationServiceTest {
     void setUserAvatar_requiresFileOwner() {
         var userPort = new StubUserPort();
         var filePort = new StubFilePort(false);
-        var service = new AvatarApplicationService(
-            appConfig(true), new StubAvatarAccess(true, true), tokenBuilder(),
-            userPort, new StubChatPort(), filePort, null, NoOpReadCacheAdapter.INSTANCE);
+        var service = avatarService(appConfig(true), new StubAvatarAccess(true, true), userPort, filePort);
         assertTrue(service.setUserAvatar(UserId.of(USER), FileId.of(FILE)).isEmpty());
     }
 
@@ -58,9 +56,7 @@ class AvatarApplicationServiceTest {
     void setUserAvatar_updatesProfileWhenOwner() {
         var userPort = new StubUserPort();
         var filePort = new StubFilePort(true);
-        var service = new AvatarApplicationService(
-            appConfig(true), new StubAvatarAccess(true, true), tokenBuilder(),
-            userPort, new StubChatPort(), filePort, null, NoOpReadCacheAdapter.INSTANCE);
+        var service = avatarService(appConfig(true), new StubAvatarAccess(true, true), userPort, filePort);
         assertTrue(service.setUserAvatar(UserId.of(USER), FileId.of(FILE)).isPresent());
         assertEquals(FILE, userPort.lastAvatarId);
     }
@@ -69,22 +65,21 @@ class AvatarApplicationServiceTest {
     void setUserAvatar_blockedWhenUploadDenied() {
         var userPort = new StubUserPort();
         var filePort = new StubFilePort(true);
-        var service = new AvatarApplicationService(
-            appConfig(true), new StubAvatarAccess(true, false), tokenBuilder(),
-            userPort, new StubChatPort(), filePort, null, NoOpReadCacheAdapter.INSTANCE);
+        var service = avatarService(appConfig(true), new StubAvatarAccess(true, false), userPort, filePort);
         assertTrue(service.setUserAvatar(UserId.of(USER), FileId.of(FILE)).isEmpty());
     }
 
     private static AvatarApplicationService service(boolean allowAccess, boolean enabled) {
-        return new AvatarApplicationService(
-            appConfig(enabled),
-            new StubAvatarAccess(allowAccess, true),
-            tokenBuilder(),
-            new StubUserPort(),
-            new StubChatPort(),
-            new StubFilePort(true),
-            null,
-            NoOpReadCacheAdapter.INSTANCE);
+        return avatarService(appConfig(enabled), new StubAvatarAccess(allowAccess, true),
+            new StubUserPort(), new StubFilePort(true));
+    }
+
+    private static AvatarApplicationService avatarService(
+        AppConfig config, AvatarAccessPort access, UserRepositoryPort userPort, FileMetadataPort filePort) {
+        return new AvatarApplicationService(new AvatarApplicationService.Dependencies(
+            new AvatarApplicationService.Ports(
+                config, access, tokenBuilder(), userPort, new StubChatPort(), filePort),
+            new AvatarApplicationService.SideEffects(null, NoOpReadCacheAdapter.INSTANCE, null)));
     }
 
     private static AvatarUrlBuilder tokenBuilder() {
@@ -92,7 +87,7 @@ class AvatarApplicationServiceTest {
     }
 
     private static AppConfig appConfig(boolean avatarsEnabled) {
-        var cfg = new AppConfig() {
+        return new AppConfig() {
             @Override
             public boolean avatarsEnabled() {
                 return avatarsEnabled;
@@ -108,7 +103,6 @@ class AvatarApplicationServiceTest {
                 return SECRET;
             }
         };
-        return cfg;
     }
 
     private static UserProfile sampleProfile(FileId avatarFileId) {
@@ -199,6 +193,7 @@ class AvatarApplicationServiceTest {
 
         @Override
         public void upsertFromKeycloak(UserId id, String username, String displayName) {
+            // no-op stub: Keycloak sync not exercised in these tests
         }
 
         @Override

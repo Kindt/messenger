@@ -9,7 +9,6 @@ import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.ChatRepositoryPort;
 import com.avandocmsg.messenger.core.port.MessageQueryPort;
-import com.avandocmsg.messenger.core.port.MessageQueryPort;
 import com.avandocmsg.messenger.core.port.MessageRepositoryPort;
 import com.avandocmsg.messenger.core.port.NatsOutboundPort;
 import org.junit.jupiter.api.Test;

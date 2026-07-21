@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,7 +30,7 @@ public final class ExportSuggestedHandler {
 
     public ExportSuggestedHandler(AuditPort auditPort, Optional<ExportAutoQueueOnSuggested> autoQueue) {
         this.auditPort = auditPort;
-        this.autoQueue = autoQueue != null ? autoQueue : Optional.empty();
+        this.autoQueue = Objects.requireNonNull(autoQueue, "autoQueue");
     }
 
     /**

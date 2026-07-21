@@ -15,6 +15,7 @@ export const BUNDLE_SCRIPTS = [
   "ui-global-errors.js",
   "ui-i18n.js",
   "ui-shell-utils.js",
+  "ui-device-profile.js",
   "ui-branding.js",
   "ui-transport-utils.js",
   "ui-ws-client.js",

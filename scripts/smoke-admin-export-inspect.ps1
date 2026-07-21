@@ -1,7 +1,6 @@
 # GET admin export attachments + manifest + json parts (finished job).
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$ChatId,
+    [string]$ChatId = "",
     [string]$JobId = "",
     [string]$BaseUrl = "http://localhost:8080",
     [string]$AdminUser = "csadmin",
@@ -10,15 +9,27 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $scriptDir "lib\Resolve-SmokeExportChatId.ps1")
 . (Join-Path $scriptDir "lib\SmokeApi.ps1")
 . (Join-Path $scriptDir "lib\SmokeExportInspect.ps1")
+$ChatId = Resolve-SmokeExportChatId -ChatId $ChatId -BaseUrl $BaseUrl -ScriptDir $scriptDir
 
 $ok = @("export_v1", "stub_written")
 $hdr = New-KorusAuthHeaders -Token (Get-KorusApiToken -BaseUrl $BaseUrl -User $AdminUser -Pass $AdminPass)
 
 if (-not $JobId) {
     Write-Host "GET latest export status ..." -ForegroundColor Cyan
-    $latest = Invoke-RestMethod -Uri "$BaseUrl/api/v1/admin/chats/$ChatId/export/latest/status" -Headers $hdr
+    try {
+        $latest = Invoke-RestMethod -Uri "$BaseUrl/api/v1/admin/chats/$ChatId/export/latest/status" -Headers $hdr
+    } catch {
+        $code = $null
+        if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
+        if ($code -ne 404) { throw }
+        Write-Host "No finished export yet - enqueue admin export ..." -ForegroundColor Yellow
+        & (Join-Path $scriptDir "smoke-admin-export.ps1") -ChatId $ChatId -BaseUrl $BaseUrl -SkipDownload | Out-Host
+        if ($LASTEXITCODE -ne 0) { throw "admin export failed before inspect (exit $LASTEXITCODE)" }
+        $latest = Invoke-RestMethod -Uri "$BaseUrl/api/v1/admin/chats/$ChatId/export/latest/status" -Headers $hdr
+    }
     $JobId = $latest.job_id
     if (-not $JobId) { $JobId = $latest.jobId }
     $status = $latest.status

@@ -15,7 +15,7 @@ public record ReadReceiptEvent(
     @JsonProperty("read_at") long readAt,
     @JsonProperty("batch_message_ids") List<String> batchMessageIds
 ) {
-    public static final String TYPE = "read_receipt";
+    public static final String TYPE = "read_receipt"; // NOSONAR java:S1845 -- wire constant matches JSON field name type
 
     public static ReadReceiptEvent single(String chatId, String messageId, String userId, long readAt) {
         return new ReadReceiptEvent(TYPE, chatId, messageId, userId, readAt, null);

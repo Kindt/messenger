@@ -37,6 +37,8 @@ public class UserResource {
 
     private static final Set<String> PRESENCE_ALLOWED = Set.of("online", "away", "dnd", "offline");
     private static final Set<String> UI_LOCALES_ALLOWED = Set.of("ru", "en", "be", "kk", "zh", "ko");
+    private static final String ERR_PROFILE_UPDATE_FAILED = "error.user.profile_update_failed";
+    private static final String ERR_PRESENCE_INVALID = "error.user.presence_invalid";
 
     private final UserApplicationService userApplicationService;
     private final AvatarApplicationService avatarApplicationService;
@@ -110,58 +112,84 @@ public class UserResource {
     public Response updateProfile(UpdateProfileRequest request,
                                    @Context SecurityContext securityContext) {
         if (request == null) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, messages.get("error.user.profile_update_failed")))
-                .build();
+            return profileError(Response.Status.BAD_REQUEST);
         }
-        var userId = CurrentUserId.uuid(securityContext);
-        var uid = UserId.of(userId);
+        var uid = UserId.of(CurrentUserId.uuid(securityContext));
+        var result = applyProfileUpdate(request, uid);
+        if (result.error() != null) {
+            return result.error();
+        }
+        var profile = mapProfile(userApplicationService.getProfileForViewer(uid, uid), uid);
+        return profile != null ? Response.ok(profile).build() : profileError(Response.Status.INTERNAL_SERVER_ERROR);
+    }
+
+    private record ProfileUpdateResult(
+        com.avandocmsg.messenger.core.domain.UserProfile updated,
+        Response error
+    ) {}
+
+    private ProfileUpdateResult applyProfileUpdate(UpdateProfileRequest request, UserId uid) {
         com.avandocmsg.messenger.core.domain.UserProfile updated = null;
         if (request.displayName() != null || request.phone() != null) {
             updated = userApplicationService
                 .updateProfile(uid, request.displayName(), request.phone())
                 .orElse(null);
         }
-        if (Boolean.TRUE.equals(request.removeAvatar())) {
-            if (!avatarApplicationService.userMayUploadAvatar(uid)) {
-                return Response.status(Response.Status.FORBIDDEN)
-                    .entity(new ApiError(403, messages.get("error.user.profile_update_failed")))
-                    .build();
-            }
-            updated = avatarApplicationService.clearUserAvatar(uid).orElse(updated);
-        } else if (request.avatarFileId() != null && !request.avatarFileId().isBlank()) {
-            if (!avatarApplicationService.userMayUploadAvatar(uid)) {
-                return Response.status(Response.Status.FORBIDDEN)
-                    .entity(new ApiError(403, messages.get("error.user.profile_update_failed")))
-                    .build();
-            }
-            var fileId = UuidParams.required(request.avatarFileId(), "avatar_file_id");
-            updated = avatarApplicationService.setUserAvatar(uid, FileId.of(fileId)).orElse(null);
+        var avatarResult = applyAvatarChange(request, uid, updated);
+        if (avatarResult.error() != null) {
+            return avatarResult;
         }
+        updated = avatarResult.updated();
         if (request.avatarHidden() != null) {
             updated = avatarApplicationService.updateUserAvatarHidden(uid, request.avatarHidden()).orElse(updated);
         }
-        if (updated == null && (request.displayName() != null || request.phone() != null
-            || request.avatarFileId() != null || Boolean.TRUE.equals(request.removeAvatar())
-            || request.avatarHidden() != null)) {
-            if (!avatarApplicationService.avatarsEnabled()
-                && (request.avatarFileId() != null || Boolean.TRUE.equals(request.removeAvatar()))) {
-                return Response.status(Response.Status.FORBIDDEN)
-                    .entity(new ApiError(403, messages.get("error.user.profile_update_failed")))
-                    .build();
+        var failure = failureWhenNoUpdate(request, updated);
+        return failure != null ? new ProfileUpdateResult(updated, failure) : new ProfileUpdateResult(updated, null);
+    }
+
+    private ProfileUpdateResult applyAvatarChange(
+        UpdateProfileRequest request,
+        UserId uid,
+        com.avandocmsg.messenger.core.domain.UserProfile updated
+    ) {
+        if (Boolean.TRUE.equals(request.removeAvatar())) {
+            if (!avatarApplicationService.userMayUploadAvatar(uid)) {
+                return new ProfileUpdateResult(updated, profileError(Response.Status.FORBIDDEN));
             }
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(new ApiError(500, messages.get("error.user.profile_update_failed")))
-                .build();
+            return new ProfileUpdateResult(avatarApplicationService.clearUserAvatar(uid).orElse(updated), null);
         }
-        var profile = mapProfile(
-            userApplicationService.getProfileForViewer(uid, uid),
-            uid);
-        if (profile != null) {
-            return Response.ok(profile).build();
+        if (request.avatarFileId() == null || request.avatarFileId().isBlank()) {
+            return new ProfileUpdateResult(updated, null);
         }
-        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-            .entity(new ApiError(500, messages.get("error.user.profile_update_failed")))
+        if (!avatarApplicationService.userMayUploadAvatar(uid)) {
+            return new ProfileUpdateResult(updated, profileError(Response.Status.FORBIDDEN));
+        }
+        var fileId = UuidParams.required(request.avatarFileId(), "avatar_file_id");
+        return new ProfileUpdateResult(
+            avatarApplicationService.setUserAvatar(uid, FileId.of(fileId)).orElse(null),
+            null);
+    }
+
+    private Response failureWhenNoUpdate(
+        UpdateProfileRequest request,
+        com.avandocmsg.messenger.core.domain.UserProfile updated
+    ) {
+        boolean attempted = request.displayName() != null || request.phone() != null
+            || request.avatarFileId() != null || Boolean.TRUE.equals(request.removeAvatar())
+            || request.avatarHidden() != null;
+        if (updated != null || !attempted) {
+            return null;
+        }
+        if (!avatarApplicationService.avatarsEnabled()
+            && (request.avatarFileId() != null || Boolean.TRUE.equals(request.removeAvatar()))) {
+            return profileError(Response.Status.FORBIDDEN);
+        }
+        return profileError(Response.Status.INTERNAL_SERVER_ERROR);
+    }
+
+    private Response profileError(Response.Status status) {
+        return Response.status(status)
+            .entity(new ApiError(status.getStatusCode(), messages.get(ERR_PROFILE_UPDATE_FAILED)))
             .build();
     }
 
@@ -173,20 +201,20 @@ public class UserResource {
                                    @Context SecurityContext securityContext) {
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, messages.get("error.user.presence_invalid")))
+                .entity(new ApiError(400, messages.get(ERR_PRESENCE_INVALID)))
                 .build();
         }
         if (request.presenceStatus() != null
             && !PRESENCE_ALLOWED.contains(request.presenceStatus())) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, messages.get("error.user.presence_invalid")))
+                .entity(new ApiError(400, messages.get(ERR_PRESENCE_INVALID)))
                 .build();
         }
         if (request.presenceStatus() == null
             && request.customStatusText() == null
             && request.dndUntil() == null) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, messages.get("error.user.presence_invalid")))
+                .entity(new ApiError(400, messages.get(ERR_PRESENCE_INVALID)))
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);

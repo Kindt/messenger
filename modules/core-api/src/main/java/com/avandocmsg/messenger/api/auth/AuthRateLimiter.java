@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
  */
 public class AuthRateLimiter {
     private static final Logger log = LoggerFactory.getLogger(AuthRateLimiter.class);
+    private static final String UNKNOWN_IP = "unknown";
 
     /**
      * KEYS[1] = counter key, ARGV[1] = TTL seconds for first increment.
@@ -106,7 +107,7 @@ public class AuthRateLimiter {
 
     private static String safeIp(String raw) {
         if (raw == null || raw.isBlank()) {
-            return "unknown";
+            return UNKNOWN_IP;
         }
         return raw.length() > 128 ? raw.substring(0, 128) : raw;
     }
@@ -114,7 +115,7 @@ public class AuthRateLimiter {
     /** Extract client IP: {@code X-Forwarded-For} first hop or remote address. */
     public static String clientIp(jakarta.servlet.http.HttpServletRequest req) {
         if (req == null) {
-            return "unknown";
+            return UNKNOWN_IP;
         }
         var xff = req.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) {
@@ -124,6 +125,6 @@ public class AuthRateLimiter {
             }
         }
         var addr = req.getRemoteAddr();
-        return addr != null ? addr : "unknown";
+        return addr != null ? addr : UNKNOWN_IP;
     }
 }

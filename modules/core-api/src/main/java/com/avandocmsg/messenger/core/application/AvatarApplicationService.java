@@ -34,36 +34,38 @@ public final class AvatarApplicationService {
     private final ReadCachePort readCachePort;
     private final AvatarHistoryPort avatarHistoryPort;
 
-    public AvatarApplicationService(AppConfig appConfig,
-                                      AvatarAccessPort avatarAccessPort,
-                                      AvatarUrlBuilder urlBuilder,
-                                      UserRepositoryPort userRepositoryPort,
-                                      ChatPersistencePort chatPersistencePort,
-                                      FileMetadataPort fileMetadataPort,
-                                      AvatarUpdatePublisher updatePublisher,
-                                      ReadCachePort readCachePort) {
-        this(appConfig, avatarAccessPort, urlBuilder, userRepositoryPort, chatPersistencePort, fileMetadataPort,
-            updatePublisher, readCachePort, null);
-    }
+    /** Ports used for avatar persistence and access checks. */
+    public record Ports(
+        AppConfig appConfig,
+        AvatarAccessPort avatarAccessPort,
+        AvatarUrlBuilder urlBuilder,
+        UserRepositoryPort userRepositoryPort,
+        ChatPersistencePort chatPersistencePort,
+        FileMetadataPort fileMetadataPort
+    ) {}
 
-    public AvatarApplicationService(AppConfig appConfig,
-                                      AvatarAccessPort avatarAccessPort,
-                                      AvatarUrlBuilder urlBuilder,
-                                      UserRepositoryPort userRepositoryPort,
-                                      ChatPersistencePort chatPersistencePort,
-                                      FileMetadataPort fileMetadataPort,
-                                      AvatarUpdatePublisher updatePublisher,
-                                      ReadCachePort readCachePort,
-                                      AvatarHistoryPort avatarHistoryPort) {
-        this.appConfig = appConfig;
-        this.avatarAccessPort = avatarAccessPort;
-        this.urlBuilder = urlBuilder;
-        this.userRepositoryPort = userRepositoryPort;
-        this.chatPersistencePort = chatPersistencePort;
-        this.fileMetadataPort = fileMetadataPort;
-        this.updatePublisher = updatePublisher;
-        this.readCachePort = readCachePort;
-        this.avatarHistoryPort = avatarHistoryPort;
+    /** Side-effect collaborators (publish / cache / history). */
+    public record SideEffects(
+        AvatarUpdatePublisher updatePublisher,
+        ReadCachePort readCachePort,
+        AvatarHistoryPort avatarHistoryPort
+    ) {}
+
+    /** Constructor dependencies for {@link AvatarApplicationService}. */
+    public record Dependencies(Ports ports, SideEffects sideEffects) {}
+
+    public AvatarApplicationService(Dependencies deps) {
+        var ports = deps.ports();
+        var side = deps.sideEffects();
+        this.appConfig = ports.appConfig();
+        this.avatarAccessPort = ports.avatarAccessPort();
+        this.urlBuilder = ports.urlBuilder();
+        this.userRepositoryPort = ports.userRepositoryPort();
+        this.chatPersistencePort = ports.chatPersistencePort();
+        this.fileMetadataPort = ports.fileMetadataPort();
+        this.updatePublisher = side.updatePublisher();
+        this.readCachePort = side.readCachePort();
+        this.avatarHistoryPort = side.avatarHistoryPort();
     }
 
     public boolean avatarsEnabled() {

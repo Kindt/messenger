@@ -54,6 +54,15 @@ smoke_register() {
     rm -f "$resp"
     return 0
   fi
+  if [[ "$code" == "429" ]]; then
+    rm -f "$resp"
+    if smoke_login "$base" "$user" "$pass" >/dev/null 2>&1; then
+      echo "register $user HTTP 429 but login ok (rate limit, user exists)" >&2
+      return 0
+    fi
+    echo "register $user HTTP 429 and login failed" >&2
+    return 1
+  fi
   echo "register $user HTTP $code: $(cat "$resp")" >&2
   rm -f "$resp"
   return 1

@@ -16,15 +16,31 @@ function Get-SmokeApiToken {
     param(
         [string]$BaseUrl,
         [string]$User,
-        [string]$Pass
+        [string]$Pass,
+        [switch]$WaitForRateLimit,
+        [int]$RateLimitWaitSec = 120
     )
-    $login = Invoke-RestMethod -Uri "$BaseUrl/api/v1/auth/login" -Method Post `
-        -Body (@{ username = $User; password = $Pass } | ConvertTo-Json) `
-        -ContentType "application/json; charset=utf-8"
-    $t = $login.access_token
-    if (-not $t) { $t = $login.accessToken }
-    if (-not $t) { Invoke-SmokeFail "No token for $User" }
-    return $t
+    $deadline = if ($WaitForRateLimit) { (Get-Date).AddSeconds($RateLimitWaitSec) } else { (Get-Date) }
+    do {
+        try {
+            $login = Invoke-RestMethod -Uri "$BaseUrl/api/v1/auth/login" -Method Post `
+                -Body (@{ username = $User; password = $Pass } | ConvertTo-Json) `
+                -ContentType "application/json; charset=utf-8"
+            $t = $login.access_token
+            if (-not $t) { $t = $login.accessToken }
+            if (-not $t) { Invoke-SmokeFail "No token for $User" }
+            return $t
+        } catch {
+            $code = $null
+            if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
+            if ($code -eq 429 -and (Get-Date) -lt $deadline) {
+                Start-Sleep -Seconds 5
+                continue
+            }
+            throw
+        }
+    } while ((Get-Date) -lt $deadline)
+    Invoke-SmokeFail "Login rate limited for $User after ${RateLimitWaitSec}s"
 }
 
 function Register-SmokeUser {
@@ -40,7 +56,18 @@ function Register-SmokeUser {
             -ContentType "application/json; charset=utf-8" -UseBasicParsing
         if ($r.StatusCode -ge 200 -and $r.StatusCode -lt 300) { return $true }
     } catch {
-        if ($_.Exception.Response.StatusCode.value__ -eq 409) { return $true }
+        $code = $null
+        if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
+        if ($code -eq 409) { return $true }
+        if ($code -eq 429) {
+            try {
+                Get-SmokeApiToken -BaseUrl $BaseUrl -User $User -Pass $Pass | Out-Null
+                Write-Host "register $User HTTP 429 but login ok (rate limit, user exists)" -ForegroundColor DarkGray
+                return $true
+            } catch {
+                throw
+            }
+        }
         throw
     }
     return $false

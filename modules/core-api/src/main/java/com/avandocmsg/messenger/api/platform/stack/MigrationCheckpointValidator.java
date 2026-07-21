@@ -11,7 +11,7 @@ public final class MigrationCheckpointValidator {
 
     public static ValidationResult validate(MigrationCheckpoint checkpoint) {
         var report = report(checkpoint);
-        return new ValidationResult(false, report.failures(), java.util.List.of(), false, Map.of(
+        return new ValidationResult(report.passed(), report.failures(), java.util.List.of(), false, Map.of(
             "severity", report.severity(),
             "rollback_ready", Boolean.toString(report.rollbackReady()),
             "no_silent_fallback", Boolean.toString(report.noSilentFallback())

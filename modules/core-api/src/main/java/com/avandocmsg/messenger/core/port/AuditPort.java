@@ -7,7 +7,8 @@ import java.util.UUID;
 
 /** Compliance audit event log ({@code audit_events}). */
 public interface AuditPort {
-    void record(UUID actorUserId, String action, String resourceType, String resourceId, String detailsJson);
+    /** Port method name kept for callers; {@code record} is a restricted identifier in newer Java. */
+    void record(UUID actorUserId, String action, String resourceType, String resourceId, String detailsJson); // NOSONAR java:S6213 — public API name; rename would ripple outside this Sonar batch
 
     List<AuditRow> listRecent(int limit);
 

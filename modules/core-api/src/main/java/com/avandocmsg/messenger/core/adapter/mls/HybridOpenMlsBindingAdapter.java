@@ -36,7 +36,7 @@ public final class HybridOpenMlsBindingAdapter implements OpenMlsBindingPort {
         if (mlsService == null || chatId == null || senderId == null || plaintext == null) {
             return null;
         }
-        var encrypted = mlsService.encrypt(chatId, senderId, plaintext);
+        var encrypted = mlsService.encrypt(chatId, plaintext);
         if (encrypted == null) {
             return null;
         }

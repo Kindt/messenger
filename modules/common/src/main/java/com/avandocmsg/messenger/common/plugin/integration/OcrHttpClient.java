@@ -18,6 +18,7 @@ import java.util.Map;
 public final class OcrHttpClient {
     private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final HttpClient HTTP = HttpClientSupport.sharedClient();
+    private static final String ENV_OCR_HTTP_URL = "OCR_HTTP_URL";
 
     private OcrHttpClient() {}
 
@@ -34,7 +35,7 @@ public final class OcrHttpClient {
         if (!IntegrationEnv.ocrOnPremOnly(policySnapshot)) {
             return false;
         }
-        var url = IntegrationEnv.getenv("OCR_HTTP_URL");
+        var url = IntegrationEnv.getenv(ENV_OCR_HTTP_URL);
         if (url.isBlank()) {
             return true;
         }
@@ -54,7 +55,7 @@ public final class OcrHttpClient {
     }
 
     private static OcrFields extractLive(String fileId) throws Exception {
-        var base = IntegrationEnv.trimSlash(IntegrationEnv.getenv("OCR_HTTP_URL"));
+        var base = IntegrationEnv.trimSlash(IntegrationEnv.getenv(ENV_OCR_HTTP_URL));
         ObjectNode body = MAPPER.createObjectNode();
         body.put("file_id", fileId != null ? fileId : "invoice-demo.pdf");
         var request = HttpRequest.newBuilder()
@@ -71,7 +72,7 @@ public final class OcrHttpClient {
     }
 
     private static boolean ocrLiveConfigured() {
-        return IntegrationEnv.isSet("OCR_HTTP_URL");
+        return IntegrationEnv.isSet(ENV_OCR_HTTP_URL);
     }
 
     private static OcrFields parseFields(JsonNode fields) {

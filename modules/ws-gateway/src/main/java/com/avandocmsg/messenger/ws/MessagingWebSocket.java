@@ -30,6 +30,9 @@ import java.util.UUID;
 public class MessagingWebSocket {
     private static final Logger log = LoggerFactory.getLogger(MessagingWebSocket.class);
     private static final ObjectMapper WS_JSON = MessengerJson.mapper();
+    private static final String PROP_WS_USER_ID = "ws.userId";
+    private static final String JSON_CHAT_ID = "chatId";
+    private static final String JSON_PAYLOAD = "payload";
     static final String ORIGIN_PROP = "ws.origin";
 
     static Connection natsConnection;
@@ -43,7 +46,7 @@ public class MessagingWebSocket {
     static boolean perMessageDeflateEnabled = true;
 
     /** Called from {@link com.avandocmsg.messenger.ws.bootstrap.WsGatewayComposition} before accepting connections. */
-    public static void configureStaticContext(
+    public static void configureStaticContext( // NOSONAR java:S107 -- composition bootstrap wires gateway deps explicitly
             WsTokenValidator validator,
             UserMessageSource messageSource,
             Connection nats,
@@ -133,7 +136,7 @@ public class MessagingWebSocket {
             closeWithError(session, messages.get("error.ws.max_connections_total"));
             return;
         }
-        session.getUserProperties().put("ws.userId", userId);
+        session.getUserProperties().put(PROP_WS_USER_ID, userId);
         log.info("WS opened for user {} (session {}, chats={})", userId, session.getId(), chatIds.size());
     }
 
@@ -145,7 +148,7 @@ public class MessagingWebSocket {
         if (ka != null) {
             ka.touch(session);
         }
-        var userId = (String) session.getUserProperties().get("ws.userId");
+        var userId = (String) session.getUserProperties().get(PROP_WS_USER_ID);
         if (userId == null || natsConnection == null) {
             return;
         }
@@ -157,12 +160,12 @@ public class MessagingWebSocket {
             if (!root.hasNonNull("type") || !RtcSignalEvent.TYPE.equals(root.get("type").asText())) {
                 return;
             }
-            if (!root.hasNonNull("chatId") || !root.has("payload") || !root.get("payload").isObject()) {
+            if (!root.hasNonNull(JSON_CHAT_ID) || !root.has(JSON_PAYLOAD) || !root.get(JSON_PAYLOAD).isObject()) {
                 return;
             }
-            UUID.fromString(root.get("chatId").asText());
-            JsonNode payload = root.get("payload");
-            var evt = new RtcSignalEvent(root.get("chatId").asText(), userId, payload);
+            UUID.fromString(root.get(JSON_CHAT_ID).asText());
+            JsonNode payload = root.get(JSON_PAYLOAD);
+            var evt = new RtcSignalEvent(root.get(JSON_CHAT_ID).asText(), userId, payload);
             natsConnection.publish(NatsSubjects.RTC_SIGNAL, WS_JSON.writeValueAsBytes(evt));
         } catch (Exception e) {
             log.debug("Ignoring invalid client WS payload: {}", e.toString());
@@ -192,7 +195,7 @@ public class MessagingWebSocket {
         if (deliveryHub != null) {
             deliveryHub.unregister(session);
         }
-        var userId = session.getUserProperties().remove("ws.userId");
+        var userId = session.getUserProperties().remove(PROP_WS_USER_ID);
         if (userId != null) {
             log.info("WS closed for user {} (session {})", userId, session.getId());
         }

@@ -52,7 +52,7 @@ public final class JdbcChatRetentionPolicyAdapter implements ChatRetentionPolicy
             }
         } catch (Exception e) {
             log.error("find chat retention policy failed chatId={}", chatId, e);
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -108,7 +108,7 @@ public final class JdbcChatRetentionPolicyAdapter implements ChatRetentionPolicy
             }
         } catch (Exception e) {
             log.error("upsert chat retention policy failed chatId={}", chatId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 }

@@ -61,6 +61,7 @@ public final class JdbcLegalHoldAdapter implements LegalHoldPort {
             }
         } catch (Exception e) {
             log.error("legal hold find failed id={}", id, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -69,27 +70,46 @@ public final class JdbcLegalHoldAdapter implements LegalHoldPort {
         if (dataSource == null) {
             return false;
         }
-        var table = org ? "org_retention_policy" : "chat_retention_policy";
-        var idCol = org ? "org_id" : "chat_id";
-        var update = """
-            UPDATE %s SET legal_hold = ?, legal_hold_files = ?, legal_hold_deep_archive = ?,
-            updated_at = now(), updated_by = ? WHERE %s = ?
-            """.formatted(table, idCol);
-        var insert = """
-            INSERT INTO %s (%s, archive_metadata_enabled, deep_archive_enabled,
+        return org ? upsertOrgHold(id, row, updatedBy) : upsertChatHold(id, row, updatedBy);
+    }
+
+    private boolean upsertOrgHold(UUID id, LegalHoldRow row, UUID updatedBy) {
+        var updateSql = """
+            UPDATE org_retention_policy SET legal_hold = ?, legal_hold_files = ?, legal_hold_deep_archive = ?,
+            updated_at = now(), updated_by = ? WHERE org_id = ?
+            """;
+        var insertSql = """
+            INSERT INTO org_retention_policy (org_id, archive_metadata_enabled, deep_archive_enabled,
               legal_hold, legal_hold_files, legal_hold_deep_archive, updated_at, updated_by)
             VALUES (?, true, true, ?, ?, ?, now(), ?)
-            """.formatted(table, idCol);
+            """;
+        return executeHoldUpsert(id, row, updatedBy, updateSql, insertSql);
+    }
+
+    private boolean upsertChatHold(UUID id, LegalHoldRow row, UUID updatedBy) {
+        var updateSql = """
+            UPDATE chat_retention_policy SET legal_hold = ?, legal_hold_files = ?, legal_hold_deep_archive = ?,
+            updated_at = now(), updated_by = ? WHERE chat_id = ?
+            """;
+        var insertSql = """
+            INSERT INTO chat_retention_policy (chat_id, archive_metadata_enabled, deep_archive_enabled,
+              legal_hold, legal_hold_files, legal_hold_deep_archive, updated_at, updated_by)
+            VALUES (?, true, true, ?, ?, ?, now(), ?)
+            """;
+        return executeHoldUpsert(id, row, updatedBy, updateSql, insertSql);
+    }
+
+    private boolean executeHoldUpsert(UUID id, LegalHoldRow row, UUID updatedBy, String updateSql, String insertSql) {
         try (var conn = dataSource.getConnection()) {
             JdbcConnectionSupport.prepareWrite(conn);
-            try (var ps = conn.prepareStatement(update)) {
+            try (var ps = conn.prepareStatement(updateSql)) {
                 JdbcQuerySupport.applyDefaultTimeout(ps);
                 bindHold(ps, row, updatedBy, id);
                 if (ps.executeUpdate() > 0) {
                     return true;
                 }
             }
-            try (var ps = conn.prepareStatement(insert)) {
+            try (var ps = conn.prepareStatement(insertSql)) {
                 JdbcQuerySupport.applyDefaultTimeout(ps);
                 ps.setObject(1, id);
                 ps.setBoolean(2, row.legalHold());
@@ -100,7 +120,7 @@ public final class JdbcLegalHoldAdapter implements LegalHoldPort {
             }
         } catch (Exception e) {
             log.error("legal hold upsert failed id={}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 

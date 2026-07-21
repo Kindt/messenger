@@ -19,6 +19,8 @@ import java.util.concurrent.Semaphore;
 /** Hexagonal application service for file metadata and storage (Phase 2d / US2). */
 public final class FileApplicationService {
     private static final String DEDUP_PREFIX = "objects/sha256/";
+    private static final String FILES_API_PREFIX = "/api/v1/files/";
+    private static final String DOWNLOAD_SUFFIX = "/download";
 
     private final FileMetadataPort fileMetadataPort;
     private final MessageQueryPort messageQueryPort;
@@ -29,14 +31,43 @@ public final class FileApplicationService {
     private final boolean fileDedupEnabled;
     private final Semaphore uploadConcurrency;
 
+    /** Ports for metadata, queries and object storage. */
+    public record Ports(
+        FileMetadataPort fileMetadataPort,
+        MessageQueryPort messageQueryPort,
+        ObjectStoragePort objectStoragePort,
+        AvatarAccessPort avatarAccessPort,
+        UuidGenerator uuidGenerator
+    ) {}
+
+    /** Upload limits and concurrency settings. */
+    public record UploadLimits(long maxUploadBytes, boolean fileDedupEnabled, int maxConcurrentUploads) {}
+
+    /** Constructor dependencies for {@link FileApplicationService}. */
+    public record Dependencies(Ports ports, UploadLimits limits) {}
+
+    public FileApplicationService(Dependencies deps) {
+        var ports = deps.ports();
+        var limits = deps.limits();
+        this.fileMetadataPort = ports.fileMetadataPort();
+        this.messageQueryPort = ports.messageQueryPort();
+        this.objectStoragePort = ports.objectStoragePort();
+        this.avatarAccessPort = ports.avatarAccessPort();
+        this.uuidGenerator = ports.uuidGenerator();
+        this.maxUploadBytes = limits.maxUploadBytes();
+        this.fileDedupEnabled = limits.fileDedupEnabled();
+        this.uploadConcurrency = new Semaphore(Math.max(1, limits.maxConcurrentUploads()), true);
+    }
+
     public FileApplicationService(FileMetadataPort fileMetadataPort,
                                   MessageQueryPort messageQueryPort,
                                   ObjectStoragePort objectStoragePort,
                                   UuidGenerator uuidGenerator,
                                   long maxUploadBytes,
                                   boolean fileDedupEnabled) {
-        this(fileMetadataPort, messageQueryPort, objectStoragePort, null, uuidGenerator,
-            maxUploadBytes, fileDedupEnabled, 20);
+        this(new Dependencies(
+            new Ports(fileMetadataPort, messageQueryPort, objectStoragePort, null, uuidGenerator),
+            new UploadLimits(maxUploadBytes, fileDedupEnabled, 20)));
     }
 
     public FileApplicationService(FileMetadataPort fileMetadataPort,
@@ -46,26 +77,9 @@ public final class FileApplicationService {
                                   UuidGenerator uuidGenerator,
                                   long maxUploadBytes,
                                   boolean fileDedupEnabled) {
-        this(fileMetadataPort, messageQueryPort, objectStoragePort, avatarAccessPort, uuidGenerator,
-            maxUploadBytes, fileDedupEnabled, 20);
-    }
-
-    public FileApplicationService(FileMetadataPort fileMetadataPort,
-                                  MessageQueryPort messageQueryPort,
-                                  ObjectStoragePort objectStoragePort,
-                                  AvatarAccessPort avatarAccessPort,
-                                  UuidGenerator uuidGenerator,
-                                  long maxUploadBytes,
-                                  boolean fileDedupEnabled,
-                                  int maxConcurrentUploads) {
-        this.fileMetadataPort = fileMetadataPort;
-        this.messageQueryPort = messageQueryPort;
-        this.objectStoragePort = objectStoragePort;
-        this.avatarAccessPort = avatarAccessPort;
-        this.uuidGenerator = uuidGenerator;
-        this.maxUploadBytes = maxUploadBytes;
-        this.fileDedupEnabled = fileDedupEnabled;
-        this.uploadConcurrency = new Semaphore(Math.max(1, maxConcurrentUploads), true);
+        this(new Dependencies(
+            new Ports(fileMetadataPort, messageQueryPort, objectStoragePort, avatarAccessPort, uuidGenerator),
+            new UploadLimits(maxUploadBytes, fileDedupEnabled, 20)));
     }
 
     public long maxUploadBytes() {
@@ -90,7 +104,7 @@ public final class FileApplicationService {
     }
 
     public Optional<FileUploadResult> uploadStream(InputStream data, String filename, String mimeType,
-                                                   UserId uploadedBy) throws IOException {
+                                                   UserId uploadedBy) {
         return uploadWithSpool(data, filename, mimeType, -1, uploadedBy);
     }
 
@@ -124,57 +138,97 @@ public final class FileApplicationService {
         var contentType = mimeType != null ? mimeType : "application/octet-stream";
         var size = spool.size();
         if (fileDedupEnabled) {
-            var hash = spool.sha256Hex();
-            var storageKey = DEDUP_PREFIX + hash;
-            var existing = fileMetadataPort.findBlobByContentHash(hash);
-            if (existing.isPresent()) {
-                try (var in = spool.open()) {
-                    objectStoragePort.put(storageKey, in, size, contentType);
-                } catch (Exception e) {
-                    return Optional.empty();
-                }
-                if (!fileMetadataPort.incrementBlobRefCount(hash)) {
-                    return Optional.empty();
-                }
-                FileDedupMetrics.savedBytes(size);
-                return fileMetadataPort.insertWithStorage(
-                        fileId, safeName, contentType, size, uploadedBy, hash, storageKey)
-                    .map(stored -> {
-                        FileUploadMetrics.uploadedBytes(size);
-                        return new FileUploadResult(stored, "/api/v1/files/" + fileId.value() + "/download");
-                    });
-            }
-            try (var in = spool.open()) {
-                objectStoragePort.put(storageKey, in, size, contentType);
-            } catch (Exception e) {
-                return Optional.empty();
-            }
-            if (!fileMetadataPort.insertBlob(hash, storageKey, size)) {
-                try {
-                    objectStoragePort.delete(storageKey);
-                } catch (Exception ignored) {
-                    // best effort rollback
-                }
-                return Optional.empty();
-            }
-            return fileMetadataPort.insertWithStorage(
-                    fileId, safeName, contentType, size, uploadedBy, hash, storageKey)
-                .map(stored -> {
-                    FileUploadMetrics.uploadedBytes(size);
-                    return new FileUploadResult(stored, "/api/v1/files/" + fileId.value() + "/download");
-                });
+            return persistDeduped(spool, fileId, safeName, contentType, size, uploadedBy);
         }
-        var objectName = fileId.value().toString() + "/" + safeName;
-        try (var in = spool.open()) {
-            objectStoragePort.put(objectName, in, size, contentType);
-        } catch (Exception e) {
+        return persistUniqueObject(spool, fileId, safeName, contentType, size, uploadedBy);
+    }
+
+    private Optional<FileUploadResult> persistDeduped(UploadSpool spool, FileId fileId, String safeName,
+                                                      String contentType, long size, UserId uploadedBy) {
+        var hash = spool.sha256Hex();
+        var storageKey = DEDUP_PREFIX + hash;
+        var existing = fileMetadataPort.findBlobByContentHash(hash);
+        if (existing.isPresent()) {
+            return putExistingBlob(new BlobPersistTarget(
+                spool, fileId, safeName, contentType, size, uploadedBy, hash, storageKey));
+        }
+        return putNewBlob(new BlobPersistTarget(
+            spool, fileId, safeName, contentType, size, uploadedBy, hash, storageKey));
+    }
+
+    private record BlobPersistTarget(
+        UploadSpool spool,
+        FileId fileId,
+        String safeName,
+        String contentType,
+        long size,
+        UserId uploadedBy,
+        String hash,
+        String storageKey
+    ) {}
+
+    private Optional<FileUploadResult> putExistingBlob(BlobPersistTarget t) {
+        if (!putObject(t.spool(), t.storageKey(), t.size(), t.contentType())) {
             return Optional.empty();
         }
-            return fileMetadataPort.insert(fileId, safeName, contentType, size, uploadedBy)
-            .map(stored -> {
-                FileUploadMetrics.uploadedBytes(size);
-                return new FileUploadResult(stored, "/api/v1/files/" + fileId.value() + "/download");
-            });
+        if (!fileMetadataPort.incrementBlobRefCount(t.hash())) {
+            return Optional.empty();
+        }
+        FileDedupMetrics.savedBytes(t.size());
+        return insertWithDownloadUrl(t.fileId(), t.safeName(), t.contentType(), t.size(), t.uploadedBy(),
+            t.hash(), t.storageKey());
+    }
+
+    private Optional<FileUploadResult> putNewBlob(BlobPersistTarget t) {
+        if (!putObject(t.spool(), t.storageKey(), t.size(), t.contentType())) {
+            return Optional.empty();
+        }
+        if (!fileMetadataPort.insertBlob(t.hash(), t.storageKey(), t.size())) {
+            try {
+                objectStoragePort.delete(t.storageKey());
+            } catch (Exception ignored) {
+                // best effort rollback
+            }
+            return Optional.empty();
+        }
+        return insertWithDownloadUrl(t.fileId(), t.safeName(), t.contentType(), t.size(), t.uploadedBy(),
+            t.hash(), t.storageKey());
+    }
+
+    private Optional<FileUploadResult> persistUniqueObject(UploadSpool spool, FileId fileId, String safeName,
+                                                           String contentType, long size, UserId uploadedBy) {
+        var objectName = fileId.value().toString() + "/" + safeName;
+        if (!putObject(spool, objectName, size, contentType)) {
+            return Optional.empty();
+        }
+        return fileMetadataPort.insert(fileId, safeName, contentType, size, uploadedBy)
+            .map(stored -> toUploadResult(stored, fileId, size));
+    }
+
+    private boolean putObject(UploadSpool spool, String storageKey, long size, String contentType) {
+        try (var in = spool.open()) {
+            objectStoragePort.put(storageKey, in, size, contentType);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private Optional<FileUploadResult> insertWithDownloadUrl(FileId fileId, String safeName, String contentType,
+                                                             long size, UserId uploadedBy, String hash,
+                                                             String storageKey) {
+        return fileMetadataPort.insertWithStorage(
+                fileId, safeName, contentType, size, uploadedBy, hash, storageKey)
+            .map(stored -> toUploadResult(stored, fileId, size));
+    }
+
+    private static FileUploadResult toUploadResult(StoredFile stored, FileId fileId, long size) {
+        FileUploadMetrics.uploadedBytes(size);
+        return new FileUploadResult(stored, downloadUrl(fileId));
+    }
+
+    private static String downloadUrl(FileId fileId) {
+        return FILES_API_PREFIX + fileId.value() + DOWNLOAD_SUFFIX;
     }
 
     public InputStream download(FileId fileId) {
@@ -218,8 +272,8 @@ public final class FileApplicationService {
                         fileMetadataPort.delete(fileId);
                         return Optional.empty();
                     }
-                    var downloadUrl = "/api/v1/files/" + fileId.value() + "/download";
-                    return Optional.of(new FilePresignUploadResult(stored, uploadUrl.get(), downloadUrl, ttlSeconds));
+                    return Optional.of(new FilePresignUploadResult(
+                        stored, uploadUrl.get(), downloadUrl(fileId), ttlSeconds));
                 } catch (Exception e) {
                     fileMetadataPort.delete(fileId);
                     return Optional.empty();

@@ -12,7 +12,17 @@ param(
 
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-if (-not $CoreMetricsUrl) {
+. (Join-Path $scriptDir "lib\Resolve-QemuLabWorkerMetrics.ps1")
+
+if ($BaseUrl -match ':18080') {
+    $resolved = Resolve-QemuLabWorkerMetrics -ApiBaseUrl $BaseUrl `
+        -CoreMetricsUrl $CoreMetricsUrl -WorkerMetricsUrl $WorkerMetricsUrl -RetentionMetricsUrl $RetentionMetricsUrl
+    $CoreMetricsUrl = $resolved.CoreMetricsUrl
+    $WorkerMetricsUrl = $resolved.WorkerMetricsUrl
+    $RetentionMetricsUrl = $resolved.RetentionMetricsUrl
+    . (Join-Path $scriptDir "lib\Ensure-NatsQemuTunnel.ps1")
+    $NatsUrl = Ensure-NatsQemuTunnel
+} elseif (-not $CoreMetricsUrl) {
     $CoreMetricsUrl = "$($BaseUrl.TrimEnd('/'))/api/v1/metrics/prometheus"
 }
 

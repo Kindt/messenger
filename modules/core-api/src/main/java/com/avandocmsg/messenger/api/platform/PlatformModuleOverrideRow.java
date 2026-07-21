@@ -17,7 +17,7 @@ public record PlatformModuleOverrideRow(
             return Optional.empty();
         }
         try {
-            return Optional.of(PlatformModuleReason.valueOf(overrideReason));
+            return Optional.of(PlatformModuleReason.fromCode(overrideReason));
         } catch (IllegalArgumentException e) {
             return Optional.empty();
         }

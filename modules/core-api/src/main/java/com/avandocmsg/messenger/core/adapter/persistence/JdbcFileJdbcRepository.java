@@ -32,7 +32,7 @@ public final class JdbcFileJdbcRepository {
             return new FileInfoResponse(id.toString(), filename, mimeType, size, uploadedBy.toString(), null);
         } catch (Exception e) {
             log.error("Failed to insert file metadata", e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -55,6 +55,7 @@ public final class JdbcFileJdbcRepository {
             }
         } catch (Exception e) {
             log.error("Failed to find file {}", id, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -68,7 +69,7 @@ public final class JdbcFileJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("Failed to delete file {}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 }

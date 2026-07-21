@@ -1,7 +1,6 @@
 # User API: POST export -> audit export.requested -> cancel -> audit export.cancelled.
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$ChatId,
+    [string]$ChatId = "",
     [string]$BaseUrl = "http://localhost:8080",
     [string]$User = "csadmin",
     [string]$Pass = "csadmin",
@@ -14,6 +13,8 @@ param(
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $scriptDir "lib\SmokeExportAudit.ps1")
+. (Join-Path $scriptDir "lib\Resolve-SmokeExportChatId.ps1")
+$ChatId = Resolve-SmokeExportChatId -ChatId $ChatId -BaseUrl $BaseUrl -ScriptDir $scriptDir
 
 function Get-Token {
     param($U, $P)

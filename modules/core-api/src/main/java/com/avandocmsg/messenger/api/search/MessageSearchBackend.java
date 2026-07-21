@@ -24,5 +24,16 @@ public interface MessageSearchBackend {
         return new SearchBackendStatus(profileId(), enabled() ? "enabled" : "disabled", null);
     }
 
-    List<MessageResponse> search(UUID userId, List<UUID> chatIds, String query, int limit) throws Exception;
+    List<MessageResponse> search(UUID userId, List<UUID> chatIds, String query, int limit)
+        throws MessageSearchException;
+
+    final class MessageSearchException extends Exception {
+        public MessageSearchException(String message) {
+            super(message);
+        }
+
+        public MessageSearchException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
 }

@@ -1,7 +1,11 @@
 # Parse deploy/qemu/run/playwright-dev-loop.log for live inner tier progress (VPP ticks).
 $ErrorActionPreference = 'Continue'
 $Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$logPath = Join-Path $Root 'deploy\qemu\run\playwright-dev-loop.log'
+$logPath = if ($env:KORUS_PW_ACTIVE_LOG -and (Test-Path $env:KORUS_PW_ACTIVE_LOG)) {
+    $env:KORUS_PW_ACTIVE_LOG
+} else {
+    Join-Path $Root 'deploy\qemu\run\playwright-dev-loop.log'
+}
 $watchPath = Join-Path $Root 'deploy\qemu\run\vpp-evidence\vpp-pw-progress-watch.json'
 
 $result = [ordered]@{

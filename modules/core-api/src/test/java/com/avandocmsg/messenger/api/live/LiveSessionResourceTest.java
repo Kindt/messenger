@@ -11,7 +11,6 @@ import jakarta.ws.rs.core.SecurityContext;
 import org.junit.jupiter.api.Test;
 
 import java.security.Principal;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -64,25 +63,6 @@ class LiveSessionResourceTest {
             "viewer",
             1,
             200
-        );
-    }
-
-    private static LiveSessionResponse sampleSession() {
-        return new LiveSessionResponse(
-            UUID.randomUUID().toString(),
-            UUID.randomUUID().toString(),
-            "Demo",
-            "active",
-            "webrtc",
-            "room-abc",
-            "livekit",
-            "wss://livekit.example",
-            0,
-            200,
-            null,
-            "open",
-            Instant.parse("2026-01-01T00:00:00Z"),
-            null
         );
     }
 

@@ -25,25 +25,38 @@ public final class JdbcChatReadStateAdapter implements ChatReadStatePort {
         if (dataSource == null) {
             return false;
         }
-        var sql = """
-            INSERT INTO chat_read_state (user_id, chat_id, last_read_message_id, updated_at)
-            VALUES (?, ?, ?, now())
-            ON CONFLICT (user_id, chat_id) DO UPDATE SET
-              last_read_message_id = EXCLUDED.last_read_message_id,
-              updated_at = now()
-            """;
-        try (var conn = dataSource.getConnection();
-             var stmt = conn.prepareStatement(sql)) {
-                 JdbcQuerySupport.applyDefaultTimeout(stmt);
-            stmt.setObject(1, userId);
-            stmt.setObject(2, chatId);
-            stmt.setObject(3, lastReadMessageId);
-            stmt.executeUpdate();
-            return true;
+        try (var conn = dataSource.getConnection()) {
+            var sql = upsertSql(conn);
+            try (var stmt = conn.prepareStatement(sql)) {
+                JdbcQuerySupport.applyDefaultTimeout(stmt);
+                stmt.setObject(1, userId);
+                stmt.setObject(2, chatId);
+                stmt.setObject(3, lastReadMessageId);
+                stmt.executeUpdate();
+                return true;
+            }
         } catch (Exception e) {
             log.error("upsertLastRead failed", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
+    }
+
+    private static String upsertSql(java.sql.Connection conn) throws java.sql.SQLException {
+        if (JdbcDialect.isPostgres(conn)) {
+            return """
+                INSERT INTO chat_read_state (user_id, chat_id, last_read_message_id, updated_at)
+                VALUES (?, ?, ?, now())
+                ON CONFLICT (user_id, chat_id) DO UPDATE SET
+                  last_read_message_id = EXCLUDED.last_read_message_id,
+                  updated_at = now()
+                """;
+        }
+        // H2 (incl. MODE=PostgreSQL): MERGE is the portable upsert
+        return """
+            MERGE INTO chat_read_state (user_id, chat_id, last_read_message_id, updated_at)
+            KEY (user_id, chat_id)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            """;
     }
 
     @Override
@@ -89,6 +102,7 @@ public final class JdbcChatReadStateAdapter implements ChatReadStatePort {
             }
         } catch (Exception e) {
             log.error("countUnread failed", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return 0;
     }

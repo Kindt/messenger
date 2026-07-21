@@ -77,7 +77,7 @@ public class PlatformAdrResource {
         var cred = request != null ? request.credentialId() : null;
         var pk = request != null ? request.publicKey() : null;
         return service.registerPasskeyScaffold(userId, cred, pk)
-            .map(id -> Response.status(Response.Status.CREATED).entity(PasskeyResponse.created(id.toString(), cred)).build())
+            .map(id -> Response.status(Response.Status.CREATED).entity(PasskeyResponse.created(cred)).build())
             .orElse(forbidden());
     }
 

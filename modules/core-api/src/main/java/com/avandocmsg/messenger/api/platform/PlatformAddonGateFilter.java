@@ -33,10 +33,10 @@ public class PlatformAddonGateFilter implements ContainerRequestFilter {
             return;
         }
         var feature = registry.resolveFeature(gate.feature());
-        if (feature.state() == PlatformModuleState.enabled) {
+        if (feature.state() == PlatformModuleState.ENABLED) {
             return;
         }
-        if (feature.state() == PlatformModuleState.degraded
+        if (feature.state() == PlatformModuleState.DEGRADED
             && "fallback".equalsIgnoreCase(feature.apiBehavior())) {
             return;
         }

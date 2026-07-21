@@ -302,10 +302,12 @@ class ExportResourceTest {
 
         @Override
         public void flush(Duration timeout) {
+            // No-op: recording stub does not buffer outbound publishes.
         }
 
         @Override
         public void publishPipelineMessageSend(byte[] payload, String userId) {
+            // No-op: export resource tests do not use pipeline message send.
         }
     }
 
@@ -323,7 +325,8 @@ class ExportResourceTest {
         }
 
         @Override
-        public void record(UUID actorUserId, String action, String resourceType, String resourceId, String detailsJson) {
+        public void record( // NOSONAR java:S6213 — AuditPort requires this method name
+            UUID actorUserId, String action, String resourceType, String resourceId, String detailsJson) {
             if ("export.downloaded".equals(action)) {
                 downloads.add(new DownloadAudit(action, resourceId));
             }

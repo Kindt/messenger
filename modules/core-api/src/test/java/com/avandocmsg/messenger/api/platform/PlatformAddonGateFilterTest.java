@@ -20,8 +20,8 @@ class PlatformAddonGateFilterTest {
 
         assertNotNull(gate);
         assertEquals("export.job.create", gate.feature());
-        assertEquals(PlatformModuleState.disabled, feature.state());
-        assertEquals(PlatformModuleReason.not_selected, feature.reason());
+        assertEquals(PlatformModuleState.DISABLED, feature.state());
+        assertEquals(PlatformModuleReason.NOT_SELECTED, feature.reason());
         assertEquals("hide_export_panels", feature.uiBehavior());
     }
 
@@ -46,8 +46,8 @@ class PlatformAddonGateFilterTest {
 
         var state = registry.resolveAddon("addon-export");
 
-        assertEquals(PlatformModuleState.installing, state.state());
-        assertEquals(PlatformModuleReason.install_requested, state.reason());
+        assertEquals(PlatformModuleState.INSTALLING, state.state());
+        assertEquals(PlatformModuleReason.INSTALL_REQUESTED, state.reason());
     }
 
     @Test
@@ -71,8 +71,8 @@ class PlatformAddonGateFilterTest {
 
         var state = registry.resolveAddon("addon-export");
 
-        assertEquals(PlatformModuleState.degraded, state.state());
-        assertEquals(PlatformModuleReason.schema_missing, state.reason());
+        assertEquals(PlatformModuleState.DEGRADED, state.state());
+        assertEquals(PlatformModuleReason.SCHEMA_MISSING, state.reason());
     }
 
     @Test
@@ -81,7 +81,7 @@ class PlatformAddonGateFilterTest {
 
         var feature = registry.resolveFeature("export.job.create");
 
-        assertEquals(PlatformModuleState.enabled, feature.state());
+        assertEquals(PlatformModuleState.ENABLED, feature.state());
     }
 
     @Test
@@ -107,11 +107,11 @@ class PlatformAddonGateFilterTest {
         ));
         var enabled = registry.resolveEffectiveState(addon, true, null);
 
-        assertEquals(PlatformModuleState.disabled, disabled.state());
-        assertEquals(PlatformModuleReason.admin_override, disabled.reason());
+        assertEquals(PlatformModuleState.DISABLED, disabled.state());
+        assertEquals(PlatformModuleReason.ADMIN_OVERRIDE, disabled.reason());
         assertEquals(true, disabled.installed());
         assertEquals(true, disabled.schemaInstalled());
-        assertEquals(PlatformModuleState.enabled, enabled.state());
+        assertEquals(PlatformModuleState.ENABLED, enabled.state());
     }
 
     private static PlatformModuleRegistry registry(String addons) {

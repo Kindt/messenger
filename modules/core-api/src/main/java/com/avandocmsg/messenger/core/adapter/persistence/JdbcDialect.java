@@ -8,6 +8,14 @@ final class JdbcDialect {
     }
 
     static boolean isPostgres(Connection conn) throws SQLException {
-        return "PostgreSQL".equalsIgnoreCase(conn.getMetaData().getDatabaseProductName());
+        if (conn == null) {
+            return false;
+        }
+        var meta = conn.getMetaData();
+        if (meta == null) {
+            return false;
+        }
+        var name = meta.getDatabaseProductName();
+        return name != null && "PostgreSQL".equalsIgnoreCase(name);
     }
 }

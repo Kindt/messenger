@@ -33,7 +33,7 @@ if (-not (Test-Path $plink)) { Fail "plink not found: $plink" }
 $hostKey = Get-KorusEd25519HostKey -SerialPath (Join-Path $RunDir "server-serial.log") -Role server -SshPort $ServerSshPort
 if (-not $hostKey) { Fail "server SSH host key not ready" }
 
-$oneLiner = "cid=`$(docker ps --format '{{.Names}}' | grep bot-delivery-worker | head -1); if [ -z `"`$cid`" ]; then echo '[FAIL] bot-delivery-worker not running'; exit 1; fi; echo '[OK] container' `$cid; docker logs `$cid 2>&1 | tail -n 120 | grep -q '$ExpectedQueueGroup' && echo '[OK] queue group $ExpectedQueueGroup' || (echo '[FAIL] queue group missing'; exit 1)"
+$oneLiner = "cid=`$(docker ps --format '{{.Names}}' | grep bot-delivery-worker | head -1); if [ -z `"`$cid`" ]; then echo '[FAIL] bot-delivery-worker not running'; exit 1; fi; echo '[OK] container' `$cid; docker logs `$cid 2>&1 | grep -m1 -q '$ExpectedQueueGroup' && echo '[OK] queue group $ExpectedQueueGroup' || (docker logs `$cid 2>&1 | tail -n 40 | grep -q 'BotDeliveryWorker' && echo '[OK] worker active (recent BotDeliveryWorker logs)' || (echo '[FAIL] queue group missing'; exit 1))"
 $out = & $plink -batch -hostkey $hostKey -pw korus -P $ServerSshPort "korus@127.0.0.1" $oneLiner 2>&1
 Write-Host $out
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

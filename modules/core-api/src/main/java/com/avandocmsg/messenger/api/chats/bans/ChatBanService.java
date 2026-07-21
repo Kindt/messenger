@@ -12,6 +12,8 @@ import java.util.UUID;
 
 public class ChatBanService {
     private static final Logger log = LoggerFactory.getLogger(ChatBanService.class);
+    private static final String ROLE_OWNER = "owner";
+    private static final String ROLE_ADMIN = "admin";
 
     private final ChatBanPort chatBanPort;
     private final ChatPersistencePort chatPersistencePort;
@@ -27,7 +29,7 @@ public class ChatBanService {
             return null;
         }
         var actorRole = chatPersistencePort.getMemberRole(chatId, actorId);
-        if (actorRole == null || (!actorRole.equals("owner") && !actorRole.equals("admin"))) {
+        if (actorRole == null || (!actorRole.equals(ROLE_OWNER) && !actorRole.equals(ROLE_ADMIN))) {
             log.warn("User {} not authorized to ban in chat {}", actorId, chatId);
             return null;
         }
@@ -36,7 +38,7 @@ public class ChatBanService {
             log.warn("User {} is not a member of chat {}", targetUserId, chatId);
             return null;
         }
-        if (targetRole.equals("owner")) {
+        if (targetRole.equals(ROLE_OWNER)) {
             log.warn("Cannot ban chat owner {} from chat {}", targetUserId, chatId);
             return null;
         }
@@ -49,7 +51,7 @@ public class ChatBanService {
 
     public boolean unbanUser(UUID chatId, UUID actorId, UUID targetUserId) {
         var actorRole = chatPersistencePort.getMemberRole(chatId, actorId);
-        if (actorRole == null || (!actorRole.equals("owner") && !actorRole.equals("admin"))) {
+        if (actorRole == null || (!actorRole.equals(ROLE_OWNER) && !actorRole.equals(ROLE_ADMIN))) {
             log.warn("User {} not authorized to unban in chat {}", actorId, chatId);
             return false;
         }
@@ -63,7 +65,7 @@ public class ChatBanService {
     /** Same privilege as ban/unban: owner or admin of the chat. */
     public Optional<List<ChatBanResponse>> listBansForViewer(UUID chatId, UUID viewerId) {
         var role = chatPersistencePort.getMemberRole(chatId, viewerId);
-        if (role == null || (!role.equals("owner") && !role.equals("admin"))) {
+        if (role == null || (!role.equals(ROLE_OWNER) && !role.equals(ROLE_ADMIN))) {
             return Optional.empty();
         }
         return Optional.of(chatBanPort.findByChatId(chatId));

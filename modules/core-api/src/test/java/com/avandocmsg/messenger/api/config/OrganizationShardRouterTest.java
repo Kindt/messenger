@@ -62,10 +62,12 @@ class OrganizationShardRouterTest {
 
         @Override
         public void setLogWriter(java.io.PrintWriter out) {
+            // unused stub DataSource for routing tests
         }
 
         @Override
         public void setLoginTimeout(int seconds) {
+            // unused stub DataSource for routing tests
         }
 
         @Override

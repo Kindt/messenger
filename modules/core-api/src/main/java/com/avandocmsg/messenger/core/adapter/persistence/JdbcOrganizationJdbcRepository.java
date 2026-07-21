@@ -45,7 +45,7 @@ public final class JdbcOrganizationJdbcRepository {
             return new OrgRow(id.toString(), name.trim(), null, clock.instant());
         } catch (Exception e) {
             log.error("create org failed", e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -60,7 +60,7 @@ public final class JdbcOrganizationJdbcRepository {
             }
         } catch (Exception e) {
             log.error("exists org failed", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -78,7 +78,7 @@ public final class JdbcOrganizationJdbcRepository {
             }
         } catch (Exception e) {
             log.error("find org by id failed", e);
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -113,6 +113,7 @@ public final class JdbcOrganizationJdbcRepository {
             }
         } catch (Exception e) {
             log.error("find orgs by ids failed count={}", unique.size(), e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return out;
     }
@@ -133,7 +134,7 @@ public final class JdbcOrganizationJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("delete org failed", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -153,6 +154,7 @@ public final class JdbcOrganizationJdbcRepository {
             }
         } catch (Exception e) {
             log.error("list orgs failed", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return out;
     }
@@ -167,7 +169,7 @@ public final class JdbcOrganizationJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("set user org failed", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -188,7 +190,7 @@ public final class JdbcOrganizationJdbcRepository {
             }
         } catch (Exception e) {
             log.error("find org by slug failed", e);
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -213,7 +215,7 @@ public final class JdbcOrganizationJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("set org slug failed", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -231,11 +233,11 @@ public final class JdbcOrganizationJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("update org logo failed", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
-    private static OrgRow mapRow(java.sql.ResultSet rs) throws Exception {
+    private static OrgRow mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new OrgRow(
             rs.getObject("id", UUID.class).toString(),
             rs.getString("name"),

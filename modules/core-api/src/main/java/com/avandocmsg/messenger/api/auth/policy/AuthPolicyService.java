@@ -25,6 +25,8 @@ import java.util.UUID;
 
 public class AuthPolicyService {
     private static final Logger log = LoggerFactory.getLogger(AuthPolicyService.class);
+    private static final String LOGIN_TYPE_PASSWORD = "password";
+    private static final String STATUS_ERROR = "error";
 
     private final AppConfig appConfig;
     private final AuthPolicyRepository authPolicyRepository;
@@ -165,35 +167,48 @@ public class AuthPolicyService {
         }
     }
 
-    private LoginOptionsResponse buildLoginOptions(OrganizationLookupPort.OrgSummary org, String redirectBase) {
+    private LoginOptionsResponse buildLoginOptions(OrganizationLookupPort.OrgSummary org, String redirectBase) { // NOSONAR java:S3776 — composes providers into login options DTO
         var orgId = UUID.fromString(org.id());
         var row = authPolicyRepository.findByOrgId(orgId).orElseGet(() -> authPolicyRepository.defaultPolicy(orgId));
         var methods = new ArrayList<LoginOptionsResponse.LoginMethodJson>();
-
         if (row.allowLocalPassword()) {
-            methods.add(new LoginOptionsResponse.LoginMethodJson("password", "password", "Password", null));
+            methods.add(new LoginOptionsResponse.LoginMethodJson(
+                LOGIN_TYPE_PASSWORD, LOGIN_TYPE_PASSWORD, "Password", null));
         }
-        for (var provider : row.providers()) {
-            if (!provider.enabled()) {
-                continue;
-            }
-            var type = mapLoginType(provider.type());
-            if (type == null) {
-                continue;
-            }
-            if ("password".equals(type) && !row.allowLocalPassword()) {
-                continue;
-            }
-            var label = provider.displayName() != null && !provider.displayName().isBlank()
-                ? provider.displayName()
-                : provider.alias();
-            var authUrl = ("oidc".equals(type) || "saml".equals(type))
-                ? brokerAuthorizationUrl(provider.alias(), redirectBase)
-                : null;
-            methods.add(new LoginOptionsResponse.LoginMethodJson(provider.id(), type, label, authUrl));
-        }
-
+        appendProviderLoginMethods(methods, row, redirectBase);
         return new LoginOptionsResponse(org.id(), org.slug(), row.allowSelfRegistration(), List.copyOf(methods));
+    }
+
+    private void appendProviderLoginMethods(
+        List<LoginOptionsResponse.LoginMethodJson> methods,
+        OrgAuthPolicyRow row,
+        String redirectBase
+    ) {
+        for (var provider : row.providers()) {
+            maybeAddProviderLoginMethod(methods, provider, row.allowLocalPassword(), redirectBase);
+        }
+    }
+
+    private void maybeAddProviderLoginMethod(
+        List<LoginOptionsResponse.LoginMethodJson> methods,
+        AuthProviderEntry provider,
+        boolean allowLocalPassword,
+        String redirectBase
+    ) {
+        if (!provider.enabled()) {
+            return;
+        }
+        var type = mapLoginType(provider.type());
+        if (type == null || (LOGIN_TYPE_PASSWORD.equals(type) && !allowLocalPassword)) {
+            return;
+        }
+        var label = provider.displayName() != null && !provider.displayName().isBlank()
+            ? provider.displayName()
+            : provider.alias();
+        var authUrl = ("oidc".equals(type) || "saml".equals(type))
+            ? brokerAuthorizationUrl(provider.alias(), redirectBase)
+            : null;
+        methods.add(new LoginOptionsResponse.LoginMethodJson(provider.id(), type, label, authUrl));
     }
 
     private String brokerAuthorizationUrl(String idpAlias, String redirectBase) {
@@ -233,7 +248,7 @@ public class AuthPolicyService {
         return organizationLookupPort.findSingle();
     }
 
-    private static Optional<String> slugFromHost(String hostHeader) {
+    private static Optional<String> slugFromHost(String hostHeader) { // NOSONAR java:S3776 — host slug parsing with localhost/IP guards
         if (hostHeader == null || hostHeader.isBlank()) {
             return Optional.empty();
         }
@@ -257,43 +272,55 @@ public class AuthPolicyService {
         String lastStatus = "ok";
         String lastError = null;
         for (var p : providers) {
-            if (!p.enabled()) {
-                updated.add(p.withStatus("disabled"));
-                continue;
-            }
-            try {
-                var settings = resolvedSettings(p);
-                if ("ldap".equalsIgnoreCase(p.type())) {
-                    settings.put("org_id", orgId.toString());
-                }
-                KeycloakAuthSyncClient.ApplyResult result;
-                if ("ldap".equalsIgnoreCase(p.type())) {
-                    result = keycloakAuthSyncClient.upsertLdap(p.alias(), settings);
-                } else if ("oidc".equalsIgnoreCase(p.type())) {
-                    result = keycloakAuthSyncClient.upsertIdentityProvider(p.alias(), "oidc", settings);
-                } else if ("saml".equalsIgnoreCase(p.type())) {
-                    result = keycloakAuthSyncClient.upsertIdentityProvider(p.alias(), "saml", settings);
-                } else {
-                    updated.add(p.withStatus("unsupported"));
-                    lastStatus = "partial";
-                    lastError = "unsupported_type:" + p.type();
-                    continue;
-                }
-                if (result.ok()) {
-                    updated.add(p.withKcComponentId(result.componentId(), "applied"));
-                } else {
-                    updated.add(p.withStatus("error"));
-                    lastStatus = "error";
-                    lastError = result.error();
-                }
-            } catch (Exception e) {
-                log.warn("apply provider {} failed: {}", p.id(), e.getMessage());
-                updated.add(p.withStatus("error"));
-                lastStatus = "error";
-                lastError = e.getMessage();
+            var one = applyOneProvider(orgId, p);
+            updated.add(one.provider());
+            if (one.status() != null) {
+                lastStatus = one.status();
+                lastError = one.error();
             }
         }
         return new ApplyOutcome(List.copyOf(updated), lastStatus, lastError);
+    }
+
+    private record ProviderApplyStep(AuthProviderEntry provider, String status, String error) {}
+
+    private ProviderApplyStep applyOneProvider(UUID orgId, AuthProviderEntry p) {
+        if (!p.enabled()) {
+            return new ProviderApplyStep(p.withStatus("disabled"), null, null);
+        }
+        try {
+            var settings = resolvedSettings(p);
+            if ("ldap".equalsIgnoreCase(p.type())) {
+                settings.put("org_id", orgId.toString());
+            }
+            var result = syncProviderToKeycloak(p, settings);
+            if (result == null) {
+                return new ProviderApplyStep(p.withStatus("unsupported"), "partial", "unsupported_type:" + p.type());
+            }
+            if (result.ok()) {
+                return new ProviderApplyStep(p.withKcComponentId(result.componentId(), "applied"), null, null);
+            }
+            return new ProviderApplyStep(p.withStatus(STATUS_ERROR), STATUS_ERROR, result.error());
+        } catch (Exception e) {
+            log.warn("apply provider {} failed: {}", p.id(), e.getMessage());
+            return new ProviderApplyStep(p.withStatus(STATUS_ERROR), STATUS_ERROR, e.getMessage());
+        }
+    }
+
+    private KeycloakAuthSyncClient.ApplyResult syncProviderToKeycloak(
+        AuthProviderEntry p,
+        Map<String, String> settings
+    ) {
+        if ("ldap".equalsIgnoreCase(p.type())) {
+            return keycloakAuthSyncClient.upsertLdap(p.alias(), settings);
+        }
+        if ("oidc".equalsIgnoreCase(p.type())) {
+            return keycloakAuthSyncClient.upsertIdentityProvider(p.alias(), "oidc", settings);
+        }
+        if ("saml".equalsIgnoreCase(p.type())) {
+            return keycloakAuthSyncClient.upsertIdentityProvider(p.alias(), "saml", settings);
+        }
+        return null;
     }
 
     private Map<String, String> resolvedSettings(AuthProviderEntry provider) {
@@ -380,7 +407,7 @@ public class AuthPolicyService {
             return false;
         }
         var k = key.toLowerCase();
-        return k.contains("password") || k.contains("secret") || k.contains("credential");
+        return k.contains(LOGIN_TYPE_PASSWORD) || k.contains("secret") || k.contains("credential");
     }
 
     private static String mapLoginType(String type) {
@@ -388,7 +415,7 @@ public class AuthPolicyService {
             return null;
         }
         return switch (type.toLowerCase()) {
-            case "ldap", "password" -> "password";
+            case "ldap", LOGIN_TYPE_PASSWORD -> LOGIN_TYPE_PASSWORD;
             case "oidc" -> "oidc";
             case "saml" -> "saml";
             default -> null;

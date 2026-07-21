@@ -135,7 +135,7 @@ public final class ExternalStackActiveProbeService {
         if (issuer == null || issuer.isBlank()) {
             return ExternalStackProbeResult.degraded("oidc issuer not configured");
         }
-        var uri = parseUri(issuer, "oidc issuer");
+        var uri = parseUri(issuer);
         if (uri == null) {
             return ExternalStackProbeResult.degraded("oidc issuer is not a valid URI");
         }
@@ -164,7 +164,7 @@ public final class ExternalStackActiveProbeService {
         if (url == null || url.isBlank()) {
             return ExternalStackProbeResult.degraded(label + " url not configured");
         }
-        var uri = parseUri(url, label + " url");
+        var uri = parseUri(url);
         if (uri == null) {
             return ExternalStackProbeResult.degraded(label + " url is not a valid URI");
         }
@@ -211,7 +211,7 @@ public final class ExternalStackActiveProbeService {
         return ExternalStackProbeResult.ok(Map.of(), warning + "; configured-only probe");
     }
 
-    private static URI parseUri(String value, String label) {
+    private static URI parseUri(String value) {
         try {
             return URI.create(value.trim());
         } catch (IllegalArgumentException e) {

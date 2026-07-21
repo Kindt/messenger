@@ -19,6 +19,7 @@ public class MlsWirePublisher {
 
     private static final Logger log = LoggerFactory.getLogger(MlsWirePublisher.class);
     private static final String DEFAULT_CIPHER_SUITE = "MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519";
+    private static final String PUBLISH_FAIL_MSG = "Failed to publish {} for group {}";
 
     private final NatsOutboundPort nats;
     private final AppConfig appConfig;
@@ -42,7 +43,7 @@ public class MlsWirePublisher {
                 memberUserIds != null ? memberUserIds : List.of());
             publish(NatsSubjects.MLS_WELCOME, MlsWireCodec.encodeWelcome(payload));
         } catch (Exception e) {
-            log.warn("Failed to publish {} for group {}", NatsSubjects.MLS_WELCOME, state.groupId(), e);
+            log.warn(PUBLISH_FAIL_MSG, NatsSubjects.MLS_WELCOME, state.groupId(), e);
         }
     }
 
@@ -60,7 +61,7 @@ public class MlsWirePublisher {
                 MlsWireCodec.treeHash(state.treeData()));
             publish(NatsSubjects.MLS_COMMIT, MlsWireCodec.encodeCommit(payload));
         } catch (Exception e) {
-            log.warn("Failed to publish {} for group {}", NatsSubjects.MLS_COMMIT, state.groupId(), e);
+            log.warn(PUBLISH_FAIL_MSG, NatsSubjects.MLS_COMMIT, state.groupId(), e);
         }
     }
 
@@ -76,7 +77,7 @@ public class MlsWirePublisher {
                 MlsWireCodec.treeHash(state.treeData()));
             publish(NatsSubjects.MLS_EPOCH, MlsWireCodec.encodeEpoch(payload));
         } catch (Exception e) {
-            log.warn("Failed to publish {} for group {}", NatsSubjects.MLS_EPOCH, state.groupId(), e);
+            log.warn(PUBLISH_FAIL_MSG, NatsSubjects.MLS_EPOCH, state.groupId(), e);
         }
     }
 

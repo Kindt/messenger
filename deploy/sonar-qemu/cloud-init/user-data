@@ -1,0 +1,87 @@
+#cloud-config
+hostname: sonar-lab
+manage_etc_hosts: true
+growpart:
+  mode: auto
+  devices: ["/"]
+resize_rootfs: true
+datasource_list: [ NoCloud, None ]
+ssh_pwauth: true
+chpasswd:
+  expire: false
+users:
+  - name: sonar
+    plain_text_passwd: sonar
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    lock_passwd: false
+package_update: true
+packages:
+  - ca-certificates
+  - curl
+  - openssh-server
+write_files:
+  - path: /opt/sonar/docker-compose.yml
+    permissions: "0644"
+    content: |
+      services:
+        db:
+          image: postgres:16-alpine
+          environment:
+            POSTGRES_USER: sonar
+            POSTGRES_PASSWORD: sonar
+            POSTGRES_DB: sonar
+          volumes:
+            - sonar-db:/var/lib/postgresql/data
+          healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U sonar -d sonar"]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+        sonarqube:
+          image: sonarqube:community
+          depends_on:
+            db:
+              condition: service_healthy
+          environment:
+            SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+            SONAR_JDBC_USERNAME: sonar
+            SONAR_JDBC_PASSWORD: sonar
+            SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+          ports:
+            - "9000:9000"
+          volumes:
+            - sonar-data:/opt/sonarqube/data
+            - sonar-logs:/opt/sonarqube/logs
+            - sonar-extensions:/opt/sonarqube/extensions
+          ulimits:
+            nofile:
+              soft: 65536
+              hard: 65536
+      volumes:
+        sonar-db:
+        sonar-data:
+        sonar-logs:
+        sonar-extensions:
+  - path: /opt/sonar/bootstrap-sonar.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      exec > >(tee -a /var/log/sonar-bootstrap.log) 2>&1
+      echo "[sonar-bootstrap] start $(date -Is)"
+      # Docker Engine + Compose plugin
+      if ! command -v docker >/dev/null 2>&1; then
+        curl -fsSL https://get.docker.com | sh
+      fi
+      systemctl enable --now docker
+      usermod -aG docker sonar || true
+      sysctl -w vm.max_map_count=262144
+      grep -q 'vm.max_map_count' /etc/sysctl.conf || echo 'vm.max_map_count=262144' >> /etc/sysctl.conf
+      cd /opt/sonar
+      docker compose pull
+      docker compose up -d
+      echo "[sonar-bootstrap] compose up done $(date -Is)"
+runcmd:
+  - [ systemctl, enable, --now, ssh ]
+  - [ sh, -c, "/opt/sonar/bootstrap-sonar.sh" ]

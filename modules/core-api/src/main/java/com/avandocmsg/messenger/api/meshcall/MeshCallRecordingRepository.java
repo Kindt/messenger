@@ -11,6 +11,8 @@ import java.util.UUID;
 /** JDBC for mesh call sessions and recordings. */
 public final class MeshCallRecordingRepository {
 
+    private static final String COL_ENDED_AT = "ended_at";
+
     private final DataSource dataSource;
 
     public MeshCallRecordingRepository(DataSource dataSource) {
@@ -250,7 +252,7 @@ public final class MeshCallRecordingRepository {
             rs.getString("media_mode"),
             rs.getString("status"),
             rs.getTimestamp("started_at").toInstant(),
-            rs.getTimestamp("ended_at") != null ? rs.getTimestamp("ended_at").toInstant() : null,
+            rs.getTimestamp(COL_ENDED_AT) != null ? rs.getTimestamp(COL_ENDED_AT).toInstant() : null,
             rs.getString("livekit_room"),
             rs.getString("egress_id"),
             rs.getString("recording_mode")
@@ -267,7 +269,7 @@ public final class MeshCallRecordingRepository {
             rs.getString("status"),
             rs.getObject("file_id", UUID.class),
             rs.getTimestamp("started_at").toInstant(),
-            rs.getTimestamp("ended_at") != null ? rs.getTimestamp("ended_at").toInstant() : null,
+            rs.getTimestamp(COL_ENDED_AT) != null ? rs.getTimestamp(COL_ENDED_AT).toInstant() : null,
             rs.getObject("duration_ms") != null ? rs.getLong("duration_ms") : null,
             rs.getString("egress_id"),
             rs.getString("storage_key")

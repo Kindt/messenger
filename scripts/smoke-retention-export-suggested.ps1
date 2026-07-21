@@ -35,8 +35,20 @@ if ($Seed) {
     & "$scriptDir\prepare-retention-export-smoke.ps1" -ChatId $ChatId -BaseUrl $BaseUrl
 }
 
-& "$scriptDir\smoke-retention-worker.ps1" -BaseUrl ($RetentionMetricsUrl -replace '/metrics$', '')
+if ($BaseUrl -match ':18080') {
+    . (Join-Path $scriptDir "lib\Resolve-QemuLabWorkerMetrics.ps1")
+    $resolved = Resolve-QemuLabWorkerMetrics -ApiBaseUrl $BaseUrl -RetentionMetricsUrl $RetentionMetricsUrl
+    $RetentionMetricsUrl = $resolved.RetentionMetricsUrl
+    if ($WaitSeconds -ge 180) { $WaitSeconds = 120 }
+}
 
+if ($ChatId -and $BaseUrl -match ':18080' -and -not $Seed) {
+    Write-Host "Re-prep retention policy for chat $ChatId ..." -ForegroundColor DarkGray
+    & "$scriptDir\prepare-retention-export-smoke.ps1" -ChatId $ChatId -BaseUrl $BaseUrl | Out-Null
+    Start-Sleep -Seconds 3
+}
+
+& "$scriptDir\smoke-retention-worker.ps1" -BaseUrl ($RetentionMetricsUrl -replace '/metrics$', '')
 Write-Host "Waiting for retention hot-body pass (epoch gauge) ..." -ForegroundColor Cyan
 $metricsUri = $RetentionMetricsUrl.TrimEnd("/")
 if (-not $metricsUri.EndsWith("/metrics")) {

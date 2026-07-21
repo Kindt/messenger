@@ -1,4 +1,5 @@
 # Up full stack with export overlays, run compliance pack, optional down.
+# QEMU lab (no host Docker): use smoke-export-compliance-stack-qemu.ps1 instead.
 param(
     [string]$ChatId = "",
     [switch]$Build,

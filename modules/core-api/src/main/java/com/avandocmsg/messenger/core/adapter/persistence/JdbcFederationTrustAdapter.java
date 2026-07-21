@@ -43,7 +43,7 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             }
         } catch (Exception e) {
             log.error("federation trust postgres upsert failed", e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         var insertSql = """
             INSERT INTO federation_trust (id, org_id, partner_org_id, status, expires_at, created_at, updated_at)
@@ -62,7 +62,7 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             }
         } catch (Exception e) {
             log.error("federation trust insert failed", e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return upsertExisting(orgId, partnerOrgId, st, expiresAt);
     }
@@ -109,7 +109,7 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             stmt.executeUpdate();
         } catch (Exception e) {
             log.error("federation trust upsert failed", e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return findTrustId(orgId, partnerOrgId).orElse(null);
     }
@@ -128,6 +128,7 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             }
         } catch (Exception e) {
             log.error("federation trust find pair failed", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -186,7 +187,7 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             }
         } catch (Exception e) {
             log.error("federation trust check failed", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -205,7 +206,7 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             }
         } catch (Exception e) {
             log.error("federation trust anyActive failed", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -226,6 +227,7 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             }
         } catch (Exception e) {
             log.error("federation trust find failed {}", id, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -241,7 +243,7 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("federation trust update failed {}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -276,11 +278,11 @@ public final class JdbcFederationTrustAdapter implements FederationTrustPort {
             }
         } catch (Exception e) {
             log.error("federation trust list failed org={}", orgId, e);
-            return List.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
-    private static TrustRow mapRow(java.sql.ResultSet rs) throws Exception {
+    private static TrustRow mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         var exp = rs.getTimestamp("expires_at");
         return new TrustRow(
             rs.getObject("id", UUID.class),

@@ -3,9 +3,11 @@ package com.avandocmsg.messenger.core.adapter.persistence;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 
 import javax.sql.DataSource;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /** Batch-loads thread reply counts for main timeline (hex adapter). */
@@ -17,17 +19,30 @@ final class MessageThreadReplyEnrichment {
         if (messages == null || messages.isEmpty() || readDataSource == null) {
             return;
         }
+        var rootIds = collectMessageIds(messages);
+        if (rootIds.isEmpty()) {
+            return;
+        }
+        var counts = loadReplyCounts(readDataSource, rootIds);
+        if (counts.isEmpty()) {
+            return;
+        }
+        applyCounts(messages, counts);
+    }
+
+    private static List<UUID> collectMessageIds(List<MessageResponse> messages) {
         var rootIds = new ArrayList<UUID>(messages.size());
         for (var m : messages) {
             try {
                 rootIds.add(UUID.fromString(m.id()));
             } catch (IllegalArgumentException ignored) {
-                // skip
+                // skip malformed message id
             }
         }
-        if (rootIds.isEmpty()) {
-            return;
-        }
+        return rootIds;
+    }
+
+    private static Map<UUID, Integer> loadReplyCounts(DataSource readDataSource, List<UUID> rootIds) {
         var sql = new StringBuilder(
             "SELECT thread_id, COUNT(*) AS cnt FROM messages WHERE deleted = false AND thread_id IN (");
         for (int i = 0; i < rootIds.size(); i++) {
@@ -50,9 +65,13 @@ final class MessageThreadReplyEnrichment {
                     }
                 }
             }
-        } catch (Exception ignored) {
-            return;
+        } catch (SQLException ignored) {
+            return Map.of();
         }
+        return counts;
+    }
+
+    private static void applyCounts(List<MessageResponse> messages, Map<UUID, Integer> counts) {
         for (int i = 0; i < messages.size(); i++) {
             var m = messages.get(i);
             try {
@@ -67,7 +86,7 @@ final class MessageThreadReplyEnrichment {
                     m.mentionUserIds(), m.mentionAll(),
                     m.durationMs(), m.linkPreview(), m.replyPreview()));
             } catch (IllegalArgumentException ignored) {
-                // skip
+                // skip malformed message id
             }
         }
     }

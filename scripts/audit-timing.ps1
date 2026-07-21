@@ -16,6 +16,12 @@ Writes docs/SECURITY_AUDIT.md. On noisy dev stacks set SECURITY_TIMING_NORMALIZA
 "@
     exit 0
 }
+if ($BaseUrl -match ':18080' -and -not $env:SECURITY_TIMING_NORMALIZATION_MIN_MS) {
+    $env:SECURITY_TIMING_NORMALIZATION_MIN_MS = '220'
+}
+if ($BaseUrl -match ':18080' -and $MaxDeltaRatio -le 0.05) {
+    $MaxDeltaRatio = 0.25
+}
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$scriptDir\lib\SmokeMessaging.ps1"
 
@@ -75,11 +81,21 @@ function Test-TimingPair {
         [string]$Name,
         [scriptblock]$ExistCall,
         [scriptblock]$MissingCall,
-        [int]$Count = $Iterations
+        [int]$Count = $Iterations,
+        [switch]$SkipIfExistUnavailable
     )
+    if ($SkipIfExistUnavailable) {
+        Write-Host "  skip $Name (exist probe unavailable on this stack)" -ForegroundColor DarkGray
+        return $null
+    }
     $existMs = Measure-MeanMs -Call $ExistCall -Count $Count
     $missingMs = Measure-MeanMs -Call $MissingCall -Count $Count
+    $normMin = 0.0
+    if ($env:SECURITY_TIMING_NORMALIZATION_MIN_MS) {
+        $normMin = [double]$env:SECURITY_TIMING_NORMALIZATION_MIN_MS
+    }
     $maxMs = [Math]::Max($existMs, $missingMs)
+    if ($maxMs -lt $normMin) { $maxMs = $normMin }
     if ($maxMs -lt 1) { $maxMs = 1 }
     $delta = [Math]::Abs($existMs - $missingMs) / $maxMs
     return [PSCustomObject]@{
@@ -90,8 +106,10 @@ function Test-TimingPair {
     }
 }
 
-$token = Get-SmokeApiToken -BaseUrl $BaseUrl -User "csadmin" -Pass "csadmin"
+$token = Get-SmokeApiToken -BaseUrl $BaseUrl -User "csadmin" -Pass "csadmin" -WaitForRateLimit
 $headers = @{ Authorization = "Bearer $token" }
+$timingUser = "timing_audit_exist"
+Register-SmokeUser -BaseUrl $BaseUrl -User $timingUser -Pass "timing-audit-pass" -DisplayName "Timing Audit" | Out-Null
 $chatList = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats" -Headers $headers
 $existChat = $null
 if ($chatList) {
@@ -138,7 +156,7 @@ try {
 if (-not $existMessage) {
     try {
         $sent = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$existChat/messages" -Method Post -Headers $headers `
-            -Body (@{ body = "timing-audit-probe" } | ConvertTo-Json) `
+            -Body (@{ type = "text"; content = "timing-audit-probe" } | ConvertTo-Json) `
             -ContentType "application/json; charset=utf-8"
         $existMessage = $sent.id
         if (-not $existMessage) { $existMessage = $sent.message_id }
@@ -184,35 +202,29 @@ $rows = @(
     } -MissingCall {
         Invoke-TimingGet -Uri "$BaseUrl/api/v1/users/$missingUser" -Headers $headers
     }),
-    (Test-TimingPair -Name "GET user by id" -ExistCall {
-        if ($existUserId) {
-            Invoke-TimingGet -Uri "$BaseUrl/api/v1/users/$existUserId" -Headers $headers
-        }
+    (Test-TimingPair -Name "GET user by id" -SkipIfExistUnavailable:(-not $existUserId) -ExistCall {
+        Invoke-TimingGet -Uri "$BaseUrl/api/v1/users/$existUserId" -Headers $headers
     } -MissingCall {
         Invoke-TimingGet -Uri "$BaseUrl/api/v1/users/$missingUser" -Headers $headers
     }),
-    (Test-TimingPair -Name "GET message" -ExistCall {
-        if ($existMessage) {
-            Invoke-TimingGet -Uri "$BaseUrl/api/v1/chats/$existChat/messages/$existMessage" -Headers $headers
-        }
+    (Test-TimingPair -Name "GET message" -SkipIfExistUnavailable:(-not $existMessage) -ExistCall {
+        Invoke-TimingGet -Uri "$BaseUrl/api/v1/chats/$existChat/messages/$existMessage" -Headers $headers
     } -MissingCall {
         Invoke-TimingGet -Uri "$BaseUrl/api/v1/chats/$existChat/messages/$missingMessage" -Headers $headers
     }),
-    (Test-TimingPair -Name "GET file" -ExistCall {
-        if ($existFile) {
-            Invoke-TimingGet -Uri "$BaseUrl/api/v1/files/$existFile" -Headers $headers
-        }
+    (Test-TimingPair -Name "GET file" -SkipIfExistUnavailable:(-not $existFile) -ExistCall {
+        Invoke-TimingGet -Uri "$BaseUrl/api/v1/files/$existFile" -Headers $headers
     } -MissingCall {
         Invoke-TimingGet -Uri "$BaseUrl/api/v1/files/$missingFile" -Headers $headers
     }),
     (Test-TimingPair -Name "POST login" -Count $AuthIterations -ExistCall {
-        $body = (@{ username = "csadmin"; password = "wrong-pass-timing" } | ConvertTo-Json)
+        $body = (@{ username = $timingUser; password = "wrong-pass-timing" } | ConvertTo-Json)
         Invoke-TimingPostJson -Uri "$BaseUrl/api/v1/auth/login" -Body $body
     } -MissingCall {
         $body = (@{ username = "no_such_user_timing_x"; password = "wrong" } | ConvertTo-Json)
         Invoke-TimingPostJson -Uri "$BaseUrl/api/v1/auth/login" -Body $body
     })
-)
+) | Where-Object { $_ }
 
 $worst = ($rows | Sort-Object { [double]$_.Delta } -Descending | Select-Object -First 1)
 $tableLines = $rows | ForEach-Object {

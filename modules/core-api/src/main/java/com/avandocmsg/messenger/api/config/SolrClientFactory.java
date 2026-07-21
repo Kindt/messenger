@@ -6,7 +6,6 @@ import org.apache.solr.client.solrj.impl.HttpJdkSolrClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Optional;
 
 /** Optional Solr client for {@link com.avandocmsg.messenger.api.search.MessageSearchService}. */
@@ -33,7 +32,10 @@ public final class SolrClientFactory {
         }
         var zk = config.solrZkHosts();
         if (!zk.isBlank()) {
-            var zkHosts = List.of(zk.split("\\s*,\\s*"));
+            var zkHosts = java.util.Arrays.stream(zk.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
             var client = new CloudSolrClient.Builder(zkHosts, Optional.empty())
                     .withDefaultCollection(config.solrCollection())
                     .build();

@@ -40,6 +40,8 @@ import java.util.UUID;
 final class AdminExportFacade {
     private static final Logger log = LoggerFactory.getLogger(AdminExportFacade.class);
     private static final ObjectMapper ADMIN_AUDIT_JSON = MessengerJson.mapper();
+    private static final String CHAT_ID = "chat_id";
+    private static final String JOB_ID = "job_id";
 
     private final AppConfig appConfig;
     private final AuditPort auditPort;
@@ -52,7 +54,7 @@ final class AdminExportFacade {
     private final NatsOutboundPort natsOutbound;
     private final UserMessageSource messages;
 
-    AdminExportFacade(
+    record Deps(
         AppConfig appConfig,
         AuditPort auditPort,
         ChatPersistencePort chatPersistencePort,
@@ -63,17 +65,19 @@ final class AdminExportFacade {
         ExportFileAccess exportFileAccess,
         NatsOutboundPort natsOutbound,
         UserMessageSource messages
-    ) {
-        this.appConfig = appConfig;
-        this.auditPort = auditPort;
-        this.chatPersistencePort = chatPersistencePort;
-        this.exportSuggestedHandler = exportSuggestedHandler;
-        this.exportComplianceSeed = exportComplianceSeed;
-        this.exportJobEnqueuer = exportJobEnqueuer;
-        this.exportJobPort = exportJobPort;
-        this.exportFileAccess = exportFileAccess;
-        this.natsOutbound = natsOutbound;
-        this.messages = messages;
+    ) {}
+
+    AdminExportFacade(Deps deps) {
+        this.appConfig = deps.appConfig();
+        this.auditPort = deps.auditPort();
+        this.chatPersistencePort = deps.chatPersistencePort();
+        this.exportSuggestedHandler = deps.exportSuggestedHandler();
+        this.exportComplianceSeed = deps.exportComplianceSeed();
+        this.exportJobEnqueuer = deps.exportJobEnqueuer();
+        this.exportJobPort = deps.exportJobPort();
+        this.exportFileAccess = deps.exportFileAccess();
+        this.natsOutbound = deps.natsOutbound();
+        this.messages = deps.messages();
     }
 
     Response exportCompliancePrep(AdminExportCompliancePrepRequest body, SecurityContext securityContext) {
@@ -106,7 +110,7 @@ final class AdminExportFacade {
                 .entity(new ApiError(404, messages.get("error.export.admin_suggest_disabled")))
                 .build();
         }
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, CHAT_ID);
         final ExportSuggestDispatch dispatch;
         try {
             dispatch = ExportSuggestDispatch.parse(body != null ? body.dispatch() : null);
@@ -160,7 +164,7 @@ final class AdminExportFacade {
                 .entity(new ApiError(404, messages.get("error.export.admin_enqueue_disabled")))
                 .build();
         }
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, CHAT_ID);
         if (!chatPersistencePort.chatExists(chatId)) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(new ApiError(404, messages.get("error.export.chat_not_found")))
@@ -181,7 +185,7 @@ final class AdminExportFacade {
     }
 
     Response listExportJobs(String chatIdStr, String status, int limit, SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, CHAT_ID);
         var lim = ExportJobReadSupport.normalizeJobsListLimit(limit);
         var rows = exportJobPort.listForChat(chatId, status, lim);
         var items = rows.stream().map(ExportJobReadSupport::toListItem).toList();
@@ -199,7 +203,7 @@ final class AdminExportFacade {
     Response listAllExportJobs(String status, String chatIdStr, int limit, SecurityContext securityContext) {
         UUID chatFilter = null;
         if (chatIdStr != null && !chatIdStr.isBlank()) {
-            chatFilter = UuidParams.required(chatIdStr, "chat_id");
+            chatFilter = UuidParams.required(chatIdStr, CHAT_ID);
         }
         var lim = ExportJobReadSupport.normalizeJobsListLimit(limit);
         var statusFilter = status != null && !status.isBlank() ? status.trim() : null;
@@ -214,7 +218,7 @@ final class AdminExportFacade {
     }
 
     Response exportLatestStatus(String chatIdStr, SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, CHAT_ID);
         var row = exportJobPort.findLatestForChat(chatId);
         if (row.isEmpty()) {
             return ExportJobReadSupport.jobNotFound(messages);
@@ -224,8 +228,8 @@ final class AdminExportFacade {
     }
 
     Response exportJobStatus(String chatIdStr, String jobIdStr, SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var jobId = UuidParams.required(jobIdStr, "job_id");
+        var chatId = UuidParams.required(chatIdStr, CHAT_ID);
+        var jobId = UuidParams.required(jobIdStr, JOB_ID);
         var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
             return ExportJobReadSupport.jobNotFound(messages);
@@ -240,18 +244,19 @@ final class AdminExportFacade {
                 .entity(new ApiError(404, messages.get("error.export.admin_enqueue_disabled")))
                 .build();
         }
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var jobId = UuidParams.required(jobIdStr, "job_id");
+        var chatId = UuidParams.required(chatIdStr, CHAT_ID);
+        var jobId = UuidParams.required(jobIdStr, JOB_ID);
         var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
             return ExportJobReadSupport.jobNotFound(messages);
         }
         return ExportJobCancelSupport.cancel(
-            row.get(),
-            chatId,
-            jobId,
-            CurrentUserId.uuid(securityContext),
-            ExportJobCancelSupport.AUDIT_ADMIN_CANCEL,
+            new ExportJobCancelSupport.CancelRequest(
+                row.get(),
+                chatId,
+                jobId,
+                CurrentUserId.uuid(securityContext),
+                ExportJobCancelSupport.AUDIT_ADMIN_CANCEL),
             exportJobPort,
             auditPort,
             messages,
@@ -265,8 +270,8 @@ final class AdminExportFacade {
         int limit,
         SecurityContext securityContext
     ) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var jobId = UuidParams.required(jobIdStr, "job_id");
+        var chatId = UuidParams.required(chatIdStr, CHAT_ID);
+        var jobId = UuidParams.required(jobIdStr, JOB_ID);
         var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
             return ExportJobReadSupport.jobNotFound(messages);
@@ -283,30 +288,31 @@ final class AdminExportFacade {
         String fileIdsStr,
         SecurityContext securityContext
     ) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var jobId = UuidParams.required(jobIdStr, "job_id");
+        var chatId = UuidParams.required(chatIdStr, CHAT_ID);
+        var jobId = UuidParams.required(jobIdStr, JOB_ID);
         var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
             return ExportJobReadSupport.jobNotFound(messages);
         }
         return ExportDownloadSupport.download(
-            row.get(),
-            chatId,
-            jobId,
-            CurrentUserId.uuid(securityContext),
-            ExportDownloadSupport.AUDIT_ADMIN_DOWNLOAD,
+            new ExportDownloadSupport.DownloadRequest(
+                row.get(),
+                chatId,
+                jobId,
+                CurrentUserId.uuid(securityContext),
+                ExportDownloadSupport.AUDIT_ADMIN_DOWNLOAD,
+                part,
+                fileIdStr,
+                fileIdsStr),
             exportFileAccess,
             auditPort,
-            messages,
-            part,
-            fileIdStr,
-            fileIdsStr);
+            messages);
     }
 
     private void auditExportInspect(SecurityContext securityContext, UUID jobId, UUID chatId, String view) {
         try {
             var details = ADMIN_AUDIT_JSON.createObjectNode()
-                .put("chat_id", chatId.toString())
+                .put(CHAT_ID, chatId.toString())
                 .put("view", view);
             auditPort.record(
                 CurrentUserId.uuid(securityContext),

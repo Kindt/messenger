@@ -22,22 +22,72 @@ public final class ExportDownloadSupport {
     public static final String AUDIT_USER_DOWNLOAD = "export.downloaded";
     public static final String AUDIT_ADMIN_DOWNLOAD = "export.admin_downloaded";
 
+    private static final String FILE_ID_PARAM = "file_id";
+    private static final String ERR_FILE_NOT_FOUND = "error.export.file_not_found";
+
     private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
     private ExportDownloadSupport() {}
 
-    public static Response download(
+    /** Inputs for a single export download request (job + part selection). */
+    public record DownloadRequest(
         ExportJobPort.ExportJobRow job,
         UUID chatId,
         UUID jobId,
         UUID actorUserId,
         String auditAction,
-        ExportFileAccess exportFileAccess,
-        AuditPort auditPort,
-        UserMessageSource messages,
         String part,
         String fileIdStr,
         String fileIdsStr
+    ) {}
+
+    public static Response download(
+        DownloadRequest request,
+        ExportFileAccess exportFileAccess,
+        AuditPort auditPort,
+        UserMessageSource messages
+    ) {
+        var readiness = checkDownloadReady(request.job(), exportFileAccess, messages);
+        if (readiness != null) {
+            return readiness;
+        }
+        final ExportFileAccess.DownloadPart downloadPart;
+        try {
+            downloadPart = ExportFileAccess.DownloadPart.parse(request.part());
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.export.invalid_download_part")))
+                .build();
+        }
+        var selection = parsePartSelection(downloadPart, request.fileIdStr(), request.fileIdsStr(), messages);
+        if (selection.error() != null) {
+            return selection.error();
+        }
+        if (!exportFileAccess.canDownloadPart(request.job(), downloadPart)) {
+            return fileNotFound(messages);
+        }
+        var resolved = resolveAttachments(exportFileAccess, request.job(), downloadPart, selection, messages);
+        if (resolved.error() != null) {
+            return resolved.error();
+        }
+        var target = ExportFileAccess.downloadTarget(request.job(), downloadPart, resolved.binaryRef());
+        auditPort.record(
+            request.actorUserId(),
+            request.auditAction(),
+            "export_job",
+            request.jobId().toString(),
+            downloadAuditDetails(
+                request.chatId(), downloadPart, request.job(), selection.fileId(), selection.fileIds()));
+        return Response.ok(streamBody(exportFileAccess, request.job(), downloadPart, resolved))
+            .type(target.mediaType())
+            .header("Content-Disposition", "attachment; filename=\"" + target.fileName() + "\"")
+            .build();
+    }
+
+    private static Response checkDownloadReady(
+        ExportJobPort.ExportJobRow job,
+        ExportFileAccess exportFileAccess,
+        UserMessageSource messages
     ) {
         if (!exportFileAccess.isDownloadableStatus(job.status())) {
             return Response.status(Response.Status.CONFLICT)
@@ -49,93 +99,106 @@ public final class ExportDownloadSupport {
                 .entity(new ApiError(503, messages.get("error.export.download_unavailable")))
                 .build();
         }
-        final ExportFileAccess.DownloadPart downloadPart;
-        try {
-            downloadPart = ExportFileAccess.DownloadPart.parse(part);
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, messages.get("error.export.invalid_download_part")))
-                .build();
-        }
-        UUID fileId = null;
-        List<UUID> fileIds = List.of();
+        return null;
+    }
+
+    private record PartSelection(UUID fileId, List<UUID> fileIds, Response error) {}
+
+    private static PartSelection parsePartSelection(
+        ExportFileAccess.DownloadPart downloadPart,
+        String fileIdStr,
+        String fileIdsStr,
+        UserMessageSource messages
+    ) {
         if (downloadPart == ExportFileAccess.DownloadPart.BINARY) {
             if (fileIdStr == null || fileIdStr.isBlank()) {
-                return Response.status(Response.Status.BAD_REQUEST)
+                return new PartSelection(null, List.of(), Response.status(Response.Status.BAD_REQUEST)
                     .entity(new ApiError(400, messages.get("error.export.file_id_required")))
-                    .build();
+                    .build());
             }
-            fileId = UuidParams.required(fileIdStr, "file_id");
-        } else if (downloadPart == ExportFileAccess.DownloadPart.BINARIES) {
-            fileIds = parseFileIds(fileIdsStr);
+            return new PartSelection(UuidParams.required(fileIdStr, FILE_ID_PARAM), List.of(), null);
+        }
+        if (downloadPart == ExportFileAccess.DownloadPart.BINARIES) {
+            var fileIds = parseFileIds(fileIdsStr);
             if (fileIds.isEmpty()) {
-                return Response.status(Response.Status.BAD_REQUEST)
+                return new PartSelection(null, List.of(), Response.status(Response.Status.BAD_REQUEST)
                     .entity(new ApiError(400, messages.get("error.export.file_ids_required")))
-                    .build();
+                    .build());
             }
             if (fileIds.size() > ExportFileAccess.MAX_BINARIES_FILE_IDS) {
-                return Response.status(Response.Status.BAD_REQUEST)
+                return new PartSelection(null, List.of(), Response.status(Response.Status.BAD_REQUEST)
                     .entity(new ApiError(400, messages.get("error.export.too_many_file_ids")))
-                    .build();
+                    .build());
             }
+            return new PartSelection(null, fileIds, null);
         }
-        if (!exportFileAccess.canDownloadPart(job, downloadPart)) {
-            return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.export.file_not_found")))
-                .build();
-        }
-        ExportZipManifestReader.AttachmentRef binaryRef = null;
-        ExportFileAccess.BinariesResolution binariesResolution = null;
+        return new PartSelection(null, List.of(), null);
+    }
+
+    private record ResolvedAttachments(
+        ExportZipManifestReader.AttachmentRef binaryRef,
+        ExportFileAccess.BinariesResolution binariesResolution,
+        Response error
+    ) {}
+
+    private static ResolvedAttachments resolveAttachments(
+        ExportFileAccess exportFileAccess,
+        ExportJobPort.ExportJobRow job,
+        ExportFileAccess.DownloadPart downloadPart,
+        PartSelection selection,
+        UserMessageSource messages
+    ) {
         if (downloadPart == ExportFileAccess.DownloadPart.BINARY) {
             try {
-                var resolved = exportFileAccess.resolveBinaryAttachment(job, fileId);
+                var resolved = exportFileAccess.resolveBinaryAttachment(job, selection.fileId());
                 if (resolved.isEmpty()) {
-                    return Response.status(Response.Status.NOT_FOUND)
+                    return new ResolvedAttachments(null, null, Response.status(Response.Status.NOT_FOUND)
                         .entity(new ApiError(404, messages.get("error.export.attachment_not_in_bundle")))
-                        .build();
+                        .build());
                 }
-                binaryRef = resolved.get();
+                return new ResolvedAttachments(resolved.get(), null, null);
             } catch (java.io.IOException e) {
-                return Response.status(Response.Status.NOT_FOUND)
-                    .entity(new ApiError(404, messages.get("error.export.file_not_found")))
-                    .build();
+                return new ResolvedAttachments(null, null, fileNotFound(messages));
             }
-        } else if (downloadPart == ExportFileAccess.DownloadPart.BINARIES) {
+        }
+        if (downloadPart == ExportFileAccess.DownloadPart.BINARIES) {
             try {
-                binariesResolution = exportFileAccess.resolveBinaries(job, fileIds);
+                var binariesResolution = exportFileAccess.resolveBinaries(job, selection.fileIds());
                 if (!binariesResolution.complete()) {
-                    return Response.status(Response.Status.NOT_FOUND)
+                    return new ResolvedAttachments(null, null, Response.status(Response.Status.NOT_FOUND)
                         .entity(new ApiError(404, messages.get("error.export.attachments_not_in_bundle")))
-                        .build();
+                        .build());
                 }
+                return new ResolvedAttachments(null, binariesResolution, null);
             } catch (java.io.IOException e) {
-                return Response.status(Response.Status.NOT_FOUND)
-                    .entity(new ApiError(404, messages.get("error.export.file_not_found")))
-                    .build();
+                return new ResolvedAttachments(null, null, fileNotFound(messages));
             }
         }
-        var target = ExportFileAccess.downloadTarget(job, downloadPart, binaryRef);
-        auditPort.record(
-            actorUserId,
-            auditAction,
-            "export_job",
-            jobId.toString(),
-            downloadAuditDetails(chatId, downloadPart, job, fileId, fileIds));
-        StreamingOutput body;
+        return new ResolvedAttachments(null, null, null);
+    }
+
+    private static StreamingOutput streamBody(
+        ExportFileAccess exportFileAccess,
+        ExportJobPort.ExportJobRow job,
+        ExportFileAccess.DownloadPart downloadPart,
+        ResolvedAttachments resolved
+    ) {
         if (downloadPart == ExportFileAccess.DownloadPart.BINARY) {
-            var zipPath = binaryRef.zipPath();
-            body = out -> exportFileAccess.streamAttachmentEntry(
+            var zipPath = resolved.binaryRef().zipPath();
+            return out -> exportFileAccess.streamAttachmentEntry(
                 job, zipPath, stream -> ExportFileAccess.transferToOutput(stream, out));
-        } else if (downloadPart == ExportFileAccess.DownloadPart.BINARIES) {
-            var attachments = binariesResolution.attachments();
-            body = out -> exportFileAccess.streamBinariesZip(job, attachments, out);
-        } else {
-            body = out -> exportFileAccess.streamDownloadPart(
-                job, downloadPart, stream -> ExportFileAccess.transferToOutput(stream, out));
         }
-        return Response.ok(body)
-            .type(target.mediaType())
-            .header("Content-Disposition", "attachment; filename=\"" + target.fileName() + "\"")
+        if (downloadPart == ExportFileAccess.DownloadPart.BINARIES) {
+            var attachments = resolved.binariesResolution().attachments();
+            return out -> exportFileAccess.streamBinariesZip(job, attachments, out);
+        }
+        return out -> exportFileAccess.streamDownloadPart(
+            job, downloadPart, stream -> ExportFileAccess.transferToOutput(stream, out));
+    }
+
+    private static Response fileNotFound(UserMessageSource messages) {
+        return Response.status(Response.Status.NOT_FOUND)
+            .entity(new ApiError(404, messages.get(ERR_FILE_NOT_FOUND)))
             .build();
     }
 
@@ -149,7 +212,7 @@ public final class ExportDownloadSupport {
             if (trimmed.isEmpty()) {
                 continue;
             }
-            out.add(UuidParams.required(trimmed, "file_id"));
+            out.add(UuidParams.required(trimmed, FILE_ID_PARAM));
         }
         return List.copyOf(out);
     }
@@ -169,7 +232,7 @@ public final class ExportDownloadSupport {
                 .put("output_storage", ExportOutputRef.outputStorage(job.outputPath()))
                 .put("status", job.status());
             if (fileId != null) {
-                node.put("file_id", fileId.toString());
+                node.put(FILE_ID_PARAM, fileId.toString());
             }
             if (fileIds != null && !fileIds.isEmpty()) {
                 var arr = node.putArray("file_ids");

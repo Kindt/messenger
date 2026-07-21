@@ -47,6 +47,8 @@ import java.util.UUID;
 @Tag(name = "Export", description = "Export / compliance replay job enqueue and status")
 public class ExportResource {
     private static final Logger log = LoggerFactory.getLogger(ExportResource.class);
+    private static final String PARAM_CHAT_ID = "chat_id";
+    private static final String PARAM_JOB_ID = "job_id";
 
     private final ChatPersistencePort chatPersistencePort;
     private final ExportJobPort exportJobPort;
@@ -85,7 +87,7 @@ public class ExportResource {
     public Response requestExport(@PathParam("chatId") String chatIdStr,
                                   @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
 
         var denied = authorizeExport(chatId, userId);
         if (denied != null) {
@@ -123,8 +125,8 @@ public class ExportResource {
                                     @PathParam("jobId") String jobIdStr,
                                     @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var jobId = UuidParams.required(jobIdStr, "job_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var jobId = UuidParams.required(jobIdStr, PARAM_JOB_ID);
 
         var denied = authorizeExport(chatId, userId);
         if (denied != null) {
@@ -133,9 +135,7 @@ public class ExportResource {
 
         var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
-            return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.export.job_not_found")))
-                .build();
+            return ExportJobReadSupport.jobNotFound(messages);
         }
 
         return Response.ok(ExportJobReadSupport.toStatusResponse(row.get())).build();
@@ -153,8 +153,8 @@ public class ExportResource {
                                  @PathParam("jobId") String jobIdStr,
                                  @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var jobId = UuidParams.required(jobIdStr, "job_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var jobId = UuidParams.required(jobIdStr, PARAM_JOB_ID);
 
         var denied = authorizeExport(chatId, userId);
         if (denied != null) {
@@ -167,11 +167,12 @@ public class ExportResource {
         }
 
         return ExportJobCancelSupport.cancel(
-            row.get(),
-            chatId,
-            jobId,
-            userId,
-            ExportJobCancelSupport.AUDIT_USER_CANCEL,
+            new ExportJobCancelSupport.CancelRequest(
+                row.get(),
+                chatId,
+                jobId,
+                userId,
+                ExportJobCancelSupport.AUDIT_USER_CANCEL),
             exportJobPort,
             auditPort,
             messages,
@@ -193,8 +194,8 @@ public class ExportResource {
                                     @QueryParam("limit") @DefaultValue("0") int limit,
                                     @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var jobId = UuidParams.required(jobIdStr, "job_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var jobId = UuidParams.required(jobIdStr, PARAM_JOB_ID);
 
         var denied = authorizeExport(chatId, userId);
         if (denied != null) {
@@ -203,9 +204,7 @@ public class ExportResource {
 
         var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
-            return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.export.job_not_found")))
-                .build();
+            return ExportJobReadSupport.jobNotFound(messages);
         }
         return ExportJobReadSupport.attachmentsResponse(
             row.get(), exportFileAccess, messages, offset, limit);
@@ -234,8 +233,8 @@ public class ExportResource {
                                    @QueryParam("file_ids") String fileIdsStr,
                                    @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var jobId = UuidParams.required(jobIdStr, "job_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var jobId = UuidParams.required(jobIdStr, PARAM_JOB_ID);
 
         var denied = authorizeExport(chatId, userId);
         if (denied != null) {
@@ -244,23 +243,22 @@ public class ExportResource {
 
         var row = exportJobPort.findByIdAndChat(jobId, chatId);
         if (row.isEmpty()) {
-            return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.export.job_not_found")))
-                .build();
+            return ExportJobReadSupport.jobNotFound(messages);
         }
 
         return ExportDownloadSupport.download(
-            row.get(),
-            chatId,
-            jobId,
-            userId,
-            ExportDownloadSupport.AUDIT_USER_DOWNLOAD,
+            new ExportDownloadSupport.DownloadRequest(
+                row.get(),
+                chatId,
+                jobId,
+                userId,
+                ExportDownloadSupport.AUDIT_USER_DOWNLOAD,
+                part,
+                fileIdStr,
+                fileIdsStr),
             exportFileAccess,
             auditPort,
-            messages,
-            part,
-            fileIdStr,
-            fileIdsStr);
+            messages);
     }
 
     private Response authorizeExport(UUID chatId, UUID userId) {

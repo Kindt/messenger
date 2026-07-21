@@ -3,6 +3,7 @@ package com.avandocmsg.messenger.api.bots;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -31,7 +32,7 @@ class BotRateLimiterTest {
     }
 
     @Test
-    void scheduledEviction_prunesStaleBotsWithoutTryAcquire() throws InterruptedException {
+    void scheduledEviction_prunesStaleBotsWithoutTryAcquire() {
         var limiter = new BotRateLimiter(3, true, 50L);
         try {
             var botId = UUID.randomUUID();
@@ -39,7 +40,7 @@ class BotRateLimiterTest {
             assertEquals(1, limiter.trackedBotCount());
             var deadline = System.nanoTime() + 10_000_000_000L;
             while (limiter.trackedBotCount() > 0 && System.nanoTime() < deadline) {
-                Thread.sleep(50);
+                LockSupport.parkNanos(50_000_000L);
                 Thread.yield();
             }
             assertEquals(0, limiter.trackedBotCount(), "scheduled eviction should prune idle bot windows");

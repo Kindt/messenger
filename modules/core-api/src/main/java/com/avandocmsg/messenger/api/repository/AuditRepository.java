@@ -24,7 +24,7 @@ public class AuditRepository {
         this.port = port;
     }
 
-    public void record(UUID actorUserId, String action, String resourceType, String resourceId, String detailsJson) {
+    public void recordEvent(UUID actorUserId, String action, String resourceType, String resourceId, String detailsJson) {
         port.record(actorUserId, action, resourceType, resourceId, detailsJson);
     }
 

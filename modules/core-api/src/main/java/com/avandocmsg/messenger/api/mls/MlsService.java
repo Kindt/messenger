@@ -41,7 +41,7 @@ public class MlsService {
         return Optional.of(session.id().toString());
     }
 
-    public EncryptedMessage encrypt(UUID chatId, UUID senderId, String plaintext) {
+    public EncryptedMessage encrypt(UUID chatId, String plaintext) {
         var sessionOpt = sessionRepository.findLatestByChatId(chatId);
         if (sessionOpt.isEmpty()) {
             var sid = ensureSession(chatId);
@@ -71,7 +71,7 @@ public class MlsService {
         System.arraycopy(nonce, 0, fullCiphertext, 0, nonce.length);
         System.arraycopy(ciphertext, 0, fullCiphertext, nonce.length, ciphertext.length);
         var plaintext = e2eeService.decrypt(fullCiphertext, sessionKey, aad);
-        if (plaintext == null) return null;
+        if (plaintext == null || plaintext.length == 0) return null;
         return new String(plaintext, StandardCharsets.UTF_8);
     }
 
@@ -80,9 +80,6 @@ public class MlsService {
         return e2eeService.deriveKey(seed, new byte[0], "mls-session-key", 32);
     }
 
-    /**
-     * Расшифровка содержимого сообщения (nonce + ciphertext в одном Base64), сохранённого в {@code messages.content}.
-     */
     /**
      * Синхронизирует epoch сессии с групповой эпохой после membership rotation (add/remove).
      */
@@ -113,6 +110,9 @@ public class MlsService {
         return session.epoch() >= targetEpoch;
     }
 
+    /**
+     * Расшифровка содержимого сообщения (nonce + ciphertext в одном Base64), сохранённого в {@code messages.content}.
+     */
     public String decryptContentBase64(UUID chatId, String contentBase64) {
         if (contentBase64 == null || contentBase64.isBlank()) {
             return null;
@@ -132,7 +132,7 @@ public class MlsService {
         var sessionKey = deriveSessionKey(session.id(), session.chatId());
         var aad = OpenMlsWireLayout.aadBytes(session.chatId(), session.epoch());
         var plaintext = e2eeService.decrypt(full, sessionKey, aad);
-        if (plaintext == null) {
+        if (plaintext == null || plaintext.length == 0) {
             return null;
         }
         return new String(plaintext, StandardCharsets.UTF_8);

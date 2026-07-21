@@ -31,7 +31,7 @@ public final class FleetSnapshotMetrics {
     private FleetSnapshotMetrics() {
     }
 
-    public static void record(FleetSnapshotResponse snapshot) {
+    public static void recordSnapshot(FleetSnapshotResponse snapshot) {
         if (snapshot == null || snapshot.components() == null) {
             return;
         }

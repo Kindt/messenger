@@ -27,6 +27,10 @@ import jakarta.ws.rs.core.SecurityContext;
 @Tag(name = "Polls", description = "In-chat polls")
 public class ChatPollResource {
 
+    private static final String CHAT_ID = "chat_id";
+    private static final String POLL_ID = "poll_id";
+    private static final String ERR_POLL_NOT_FOUND = "error.poll.not_found";
+
     private final ChatPollService chatPollService;
     private final UserMessageSource messages;
 
@@ -43,7 +47,7 @@ public class ChatPollResource {
                            CreatePollRequest request,
                            @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
         var created = chatPollService.create(cid, userId, request);
         return created.map(p -> Response.status(Response.Status.CREATED).entity(p).build())
             .orElse(Response.status(Response.Status.FORBIDDEN)
@@ -57,7 +61,7 @@ public class ChatPollResource {
                          @QueryParam("limit") @DefaultValue("50") int limit,
                          @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
         return Response.ok(chatPollService.listForChat(cid, userId, limit)).build();
     }
 
@@ -68,12 +72,12 @@ public class ChatPollResource {
                         @PathParam("pollId") String pollId,
                         @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var pid = UuidParams.required(pollId, "poll_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
+        var pid = UuidParams.required(pollId, POLL_ID);
         return chatPollService.get(cid, pid, userId)
             .map(p -> Response.ok(p).build())
             .orElse(Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.poll.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_POLL_NOT_FOUND)))
                 .build());
     }
 
@@ -86,13 +90,13 @@ public class ChatPollResource {
                          VotePollRequest request,
                          @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var pid = UuidParams.required(pollId, "poll_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
+        var pid = UuidParams.required(pollId, POLL_ID);
         var indexes = request != null ? request.optionIndexes() : null;
         var result = chatPollService.vote(cid, pid, userId, indexes);
         if (result.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.poll.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_POLL_NOT_FOUND)))
                 .build();
         }
         if (!result.get()) {
@@ -103,7 +107,7 @@ public class ChatPollResource {
         return chatPollService.get(cid, pid, userId)
             .map(p -> Response.ok(p).build())
             .orElse(Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.poll.not_found")))
+                .entity(new ApiError(404, messages.get(ERR_POLL_NOT_FOUND)))
                 .build());
     }
 
@@ -114,8 +118,8 @@ public class ChatPollResource {
                           @PathParam("pollId") String pollId,
                           @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
-        var pid = UuidParams.required(pollId, "poll_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
+        var pid = UuidParams.required(pollId, POLL_ID);
         return chatPollService.close(cid, pid, userId)
             .map(p -> Response.ok(p).build())
             .orElse(Response.status(Response.Status.FORBIDDEN)

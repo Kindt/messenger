@@ -16,7 +16,9 @@ public final class CryptoProvider {
         }
     }
 
+    /** Forces class initialization so BouncyCastle is registered before first crypto use. */
     public static void ensureLoaded() {
+        // no-op: static initializer does the work
     }
 
     private CryptoProvider() {

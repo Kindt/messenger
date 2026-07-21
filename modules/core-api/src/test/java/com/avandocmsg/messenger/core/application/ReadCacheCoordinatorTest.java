@@ -1,6 +1,5 @@
 package com.avandocmsg.messenger.core.application;
 
-import com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter;
 import com.avandocmsg.messenger.core.port.ReadCacheKeys;
 import com.avandocmsg.messenger.core.port.ReadCachePort;
 import org.junit.jupiter.api.Test;
@@ -54,6 +53,7 @@ class ReadCacheCoordinatorTest {
 
         @Override
         public void put(String key, String jsonValue, int ttlSeconds) {
+            // no-op stub: invalidate-only assertions
         }
 
         @Override

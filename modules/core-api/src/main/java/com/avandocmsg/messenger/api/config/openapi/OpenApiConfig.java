@@ -15,6 +15,9 @@ import java.util.Set;
 
 public class OpenApiConfig {
 
+    private OpenApiConfig() {
+    }
+
     public static OpenApiResource create(String version) {
         var openAPI = new OpenAPI()
             .info(new Info()

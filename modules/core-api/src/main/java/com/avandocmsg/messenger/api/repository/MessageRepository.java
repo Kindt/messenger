@@ -2,7 +2,6 @@ package com.avandocmsg.messenger.api.repository;
 
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageReadRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageWriteRepository;
-import com.avandocmsg.messenger.core.adapter.persistence.MessageJdbcSql;
 import com.avandocmsg.messenger.core.port.MessageMentionRepositoryPort;
 import com.avandocmsg.messenger.api.messages.dto.MessageResponse;
 import com.avandocmsg.messenger.api.messages.dto.MessageVersionResponse;
@@ -20,10 +19,6 @@ import java.util.UUID;
  * SQL lives in {@link JdbcMessageReadRepository} / {@link JdbcMessageWriteRepository}.
  */
 public class MessageRepository {
-    /** @deprecated use {@link MessageJdbcSql#MSG_VISIBILITY_TTL_VISIBLE} */
-    @Deprecated
-    public static final String SQL_MSG_VISIBILITY_TTL_VISIBLE = MessageJdbcSql.MSG_VISIBILITY_TTL_VISIBLE;
-
     private final JdbcMessageReadRepository readRepository;
     private final JdbcMessageWriteRepository writeRepository;
 
@@ -36,14 +31,13 @@ public class MessageRepository {
     }
 
     public MessageRepository(DataSource dataSource, DataSource readDataSource, Clock clock, int queryTimeoutSeconds) {
-        this(dataSource, readDataSource, clock, queryTimeoutSeconds,
+        this(dataSource, readDataSource, queryTimeoutSeconds,
             new JdbcMessageWriteRepository(dataSource, readDataSource, clock, queryTimeoutSeconds));
     }
 
     public MessageRepository(
         DataSource dataSource,
         DataSource readDataSource,
-        Clock clock,
         int queryTimeoutSeconds,
         JdbcMessageWriteRepository writeRepository
     ) {
@@ -63,26 +57,26 @@ public class MessageRepository {
         return readRepository;
     }
 
-    public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
+    public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content, // NOSONAR java:S107
                                   UUID replyToMsgId, String clientMsgId, Integer visibilityTtlSeconds) {
         return insert(id, chatId, senderId, type, content, replyToMsgId, null, clientMsgId, visibilityTtlSeconds, null);
     }
 
-    public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
+    public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content, // NOSONAR java:S107
                                   UUID replyToMsgId, String clientMsgId, Integer visibilityTtlSeconds,
                                   UUID attachmentFileId) {
         return insert(id, chatId, senderId, type, content, replyToMsgId, null, clientMsgId,
             visibilityTtlSeconds, attachmentFileId);
     }
 
-    public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
+    public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content, // NOSONAR java:S107
                                   UUID replyToMsgId, UUID threadId, String clientMsgId,
                                   Integer visibilityTtlSeconds, UUID attachmentFileId) {
         return insert(id, chatId, senderId, type, content, replyToMsgId, threadId, clientMsgId,
             visibilityTtlSeconds, attachmentFileId, null);
     }
 
-    public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content,
+    public MessageResponse insert(UUID id, UUID chatId, UUID senderId, String type, String content, // NOSONAR java:S107
                                   UUID replyToMsgId, UUID threadId, String clientMsgId,
                                   Integer visibilityTtlSeconds, UUID attachmentFileId, Integer voiceDurationMs) {
         return writeRepository.insert(id, chatId, senderId, type, content, replyToMsgId, threadId, clientMsgId,

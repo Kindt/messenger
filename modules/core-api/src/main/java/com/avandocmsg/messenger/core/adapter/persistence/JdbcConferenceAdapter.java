@@ -56,6 +56,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             }
         } catch (Exception e) {
             log.error("insert conference failed", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -90,6 +91,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             }
         } catch (Exception e) {
             log.error("listActiveParticipants {}", conferenceId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return list;
     }
@@ -115,6 +117,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             }
         } catch (Exception e) {
             log.error("count participants {}", conferenceId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return 0;
     }
@@ -139,6 +142,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             }
         } catch (Exception e) {
             log.error("findActiveByRoomSlug {}", roomSlug, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -160,6 +164,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             }
         } catch (Exception e) {
             log.error("find conference {}", conferenceId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -186,16 +191,24 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             }
         } catch (Exception e) {
             log.error("list active conferences for user {}", userId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return list;
     }
 
     @Override
     public List<ConferenceResponse> listForChat(UUID chatId, boolean activeOnly) {
-        var sql = """
+        var sql = activeOnly
+            ? """
+            SELECT id, chat_id, title, status, room_slug, created_at, ended_at
+            FROM conferences WHERE chat_id = ? AND status = 'active'
+            ORDER BY created_at DESC
+            """
+            : """
             SELECT id, chat_id, title, status, room_slug, created_at, ended_at
             FROM conferences WHERE chat_id = ?
-            """ + (activeOnly ? " AND status = 'active' " : "") + " ORDER BY created_at DESC";
+            ORDER BY created_at DESC
+            """;
         var list = new ArrayList<ConferenceResponse>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
@@ -208,6 +221,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             }
         } catch (Exception e) {
             log.error("list conferences chat {}", chatId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return list;
     }
@@ -227,7 +241,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("join conference", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -245,7 +259,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("leave conference", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -263,6 +277,7 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             }
         } catch (Exception e) {
             log.error("findCreatorId", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -277,11 +292,11 @@ public final class JdbcConferenceAdapter implements ConferencePort {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("end conference", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
-    private ConferenceResponse mapRow(java.sql.ResultSet rs) throws Exception {
+    private ConferenceResponse mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         var id = rs.getObject("id", UUID.class).toString();
         var chatId = rs.getObject("chat_id", UUID.class).toString();
         var slug = rs.getString("room_slug");

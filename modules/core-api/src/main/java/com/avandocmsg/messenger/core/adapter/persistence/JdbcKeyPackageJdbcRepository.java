@@ -47,7 +47,7 @@ public final class JdbcKeyPackageJdbcRepository {
                 cipherSuite, protocolVersion, clock.instant());
         } catch (Exception e) {
             log.error("Failed to insert key package", e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -69,6 +69,7 @@ public final class JdbcKeyPackageJdbcRepository {
             }
         } catch (Exception e) {
             log.error("Failed to list key packages for user {}", userId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return result;
     }
@@ -85,11 +86,11 @@ public final class JdbcKeyPackageJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("Failed to delete key package {}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
-    private KeyPackageResponse mapKeyPackage(java.sql.ResultSet rs) throws Exception {
+    private KeyPackageResponse mapKeyPackage(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new KeyPackageResponse(
             rs.getObject("id", UUID.class).toString(),
             rs.getObject("user_id", UUID.class).toString(),

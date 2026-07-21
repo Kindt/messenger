@@ -11,29 +11,7 @@ public class ExternalStackStatusService {
     public ExternalStackStatusResponse status(List<ManifestObservation> observations) {
         var components = new LinkedHashMap<String, ComponentStatus>();
         for (var observation : observations) {
-            var desired = observation.desiredManifest();
-            var observed = observation.observedManifest();
-            var component = desired.component();
-            var validation = observation.validationResult();
-            var observedEndpoint = observed != null ? observed.endpoint() : null;
-            if (validation != null && validation.metadata().containsKey(component + ".endpoint")) {
-                observedEndpoint = validation.metadata().get(component + ".endpoint");
-            }
-            components.put(component, new ComponentStatus(
-                component,
-                desired.connector(),
-                observed != null ? observed.connector() : null,
-                desired.role().name(),
-                observed != null ? observed.role().name() : null,
-                observation.healthStatus(),
-                observation.degradedReason(),
-                supportScope(observed != null ? observed.supportBoundary() : desired.supportBoundary()),
-                observedEndpoint,
-                observed != null && !desired.connector().equals(observed.connector()),
-                validation != null && validation.passed() ? "passed" : "failed",
-                validation != null ? validation.failures() : List.of(),
-                validation != null ? validation.warnings() : List.of()
-            ));
+            components.put(observation.desiredManifest().component(), toComponentStatus(observation));
         }
         return new ExternalStackStatusResponse(components);
     }
@@ -41,20 +19,50 @@ public class ExternalStackStatusService {
     public ExternalStackProfileStatusResponse profileStatus(List<ConnectorProfile> profiles) {
         var profileRows = new LinkedHashMap<String, ProfileStatus>();
         for (var profile : profiles) {
-            var pack = compatibilityPack(profile.profileId());
-            profileRows.put(profile.profileId(), new ProfileStatus(
-                profile.profileId(),
-                profile.lifecycleStatus().name(),
-                profile.deploymentModes().stream().map(Enum::name).toList(),
-                profile.lifecycleStatus() == LifecycleStatus.supported_bundled
-                    || profile.lifecycleStatus() == LifecycleStatus.supported_external_byo,
-                supportScope(profile.supportBoundary()),
-                pack != null ? pack.requiredChecks() : List.of(),
-                pack != null ? pack.promotionEvidence() : List.of(),
-                pack != null ? pack.unsupportedModes() : List.of()
-            ));
+            profileRows.put(profile.profileId(), toProfileStatus(profile));
         }
         return new ExternalStackProfileStatusResponse(profileRows);
+    }
+
+    private static ComponentStatus toComponentStatus(ManifestObservation observation) {
+        var desired = observation.desiredManifest();
+        var observed = observation.observedManifest();
+        var component = desired.component();
+        var validation = observation.validationResult();
+        var observedEndpoint = observed != null ? observed.endpoint() : null;
+        if (validation != null && validation.metadata().containsKey(component + ".endpoint")) {
+            observedEndpoint = validation.metadata().get(component + ".endpoint");
+        }
+        return new ComponentStatus(
+            component,
+            desired.connector(),
+            observed != null ? observed.connector() : null,
+            desired.role().code(),
+            observed != null ? observed.role().code() : null,
+            observation.healthStatus(),
+            observation.degradedReason(),
+            supportScope(observed != null ? observed.supportBoundary() : desired.supportBoundary()),
+            observedEndpoint,
+            observed != null && !desired.connector().equals(observed.connector()),
+            validation != null && validation.passed() ? "passed" : "failed",
+            validation != null ? validation.failures() : List.of(),
+            validation != null ? validation.warnings() : List.of()
+        );
+    }
+
+    private ProfileStatus toProfileStatus(ConnectorProfile profile) {
+        var pack = compatibilityPack(profile.profileId());
+        return new ProfileStatus(
+            profile.profileId(),
+            profile.lifecycleStatus().code(),
+            profile.deploymentModes().stream().map(DeploymentMode::wire).toList(),
+            profile.lifecycleStatus() == LifecycleStatus.SUPPORTED_BUNDLED
+                || profile.lifecycleStatus() == LifecycleStatus.SUPPORTED_EXTERNAL_BYO,
+            supportScope(profile.supportBoundary()),
+            pack != null ? pack.requiredChecks() : List.of(),
+            pack != null ? pack.promotionEvidence() : List.of(),
+            pack != null ? pack.unsupportedModes() : List.of()
+        );
     }
 
     private static ConnectorCompatibilityPack compatibilityPack(String profileId) {

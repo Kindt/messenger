@@ -48,6 +48,7 @@ public final class JdbcPluginJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("listPresets failed: {}", e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return out;
     }
@@ -77,6 +78,7 @@ public final class JdbcPluginJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("listInstances failed: {}", e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return new PluginRepository.InstancePage(List.copyOf(out), total);
     }
@@ -94,6 +96,7 @@ public final class JdbcPluginJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("countInstances failed: {}", e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return 0;
     }
@@ -121,6 +124,7 @@ public final class JdbcPluginJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("findInstanceByOrgAndBotName failed: {}", e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -137,7 +141,7 @@ public final class JdbcPluginJdbcRepository {
             return ps.executeUpdate() == 1;
         } catch (Exception e) {
             log.warn("setInstanceEnabled failed: {}", e.getMessage());
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -160,6 +164,7 @@ public final class JdbcPluginJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("findInstance failed: {}", e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -185,7 +190,7 @@ public final class JdbcPluginJdbcRepository {
             return ps.executeUpdate() == 1;
         } catch (Exception e) {
             log.warn("insertInstance failed: {}", e.getMessage());
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -206,6 +211,7 @@ public final class JdbcPluginJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("findOrgPolicy failed: {}", e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -230,7 +236,7 @@ public final class JdbcPluginJdbcRepository {
             return ps.executeUpdate() >= 1;
         } catch (Exception e) {
             log.warn("upsertOrgPolicy failed: {}", e.getMessage());
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -251,7 +257,7 @@ public final class JdbcPluginJdbcRepository {
             return ps.executeUpdate() == 1;
         } catch (Exception e) {
             log.warn("configureOutbound failed: {}", e.getMessage());
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 

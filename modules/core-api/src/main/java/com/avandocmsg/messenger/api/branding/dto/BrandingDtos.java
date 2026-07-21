@@ -12,71 +12,53 @@ public final class BrandingDtos {
     }
 
     public static BrandingResponse fromMerged(UiBrandingPort.MergedBranding row) {
-        return toResponse(
+        var resolved = ShellLayout.normalize(row.shellLayout());
+        return new BrandingResponse(
             row.orgId(),
             row.palette(),
             row.tokenOverrides(),
             row.customCss(),
             row.brandTitle(),
             row.demoSkinsEnabled(),
-            row.shellLayout(),
+            resolved,
+            ShellLayout.authLayout(resolved),
+            ShellLayout.postLoginLayout(resolved),
             row.revision(),
             row.logoUrl()
         );
     }
 
     public static BrandingResponse fromPlatform(UiBrandingPort.PlatformBranding row) {
-        return toResponse(
+        var resolved = ShellLayout.normalize(row.shellLayout());
+        return new BrandingResponse(
             null,
             row.palette(),
             row.tokenOverrides(),
             row.customCss(),
             row.brandTitle(),
             row.demoSkinsEnabled(),
-            row.shellLayout(),
+            resolved,
+            ShellLayout.authLayout(resolved),
+            ShellLayout.postLoginLayout(resolved),
             row.revision(),
             null
         );
     }
 
     public static BrandingResponse fromOrg(UiBrandingPort.OrgBranding row) {
-        return toResponse(
+        var resolved = ShellLayout.normalize(row.shellLayout());
+        return new BrandingResponse(
             row.orgId(),
             row.palette(),
             row.tokenOverrides(),
             row.customCss(),
             row.brandTitle(),
             null,
-            row.shellLayout(),
-            row.revision(),
-            null
-        );
-    }
-
-    private static BrandingResponse toResponse(
-        UUID orgId,
-        String palette,
-        Map<String, String> tokenOverrides,
-        String customCss,
-        String brandTitle,
-        Boolean demoSkinsEnabled,
-        String shellLayout,
-        long revision,
-        String logoUrl
-    ) {
-        var resolved = ShellLayout.normalize(shellLayout);
-        return new BrandingResponse(
-            orgId,
-            palette,
-            tokenOverrides,
-            customCss,
-            brandTitle,
-            demoSkinsEnabled,
             resolved,
             ShellLayout.authLayout(resolved),
             ShellLayout.postLoginLayout(resolved),
-            revision,
-            logoUrl
+            row.revision(),
+            null
         );
     }
 

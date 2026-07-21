@@ -23,6 +23,8 @@ import java.util.UUID;
 
 /** Hexagonal application service for message reads and write-path (Phase 2b+). */
 public final class MessageApplicationService {
+    static final String ERROR_THREAD_INVALID = "error.message.thread_invalid";
+
     private final MessageRepositoryPort messageRepositoryPort;
     private final ChatRepositoryPort chatRepositoryPort;
     private final BlockRepositoryPort blockRepositoryPort;
@@ -35,73 +37,112 @@ public final class MessageApplicationService {
     private final MlsService mlsService;
     private final com.avandocmsg.messenger.api.compliance.DlpBridgeGate dlpBridgeGate;
 
+    /** Persistence and ACL ports. */
+    public record Ports(
+        MessageRepositoryPort messageRepositoryPort,
+        ChatRepositoryPort chatRepositoryPort,
+        BlockRepositoryPort blockRepositoryPort,
+        MessageQueryPort messageQueryPort
+    ) {}
+
+    /** Write-path coordinators. */
+    public record Coordinators(
+        MessageSendCoordinator sendCoordinator,
+        MessageEditCoordinator editCoordinator,
+        MessageDeleteCoordinator deleteCoordinator,
+        MessageReactionCoordinator reactionCoordinator,
+        MessagePinCoordinator pinCoordinator
+    ) {}
+
+    /** Optional MLS / DLP collaborators. */
+    public record Gateways(
+        MlsService mlsService,
+        com.avandocmsg.messenger.api.compliance.DlpBridgeGate dlpBridgeGate
+    ) {}
+
+    /** Constructor dependencies for {@link MessageApplicationService}. */
+    public record Dependencies(Ports ports, Coordinators coordinators, Gateways gateways) {}
+
+    public MessageApplicationService(Dependencies deps) {
+        var ports = deps.ports();
+        var coordinators = deps.coordinators();
+        var gateways = deps.gateways();
+        this.messageRepositoryPort = ports.messageRepositoryPort();
+        this.chatRepositoryPort = ports.chatRepositoryPort();
+        this.blockRepositoryPort = ports.blockRepositoryPort();
+        this.messageQueryPort = ports.messageQueryPort();
+        this.sendCoordinator = coordinators.sendCoordinator();
+        this.editCoordinator = coordinators.editCoordinator();
+        this.deleteCoordinator = coordinators.deleteCoordinator();
+        this.reactionCoordinator = coordinators.reactionCoordinator();
+        this.pinCoordinator = coordinators.pinCoordinator();
+        this.mlsService = gateways.mlsService();
+        this.dlpBridgeGate = gateways.dlpBridgeGate();
+    }
+
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort) {
-        this(messageRepositoryPort, chatRepositoryPort, null, null, null, null, null, null, null, null);
+        this(new Dependencies(
+            new Ports(messageRepositoryPort, chatRepositoryPort, null, null),
+            new Coordinators(null, null, null, null, null),
+            new Gateways(null, null)));
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
                                      BlockRepositoryPort blockRepositoryPort) {
-        this(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, null, null, null, null, null, null, null);
+        this(new Dependencies(
+            new Ports(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, null),
+            new Coordinators(null, null, null, null, null),
+            new Gateways(null, null)));
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
                                      BlockRepositoryPort blockRepositoryPort, MessageSendCoordinator sendCoordinator) {
-        this(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, sendCoordinator, null, null, null, null, null, null);
+        this(new Dependencies(
+            new Ports(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, null),
+            new Coordinators(sendCoordinator, null, null, null, null),
+            new Gateways(null, null)));
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
                                      BlockRepositoryPort blockRepositoryPort, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator) {
-        this(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, sendCoordinator, editCoordinator, null, null, null, null, null);
+        this(new Dependencies(
+            new Ports(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, null),
+            new Coordinators(sendCoordinator, editCoordinator, null, null, null),
+            new Gateways(null, null)));
     }
 
     public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
                                      BlockRepositoryPort blockRepositoryPort, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
                                      MessageReactionCoordinator reactionCoordinator) {
-        this(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, sendCoordinator, editCoordinator,
-            deleteCoordinator, reactionCoordinator, null, null, null);
+        this(new Dependencies(
+            new Ports(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, null),
+            new Coordinators(sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator, null),
+            new Gateways(null, null)));
     }
 
-    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort, // NOSONAR java:S107 — test/legacy wiring mirrors Coordinators arity
                                      BlockRepositoryPort blockRepositoryPort, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
                                      MessageReactionCoordinator reactionCoordinator,
                                      MessagePinCoordinator pinCoordinator) {
-        this(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, sendCoordinator, editCoordinator,
-            deleteCoordinator, reactionCoordinator, pinCoordinator, null, null);
+        this(new Dependencies(
+            new Ports(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, null),
+            new Coordinators(sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator),
+            new Gateways(null, null)));
     }
 
-    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
+    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort, // NOSONAR java:S107 — full wiring used by write-path unit tests
                                      BlockRepositoryPort blockRepositoryPort, MessageSendCoordinator sendCoordinator,
                                      MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
                                      MessageReactionCoordinator reactionCoordinator,
-                                     MessagePinCoordinator pinCoordinator,
-                                     MessageQueryPort messageQueryPort,
+                                     MessagePinCoordinator pinCoordinator, MessageQueryPort messageQueryPort,
                                      MlsService mlsService) {
-        this(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, sendCoordinator, editCoordinator,
-            deleteCoordinator, reactionCoordinator, pinCoordinator, messageQueryPort, mlsService, null);
-    }
-
-    public MessageApplicationService(MessageRepositoryPort messageRepositoryPort, ChatRepositoryPort chatRepositoryPort,
-                                     BlockRepositoryPort blockRepositoryPort, MessageSendCoordinator sendCoordinator,
-                                     MessageEditCoordinator editCoordinator, MessageDeleteCoordinator deleteCoordinator,
-                                     MessageReactionCoordinator reactionCoordinator,
-                                     MessagePinCoordinator pinCoordinator,
-                                     MessageQueryPort messageQueryPort,
-                                     MlsService mlsService,
-                                     com.avandocmsg.messenger.api.compliance.DlpBridgeGate dlpBridgeGate) {
-        this.messageRepositoryPort = messageRepositoryPort;
-        this.chatRepositoryPort = chatRepositoryPort;
-        this.blockRepositoryPort = blockRepositoryPort;
-        this.sendCoordinator = sendCoordinator;
-        this.editCoordinator = editCoordinator;
-        this.deleteCoordinator = deleteCoordinator;
-        this.reactionCoordinator = reactionCoordinator;
-        this.pinCoordinator = pinCoordinator;
-        this.messageQueryPort = messageQueryPort;
-        this.mlsService = mlsService;
-        this.dlpBridgeGate = dlpBridgeGate;
+        this(new Dependencies(
+            new Ports(messageRepositoryPort, chatRepositoryPort, blockRepositoryPort, messageQueryPort),
+            new Coordinators(sendCoordinator, editCoordinator, deleteCoordinator, reactionCoordinator, pinCoordinator),
+            new Gateways(mlsService, null)));
     }
 
     public Optional<Message> getMessageForMember(ChatId chatId, MessageId messageId, UserId viewerId) {
@@ -151,18 +192,18 @@ public final class MessageApplicationService {
             var threadId = UUID.fromString(request.threadId().trim());
             var root = messageRepositoryPort.findById(MessageId.of(threadId));
             if (root.isEmpty()) {
-                return Optional.of("error.message.thread_invalid");
+                return Optional.of(ERROR_THREAD_INVALID);
             }
             var message = root.get();
             if (!message.chatId().value().equals(chatId) || message.deleted()) {
-                return Optional.of("error.message.thread_invalid");
+                return Optional.of(ERROR_THREAD_INVALID);
             }
             if (message.threadId() != null) {
-                return Optional.of("error.message.thread_invalid");
+                return Optional.of(ERROR_THREAD_INVALID);
             }
             return Optional.empty();
         } catch (IllegalArgumentException e) {
-            return Optional.of("error.message.thread_invalid");
+            return Optional.of(ERROR_THREAD_INVALID);
         }
     }
 

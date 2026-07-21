@@ -17,6 +17,16 @@ public class ExternalStackRuntimeManifestProvider {
 
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory()).findAndRegisterModules();
 
+    private static final String FAMILY_POSTGRES = "postgres";
+    private static final String CONNECTOR_POSTGRES_16 = "postgres-16";
+    private static final String FAMILY_S3 = "s3-compatible";
+    private static final String FAMILY_REDIS = "redis-compatible";
+    private static final String PROTOCOL_REDIS = "redis";
+    private static final String COMPONENT_MEDIA = "media";
+    private static final String FAMILY_LIVEKIT = "livekit";
+    private static final String PROTOCOL_HTTP_JSON = "http-json";
+    private static final String UNKNOWN = "unknown";
+
     private final AppConfig appConfig;
     private final ExternalStackActiveProbeService activeProbeService;
 
@@ -38,20 +48,20 @@ public class ExternalStackRuntimeManifestProvider {
             return configured.stream().map(this::observation).toList();
         }
         return List.of(
-            observation(manifest(
+            observation(manifest(new ManifestSpec(
                 "relational-db-hot",
-                "postgres",
-                "postgres-16",
+                FAMILY_POSTGRES,
+                CONNECTOR_POSTGRES_16,
                 appConfig.dbJdbcUrl(),
                 "avandocmsg_hot",
                 "flyway-current",
                 "postgres-16-bundled",
                 List.of("jdbc_connectivity", "flyway_privileges", "pool_sizing"),
                 "hot-personal-data"
-            )),
-            observation(manifest(
+            ))),
+            observation(manifest(new ManifestSpec(
                 "object-storage",
-                "s3-compatible",
+                FAMILY_S3,
                 "minio-s3",
                 appConfig.minioEndpoint(),
                 appConfig.minioBucket(),
@@ -59,8 +69,8 @@ public class ExternalStackRuntimeManifestProvider {
                 "s3-minio-bundled",
                 List.of("put_get_head_delete_list", "multipart", "checksum"),
                 "file-content"
-            )),
-            observation(manifest(
+            ))),
+            observation(manifest(new ManifestSpec(
                 "messaging",
                 "nats",
                 "nats-2.10",
@@ -70,8 +80,8 @@ public class ExternalStackRuntimeManifestProvider {
                 "nats-2.10-bundled",
                 List.of("publish_subscribe_subject_prefixes", "queue_groups", "drain_behavior"),
                 "event-metadata"
-            )),
-            observation(manifest(
+            ))),
+            observation(manifest(new ManifestSpec(
                 "idp",
                 "oidc",
                 "keycloak-24",
@@ -81,19 +91,19 @@ public class ExternalStackRuntimeManifestProvider {
                 "keycloak-24-bundled",
                 List.of("issuer_jwks_tls", "token_signature_audience_issuer", "required_claims_user_org_roles"),
                 "identity-security"
-            )),
-            observation(manifest(
+            ))),
+            observation(manifest(new ManifestSpec(
                 "cache",
-                "redis-compatible",
+                FAMILY_REDIS,
                 "redis-7",
                 appConfig.redisUri(),
                 "default",
-                "redis",
+                PROTOCOL_REDIS,
                 "redis-7-bundled",
                 List.of("command_subset_get_set_del_expire_counters_ttl", "key_prefix_isolation"),
                 "cache-security-adjacent"
-            )),
-            observation(manifest(
+            ))),
+            observation(manifest(new ManifestSpec(
                 "web-edge",
                 "http-reverse-proxy",
                 "tomcat-11",
@@ -103,19 +113,19 @@ public class ExternalStackRuntimeManifestProvider {
                 "nginx-bundled",
                 List.of("health_routing", "forwarded_headers", "security_headers"),
                 "public-edge"
-            )),
-            observation(manifest(
-                "media",
-                "livekit",
-                "livekit",
+            ))),
+            observation(manifest(new ManifestSpec(
+                COMPONENT_MEDIA,
+                FAMILY_LIVEKIT,
+                FAMILY_LIVEKIT,
                 appConfig.livekitUrl(),
-                appConfig.livekitUrl().isBlank() ? "mesh-webrtc" : "livekit",
-                "livekit",
+                appConfig.livekitUrl().isBlank() ? "mesh-webrtc" : FAMILY_LIVEKIT,
+                FAMILY_LIVEKIT,
                 "livekit-1.8-bundled",
                 List.of("livekit_token_issue", "room_join", "vks_integration_candidate_gate"),
                 "media-metadata"
-            )),
-            observation(manifest(
+            ))),
+            observation(manifest(new ManifestSpec(
                 "turn",
                 "stun-turn",
                 "webrtc-ice",
@@ -125,8 +135,8 @@ public class ExternalStackRuntimeManifestProvider {
                 "explicit",
                 List.of("realm_secret", "relay_reachability", "udp_tcp_ports"),
                 "media-network"
-            )),
-            observation(manifest(
+            ))),
+            observation(manifest(new ManifestSpec(
                 "notifications",
                 "web-push",
                 "vapid",
@@ -136,29 +146,29 @@ public class ExternalStackRuntimeManifestProvider {
                 "webpush-vapid-bundled-config",
                 List.of("vapid_config", "gateway_config", "best_effort_semantics"),
                 "notification-metadata"
-            )),
-            observation(manifest(
+            ))),
+            observation(manifest(new ManifestSpec(
                 "dlp",
                 "dlp-integration",
                 "connector-runtime-dlp",
                 appConfig.integrationsBaseUrl(),
                 "dlp-policy",
-                "http-json",
+                PROTOCOL_HTTP_JSON,
                 "explicit",
                 List.of("endpoint_auth_tls", "verdict_schema", "tenant_policy", "e2ee_plaintext_boundary"),
                 "compliance-boundary"
-            )),
-            observation(manifest(
+            ))),
+            observation(manifest(new ManifestSpec(
                 "integrations",
                 "connector-runtime",
                 "webhook-plugin-bot-gateway",
                 appConfig.integrationsBaseUrl(),
                 "integrations-gateway",
-                "http-json",
+                PROTOCOL_HTTP_JSON,
                 "http-webhook-generic",
                 List.of("webhook_plugin_bot_gateway_endpoint", "event_schema", "retry_timeout", "audit_boundary"),
                 "integration-events"
-            ))
+            )))
         );
     }
 
@@ -182,20 +192,20 @@ public class ExternalStackRuntimeManifestProvider {
 
     public List<ConnectorProfile> profiles() {
         return List.of(
-            supportedBundled("postgres-16-bundled", "postgres", "postgres-16", "pg"),
-            supportedExternal("postgres-16-external", "postgres", "postgres-16", "pg"),
-            supportedBundled("s3-minio-bundled", "s3-compatible", "minio-s3", "s3"),
-            supportedExternal("s3-compatible-external", "s3-compatible", "s3-compatible", "s3"),
+            supportedBundled("postgres-16-bundled", FAMILY_POSTGRES, CONNECTOR_POSTGRES_16, "pg"),
+            supportedExternal("postgres-16-external", FAMILY_POSTGRES, CONNECTOR_POSTGRES_16, "pg"),
+            supportedBundled("s3-minio-bundled", FAMILY_S3, "minio-s3", "s3"),
+            supportedExternal("s3-compatible-external", FAMILY_S3, FAMILY_S3, "s3"),
             supportedBundled("nats-2.10-bundled", "nats", "nats-2.10", "nats"),
             supportedExternal("nats-2.x-external", "nats", "nats-2.x", "nats"),
             supportedBundled("keycloak-24-bundled", "oidc", "keycloak-24", "oidc"),
             supportedExternal("oidc-generic", "oidc", "oidc-generic", "oidc"),
-            supportedBundled("redis-7-bundled", "redis-compatible", "redis-7", "redis"),
-            supportedExternal("redis-compatible-external", "redis-compatible", "redis-compatible", "redis"),
-            supportedBundled("livekit-bundled", "livekit", "livekit", "media"),
-            integrationCandidate("vks-integration-candidate", "livekit", "vks-integration", "media"),
+            supportedBundled("redis-7-bundled", FAMILY_REDIS, "redis-7", PROTOCOL_REDIS),
+            supportedExternal("redis-compatible-external", FAMILY_REDIS, FAMILY_REDIS, PROTOCOL_REDIS),
+            supportedBundled("livekit-bundled", FAMILY_LIVEKIT, FAMILY_LIVEKIT, COMPONENT_MEDIA),
+            integrationCandidate("vks-integration-candidate", FAMILY_LIVEKIT, "vks-integration", COMPONENT_MEDIA),
             supportedBundled("web-push-vapid", "web-push", "vapid", "notifications"),
-            supportedExternal("dlp-external", "dlp-integration", "http-json", "dlp"),
+            supportedExternal("dlp-external", "dlp-integration", PROTOCOL_HTTP_JSON, "dlp"),
             supportedBundled("connector-runtime-bundled", "connector-runtime", "webhook-plugin-bot-gateway", "integrations")
         );
     }
@@ -217,47 +227,44 @@ public class ExternalStackRuntimeManifestProvider {
         ValidationResult validation,
         ExternalStackProbeResult probe
     ) {
-        if (probe.warnings().isEmpty() && probe.metadata().isEmpty()) {
+        if (probe.healthy() && probe.warnings().isEmpty() && probe.metadata().isEmpty()) {
             return validation;
+        }
+        var failures = new ArrayList<>(validation.failures());
+        if (!probe.healthy()) {
+            var reason = probe.degradedReason() != null && !probe.degradedReason().isBlank()
+                ? probe.degradedReason()
+                : "unhealthy";
+            failures.add(manifest.component() + " probe failed: " + reason);
         }
         var warnings = new ArrayList<>(validation.warnings());
         probe.warnings().forEach(w -> warnings.add(manifest.component() + " probe warning: " + w));
         var metadata = new LinkedHashMap<>(validation.metadata());
         probe.metadata().forEach((k, v) -> metadata.put(manifest.component() + "." + k, v));
         return new ValidationResult(
-            validation.passed(),
-            validation.failures(),
+            failures.isEmpty(),
+            failures,
             warnings,
             validation.redacted(),
             metadata
         );
     }
 
-    private ComponentBackendManifest manifest(
-        String component,
-        String backendFamily,
-        String connector,
-        String endpoint,
-        String resourceNameOrAlias,
-        String schemaOrProtocolVersion,
-        String compatibilityProfile,
-        List<String> capabilities,
-        String dataClassification
-    ) {
+    private ComponentBackendManifest manifest(ManifestSpec spec) {
         return new ComponentBackendManifest(
-            component,
-            backendFamily,
-            connector,
+            spec.component(),
+            spec.backendFamily(),
+            spec.connector(),
             "configured",
-            ExternalStackRole.active,
-            endpoint,
-            resourceNameOrAlias,
-            schemaOrProtocolVersion,
-            compatibilityProfile,
+            ExternalStackRole.ACTIVE,
+            spec.endpoint(),
+            spec.resourceNameOrAlias(),
+            spec.schemaOrProtocolVersion(),
+            spec.compatibilityProfile(),
             "configured",
             "app-config",
-            capabilities,
-            dataClassification,
+            spec.capabilities(),
+            spec.dataClassification(),
             SupportBoundary.bundled("korus"),
             Map.of("serve_traffic", "true")
         );
@@ -273,8 +280,8 @@ public class ExternalStackRuntimeManifestProvider {
             profileId,
             backendFamily,
             connector,
-            LifecycleStatus.supported_bundled,
-            List.of(DeploymentMode.bundled),
+            LifecycleStatus.SUPPORTED_BUNDLED,
+            List.of(DeploymentMode.BUNDLED),
             List.of("runtime_manifest"),
             validationContract,
             SupportBoundary.bundled("korus"),
@@ -292,8 +299,8 @@ public class ExternalStackRuntimeManifestProvider {
             profileId,
             backendFamily,
             connector,
-            LifecycleStatus.supported_external_byo,
-            List.of(DeploymentMode.external_byo, DeploymentMode.managed_by_customer),
+            LifecycleStatus.SUPPORTED_EXTERNAL_BYO,
+            List.of(DeploymentMode.EXTERNAL_BYO, DeploymentMode.MANAGED_BY_CUSTOMER),
             List.of("runtime_manifest"),
             validationContract,
             SupportBoundary.externalByo("customer"),
@@ -311,14 +318,26 @@ public class ExternalStackRuntimeManifestProvider {
             profileId,
             backendFamily,
             connector,
-            LifecycleStatus.integration_candidate,
-            List.of(DeploymentMode.external_byo, DeploymentMode.rf_candidate),
+            LifecycleStatus.INTEGRATION_CANDIDATE,
+            List.of(DeploymentMode.EXTERNAL_BYO, DeploymentMode.RF_CANDIDATE),
             List.of("integration_spike_required"),
             validationContract,
             SupportBoundary.externalByo("vendor"),
-            new ImpactModel("unknown", "unknown", "unknown", "customer-tco", "separate-integration-runbook")
+            new ImpactModel(UNKNOWN, UNKNOWN, UNKNOWN, "customer-tco", "separate-integration-runbook")
         );
     }
+
+    private record ManifestSpec(
+        String component,
+        String backendFamily,
+        String connector,
+        String endpoint,
+        String resourceNameOrAlias,
+        String schemaOrProtocolVersion,
+        String compatibilityProfile,
+        List<String> capabilities,
+        String dataClassification
+    ) {}
 
     private record ManifestFile(
         @JsonProperty("manifests") List<ComponentBackendManifest> manifests

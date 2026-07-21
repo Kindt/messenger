@@ -29,6 +29,14 @@ import java.util.UUID;
 public class AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final ObjectMapper MAPPER = MessengerJson.mapper();
+    private static final String HEADER_CONTENT_TYPE = "Content-Type";
+    private static final String HEADER_AUTHORIZATION = "Authorization";
+    private static final String CONTENT_TYPE_FORM = "application/x-www-form-urlencoded";
+    private static final String CONTENT_TYPE_JSON = "application/json";
+    private static final String BEARER_PREFIX = "Bearer ";
+    private static final String JSON_ACCESS_TOKEN = "access_token";
+    private static final String JSON_REFRESH_TOKEN = "refresh_token";
+    private static final String JSON_EXPIRES_IN = "expires_in";
 
     private final AppConfig appConfig;
     private final UserLookupPort userLookupPort;
@@ -77,7 +85,7 @@ public class AuthService {
 
             var httpRequest = HttpRequest.newBuilder()
                 .uri(URI.create(tokenEndpoint))
-                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header(HEADER_CONTENT_TYPE, CONTENT_TYPE_FORM)
                 .timeout(Duration.ofSeconds(10))
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
@@ -89,13 +97,17 @@ public class AuthService {
             }
 
             var json = MAPPER.readTree(response.body());
-            var accessToken = json.get("access_token").asText();
+            var accessToken = json.get(JSON_ACCESS_TOKEN).asText();
             syncUserFromAccessToken(accessToken);
             return new LoginResponse(
                 accessToken,
-                json.get("refresh_token").asText(),
-                json.get("expires_in").asInt()
+                json.get(JSON_REFRESH_TOKEN).asText(),
+                json.get(JSON_EXPIRES_IN).asInt()
             );
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Login interrupted", e);
+            return null;
         } catch (Exception e) {
             log.error("Login error", e);
             return null;
@@ -165,8 +177,8 @@ public class AuthService {
 
             var kcRequest = HttpRequest.newBuilder()
                 .uri(URI.create(usersEndpoint))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + adminToken)
+                .header(HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON)
+                .header(HEADER_AUTHORIZATION, BEARER_PREFIX + adminToken)
                 .timeout(Duration.ofSeconds(10))
                 .POST(HttpRequest.BodyPublishers.ofString(keycloakUser.toString()))
                 .build();
@@ -191,6 +203,10 @@ public class AuthService {
             return userId;
         } catch (UsernameExistsException e) {
             throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Keycloak user creation interrupted: {}", e.getMessage());
+            return null;
         } catch (Exception e) {
             log.warn("Keycloak user creation failed: {}", e.getMessage());
             return null;
@@ -198,8 +214,8 @@ public class AuthService {
     }
 
     /**
-     * РћС‚Р·С‹РІ refresh-С‚РѕРєРµРЅР° РІ Keycloak (RFC 7009, endpoint {@code .../openid-connect/revoke}).
-     * РРґРµРјРїРѕС‚РµРЅС‚РЅРѕ РґР»СЏ РєР»РёРµРЅС‚Р°: РїСЂРё СѓР¶Рµ РЅРµРґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕРј С‚РѕРєРµРЅРµ Keycloak РјРѕР¶РµС‚ РІРµСЂРЅСѓС‚СЊ 400 вЂ” СЃС‡РёС‚Р°РµРј СѓСЃРїРµС…РѕРј РґР»СЏ logout.
+     * Отзыв refresh-токена в Keycloak (RFC 7009, endpoint {@code .../openid-connect/revoke}).
+     * Идемпотентно для клиента: при уже недействительном токене Keycloak может вернуть 400 — считаем успехом для logout.
      */
     public boolean revokeRefreshToken(String refreshToken) {
         try {
@@ -209,7 +225,7 @@ public class AuthService {
                 + "&token_type_hint=refresh_token";
             var httpRequest = HttpRequest.newBuilder()
                 .uri(URI.create(revokeUrl))
-                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header(HEADER_CONTENT_TYPE, CONTENT_TYPE_FORM)
                 .timeout(Duration.ofSeconds(10))
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
@@ -218,11 +234,15 @@ public class AuthService {
             if (code >= 200 && code < 300) {
                 return true;
             }
-            // Keycloak: РЅРµРІРµСЂРЅС‹Р№/РёСЃС‚С‘РєС€РёР№ С‚РѕРєРµРЅ С‡Р°СЃС‚Рѕ РґР°С‘С‚ 400 вЂ” РґР»СЏ logout СЌС‚Рѕ РѕР¶РёРґР°РµРјРѕ
+            // Keycloak: неверный/истёкший токен часто даёт 400 — для logout это ожидаемо
             if (code == 400) {
                 return true;
             }
             log.warn("Keycloak revoke unexpected status: {}", code);
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Keycloak revoke interrupted: {}", e.getMessage());
             return false;
         } catch (Exception e) {
             log.warn("Keycloak revoke failed: {}", e.getMessage());
@@ -230,7 +250,7 @@ public class AuthService {
         }
     }
 
-    /** РљР°Рє {@link #login}, РЅРѕ РїРѕ refresh_token; РїСЂРё РѕС‚СЃСѓС‚СЃС‚РІРёРё РЅРѕРІРѕРіРѕ refresh РІ РѕС‚РІРµС‚Рµ Keycloak РїРѕРґСЃС‚Р°РІР»СЏРµС‚СЃСЏ РїРµСЂРµРґР°РЅРЅС‹Р№ С‚РѕРєРµРЅ. */
+    /** Как {@link #login}, но по refresh_token; при отсутствии нового refresh в ответе Keycloak подставляется переданный токен. */
     public LoginResponse refreshAccessToken(String refreshToken) {
         try {
             var tokenEndpoint = appConfig.keycloakIssuer() + "/protocol/openid-connect/token";
@@ -240,7 +260,7 @@ public class AuthService {
 
             var httpRequest = HttpRequest.newBuilder()
                 .uri(URI.create(tokenEndpoint))
-                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header(HEADER_CONTENT_TYPE, CONTENT_TYPE_FORM)
                 .timeout(Duration.ofSeconds(10))
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
@@ -250,13 +270,17 @@ public class AuthService {
                 return null;
             }
             var json = MAPPER.readTree(response.body());
-            var accessToken = json.get("access_token").asText();
-            var newRefresh = json.hasNonNull("refresh_token")
-                ? json.get("refresh_token").asText()
+            var accessToken = json.get(JSON_ACCESS_TOKEN).asText();
+            var newRefresh = json.hasNonNull(JSON_REFRESH_TOKEN)
+                ? json.get(JSON_REFRESH_TOKEN).asText()
                 : refreshToken;
-            var expiresIn = json.has("expires_in") ? json.get("expires_in").asInt() : 0;
+            var expiresIn = json.has(JSON_EXPIRES_IN) ? json.get(JSON_EXPIRES_IN).asInt() : 0;
             syncUserFromAccessToken(accessToken);
             return new LoginResponse(accessToken, newRefresh, expiresIn);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Refresh interrupted", e);
+            return null;
         } catch (Exception e) {
             log.error("Refresh error", e);
             return null;
@@ -295,7 +319,7 @@ public class AuthService {
             var uri = appConfig.keycloakAdminRealmBase() + "/users?username=" + urlEncode(username) + "&exact=true";
             var req = HttpRequest.newBuilder()
                 .uri(URI.create(uri))
-                .header("Authorization", "Bearer " + adminToken)
+                .header(HEADER_AUTHORIZATION, BEARER_PREFIX + adminToken)
                 .timeout(Duration.ofSeconds(10))
                 .GET()
                 .build();
@@ -308,6 +332,10 @@ public class AuthService {
                 return null;
             }
             return UUID.fromString(arr.get(0).get("id").asText());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("lookupKeycloakUserId interrupted: {}", e.getMessage());
+            return null;
         } catch (Exception e) {
             log.warn("lookupKeycloakUserId failed: {}", e.getMessage());
             return null;
@@ -338,7 +366,7 @@ public class AuthService {
 
             var request = HttpRequest.newBuilder()
                 .uri(URI.create(tokenEndpoint))
-                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header(HEADER_CONTENT_TYPE, CONTENT_TYPE_FORM)
                 .timeout(Duration.ofSeconds(10))
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
@@ -346,8 +374,11 @@ public class AuthService {
             var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 var json = MAPPER.readTree(response.body());
-                return json.get("access_token").asText();
+                return json.get(JSON_ACCESS_TOKEN).asText();
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Cannot get admin token (interrupted): {}", e.getMessage());
         } catch (Exception e) {
             log.warn("Cannot get admin token: {}", e.getMessage());
         }

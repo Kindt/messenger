@@ -23,6 +23,9 @@ public class LiveSessionService {
     private static final Logger log = LoggerFactory.getLogger(LiveSessionService.class);
     private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final int TOKEN_TTL_SEC = 3600;
+    private static final String CHANGE_UPDATED = "updated";
+    private static final String STATUS_ACTIVE = "active";
+    private static final String STATUS_STOPPED = "stopped";
 
     private final LiveSessionPort liveSessionPort;
     private final ChatPersistencePort chatPersistencePort;
@@ -61,7 +64,7 @@ public class LiveSessionService {
             liveSessionPort.join(UUID.fromString(session.liveSessionId()), userId, "host");
             publishChange("created", session, userId);
             liveSessionPort.findById(UUID.fromString(session.liveSessionId()))
-                .ifPresent(s -> publishChange("updated", s, userId));
+                .ifPresent(s -> publishChange(CHANGE_UPDATED, s, userId));
         });
         return created.flatMap(s -> liveSessionPort.findById(UUID.fromString(s.liveSessionId())));
     }
@@ -87,7 +90,7 @@ public class LiveSessionService {
 
     public Optional<JoinLiveSessionResponse> join(UUID sessionId, UUID userId) {
         var sessionOpt = liveSessionPort.findById(sessionId);
-        if (sessionOpt.isEmpty() || !"active".equals(sessionOpt.get().status())) {
+        if (sessionOpt.isEmpty() || !STATUS_ACTIVE.equals(sessionOpt.get().status())) {
             return Optional.empty();
         }
         var session = sessionOpt.get();
@@ -117,7 +120,7 @@ public class LiveSessionService {
         var updated = liveSessionPort.findById(sessionId).orElse(session);
         var canPublish = "host".equals(role) || "cohost".equals(role);
         var token = liveKitTokenService.createAccessToken(updated.roomName(), userId.toString(), canPublish, TOKEN_TTL_SEC);
-        publishChange("updated", updated, userId);
+        publishChange(CHANGE_UPDATED, updated, userId);
         return Optional.of(new JoinLiveSessionResponse(
             updated.liveSessionId(),
             updated.roomName(),
@@ -133,13 +136,13 @@ public class LiveSessionService {
         if (!liveSessionPort.leave(sessionId, userId)) {
             return false;
         }
-        liveSessionPort.findById(sessionId).ifPresent(s -> publishChange("updated", s, userId));
+        liveSessionPort.findById(sessionId).ifPresent(s -> publishChange(CHANGE_UPDATED, s, userId));
         return true;
     }
 
     public boolean end(UUID sessionId, UUID userId) {
         var session = liveSessionPort.findById(sessionId);
-        if (session.isEmpty() || !"active".equals(session.get().status())) {
+        if (session.isEmpty() || !STATUS_ACTIVE.equals(session.get().status())) {
             return false;
         }
         var chatId = UUID.fromString(session.get().chatId());
@@ -172,7 +175,7 @@ public class LiveSessionService {
             return Optional.empty();
         }
         return liveSessionPort.findById(sessionId).map(s -> {
-            publishChange("updated", s, userId);
+            publishChange(CHANGE_UPDATED, s, userId);
             return s;
         });
     }
@@ -192,11 +195,11 @@ public class LiveSessionService {
             return Optional.empty();
         }
         resolveModerationState(normalized).ifPresent(state -> liveSessionPort.setModerationState(sessionId, state));
-        if ("stop".equals(normalized) || "stopped".equals(normalized)) {
+        if ("stop".equals(normalized) || STATUS_STOPPED.equals(normalized)) {
             liveSessionPort.endSession(sessionId);
         }
         return liveSessionPort.findById(sessionId).map(s -> {
-            publishChange("stop".equals(normalized) || "stopped".equals(normalized) ? "ended" : "updated", s, userId);
+            publishChange("stop".equals(normalized) || STATUS_STOPPED.equals(normalized) ? "ended" : CHANGE_UPDATED, s, userId);
             return s;
         });
     }
@@ -224,7 +227,7 @@ public class LiveSessionService {
         if (chatPersistencePort.getMemberRole(chatId, userId) == null) {
             return Optional.empty();
         }
-        if (!"active".equals(session.get().status())) {
+        if (!STATUS_ACTIVE.equals(session.get().status())) {
             return Optional.empty();
         }
         return session;
@@ -250,7 +253,7 @@ public class LiveSessionService {
 
     private Optional<String> resolveModerationState(String action) {
         return switch (action) {
-            case "stop", "stopped" -> Optional.of("stopped");
+            case "stop", STATUS_STOPPED -> Optional.of(STATUS_STOPPED);
             case "slow_mode" -> Optional.of("slow_mode");
             case "open", "reopen" -> Optional.of("open");
             case "ban" -> Optional.of("restricted");

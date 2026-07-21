@@ -36,14 +36,11 @@ public final class FleetTargetRegistry {
             var raw = MAPPER.readValue(json.trim(), new TypeReference<List<FleetTarget>>() {});
             var validated = new ArrayList<FleetTarget>();
             for (var t : raw) {
-                if (t == null || !t.isEnabled()) {
-                    continue;
-                }
-                if (!isAllowedUrl(t.baseUrl())) {
+                if (t != null && t.isEnabled() && isAllowedUrl(t.baseUrl())) {
+                    validated.add(t);
+                } else if (t != null && t.isEnabled()) {
                     log.warn("Fleet target {} skipped: disallowed base_url {}", t.id(), t.baseUrl());
-                    continue;
                 }
-                validated.add(t);
             }
             return new FleetTargetRegistry(validated);
         } catch (Exception e) {

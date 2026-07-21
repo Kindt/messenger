@@ -24,7 +24,7 @@ class AuthRateLimiterTest {
     void allowLogin_blocksWhenOverLimit() {
         var cfg = mockConfig(2, 5);
         AtomicLong evalResult = new AtomicLong(3L);
-        RedisCommands<String, String> redis = evalOnlyRedis(() -> evalResult.get());
+        RedisCommands<String, String> redis = evalOnlyRedis(evalResult::get);
         var lim = AuthRateLimiter.redis(redis, cfg);
         assertFalse(lim.allowLogin("10.0.0.1"));
     }
@@ -34,7 +34,7 @@ class AuthRateLimiterTest {
     void allowLogin_allowsAtBoundary() {
         var cfg = mockConfig(3, 5);
         AtomicLong evalResult = new AtomicLong(3L);
-        RedisCommands<String, String> redis = evalOnlyRedis(() -> evalResult.get());
+        RedisCommands<String, String> redis = evalOnlyRedis(evalResult::get);
         var lim = AuthRateLimiter.redis(redis, cfg);
         assertTrue(lim.allowLogin("10.0.0.2"));
     }

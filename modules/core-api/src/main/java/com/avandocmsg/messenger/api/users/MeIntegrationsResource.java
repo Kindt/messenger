@@ -18,6 +18,7 @@ import jakarta.ws.rs.core.SecurityContext;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Path("/v1/me/integrations")
@@ -45,33 +46,39 @@ public class MeIntegrationsResource {
         var orgId = UUID.fromString(profile.orgId());
         var items = new ArrayList<MeIntegrationsResponse.IntegrationItem>();
         for (var instance : pluginRepository.listInstances(orgId)) {
-            if (!instance.enabled() || !"L0".equalsIgnoreCase(instance.pluginClass())) {
-                continue;
-            }
-            var launcher = launcherFromConfig(instance.configJson());
-            if (launcher != null && !launcher.visible()) {
-                continue;
-            }
-            var label = launcher != null && launcher.label() != null && !launcher.label().isBlank()
-                ? launcher.label()
-                : instance.displayName();
-            var launchUrl = launcher != null ? launcher.launchUrl() : null;
-            if (launchUrl == null || launchUrl.isBlank()) {
-                launchUrl = firstMenuUrl(instance.configJson());
-            }
-            if (launchUrl == null || launchUrl.isBlank()) {
-                continue;
-            }
-            var openMode = launcher != null && launcher.openMode() != null ? launcher.openMode() : "iframe";
-            items.add(new MeIntegrationsResponse.IntegrationItem(
-                instance.id().toString(),
-                label,
-                instance.botName(),
-                launcher != null ? launcher.iconUrl() : null,
-                launchUrl,
-                openMode));
+            toIntegrationItem(instance).ifPresent(items::add);
         }
         return Response.ok(new MeIntegrationsResponse(items, MeIntegrationsVitrine.tiles())).build();
+    }
+
+    private static Optional<MeIntegrationsResponse.IntegrationItem> toIntegrationItem(
+        PluginRepository.InstanceRow instance
+    ) {
+        if (!instance.enabled() || !"L0".equalsIgnoreCase(instance.pluginClass())) {
+            return Optional.empty();
+        }
+        var launcher = launcherFromConfig(instance.configJson());
+        if (launcher != null && !launcher.visible()) {
+            return Optional.empty();
+        }
+        var label = launcher != null && launcher.label() != null && !launcher.label().isBlank()
+            ? launcher.label()
+            : instance.displayName();
+        var launchUrl = launcher != null ? launcher.launchUrl() : null;
+        if (launchUrl == null || launchUrl.isBlank()) {
+            launchUrl = firstMenuUrl(instance.configJson());
+        }
+        if (launchUrl == null || launchUrl.isBlank()) {
+            return Optional.empty();
+        }
+        var openMode = launcher != null && launcher.openMode() != null ? launcher.openMode() : "iframe";
+        return Optional.of(new MeIntegrationsResponse.IntegrationItem(
+            instance.id().toString(),
+            label,
+            instance.botName(),
+            launcher != null ? launcher.iconUrl() : null,
+            launchUrl,
+            openMode));
     }
 
     private static LauncherConfig launcherFromConfig(JsonNode config) {

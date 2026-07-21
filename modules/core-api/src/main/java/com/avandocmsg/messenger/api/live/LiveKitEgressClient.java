@@ -22,6 +22,11 @@ public final class LiveKitEgressClient {
 
     private static final Logger log = LoggerFactory.getLogger(LiveKitEgressClient.class);
     private static final ObjectMapper MAPPER = MessengerJson.mapper();
+    private static final String HEADER_AUTHORIZATION = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
+    private static final String HEADER_CONTENT_TYPE = "Content-Type";
+    private static final String APPLICATION_JSON = "application/json";
+    private static final String FIELD_EGRESS_ID = "egressId";
 
     private final AppConfig appConfig;
     private final LiveKitTokenService tokenService;
@@ -63,23 +68,21 @@ public final class LiveKitEgressClient {
             var token = tokenService.createRoomRecordToken(roomName, 7200);
             var url = appConfig.livekitEgressUrl().replaceAll("/$", "")
                 + "/twirp/livekit.Egress/StartRoomCompositeEgress";
-            var req = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofSeconds(30))
-                .header("Authorization", "Bearer " + token)
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body), StandardCharsets.UTF_8))
-                .build();
-            var resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            var resp = httpClient.send(jsonPost(url, token, body), HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
                 log.warn("LiveKit egress start failed HTTP {}: {}", resp.statusCode(), resp.body());
                 return Optional.empty();
             }
             JsonNode root = MAPPER.readTree(resp.body());
-            var egressId = textOrNull(root, "egressId");
+            var egressId = textOrNull(root, FIELD_EGRESS_ID);
             if (egressId == null) {
                 egressId = textOrNull(root, "egress_id");
             }
             return egressId != null && !egressId.isBlank() ? Optional.of(egressId) : Optional.empty();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("LiveKit egress start interrupted for room {}: {}", roomName, e.toString());
+            return Optional.empty();
         } catch (Exception e) {
             log.warn("LiveKit egress start failed for room {}: {}", roomName, e.toString());
             return Optional.empty();
@@ -91,17 +94,14 @@ public final class LiveKitEgressClient {
             return;
         }
         try {
-            var body = Map.of("egressId", egressId);
+            var body = Map.of(FIELD_EGRESS_ID, egressId);
             var token = tokenService.createRoomRecordToken("*", 300);
             var url = appConfig.livekitEgressUrl().replaceAll("/$", "")
                 + "/twirp/livekit.Egress/StopEgress";
-            var req = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofSeconds(30))
-                .header("Authorization", "Bearer " + token)
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body), StandardCharsets.UTF_8))
-                .build();
-            httpClient.send(req, HttpResponse.BodyHandlers.discarding());
+            httpClient.send(jsonPost(url, token, body), HttpResponse.BodyHandlers.discarding());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("LiveKit egress stop interrupted for {}: {}", egressId, e.toString());
         } catch (Exception e) {
             log.warn("LiveKit egress stop failed for {}: {}", egressId, e.toString());
         }
@@ -112,17 +112,11 @@ public final class LiveKitEgressClient {
             return Optional.empty();
         }
         try {
-            var body = Map.of("egressId", egressId);
+            var body = Map.of(FIELD_EGRESS_ID, egressId);
             var token = tokenService.createRoomRecordToken("*", 300);
             var url = appConfig.livekitEgressUrl().replaceAll("/$", "")
                 + "/twirp/livekit.Egress/GetEgress";
-            var req = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofSeconds(15))
-                .header("Authorization", "Bearer " + token)
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body), StandardCharsets.UTF_8))
-                .build();
-            var resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            var resp = httpClient.send(jsonPost(url, token, body), HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
                 return Optional.empty();
             }
@@ -131,10 +125,23 @@ public final class LiveKitEgressClient {
             var status = textOrNull(info, "status");
             var filepath = extractFilepath(info);
             return Optional.of(new EgressInfo(egressId, status, filepath));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.debug("LiveKit getEgress interrupted for {}: {}", egressId, e.toString());
+            return Optional.empty();
         } catch (Exception e) {
             log.debug("LiveKit getEgress failed for {}: {}", egressId, e.toString());
             return Optional.empty();
         }
+    }
+
+    private HttpRequest jsonPost(String url, String token, Object body) throws Exception {
+        return HttpRequest.newBuilder(URI.create(url))
+            .timeout(Duration.ofSeconds(30))
+            .header(HEADER_AUTHORIZATION, BEARER_PREFIX + token)
+            .header(HEADER_CONTENT_TYPE, APPLICATION_JSON)
+            .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body), StandardCharsets.UTF_8))
+            .build();
     }
 
     private static String extractFilepath(JsonNode info) {

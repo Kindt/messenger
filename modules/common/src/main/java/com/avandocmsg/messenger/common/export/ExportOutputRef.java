@@ -8,6 +8,8 @@ import java.util.Optional;
 public final class ExportOutputRef {
 
     public static final String MINIO_PREFIX = "minio:";
+    public static final String EXPORT_ZIP_SUFFIX = ".export.zip";
+    public static final String EXPORT_JSON_SUFFIX = ".export.json";
 
     /** Entry inside {@code .export.zip} bundles. */
     public static final String ZIP_JSON_ENTRY = "export.json";
@@ -26,22 +28,22 @@ public final class ExportOutputRef {
     }
 
     public static String objectKey(String jobId) {
-        return "exports/" + safeJobIdForFilename(jobId) + ".export.json";
+        return "exports/" + safeJobIdForFilename(jobId) + EXPORT_JSON_SUFFIX;
     }
 
     public static String zipObjectKey(String jobId) {
-        return "exports/" + safeJobIdForFilename(jobId) + ".export.zip";
+        return "exports/" + safeJobIdForFilename(jobId) + EXPORT_ZIP_SUFFIX;
     }
 
     public static boolean isZipBundlePath(String outputPath) {
-        return outputPath != null && outputPath.endsWith(".export.zip");
+        return outputPath != null && outputPath.endsWith(EXPORT_ZIP_SUFFIX);
     }
 
     public static String downloadFileName(String jobId, String outputPath) {
         if (isZipBundlePath(outputPath)) {
-            return safeJobIdForFilename(jobId) + ".export.zip";
+            return safeJobIdForFilename(jobId) + EXPORT_ZIP_SUFFIX;
         }
-        return safeJobIdForFilename(jobId) + ".export.json";
+        return safeJobIdForFilename(jobId) + EXPORT_JSON_SUFFIX;
     }
 
     public static String minioStoredPath(String objectKey) {

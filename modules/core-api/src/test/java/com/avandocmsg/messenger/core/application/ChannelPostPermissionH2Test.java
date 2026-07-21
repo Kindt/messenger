@@ -1,7 +1,6 @@
 package com.avandocmsg.messenger.core.application;
 
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcMessageRepositoryAdapter;
@@ -22,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class ChannelPostPermissionH2Test {
 
     private HikariDataSource ds;
-    private ChatRepository chatRepository;
     private MessageApplicationService messageService;
     private UUID channelId;
     private UUID ownerId;
@@ -83,7 +81,6 @@ class ChannelPostPermissionH2Test {
             ps.setObject(1, memberId);
             ps.executeUpdate();
         }
-        chatRepository = new ChatRepository(ds, Clock.systemUTC(), UuidGenerator.standard());
         try (var c = ds.getConnection(); var st = c.createStatement()) {
             st.execute("INSERT INTO chats (id, title, type, owner_id, channel_post_policy, created_at) VALUES ('"
                 + channelId + "', 'news', 'channel', '" + ownerId + "', 'admins_only', CURRENT_TIMESTAMP)");

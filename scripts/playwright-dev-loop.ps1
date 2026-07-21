@@ -66,7 +66,10 @@ function Invoke-TierPlaywright {
         [int]$ResumeAfterIndex = 0
     )
     $e2e = Join-Path $Root "tests\e2e-web"
-    $log = Join-Path $RunDir "playwright-dev-loop.log"
+    $aggregateLog = Join-Path $RunDir "playwright-dev-loop.log"
+    $log = if ($env:KORUS_PW_LOOP_LOG) { $env:KORUS_PW_LOOP_LOG } else { Join-Path $RunDir "playwright-dev-loop.$TierName.log" }
+    $env:KORUS_PW_LOOP_LOG = $log
+    $env:KORUS_PW_ACTIVE_LOG = $log
     $prevStartAfter = $env:UI_TESTS_START_AFTER_INDEX
     if ($ResumeAfterIndex -gt 0) {
         $env:UI_TESTS_START_AFTER_INDEX = "$ResumeAfterIndex"
@@ -89,6 +92,10 @@ function Invoke-TierPlaywright {
             $pwArgs += "--grep=$([string]$TierDef.grep)"
         }
         Write-Host "--- tier=$TierName npx $($pwArgs -join ' ') ---"
+        $header = "--- tier=$TierName $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ---"
+        foreach ($path in @($log, $aggregateLog)) {
+            try { Add-Content -LiteralPath $path -Value $header -Encoding utf8 -ErrorAction Stop } catch { }
+        }
         $prevEap = $ErrorActionPreference
         $ErrorActionPreference = 'Continue'
         try {
@@ -96,8 +103,11 @@ function Invoke-TierPlaywright {
             & npx @pwArgs 2>&1 | ForEach-Object {
                 $line = if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.ToString() } else { "$_" }
                 if ($line -match '(?i)NO_COLOR.*FORCE_COLOR') { return }
-                if ($_ -is [System.Management.Automation.ErrorRecord]) { Write-Host $line } else { Write-Output $_ }
-            } | Tee-Object -FilePath $log | Out-Host
+                foreach ($path in @($log, $aggregateLog)) {
+                    try { Add-Content -LiteralPath $path -Value $line -Encoding utf8 -ErrorAction SilentlyContinue } catch { }
+                }
+                if ($_ -is [System.Management.Automation.ErrorRecord]) { Write-Host $line } else { Write-Host $_ }
+            }
             $exit = $LASTEXITCODE
         } finally {
             $ErrorActionPreference = $prevEap

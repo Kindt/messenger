@@ -23,11 +23,18 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.AclEntry;
+import java.nio.file.attribute.AclEntryPermission;
+import java.nio.file.attribute.AclEntryType;
+import java.nio.file.attribute.AclFileAttributeView;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.nio.file.attribute.UserPrincipal;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -788,7 +795,7 @@ final class RetentionHotBodyJanitor {
         ) throws Exception {
             Path tmp = null;
             try {
-                tmp = Files.createTempFile("retention-snapshot-", ".json");
+                tmp = createSecureTempFile();
                 MAPPER.writeValue(tmp.toFile(), payload);
                 long fileSize = Files.size(tmp);
                 if (shouldWriteChunkedSnapshot(chunkThreshold, fileSize)) {
@@ -827,6 +834,36 @@ final class RetentionHotBodyJanitor {
                         log.warn(logMessages().format("worker.retention.hot_body.temp_delete_failed", tmp, delEx.getMessage()));
                     }
                 }
+            }
+        }
+
+        private static Path createSecureTempFile() throws java.io.IOException {
+            try {
+                var attr = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
+                return Files.createTempFile("retention-snapshot-", ".json", attr);
+            } catch (UnsupportedOperationException posixUnsupported) {
+                Path tmp = Files.createTempFile("retention-snapshot-", ".json"); // NOSONAR java:S5443 — restrictOwnerOnly applied before return
+                restrictOwnerOnly(tmp);
+                return tmp;
+            }
+        }
+
+        private static void restrictOwnerOnly(Path path) throws java.io.IOException {
+            AclFileAttributeView aclView = Files.getFileAttributeView(path, AclFileAttributeView.class);
+            if (aclView != null) {
+                UserPrincipal owner = aclView.getOwner();
+                AclEntry entry = AclEntry.newBuilder()
+                    .setType(AclEntryType.ALLOW)
+                    .setPrincipal(owner)
+                    .setPermissions(EnumSet.allOf(AclEntryPermission.class))
+                    .build();
+                aclView.setAcl(List.of(entry));
+                return;
+            }
+            var file = path.toFile();
+            if (!(file.setReadable(false, false) && file.setWritable(false, false)
+                && file.setReadable(true, true) && file.setWritable(true, true))) {
+                log.warn("Unable to fully restrict retention snapshot temp file permissions on {}", path);
             }
         }
     }

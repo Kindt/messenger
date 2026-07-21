@@ -52,34 +52,7 @@ public class AdminProductModulesResource {
         var overrides = overrideRepository.findAll();
         var rows = new ArrayList<AdminProductModulesResponse.AddonRow>();
         for (var addon : catalog.addons()) {
-            var state = resolved.get(addon.id());
-            var override = overrides.get(addon.id());
-            rows.add(new AdminProductModulesResponse.AddonRow(
-                addon.id(),
-                addon.label(),
-                state.selected(),
-                state.installed(),
-                state.schemaInstalled(),
-                state.runtimeReady(),
-                state.adminEnabled(),
-                state.state().name(),
-                state.reason() != null ? state.reason().name() : null,
-                override != null && override.disabled(),
-                override != null && override.forceEnabled(),
-                addon.internalInfra(),
-                addon.runtime() != null ? addon.runtime().services() : java.util.List.of(),
-                addon.runtime() != null ? addon.runtime().workers() : java.util.List.of(),
-                addon.runtime() != null ? addon.runtime().requiredSecrets() : java.util.List.of(),
-                addon.migrationBundle() != null ? addon.migrationBundle().id() : null,
-                addon.migrationBundle() != null ? addon.migrationBundle().historyTable() : null,
-                addon.gates() != null && addon.gates().api() != null ? addon.gates().api().size() : 0,
-                addon.gates() != null && addon.gates().ui() != null ? addon.gates().ui().size() : 0,
-                addon.gates() != null && addon.gates().jobs() != null ? addon.gates().jobs().size() : 0,
-                addon.gates() != null && addon.gates().hooks() != null ? addon.gates().hooks().size() : 0,
-                addon.acceptance() != null ? addon.acceptance().positive() : java.util.List.of(),
-                addon.acceptance() != null ? addon.acceptance().disabled() : java.util.List.of(),
-                addon.acceptance() != null ? addon.acceptance().degraded() : java.util.List.of()
-            ));
+            rows.add(toAddonRow(addon, resolved.get(addon.id()), overrides.get(addon.id())));
         }
         return new AdminProductModulesResponse(
             new AdminProductModulesResponse.BaseRow(
@@ -91,6 +64,47 @@ public class AdminProductModulesResource {
         );
     }
 
+    private static AdminProductModulesResponse.AddonRow toAddonRow(
+        ProductModulesCatalog.AddonEntry addon,
+        PlatformModuleRegistry.ResolvedAddonState state,
+        PlatformModuleOverrideRow override
+    ) {
+        var runtime = addon.runtime();
+        var gates = addon.gates();
+        var acceptance = addon.acceptance();
+        var migration = addon.migrationBundle();
+        return new AdminProductModulesResponse.AddonRow(
+            addon.id(),
+            addon.label(),
+            state.selected(),
+            state.installed(),
+            state.schemaInstalled(),
+            state.runtimeReady(),
+            state.adminEnabled(),
+            state.state().code(),
+            state.reason() != null ? state.reason().code() : null,
+            override != null && override.disabled(),
+            override != null && override.forceEnabled(),
+            addon.internalInfra(),
+            runtime != null ? runtime.services() : java.util.List.of(),
+            runtime != null ? runtime.workers() : java.util.List.of(),
+            runtime != null ? runtime.requiredSecrets() : java.util.List.of(),
+            migration != null ? migration.id() : null,
+            migration != null ? migration.historyTable() : null,
+            gateSize(gates == null ? null : gates.api()),
+            gateSize(gates == null ? null : gates.ui()),
+            gateSize(gates == null ? null : gates.jobs()),
+            gateSize(gates == null ? null : gates.hooks()),
+            acceptance != null ? acceptance.positive() : java.util.List.of(),
+            acceptance != null ? acceptance.disabled() : java.util.List.of(),
+            acceptance != null ? acceptance.degraded() : java.util.List.of()
+        );
+    }
+
+    private static int gateSize(java.util.List<?> gates) {
+        return gates != null ? gates.size() : 0;
+    }
+
     @PUT
     @Path("{addonId}/override")
     @Operation(summary = "Admin soft-disable add-on", security = @SecurityRequirement(name = "bearerAuth"))
@@ -100,10 +114,10 @@ public class AdminProductModulesResource {
         @Context SecurityContext securityContext
     ) {
         registry.resolveAddon(addonId);
-        PlatformModuleReason reason = PlatformModuleReason.admin_override;
+        PlatformModuleReason reason = PlatformModuleReason.ADMIN_OVERRIDE;
         if (body.overrideReason() != null && !body.overrideReason().isBlank()) {
             try {
-                reason = PlatformModuleReason.valueOf(body.overrideReason());
+                reason = PlatformModuleReason.fromCode(body.overrideReason());
             } catch (IllegalArgumentException e) {
                 return Response.status(Response.Status.BAD_REQUEST).build();
             }

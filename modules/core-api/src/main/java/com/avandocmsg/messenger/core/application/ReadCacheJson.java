@@ -9,6 +9,10 @@ import java.util.Optional;
 /** JSON helpers for read-cache user profile blobs. */
 public final class ReadCacheJson {
     private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER = MessengerJson.mapper();
+    private static final String FIELD_CREATED_AT = "createdAt";
+    private static final String FIELD_LAST_SEEN_AT = "lastSeenAt";
+    private static final String FIELD_DND_UNTIL = "dndUntil";
+    private static final String FIELD_AVATAR_FILE_ID = "avatarFileId";
 
     private ReadCacheJson() {
     }
@@ -21,21 +25,21 @@ public final class ReadCacheJson {
             node.put("phone", profile.phone());
             node.put("hidden", profile.hidden());
             if (profile.createdAt() != null) {
-                node.put("createdAt", profile.createdAt().toString());
+                node.put(FIELD_CREATED_AT, profile.createdAt().toString());
             }
             node.put("presenceStatus", profile.presenceStatus());
             if (profile.lastSeenAt() != null) {
-                node.put("lastSeenAt", profile.lastSeenAt().toString());
+                node.put(FIELD_LAST_SEEN_AT, profile.lastSeenAt().toString());
             }
             node.put("orgId", profile.orgId());
             node.put("privacyDisableReadReceipts", profile.privacyDisableReadReceipts());
             node.put("uiLocale", profile.uiLocale());
             node.put("customStatusText", profile.customStatusText());
             if (profile.dndUntil() != null) {
-                node.put("dndUntil", profile.dndUntil().toString());
+                node.put(FIELD_DND_UNTIL, profile.dndUntil().toString());
             }
             if (profile.avatarFileId() != null) {
-                node.put("avatarFileId", profile.avatarFileId().value().toString());
+                node.put(FIELD_AVATAR_FILE_ID, profile.avatarFileId().value().toString());
             }
             node.put("avatarHidden", profile.avatarHidden());
             return Optional.of(MAPPER.writeValueAsString(node));
@@ -48,16 +52,16 @@ public final class ReadCacheJson {
         try {
             var node = MAPPER.readTree(json);
             var id = UserId.of(java.util.UUID.fromString(node.get("id").asText()));
-            var createdAt = node.hasNonNull("createdAt")
-                ? java.time.Instant.parse(node.get("createdAt").asText()) : null;
-            var lastSeen = node.hasNonNull("lastSeenAt")
-                ? java.time.Instant.parse(node.get("lastSeenAt").asText()) : null;
-            var dndUntil = node.hasNonNull("dndUntil")
-                ? java.time.Instant.parse(node.get("dndUntil").asText()) : null;
+            var createdAt = node.hasNonNull(FIELD_CREATED_AT)
+                ? java.time.Instant.parse(node.get(FIELD_CREATED_AT).asText()) : null;
+            var lastSeen = node.hasNonNull(FIELD_LAST_SEEN_AT)
+                ? java.time.Instant.parse(node.get(FIELD_LAST_SEEN_AT).asText()) : null;
+            var dndUntil = node.hasNonNull(FIELD_DND_UNTIL)
+                ? java.time.Instant.parse(node.get(FIELD_DND_UNTIL).asText()) : null;
             com.avandocmsg.messenger.core.domain.FileId avatarFileId = null;
-            if (node.hasNonNull("avatarFileId")) {
+            if (node.hasNonNull(FIELD_AVATAR_FILE_ID)) {
                 avatarFileId = com.avandocmsg.messenger.core.domain.FileId.of(
-                    java.util.UUID.fromString(node.get("avatarFileId").asText()));
+                    java.util.UUID.fromString(node.get(FIELD_AVATAR_FILE_ID).asText()));
             }
             return Optional.of(new UserProfile(
                 id,

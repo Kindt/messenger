@@ -12,13 +12,27 @@ if ($Help) {
 }
 
 $Root = Split-Path -Parent $PSScriptRoot
+$gitBash = Join-Path ${env:ProgramFiles} "Git\bin\bash.exe"
+function Get-SmokeBash {
+    if (Test-Path $gitBash) { return $gitBash }
+    $cmd = Get-Command bash -ErrorAction SilentlyContinue
+    if ($cmd -and $cmd.Source -notmatch '\\Windows\\System32\\bash\.exe$') { return $cmd.Source }
+    throw "Git bash required (avoid WSL store stub)"
+}
+
 $steps = @(
-    @{ Name = "export-compliance-flow"; Script = "smoke-export-compliance-flow.sh" }
-    @{ Name = "export-compliance-pack"; Script = "smoke-export-compliance-pack.sh" }
-    @{ Name = "openapi-export-compliance"; Script = "smoke-openapi-export-compliance.sh" }
+    @{ Name = "export-compliance-flow"; Script = "smoke-export-compliance-flow.ps1" }
+    @{ Name = "export-compliance-pack"; Script = "smoke-export-compliance-pack.ps1" }
+    @{ Name = "openapi-export-compliance"; Script = "smoke-openapi-export-compliance.ps1" }
     @{ Name = "export-gdpr-fulfillment"; Script = "smoke-export-gdpr-fulfillment.ps1" }
     @{ Name = "export-retention-gate"; Script = "smoke-export-retention-gate.ps1" }
 )
+
+. (Join-Path $Root "scripts\lib\Resolve-QemuLabWorkerMetrics.ps1")
+$metrics = Resolve-QemuLabWorkerMetrics -ApiBaseUrl $ApiBaseUrl
+. (Join-Path $Root "scripts\lib\Reset-QemuLabOrgIpAllowlist.ps1")
+& (Join-Path $Root "scripts\vpp\Wait-AuthRateLimitCooldown.ps1") -BaseUrl $ApiBaseUrl -MaxSec 180 | Out-Null
+Reset-QemuLabOrgIpAllowlist -BaseUrl $ApiBaseUrl | Out-Null
 
 foreach ($s in $steps) {
     Write-Host ""
@@ -26,10 +40,10 @@ foreach ($s in $steps) {
     $path = Join-Path $PSScriptRoot $s.Script
     if (-not (Test-Path $path)) { Write-Host "[FAIL] missing $path"; exit 1 }
     if ($s.Script -like "*.sh") {
-        $bash = Get-Command bash -ErrorAction SilentlyContinue
-        if (-not $bash) { Write-Host "[FAIL] bash required for $($s.Script)"; exit 1 }
         $env:BASE_URL = $ApiBaseUrl
-        & bash $path
+        & (Get-SmokeBash) $path
+    } elseif ($s.Script -like "*export-compliance-pack.ps1") {
+        & $path -BaseUrl $ApiBaseUrl -WorkerMetricsUrl $metrics.WorkerMetricsUrl -RetentionMetricsUrl $metrics.RetentionMetricsUrl
     } else {
         & $path -BaseUrl $ApiBaseUrl
     }

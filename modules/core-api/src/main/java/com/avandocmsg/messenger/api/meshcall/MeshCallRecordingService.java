@@ -23,6 +23,9 @@ public final class MeshCallRecordingService {
     private static final String KIND_COMPOSITE = "composite";
     private static final String MODE_MESH = "mesh";
     private static final String MODE_COMPOSITE = "composite";
+    private static final String AUDIT_ENTITY_SESSION = "mesh_call_session";
+    private static final String AUDIT_ENTITY_RECORDING = "mesh_call_recording";
+    private static final String AUDIT_DETAIL_SESSION_ID = "{\"session_id\":\"";
 
     private final MeshCallRecordingRepository repository;
     private final ChatPersistencePort chatPersistencePort;
@@ -33,7 +36,7 @@ public final class MeshCallRecordingService {
     private final FileMetadataPort fileMetadataPort;
     private final UuidGenerator uuidGenerator;
 
-    public MeshCallRecordingService(
+    public MeshCallRecordingService( // NOSONAR java:S107
         MeshCallRecordingRepository repository,
         ChatPersistencePort chatPersistencePort,
         AuditPort auditPort,
@@ -59,7 +62,7 @@ public final class MeshCallRecordingService {
         }
         var mode = normalizeMediaMode(mediaMode);
         var sessionId = repository.createSession(chatId, userId, mode);
-        auditPort.record(userId, "mesh_call.session.started", "mesh_call_session", sessionId.toString(),
+        auditPort.record(userId, "mesh_call.session.started", AUDIT_ENTITY_SESSION, sessionId.toString(),
             "{\"chat_id\":\"" + chatId + "\",\"media_mode\":\"" + mode + "\"}");
 
         if (appConfig.compositeCallRecordingEnabled()) {
@@ -70,16 +73,16 @@ public final class MeshCallRecordingService {
                 var compositeId = repository.createRecording(sessionId, chatId, userId, KIND_COMPOSITE);
                 repository.attachSessionComposite(sessionId, chatId, room, egressId.get(), MODE_COMPOSITE);
                 repository.attachRecordingEgress(compositeId, sessionId, chatId, egressId.get(), filepath);
-                auditPort.record(userId, "mesh_call.composite_recording.started", "mesh_call_recording",
-                    compositeId.toString(), "{\"session_id\":\"" + sessionId + "\",\"egress_id\":\"" + egressId.get() + "\"}");
+                auditPort.record(userId, "mesh_call.composite_recording.started", AUDIT_ENTITY_RECORDING,
+                    compositeId.toString(), AUDIT_DETAIL_SESSION_ID + sessionId + "\",\"egress_id\":\"" + egressId.get() + "\"}");
                 return Optional.of(buildSessionResponse(sessionId, compositeId, mode, room, userId));
             }
         }
 
         var auditId = repository.createRecording(sessionId, chatId, userId, KIND_AUDIT);
         repository.attachSessionComposite(sessionId, chatId, null, null, MODE_MESH);
-        auditPort.record(userId, "mesh_call.audit_recording.started", "mesh_call_recording", auditId.toString(),
-            "{\"session_id\":\"" + sessionId + "\",\"kind\":\"audit\"}");
+        auditPort.record(userId, "mesh_call.audit_recording.started", AUDIT_ENTITY_RECORDING, auditId.toString(),
+            AUDIT_DETAIL_SESSION_ID + sessionId + "\",\"kind\":\"audit\"}");
         return Optional.of(buildSessionResponse(sessionId, auditId, mode, null, userId));
     }
 
@@ -91,7 +94,7 @@ public final class MeshCallRecordingService {
         if (session.isEmpty() || !"active".equals(session.get().status())) {
             return Optional.empty();
         }
-        auditPort.record(userId, "mesh_call.session.joined", "mesh_call_session", sessionId.toString(), null);
+        auditPort.record(userId, "mesh_call.session.joined", AUDIT_ENTITY_SESSION, sessionId.toString(), null);
         if (MODE_COMPOSITE.equals(session.get().recordingMode())) {
             return Optional.of(buildSessionResponse(
                 sessionId,
@@ -102,8 +105,8 @@ public final class MeshCallRecordingService {
             ));
         }
         var auditId = repository.createRecording(sessionId, chatId, userId, KIND_AUDIT);
-        auditPort.record(userId, "mesh_call.audit_recording.started", "mesh_call_recording", auditId.toString(),
-            "{\"session_id\":\"" + sessionId + "\",\"kind\":\"audit\"}");
+        auditPort.record(userId, "mesh_call.audit_recording.started", AUDIT_ENTITY_RECORDING, auditId.toString(),
+            AUDIT_DETAIL_SESSION_ID + sessionId + "\",\"kind\":\"audit\"}");
         return Optional.of(buildSessionResponse(sessionId, auditId, session.get().mediaMode(), null, userId));
     }
 
@@ -119,7 +122,7 @@ public final class MeshCallRecordingService {
             finalizeCompositeEgress(session.get().egressId(), sessionId, chatId, userId, KIND_COMPOSITE);
         }
         repository.endSession(sessionId, chatId);
-        auditPort.record(userId, "mesh_call.session.ended", "mesh_call_session", sessionId.toString(), null);
+        auditPort.record(userId, "mesh_call.session.ended", AUDIT_ENTITY_SESSION, sessionId.toString(), null);
         return Optional.of(Boolean.TRUE);
     }
 
@@ -141,8 +144,8 @@ public final class MeshCallRecordingService {
             }
             repository.attachRecordingEgress(recId, sessionId, chatId, egressId.get(), filepath);
         }
-        auditPort.record(userId, "mesh_call.user_recording.started", "mesh_call_recording", recId.toString(),
-            "{\"session_id\":\"" + sessionId + "\"}");
+        auditPort.record(userId, "mesh_call.user_recording.started", AUDIT_ENTITY_RECORDING, recId.toString(),
+            AUDIT_DETAIL_SESSION_ID + sessionId + "\"}");
         return Optional.of(MeshCallRecordingResponse.started(recId.toString(), KIND_USER));
     }
 
@@ -188,7 +191,7 @@ public final class MeshCallRecordingService {
         if (!repository.completeRecording(recordingId, sessionId, chatId, fileId, durationMs)) {
             return Optional.empty();
         }
-        auditPort.record(userId, "mesh_call.recording.completed", "mesh_call_recording", recordingId.toString(),
+        auditPort.record(userId, "mesh_call.recording.completed", AUDIT_ENTITY_RECORDING, recordingId.toString(),
             "{\"file_id\":\"" + fileId + "\",\"duration_ms\":" + durationMs + "}");
         return Optional.of(Boolean.TRUE);
     }

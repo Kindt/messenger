@@ -34,6 +34,8 @@ import java.util.UUID;
 @Tag(name = "Integrations", description = "User marketplace catalog (spec 022 US24 T02311)")
 public class MeIntegrationsMarketplaceResource {
 
+    private static final String FIELD_BUTTONS = "buttons";
+
     private final UserLookupPort userLookupPort;
     private final PluginRepository pluginRepository;
     private final UserIntegrationConnectRepository connectRepository;
@@ -112,41 +114,56 @@ public class MeIntegrationsMarketplaceResource {
     private ArrayList<MeIntegrationsMarketplaceResponse.MarketplaceItem> buildItems(UUID orgId, java.util.Set<UUID> connected) {
         var items = new ArrayList<MeIntegrationsMarketplaceResponse.MarketplaceItem>();
         for (var instance : pluginRepository.listInstances(orgId)) {
-            if (!instance.enabled()) {
-                continue;
-            }
-            var market = marketplaceFromConfig(instance.configJson());
-            if (market != null && !market.visible()) {
-                continue;
-            }
-            var launcher = launcherFromConfig(instance.configJson());
-            var label = market != null && market.label() != null && !market.label().isBlank()
-                ? market.label()
-                : (launcher != null && launcher.label() != null ? launcher.label() : instance.displayName());
-            var launchUrl = launcher != null ? launcher.launchUrl() : null;
-            if (launchUrl == null || launchUrl.isBlank()) {
-                launchUrl = firstMenuUrl(instance.configJson());
-            }
-            if (launchUrl == null || launchUrl.isBlank()) {
-                continue;
-            }
-            var category = market != null && market.category() != null ? market.category() : "general";
-            var description = market != null ? market.description() : "";
-            var openMode = launcher != null && launcher.openMode() != null ? launcher.openMode() : "iframe";
-            items.add(new MeIntegrationsMarketplaceResponse.MarketplaceItem(
-                instance.id().toString(),
-                instance.presetId(),
-                instance.pluginClass(),
-                label,
-                description,
-                category,
-                instance.botName(),
-                launcher != null ? launcher.iconUrl() : null,
-                launchUrl,
-                openMode,
-                connected.contains(instance.id())));
+            toMarketplaceItem(instance, connected).ifPresent(items::add);
         }
         return items;
+    }
+
+    private java.util.Optional<MeIntegrationsMarketplaceResponse.MarketplaceItem> toMarketplaceItem(
+        PluginRepository.InstanceRow instance,
+        java.util.Set<UUID> connected
+    ) {
+        if (!instance.enabled()) {
+            return java.util.Optional.empty();
+        }
+        var market = marketplaceFromConfig(instance.configJson());
+        if (market != null && !market.visible()) {
+            return java.util.Optional.empty();
+        }
+        var launcher = launcherFromConfig(instance.configJson());
+        var label = resolveLabel(market, launcher, instance.displayName());
+        var launchUrl = launcher != null ? launcher.launchUrl() : null;
+        if (launchUrl == null || launchUrl.isBlank()) {
+            launchUrl = firstMenuUrl(instance.configJson());
+        }
+        if (launchUrl == null || launchUrl.isBlank()) {
+            return java.util.Optional.empty();
+        }
+        var category = market != null && market.category() != null ? market.category() : "general";
+        var description = market != null ? market.description() : "";
+        var openMode = launcher != null && launcher.openMode() != null ? launcher.openMode() : "iframe";
+        return java.util.Optional.of(new MeIntegrationsMarketplaceResponse.MarketplaceItem(
+            instance.id().toString(),
+            instance.presetId(),
+            instance.pluginClass(),
+            label,
+            description,
+            category,
+            instance.botName(),
+            launcher != null ? launcher.iconUrl() : null,
+            launchUrl,
+            openMode,
+            connected.contains(instance.id())));
+    }
+
+    private static String resolveLabel(MarketplaceConfig market, LauncherConfig launcher, String displayName) {
+        if (market != null && market.label() != null && !market.label().isBlank()) {
+            return market.label();
+        }
+        if (launcher != null && launcher.label() != null) {
+            return launcher.label();
+        }
+        return displayName;
     }
 
     private boolean isOrgInstance(UUID orgId, UUID instanceId) {
@@ -207,10 +224,10 @@ public class MeIntegrationsMarketplaceResource {
             return null;
         }
         var menu = config.get("menu");
-        if (menu == null || !menu.has("buttons") || !menu.get("buttons").isArray()) {
+        if (menu == null || !menu.has(FIELD_BUTTONS) || !menu.get(FIELD_BUTTONS).isArray()) {
             return null;
         }
-        for (var btn : menu.get("buttons")) {
+        for (var btn : menu.get(FIELD_BUTTONS)) {
             var url = textOrNull(btn, "url");
             if (url != null && !url.isBlank()) {
                 return url;

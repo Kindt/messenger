@@ -61,7 +61,7 @@ class HotPlugRegistryTest {
             long t0 = 1_000_000L;
             registry.onHeartbeat("indexer-1", "ACTIVE", t0);
             assertEquals(1, registry.snapshot().size());
-            Thread.sleep(150);
+            Thread.sleep(150); // NOSONAR java:S2925 -- wait for scheduled eviction tick in unit test
             assertEquals(0, registry.snapshot().size());
             assertFalse(registry.isPresent("indexer-1", t0 + 200));
         } finally {

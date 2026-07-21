@@ -55,7 +55,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             return id;
         } catch (Exception e) {
             log.error("scheduled message create failed chat={}", cmd.chatId(), e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -77,6 +77,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             }
         } catch (Exception e) {
             log.error("scheduled message find failed {}", id, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -119,7 +120,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             }
         } catch (Exception e) {
             log.error("scheduled message listForSender failed sender={}", senderId, e);
-            return List.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -148,7 +149,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             }
         } catch (Exception e) {
             log.error("scheduled message listDue failed", e);
-            return List.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -170,7 +171,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("scheduled message updateStatus failed {}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -188,7 +189,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("scheduled message cancelPending failed id={}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -207,11 +208,11 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             }
         } catch (Exception e) {
             log.error("scheduled message list failed chat={}", chatId, e);
-            return List.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
-    private static ScheduledRow mapRow(java.sql.ResultSet rs) throws Exception {
+    private static ScheduledRow mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         var scheduled = rs.getTimestamp("scheduled_at");
         var created = rs.getTimestamp("created_at");
         return new ScheduledRow(
@@ -229,7 +230,7 @@ public final class JdbcScheduledMessageAdapter implements ScheduledMessagePort {
             created != null ? created.toInstant() : null);
     }
 
-    private static void setUuid(java.sql.PreparedStatement stmt, int idx, UUID value) throws Exception {
+    private static void setUuid(java.sql.PreparedStatement stmt, int idx, UUID value) throws java.sql.SQLException {
         if (value != null) {
             stmt.setObject(idx, value);
         } else {

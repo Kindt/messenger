@@ -14,11 +14,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.security.interfaces.RSAPublicKey;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TokenValidator {
@@ -73,7 +71,7 @@ public class TokenValidator {
                 }
             }
             var expiration = claims.getExpirationTime();
-            if (expiration != null && expiration.before(Date.from(clock.instant()))) {
+            if (expiration != null && expiration.toInstant().isBefore(clock.instant())) {
                 log.warn("JWT expired");
                 return null;
             }
@@ -85,10 +83,10 @@ public class TokenValidator {
     }
 
     private RSAKey resolveKey(String kid) {
-        if (kid != null && keyCache.containsKey(kid)) {
-            return keyCache.get(kid);
+        if (kid == null || kid.isBlank()) {
+            return null;
         }
-        return keyCache.values().stream().findFirst().orElse(null);
+        return keyCache.get(kid);
     }
 
     private void refreshKeys() {
@@ -114,6 +112,9 @@ public class TokenValidator {
                 lastFetch = now;
                 log.info("JWKS refreshed: {} keys loaded", keyCache.size());
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Failed to refresh JWKS (interrupted): {}", e.getMessage());
         } catch (Exception e) {
             log.warn("Failed to refresh JWKS: {}", e.getMessage());
         }

@@ -43,6 +43,7 @@ public final class JdbcSessionJdbcRepository {
             }
         } catch (Exception e) {
             log.error("Failed to find latest session for chat {}", chatId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -65,6 +66,7 @@ public final class JdbcSessionJdbcRepository {
             }
         } catch (Exception e) {
             log.error("Failed to find session for chat {} epoch {}", chatId, epoch, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -86,7 +88,7 @@ public final class JdbcSessionJdbcRepository {
             return new MlsSession(id, chatId, 0, cipherSuite, null, null, null, now, now);
         } catch (Exception e) {
             log.error("Failed to create MLS session for chat {}", chatId, e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -104,11 +106,11 @@ public final class JdbcSessionJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("Failed to advance epoch for session {}", sessionId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
-    private MlsSession mapSession(java.sql.ResultSet rs) throws Exception {
+    private MlsSession mapSession(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new MlsSession(
             rs.getObject("id", UUID.class),
             rs.getObject("chat_id", UUID.class),

@@ -37,6 +37,10 @@ public class ChatService {
     private static final ObjectMapper JSON = MessengerJson.mapper();
     private static final TypeReference<List<ChatResponse>> CHAT_LIST_TYPE = new TypeReference<>() {
     };
+    private static final String ROLE_OWNER = "owner";
+    private static final String ROLE_ADMIN = "admin";
+    private static final String ROLE_MEMBER = "member";
+    private static final String ERR_CANNOT_ADD_MEMBER = "error.chat.cannot_add_member";
 
     private final ChatPersistencePort chatPersistencePort;
     private final BlockRepositoryPort blockRepositoryPort;
@@ -50,21 +54,25 @@ public class ChatService {
     private final AppConfig appConfig;
     private final com.avandocmsg.messenger.api.federation.FederationMemberGuard federationMemberGuard;
 
+    // Collaborator injection; parameter object would break existing construction sites outside this batch
+    @SuppressWarnings("java:S107")
     public ChatService(ChatPersistencePort chatPersistencePort, BlockRepositoryPort blockRepositoryPort,
                        ChatReadStatePort chatReadStatePort, MessageRepositoryPort messageRepositoryPort,
                        MessageQueryPort messageQueryPort,
                        NatsOutboundPort natsOutbound, Clock clock, UuidGenerator uuidGenerator,
-                       ReadCachePort readCachePort, AppConfig appConfig) {
+                       ReadCachePort readCachePort, AppConfig appConfig) { // NOSONAR S107 — DI collaborators
         this(chatPersistencePort, blockRepositoryPort, chatReadStatePort, messageRepositoryPort, messageQueryPort,
             natsOutbound, clock, uuidGenerator, readCachePort, appConfig, null);
     }
 
+    // Collaborator injection; parameter object would break existing construction sites outside this batch
+    @SuppressWarnings("java:S107")
     public ChatService(ChatPersistencePort chatPersistencePort, BlockRepositoryPort blockRepositoryPort,
                        ChatReadStatePort chatReadStatePort, MessageRepositoryPort messageRepositoryPort,
                        MessageQueryPort messageQueryPort,
                        NatsOutboundPort natsOutbound, Clock clock, UuidGenerator uuidGenerator,
                        ReadCachePort readCachePort, AppConfig appConfig,
-                       com.avandocmsg.messenger.api.federation.FederationMemberGuard federationMemberGuard) {
+                       com.avandocmsg.messenger.api.federation.FederationMemberGuard federationMemberGuard) { // NOSONAR S107 — DI collaborators
         this.chatPersistencePort = chatPersistencePort;
         this.blockRepositoryPort = blockRepositoryPort;
         this.chatReadStatePort = chatReadStatePort;
@@ -80,7 +88,7 @@ public class ChatService {
 
     public boolean canManageChatSettings(UUID chatId, UUID userId) {
         var role = chatPersistencePort.getMemberRole(chatId, userId);
-        return role != null && (role.equals("owner") || role.equals("admin"));
+        return role != null && (role.equals(ROLE_OWNER) || role.equals(ROLE_ADMIN));
     }
 
     public ChatResponse createGroup(String title, UUID ownerId, List<String> memberIds) {
@@ -96,7 +104,7 @@ public class ChatService {
             for (var mid : memberIds) {
                 var memberUuid = UUID.fromString(mid);
                 if (!memberUuid.equals(ownerId)) {
-                    chatPersistencePort.addMember(chatId, memberUuid, "member");
+                    chatPersistencePort.addMember(chatId, memberUuid, ROLE_MEMBER);
                 }
             }
         }
@@ -117,7 +125,7 @@ public class ChatService {
             for (var mid : memberIds) {
                 var memberUuid = UUID.fromString(mid);
                 if (!memberUuid.equals(ownerId)) {
-                    chatPersistencePort.addMember(chatId, memberUuid, "member");
+                    chatPersistencePort.addMember(chatId, memberUuid, ROLE_MEMBER);
                 }
             }
         }
@@ -227,11 +235,11 @@ public class ChatService {
     /** Empty when member added; otherwise i18n key for {@link com.avandocmsg.messenger.api.errors.ApiError}. */
     public Optional<String> addMemberWithReason(UUID chatId, UUID actorId, UUID targetUserId) {
         var role = chatPersistencePort.getMemberRole(chatId, actorId);
-        if (role == null || (!role.equals("owner") && !role.equals("admin"))) {
-            return Optional.of("error.chat.cannot_add_member");
+        if (role == null || (!role.equals(ROLE_OWNER) && !role.equals(ROLE_ADMIN))) {
+            return Optional.of(ERR_CANNOT_ADD_MEMBER);
         }
         if (blockRepositoryPort.exists(UserId.of(targetUserId), UserId.of(actorId))) {
-            return Optional.of("error.chat.cannot_add_member");
+            return Optional.of(ERR_CANNOT_ADD_MEMBER);
         }
         if (federationMemberGuard != null) {
             var fed = federationMemberGuard.denyReason(actorId, targetUserId);
@@ -239,12 +247,12 @@ public class ChatService {
                 return fed;
             }
         }
-        var ok = chatPersistencePort.addMember(chatId, targetUserId, "member");
+        var ok = chatPersistencePort.addMember(chatId, targetUserId, ROLE_MEMBER);
         if (ok) {
             ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, actorId, targetUserId);
             return Optional.empty();
         }
-        return Optional.of("error.chat.cannot_add_member");
+        return Optional.of(ERR_CANNOT_ADD_MEMBER);
     }
 
     public boolean removeMember(UUID chatId, UUID actorId, UUID targetUserId) {
@@ -253,14 +261,14 @@ public class ChatService {
         if (actorRole == null || targetRole == null) {
             return false;
         }
-        if (actorRole.equals("owner")) {
+        if (actorRole.equals(ROLE_OWNER)) {
             var ok = chatPersistencePort.removeMember(chatId, targetUserId);
             if (ok) {
                 ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, actorId, targetUserId);
             }
             return ok;
         }
-        if (actorRole.equals("admin") && !targetRole.equals("owner")) {
+        if (actorRole.equals(ROLE_ADMIN) && !targetRole.equals(ROLE_OWNER)) {
             var ok = chatPersistencePort.removeMember(chatId, targetUserId);
             if (ok) {
                 ReadCacheCoordinator.invalidateAfterChatMutation(readCachePort, actorId, targetUserId);
@@ -276,10 +284,10 @@ public class ChatService {
         if (actorRole == null || targetRole == null) {
             return false;
         }
-        if (!actorRole.equals("owner")) {
+        if (!actorRole.equals(ROLE_OWNER)) {
             return false;
         }
-        if (!newRole.equals("admin") && !newRole.equals("member")) {
+        if (!newRole.equals(ROLE_ADMIN) && !newRole.equals(ROLE_MEMBER)) {
             return false;
         }
         return chatPersistencePort.setRole(chatId, targetUserId, newRole);

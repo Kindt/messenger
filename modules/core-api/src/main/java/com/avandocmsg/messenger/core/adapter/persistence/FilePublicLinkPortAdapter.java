@@ -25,6 +25,7 @@ import java.util.UUID;
 /** JDBC adapter for {@link PublicLinkPort}. */
 public final class FilePublicLinkPortAdapter implements PublicLinkPort {
     private static final Logger log = LoggerFactory.getLogger(FilePublicLinkPortAdapter.class);
+    private static final String COL_LINK_KIND = "link_kind";
     private final DataSource dataSource;
     private final UuidGenerator uuidGenerator;
     private final SecureRandom random = new SecureRandom();
@@ -146,7 +147,7 @@ public final class FilePublicLinkPortAdapter implements PublicLinkPort {
                     result.add(new OwnerPublicLinkSummary(
                         rs.getObject("id", UUID.class).toString(),
                         rs.getObject("file_id", UUID.class).toString(),
-                        rs.getString("link_kind"),
+                        rs.getString(COL_LINK_KIND),
                         rs.getTimestamp("expires_at").toInstant(),
                         rs.getTimestamp("created_at").toInstant(),
                         rs.getString("filename")));
@@ -174,7 +175,7 @@ public final class FilePublicLinkPortAdapter implements PublicLinkPort {
                 while (rs.next()) {
                     result.add(new PublicLinkSummary(
                         rs.getObject("id", UUID.class).toString(),
-                        rs.getString("link_kind"),
+                        rs.getString(COL_LINK_KIND),
                         rs.getTimestamp("expires_at").toInstant(),
                         rs.getTimestamp("created_at").toInstant()));
                 }
@@ -198,7 +199,7 @@ public final class FilePublicLinkPortAdapter implements PublicLinkPort {
                 if (rs.next()) {
                     return Optional.of(new ResolvedLinkRow(
                         rs.getObject("file_id", UUID.class),
-                        rs.getString("link_kind").charAt(0),
+                        rs.getString(COL_LINK_KIND).charAt(0),
                         rs.getObject("created_by", UUID.class),
                         rs.getString("password_hash")));
                 }

@@ -42,6 +42,7 @@ class OverlayWebUiServletTest {
 
             @Override
             public void setWriteListener(jakarta.servlet.WriteListener writeListener) {
+                // Servlet 3.1 async write listener unused in this unit-test stub
             }
 
             @Override
@@ -75,6 +76,7 @@ class OverlayWebUiServletTest {
 
             @Override
             public void setWriteListener(jakarta.servlet.WriteListener writeListener) {
+                // Servlet 3.1 async write listener unused in this unit-test stub
             }
 
             @Override

@@ -92,10 +92,12 @@ class ExportAutoQueueOnSuggestedTest {
 
         @Override
         public void flush(Duration timeout) {
+            // No-op: recording stub does not buffer outbound publishes.
         }
 
         @Override
         public void publishPipelineMessageSend(byte[] payload, String userId) {
+            // No-op: export enqueue tests do not use pipeline message send.
         }
     }
 }

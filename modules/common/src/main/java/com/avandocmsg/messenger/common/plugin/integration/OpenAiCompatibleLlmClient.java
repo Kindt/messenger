@@ -18,6 +18,9 @@ import java.util.Map;
 public final class OpenAiCompatibleLlmClient {
     private static final ObjectMapper MAPPER = MessengerJson.mapper();
     private static final HttpClient HTTP = HttpClientSupport.sharedClient();
+    private static final String JSON_CONTENT = "content";
+    private static final String DEFAULT_CATEGORY = "general";
+    private static final String DEFAULT_PRIORITY = "normal";
 
     private OpenAiCompatibleLlmClient() {}
 
@@ -69,8 +72,8 @@ public final class OpenAiCompatibleLlmClient {
         ArrayNode messages = root.putArray("messages");
         messages.addObject()
             .put("role", "system")
-            .put("content", "Classify support thread. Reply JSON: category,priority,draft_title");
-        messages.addObject().put("role", "user").put("content", text);
+            .put(JSON_CONTENT, "Classify support thread. Reply JSON: category,priority,draft_title");
+        messages.addObject().put("role", "user").put(JSON_CONTENT, text);
         var builder = HttpRequest.newBuilder()
             .uri(URI.create(baseUrl + "/v1/chat/completions"))
             .timeout(Duration.ofSeconds(45))
@@ -85,14 +88,14 @@ public final class OpenAiCompatibleLlmClient {
             throw new IllegalStateException("LLM HTTP " + response.statusCode());
         }
         var content = MAPPER.readTree(response.body())
-            .path("choices").path(0).path("message").path("content").asText("");
+            .path("choices").path(0).path("message").path(JSON_CONTENT).asText("");
         if (content.isBlank()) {
-            return new TriageResult("general", "normal", text.substring(0, Math.min(80, text.length())));
+            return new TriageResult(DEFAULT_CATEGORY, DEFAULT_PRIORITY, text.substring(0, Math.min(80, text.length())));
         }
         try {
             return parseTriage(MAPPER.readTree(content));
         } catch (Exception ignored) {
-            return new TriageResult("general", "normal", content.substring(0, Math.min(120, content.length())));
+            return new TriageResult(DEFAULT_CATEGORY, DEFAULT_PRIORITY, content.substring(0, Math.min(120, content.length())));
         }
     }
 
@@ -109,8 +112,8 @@ public final class OpenAiCompatibleLlmClient {
         var draft = json.path("draft_ticket");
         var title = draft.path("title").asText(json.path("draft_title").asText("?"));
         return new TriageResult(
-            json.path("category").asText("general"),
-            json.path("priority").asText("normal"),
+            json.path("category").asText(DEFAULT_CATEGORY),
+            json.path("priority").asText(DEFAULT_PRIORITY),
             title
         );
     }

@@ -22,6 +22,8 @@ import jakarta.ws.rs.core.SecurityContext;
 @Tag(name = "Live streaming", description = "Прямые эфиры — join/end по id сессии")
 public class LiveSessionResource {
 
+    private static final String LIVE_SESSION_ID = "live_session_id";
+
     private final LiveSessionService liveSessionService;
     private final UserMessageSource messages;
 
@@ -37,7 +39,7 @@ public class LiveSessionResource {
     public Response get(@PathParam("sessionId") String sessionId,
                         @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var id = UuidParams.required(sessionId, "live_session_id");
+        var id = UuidParams.required(sessionId, LIVE_SESSION_ID);
         return liveSessionService.get(id, userId)
             .map(c -> Response.ok(c).build())
             .orElse(Response.status(Response.Status.NOT_FOUND)
@@ -56,7 +58,7 @@ public class LiveSessionResource {
                 .build();
         }
         var userId = CurrentUserId.uuid(securityContext);
-        var id = UuidParams.required(sessionId, "live_session_id");
+        var id = UuidParams.required(sessionId, LIVE_SESSION_ID);
         return liveSessionService.join(id, userId)
             .map(j -> Response.ok(j).build())
             .orElse(Response.status(Response.Status.BAD_REQUEST)
@@ -70,7 +72,7 @@ public class LiveSessionResource {
     public Response leave(@PathParam("sessionId") String sessionId,
                           @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var id = UuidParams.required(sessionId, "live_session_id");
+        var id = UuidParams.required(sessionId, LIVE_SESSION_ID);
         liveSessionService.leave(id, userId);
         return Response.noContent().build();
     }
@@ -81,7 +83,7 @@ public class LiveSessionResource {
     public Response end(@PathParam("sessionId") String sessionId,
                         @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var id = UuidParams.required(sessionId, "live_session_id");
+        var id = UuidParams.required(sessionId, LIVE_SESSION_ID);
         if (liveSessionService.end(id, userId)) {
             return Response.noContent().build();
         }

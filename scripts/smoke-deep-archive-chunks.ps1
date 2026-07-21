@@ -229,6 +229,11 @@ if ($PayloadBytes -lt 4096) {
     throw "PayloadBytes must be >= 4096 for chunk smoke (got $PayloadBytes)"
 }
 
+if ($BaseUrl -match ':18080' -and -not $UseSshMinioTunnel) {
+    $UseSshMinioTunnel = $true
+    Write-Host "QEMU lab: enabling MinIO SSH tunnel via :$LocalMinioPort" -ForegroundColor DarkGray
+}
+
 $tunnelProc = $null
 try {
     if ($UseSshMinioTunnel) {

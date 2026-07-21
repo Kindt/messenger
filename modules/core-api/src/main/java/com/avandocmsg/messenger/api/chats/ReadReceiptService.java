@@ -43,6 +43,8 @@ public class ReadReceiptService {
     private final Clock clock;
     private final ReadCachePort readCache;
 
+    // Collaborator injection; parameter object would break existing construction sites outside this batch
+    @SuppressWarnings("java:S107")
     public ReadReceiptService(MessageReadReceiptPort readReceiptPort,
                               ChatPersistencePort chatPersistencePort,
                               MessageRepositoryPort messageRepositoryPort,
@@ -51,11 +53,13 @@ public class ReadReceiptService {
                               AuditPort auditPort,
                               NatsOutboundPort natsOutbound,
                               AppConfig appConfig,
-                              Clock clock) {
+                              Clock clock) { // NOSONAR S107 — DI collaborators
         this(readReceiptPort, chatPersistencePort, messageRepositoryPort, chatReadStatePort, userLookupPort,
             auditPort, natsOutbound, appConfig, clock, NoOpReadCacheAdapter.INSTANCE);
     }
 
+    // Collaborator injection; parameter object would break existing construction sites outside this batch
+    @SuppressWarnings("java:S107")
     public ReadReceiptService(MessageReadReceiptPort readReceiptPort,
                               ChatPersistencePort chatPersistencePort,
                               MessageRepositoryPort messageRepositoryPort,
@@ -65,7 +69,7 @@ public class ReadReceiptService {
                               NatsOutboundPort natsOutbound,
                               AppConfig appConfig,
                               Clock clock,
-                              ReadCachePort readCache) {
+                              ReadCachePort readCache) { // NOSONAR S107 — DI collaborators
         this.readReceiptPort = readReceiptPort;
         this.chatPersistencePort = chatPersistencePort;
         this.messageRepositoryPort = messageRepositoryPort;

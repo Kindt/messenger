@@ -5,11 +5,14 @@ import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.FileId;
 import com.avandocmsg.messenger.core.domain.UserId;
 import com.avandocmsg.messenger.core.port.AvatarHistoryPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 
 /** JDBC adapter for {@link avatar_history} inserts. */
 public final class JdbcAvatarHistoryAdapter implements AvatarHistoryPort {
+    private static final Logger log = LoggerFactory.getLogger(JdbcAvatarHistoryAdapter.class);
 
     private static final String INSERT = """
         INSERT INTO avatar_history (entity_type, entity_id, file_id, set_by_user_id)
@@ -48,8 +51,9 @@ public final class JdbcAvatarHistoryAdapter implements AvatarHistoryPort {
                 stmt.setObject(4, null);
             }
             stmt.executeUpdate();
-        } catch (Exception ignored) {
-            // history is best-effort
+        } catch (Exception e) {
+            log.error("avatar history insert failed for {} {}", entityType, entityId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 }

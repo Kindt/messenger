@@ -11,6 +11,7 @@ import java.util.List;
 public final class TelegramExportV1Parser {
 
     private static final ObjectMapper MAPPER = MessengerJson.mapper();
+    private static final String EXPORT_JSON = "export_json";
 
     public record ParsedMessage(long exportId, String text) {}
 
@@ -20,7 +21,7 @@ public final class TelegramExportV1Parser {
 
     public static ParsedExport parse(JsonNode root) {
         if (root == null || root.isNull()) {
-            throw new IllegalArgumentException("export_json missing");
+            throw new IllegalArgumentException(EXPORT_JSON + " missing");
         }
         var export = resolveExportNode(root);
         var title = export.path("name").asText("Telegram import");
@@ -33,27 +34,22 @@ public final class TelegramExportV1Parser {
         }
         var messages = new ArrayList<ParsedMessage>();
         for (var node : messagesNode) {
-            if (!"message".equals(node.path("type").asText())) {
-                continue;
+            if ("message".equals(node.path("type").asText())
+                && node.has("id") && !node.get("id").isNull()) {
+                var text = flattenText(node.get("text"));
+                if (!text.isBlank()) {
+                    messages.add(new ParsedMessage(node.get("id").asLong(), text));
+                }
             }
-            if (!node.has("id") || node.get("id").isNull()) {
-                continue;
-            }
-            var exportId = node.get("id").asLong();
-            var text = flattenText(node.get("text"));
-            if (text.isBlank()) {
-                continue;
-            }
-            messages.add(new ParsedMessage(exportId, text));
         }
         return new ParsedExport(title, messages);
     }
 
     private static JsonNode resolveExportNode(JsonNode root) {
-        if (!root.has("export_json") || root.get("export_json").isNull()) {
+        if (!root.has(EXPORT_JSON) || root.get(EXPORT_JSON).isNull()) {
             return root;
         }
-        var exportField = root.get("export_json");
+        var exportField = root.get(EXPORT_JSON);
         if (exportField.isObject()) {
             return exportField;
         }
@@ -61,7 +57,7 @@ public final class TelegramExportV1Parser {
             try {
                 return MAPPER.readTree(exportField.asText());
             } catch (Exception e) {
-                throw new IllegalArgumentException("export_json is not valid JSON");
+                throw new IllegalArgumentException(EXPORT_JSON + " is not valid JSON");
             }
         }
         return root;

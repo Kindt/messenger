@@ -28,7 +28,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 public class BotService {
-    private static final Pattern BOT_NAME = Pattern.compile("^[a-zA-Z0-9_]{3,32}$");
+    private static final Pattern BOT_NAME = Pattern.compile("^\\w{3,32}$");
     private static final int MAX_UPDATES = 100;
     private static final ObjectMapper MAPPER = MessengerJson.mapper();
 
@@ -41,28 +41,40 @@ public class BotService {
     private final UserRepositoryPort userRepositoryPort;
     private final AvatarApplicationService avatarApplicationService;
 
+    public record AvatarSupport(UserRepositoryPort userRepositoryPort,
+                                AvatarApplicationService avatarApplicationService) {}
+
     public BotService(BotRepository botRepository, ChatPersistencePort chatPersistencePort,
                       MessageApplicationService messageApplicationService,
                       ChatBanService chatBanService,
                       AuditPort auditPort, UuidGenerator uuidGenerator) {
         this(botRepository, chatPersistencePort, messageApplicationService, chatBanService, auditPort, uuidGenerator,
-            null, null);
+            null);
+    }
+
+    public BotService(BotRepository botRepository, ChatPersistencePort chatPersistencePort, // NOSONAR java:S107 — convenience overload for wiring; prefer AvatarSupport
+                      MessageApplicationService messageApplicationService,
+                      ChatBanService chatBanService,
+                      AuditPort auditPort, UuidGenerator uuidGenerator,
+                      UserRepositoryPort userRepositoryPort,
+                      AvatarApplicationService avatarApplicationService) {
+        this(botRepository, chatPersistencePort, messageApplicationService, chatBanService, auditPort, uuidGenerator,
+            new AvatarSupport(userRepositoryPort, avatarApplicationService));
     }
 
     public BotService(BotRepository botRepository, ChatPersistencePort chatPersistencePort,
                       MessageApplicationService messageApplicationService,
                       ChatBanService chatBanService,
                       AuditPort auditPort, UuidGenerator uuidGenerator,
-                      UserRepositoryPort userRepositoryPort,
-                      AvatarApplicationService avatarApplicationService) {
+                      AvatarSupport avatarSupport) {
         this.botRepository = botRepository;
         this.chatPersistencePort = chatPersistencePort;
         this.messageApplicationService = messageApplicationService;
         this.chatBanService = chatBanService;
         this.auditPort = auditPort;
         this.uuidGenerator = uuidGenerator;
-        this.userRepositoryPort = userRepositoryPort;
-        this.avatarApplicationService = avatarApplicationService;
+        this.userRepositoryPort = avatarSupport != null ? avatarSupport.userRepositoryPort() : null;
+        this.avatarApplicationService = avatarSupport != null ? avatarSupport.avatarApplicationService() : null;
     }
 
     public enum CreateOutcome { SUCCESS, INVALID_NAME, INVALID_WEBHOOK, INVALID_LISTEN_MODE, NAME_TAKEN, PERSISTENCE_FAILED }
@@ -195,18 +207,16 @@ public class BotService {
     public BotUpdatesResponse pollUpdates(UUID botId, long offset, int timeoutSec) {
         var timeout = Math.min(Math.max(timeoutSec, 0), 60);
         var deadline = System.currentTimeMillis() + timeout * 1000L;
-        do {
+        while (true) {
             var rows = botRepository.pollUpdates(botId, offset, MAX_UPDATES);
             if (!rows.isEmpty()) {
                 return toUpdatesResponse(rows);
             }
-            if (timeout <= 0) {
+            if (timeout <= 0 || InterruptibleWait.awaitDeadline(deadline, 500L)
+                || System.currentTimeMillis() >= deadline) {
                 break;
             }
-            if (InterruptibleWait.awaitDeadline(deadline, 500L)) {
-                break;
-            }
-        } while (System.currentTimeMillis() < deadline);
+        }
         return new BotUpdatesResponse(List.of(), offset);
     }
 

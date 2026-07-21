@@ -73,7 +73,7 @@ public class PlatformModuleOverrideRepository {
              var ps = conn.prepareStatement(sql)) {
             ps.setString(1, moduleId);
             ps.setBoolean(2, disabled);
-            ps.setString(3, reason != null ? reason.name() : null);
+            ps.setString(3, reason != null ? reason.code() : null);
             ps.setBoolean(4, forceEnabled);
             ps.setTimestamp(5, java.sql.Timestamp.from(Instant.now()));
             if (updatedBy != null) {

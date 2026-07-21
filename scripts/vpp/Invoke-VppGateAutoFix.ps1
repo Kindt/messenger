@@ -66,6 +66,106 @@ switch ($GateKey) {
     'korus_web' {
         Run-Fix 'Repair-WebTurnIce' (Join-Path $Root 'scripts\vpp\Repair-WebTurnIce.ps1') | Out-Null
     }
+    { $_ -in @('export_compliance_stack', 'export_compliance_pack') } {
+        $libN = Join-Path $Root 'scripts\lib\Ensure-NatsQemuTunnel.ps1'
+        $libM = Join-Path $Root 'scripts\lib\Ensure-GuestWorkerMetricsTunnels.ps1'
+        foreach ($lib in @($libN, $libM)) {
+            if (-not (Test-Path $lib)) { continue }
+            try {
+                . $lib
+                if ($lib -like '*Nats*') { $null = Ensure-NatsQemuTunnel }
+                else { Ensure-GuestWorkerMetricsTunnels | Out-Null }
+                $script:ran = $true
+            } catch {
+                Write-Host "  [auto-fix] tunnel failed: $_" -ForegroundColor DarkYellow
+            }
+        }
+        if ($GateKey -eq 'export_compliance_stack') {
+            Run-Fix 'Repair-ExportAutoQueue' (Join-Path $Root 'scripts\vpp\Repair-ExportAutoQueue.ps1') | Out-Null
+            Run-Fix 'Repair-RetentionExportSmoke' (Join-Path $Root 'scripts\vpp\Repair-RetentionExportSmoke.ps1') | Out-Null
+        }
+    }
+    { $_ -in @('retention_export_suggested', 'retention_export_suggested_full', 'export_retention_gate') } {
+        Run-Fix 'Repair-RetentionExportSmoke' (Join-Path $Root 'scripts\vpp\Repair-RetentionExportSmoke.ps1') | Out-Null
+    }
+    { $_ -in @('retention_purge', 'retention_file_cleanup', 'retention_worker', 'retention_solr_clear', 'export_worker_metrics', 'export_observability_qemu') } {
+        $libM = Join-Path $Root 'scripts\lib\Ensure-GuestWorkerMetricsTunnels.ps1'
+        $libS = Join-Path $Root 'scripts\lib\Ensure-GuestSolrTunnel.ps1'
+        foreach ($lib in @($libM, $libS)) {
+            if (-not (Test-Path $lib)) { continue }
+            try {
+                . $lib
+                if ($lib -like '*Solr*') {
+                    Ensure-GuestSolrTunnel | Out-Null
+                    Write-Host '  [auto-fix] Solr tunnel :18983' -ForegroundColor Yellow
+                } else {
+                    Ensure-GuestWorkerMetricsTunnels | Out-Null
+                    Write-Host '  [auto-fix] worker metrics tunnels :19193/:19192' -ForegroundColor Yellow
+                }
+                $script:ran = $true
+            } catch {
+                Write-Host "  [auto-fix] tunnel failed: $_" -ForegroundColor DarkYellow
+            }
+        }
+    }
+    'us2_epic01' {
+        $libM = Join-Path $Root 'scripts\lib\Ensure-GuestWorkerMetricsTunnels.ps1'
+        $libN = Join-Path $Root 'scripts\lib\Ensure-NatsQemuTunnel.ps1'
+        foreach ($lib in @($libM, $libN)) {
+            if (-not (Test-Path $lib)) { continue }
+            try {
+                . $lib
+                if ($lib -like '*Nats*') { $null = Ensure-NatsQemuTunnel }
+                else { Ensure-GuestWorkerMetricsTunnels | Out-Null }
+                $script:ran = $true
+            } catch {
+                Write-Host "  [auto-fix] tunnel failed: $_" -ForegroundColor DarkYellow
+            }
+        }
+    }
+    'deep_archive_chunks' {
+        Run-Fix 'Repair-MinioDeepArchive' (Join-Path $Root 'scripts\vpp\Repair-MinioDeepArchive.ps1') | Out-Null
+    }
+    'dlp_mock' {
+        $t = Test-NetConnection -ComputerName 127.0.0.1 -Port 12223 -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+        if (-not $t.TcpTestSucceeded) {
+            Run-Fix 'qemu-integrations-up' (Join-Path $Root 'scripts\qemu-integrations-up.ps1') | Out-Null
+        }
+        Run-Fix 'Wait-IntegrationsOnline' (Join-Path $Root 'scripts\vpp\Wait-IntegrationsOnline.ps1') @('-MaxSec', '900', '-StartVmIfDown', '-RepairGateway') | Out-Null
+        $lib = Join-Path $Root 'scripts\lib\Ensure-DlpMockTunnel.ps1'
+        if (Test-Path $lib) {
+            try {
+                . $lib
+                Ensure-DlpMockTunnel | Out-Null
+                $script:ran = $true
+                Write-Host '  [auto-fix] DLP mock tunnel :18098' -ForegroundColor Yellow
+            } catch {
+                Write-Host "  [auto-fix] DLP mock tunnel failed: $_" -ForegroundColor DarkYellow
+            }
+        }
+    }
+    'audit_timing' {
+        Run-Fix 'wait-auth-rate-limit' (Join-Path $Root 'scripts\vpp\Wait-AuthRateLimitCooldown.ps1') @('-BaseUrl', 'http://127.0.0.1:18080', '-MaxSec', '120') | Out-Null
+    }
+    'security_gate' {
+        Run-Fix 'wait-auth-rate-limit' (Join-Path $Root 'scripts\vpp\Wait-AuthRateLimitCooldown.ps1') @('-BaseUrl', 'http://127.0.0.1:18080', '-MaxSec', '120') | Out-Null
+    }
+    { $_ -in @('export_suggested_nats', 'export_auto_queue_nats', 'hotplug_indexer') } {
+        $lib = Join-Path $Root 'scripts\lib\Ensure-NatsQemuTunnel.ps1'
+        if (Test-Path $lib) {
+            try {
+                . $lib
+                $null = Ensure-NatsQemuTunnel
+                $script:ran = $true
+                Write-Host '  [auto-fix] NATS tunnel :14222' -ForegroundColor Yellow
+            } catch {
+                Write-Host "  [auto-fix] NATS tunnel failed: $_" -ForegroundColor DarkYellow
+            }
+        }
+        if ($GateKey -eq 'export_auto_queue_nats') {
+            Run-Fix 'Repair-ExportAutoQueue' (Join-Path $Root 'scripts\vpp\Repair-ExportAutoQueue.ps1') | Out-Null
+        }
+    }
 }
 
 if ($ran) { exit 0 }

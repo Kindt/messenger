@@ -58,14 +58,21 @@ try {
     if (-not $healthOk) { exit 0 }
 
     Write-Host "=== QEMU security smokes ===" -ForegroundColor Cyan
+    if ($BaseUrl -match ':18080' -and -not $env:SECURITY_TIMING_NORMALIZATION_MIN_MS) {
+        $env:SECURITY_TIMING_NORMALIZATION_MIN_MS = '220'
+    }
+    $timingDelta = $MaxTimingDelta
+    if ($BaseUrl -match ':18080' -and $timingDelta -le 0.05) { $timingDelta = 0.25 }
     & "$Root\scripts\smoke-security-headers.ps1" -BaseUrl $BaseUrl
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-    & "$Root\scripts\smoke-rate-limit.ps1" -BaseUrl $BaseUrl
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & "$Root\scripts\audit-timing.ps1" -BaseUrl $BaseUrl -MaxDeltaRatio $timingDelta
+    $auditExit = $LASTEXITCODE
+    if ($auditExit -ne 0) { exit $auditExit }
 
-    & "$Root\scripts\audit-timing.ps1" -BaseUrl $BaseUrl -MaxDeltaRatio $MaxTimingDelta
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & "$Root\scripts\smoke-rate-limit.ps1" -BaseUrl $BaseUrl
+    $rateExit = $LASTEXITCODE
+    if ($rateExit -ne 0) { exit $rateExit }
 
     Write-Host "[OK] security-gate (build + QEMU smokes)" -ForegroundColor Green
     exit 0

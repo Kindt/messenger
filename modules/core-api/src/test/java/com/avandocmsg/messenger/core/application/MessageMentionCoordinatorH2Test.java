@@ -157,10 +157,12 @@ class MessageMentionCoordinatorH2Test {
 
         @Override
         public void flush(java.time.Duration timeout) {
+            // no-op stub: flush not needed when capturing in-memory publish calls
         }
 
         @Override
         public void publishPipelineMessageSend(byte[] payload, String userId) {
+            // no-op stub: pipeline path not under test here
         }
     }
 }

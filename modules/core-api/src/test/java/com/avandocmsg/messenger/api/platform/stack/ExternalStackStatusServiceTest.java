@@ -23,9 +23,9 @@ class ExternalStackStatusServiceTest {
 
     @Test
     void rendersDesiredObservedMismatchAndSupportBoundary() {
-        var desired = manifest("object-storage", "minio-s3", ExternalStackRole.active)
+        var desired = manifest("object-storage", "minio-s3", ExternalStackRole.ACTIVE)
             .withEndpoint("https://minio.internal/deep-archive");
-        var observed = manifest("object-storage", "external-s3", ExternalStackRole.active)
+        var observed = manifest("object-storage", "external-s3", ExternalStackRole.ACTIVE)
             .withEndpoint("https://token:secret@s3.customer.test/deep-archive");
         var validation = ExternalStackManifestValidator.validateDesiredManifests(List.of(observed));
 
@@ -52,9 +52,9 @@ class ExternalStackStatusServiceTest {
 
     @Test
     void exposesValidationFailuresWithoutLeakingSecretEndpoint() {
-        var desired = manifest("idp", "oidc-generic", ExternalStackRole.active)
+        var desired = manifest("idp", "oidc-generic", ExternalStackRole.ACTIVE)
             .withEndpoint("https://user:secret@idp.example.test/realms/korus");
-        var observed = manifest("idp", "oidc-generic", ExternalStackRole.migration_target)
+        var observed = manifest("idp", "oidc-generic", ExternalStackRole.MIGRATION_TARGET)
             .withEndpoint("https://user:secret@idp.example.test/realms/korus");
         var validation = ExternalStackManifestValidator.validateDesiredManifests(List.of(observed));
 
@@ -79,8 +79,8 @@ class ExternalStackStatusServiceTest {
             "angie",
             "reverse-proxy",
             "nginx-compatible",
-            LifecycleStatus.candidate,
-            List.of(DeploymentMode.rf_candidate),
+            LifecycleStatus.CANDIDATE,
+            List.of(DeploymentMode.RF_CANDIDATE),
             List.of("websocket_upgrade"),
             "web-edge",
             SupportBoundary.externalByo("vendor"),
@@ -99,8 +99,8 @@ class ExternalStackStatusServiceTest {
             "postgres-16-external",
             "postgres",
             "postgres-16",
-            LifecycleStatus.supported_external_byo,
-            List.of(DeploymentMode.external_byo),
+            LifecycleStatus.SUPPORTED_EXTERNAL_BYO,
+            List.of(DeploymentMode.EXTERNAL_BYO),
             List.of("runtime_manifest"),
             "relational-db-hot",
             SupportBoundary.externalByo("customer"),
@@ -141,9 +141,9 @@ class ExternalStackStatusServiceTest {
     @Test
     void resourcePreflightManifestsReturnsRedactedValidationResult() {
         var resource = new ExternalStackStatusResource();
-        var primary = manifest("object-storage", "minio-s3", ExternalStackRole.active)
+        var primary = manifest("object-storage", "minio-s3", ExternalStackRole.ACTIVE)
             .withEndpoint("https://user:secret@s3-a.example.test/files");
-        var secondActive = manifest("object-storage", "external-s3", ExternalStackRole.active)
+        var secondActive = manifest("object-storage", "external-s3", ExternalStackRole.ACTIVE)
             .withEndpoint("https://token:secret@s3-b.example.test/files");
 
         var result = resource.preflightManifests(new ExternalStackManifestPreflightRequest(List.of(primary, secondActive)));
@@ -157,10 +157,10 @@ class ExternalStackStatusServiceTest {
     @Test
     void resourcePreflightManifestsReportExplainsSeverityByComponent() {
         var resource = new ExternalStackStatusResource();
-        var primary = manifest("object-storage", "minio-s3", ExternalStackRole.active)
+        var primary = manifest("object-storage", "minio-s3", ExternalStackRole.ACTIVE)
             .withEndpoint("https://user:secret@minio.example.test/bucket");
-        var secondActive = manifest("object-storage", "external-s3", ExternalStackRole.active);
-        var searchServingStandby = manifest("search", "opensearch", ExternalStackRole.migration_target)
+        var secondActive = manifest("object-storage", "external-s3", ExternalStackRole.ACTIVE);
+        var searchServingStandby = manifest("search", "opensearch", ExternalStackRole.MIGRATION_TARGET)
             .withMetadata(Map.of("serve_traffic", "true"));
 
         var report = resource.preflightManifestReport(
@@ -191,7 +191,7 @@ class ExternalStackStatusServiceTest {
     @Test
     void resourcePreflightManifestsReportUsesWarningSeverityForWarningOnlyValidation() {
         var resource = new ExternalStackStatusResource();
-        var manifest = manifest("object-storage", "minio-s3", ExternalStackRole.active)
+        var manifest = manifest("object-storage", "minio-s3", ExternalStackRole.ACTIVE)
             .withCompatibilityProfile("s3-minio-bundled")
             .withCapabilities(List.of("put_get_head_delete_list"));
 
@@ -239,12 +239,16 @@ class ExternalStackStatusServiceTest {
             "postgres-16-external",
             List.of("h2_or_lab_migration_green")
         ));
+        var supportedReady = resource.preflightProfileReport(new ExternalStackProfilePreflightRequest(
+            "postgres-16-external",
+            List.of("h2_or_lab_migration_green", "customer_profile_evidence")
+        ));
         var candidate = resource.preflightProfileReport(new ExternalStackProfilePreflightRequest(
             "opensearch-candidate",
             List.of("search_reindex_contract_green")
         ));
 
-        assertTrue(supported.passed());
+        assertFalse(supported.passed());
         assertEquals("warning", supported.severity());
         assertEquals(1, supported.missingPromotionEvidenceCount());
         assertEquals(1, supported.unsupportedModeCount());
@@ -252,6 +256,11 @@ class ExternalStackStatusServiceTest {
         assertTrue(supported.unsupportedModes().contains("silent_fallback"));
         assertTrue(supported.remediationActions().contains("postgres-16-external: attach promotion evidence customer_profile_evidence"));
         assertTrue(supported.remediationActions().contains("postgres-16-external: remove unsupported mode silent_fallback"));
+
+        // unsupported mode still blocks ready even with full promotion evidence
+        assertFalse(supportedReady.passed());
+        assertTrue(supportedReady.missingPromotionEvidence().isEmpty());
+        assertEquals(1, supportedReady.unsupportedModeCount());
 
         assertFalse(candidate.passed());
         assertEquals("blocked", candidate.severity());

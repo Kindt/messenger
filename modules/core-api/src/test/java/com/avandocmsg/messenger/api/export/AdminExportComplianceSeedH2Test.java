@@ -7,7 +7,6 @@ import com.avandocmsg.messenger.api.mls.MlsService;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcBlockRepositoryAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatPersistenceAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRetentionPolicyAdapter;
-import com.avandocmsg.messenger.api.repository.ChatRepository;
 import com.avandocmsg.messenger.api.repository.MessageRepository;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcFileMetadataAdapter;
 import com.avandocmsg.messenger.core.adapter.persistence.JdbcChatRepositoryAdapter;
@@ -145,7 +144,6 @@ class AdminExportComplianceSeedH2Test {
 
         var clock = java.time.Clock.systemUTC();
         var uuidGen = UuidGenerator.standard();
-        var chatRepository = new ChatRepository(ds, clock, uuidGen);
         var messageRepository = new MessageRepository(ds, clock);
         var appConfig = new AppConfig() {
             @Override

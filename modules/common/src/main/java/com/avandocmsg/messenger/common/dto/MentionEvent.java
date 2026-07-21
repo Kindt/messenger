@@ -14,7 +14,7 @@ public record MentionEvent(
     @JsonProperty("mention_all") boolean mentionAll,
     @JsonProperty("created_at") Long createdAt
 ) {
-    public static final String TYPE = "mention";
+    public static final String TYPE = "mention"; // NOSONAR java:S1845 -- wire constant matches JSON field name type
 
     public MentionEvent(String messageId, String chatId, String senderId, String mentionedUserId,
                         boolean mentionAll, Long createdAt) {

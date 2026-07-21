@@ -7,9 +7,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public final class ExternalStackManifestValidator {
+
+    private static final String COMPONENT_PREFIX = "component ";
+    private static final String PROFILE_PREFIX = "profile ";
+    private static final String PROFILE_SEPARATOR = " profile ";
+    private static final String USERINFO_PATTERN = "//[^/@]+@";
+    private static final String USERINFO_REDACTED = "//<redacted>@";
+    private static final Pattern USERINFO_IN_ENDPOINT = Pattern.compile(USERINFO_PATTERN);
 
     private ExternalStackManifestValidator() {
     }
@@ -23,41 +31,63 @@ public final class ExternalStackManifestValidator {
         var byComponent = manifests.stream()
             .collect(Collectors.groupingBy(ComponentBackendManifest::component, LinkedHashMap::new, Collectors.toList()));
         for (var entry : byComponent.entrySet()) {
-            var component = entry.getKey();
-            var componentManifests = entry.getValue();
-            long activeCount = componentManifests.stream()
-                .filter(m -> m.role() == ExternalStackRole.active)
-                .count();
-            if (activeCount == 0) {
-                failures.add("component " + component + " has no active manifest");
-            } else if (activeCount > 1) {
-                failures.add("component " + component + " has " + activeCount + " active manifests");
-            }
-
-            for (var manifest : componentManifests) {
-                if (manifest.role() != ExternalStackRole.active
-                    && "true".equalsIgnoreCase(manifest.metadata().get("serve_traffic"))) {
-                    failures.add("component " + component + " role " + manifest.role() + " cannot serve active traffic");
-                }
-                if (ambiguousAuto(manifest)) {
-                    failures.add("component " + component + " uses ambiguous production auto profile");
-                }
-                validateCompatibilityProfile(manifest, failures, warnings);
-                validateRequiredCheckEvidence(manifest, warnings);
-                var redactedEndpoint = redactEndpoint(manifest.endpoint());
-                if (!Objects.equals(redactedEndpoint, manifest.endpoint())) {
-                    redacted = true;
-                }
-                if (redactedEndpoint != null) {
-                    var metadataKey = component + ".endpoint";
-                    if (!Objects.equals(redactedEndpoint, manifest.endpoint()) || !metadata.containsKey(metadataKey)) {
-                        metadata.put(metadataKey, redactedEndpoint);
-                    }
-                }
-            }
+            redacted = validateComponentGroup(entry.getKey(), entry.getValue(), failures, warnings, metadata)
+                || redacted;
         }
 
-        return new ValidationResult(false, failures, warnings, redacted, metadata);
+        return new ValidationResult(failures.isEmpty(), failures, warnings, redacted, metadata);
+    }
+
+    private static boolean validateComponentGroup(
+        String component,
+        List<ComponentBackendManifest> componentManifests,
+        List<String> failures,
+        List<String> warnings,
+        Map<String, String> metadata
+    ) {
+        boolean redacted = false;
+        long activeCount = componentManifests.stream()
+            .filter(m -> m.role() == ExternalStackRole.ACTIVE)
+            .count();
+        if (activeCount == 0) {
+            failures.add(COMPONENT_PREFIX + component + " has no active manifest");
+        } else if (activeCount > 1) {
+            failures.add(COMPONENT_PREFIX + component + " has " + activeCount + " active manifests");
+        }
+
+        for (var manifest : componentManifests) {
+            redacted = validateSingleManifest(component, manifest, failures, warnings, metadata) || redacted;
+        }
+        return redacted;
+    }
+
+    private static boolean validateSingleManifest(
+        String component,
+        ComponentBackendManifest manifest,
+        List<String> failures,
+        List<String> warnings,
+        Map<String, String> metadata
+    ) {
+        if (manifest.role() != ExternalStackRole.ACTIVE
+            && "true".equalsIgnoreCase(manifest.metadata().get("serve_traffic"))) {
+            failures.add(COMPONENT_PREFIX + component + " role " + manifest.role().code() + " cannot serve active traffic");
+        }
+        if (ambiguousAuto(manifest)) {
+            failures.add(COMPONENT_PREFIX + component + " uses ambiguous production auto profile");
+        }
+        validateCompatibilityProfile(manifest, failures, warnings);
+        validateRequiredCheckEvidence(manifest, warnings);
+        var redactedEndpoint = redactEndpoint(manifest.endpoint());
+        boolean redacted = !Objects.equals(redactedEndpoint, manifest.endpoint());
+        if (redactedEndpoint != null) {
+            var metadataKey = component + ".endpoint";
+            if (redacted) {
+                metadata.put(metadataKey, redactedEndpoint);
+            } else {
+                metadata.putIfAbsent(metadataKey, redactedEndpoint);
+            }
+        }
+        return redacted;
     }
 
     public static ExternalStackManifestPreflightReport report(List<ComponentBackendManifest> manifests) {
@@ -69,9 +99,9 @@ public final class ExternalStackManifestValidator {
         for (var entry : byComponent.entrySet()) {
             var component = entry.getKey();
             var componentManifests = entry.getValue();
-            var componentPrefix = "component " + component + " ";
+            var componentPrefix = COMPONENT_PREFIX + component + " ";
             var activeCount = (int) componentManifests.stream()
-                .filter(m -> m.role() == ExternalStackRole.active)
+                .filter(m -> m.role() == ExternalStackRole.ACTIVE)
                 .count();
             var failures = validation.failures().stream()
                 .filter(failure -> failure.startsWith(componentPrefix))
@@ -122,26 +152,31 @@ public final class ExternalStackManifestValidator {
         var failures = new ArrayList<String>();
         var warnings = new ArrayList<String>();
         for (var profile : profiles) {
-            if ((profile.lifecycleStatus() == LifecycleStatus.candidate
-                || profile.lifecycleStatus() == LifecycleStatus.integration_candidate)
-                && profile.deploymentModes().contains(DeploymentMode.bundled)) {
-                failures.add("profile " + profile.profileId() + " is candidate but declares bundled deployment");
-            }
-            if ((profile.lifecycleStatus() == LifecycleStatus.supported_bundled
-                || profile.lifecycleStatus() == LifecycleStatus.supported_external_byo)
-                && (profile.impactModel() == null || !profile.impactModel().complete())) {
-                failures.add("profile " + profile.profileId() + " is supported but has no impact model");
-            }
-            if (profile.deploymentModes().contains(DeploymentMode.external_byo)
-                && profile.supportBoundary() == null) {
-                failures.add("profile " + profile.profileId() + " external_byo has no support boundary");
-            }
-            if (profile.lifecycleStatus() == LifecycleStatus.rejected
-                && profile.deploymentModes().contains(DeploymentMode.bundled)) {
-                failures.add("profile " + profile.profileId() + " is rejected but declares bundled deployment");
-            }
+            validateOneProfile(profile, failures);
         }
-        return new ValidationResult(false, failures, warnings, false, Map.of());
+        return new ValidationResult(failures.isEmpty(), failures, warnings, false, Map.of());
+    }
+
+    private static void validateOneProfile(ConnectorProfile profile, List<String> failures) {
+        var id = PROFILE_PREFIX + profile.profileId();
+        if ((profile.lifecycleStatus() == LifecycleStatus.CANDIDATE
+            || profile.lifecycleStatus() == LifecycleStatus.INTEGRATION_CANDIDATE)
+            && profile.deploymentModes().contains(DeploymentMode.BUNDLED)) {
+            failures.add(id + " is candidate but declares bundled deployment");
+        }
+        if ((profile.lifecycleStatus() == LifecycleStatus.SUPPORTED_BUNDLED
+            || profile.lifecycleStatus() == LifecycleStatus.SUPPORTED_EXTERNAL_BYO)
+            && (profile.impactModel() == null || !profile.impactModel().complete())) {
+            failures.add(id + " is supported but has no impact model");
+        }
+        if (profile.deploymentModes().contains(DeploymentMode.EXTERNAL_BYO)
+            && profile.supportBoundary() == null) {
+            failures.add(id + " external_byo has no support boundary");
+        }
+        if (profile.lifecycleStatus() == LifecycleStatus.REJECTED
+            && profile.deploymentModes().contains(DeploymentMode.BUNDLED)) {
+            failures.add(id + " is rejected but declares bundled deployment");
+        }
     }
 
     private static boolean ambiguousAuto(ComponentBackendManifest manifest) {
@@ -169,32 +204,29 @@ public final class ExternalStackManifestValidator {
         try {
             pack = ConnectorCompatibilityPacks.packFor(profileId);
         } catch (IllegalArgumentException e) {
-            failures.add("component " + manifest.component()
+            failures.add(COMPONENT_PREFIX + manifest.component()
                 + " references unknown compatibility profile " + profileId);
             return;
         }
+        var profileLabel = COMPONENT_PREFIX + manifest.component() + PROFILE_SEPARATOR + profileId;
         if (!manifest.component().equals(pack.component())) {
-            failures.add("component " + manifest.component()
-                + " profile " + profileId + " belongs to component " + pack.component());
+            failures.add(profileLabel + " belongs to component " + pack.component());
             return;
         }
-        if (manifest.role() == ExternalStackRole.active && !pack.supported()) {
-            failures.add("component " + manifest.component()
-                + " profile " + profileId + " is not production-supported");
+        if (manifest.role() == ExternalStackRole.ACTIVE && !pack.supported()) {
+            failures.add(profileLabel + " is not production-supported");
         }
-        if (manifest.role() == ExternalStackRole.active
-            && pack.lifecycleStatus() == LifecycleStatus.supported_external_byo) {
-            warnings.add("component " + manifest.component()
-                + " profile " + profileId + " requires customer support boundary evidence");
+        if (manifest.role() == ExternalStackRole.ACTIVE
+            && pack.lifecycleStatus() == LifecycleStatus.SUPPORTED_EXTERNAL_BYO) {
+            warnings.add(profileLabel + " requires customer support boundary evidence");
         }
-        if (manifest.role() == ExternalStackRole.active) {
-            pack.unsupportedModes().forEach(mode -> warnings.add("component " + manifest.component()
-                + " profile " + profileId + " unsupported mode: " + mode));
+        if (manifest.role() == ExternalStackRole.ACTIVE) {
+            pack.unsupportedModes().forEach(mode -> warnings.add(profileLabel + " unsupported mode: " + mode));
         }
     }
 
     private static void validateRequiredCheckEvidence(ComponentBackendManifest manifest, List<String> warnings) {
-        if (manifest.role() != ExternalStackRole.active) {
+        if (manifest.role() != ExternalStackRole.ACTIVE) {
             return;
         }
         ComponentValidationContract contract;
@@ -205,7 +237,7 @@ public final class ExternalStackManifestValidator {
         }
         for (var check : contract.requiredChecks()) {
             if (!manifest.capabilities().contains(check)) {
-                warnings.add("component " + manifest.component() + " missing required check evidence: " + check);
+                warnings.add(COMPONENT_PREFIX + manifest.component() + " missing required check evidence: " + check);
             }
         }
     }
@@ -221,7 +253,7 @@ public final class ExternalStackManifestValidator {
             return List.of();
         }
         var provided = componentManifests.stream()
-            .filter(manifest -> manifest.role() == ExternalStackRole.active)
+            .filter(manifest -> manifest.role() == ExternalStackRole.ACTIVE)
             .flatMap(manifest -> manifest.capabilities().stream())
             .collect(Collectors.toSet());
         return contract.requiredChecks().stream()
@@ -266,17 +298,17 @@ public final class ExternalStackManifestValidator {
         if (endpoint == null || endpoint.isBlank()) {
             return endpoint;
         }
-        if (endpoint.matches(".*//[^/@]+@.*")) {
-            return endpoint.replaceFirst("//[^/@]+@", "//<redacted>@");
+        if (USERINFO_IN_ENDPOINT.matcher(endpoint).find()) {
+            return endpoint.replaceFirst(USERINFO_PATTERN, USERINFO_REDACTED);
         }
         try {
             var uri = new URI(endpoint);
             if (uri.getUserInfo() == null || uri.getUserInfo().isBlank()) {
                 return endpoint;
             }
-            return endpoint.replaceFirst("//[^/@]+@", "//<redacted>@");
+            return endpoint.replaceFirst(USERINFO_PATTERN, USERINFO_REDACTED);
         } catch (URISyntaxException e) {
-            return endpoint.replaceFirst("//[^/@]+@", "//<redacted>@");
+            return endpoint.replaceFirst(USERINFO_PATTERN, USERINFO_REDACTED);
         }
     }
 }

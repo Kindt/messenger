@@ -16,6 +16,7 @@ public final class WebClientApplication {
     private static final Logger log = LoggerFactory.getLogger(WebClientApplication.class);
     private static final String DEFAULT_PORT = "9080";
     private static final String DEFAULT_API_UPSTREAM = "http://127.0.0.1:8080";
+    private static final String SERVLET_NAME_WEB_UI = "webUi";
 
     public static void main(String[] args) throws Exception {
         int port = readPortFromEnv();
@@ -47,12 +48,12 @@ public final class WebClientApplication {
             if (!Files.isDirectory(overlayRoot)) {
                 throw new IllegalStateException("WEB_CLIENT_WEBUI_OVERLAY is not a directory: " + overlayRoot);
             }
-            Tomcat.addServlet(ctx, "webUi", new OverlayWebUiServlet(overlayRoot));
+            Tomcat.addServlet(ctx, SERVLET_NAME_WEB_UI, new OverlayWebUiServlet(overlayRoot));
             log.info("web-client webui overlay: {}", overlayRoot.toAbsolutePath());
         } else {
-            Tomcat.addServlet(ctx, "webUi", new ClasspathWebUiServlet());
+            Tomcat.addServlet(ctx, SERVLET_NAME_WEB_UI, new ClasspathWebUiServlet());
         }
-        ctx.addServletMappingDecoded("/*", "webUi");
+        ctx.addServletMappingDecoded("/*", SERVLET_NAME_WEB_UI);
 
         tomcat.start();
         log.info("web-client started on port {} (API upstream: {})", port, apiUpstream);

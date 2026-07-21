@@ -303,6 +303,7 @@ class UserApplicationServiceTest {
 
         @Override
         public void upsertFromKeycloak(UserId id, String username, String displayName) {
+            // no-op stub: Keycloak sync not exercised in these tests
         }
 
         @Override

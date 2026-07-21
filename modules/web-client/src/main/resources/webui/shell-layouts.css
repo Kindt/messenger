@@ -37,22 +37,23 @@
   justify-self: center;
 }
 
-@media (max-width: 960px) {
-  .auth-shell-split {
+html[data-mobile-shell="1"] .auth-shell-split {
     grid-template-columns: 1fr;
     align-items: stretch;
   }
 
-  .auth-split-hero {
+html[data-mobile-shell="1"] .auth-split-hero {
     text-align: center;
     align-items: center;
     max-width: none;
   }
 
-  .auth-split-hero .auth-card-brand {
+html[data-mobile-shell="1"] .auth-split-hero .auth-card-brand {
     align-items: center;
   }
-}
+
+
+
 
 html[data-shell-layout="compact"] .app-header {
   padding-top: 8px;

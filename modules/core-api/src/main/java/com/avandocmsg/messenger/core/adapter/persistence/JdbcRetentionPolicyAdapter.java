@@ -54,7 +54,7 @@ public final class JdbcRetentionPolicyAdapter implements RetentionPolicyPort {
             }
         } catch (Exception e) {
             log.error("find retention policy failed orgId={}", orgId, e);
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -68,26 +68,30 @@ public final class JdbcRetentionPolicyAdapter implements RetentionPolicyPort {
         try (var conn = dataSource.getConnection()) {
             JdbcConnectionSupport.prepareWrite(conn);
             if (JdbcDialect.isPostgres(conn)) {
-                return upsertOnConflict(conn, orgId, hotMessageBodyMaxAgeDays, hotMetadataMinAgeDays,
-                    archiveMetadataEnabled, deepArchiveEnabled, legalHold, updatedBy);
+                return upsertOnConflict(conn, new UpsertParams(
+                    orgId, hotMessageBodyMaxAgeDays, hotMetadataMinAgeDays,
+                    archiveMetadataEnabled, deepArchiveEnabled, legalHold, updatedBy));
             }
-            return upsertLegacy(conn, orgId, hotMessageBodyMaxAgeDays, hotMetadataMinAgeDays,
-                archiveMetadataEnabled, deepArchiveEnabled, legalHold, updatedBy);
+            return upsertLegacy(conn, new UpsertParams(
+                orgId, hotMessageBodyMaxAgeDays, hotMetadataMinAgeDays,
+                archiveMetadataEnabled, deepArchiveEnabled, legalHold, updatedBy));
         } catch (Exception e) {
             log.error("upsert retention policy failed orgId={}", orgId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
-    private boolean upsertOnConflict(
-        java.sql.Connection conn,
+    private record UpsertParams(
         UUID orgId,
         Integer hotMessageBodyMaxAgeDays,
         Integer hotMetadataMinAgeDays,
         boolean archiveMetadataEnabled,
         boolean deepArchiveEnabled,
         boolean legalHold,
-        UUID updatedBy) throws Exception {
+        UUID updatedBy
+    ) {}
+
+    private boolean upsertOnConflict(java.sql.Connection conn, UpsertParams p) throws java.sql.SQLException {
         var sql = """
             INSERT INTO org_retention_policy (
                 org_id, hot_message_body_max_age_days, hot_metadata_min_age_days,
@@ -104,26 +108,18 @@ public final class JdbcRetentionPolicyAdapter implements RetentionPolicyPort {
             """;
         try (var stmt = conn.prepareStatement(sql)) {
             JdbcQuerySupport.applyDefaultTimeout(stmt);
-            stmt.setObject(1, orgId);
-            stmt.setObject(2, hotMessageBodyMaxAgeDays);
-            stmt.setObject(3, hotMetadataMinAgeDays);
-            stmt.setBoolean(4, archiveMetadataEnabled);
-            stmt.setBoolean(5, deepArchiveEnabled);
-            stmt.setBoolean(6, legalHold);
-            stmt.setObject(7, updatedBy);
+            stmt.setObject(1, p.orgId());
+            stmt.setObject(2, p.hotMessageBodyMaxAgeDays());
+            stmt.setObject(3, p.hotMetadataMinAgeDays());
+            stmt.setBoolean(4, p.archiveMetadataEnabled());
+            stmt.setBoolean(5, p.deepArchiveEnabled());
+            stmt.setBoolean(6, p.legalHold());
+            stmt.setObject(7, p.updatedBy());
             return stmt.executeUpdate() > 0;
         }
     }
 
-    private boolean upsertLegacy(
-        java.sql.Connection conn,
-        UUID orgId,
-        Integer hotMessageBodyMaxAgeDays,
-        Integer hotMetadataMinAgeDays,
-        boolean archiveMetadataEnabled,
-        boolean deepArchiveEnabled,
-        boolean legalHold,
-        UUID updatedBy) throws Exception {
+    private boolean upsertLegacy(java.sql.Connection conn, UpsertParams p) throws java.sql.SQLException {
         var updateSql = """
             UPDATE org_retention_policy SET
                 hot_message_body_max_age_days = ?,
@@ -137,13 +133,13 @@ public final class JdbcRetentionPolicyAdapter implements RetentionPolicyPort {
             """;
         try (var stmt = conn.prepareStatement(updateSql)) {
             JdbcQuerySupport.applyDefaultTimeout(stmt);
-            stmt.setObject(1, hotMessageBodyMaxAgeDays);
-            stmt.setObject(2, hotMetadataMinAgeDays);
-            stmt.setBoolean(3, archiveMetadataEnabled);
-            stmt.setBoolean(4, deepArchiveEnabled);
-            stmt.setBoolean(5, legalHold);
-            stmt.setObject(6, updatedBy);
-            stmt.setObject(7, orgId);
+            stmt.setObject(1, p.hotMessageBodyMaxAgeDays());
+            stmt.setObject(2, p.hotMetadataMinAgeDays());
+            stmt.setBoolean(3, p.archiveMetadataEnabled());
+            stmt.setBoolean(4, p.deepArchiveEnabled());
+            stmt.setBoolean(5, p.legalHold());
+            stmt.setObject(6, p.updatedBy());
+            stmt.setObject(7, p.orgId());
             if (stmt.executeUpdate() > 0) {
                 return true;
             }
@@ -156,13 +152,13 @@ public final class JdbcRetentionPolicyAdapter implements RetentionPolicyPort {
             """;
         try (var stmt = conn.prepareStatement(insertSql)) {
             JdbcQuerySupport.applyDefaultTimeout(stmt);
-            stmt.setObject(1, orgId);
-            stmt.setObject(2, hotMessageBodyMaxAgeDays);
-            stmt.setObject(3, hotMetadataMinAgeDays);
-            stmt.setBoolean(4, archiveMetadataEnabled);
-            stmt.setBoolean(5, deepArchiveEnabled);
-            stmt.setBoolean(6, legalHold);
-            stmt.setObject(7, updatedBy);
+            stmt.setObject(1, p.orgId());
+            stmt.setObject(2, p.hotMessageBodyMaxAgeDays());
+            stmt.setObject(3, p.hotMetadataMinAgeDays());
+            stmt.setBoolean(4, p.archiveMetadataEnabled());
+            stmt.setBoolean(5, p.deepArchiveEnabled());
+            stmt.setBoolean(6, p.legalHold());
+            stmt.setObject(7, p.updatedBy());
             return stmt.executeUpdate() > 0;
         }
     }

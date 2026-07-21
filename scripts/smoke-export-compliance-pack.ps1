@@ -80,7 +80,7 @@ if (-not $SkipSuggestedNats) {
 if (-not $SkipRetentionSuggested) {
     Step "retention export.suggested -> audit" {
         & "$scriptDir\smoke-retention-export-suggested.ps1" -ChatId $script:ChatId -BaseUrl $BaseUrl `
-            -RetentionMetricsUrl $RetentionMetricsUrl
+            -RetentionMetricsUrl $RetentionMetricsUrl -WaitSeconds 120
     }
 }
 
@@ -100,7 +100,12 @@ if (-not $SkipGlobalJobs) {
 
 if (-not $SkipObservability) {
     Step "prometheus export metrics" {
-        & "$scriptDir\smoke-export-observability.ps1"
+        $obsArgs = @{
+            CoreMetricsUrl      = "$($BaseUrl.TrimEnd('/'))/api/v1/metrics/prometheus"
+            WorkerMetricsUrl    = $WorkerMetricsUrl
+            RetentionMetricsUrl = $RetentionMetricsUrl
+        }
+        & "$scriptDir\smoke-export-observability.ps1" @obsArgs
     }
 }
 

@@ -10,9 +10,13 @@ if (-not $hostKey) { throw 'server SSH host key not ready' }
 
 . (Join-Path $Root 'deploy\qemu\lib\New-KorusRepoSnapshot.ps1')
 
-Write-Host 'Repair: sync repo + MinIO prune + deep-archiver recreate...' -ForegroundColor Cyan
-New-KorusRepoSnapshot -Force | Out-Null
-Update-KorusGuestRepo -Role server -SshPort 12221 -HostKey $hostKey -Plink $plink | Out-Null
+Write-Host 'Repair: MinIO prune + deep-archiver recreate on server guest...' -ForegroundColor Cyan
+try {
+    New-KorusRepoSnapshot -Force | Out-Null
+    Update-KorusGuestRepo -Role server -SshPort 12221 -HostKey $hostKey -Plink $plink | Out-Null
+} catch {
+    Write-Host "  repo snapshot sync skipped: $_" -ForegroundColor DarkYellow
+}
 $guestScript = @'
 set -e
 docker exec docker-minio-1 mc alias set local http://127.0.0.1:9000 avandocmsg avandocmsg123

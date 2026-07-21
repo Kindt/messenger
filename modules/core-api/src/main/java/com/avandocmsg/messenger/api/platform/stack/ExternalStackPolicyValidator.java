@@ -6,6 +6,8 @@ import java.util.Map;
 
 public final class ExternalStackPolicyValidator {
 
+    private static final String FAIL_CLOSED = "fail_closed";
+
     private ExternalStackPolicyValidator() {
     }
 
@@ -15,16 +17,16 @@ public final class ExternalStackPolicyValidator {
         if (!allowed.contains(policy)) {
             failures.add("component " + componentUse + " does not allow " + policy);
         }
-        return new ValidationResult(false, failures, List.of(), false, Map.of());
+        return new ValidationResult(failures.isEmpty(), failures, List.of(), false, Map.of());
     }
 
     private static List<String> allowedPolicies(String componentUse) {
         return switch (componentUse) {
-            case "idp", "relational-db-hot" -> List.of("fail_closed");
+            case "idp", "relational-db-hot" -> List.of(FAIL_CLOSED);
             case "cache:read-cache", "notifications", "media", "turn" -> List.of("fail_open", "degraded");
-            case "cache:rate-limit" -> List.of("fail_closed", "controlled_degraded");
-            case "dlp" -> List.of("fail_open", "fail_closed", "quarantine");
-            default -> List.of("degraded", "fail_closed");
+            case "cache:rate-limit" -> List.of(FAIL_CLOSED, "controlled_degraded");
+            case "dlp" -> List.of("fail_open", FAIL_CLOSED, "quarantine");
+            default -> List.of("degraded", FAIL_CLOSED);
         };
     }
 }

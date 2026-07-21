@@ -155,7 +155,7 @@ class ExternalStackStatefulContractTest {
         assertEquals("relational-db-hot", postgres.component());
         assertTrue(postgres.requiredChecks().contains("flyway_privileges"));
         assertTrue(postgres.promotionEvidence().contains("h2_or_lab_migration_green"));
-        assertEquals(LifecycleStatus.supported_external_byo, postgres.lifecycleStatus());
+        assertEquals(LifecycleStatus.SUPPORTED_EXTERNAL_BYO, postgres.lifecycleStatus());
         assertTrue(postgres.supported());
 
         var minio = ConnectorCompatibilityPacks.packFor("s3-minio-bundled");
@@ -163,7 +163,7 @@ class ExternalStackStatefulContractTest {
         assertTrue(minio.requiredChecks().contains("checksum"));
 
         var opensearch = ConnectorCompatibilityPacks.packFor("opensearch-candidate");
-        assertEquals(LifecycleStatus.integration_candidate, opensearch.lifecycleStatus());
+        assertEquals(LifecycleStatus.INTEGRATION_CANDIDATE, opensearch.lifecycleStatus());
         assertFalse(opensearch.supported());
         assertTrue(opensearch.unsupportedModes().contains("production_without_reindex_gate"));
 
@@ -176,13 +176,13 @@ class ExternalStackStatefulContractTest {
     void compatibilityPacksLoadFullYamlProfileCatalog() {
         var jatoba = ConnectorCompatibilityPacks.packFor("jatoba");
         assertEquals("relational-db-hot", jatoba.component());
-        assertEquals(LifecycleStatus.candidate, jatoba.lifecycleStatus());
+        assertEquals(LifecycleStatus.CANDIDATE, jatoba.lifecycleStatus());
         assertTrue(jatoba.requiredChecks().contains("jdbc_connectivity"));
         assertTrue(jatoba.unsupportedModes().contains("supported_bundled_claim"));
 
         var nginx = ConnectorCompatibilityPacks.packFor("nginx-bundled");
         assertEquals("web-edge", nginx.component());
-        assertEquals(LifecycleStatus.supported_bundled, nginx.lifecycleStatus());
+        assertEquals(LifecycleStatus.SUPPORTED_BUNDLED, nginx.lifecycleStatus());
         assertTrue(nginx.requiredChecks().contains("security_headers"));
 
         var livekit = ConnectorCompatibilityPacks.packFor("livekit-1.8-bundled");

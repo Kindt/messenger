@@ -75,10 +75,12 @@ class MessageSendCoordinatorTest {
 
         @Override
         public void publish(String subject, byte[] payload) {
+            // no-op stub: only pipeline publish is asserted
         }
 
         @Override
         public void flush(java.time.Duration timeout) {
+            // no-op stub: flush not exercised in unit test
         }
 
         @Override
@@ -93,8 +95,7 @@ class MessageSendCoordinatorTest {
         }
 
         @Override
-        public com.avandocmsg.messenger.api.mls.dto.EncryptedMessage encrypt(
-            UUID chatId, UUID senderId, String plaintext) {
+        public com.avandocmsg.messenger.api.mls.dto.EncryptedMessage encrypt(UUID chatId, String plaintext) {
             return null;
         }
     }

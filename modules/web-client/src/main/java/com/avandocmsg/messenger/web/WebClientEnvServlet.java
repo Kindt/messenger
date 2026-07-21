@@ -6,7 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 /**
  * Отдаёт небольшой JS: публичный URL WebSocket (ws-gateway) и опционально JSON-массив ICE-серверов для WebRTC.
@@ -18,7 +18,7 @@ final class WebClientEnvServlet extends HttpServlet {
      * Собирает тело скрипта (как в {@link #doGet}). {@code getenv} возвращает {@code null}, если переменной нет.
      * Пакетный доступ — для юнит-тестов без подмены {@link System#getenv()}.
      */
-    static String buildEnvScriptBody(Function<String, String> getenv) {
+    static String buildEnvScriptBody(UnaryOperator<String> getenv) {
         String wsUrl = envOrDefault(getenv, "WEB_CLIENT_WS_PUBLIC_URL", "ws://127.0.0.1:8081/ws")
             .replaceAll("/$", "");
         String iceRaw = envOrDefault(getenv, "WEB_CLIENT_RTC_ICE_SERVERS", "");
@@ -58,7 +58,7 @@ final class WebClientEnvServlet extends HttpServlet {
         return "\"" + s.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
-    private static String envOrDefault(Function<String, String> getenv, String key, String fallback) {
+    private static String envOrDefault(UnaryOperator<String> getenv, String key, String fallback) {
         String value = getenv.apply(key);
         if (value == null) {
             return fallback;
@@ -66,13 +66,13 @@ final class WebClientEnvServlet extends HttpServlet {
         return value.trim();
     }
 
-    private static boolean envFlag(Function<String, String> getenv, String key) {
+    private static boolean envFlag(UnaryOperator<String> getenv, String key) {
         String value = getenv.apply(key);
         return value != null && ("1".equals(value.trim()) || "true".equalsIgnoreCase(value.trim()));
     }
 
     /** {@code WEB_CLIENT_DEMO_SKINS=false|0|no} disables demo skin buttons on login. */
-    static boolean demoSkinsEnabled(Function<String, String> getenv) {
+    static boolean demoSkinsEnabled(UnaryOperator<String> getenv) {
         String value = getenv.apply("WEB_CLIENT_DEMO_SKINS");
         if (value == null || value.isBlank()) {
             return true;

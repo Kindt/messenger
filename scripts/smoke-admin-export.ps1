@@ -1,8 +1,7 @@
 # Admin: POST export -> poll status -> optional download (all /admin/... endpoints).
 # Requires EXPORT_ADMIN_EXPORT_ENABLED=true on core-api.
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$ChatId,
+    [string]$ChatId = "",
     [string]$BaseUrl = "http://localhost:8080",
     [string]$AdminUser = "csadmin",
     [string]$AdminPass = "csadmin",
@@ -11,6 +10,9 @@ param(
     [switch]$SkipDownload
 )
 $ErrorActionPreference = "Stop"
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $scriptDir "lib\Resolve-SmokeExportChatId.ps1")
+$ChatId = Resolve-SmokeExportChatId -ChatId $ChatId -BaseUrl $BaseUrl -ScriptDir $scriptDir
 
 function Get-Token {
     param($User, $Pass)

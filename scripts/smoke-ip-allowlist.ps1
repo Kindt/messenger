@@ -109,4 +109,7 @@ if ($RequireEnforce) {
         -Body (@{ enabled = $false; allowed_cidrs = "" } | ConvertTo-Json) | Out-Null
 }
 
+. (Join-Path $PSScriptRoot "lib\Reset-QemuLabOrgIpAllowlist.ps1")
+Reset-QemuLabOrgIpAllowlist -BaseUrl $BaseUrl | Out-Null
+
 Write-Host "[OK] smoke-ip-allowlist org=$orgId" -ForegroundColor Green

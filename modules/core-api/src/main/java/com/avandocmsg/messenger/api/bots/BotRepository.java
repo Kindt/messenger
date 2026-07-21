@@ -41,7 +41,7 @@ public class BotRepository {
         String defaultWebhookUrl
     ) {}
 
-    public boolean createBot(UUID botUserId, UUID ownerId, UUID orgId, String botName, String displayName,
+    public boolean createBot(UUID botUserId, UUID ownerId, UUID orgId, String botName, String displayName, // NOSONAR java:S107
                              String tokenHash, String listenMode, String defaultWebhookUrl) {
         return jdbc.createBot(botUserId, ownerId, orgId, botName, displayName, tokenHash, listenMode, defaultWebhookUrl);
     }

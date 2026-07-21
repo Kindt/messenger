@@ -6,9 +6,10 @@ import java.util.regex.Pattern;
 /** Removes dangerous CSS constructs and enforces payload size limit. */
 public final class CustomCssSanitizer {
     private static final int MAX_BYTES = 32 * 1024;
-    private static final Pattern IMPORT_PATTERN = Pattern.compile("(?is)@import\\s+[^;]+;");
-    private static final Pattern JAVASCRIPT_PATTERN = Pattern.compile("(?i)javascript\\s*:");
-    private static final Pattern EXPRESSION_PATTERN = Pattern.compile("(?i)expression\\s*\\(");
+    /** Possessive quantifier avoids catastrophic backtracking (S8786). */
+    private static final Pattern IMPORT_PATTERN = Pattern.compile("(?is)@import\\s++[^;]++;");
+    private static final Pattern JAVASCRIPT_PATTERN = Pattern.compile("(?i)javascript\\s*+:");
+    private static final Pattern EXPRESSION_PATTERN = Pattern.compile("(?i)expression\\s*+\\(");
 
     public String sanitize(String css) {
         if (css == null || css.isBlank()) {

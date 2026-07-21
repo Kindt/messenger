@@ -17,7 +17,7 @@ public final class BrandingWebManifestBuilder {
     private static final String DEFAULT_BG = "#0c0b10";
 
     private static final Map<String, String> PALETTE_THEME = Map.of(
-        "korus", "#7949f4",
+        "korus", DEFAULT_THEME,
         "vtb", "#0a2896",
         "alfa", "#ef3124",
         "rzd", "#e4002b",

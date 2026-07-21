@@ -48,12 +48,13 @@ public final class JdbcSavedChatAdapter implements SavedChatPort {
             }
         } catch (Exception e) {
             log.error("getSavedChatId failed for user {}", userId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
 
     @Override
-    public Optional<ChatId> ensureSavedVaultChat(UserId userId) {
+    public Optional<ChatId> ensureSavedVaultChat(UserId userId) { // NOSONAR java:S1141 — connection + txn callback
         var existing = getSavedChatId(userId);
         if (existing.isPresent()) {
             return existing;
@@ -62,35 +63,35 @@ public final class JdbcSavedChatAdapter implements SavedChatPort {
             return Optional.empty();
         }
         try (var conn = dataSource.getConnection()) {
-            JdbcConnectionSupport.beginTransaction(conn);
-            try {
-                var chatId = uuidGenerator.randomUuid();
-                try (var stmt = conn.prepareStatement(
-                    "INSERT INTO chats (id, title, type, owner_id, created_at, updated_at) VALUES (?, ?, 'saved', ?, now(), now())")) {
-                    JdbcQuerySupport.applyDefaultTimeout(stmt);
-                    stmt.setObject(1, chatId);
-                    stmt.setString(2, "Saved Messages");
-                    stmt.setObject(3, userId.value());
-                    stmt.executeUpdate();
-                }
-                try (var stmt = conn.prepareStatement(
-                    "INSERT INTO chat_members (chat_id, user_id, role, joined_at) VALUES (?, ?, ?, now())")) {
-                    JdbcQuerySupport.applyDefaultTimeout(stmt);
-                    stmt.setObject(1, chatId);
-                    stmt.setObject(2, userId.value());
-                    stmt.setString(3, "owner");
-                    stmt.executeUpdate();
-                }
-                conn.commit();
+            return Optional.of(JdbcConnectionSupport.callInTransaction(conn, () -> {
+                var chatId = insertSavedChat(conn, userId);
                 log.info("Created saved vault chat {} for user {}", chatId, userId);
-                return Optional.of(ChatId.of(chatId));
-            } catch (Exception e) {
-                conn.rollback();
-                throw e;
-            }
+                return ChatId.of(chatId);
+            }));
         } catch (Exception e) {
             log.error("ensureSavedVaultChat failed for {}", userId, e);
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
+    }
+
+    private UUID insertSavedChat(java.sql.Connection conn, UserId userId) throws java.sql.SQLException {
+        var chatId = uuidGenerator.randomUuid();
+        try (var stmt = conn.prepareStatement(
+            "INSERT INTO chats (id, title, type, owner_id, created_at, updated_at) VALUES (?, ?, 'saved', ?, now(), now())")) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
+            stmt.setObject(1, chatId);
+            stmt.setString(2, "Saved Messages");
+            stmt.setObject(3, userId.value());
+            stmt.executeUpdate();
+        }
+        try (var stmt = conn.prepareStatement(
+            "INSERT INTO chat_members (chat_id, user_id, role, joined_at) VALUES (?, ?, ?, now())")) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
+            stmt.setObject(1, chatId);
+            stmt.setObject(2, userId.value());
+            stmt.setString(3, "owner");
+            stmt.executeUpdate();
+        }
+        return chatId;
     }
 }

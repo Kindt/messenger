@@ -33,7 +33,14 @@ done
 
 echo "GET $WEB_BASE_URL/health ..." >&2
 body=$(curl -fsS "$WEB_BASE_URL/health") || fail "health request"
-[[ "$(echo -n "$body" | tr -d '\r\n')" == "ok" ]] || fail "health body expected ok, got: $body"
+body_trim=$(echo -n "$body" | tr -d '\r\n')
+if [[ "$body_trim" == "ok" ]]; then
+  :
+elif echo "$body_trim" | grep -q '"status"[[:space:]]*:[[:space:]]*"ok"'; then
+  :
+else
+  fail "health body expected ok, got: $body"
+fi
 
 echo "GET $WEB_BASE_URL/ ..." >&2
 html=$(curl -fsS "$WEB_BASE_URL/") || fail "root request"

@@ -45,7 +45,7 @@ public final class JdbcAuthPolicyJdbcRepository {
             }
         } catch (Exception e) {
             log.error("find auth policy failed orgId={}", orgId, e);
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -58,7 +58,7 @@ public final class JdbcAuthPolicyJdbcRepository {
             return upsertLegacy(conn, row);
         } catch (Exception e) {
             log.error("upsert auth policy failed orgId={}", row.orgId(), e);
-            return row;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -151,10 +151,11 @@ public final class JdbcAuthPolicyJdbcRepository {
             stmt.executeUpdate();
         } catch (Exception e) {
             log.error("update apply status failed orgId={}", orgId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
-    private OrgAuthPolicyRow mapRow(java.sql.ResultSet rs) throws Exception {
+    private OrgAuthPolicyRow mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new OrgAuthPolicyRow(
             rs.getObject("org_id", UUID.class),
             rs.getBoolean("allow_local_password"),
@@ -175,7 +176,7 @@ public final class JdbcAuthPolicyJdbcRepository {
             return list != null ? list : List.of();
         } catch (Exception e) {
             log.warn("parse providers_json failed: {}", e.getMessage());
-            return List.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -183,7 +184,7 @@ public final class JdbcAuthPolicyJdbcRepository {
         try {
             return MAPPER.writeValueAsString(providers != null ? providers : List.of());
         } catch (Exception e) {
-            return "[]";
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 }

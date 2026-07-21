@@ -16,7 +16,7 @@ public record UserPresenceEvent(
     @JsonProperty("dnd_until") Instant dndUntil,
     long ts
 ) {
-    public static final String TYPE = "presence";
+    public static final String TYPE = "presence"; // NOSONAR java:S1845 -- wire constant matches JSON field name type
 
     public static UserPresenceEvent of(
         String userId,

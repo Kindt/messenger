@@ -3,13 +3,10 @@ package com.avandocmsg.messenger.api.platform;
 import com.avandocmsg.messenger.api.platform.stack.ConnectorCompatibilityPacks;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +16,6 @@ import java.util.stream.Collectors;
 
 public final class ProductModuleCatalogLoader {
 
-    private static final Logger log = LoggerFactory.getLogger(ProductModuleCatalogLoader.class);
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
 
     private ProductModuleCatalogLoader() {}
@@ -71,6 +67,7 @@ public final class ProductModuleCatalogLoader {
         ProductModulesCatalog catalog,
         String explicitAddonsCsv
     ) {
+        java.util.Objects.requireNonNull(catalog, "catalog");
         if (explicitAddonsCsv != null && !explicitAddonsCsv.isBlank()) {
             return parseCsv(explicitAddonsCsv);
         }
@@ -128,9 +125,7 @@ public final class ProductModuleCatalogLoader {
             addFeatureOwners(substrate.id(), substrate.features(), ownerByFeature, errors);
             validateBundle(substrate.id(), substrate.migrationBundle(), "substrate", errors);
         }
-        var addonIds = new HashSet<String>();
         for (var addon : safeList(catalog.addons())) {
-            addonIds.add(addon.id());
             if (isBlank(addon.degradationMode())) {
                 errors.add(addon.id() + ": degradation_mode is required");
             }
@@ -264,10 +259,6 @@ public final class ProductModuleCatalogLoader {
 
     private static <T> List<T> safeList(List<T> value) {
         return value == null ? List.of() : value;
-    }
-
-    private static <K, V> Map<K, V> safeMap(Map<K, V> value) {
-        return value == null ? Map.of() : value;
     }
 
     private static boolean isBlank(String value) {

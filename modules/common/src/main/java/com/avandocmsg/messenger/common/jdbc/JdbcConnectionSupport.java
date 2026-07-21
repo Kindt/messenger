@@ -40,4 +40,31 @@ public final class JdbcConnectionSupport {
         conn.setAutoCommit(true);
         conn.setReadOnly(false);
     }
+
+    @FunctionalInterface
+    public interface SqlWork<T> {
+        T execute() throws Exception; // NOSONAR java:S112 — JDBC work may wrap checked SQLException and app exceptions
+    }
+
+    /** Begin/commit/rollback + restore autoCommit; keeps callers free of nested try blocks. */
+    public static <T> T callInTransaction(Connection conn, SqlWork<T> work) throws Exception {
+        beginTransaction(conn);
+        try {
+            T result = work.execute();
+            conn.commit();
+            return result;
+        } catch (Exception e) {
+            conn.rollback();
+            throw e;
+        } finally {
+            endTransaction(conn);
+        }
+    }
+
+    public static void runInTransaction(Connection conn, SqlWork<Void> work) throws Exception {
+        callInTransaction(conn, () -> {
+            work.execute();
+            return null;
+        });
+    }
 }

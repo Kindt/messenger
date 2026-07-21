@@ -11,6 +11,12 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 public final class ExportGdprDisclosures {
 
     private static final ObjectMapper MAPPER = MessengerJson.mapper();
+    private static final String CATEGORY_CHAT_DATA = "chat_data";
+    private static final String CATEGORY_ATTACHMENTS = "attachments";
+    private static final String CATEGORY_PERSONAL_DATA = "personal_data";
+    private static final String CATEGORY_ARCHIVE = "archive";
+    private static final String CATEGORY_SEARCH_INDEX = "search_index";
+    private static final String CATEGORY_RETENTION = "retention";
 
     private ExportGdprDisclosures() {}
 
@@ -38,7 +44,7 @@ public final class ExportGdprDisclosures {
             0);
     }
 
-    public static ArrayNode build(
+    public static ArrayNode build( // NOSONAR java:S107 -- public export API; callers pass flat flags
         boolean messageTtlFilterApplied,
         boolean includeVersions,
         boolean includeReactions,
@@ -58,55 +64,97 @@ public final class ExportGdprDisclosures {
         int e2eeFileCandidateCount
     ) {
         var arr = MAPPER.createArrayNode();
-        addDisclosure(arr, "hot_messages", "chat_data", true,
-            "Message rows from hot PostgreSQL (metadata; E2EE without plaintext).");
-        addDisclosure(arr, "e2ee_plaintext", "personal_data", false,
+        addDisclosure(arr, "hot_messages", CATEGORY_CHAT_DATA, true,
+            "Message rows from hot PostgreSQL (metadata; E2EE without plaintext; "
+                + nonE2eeMessageCount + " non-E2EE message(s) in scope).");
+        addDisclosure(arr, "e2ee_plaintext", CATEGORY_PERSONAL_DATA, false,
             "End-to-end encrypted message bodies are never exported in plaintext.");
-        addDisclosure(arr, "e2ee_file_refs", "attachments", false,
-            e2eeMessageCount > 0
-                ? "File UUIDs embedded in " + e2eeMessageCount + " E2EE message(s) are not extracted from ciphertext."
-                : "No E2EE messages in this export; file refs come from plaintext content and chat avatar only.");
-        addDisclosure(arr, "e2ee_file_candidates", "attachments", e2eeFileCandidatesIncluded,
-            e2eeFileCandidatesIncluded
-                ? e2eeFileCandidateCount + " heuristic file_metadata row(s) uploaded by chat members (not from E2EE bodies)."
-                : (e2eeMessageCount > 0
-                ? "Optional heuristic list omitted; set EXPORT_REPLAY_INCLUDE_E2EE_FILE_CANDIDATES=true to include."
-                : "Not applicable вЂ” no E2EE messages in this export."));
-        addDisclosure(arr, "message_versions", "chat_data", includeVersions,
+        addDisclosure(arr, "e2ee_file_refs", CATEGORY_ATTACHMENTS, false,
+            e2eeFileRefsNote(e2eeMessageCount));
+        addDisclosure(arr, "e2ee_file_candidates", CATEGORY_ATTACHMENTS, e2eeFileCandidatesIncluded,
+            e2eeFileCandidatesNote(e2eeFileCandidatesIncluded, e2eeFileCandidateCount, e2eeMessageCount));
+        addDisclosure(arr, "message_versions", CATEGORY_CHAT_DATA, includeVersions,
             includeVersions ? "Edit history included when enabled." : "Edit history not included in this export.");
-        addDisclosure(arr, "reactions", "chat_data", includeReactions,
+        addDisclosure(arr, "reactions", CATEGORY_CHAT_DATA, includeReactions,
             includeReactions ? "Reactions included." : "Reactions not included.");
-        addDisclosure(arr, "pinned_messages", "chat_data", includePins,
+        addDisclosure(arr, "pinned_messages", CATEGORY_CHAT_DATA, includePins,
             includePins ? "Pinned message references included." : "Pins not included.");
-        addDisclosure(arr, "file_metadata", "attachments", includeReferencedFiles,
+        addDisclosure(arr, "file_metadata", CATEGORY_ATTACHMENTS, includeReferencedFiles,
             includeReferencedFiles ? "Referenced file metadata (not binary bodies)." : "File metadata omitted.");
-        addDisclosure(arr, "file_binary", "attachments", false,
+        addDisclosure(arr, "file_binary", CATEGORY_ATTACHMENTS, false,
             fileBodiesRequested
                 ? "See fileBodies in export root and attachments/ in zip when bundle was built."
                 : "Attachment file bytes are not part of export v1 JSON unless EXPORT_REPLAY_INCLUDE_FILE_BODIES.");
-        addDisclosure(arr, "deep_archive_bodies", "archive", deepArchiveSnapshotsFound > 0,
-            deepArchiveSnapshotsRequested
-                ? (deepArchiveSnapshotsFound > 0
-                ? "Deep-archive MinIO snapshots merged for " + deepArchiveSnapshotsFound + " message(s)."
-                : "Deep-archive requested but no snapshots found in object storage.")
-                : "Deep-archive snapshots not requested for this export.");
-        addDisclosure(arr, "retention_snapshots", "archive", retentionSnapshotsFound > 0,
-            retentionSnapshotsRequested
-                ? (retentionSnapshotsFound > 0
-                ? "Retention hot-body MinIO snapshots included for " + retentionSnapshotsFound + " message(s)."
-                : "Retention snapshots requested but none found.")
-                : "Retention MinIO snapshots not requested.");
-        addDisclosure(arr, "solr_index", "search_index", solrExported > 0,
-            solrIndexRequested
-                ? (solrExported > 0
-                ? "Solr index documents exported (" + solrExported + ")."
-                : "Solr dump requested but no documents exported.")
-                : "Solr index not included.");
-        addDisclosure(arr, "ttl_filtered_messages", "retention", !messageTtlFilterApplied,
+        addDisclosure(arr, "deep_archive_bodies", CATEGORY_ARCHIVE,
+            deepArchiveSnapshotsFound > 0,
+            deepArchiveBodiesNote(deepArchiveSnapshotsRequested, deepArchiveSnapshotsFound, deepArchiveFileIdsReferenced));
+        addDisclosure(arr, "retention_snapshots", CATEGORY_ARCHIVE, retentionSnapshotsFound > 0,
+            retentionSnapshotsNote(retentionSnapshotsRequested, retentionSnapshotsFound));
+        addDisclosure(arr, "solr_index", CATEGORY_SEARCH_INDEX, solrExported > 0,
+            solrIndexNote(solrIndexRequested, solrExported));
+        addDisclosure(arr, "ttl_filtered_messages", CATEGORY_RETENTION, !messageTtlFilterApplied,
             messageTtlFilterApplied
                 ? "Messages past per-message TTL were excluded (same rule as live API)."
                 : "Per-message TTL filter was off; expired-TTL rows may appear.");
         return arr;
+    }
+
+    private static String e2eeFileRefsNote(int e2eeMessageCount) {
+        if (e2eeMessageCount > 0) {
+            return "File UUIDs embedded in " + e2eeMessageCount + " E2EE message(s) are not extracted from ciphertext.";
+        }
+        return "No E2EE messages in this export; file refs come from plaintext content and chat avatar only.";
+    }
+
+    private static String e2eeFileCandidatesNote(
+        boolean e2eeFileCandidatesIncluded,
+        int e2eeFileCandidateCount,
+        int e2eeMessageCount
+    ) {
+        if (e2eeFileCandidatesIncluded) {
+            return e2eeFileCandidateCount
+                + " heuristic file_metadata row(s) uploaded by chat members (not from E2EE bodies).";
+        }
+        if (e2eeMessageCount > 0) {
+            return "Optional heuristic list omitted; set EXPORT_REPLAY_INCLUDE_E2EE_FILE_CANDIDATES=true to include.";
+        }
+        return "Not applicable — no E2EE messages in this export.";
+    }
+
+    private static String deepArchiveBodiesNote(
+        boolean deepArchiveSnapshotsRequested,
+        int deepArchiveSnapshotsFound,
+        boolean deepArchiveFileIdsReferenced
+    ) {
+        if (!deepArchiveSnapshotsRequested) {
+            return deepArchiveFileIdsReferenced
+                ? "Deep-archive snapshots not requested; export still references deep-archive file IDs."
+                : "Deep-archive snapshots not requested for this export.";
+        }
+        if (deepArchiveSnapshotsFound > 0) {
+            return "Deep-archive MinIO snapshots merged for " + deepArchiveSnapshotsFound + " message(s).";
+        }
+        return "Deep-archive requested but no snapshots found in object storage.";
+    }
+
+    private static String retentionSnapshotsNote(boolean retentionSnapshotsRequested, int retentionSnapshotsFound) {
+        if (!retentionSnapshotsRequested) {
+            return "Retention MinIO snapshots not requested.";
+        }
+        if (retentionSnapshotsFound > 0) {
+            return "Retention hot-body MinIO snapshots included for " + retentionSnapshotsFound + " message(s).";
+        }
+        return "Retention snapshots requested but none found.";
+    }
+
+    private static String solrIndexNote(boolean solrIndexRequested, int solrExported) {
+        if (!solrIndexRequested) {
+            return "Solr index not included.";
+        }
+        if (solrExported > 0) {
+            return "Solr index documents exported (" + solrExported + ").";
+        }
+        return "Solr dump requested but no documents exported.";
     }
 
     private static void addDisclosure(ArrayNode arr, String id, String category, boolean included, String note) {

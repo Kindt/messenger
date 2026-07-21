@@ -146,6 +146,12 @@ deploy/qemu/backups/
 deploy/qemu/run/
 deploy/qemu/tools/__pycache__/
 
+# SonarQube Community lab (deploy/sonar-qemu) — local disks/scanner artifacts
+deploy/sonar-qemu/images/
+deploy/sonar-qemu/run/
+deploy/sonar-qemu/tools/
+deploy/sonar-qemu/config.local.ps1
+
 # Playwright artifacts (when e2e tree exists locally)
 tests/e2e-web/node_modules/
 tests/e2e-web/test-results/

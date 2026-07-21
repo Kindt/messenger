@@ -33,8 +33,8 @@ public final class JdbcMessageMentionRepositoryAdapter implements MessageMention
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
                  JdbcQuerySupport.applyDefaultTimeout(stmt);
+            stmt.setObject(1, messageId);
             for (var row : rows) {
-                stmt.setObject(1, messageId);
                 stmt.setObject(2, row.userId());
                 stmt.setString(3, row.kind());
                 stmt.addBatch();
@@ -42,6 +42,7 @@ public final class JdbcMessageMentionRepositoryAdapter implements MessageMention
             stmt.executeBatch();
         } catch (Exception e) {
             log.error("insertMentions failed for {}", messageId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -79,7 +80,7 @@ public final class JdbcMessageMentionRepositoryAdapter implements MessageMention
             }
         } catch (Exception e) {
             log.error("findSummariesByMessageIds failed", e);
-            return Map.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         var out = new HashMap<UUID, MentionSummary>();
         for (var id : messageIds) {
@@ -102,7 +103,7 @@ public final class JdbcMessageMentionRepositoryAdapter implements MessageMention
             }
         } catch (Exception e) {
             log.error("isUserMentioned failed", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -118,7 +119,7 @@ public final class JdbcMessageMentionRepositoryAdapter implements MessageMention
             }
         } catch (Exception e) {
             log.error("hasMentionAll failed", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 }

@@ -50,6 +50,7 @@ public final class JdbcContactRepositoryAdapter implements ContactRepositoryPort
             }
         } catch (Exception e) {
             log.error("Failed to list contacts for {}", userId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return result;
     }
@@ -65,7 +66,7 @@ public final class JdbcContactRepositoryAdapter implements ContactRepositoryPort
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("Failed to add contact {} for {}", contactUserId, userId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -80,7 +81,7 @@ public final class JdbcContactRepositoryAdapter implements ContactRepositoryPort
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("Failed to remove contact {} for {}", contactUserId, userId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -89,31 +90,29 @@ public final class JdbcContactRepositoryAdapter implements ContactRepositoryPort
         if (phoneHashes == null || phoneHashes.isEmpty()) {
             return List.of();
         }
-        var placeholders = phoneHashes.stream().map(h -> "?").collect(java.util.stream.Collectors.joining(","));
-        var sql = "SELECT id FROM users WHERE phone_hash IN (" + placeholders + ") AND hidden = false AND id != ? LIMIT ?";
+        var sql = "SELECT id FROM users WHERE phone_hash = ANY (?) AND hidden = false AND id != ? LIMIT ?";
         var result = new ArrayList<UUID>();
         try (var conn = dataSource.getConnection()) {
             JdbcConnectionSupport.prepareRead(conn);
             try (var stmt = conn.prepareStatement(sql)) {
                 JdbcQuerySupport.applyDefaultTimeout(stmt);
-                for (int i = 0; i < phoneHashes.size(); i++) {
-                    stmt.setString(i + 1, phoneHashes.get(i));
+                stmt.setArray(1, conn.createArrayOf("varchar", phoneHashes.toArray(new String[0])));
+                stmt.setObject(2, userId.value());
+                stmt.setInt(3, JdbcListLimits.PHONE_HASH_MATCHES);
+                try (var rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        result.add(rs.getObject("id", UUID.class));
+                    }
                 }
-                stmt.setObject(phoneHashes.size() + 1, userId.value());
-                stmt.setInt(phoneHashes.size() + 2, JdbcListLimits.PHONE_HASH_MATCHES);
-            try (var rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    result.add(rs.getObject("id", UUID.class));
-                }
-            }
             }
         } catch (Exception e) {
             log.error("Failed to find by phone hashes", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return result;
     }
 
-    private Contact mapContact(ResultSet rs) throws Exception {
+    private Contact mapContact(ResultSet rs) throws java.sql.SQLException {
         return new Contact(
             UserId.of(rs.getObject("contact_user_id", UUID.class)),
             rs.getString("username"),

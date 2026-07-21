@@ -26,6 +26,10 @@ import java.util.Map;
 @Tag(name = "Platform", description = "External stack profile manifests and validation status")
 public class ExternalStackStatusResource {
 
+    private static final String SEVERITY_BLOCKED = "blocked";
+    private static final String SEVERITY_WARNING = "warning";
+    private static final String SEVERITY_OK = "ok";
+
     private final ExternalStackStatusService statusService;
     private final ExternalStackRuntimeManifestProvider manifestProvider;
 
@@ -161,21 +165,21 @@ public class ExternalStackStatusResource {
         var blockers = new java.util.ArrayList<String>();
         blockers.addAll(catalog.failures());
         componentSummaries.stream()
-            .filter(summary -> "blocked".equals(summary.readinessSeverity()))
+            .filter(summary -> SEVERITY_BLOCKED.equals(summary.readinessSeverity()))
             .map(summary -> "component " + summary.component() + " has no production-supported profile")
             .forEach(blockers::add);
 
         var warnings = new java.util.ArrayList<String>();
         warnings.addAll(catalog.warnings());
         componentSummaries.stream()
-            .filter(summary -> "warning".equals(summary.readinessSeverity()))
+            .filter(summary -> SEVERITY_WARNING.equals(summary.readinessSeverity()))
             .map(summary -> "component " + summary.component() + ": " + summary.readinessWarning())
             .forEach(warnings::add);
 
         var remediation = new java.util.ArrayList<String>();
         remediation.addAll(catalog.remediationActions());
         componentSummaries.forEach(summary -> remediation.addAll(summary.remediationActions()));
-        var severity = !blockers.isEmpty() ? "blocked" : (!warnings.isEmpty() ? "warning" : "ok");
+        var severity = cutoverSeverity(blockers, warnings);
         return new ExternalStackCutoverReadinessReport(
             blockers.isEmpty(),
             severity,
@@ -240,7 +244,7 @@ public class ExternalStackStatusResource {
         if (profileId == null || profileId.isBlank()) {
             return new ExternalStackProfilePreflightReport(
                 false,
-                "blocked",
+                SEVERITY_BLOCKED,
                 null,
                 null,
                 null,
@@ -256,7 +260,7 @@ public class ExternalStackStatusResource {
         var failures = pack.supported()
             ? List.<String>of()
             : List.of("profile " + profileId + " is not production-supported");
-        var evidence = request != null ? request.evidence() : List.<String>of();
+        var evidence = request.evidence() != null ? request.evidence() : List.<String>of();
         var missingEvidence = pack.promotionEvidence().stream()
             .filter(required -> !evidence.contains(required))
             .toList();
@@ -265,7 +269,7 @@ public class ExternalStackStatusResource {
             severityForProfile(failures, missingEvidence, pack.unsupportedModes()),
             profileId,
             pack.component(),
-            pack.lifecycleStatus().name(),
+            pack.lifecycleStatus().code(),
             missingEvidence.size(),
             pack.unsupportedModes().size(),
             failures,
@@ -298,12 +302,22 @@ public class ExternalStackStatusResource {
         List<String> unsupportedModes
     ) {
         if (!failures.isEmpty()) {
-            return "blocked";
+            return SEVERITY_BLOCKED;
         }
         if (!missingEvidence.isEmpty() || !unsupportedModes.isEmpty()) {
-            return "warning";
+            return SEVERITY_WARNING;
         }
-        return "ok";
+        return SEVERITY_OK;
+    }
+
+    private static String cutoverSeverity(List<String> blockers, List<String> warnings) {
+        if (!blockers.isEmpty()) {
+            return SEVERITY_BLOCKED;
+        }
+        if (!warnings.isEmpty()) {
+            return SEVERITY_WARNING;
+        }
+        return SEVERITY_OK;
     }
 
     public record ConnectorCompatibilityPackCatalogResponse(

@@ -15,10 +15,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class AuthServiceTest {
 
-    private final StubUserRepository userRepo = new StubUserRepository();
-    private final StubAppConfig appConfig = new StubAppConfig();
-    private final StubUserRepositoryPort userPort = new StubUserRepositoryPort();
-    private final StubSavedChatPort savedChatPort = new StubSavedChatPort();
     private final UUID keycloakUserId = UUID.fromString("11111111-1111-4111-8111-111111111111");
 
     @Test
@@ -202,6 +198,7 @@ class AuthServiceTest {
 
         @Override
         public void upsertFromKeycloak(UserId id, String username, String displayName) {
+            // no-op stub for register tests that do not sync from Keycloak
         }
 
         @Override

@@ -47,16 +47,26 @@ public final class JdbcMlsGroupStateJdbcRepository {
             return true;
         } catch (Exception e) {
             log.error("save mls_group_state failed groupId={}", state.groupId(), e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
     public Optional<MlsGroupState> findByGroupId(UUID groupId) {
-        return findOne("group_id", groupId);
+        return findByColumn(
+            """
+            SELECT group_id, chat_id, epoch, tree_data, created_at, updated_at
+            FROM mls_group_state WHERE group_id = ?
+            """,
+            groupId);
     }
 
     public Optional<MlsGroupState> findByChatId(UUID chatId) {
-        return findOne("chat_id", chatId);
+        return findByColumn(
+            """
+            SELECT group_id, chat_id, epoch, tree_data, created_at, updated_at
+            FROM mls_group_state WHERE chat_id = ?
+            """,
+            chatId);
     }
 
     public long countAll() {
@@ -80,6 +90,7 @@ public final class JdbcMlsGroupStateJdbcRepository {
             }
         } catch (Exception e) {
             log.error("countAll mls_group_state failed", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return 0L;
     }
@@ -96,16 +107,14 @@ public final class JdbcMlsGroupStateJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("deleteByGroupId failed groupId={}", groupId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
-    private Optional<MlsGroupState> findOne(String column, UUID id) {
+    private Optional<MlsGroupState> findByColumn(String sql, UUID id) {
         if (dataSource == null) {
             return Optional.empty();
         }
-        var sql = "SELECT group_id, chat_id, epoch, tree_data, created_at, updated_at FROM mls_group_state WHERE "
-            + column + " = ?";
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
                  JdbcQuerySupport.applyDefaultTimeout(stmt);
@@ -117,11 +126,12 @@ public final class JdbcMlsGroupStateJdbcRepository {
             }
         } catch (Exception e) {
             log.error("findOne mls_group_state failed", e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
 
-    private MlsGroupState mapRow(java.sql.ResultSet rs) throws Exception {
+    private MlsGroupState mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new MlsGroupState(
             rs.getObject("group_id", UUID.class),
             rs.getObject("chat_id", UUID.class),

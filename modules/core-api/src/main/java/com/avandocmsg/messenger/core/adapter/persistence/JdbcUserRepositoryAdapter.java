@@ -50,7 +50,7 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
             stmt.setObject(3, id.value());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -65,43 +65,46 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
         if (dataSource == null) {
             return false;
         }
-        var updates = new java.util.ArrayList<String>();
-        var params = new java.util.ArrayList<Object>();
-        if (presenceStatus != null) {
-            updates.add("presence_status = ?");
-            params.add(presenceStatus);
-        }
-        if (customStatusText != null) {
-            updates.add("custom_status_text = ?");
-            params.add(customStatusText);
-        }
-        if (dndUntil != null) {
-            updates.add("dnd_until = ?");
-            params.add(Timestamp.from(dndUntil));
-        } else if (clearDndUntil) {
-            updates.add("dnd_until = NULL");
-        }
-        if (updates.isEmpty()) {
+        boolean touchPresence = presenceStatus != null;
+        boolean touchCustom = customStatusText != null;
+        boolean touchDndSet = dndUntil != null;
+        boolean touchDndClear = !touchDndSet && clearDndUntil;
+        if (!touchPresence && !touchCustom && !touchDndSet && !touchDndClear) {
             return false;
         }
-        updates.add("last_seen_at = now()");
-        updates.add("updated_at = now()");
-        var sql = "UPDATE users SET " + String.join(", ", updates) + " WHERE id = ?";
+        // Fully static SQL — optional columns via CASE/COALESCE, no concatenated identifiers.
+        var sql = """
+            UPDATE users SET
+              presence_status = CASE WHEN ? THEN ? ELSE presence_status END,
+              custom_status_text = CASE WHEN ? THEN ? ELSE custom_status_text END,
+              dnd_until = CASE
+                WHEN ? THEN ?
+                WHEN ? THEN NULL
+                ELSE dnd_until
+              END,
+              last_seen_at = now(),
+              updated_at = now()
+            WHERE id = ?
+            """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
-                 JdbcQuerySupport.applyDefaultTimeout(stmt);
-            int idx = 1;
-            for (var param : params) {
-                if (param instanceof Timestamp ts) {
-                    stmt.setTimestamp(idx++, ts);
-                } else {
-                    stmt.setObject(idx++, param);
-                }
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
+            int i = 1;
+            stmt.setBoolean(i++, touchPresence);
+            stmt.setString(i++, presenceStatus);
+            stmt.setBoolean(i++, touchCustom);
+            stmt.setString(i++, customStatusText);
+            stmt.setBoolean(i++, touchDndSet);
+            if (touchDndSet) {
+                stmt.setTimestamp(i++, Timestamp.from(dndUntil));
+            } else {
+                stmt.setTimestamp(i++, null);
             }
-            stmt.setObject(idx, id.value());
+            stmt.setBoolean(i++, touchDndClear);
+            stmt.setObject(i, id.value());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -120,7 +123,7 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
             stmt.setObject(2, id.value());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -139,7 +142,7 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
             stmt.setObject(2, id.value());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -162,7 +165,7 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
             stmt.setObject(2, id.value());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -178,7 +181,7 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
             stmt.setObject(1, id.value());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -235,7 +238,7 @@ public final class JdbcUserRepositoryAdapter implements UserRepositoryPort {
             stmt.setObject(2, id.value());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 }

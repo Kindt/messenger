@@ -17,7 +17,7 @@ class FederationMemberGuardTest {
     @Test
     void allowsSameOrg() {
         var org = UUID.randomUUID().toString();
-        var guard = new FederationMemberGuard(null, user(org, org));
+        var guard = new FederationMemberGuard(null, user(org));
         assertTrue(guard.canAddMember(UUID.randomUUID(), UUID.randomUUID()));
     }
 
@@ -77,7 +77,7 @@ class FederationMemberGuardTest {
         };
     }
 
-    private static UserLookupPort user(String org, String org2) {
+    private static UserLookupPort user(String org) {
         return new UserLookupPort() {
             @Override
             public Optional<UserProfile> findById(UUID id) {

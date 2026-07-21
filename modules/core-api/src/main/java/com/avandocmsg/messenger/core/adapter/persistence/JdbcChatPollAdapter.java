@@ -58,7 +58,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             return id;
         } catch (Exception e) {
             log.error("chat poll create failed chat={}", cmd.chatId(), e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -79,6 +79,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             }
         } catch (Exception e) {
             log.error("chat poll find failed {}", pollId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -106,7 +107,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             }
         } catch (Exception e) {
             log.error("chat poll list failed chat={}", chatId, e);
-            return List.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -134,7 +135,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             }
         } catch (Exception e) {
             log.error("chat poll vote insert failed poll={} user={}", pollId, userId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return updateVote(pollId, userId, optionIndexes);
     }
@@ -153,7 +154,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("chat poll vote update failed poll={} user={}", pollId, userId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -181,7 +182,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             }
         } catch (Exception e) {
             log.error("chat poll listDue failed", e);
-            return List.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -204,7 +205,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("chat poll setClosesAt failed poll={}", pollId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -228,7 +229,7 @@ public final class JdbcChatPollAdapter implements ChatPollPort {
             }
         } catch (Exception e) {
             log.error("chat poll listVotes failed poll={}", pollId, e);
-            return List.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 

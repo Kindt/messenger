@@ -1,7 +1,6 @@
 # E2E: msg.export.suggested -> EXPORT_AUTO_QUEUE_ON_SUGGESTED -> audit export.auto_queued + queued job.
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$ChatId,
+    [string]$ChatId = "",
     [string]$BaseUrl = "http://localhost:8080",
     [string]$NatsUrl = "",
     [int]$PollSeconds = 30,
@@ -11,6 +10,13 @@ param(
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $scriptDir "lib\SmokeExportAudit.ps1")
+. (Join-Path $scriptDir "lib\Resolve-SmokeExportChatId.ps1")
+. (Join-Path $scriptDir "lib\Ensure-NatsQemuTunnel.ps1")
+$ChatId = Resolve-SmokeExportChatId -ChatId $ChatId -BaseUrl $BaseUrl -ScriptDir $scriptDir
+if (-not $NatsUrl) {
+    if ($BaseUrl -match ':18080|127\.0\.0\.1') { $NatsUrl = Ensure-NatsQemuTunnel }
+    else { $NatsUrl = if ($env:NATS_URL) { $env:NATS_URL } else { "nats://127.0.0.1:4222" } }
+}
 
 function Get-Token {
     param($User, $Pass)

@@ -22,7 +22,17 @@ $payload = @{
 } | ConvertTo-Json -Compress
 
 Write-Host "Publishing msg.export.suggested chatId=$ChatId via $NatsUrl ..." -ForegroundColor Cyan
-$payload | & nats --server $NatsUrl pub --force-stdin --no-templates msg.export.suggested
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
+try {
+    $payload | & nats --server $NatsUrl pub --force-stdin --no-templates msg.export.suggested 2>&1 | ForEach-Object {
+        $line = "$_"
+        if ($line -match '^(error|nats: error)') { Write-Host $line -ForegroundColor Red; throw $line }
+        if ($line) { Write-Host $line -ForegroundColor DarkGray }
+    }
+} finally {
+    $ErrorActionPreference = $prevEap
+}
 if ($LASTEXITCODE -ne 0) {
     throw "nats publish failed for $NatsUrl (exit $LASTEXITCODE)"
 }

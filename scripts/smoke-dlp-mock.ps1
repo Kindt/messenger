@@ -4,9 +4,22 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$base = if ($env:DLP_MOCK_URL) { $env:DLP_MOCK_URL.TrimEnd("/") } else { "http://127.0.0.1:8098" }
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+function Resolve-DlpMockBaseUrl {
+    if ($env:DLP_MOCK_URL) { return $env:DLP_MOCK_URL.TrimEnd('/') }
+    $local = "http://127.0.0.1:8098"
+    try {
+        Invoke-WebRequest -Uri "$local/health" -UseBasicParsing -TimeoutSec 3 | Out-Null
+        return $local
+    } catch { }
+    . (Join-Path $scriptDir "lib\Ensure-DlpMockTunnel.ps1")
+    return (Ensure-DlpMockTunnel)
+}
+
+$base = Resolve-DlpMockBaseUrl
 try {
-    Invoke-WebRequest -Uri "$base/health" -UseBasicParsing -TimeoutSec 5 | Out-Null
+    Invoke-WebRequest -Uri "$base/health" -UseBasicParsing -TimeoutSec 10 | Out-Null
 } catch {
     if ($SkipIfUnreachable) {
         Write-Host "[SKIP] dlp-mock not reachable at $base (integrations VM / docker-compose.integrations.yml)"

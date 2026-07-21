@@ -44,7 +44,7 @@ public final class JdbcMessageReminderAdapter implements MessageReminderPort {
             return id;
         } catch (Exception e) {
             log.error("message reminder create failed user={}", cmd.userId(), e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -65,6 +65,7 @@ public final class JdbcMessageReminderAdapter implements MessageReminderPort {
             }
         } catch (Exception e) {
             log.error("message reminder find failed {}", id, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -93,7 +94,7 @@ public final class JdbcMessageReminderAdapter implements MessageReminderPort {
             }
         } catch (Exception e) {
             log.error("message reminder list failed user={}", userId, e);
-            return List.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -121,7 +122,7 @@ public final class JdbcMessageReminderAdapter implements MessageReminderPort {
             }
         } catch (Exception e) {
             log.error("message reminder listDue failed", e);
-            return List.of();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -136,11 +137,11 @@ public final class JdbcMessageReminderAdapter implements MessageReminderPort {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("message reminder updateStatus failed {}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
-    private static ReminderRow mapRow(java.sql.ResultSet rs) throws Exception {
+    private static ReminderRow mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         var remind = rs.getTimestamp("remind_at");
         var created = rs.getTimestamp("created_at");
         return new ReminderRow(

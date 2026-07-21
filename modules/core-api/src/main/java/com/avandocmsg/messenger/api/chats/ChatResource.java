@@ -56,6 +56,12 @@ import java.util.UUID;
 public class ChatResource {
 
     private static final java.util.Set<String> FOLDER_TAGS = java.util.Set.of("work", "personal");
+    private static final String PARAM_CHAT_ID = "chat_id";
+    private static final String PARAM_MEMBER_ID = "member_id";
+    private static final String PARAM_USER_ID = "user_id";
+    private static final String PARAM_MESSAGE_ID = "message_id";
+    private static final String ERR_CHAT_NOT_AUTHORIZED = "error.chat.not_authorized";
+    private static final String ERR_CHAT_NOT_A_MEMBER = "error.chat.not_a_member";
 
     private final ChatService chatService;
     private final ReadReceiptService readReceiptService;
@@ -109,48 +115,59 @@ public class ChatResource {
         var userId = CurrentUserId.uuid(securityContext);
 
         if ("p2p".equals(request.type()) && request.memberIds() != null && request.memberIds().size() == 1) {
-            var chat = chatService.findOrCreateP2P(userId, UuidParams.required(request.memberIds().get(0), "member_id"));
-            if (chat == null) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ApiError(400, messages.get("error.chat.cannot_create_p2p")))
-                    .build();
-            }
-            return Response.ok(chat).build();
+            return createP2p(userId, request.memberIds().get(0));
         }
-
         if ("group".equals(request.type())) {
-            if (request.memberIds() != null) {
-                for (var mid : request.memberIds()) {
-                    UuidParams.required(mid, "member_id");
-                }
-            }
-            var chat = chatService.createGroup(request.title(), userId, request.memberIds());
-            if (chat == null) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ApiError(400, messages.get("error.chat.cannot_create_group")))
-                    .build();
-            }
-            return Response.status(Response.Status.CREATED).entity(chat).build();
+            return createGroup(userId, request);
         }
-
         if ("channel".equals(request.type())) {
-            if (request.memberIds() != null) {
-                for (var mid : request.memberIds()) {
-                    UuidParams.required(mid, "member_id");
-                }
-            }
-            var chat = chatService.createChannel(request.title(), userId, request.memberIds());
-            if (chat == null) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ApiError(400, messages.get("error.chat.cannot_create_channel")))
-                    .build();
-            }
-            return Response.status(Response.Status.CREATED).entity(chat).build();
+            return createChannel(userId, request);
         }
 
         return Response.status(Response.Status.BAD_REQUEST)
             .entity(new ApiError(400, messages.get("error.chat.invalid_type")))
             .build();
+    }
+
+    private Response createP2p(UUID userId, String memberId) {
+        var chat = chatService.findOrCreateP2P(userId, UuidParams.required(memberId, PARAM_MEMBER_ID));
+        if (chat == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.chat.cannot_create_p2p")))
+                .build();
+        }
+        return Response.ok(chat).build();
+    }
+
+    private Response createGroup(UUID userId, CreateChatRequest request) {
+        requireMemberIds(request.memberIds());
+        var chat = chatService.createGroup(request.title(), userId, request.memberIds());
+        if (chat == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.chat.cannot_create_group")))
+                .build();
+        }
+        return Response.status(Response.Status.CREATED).entity(chat).build();
+    }
+
+    private Response createChannel(UUID userId, CreateChatRequest request) {
+        requireMemberIds(request.memberIds());
+        var chat = chatService.createChannel(request.title(), userId, request.memberIds());
+        if (chat == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ApiError(400, messages.get("error.chat.cannot_create_channel")))
+                .build();
+        }
+        return Response.status(Response.Status.CREATED).entity(chat).build();
+    }
+
+    private static void requireMemberIds(List<String> memberIds) {
+        if (memberIds == null) {
+            return;
+        }
+        for (var mid : memberIds) {
+            UuidParams.required(mid, PARAM_MEMBER_ID);
+        }
     }
 
     @GET
@@ -162,7 +179,7 @@ public class ChatResource {
         content = @Content(schema = @Schema(implementation = ApiError.class)))
     public Response getById(@PathParam("chatId") String chatIdStr,
                             @Context SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         var userId = CurrentUserId.uuid(securityContext);
         var minNs = appConfig.timingNormalizationMinNanos();
         if (minNs > 0) {
@@ -195,7 +212,7 @@ public class ChatResource {
                            UpdateChatRequest request,
                            @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
@@ -203,28 +220,28 @@ public class ChatResource {
             var ok = chatService.updateTitle(chatId, userId, request.title());
             if (!ok) {
                 return Response.status(Response.Status.FORBIDDEN)
-                    .entity(new ApiError(403, messages.get("error.chat.not_authorized")))
+                    .entity(new ApiError(403, messages.get(ERR_CHAT_NOT_AUTHORIZED)))
                     .build();
             }
         }
         if (Boolean.TRUE.equals(request.removeAvatar())) {
             if (!chatService.canManageChatSettings(chatId, userId)) {
                 return Response.status(Response.Status.FORBIDDEN)
-                    .entity(new ApiError(403, messages.get("error.chat.not_authorized")))
+                    .entity(new ApiError(403, messages.get(ERR_CHAT_NOT_AUTHORIZED)))
                     .build();
             }
             avatarApplicationService.clearChatAvatar(UserId.of(userId), ChatId.of(chatId));
         } else if (request.avatarFileId() != null && !request.avatarFileId().isBlank()) {
             if (!chatService.canManageChatSettings(chatId, userId)) {
                 return Response.status(Response.Status.FORBIDDEN)
-                    .entity(new ApiError(403, messages.get("error.chat.not_authorized")))
+                    .entity(new ApiError(403, messages.get(ERR_CHAT_NOT_AUTHORIZED)))
                     .build();
             }
             var fileId = UuidParams.required(request.avatarFileId(), "avatar_file_id");
             if (avatarApplicationService.setChatAvatar(UserId.of(userId), ChatId.of(chatId), FileId.of(fileId))
                 .isEmpty()) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ApiError(400, messages.get("error.chat.not_authorized")))
+                    .entity(new ApiError(400, messages.get(ERR_CHAT_NOT_AUTHORIZED)))
                     .build();
             }
         }
@@ -241,8 +258,8 @@ public class ChatResource {
                               AddMemberRequest request,
                               @Context SecurityContext securityContext) {
         var actorId = CurrentUserId.uuid(securityContext);
-        var err = chatService.addMemberWithReason(UuidParams.required(chatIdStr, "chat_id"), actorId,
-            UuidParams.required(request.userId(), "user_id"));
+        var err = chatService.addMemberWithReason(UuidParams.required(chatIdStr, PARAM_CHAT_ID), actorId,
+            UuidParams.required(request.userId(), PARAM_USER_ID));
         if (err.isPresent()) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get(err.get())))
@@ -258,9 +275,9 @@ public class ChatResource {
                                   @PathParam("userId") String targetUserIdStr,
                                   @Context SecurityContext securityContext) {
         var ok = chatService.removeMember(
-            UuidParams.required(chatIdStr, "chat_id"),
+            UuidParams.required(chatIdStr, PARAM_CHAT_ID),
             CurrentUserId.uuid(securityContext),
-            UuidParams.required(targetUserIdStr, "user_id"));
+            UuidParams.required(targetUserIdStr, PARAM_USER_ID));
         if (!ok) {
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get("error.chat.cannot_remove_member")))
@@ -277,9 +294,9 @@ public class ChatResource {
                             UpdateRoleRequest request,
                             @Context SecurityContext securityContext) {
         var ok = chatService.setRole(
-            UuidParams.required(chatIdStr, "chat_id"),
+            UuidParams.required(chatIdStr, PARAM_CHAT_ID),
             CurrentUserId.uuid(securityContext),
-            UuidParams.required(targetUserIdStr, "user_id"),
+            UuidParams.required(targetUserIdStr, PARAM_USER_ID),
             request.role());
         if (!ok) {
             return Response.status(Response.Status.FORBIDDEN)
@@ -298,12 +315,12 @@ public class ChatResource {
         content = @Content(schema = @Schema(implementation = ApiError.class)))
     public Response listMembers(@PathParam("chatId") String chatIdStr,
                                 @Context SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         var userId = CurrentUserId.uuid(securityContext);
         return chatService.listMembersForViewer(chatId, userId)
             .map(members -> Response.ok(avatarApplicationService.enrichChatMembers(members, UserId.of(userId))).build())
             .orElse(Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.chat.not_a_member")))
+                .entity(new ApiError(403, messages.get(ERR_CHAT_NOT_A_MEMBER)))
                 .build());
     }
 
@@ -314,7 +331,7 @@ public class ChatResource {
                          MuteRequest request,
                          @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        chatService.setMuted(UuidParams.required(chatIdStr, "chat_id"), userId, request.muted());
+        chatService.setMuted(UuidParams.required(chatIdStr, PARAM_CHAT_ID), userId, request.muted());
         return Response.ok().build();
     }
 
@@ -326,7 +343,7 @@ public class ChatResource {
                                     PersonalFilterRequest request,
                                     @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        chatService.setPersonalFilter(UuidParams.required(chatIdStr, "chat_id"), userId, request.active());
+        chatService.setPersonalFilter(UuidParams.required(chatIdStr, PARAM_CHAT_ID), userId, request.active());
         return Response.ok().build();
     }
 
@@ -337,13 +354,13 @@ public class ChatResource {
                             ChatArchiveRequest request,
                             @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
         if (!chatService.setArchived(chatId, userId, request.archived())) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.chat.not_a_member")))
+                .entity(new ApiError(403, messages.get(ERR_CHAT_NOT_A_MEMBER)))
                 .build();
         }
         return Response.ok().build();
@@ -356,7 +373,7 @@ public class ChatResource {
                            ChatFolderRequest request,
                            @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         var tag = request != null ? request.folderTag() : null;
         if (tag != null && !tag.isBlank() && !FOLDER_TAGS.contains(tag)) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -365,7 +382,7 @@ public class ChatResource {
         }
         if (!chatService.setFolderTag(chatId, userId, tag)) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.chat.not_a_member")))
+                .entity(new ApiError(403, messages.get(ERR_CHAT_NOT_A_MEMBER)))
                 .build();
         }
         return Response.ok().build();
@@ -377,7 +394,7 @@ public class ChatResource {
     public Response markRead(@PathParam("chatId") String chatIdStr,
                              MarkReadRequest request,
                              @Context SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         final UUID upTo;
         if (request != null && request.upToMessageId() != null && !request.upToMessageId().isBlank()) {
             upTo = UuidParams.required(request.upToMessageId(), "up_to_message_id");
@@ -399,12 +416,12 @@ public class ChatResource {
     @Operation(summary = "Число непрочитанных (от других участников)")
     public Response unreadCount(@PathParam("chatId") String chatIdStr,
                                 @Context SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         var userId = CurrentUserId.uuid(securityContext);
         var n = chatService.unreadCount(chatId, userId);
         if (n < 0) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.chat.not_a_member")))
+                .entity(new ApiError(403, messages.get(ERR_CHAT_NOT_A_MEMBER)))
                 .build();
         }
         return Response.ok(new UnreadCountResponse(n)).build();
@@ -415,7 +432,7 @@ public class ChatResource {
     @Operation(summary = "Индикатор набора", description = "Событие в NATS msg.typing (ТЗ п. 19)")
     public Response typing(@PathParam("chatId") String chatIdStr,
                            @Context SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         var userId = CurrentUserId.uuid(securityContext);
         chatService.publishTyping(chatId, userId);
         return Response.noContent().build();
@@ -429,8 +446,8 @@ public class ChatResource {
     public Response markMessageRead(@PathParam("chatId") String chatIdStr,
                                     @PathParam("messageId") String messageIdStr,
                                     @Context SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var messageId = UuidParams.required(messageIdStr, "message_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var messageId = UuidParams.required(messageIdStr, PARAM_MESSAGE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         return mapReadReceiptResult(readReceiptService.markMessageRead(chatId, userId, messageId));
     }
@@ -441,11 +458,11 @@ public class ChatResource {
     public Response markBatchRead(@PathParam("chatId") String chatIdStr,
                                   BatchReadRequest request,
                                   @Context SecurityContext securityContext) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
         var userId = CurrentUserId.uuid(securityContext);
         var ids = request == null || request.messageIds() == null
             ? List.<UUID>of()
-            : request.messageIds().stream().map(s -> UuidParams.required(s, "message_id")).toList();
+            : request.messageIds().stream().map(s -> UuidParams.required(s, PARAM_MESSAGE_ID)).toList();
         return mapReadReceiptResult(readReceiptService.markBatchRead(chatId, userId, ids));
     }
 
@@ -462,8 +479,8 @@ public class ChatResource {
                 .entity(new ApiError(400, messages.get("error.read_receipt.message_id_required")))
                 .build();
         }
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
-        var messageId = UuidParams.required(messageIdStr, "message_id");
+        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+        var messageId = UuidParams.required(messageIdStr, PARAM_MESSAGE_ID);
         var userId = CurrentUserId.uuid(securityContext);
         var off = offset != null ? Math.max(0, offset) : 0;
         var lim = limit != null ? Math.min(500, Math.max(1, limit)) : 100;
@@ -478,7 +495,7 @@ public class ChatResource {
         return switch (result) {
             case OK -> Response.noContent().build();
             case NOT_MEMBER -> Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get("error.chat.not_a_member")))
+                .entity(new ApiError(403, messages.get(ERR_CHAT_NOT_A_MEMBER)))
                 .build();
             case MESSAGE_NOT_FOUND -> Response.status(Response.Status.BAD_REQUEST)
                 .entity(new ApiError(400, messages.get("error.read_receipt.message_not_in_chat")))

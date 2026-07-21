@@ -65,8 +65,8 @@ public final class ConnectorCompatibilityPacks {
             .filter(component -> !contractComponents.contains(component))
             .forEach(component -> failures.add("component " + component + " has no validation contract"));
         var candidateCount = (int) CATALOG.stream()
-            .filter(pack -> pack.lifecycleStatus() == LifecycleStatus.candidate
-                || pack.lifecycleStatus() == LifecycleStatus.integration_candidate)
+            .filter(pack -> pack.lifecycleStatus() == LifecycleStatus.CANDIDATE
+                || pack.lifecycleStatus() == LifecycleStatus.INTEGRATION_CANDIDATE)
             .count();
         var warnings = candidateCount > 0
             ? List.of("candidate profiles require explicit promotion before production use")
@@ -114,11 +114,11 @@ public final class ConnectorCompatibilityPacks {
         var component = packs.getFirst().component();
         var supported = (int) packs.stream().filter(ConnectorCompatibilityPack::supported).count();
         var candidates = (int) packs.stream()
-            .filter(pack -> pack.lifecycleStatus() == LifecycleStatus.candidate
-                || pack.lifecycleStatus() == LifecycleStatus.integration_candidate)
+            .filter(pack -> pack.lifecycleStatus() == LifecycleStatus.CANDIDATE
+                || pack.lifecycleStatus() == LifecycleStatus.INTEGRATION_CANDIDATE)
             .count();
         var rejected = (int) packs.stream()
-            .filter(pack -> pack.lifecycleStatus() == LifecycleStatus.rejected)
+            .filter(pack -> pack.lifecycleStatus() == LifecycleStatus.REJECTED)
             .count();
         String warning = null;
         String severity = "ok";
@@ -171,7 +171,7 @@ public final class ConnectorCompatibilityPacks {
         JsonNode profileNode,
         JsonNode componentNode
     ) {
-        var lifecycleStatus = LifecycleStatus.valueOf(profileNode.path("lifecycle_status").asText());
+        var lifecycleStatus = LifecycleStatus.fromCode(profileNode.path("lifecycle_status").asText());
         return new ConnectorCompatibilityPack(
             profileId,
             component,
@@ -224,9 +224,9 @@ public final class ConnectorCompatibilityPacks {
 
     private static List<String> promotionEvidence(String component, LifecycleStatus lifecycleStatus) {
         var evidence = new ArrayList<>(EVIDENCE_BY_COMPONENT.getOrDefault(component, List.of("profile_contract_green")));
-        if (lifecycleStatus == LifecycleStatus.supported_bundled) {
+        if (lifecycleStatus == LifecycleStatus.SUPPORTED_BUNDLED) {
             evidence.add("korus_bundled_runbook");
-        } else if (lifecycleStatus == LifecycleStatus.supported_external_byo) {
+        } else if (lifecycleStatus == LifecycleStatus.SUPPORTED_EXTERNAL_BYO) {
             evidence.add("customer_profile_evidence");
         } else {
             evidence.add("vendor_certification_required");
@@ -235,10 +235,10 @@ public final class ConnectorCompatibilityPacks {
     }
 
     private static List<String> unsupportedModes(LifecycleStatus lifecycleStatus, JsonNode componentNode) {
-        if (lifecycleStatus == LifecycleStatus.supported_bundled) {
+        if (lifecycleStatus == LifecycleStatus.SUPPORTED_BUNDLED) {
             return List.of();
         }
-        if (lifecycleStatus == LifecycleStatus.supported_external_byo) {
+        if (lifecycleStatus == LifecycleStatus.SUPPORTED_EXTERNAL_BYO) {
             return List.of("silent_fallback");
         }
         var fallbackAllowed = componentNode.path("degradation").path("fallback_allowed").asText("");

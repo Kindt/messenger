@@ -54,7 +54,7 @@ public class OrgIpAllowlistAdminResource {
         if (orgId == null) {
             return badRequest();
         }
-        var enabled = request != null && request.enabled() != null ? request.enabled() : false;
+        var enabled = request != null && Boolean.TRUE.equals(request.enabled());
         var cidrs = request != null ? request.allowedCidrs() : "";
         var saved = allowlistService.update(orgId, enabled, cidrs);
         return Response.ok(toResponse(saved)).build();

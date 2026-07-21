@@ -20,7 +20,7 @@ public final class ScheduledTaskSupport {
         return baseMs + ThreadLocalRandom.current().nextLong(maxJitterMs + 1);
     }
 
-    public static ScheduledFuture<?> scheduleWithFixedDelayAndJitter(
+    public static ScheduledFuture<?> scheduleWithFixedDelayAndJitter( // NOSONAR java:S1452 -- mirrors ScheduledExecutorService return
             ScheduledExecutorService executor,
             Runnable task,
             long initialDelayMs,
@@ -33,7 +33,7 @@ public final class ScheduledTaskSupport {
             TimeUnit.MILLISECONDS);
     }
 
-    public static ScheduledFuture<?> scheduleAtFixedRateWithJitter(
+    public static ScheduledFuture<?> scheduleAtFixedRateWithJitter( // NOSONAR java:S1452 -- mirrors ScheduledExecutorService return
             ScheduledExecutorService executor,
             Runnable task,
             long initialDelay,

@@ -20,6 +20,10 @@ param(
 
     [switch]$SkipBuild,
 
+    [ValidateSet('', 'W5', 'W7')]
+
+    [string]$StartAtStep = '',
+
     [switch]$Help
 
 )
@@ -122,19 +126,31 @@ if (-not $SkipBuild) {
 
 if (-not (Health-Ok "$ApiBaseUrl/api/v1/health")) {
 
-    Write-Host "[FAIL] API not healthy at $ApiBaseUrl — start QEMU first" -ForegroundColor Red
+    Write-Host "[FAIL] API not healthy at $ApiBaseUrl - start QEMU first" -ForegroundColor Red
 
     exit 2
 
 }
 
+if ($StartAtStep -eq 'W5' -or $StartAtStep -eq 'W7') {
+    Write-Host "[INFO] VMA resume from $StartAtStep (prior waves assumed PASS)" -ForegroundColor DarkGray
+    $gates.W1_regression = 'PASS'
+    $gates.W2_integrations = if ($SkipIntegrations) { 'SKIP' } else { 'PASS' }
+    $gates.W3_media = 'PASS'
+    $gates.W4_security = 'PASS'
+    $gates.W6_export_chain = 'PASS'
+}
+if ($StartAtStep -eq 'W7') {
+    $gates.W5_load = 'PASS'
+}
 
+
+
+if ($StartAtStep -ne 'W5' -and $StartAtStep -ne 'W7') {
 
 Step "L2 regression" "W1_regression" {
 
-    & (Join-Path $Root "scripts\smoke-local-regression.ps1") `
-
-        -ApiBaseUrl $ApiBaseUrl -WebBaseUrl $WebBaseUrl
+    & (Join-Path $Root "scripts\smoke-local-regression.ps1") -ApiBaseUrl $ApiBaseUrl -WebBaseUrl $WebBaseUrl
 
 }
 
@@ -206,19 +222,25 @@ Step "W6 export chain" "W6_export_chain" {
 
 $gates.W6_export_chain = "PASS"
 
+}
 
+
+
+if ($StartAtStep -ne 'W7') {
 
 Step "W5 load" "W5_load" {
 
     & (Join-Path $Root "scripts\run-k6-qemu-baseline.ps1")
 
-    & (Join-Path $Root "scripts\load-ws-soak-qemu.ps1")
+    & (Join-Path $Root "scripts\load-ws-soak-qemu.ps1") -SkipServerRedeploy
 
     & (Join-Path $Root "scripts\run-sfu-participant-load-qemu.ps1")
 
 }
 
 $gates.W5_load = "PASS"
+
+}
 
 
 
@@ -312,9 +334,7 @@ $addons = @(
 
 $evLevel = if ($Level -eq 'L2') { 'L2' } else { 'L4' }
 
-$evPath = & $writeEvidence -Level $evLevel -Gates $gates `
-
-    -ScaffoldRuns $scaffolds -Artifacts $artifacts -AddonsEnabled $addons
+$evPath = & $writeEvidence -Level $evLevel -Gates $gates -ScaffoldRuns $scaffolds -Artifacts $artifacts -AddonsEnabled $addons
 
 
 

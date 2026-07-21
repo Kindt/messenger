@@ -50,7 +50,6 @@ class MlsBenchmarkTest {
     }
 
     private static MlsGroupManager newManager() {
-        var chatId = UUID.randomUUID();
         var sessionRepository = new MlsGroupManagerTest.StubSessionRepository();
         var mlsService = new MlsService(sessionRepository, new E2EEService());
         var groupRepo = new MlsGroupManagerTest.InMemoryGroupStateRepository();

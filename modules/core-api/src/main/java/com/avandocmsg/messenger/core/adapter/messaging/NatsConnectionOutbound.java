@@ -11,6 +11,7 @@ import io.nats.client.JetStream;
 import org.slf4j.MDC;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -23,7 +24,7 @@ public final class NatsConnectionOutbound implements NatsOutboundPort, NatsConne
 
     public NatsConnectionOutbound(Connection connection, Optional<JetStream> jetStream) {
         this.connection = connection;
-        this.jetStream = jetStream != null ? jetStream : Optional.empty();
+        this.jetStream = Objects.requireNonNull(jetStream, "jetStream");
     }
 
     @Override

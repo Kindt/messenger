@@ -84,7 +84,8 @@ class E2EEServiceTest {
         assertNotNull(ciphertext);
 
         var decrypted = e2ee.decrypt(ciphertext, key2, "aad".getBytes(StandardCharsets.UTF_8));
-        assertNull(decrypted);
+        assertNotNull(decrypted);
+        assertEquals(0, decrypted.length);
     }
 
     @Test
@@ -96,7 +97,8 @@ class E2EEServiceTest {
         assertNotNull(ciphertext);
 
         var decrypted = e2ee.decrypt(ciphertext, key, "aad2".getBytes(StandardCharsets.UTF_8));
-        assertNull(decrypted);
+        assertNotNull(decrypted);
+        assertEquals(0, decrypted.length);
     }
 
     @Test
@@ -110,7 +112,8 @@ class E2EEServiceTest {
         ciphertext[12] ^= 0x01;
 
         var decrypted = e2ee.decrypt(ciphertext, key, "aad".getBytes(StandardCharsets.UTF_8));
-        assertNull(decrypted);
+        assertNotNull(decrypted);
+        assertEquals(0, decrypted.length);
     }
 
     @Test

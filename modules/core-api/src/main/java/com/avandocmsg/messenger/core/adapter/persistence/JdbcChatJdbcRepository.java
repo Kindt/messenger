@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.core.adapter.persistence;
 
+import com.avandocmsg.messenger.common.jdbc.JdbcConnectionSupport;
 import com.avandocmsg.messenger.common.jdbc.JdbcQuerySupport;
 import com.avandocmsg.messenger.api.metrics.JdbcQueryMetrics;
 import com.avandocmsg.messenger.api.chats.dto.ChatMemberResponse;
@@ -21,10 +22,13 @@ import java.util.UUID;
 
 public final class JdbcChatJdbcRepository {
     private static final Logger log = LoggerFactory.getLogger(JdbcChatJdbcRepository.class);
+    private static final String COL_USER_ID = "user_id";
+    private static final String COL_BANNED = "banned";
+    private static final String COL_OWNER_ID = "owner_id";
+
     private final DataSource dataSource;
     private final DataSource readDataSource;
     private final Clock clock;
-    private final UuidGenerator uuidGenerator;
     private final int queryTimeoutSeconds;
 
     public JdbcChatJdbcRepository(DataSource dataSource, Clock clock, UuidGenerator uuidGenerator) {
@@ -40,7 +44,7 @@ public final class JdbcChatJdbcRepository {
         this.dataSource = dataSource;
         this.readDataSource = readDataSource != null ? readDataSource : dataSource;
         this.clock = clock;
-        this.uuidGenerator = uuidGenerator;
+        java.util.Objects.requireNonNull(uuidGenerator, "uuidGenerator");
         this.queryTimeoutSeconds = Math.max(0, queryTimeoutSeconds);
     }
 
@@ -65,10 +69,6 @@ public final class JdbcChatJdbcRepository {
 
     private DataSource read() {
         return readDataSource;
-    }
-
-    private DataSource write() {
-        return dataSource;
     }
 
     public boolean chatExists(UUID chatId) {
@@ -299,7 +299,7 @@ public final class JdbcChatJdbcRepository {
             stmt.setObject(2, userId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return Optional.of(rs.getObject("user_id", UUID.class));
+                    return Optional.of(rs.getObject(COL_USER_ID, UUID.class));
                 }
             }
         } catch (SQLException e) {
@@ -425,35 +425,37 @@ public final class JdbcChatJdbcRepository {
         }
     }
 
-    public boolean addMember(UUID chatId, UUID userId, String role) {
+    public boolean addMember(UUID chatId, UUID userId, String role) { // NOSONAR java:S1141 — connection + txn callback
         try (var conn = dataSource.getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                var check = "SELECT banned FROM chat_members WHERE chat_id = ? AND user_id = ?";
-                try (var stmt = conn.prepareStatement(check)) {
-                    JdbcQuerySupport.applyDefaultTimeout(stmt);
-                    stmt.setObject(1, chatId);
-                    stmt.setObject(2, userId);
-                    try (var rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            if (rs.getBoolean("banned")) {
-                                return false;
-                            }
-                            return true;
-                        }
-                    }
+            return Boolean.TRUE.equals(JdbcConnectionSupport.callInTransaction(conn, () -> {
+                var existing = existingMemberAllowed(conn, chatId, userId);
+                if (existing.isPresent()) {
+                    return existing.get();
                 }
                 addMemberInternal(conn, chatId, userId, role);
-                conn.commit();
                 return true;
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            }
-        } catch (SQLException e) {
+            }));
+        } catch (Exception e) {
             log.error("Failed to add member {} to chat {}", userId, chatId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
+    }
+
+    /** Present when row already exists: false if banned, true if active member. */
+    private Optional<Boolean> existingMemberAllowed(java.sql.Connection conn, UUID chatId, UUID userId)
+        throws SQLException {
+        var check = "SELECT banned FROM chat_members WHERE chat_id = ? AND user_id = ?";
+        try (var stmt = conn.prepareStatement(check)) {
+            JdbcQuerySupport.applyDefaultTimeout(stmt);
+            stmt.setObject(1, chatId);
+            stmt.setObject(2, userId);
+            try (var rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(!rs.getBoolean(COL_BANNED));
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     public boolean removeMember(UUID chatId, UUID userId) {
@@ -501,12 +503,12 @@ public final class JdbcChatJdbcRepository {
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     result.add(new ChatMemberResponse(
-                        rs.getObject("user_id", UUID.class).toString(),
+                        rs.getObject(COL_USER_ID, UUID.class).toString(),
                         rs.getString("username"),
                         rs.getString("display_name"),
                         rs.getString("role"),
                         rs.getBoolean("muted"),
-                        rs.getBoolean("banned"),
+                        rs.getBoolean(COL_BANNED),
                         rs.getTimestamp("joined_at").toInstant()
                     ));
                 }
@@ -526,7 +528,7 @@ public final class JdbcChatJdbcRepository {
             stmt.setObject(1, chatId);
             try (var rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    var ownerId = rs.getObject("owner_id", UUID.class);
+                    var ownerId = rs.getObject(COL_OWNER_ID, UUID.class);
                     return ownerId != null ? Optional.of(ownerId) : Optional.empty();
                 }
             }
@@ -562,7 +564,7 @@ public final class JdbcChatJdbcRepository {
             stmt.setObject(1, chatId);
             stmt.setObject(2, userId);
             try (var rs = stmt.executeQuery()) {
-                return rs.next() && rs.getBoolean("banned");
+                return rs.next() && rs.getBoolean(COL_BANNED);
             }
         } catch (SQLException e) {
             log.error("Failed to check banned status", e);
@@ -655,7 +657,7 @@ public final class JdbcChatJdbcRepository {
                 stmt.setInt(2, JdbcListLimits.CHAT_MEMBERS);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    result.add(rs.getObject("user_id", UUID.class));
+                    result.add(rs.getObject(COL_USER_ID, UUID.class));
                 }
             }
             }
@@ -730,7 +732,7 @@ public final class JdbcChatJdbcRepository {
             rs.getObject("id", UUID.class).toString(),
             rs.getString("title"),
             rs.getString("type"),
-            rs.getObject("owner_id", UUID.class) != null ? rs.getObject("owner_id", UUID.class).toString() : null,
+            rs.getObject(COL_OWNER_ID, UUID.class) != null ? rs.getObject(COL_OWNER_ID, UUID.class).toString() : null,
             rs.getInt("member_count"),
             rs.getBoolean("muted"),
             rs.getBoolean("personal_filter_active"),

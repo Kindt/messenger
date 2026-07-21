@@ -40,7 +40,7 @@ public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepository
             }
         } catch (Exception e) {
             log.error("findById failed id={}", id, e);
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -50,15 +50,15 @@ public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepository
             SELECT id, org_id, display_name, external_id, members_json, created_at, updated_at
             FROM scim_groups WHERE org_id = ?
             ORDER BY display_name
-            OFFSET ? LIMIT ?
+            LIMIT ? OFFSET ?
             """;
         var out = new ArrayList<ScimGroupRow>();
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
                  JdbcQuerySupport.applyDefaultTimeout(stmt);
             stmt.setObject(1, orgId);
-            stmt.setInt(2, offset);
-            stmt.setInt(3, limit);
+            stmt.setInt(2, limit);
+            stmt.setInt(3, offset);
             try (var rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     out.add(mapRow(rs));
@@ -66,6 +66,7 @@ public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepository
             }
         } catch (Exception e) {
             log.error("listByOrg failed orgId={}", orgId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return out;
     }
@@ -82,7 +83,7 @@ public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepository
             }
         } catch (Exception e) {
             log.error("countByOrg failed orgId={}", orgId, e);
-            return 0;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -103,7 +104,7 @@ public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepository
             return stmt.executeUpdate() == 1;
         } catch (Exception e) {
             log.error("insert failed id={}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -124,7 +125,7 @@ public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepository
             return stmt.executeUpdate() == 1;
         } catch (Exception e) {
             log.error("update failed id={}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -138,7 +139,7 @@ public final class JdbcScimGroupRepositoryAdapter implements ScimGroupRepository
             return stmt.executeUpdate() == 1;
         } catch (Exception e) {
             log.error("delete failed id={}", id, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 

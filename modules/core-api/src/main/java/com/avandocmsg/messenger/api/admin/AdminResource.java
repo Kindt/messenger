@@ -87,6 +87,13 @@ import java.util.UUID;
 @RolesAllowed("admin")
 public class AdminResource {
 
+    private static final String ORG_ID = "org_id";
+    private static final String CHAT_ID = "chat_id";
+    private static final String RESOURCE_ORGANIZATION = "organization";
+    private static final String ERR_ORG_NOT_FOUND = "error.admin.org_not_found";
+    private static final String ERR_BODY_REQUIRED = "error.admin.body_required";
+    private static final String LOGO_FILE_ID = "logo_file_id";
+
     private final AppConfig appConfig;
     private final AuditPort auditPort;
     private final OrganizationApplicationService organizationApplicationService;
@@ -130,7 +137,7 @@ public class AdminResource {
         this.retentionPolicyPort = retentionPolicyPort;
         this.chatPersistencePort = chatPersistencePort;
         this.chatRetentionPolicyPort = chatRetentionPolicyPort;
-        this.exportFacade = new AdminExportFacade(
+        this.exportFacade = new AdminExportFacade(new AdminExportFacade.Deps(
             appConfig,
             auditPort,
             chatPersistencePort,
@@ -141,7 +148,7 @@ public class AdminResource {
             exportFileAccess,
             natsOutbound,
             messages
-        );
+        ));
         this.readReceiptService = readReceiptService;
         this.mlsGroupManager = mlsGroupManager;
         this.mlsMigrationService = mlsMigrationService;
@@ -165,7 +172,7 @@ public class AdminResource {
     @Path("legal-hold/organizations/{orgId}")
     @Operation(summary = "Extended legal-hold flags for organization")
     public Response getOrgLegalHold(@PathParam("orgId") String orgIdStr) {
-        var orgId = UuidParams.required(orgIdStr, "org_id");
+        var orgId = UuidParams.required(orgIdStr, ORG_ID);
         if (legalHoldPort == null) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
         }
@@ -187,7 +194,7 @@ public class AdminResource {
     @Path("legal-hold/chats/{chatId}")
     @Operation(summary = "Extended legal-hold flags for chat")
     public Response getChatLegalHold(@PathParam("chatId") String chatIdStr) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, CHAT_ID);
         if (legalHoldPort == null) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
         }
@@ -210,7 +217,7 @@ public class AdminResource {
         if (legalHoldPort == null || request == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
-        var id = UuidParams.required(idStr, org ? "org_id" : "chat_id");
+        var id = UuidParams.required(idStr, org ? ORG_ID : CHAT_ID);
         var actor = CurrentUserId.uuid(securityContext);
         var current = org
             ? legalHoldPort.findOrg(id).orElse(new LegalHoldPort.LegalHoldRow(false, false, false))
@@ -228,7 +235,7 @@ public class AdminResource {
                 .build();
         }
         auditPort.record(actor, org ? "organization.legal_hold.set" : "chat.legal_hold.set",
-            org ? "organization" : "chat", id.toString(), null);
+            org ? RESOURCE_ORGANIZATION : "chat", id.toString(), null);
         return Response.ok(toLegalHoldResponse(next)).build();
     }
 
@@ -589,10 +596,10 @@ public class AdminResource {
         description = "Слияние строки org_retention_policy (V011) с дефолтами из конфигурации. См. docs/RETENTION_AND_DEEP_ARCHIVE.md.",
         security = @SecurityRequirement(name = "bearerAuth"))
     public Response getOrganizationRetention(@PathParam("orgId") String orgIdStr) {
-        var orgId = UuidParams.required(orgIdStr, "org_id");
+        var orgId = UuidParams.required(orgIdStr, ORG_ID);
         if (!organizationApplicationService.exists(OrganizationId.of(orgId))
             || organizationApplicationService.findById(OrganizationId.of(orgId)).isEmpty()) {
-            return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.org_not_found"))).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get(ERR_ORG_NOT_FOUND))).build();
         }
         var stored = retentionPolicyPort.findByOrgId(orgId);
         var body = RetentionPolicyResponse.resolved(orgId, appConfig, stored);
@@ -605,7 +612,7 @@ public class AdminResource {
         description = "Платформа → org (по владельцу/участникам) → chat_retention_policy (V012). См. docs/RETENTION_AND_DEEP_ARCHIVE.md.",
         security = @SecurityRequirement(name = "bearerAuth"))
     public Response getChatRetention(@PathParam("chatId") String chatIdStr) {
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, CHAT_ID);
         if (!chatPersistencePort.chatExists(chatId)) {
             return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.chat_not_found"))).build();
         }
@@ -634,7 +641,7 @@ public class AdminResource {
                                        UpdateRetentionPolicyRequest request,
                                        @Context SecurityContext securityContext) {
         if (request == null) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(new ApiError(400, messages.get("error.admin.body_required"))).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ApiError(400, messages.get(ERR_BODY_REQUIRED))).build();
         }
         if (request.archiveMetadataEnabled() == null || request.deepArchiveEnabled() == null || request.legalHold() == null) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -653,7 +660,7 @@ public class AdminResource {
                 .entity(new ApiError(400, messages.get("error.admin.hot_meta_nonneg")))
                 .build();
         }
-        var chatId = UuidParams.required(chatIdStr, "chat_id");
+        var chatId = UuidParams.required(chatIdStr, CHAT_ID);
         if (!chatPersistencePort.chatExists(chatId)) {
             return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.chat_not_found"))).build();
         }
@@ -705,7 +712,7 @@ public class AdminResource {
                                                UpdateRetentionPolicyRequest request,
                                                @Context SecurityContext securityContext) {
         if (request == null) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(new ApiError(400, messages.get("error.admin.body_required"))).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ApiError(400, messages.get(ERR_BODY_REQUIRED))).build();
         }
         if (request.archiveMetadataEnabled() == null || request.deepArchiveEnabled() == null || request.legalHold() == null) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -724,9 +731,9 @@ public class AdminResource {
                 .entity(new ApiError(400, messages.get("error.admin.hot_meta_nonneg")))
                 .build();
         }
-        var orgId = UuidParams.required(orgIdStr, "org_id");
+        var orgId = UuidParams.required(orgIdStr, ORG_ID);
         if (!organizationApplicationService.exists(OrganizationId.of(orgId))) {
-            return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.org_not_found"))).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get(ERR_ORG_NOT_FOUND))).build();
         }
         var actor = CurrentUserId.uuid(securityContext);
         var ok = retentionPolicyPort.upsert(
@@ -750,7 +757,7 @@ public class AdminResource {
             request.deepArchiveEnabled(),
             request.legalHold()
         );
-        auditPort.record(actor, "organization.retention.set", "organization", orgIdStr, details);
+        auditPort.record(actor, "organization.retention.set", RESOURCE_ORGANIZATION, orgIdStr, details);
         var stored = retentionPolicyPort.findByOrgId(orgId);
         var body = RetentionPolicyResponse.resolved(orgId, appConfig, stored);
         return Response.ok(body).build();
@@ -793,7 +800,7 @@ public class AdminResource {
         }
         var created = org.get();
         var actor = CurrentUserId.uuid(securityContext);
-        auditPort.record(actor, "organization.create", "organization", created.id().value().toString(),
+        auditPort.record(actor, "organization.create", RESOURCE_ORGANIZATION, created.id().value().toString(),
             organizationCreateAuditDetails(created.name()));
         return Response.status(Response.Status.CREATED)
             .entity(new OrganizationJson(created.id().value().toString(), created.name(), created.createdAt()))
@@ -807,21 +814,21 @@ public class AdminResource {
                                       UpdateOrganizationRequest request,
                                       @Context SecurityContext securityContext) {
         if (request == null) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(new ApiError(400, messages.get("error.admin.body_required"))).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ApiError(400, messages.get(ERR_BODY_REQUIRED))).build();
         }
-        var orgId = UuidParams.required(orgIdStr, "org_id");
+        var orgId = UuidParams.required(orgIdStr, ORG_ID);
         if (organizationApplicationService.findById(OrganizationId.of(orgId)).isEmpty()) {
-            return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.org_not_found"))).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get(ERR_ORG_NOT_FOUND))).build();
         }
         UUID logoUuid = null;
         if (request.logoFileId() != null && !request.logoFileId().isBlank()) {
-            logoUuid = UuidParams.required(request.logoFileId(), "logo_file_id");
+            logoUuid = UuidParams.required(request.logoFileId(), LOGO_FILE_ID);
         }
         if (!organizationApplicationService.updateLogo(OrganizationId.of(orgId), logoUuid)) {
-            return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.org_not_found"))).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get(ERR_ORG_NOT_FOUND))).build();
         }
         var actor = CurrentUserId.uuid(securityContext);
-        auditPort.record(actor, "organization.logo.set", "organization", orgIdStr,
+        auditPort.record(actor, "organization.logo.set", RESOURCE_ORGANIZATION, orgIdStr,
             organizationLogoAuditDetails(logoUuid));
         var updated = organizationApplicationService.findById(OrganizationId.of(orgId)).orElseThrow();
         var viewerId = UserId.of(actor);
@@ -842,10 +849,10 @@ public class AdminResource {
     @Operation(summary = "Удалить организацию (если нет пользователей)", security = @SecurityRequirement(name = "bearerAuth"))
     public Response deleteOrganization(@PathParam("orgId") String orgIdStr,
                                        @Context SecurityContext securityContext) {
-        var orgId = UuidParams.required(orgIdStr, "org_id");
+        var orgId = UuidParams.required(orgIdStr, ORG_ID);
         var orgRow = organizationApplicationService.findById(OrganizationId.of(orgId));
         if (orgRow.isEmpty()) {
-            return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get("error.admin.org_not_found"))).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(new ApiError(404, messages.get(ERR_ORG_NOT_FOUND))).build();
         }
         var orgName = orgRow.get().name();
         if (!organizationApplicationService.deleteIfUnused(OrganizationId.of(orgId))) {
@@ -854,7 +861,7 @@ public class AdminResource {
                 .build();
         }
         var actor = CurrentUserId.uuid(securityContext);
-        auditPort.record(actor, "organization.delete", "organization", orgIdStr,
+        auditPort.record(actor, "organization.delete", RESOURCE_ORGANIZATION, orgIdStr,
             organizationDeleteAuditDetails(orgName));
         return Response.noContent().build();
     }
@@ -866,9 +873,9 @@ public class AdminResource {
                                        SetUserOrganizationRequest request,
                                        @Context SecurityContext securityContext) {
         if (request == null) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(new ApiError(400, messages.get("error.admin.body_required"))).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(new ApiError(400, messages.get(ERR_BODY_REQUIRED))).build();
         }
-        var orgId = UuidParams.required(request.orgId(), "org_id");
+        var orgId = UuidParams.required(request.orgId(), ORG_ID);
         var userId = UuidParams.required(userIdStr, "user_id");
         var ok = organizationApplicationService.setUserOrg(UserId.of(userId), OrganizationId.of(orgId));
         if (!ok) {
@@ -893,7 +900,7 @@ public class AdminResource {
     /** Package-visible for tests. */
     static String userOrganizationSetAuditDetails(UUID orgId) {
         var n = ADMIN_AUDIT_JSON.createObjectNode();
-        n.put("org_id", orgId.toString());
+        n.put(ORG_ID, orgId.toString());
         return writeAdminAuditJson(n);
     }
 
@@ -916,9 +923,9 @@ public class AdminResource {
     static String organizationLogoAuditDetails(java.util.UUID logoFileId) {
         var n = ADMIN_AUDIT_JSON.createObjectNode();
         if (logoFileId == null) {
-            n.putNull("logo_file_id");
+            n.putNull(LOGO_FILE_ID);
         } else {
-            n.put("logo_file_id", logoFileId.toString());
+            n.put(LOGO_FILE_ID, logoFileId.toString());
         }
         return writeAdminAuditJson(n);
     }

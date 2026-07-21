@@ -1,7 +1,5 @@
 package com.avandocmsg.messenger.api.phase5;
 
-import com.avandocmsg.messenger.common.json.MessengerJson;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +15,12 @@ import java.util.UUID;
 
 /** JDBC scaffold for spec 022 Phase 5 ADR backlog (repo MVP). */
 public final class Phase5AdrRepository {
-    private static final ObjectMapper MAPPER = MessengerJson.mapper();
+    private static final String COL_ORG_ID = "org_id";
+    private static final String COL_CREATED_AT = "created_at";
+    private static final String COL_CHAT_ID = "chat_id";
+    private static final String COL_CONFERENCE_ID = "conference_id";
+    private static final String COL_EXPIRES_AT = "expires_at";
+    private static final String COL_ADMITTED_AT = "admitted_at";
 
     private final DataSource dataSource;
 
@@ -38,9 +41,9 @@ public final class Phase5AdrRepository {
                 while (rs.next()) {
                     out.add(new StickerPackRow(
                         rs.getObject("id", UUID.class),
-                        rs.getObject("org_id", UUID.class),
+                        rs.getObject(COL_ORG_ID, UUID.class),
                         rs.getString("name"),
-                        rs.getTimestamp("created_at").toInstant()));
+                        rs.getTimestamp(COL_CREATED_AT).toInstant()));
                 }
             }
         } catch (SQLException e) {
@@ -80,11 +83,11 @@ public final class Phase5AdrRepository {
                 while (rs.next()) {
                     out.add(new GifRow(
                         rs.getObject("id", UUID.class),
-                        rs.getObject("org_id", UUID.class),
+                        rs.getObject(COL_ORG_ID, UUID.class),
                         rs.getString("query_key"),
                         rs.getString("preview_url"),
                         rs.getString("gif_url"),
-                        rs.getTimestamp("created_at").toInstant()));
+                        rs.getTimestamp(COL_CREATED_AT).toInstant()));
                 }
             }
         } catch (SQLException e) {
@@ -187,10 +190,10 @@ public final class Phase5AdrRepository {
                     out.add(new BreakoutRow(
                         rs.getObject("id", UUID.class),
                         rs.getObject("parent_conference_id", UUID.class),
-                        rs.getObject("chat_id", UUID.class),
+                        rs.getObject(COL_CHAT_ID, UUID.class),
                         rs.getString("name"),
                         rs.getString("livekit_room"),
-                        rs.getTimestamp("created_at").toInstant()));
+                        rs.getTimestamp(COL_CREATED_AT).toInstant()));
                 }
             }
         } catch (SQLException e) {
@@ -327,35 +330,35 @@ public final class Phase5AdrRepository {
         Integer sortOrder,
         String title
     ) {
-        var sets = new ArrayList<String>();
-        if (columnKey != null && !columnKey.isBlank()) {
-            sets.add("column_key = ?");
-        }
-        if (sortOrder != null) {
-            sets.add("sort_order = ?");
-        }
-        if (title != null && !title.isBlank()) {
-            sets.add("title = ?");
-        }
-        if (sets.isEmpty()) {
+        boolean touchColumn = columnKey != null && !columnKey.isBlank();
+        boolean touchSort = sortOrder != null;
+        boolean touchTitle = title != null && !title.isBlank();
+        if (!touchColumn && !touchSort && !touchTitle) {
             return getKanbanTask(taskId, chatId);
         }
-        var sql = "UPDATE chat_kanban_tasks SET " + String.join(", ", sets) + " WHERE id = ? AND chat_id = ?";
+        var sql = """
+            UPDATE chat_kanban_tasks SET
+              column_key = CASE WHEN ? THEN ? ELSE column_key END,
+              sort_order = CASE WHEN ? THEN ? ELSE sort_order END,
+              title = CASE WHEN ? THEN ? ELSE title END
+            WHERE id = ? AND chat_id = ?
+            """;
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
-            var idx = 1;
-            if (columnKey != null && !columnKey.isBlank()) {
-                stmt.setString(idx++, columnKey.trim());
+            int i = 1;
+            stmt.setBoolean(i++, touchColumn);
+            stmt.setString(i++, touchColumn ? columnKey.trim() : null);
+            stmt.setBoolean(i++, touchSort);
+            if (touchSort) {
+                stmt.setInt(i++, sortOrder);
+            } else {
+                stmt.setNull(i++, java.sql.Types.INTEGER);
             }
-            if (sortOrder != null) {
-                stmt.setInt(idx++, sortOrder);
-            }
-            if (title != null && !title.isBlank()) {
-                stmt.setString(idx++, title.trim());
-            }
-            stmt.setObject(idx++, taskId);
-            stmt.setObject(idx, chatId);
-            if (stmt.executeUpdate() == 0) {
+            stmt.setBoolean(i++, touchTitle);
+            stmt.setString(i++, touchTitle ? title.trim() : null);
+            stmt.setObject(i++, taskId);
+            stmt.setObject(i, chatId);
+            if (stmt.executeUpdate() <= 0) {
                 return Optional.empty();
             }
         } catch (SQLException e) {
@@ -394,15 +397,15 @@ public final class Phase5AdrRepository {
                 }
                 return Optional.of(new GuestLinkLookupRow(
                     rs.getObject("id", UUID.class),
-                    rs.getObject("conference_id", UUID.class),
-                    rs.getObject("chat_id", UUID.class),
+                    rs.getObject(COL_CONFERENCE_ID, UUID.class),
+                    rs.getObject(COL_CHAT_ID, UUID.class),
                     rs.getBoolean("waiting_room"),
-                    rs.getTimestamp("expires_at") != null
-                        ? rs.getTimestamp("expires_at").toInstant()
+                    rs.getTimestamp(COL_EXPIRES_AT) != null
+                        ? rs.getTimestamp(COL_EXPIRES_AT).toInstant()
                         : null,
-                    rs.getTimestamp("created_at").toInstant(),
-                    rs.getTimestamp("admitted_at") != null
-                        ? rs.getTimestamp("admitted_at").toInstant()
+                    rs.getTimestamp(COL_CREATED_AT).toInstant(),
+                    rs.getTimestamp(COL_ADMITTED_AT) != null
+                        ? rs.getTimestamp(COL_ADMITTED_AT).toInstant()
                         : null));
             }
         } catch (SQLException e) {
@@ -425,15 +428,15 @@ public final class Phase5AdrRepository {
                 while (rs.next()) {
                     rows.add(new GuestLinkLookupRow(
                         rs.getObject("id", UUID.class),
-                        rs.getObject("conference_id", UUID.class),
-                        rs.getObject("chat_id", UUID.class),
+                        rs.getObject(COL_CONFERENCE_ID, UUID.class),
+                        rs.getObject(COL_CHAT_ID, UUID.class),
                         rs.getBoolean("waiting_room"),
-                        rs.getTimestamp("expires_at") != null
-                            ? rs.getTimestamp("expires_at").toInstant()
+                        rs.getTimestamp(COL_EXPIRES_AT) != null
+                            ? rs.getTimestamp(COL_EXPIRES_AT).toInstant()
                             : null,
-                        rs.getTimestamp("created_at").toInstant(),
-                        rs.getTimestamp("admitted_at") != null
-                            ? rs.getTimestamp("admitted_at").toInstant()
+                        rs.getTimestamp(COL_CREATED_AT).toInstant(),
+                        rs.getTimestamp(COL_ADMITTED_AT) != null
+                            ? rs.getTimestamp(COL_ADMITTED_AT).toInstant()
                             : null));
                 }
             }
@@ -463,13 +466,13 @@ public final class Phase5AdrRepository {
     private static KanbanTaskRow mapKanbanTask(java.sql.ResultSet rs) throws SQLException {
         return new KanbanTaskRow(
             rs.getObject("id", UUID.class),
-            rs.getObject("chat_id", UUID.class),
+            rs.getObject(COL_CHAT_ID, UUID.class),
             rs.getString("column_key"),
             rs.getString("title"),
             rs.getObject("assignee_id", UUID.class),
             rs.getObject("created_by", UUID.class),
             rs.getInt("sort_order"),
-            rs.getTimestamp("created_at").toInstant());
+            rs.getTimestamp(COL_CREATED_AT).toInstant());
     }
 
     public Optional<SipGatewayRow> getSipGateway(UUID orgId) {
@@ -482,7 +485,7 @@ public final class Phase5AdrRepository {
                     return Optional.empty();
                 }
                 return Optional.of(new SipGatewayRow(
-                    rs.getObject("org_id", UUID.class),
+                    rs.getObject(COL_ORG_ID, UUID.class),
                     rs.getBoolean("enabled"),
                     rs.getString("gateway_uri"),
                     rs.getBoolean("h323_enabled"),
@@ -532,7 +535,7 @@ public final class Phase5AdrRepository {
                         rs.getObject("user_id", UUID.class),
                         rs.getString("credential_id"),
                         rs.getString("public_key"),
-                        rs.getTimestamp("created_at").toInstant()));
+                        rs.getTimestamp(COL_CREATED_AT).toInstant()));
                 }
             }
         } catch (SQLException e) {
@@ -624,9 +627,9 @@ public final class Phase5AdrRepository {
         );
         try (var conn = dataSource.getConnection();
              var stmt = conn.prepareStatement(sql)) {
+            stmt.setObject(2, orgId);
             for (var row : rows) {
                 stmt.setObject(1, UUID.randomUUID());
-                stmt.setObject(2, orgId);
                 stmt.setString(3, row[0]);
                 stmt.setString(4, row[1]);
                 stmt.setString(5, row[2]);
@@ -647,12 +650,12 @@ public final class Phase5AdrRepository {
                 while (rs.next()) {
                     out.add(new RecordingRow(
                         rs.getObject("id", UUID.class),
-                        rs.getObject("conference_id", UUID.class),
-                        rs.getObject("chat_id", UUID.class),
+                        rs.getObject(COL_CONFERENCE_ID, UUID.class),
+                        rs.getObject(COL_CHAT_ID, UUID.class),
                         rs.getObject("started_by", UUID.class),
                         rs.getString("status"),
                         rs.getString("storage_key"),
-                        rs.getTimestamp("created_at").toInstant()));
+                        rs.getTimestamp(COL_CREATED_AT).toInstant()));
                 }
             }
         } catch (SQLException e) {
@@ -677,7 +680,7 @@ public final class Phase5AdrRepository {
     private static WhiteboardRow mapWhiteboard(java.sql.ResultSet rs) throws SQLException {
         return new WhiteboardRow(
             rs.getObject("id", UUID.class),
-            rs.getObject("chat_id", UUID.class),
+            rs.getObject(COL_CHAT_ID, UUID.class),
             rs.getObject("created_by", UUID.class),
             rs.getString("title"),
             rs.getString("snapshot_json"),
@@ -687,12 +690,12 @@ public final class Phase5AdrRepository {
     private static CaptionSessionRow mapCaption(java.sql.ResultSet rs) throws SQLException {
         return new CaptionSessionRow(
             rs.getObject("id", UUID.class),
-            rs.getObject("conference_id", UUID.class),
-            rs.getObject("chat_id", UUID.class),
+            rs.getObject(COL_CONFERENCE_ID, UUID.class),
+            rs.getObject(COL_CHAT_ID, UUID.class),
             rs.getString("status"),
             rs.getString("language"),
             rs.getString("transcript_json"),
-            rs.getTimestamp("created_at").toInstant());
+            rs.getTimestamp(COL_CREATED_AT).toInstant());
     }
 
     private static String sha256(String token) {

@@ -82,7 +82,7 @@ class ExternalStackRuntimeManifestProviderTest {
         assertTrue(profiles.stream().anyMatch(p -> p.profileId().equals("s3-minio-bundled")));
         assertTrue(profiles.stream().anyMatch(p -> p.profileId().equals("livekit-bundled")));
         assertTrue(profiles.stream().anyMatch(p -> p.profileId().equals("dlp-external")));
-        assertTrue(profiles.stream().anyMatch(p -> p.lifecycleStatus() == LifecycleStatus.supported_external_byo));
+        assertTrue(profiles.stream().anyMatch(p -> p.lifecycleStatus() == LifecycleStatus.SUPPORTED_EXTERNAL_BYO));
     }
 
     @Test

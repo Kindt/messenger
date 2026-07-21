@@ -61,9 +61,7 @@ public final class JdbcAdminStatsJdbcRepository implements DatabaseHealthPort, A
             return conn.isValid(1);
 
         } catch (Exception e) {
-
-            return false;
-
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
     }
@@ -91,9 +89,7 @@ public final class JdbcAdminStatsJdbcRepository implements DatabaseHealthPort, A
             }
 
         } catch (Exception e) {
-
-            return false;
-
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
     }
@@ -119,9 +115,7 @@ public final class JdbcAdminStatsJdbcRepository implements DatabaseHealthPort, A
         } catch (Exception e) {
 
             log.warn("countMessagingTables failed: {}", e.getMessage());
-
-            return new AdminMetricsQueryPort.TableCounts(0, 0, 0, false);
-
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
     }
@@ -189,9 +183,7 @@ public final class JdbcAdminStatsJdbcRepository implements DatabaseHealthPort, A
         } catch (Exception e) {
 
             log.warn("scanExportJobStatuses failed: {}", e.getMessage());
-
-            return AdminMetricsQueryPort.ExportJobStatusScan.unavailable();
-
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
     }
@@ -227,9 +219,7 @@ public final class JdbcAdminStatsJdbcRepository implements DatabaseHealthPort, A
         } catch (Exception e) {
 
             log.warn("countAuditExportSince failed: {}", e.getMessage());
-
-            return 0L;
-
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
     }
@@ -271,9 +261,7 @@ public final class JdbcAdminStatsJdbcRepository implements DatabaseHealthPort, A
         } catch (Exception e) {
 
             log.warn("countAuditExportCancelledSince failed: {}", e.getMessage());
-
-            return 0L;
-
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
     }
@@ -319,7 +307,7 @@ public final class JdbcAdminStatsJdbcRepository implements DatabaseHealthPort, A
         } catch (Exception e) {
 
             log.warn("countPendingHotRowCandidates failed: {}", e.getMessage());
-
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
         return 0L;
@@ -367,7 +355,7 @@ public final class JdbcAdminStatsJdbcRepository implements DatabaseHealthPort, A
         } catch (Exception e) {
 
             log.warn("countPendingMlsMigrations failed: {}", e.getMessage());
-
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
         return 0L;
@@ -431,7 +419,7 @@ public final class JdbcAdminStatsJdbcRepository implements DatabaseHealthPort, A
         } catch (Exception e) {
 
             log.warn("listPendingMlsMigrationChatIds failed: {}", e.getMessage());
-
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
         return out;
@@ -451,9 +439,7 @@ public final class JdbcAdminStatsJdbcRepository implements DatabaseHealthPort, A
         } catch (Exception e) {
 
             log.warn("countProcessingStaleExportJobs failed (staleMinutes={}): {}", staleMinutes, e.getMessage());
-
-            return 0L;
-
+            throw new IllegalStateException("JDBC operation failed", e);
         }
 
     }

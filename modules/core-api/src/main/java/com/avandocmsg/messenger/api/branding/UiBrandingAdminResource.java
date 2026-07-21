@@ -31,6 +31,9 @@ import java.util.UUID;
 @RolesAllowed("admin")
 @Tag(name = "Admin Branding", description = "Platform/org UI branding management")
 public class UiBrandingAdminResource {
+    private static final String ORG_ID_PARAM = "org_id";
+    private static final String INVALID_ORG_ID = "invalid org_id";
+
     private final UiBrandingService brandingService;
     private final AuditPort auditPort;
 
@@ -82,10 +85,10 @@ public class UiBrandingAdminResource {
     public Response getOrg(@PathParam("orgId") String orgIdRaw) {
         UUID orgId;
         try {
-            orgId = UuidParams.required(orgIdRaw, "org_id");
+            orgId = UuidParams.required(orgIdRaw, ORG_ID_PARAM);
         } catch (Exception e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, "invalid org_id"))
+                .entity(new ApiError(400, INVALID_ORG_ID))
                 .build();
         }
         return Response.ok(BrandingDtos.fromOrg(brandingService.getOrg(orgId))).build();
@@ -99,10 +102,10 @@ public class UiBrandingAdminResource {
                            @Context SecurityContext securityContext) {
         UUID orgId;
         try {
-            orgId = UuidParams.required(orgIdRaw, "org_id");
+            orgId = UuidParams.required(orgIdRaw, ORG_ID_PARAM);
         } catch (Exception e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, "invalid org_id"))
+                .entity(new ApiError(400, INVALID_ORG_ID))
                 .build();
         }
         if (request == null) {
@@ -136,10 +139,10 @@ public class UiBrandingAdminResource {
                               @Context SecurityContext securityContext) {
         UUID orgId;
         try {
-            orgId = UuidParams.required(orgIdRaw, "org_id");
+            orgId = UuidParams.required(orgIdRaw, ORG_ID_PARAM);
         } catch (Exception e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ApiError(400, "invalid org_id"))
+                .entity(new ApiError(400, INVALID_ORG_ID))
                 .build();
         }
         var deleted = brandingService.deleteOrg(orgId);

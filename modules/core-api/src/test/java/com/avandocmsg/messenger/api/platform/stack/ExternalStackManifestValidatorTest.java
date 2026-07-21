@@ -26,7 +26,7 @@ class ExternalStackManifestValidatorTest {
 
     @Test
     void rejectsTrafficRoleWhenManifestIsNotActive() {
-        var manifests = List.of(activeManifest("messaging", "nats-2.10").withRole(ExternalStackRole.migration_target));
+        var manifests = List.of(activeManifest("messaging", "nats-2.10").withRole(ExternalStackRole.MIGRATION_TARGET));
 
         var result = ExternalStackManifestValidator.validateDesiredManifests(manifests);
 
@@ -119,8 +119,8 @@ class ExternalStackManifestValidatorTest {
             "angie",
             "reverse-proxy",
             "nginx-compatible",
-            LifecycleStatus.candidate,
-            List.of(DeploymentMode.bundled),
+            LifecycleStatus.CANDIDATE,
+            List.of(DeploymentMode.BUNDLED),
             List.of("websocket_upgrade"),
             "web-edge",
             SupportBoundary.externalByo("customer"),
@@ -139,8 +139,8 @@ class ExternalStackManifestValidatorTest {
             "postgres-16-external",
             "postgres",
             "postgres-16",
-            LifecycleStatus.supported_external_byo,
-            List.of(DeploymentMode.external_byo),
+            LifecycleStatus.SUPPORTED_EXTERNAL_BYO,
+            List.of(DeploymentMode.EXTERNAL_BYO),
             List.of("jdbc_connectivity", "flyway_privileges"),
             "pg",
             SupportBoundary.externalByo("customer-dba"),
@@ -159,8 +159,8 @@ class ExternalStackManifestValidatorTest {
             "postgres-16-external",
             "postgres",
             "postgres-16",
-            LifecycleStatus.supported_external_byo,
-            List.of(DeploymentMode.external_byo),
+            LifecycleStatus.SUPPORTED_EXTERNAL_BYO,
+            List.of(DeploymentMode.EXTERNAL_BYO),
             List.of("jdbc_connectivity", "flyway_privileges"),
             "pg",
             SupportBoundary.externalByo("customer-dba"),
@@ -202,7 +202,7 @@ class ExternalStackManifestValidatorTest {
             "family",
             connector,
             "1",
-            ExternalStackRole.active,
+            ExternalStackRole.ACTIVE,
             "https://example.test/" + component,
             component + "-resource",
             "v1",

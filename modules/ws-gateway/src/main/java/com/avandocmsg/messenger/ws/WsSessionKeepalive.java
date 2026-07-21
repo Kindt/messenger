@@ -85,10 +85,8 @@ public final class WsSessionKeepalive implements AutoCloseable {
         int evicted = 0;
         for (var session : registry.allOpenSessions()) {
             var last = lastActivityMs.get(session);
-            if (last == null || nowMs - last > pongTimeoutMs) {
-                if (evictSession(session, "stale")) {
-                    evicted++;
-                }
+            if ((last == null || nowMs - last > pongTimeoutMs) && evictSession(session, "stale")) {
+                evicted++;
             }
         }
         return evicted;

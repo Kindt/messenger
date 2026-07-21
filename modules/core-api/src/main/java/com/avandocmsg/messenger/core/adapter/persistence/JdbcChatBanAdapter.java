@@ -45,7 +45,7 @@ public final class JdbcChatBanAdapter implements ChatBanPort {
                 bannedBy.toString(), reason, clock.instant());
         } catch (Exception e) {
             log.error("Failed to ban user {} from chat {}", userId, chatId, e);
-            return null;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -63,6 +63,7 @@ public final class JdbcChatBanAdapter implements ChatBanPort {
             }
         } catch (Exception e) {
             log.error("Failed to find ban {}", id, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -86,6 +87,7 @@ public final class JdbcChatBanAdapter implements ChatBanPort {
             }
         } catch (Exception e) {
             log.error("Failed to list bans for chat {}", chatId, e);
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return result;
     }
@@ -101,7 +103,7 @@ public final class JdbcChatBanAdapter implements ChatBanPort {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.error("Failed to unban user {} from chat {}", userId, chatId, e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -118,11 +120,11 @@ public final class JdbcChatBanAdapter implements ChatBanPort {
             }
         } catch (Exception e) {
             log.error("Failed to check ban status", e);
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
-    private ChatBanResponse mapBan(java.sql.ResultSet rs) throws Exception {
+    private ChatBanResponse mapBan(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new ChatBanResponse(
             rs.getObject("id", UUID.class).toString(),
             rs.getObject("chat_id", UUID.class).toString(),

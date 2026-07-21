@@ -2,8 +2,7 @@
 # Requires EXPORT_ADMIN_EXPORT_ENABLED=true.
 # -Mode queued|processing|any (default any): when to DELETE (processing = cooperative cancel path).
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$ChatId,
+    [string]$ChatId = "",
     [string]$BaseUrl = "http://localhost:8080",
     [string]$AdminUser = "csadmin",
     [string]$AdminPass = "csadmin",
@@ -17,6 +16,8 @@ param(
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $scriptDir "lib\SmokeExportAudit.ps1")
+. (Join-Path $scriptDir "lib\Resolve-SmokeExportChatId.ps1")
+$ChatId = Resolve-SmokeExportChatId -ChatId $ChatId -BaseUrl $BaseUrl -ScriptDir $scriptDir
 
 function Get-Token {
     param($User, $Pass)

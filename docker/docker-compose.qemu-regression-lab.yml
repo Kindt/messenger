@@ -9,6 +9,17 @@ services:
       EXPORT_ADMIN_SUGGEST_ENABLED: "true"
       EXPORT_ADMIN_EXPORT_ENABLED: "true"
       EXPORT_SUGGESTED_SUBSCRIBER_ENABLED: "true"
+      EXPORT_AUTO_QUEUE_ON_SUGGESTED: "true"
+      EXPORT_AUTO_QUEUE_COOLDOWN_MINUTES: "0"
+      # Lab-only VAPID (scripts/generate-vapid.ps1); enables addon-engage runtime_ready on QEMU.
+      PUSH_VAPID_PUBLIC_KEY: "BJzSsmNOfnx3oD_fgRR3bPahmzfMn9qcJQB8FSYdRNBPoSYfSRtF_3NEqYAo5wfMHSNyCPPmT_hstGi2hydswSI"
+      PUSH_VAPID_PRIVATE_KEY: "EazpWO3TFy3FtOu6S7OJGI3jnXanbzVOpteoNwJVy64"
+      PUSH_VAPID_SUBJECT: "mailto:notify@localhost"
+  push-worker:
+    environment:
+      PUSH_VAPID_PUBLIC_KEY: "BJzSsmNOfnx3oD_fgRR3bPahmzfMn9qcJQB8FSYdRNBPoSYfSRtF_3NEqYAo5wfMHSNyCPPmT_hstGi2hydswSI"
+      PUSH_VAPID_PRIVATE_KEY: "EazpWO3TFy3FtOu6S7OJGI3jnXanbzVOpteoNwJVy64"
+      PUSH_VAPID_SUBJECT: "mailto:notify@localhost"
   export-replay-worker:
     environment:
       EXPORT_REPLAY_INCLUDE_FILE_BODIES: "true"
@@ -16,3 +27,9 @@ services:
     environment:
       # Metadata-only deep-archive snapshots are ~400 B; threshold must be below that for chunk smoke.
       DEEP_ARCHIVE_CHUNK_SIZE_BYTES: "256"
+  retention-worker:
+    environment:
+      RETENTION_PUBLISH_EXPORT_SUGGESTED: "true"
+      RETENTION_DRY_RUN: "true"
+      RETENTION_SCAN_INTERVAL_SECONDS: "30"
+      RETENTION_INITIAL_DELAY_SECONDS: "10"

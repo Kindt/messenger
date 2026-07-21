@@ -9,6 +9,25 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
+
+function Resolve-SmokeScriptForLab {
+    param([string]$ScriptRel)
+    $map = @{
+        'scripts/smoke-ready.sh' = 'scripts/smoke-ready.ps1'
+        'scripts/smoke-hotplug-indexer.sh' = 'scripts/smoke-hotplug-indexer.ps1'
+        'scripts/smoke-deploy-acceptance.sh' = 'scripts/smoke-deploy-acceptance-qemu.ps1'
+    }
+    if ($map.ContainsKey($ScriptRel)) { return $map[$ScriptRel] }
+    return $ScriptRel
+}
+function Get-SmokeBashPath {
+    $gitBash = Join-Path ${env:ProgramFiles} "Git\bin\bash.exe"
+    if (Test-Path $gitBash) { return $gitBash }
+    $cmd = Get-Command bash -ErrorAction SilentlyContinue
+    if ($cmd -and $cmd.Source -notmatch '\\Windows\\System32\\bash\.exe$') { return $cmd.Source }
+    throw "bash not found (install Git for Windows; avoid WSL store stub)"
+}
+
 if (-not $ProfilesFile) {
     $ProfilesFile = Join-Path $Root "scripts\smoke-profiles.json"
 }
@@ -39,6 +58,7 @@ foreach ($name in $names) {
     Write-Host "  $($p.description)"
     $profileOk = $true
     foreach ($scriptRel in $p.smoke_scripts) {
+        $scriptRel = Resolve-SmokeScriptForLab -ScriptRel $scriptRel
         $scriptPath = Join-Path $Root ($scriptRel -replace '/', '\')
         if (-not (Test-Path $scriptPath)) {
             Write-Host "[FAIL] missing $scriptRel"
@@ -48,9 +68,36 @@ foreach ($name in $names) {
         Write-Host "  -> $scriptRel"
         if ($scriptRel -like "*.sh") {
             $env:BASE_URL = "http://127.0.0.1:18080"
-            & bash $scriptPath
+            $env:KORUS_API_URL = "http://127.0.0.1:18080"
+            & (Get-SmokeBashPath) $scriptPath
         } elseif ($scriptRel -like "*.ps1") {
-            & $scriptPath
+            $env:BASE_URL = "http://127.0.0.1:18080"
+            if ($scriptRel -like '*smoke-ready.ps1') {
+                & $scriptPath -BaseUrl "http://127.0.0.1:18080"
+            } elseif ($scriptRel -like '*deep-archive-chunks.ps1') {
+                & $scriptPath -BaseUrl "http://127.0.0.1:18080"
+            } elseif ($scriptRel -like '*retention-worker.ps1') {
+                & $scriptPath -ApiBaseUrl "http://127.0.0.1:18080"
+            } elseif ($scriptRel -like '*hotplug-indexer.ps1') {
+                . (Join-Path $Root 'scripts\lib\Ensure-NatsQemuTunnel.ps1')
+                $nats = Ensure-NatsQemuTunnel
+                & $scriptPath -NatsUrl $nats
+            } elseif ($scriptRel -like '*retention-purge.ps1') {
+                & $scriptPath -BaseUrl "http://127.0.0.1:18080"
+            } elseif ($scriptRel -like '*export-compliance*.ps1') {
+                . (Join-Path $Root 'scripts\lib\Resolve-QemuLabWorkerMetrics.ps1')
+                $m = Resolve-QemuLabWorkerMetrics -ApiBaseUrl 'http://127.0.0.1:18080'
+                if ($scriptRel -like '*export-compliance-pack.ps1') {
+                    & $scriptPath -BaseUrl 'http://127.0.0.1:18080' `
+                        -WorkerMetricsUrl $m.WorkerMetricsUrl -RetentionMetricsUrl $m.RetentionMetricsUrl
+                } else {
+                    & $scriptPath -BaseUrl 'http://127.0.0.1:18080'
+                }
+            } elseif ($scriptRel -like '*deploy-acceptance-qemu.ps1') {
+                & $scriptPath -ApiBaseUrl 'http://127.0.0.1:18080' -WebBaseUrl 'http://127.0.0.1:19088'
+            } else {
+                & $scriptPath
+            }
         } else {
             Write-Host "[SKIP] unknown script type $scriptRel"
             continue

@@ -29,12 +29,17 @@ $patterns = @(
     'Start-VppAfterStackRecovery',
     'Start-VppLabRun',
     'Start-VppMonitoredLabRun',
+    'Resume-VppMonitoredLabRun',
     'Start-VppChatReporter',
     'Start-VppStatusWatcher',
     'Start-VppRealtimeWatch',
+    'Wait-AndResumeAfterGate',
+    'Wait-AndStopAfterGate',
+    'Invoke-VppGateRunner',
     'integrations-gate-preflight',
     'Repair-IntegrationsGateway',
-    'Wait-IntegrationsOnline'
+    'Wait-IntegrationsOnline',
+    'qemu-status-loop'
 )
 
 $killed = @()

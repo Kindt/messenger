@@ -8,6 +8,7 @@ import com.avandocmsg.messenger.core.port.UuidGenerator;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -73,10 +74,12 @@ public class MlsGroupManager {
         if (group == null) {
             return null;
         }
-        return mlsService.encrypt(group.chatId(), senderId, plaintext);
+        // senderId retained for API symmetry with add/remove and future openmls sender binding
+        Objects.requireNonNull(senderId, "senderId");
+        return mlsService.encrypt(group.chatId(), plaintext);
     }
 
-    public String decrypt(UUID groupId, long epoch, byte[] ciphertext, byte[] nonce) {
+    public String decrypt(UUID groupId, byte[] ciphertext, byte[] nonce) {
         var group = groupStateRepository.findByGroupId(groupId).orElse(null);
         if (group == null || ciphertext == null || nonce == null) {
             return null;

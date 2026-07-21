@@ -167,13 +167,14 @@ button {
   display: none !important;
 }
 
-@media (max-width: 960px) {
-  .messenger-shell.call-open {
+/* Mobile shell layout: html[data-mobile-shell] from ui-device-profile.js (UA + tablet portrait). */
+
+html[data-mobile-shell="1"] .messenger-shell.call-open {
     display: flex;
     flex-direction: column;
   }
 
-  .messenger-shell.call-open > .call-panel {
+html[data-mobile-shell="1"] .messenger-shell.call-open > .call-panel {
     width: 100%;
     max-height: 42vh;
     border-left: none;
@@ -182,185 +183,185 @@ button {
     order: 0;
   }
 
-  .messenger-shell.call-open > .messenger {
+html[data-mobile-shell="1"] .messenger-shell.call-open > .messenger {
     order: 1;
     min-height: 0;
   }
 
-  .messenger {
+html[data-mobile-shell="1"] .messenger {
     flex-direction: column;
   }
 
-  .sidebar-resizer {
+html[data-mobile-shell="1"] .sidebar-resizer {
     display: none;
   }
 
-  .messenger:not(.has-selection) .thread {
+html[data-mobile-shell="1"] .messenger:not(.has-selection) .thread {
     display: none;
   }
 
-  .messenger.has-selection .sidebar {
+html[data-mobile-shell="1"] .messenger.has-selection .sidebar {
     display: none;
   }
 
-  .messenger.has-selection .empty-thread {
+html[data-mobile-shell="1"] .messenger.has-selection .empty-thread {
     display: none;
   }
 
-  .thread-back-btn {
+html[data-mobile-shell="1"] .thread-back-btn {
     display: inline-flex !important;
     flex-shrink: 0;
   }
 
-  .thread-header {
+html[data-mobile-shell="1"] .thread-header {
     flex-wrap: wrap;
     align-items: center;
     padding-left: max(8px, env(safe-area-inset-left, 0px));
     padding-right: max(12px, env(safe-area-inset-right, 0px));
   }
 
-  .sidebar {
+html[data-mobile-shell="1"] .sidebar {
     border-right: none;
   }
 
-  .global-search-wrap {
+html[data-mobile-shell="1"] .global-search-wrap {
     display: none;
   }
 
-  .sidebar-message-search .global-search-wrap {
+html[data-mobile-shell="1"] .sidebar-message-search .global-search-wrap {
     display: block;
   }
 
-  .thread-header-search-host {
+html[data-mobile-shell="1"] .thread-header-search-host {
     display: block;
   }
 
-  .thread-header-search-host .global-search-wrap {
+html[data-mobile-shell="1"] .thread-header-search-host .global-search-wrap {
     display: block;
   }
 
-  .msg-actions {
+html[data-mobile-shell="1"] .msg-actions {
     opacity: 1;
   }
 
-  .msg {
+html[data-mobile-shell="1"] .msg {
     max-width: 92%;
   }
 
-  .thread-header-actions .btn-icon,
-  .msg-actions .btn-icon {
+html[data-mobile-shell="1"] .thread-header-actions .btn-icon,
+html[data-mobile-shell="1"] .msg-actions .btn-icon {
     min-width: 2rem;
     width: 2rem;
     height: 2rem;
   }
 
-  .sidebar-search,
-  .thread-search-input,
-  .composer textarea,
-  .auth-form .auth-field input {
+html[data-mobile-shell="1"] .sidebar-search,
+html[data-mobile-shell="1"] .thread-search-input,
+html[data-mobile-shell="1"] .composer textarea,
+html[data-mobile-shell="1"] .auth-form .auth-field input {
     font-size: 16px;
   }
 
-  .messenger-shell.thread-focus .app-header-left,
-  .messenger-shell.thread-focus .global-search-panel {
+html[data-mobile-shell="1"] .messenger-shell.thread-focus .app-header-left,
+html[data-mobile-shell="1"] .messenger-shell.thread-focus .global-search-panel {
     display: none;
   }
 
-  .messenger-shell.thread-focus .app-header {
+html[data-mobile-shell="1"] .messenger-shell.thread-focus .app-header {
     padding: 6px max(10px, env(safe-area-inset-right, 0px)) 6px
       max(10px, env(safe-area-inset-left, 0px));
   }
 
-  .messenger-shell.thread-focus .hdr-btn-optional {
+html[data-mobile-shell="1"] .messenger-shell.thread-focus .hdr-btn-optional {
     display: none !important;
   }
 
-  .messenger-shell.thread-focus .app-header-right {
+html[data-mobile-shell="1"] .messenger-shell.thread-focus .app-header-right {
     width: 100%;
     justify-content: flex-end;
   }
 
-  .chat-item-row {
+html[data-mobile-shell="1"] .chat-item-row {
     min-height: 44px;
   }
 
-  .thread-header {
+html[data-mobile-shell="1"] .thread-header {
     flex-wrap: wrap;
   }
 
-  .thread-header-actions {
+html[data-mobile-shell="1"] .thread-header-actions {
     width: 100%;
     justify-content: flex-end;
   }
 
-  .messages {
+html[data-mobile-shell="1"] .messages {
     padding-left: max(12px, env(safe-area-inset-left, 0px));
     padding-right: max(12px, env(safe-area-inset-right, 0px));
   }
 
-  .settings-overlay,
-  .forward-overlay {
+html[data-mobile-shell="1"] .settings-overlay,
+html[data-mobile-shell="1"] .forward-overlay {
     padding: max(12px, env(safe-area-inset-top, 0px))
       max(12px, env(safe-area-inset-right, 0px))
       max(12px, env(safe-area-inset-bottom, 0px))
       max(12px, env(safe-area-inset-left, 0px));
   }
 
-  .forward-card,
-  .members-card,
-  .settings-card {
+html[data-mobile-shell="1"] .forward-card,
+html[data-mobile-shell="1"] .members-card,
+html[data-mobile-shell="1"] .settings-card {
     max-height: min(88vh, calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
   }
 
-  .forward-chat-item {
+html[data-mobile-shell="1"] .forward-chat-item {
     min-height: 44px;
     padding: 12px;
   }
 
-  .composer {
+html[data-mobile-shell="1"] .composer {
     gap: 8px;
   }
 
-  .composer-md-hint {
+html[data-mobile-shell="1"] .composer-md-hint {
     display: none;
   }
 
-  .composer-format .btn-icon {
+html[data-mobile-shell="1"] .composer-format .btn-icon {
     min-width: 2.25rem;
     width: 2.25rem;
     height: 2.25rem;
   }
 
-  .composer-ttl-row {
+html[data-mobile-shell="1"] .composer-ttl-row {
     flex-wrap: wrap;
   }
 
-  .composer-send-btn {
+html[data-mobile-shell="1"] .composer-send-btn {
     min-width: 2.75rem;
     width: 2.75rem;
     height: 2.75rem;
   }
 
-  .composer-reply-bar {
+html[data-mobile-shell="1"] .composer-reply-bar {
     flex-wrap: wrap;
     gap: 6px;
   }
 
-  .call-panel-head {
+html[data-mobile-shell="1"] .call-panel-head {
     padding-left: max(10px, env(safe-area-inset-left, 0px));
     padding-right: max(10px, env(safe-area-inset-right, 0px));
   }
 
-  .call-mode-bar {
+html[data-mobile-shell="1"] .call-mode-bar {
     flex-wrap: wrap;
   }
 
-  .call-toolbar {
+html[data-mobile-shell="1"] .call-toolbar {
     flex-wrap: wrap;
     padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
   }
 
-  .auth-shell {
+html[data-mobile-shell="1"] .auth-shell {
     align-items: flex-start;
     overflow-y: auto;
     padding: max(16px, env(safe-area-inset-top, 0px))
@@ -369,83 +370,83 @@ button {
       max(12px, env(safe-area-inset-left, 0px));
   }
 
-  .auth-card {
+html[data-mobile-shell="1"] .auth-card {
     max-width: 100%;
     margin: auto 0;
   }
 
-  .auth-tab {
+html[data-mobile-shell="1"] .auth-tab {
     min-height: 44px;
   }
 
-  .auth-submit {
+html[data-mobile-shell="1"] .auth-submit {
     min-height: 44px;
   }
 
-  .auth-error,
-  .auth-foot,
-  .error-banner {
+html[data-mobile-shell="1"] .auth-error,
+html[data-mobile-shell="1"] .auth-foot,
+html[data-mobile-shell="1"] .error-banner {
     overflow-wrap: anywhere;
     word-break: break-word;
   }
 
-  .auth-sso-btn {
+html[data-mobile-shell="1"] .auth-sso-btn {
     width: 100%;
     min-height: 44px;
   }
 
-  .export-progress-banner,
-  .sw-update-banner,
-  .network-banner {
+html[data-mobile-shell="1"] .export-progress-banner,
+html[data-mobile-shell="1"] .sw-update-banner,
+html[data-mobile-shell="1"] .network-banner {
     padding-left: max(12px, env(safe-area-inset-left, 0px));
     padding-right: max(12px, env(safe-area-inset-right, 0px));
     line-height: 1.35;
     text-align: center;
   }
 
-  .export-progress-banner .btn-icon,
-  .sw-update-banner .btn-icon {
+html[data-mobile-shell="1"] .export-progress-banner .btn-icon,
+html[data-mobile-shell="1"] .sw-update-banner .btn-icon {
     min-width: 2.25rem;
     width: 2.25rem;
     height: 2.25rem;
   }
 
-  .incoming-call-banner {
+html[data-mobile-shell="1"] .incoming-call-banner {
     margin: 0 max(8px, env(safe-area-inset-left, 0px)) 8px
       max(8px, env(safe-area-inset-right, 0px));
     padding: 10px max(12px, env(safe-area-inset-right, 0px)) 10px
       max(12px, env(safe-area-inset-left, 0px));
   }
 
-  .incoming-call-text {
+html[data-mobile-shell="1"] .incoming-call-text {
     flex: 1 1 100%;
     min-width: 0;
     overflow-wrap: anywhere;
   }
 
-  .incoming-call-actions {
+html[data-mobile-shell="1"] .incoming-call-actions {
     flex: 1 1 auto;
     justify-content: flex-end;
   }
 
-  .incoming-call-actions .btn-icon {
+html[data-mobile-shell="1"] .incoming-call-actions .btn-icon {
     min-width: 2.5rem;
     width: 2.5rem;
     height: 2.5rem;
   }
 
-  .banner-wrap {
+html[data-mobile-shell="1"] .banner-wrap {
     margin-left: max(8px, env(safe-area-inset-left, 0px));
     margin-right: max(8px, env(safe-area-inset-right, 0px));
   }
 
-  .banner-wrap .error-banner,
-  .banner-wrap .info-banner {
+html[data-mobile-shell="1"] .banner-wrap .error-banner,
+html[data-mobile-shell="1"] .banner-wrap .info-banner {
     overflow-wrap: anywhere;
     word-break: break-word;
   }
 
-  .conference-live-banner {
+html[data-mobile-shell="1"] .conference-live-banner {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
@@ -453,49 +454,52 @@ button {
     padding-right: max(12px, env(safe-area-inset-right, 0px));
   }
 
-  .conference-live-banner-text {
+html[data-mobile-shell="1"] .conference-live-banner-text {
     white-space: normal;
   }
 
-  .sidebar-chips-bar {
+html[data-mobile-shell="1"] .sidebar-chips-bar {
     flex-wrap: nowrap;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
   }
 
-  .sidebar-tab {
+html[data-mobile-shell="1"] .sidebar-tab {
     min-height: 40px;
   }
-}
 
-@media (max-width: 520px) {
-  .auth-shell-glow-a,
-  .auth-shell-glow-b {
+
+
+
+html[data-device="phone"] .auth-shell-glow-a,
+html[data-device="phone"] .auth-shell-glow-b {
     opacity: 0.35;
   }
 
-  .auth-card-brand-tag {
+html[data-device="phone"] .auth-card-brand-tag {
     font-size: 0.72rem;
   }
 
-  .app-header {
+html[data-device="phone"] .app-header {
     padding: 8px max(10px, env(safe-area-inset-right, 0px)) 8px
       max(10px, env(safe-area-inset-left, 0px));
   }
 
-  .app-header-left h1 {
+html[data-device="phone"] .app-header-left h1 {
     display: none;
   }
 
-  .hdr-btn-optional {
+html[data-device="phone"] .hdr-btn-optional {
     display: none !important;
   }
 
-  .app-header-right {
+html[data-device="phone"] .app-header-right {
     gap: 2px;
   }
-}
+
+
+
 
 .app-header {
   display: flex;
@@ -540,11 +544,11 @@ button {
   width: 100%;
 }
 
-@media (min-width: 961px) {
-  .app-header-left > .global-search-wrap {
+html[data-mobile-shell="0"] .app-header-left > .global-search-wrap {
     display: none;
   }
-}
+
+
 
 .message-search-row {
   display: flex;
@@ -2858,12 +2862,13 @@ button {
   resize: vertical;
 }
 
-@media (max-width: 640px) {
-  .settings-sheet-title,
-  .settings-title {
+html[data-device="phone"] .settings-sheet-title,
+html[data-device="phone"] .settings-title {
     font-size: 1rem;
   }
-}
+
+
+
 
 .poll-card {
   border: 1px solid var(--border);

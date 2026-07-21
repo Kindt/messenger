@@ -22,8 +22,8 @@ public final class JdbcBotJdbcRepository {
         this.dataSource = dataSource;
     }
 
-    public boolean createBot(UUID botUserId, UUID ownerId, UUID orgId, String botName, String displayName,
-                             String tokenHash, String listenMode, String defaultWebhookUrl) {
+    public boolean createBot(UUID botUserId, UUID ownerId, UUID orgId, String botName, String displayName, // NOSONAR java:S107 - mirrors BotRepository.createBot arity
+                             String tokenHash, String listenMode, String defaultWebhookUrl) { // NOSONAR java:S1141
         var sqlUser = """
             INSERT INTO users (id, username, display_name, is_bot, created_at, updated_at)
             VALUES (?, ?, ?, true, now(), now())
@@ -32,41 +32,58 @@ public final class JdbcBotJdbcRepository {
             INSERT INTO bots (id, owner_id, org_id, bot_name, access_token_hash, listen_mode, default_webhook_url)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """;
+        var bind = new CreateBotBind(botUserId, ownerId, orgId, botName, displayName, tokenHash, listenMode, defaultWebhookUrl);
         try (var conn = dataSource.getConnection()) {
             JdbcConnectionSupport.prepareWrite(conn);
-            conn.setAutoCommit(false);
-            try (var userStmt = conn.prepareStatement(sqlUser);
-                 var botStmt = conn.prepareStatement(sqlBot)) {
-                JdbcQuerySupport.applyDefaultTimeout(userStmt);
-                JdbcQuerySupport.applyDefaultTimeout(botStmt);
-                userStmt.setObject(1, botUserId);
-                userStmt.setString(2, botName);
-                userStmt.setString(3, displayName);
-                userStmt.executeUpdate();
-
-                botStmt.setObject(1, botUserId);
-                botStmt.setObject(2, ownerId);
-                if (orgId != null) {
-                    botStmt.setObject(3, orgId);
-                } else {
-                    botStmt.setObject(3, null);
-                }
-                botStmt.setString(4, botName);
-                botStmt.setString(5, tokenHash);
-                botStmt.setString(6, listenMode);
-                botStmt.setString(7, defaultWebhookUrl);
-                botStmt.executeUpdate();
-                conn.commit();
+            JdbcConnectionSupport.callInTransaction(conn, () -> {
+                insertBotUserAndRow(conn, sqlUser, sqlBot, bind);
                 return true;
-            } catch (Exception e) {
-                conn.rollback();
-                throw e;
-            } finally {
-                conn.setAutoCommit(true);
-            }
+            });
+            return true;
         } catch (Exception e) {
             log.warn("createBot failed: {}", e.getMessage());
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
+        }
+    }
+
+    private record CreateBotBind(
+        UUID botUserId,
+        UUID ownerId,
+        UUID orgId,
+        String botName,
+        String displayName,
+        String tokenHash,
+        String listenMode,
+        String defaultWebhookUrl
+    ) {}
+
+    private static void insertBotUserAndRow(
+        java.sql.Connection conn,
+        String sqlUser,
+        String sqlBot,
+        CreateBotBind bind
+    ) throws java.sql.SQLException {
+        try (var userStmt = conn.prepareStatement(sqlUser);
+             var botStmt = conn.prepareStatement(sqlBot)) {
+            JdbcQuerySupport.applyDefaultTimeout(userStmt);
+            JdbcQuerySupport.applyDefaultTimeout(botStmt);
+            userStmt.setObject(1, bind.botUserId());
+            userStmt.setString(2, bind.botName());
+            userStmt.setString(3, bind.displayName());
+            userStmt.executeUpdate();
+
+            botStmt.setObject(1, bind.botUserId());
+            botStmt.setObject(2, bind.ownerId());
+            if (bind.orgId() != null) {
+                botStmt.setObject(3, bind.orgId());
+            } else {
+                botStmt.setObject(3, null);
+            }
+            botStmt.setString(4, bind.botName());
+            botStmt.setString(5, bind.tokenHash());
+            botStmt.setString(6, bind.listenMode());
+            botStmt.setString(7, bind.defaultWebhookUrl());
+            botStmt.executeUpdate();
         }
     }
 
@@ -99,7 +116,7 @@ public final class JdbcBotJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("findByTokenHash failed: {}", e.getMessage());
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -122,7 +139,7 @@ public final class JdbcBotJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("findByBotName failed: {}", e.getMessage());
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -146,6 +163,7 @@ public final class JdbcBotJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("listByOwner failed: {}", e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return out;
     }
@@ -164,11 +182,11 @@ public final class JdbcBotJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.warn("updateDefaultWebhook failed: {}", e.getMessage());
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
-    public boolean upsertSubscription(UUID botId, UUID chatId, String webhookUrl) {
+    public boolean upsertSubscription(UUID botId, UUID chatId, String webhookUrl) { // NOSONAR java:S1141 — txn helper + statement batch
         var deleteLegacy = """
             DELETE FROM bot_webhook_subscriptions
             WHERE chat_id = ? AND bot_id IS NULL
@@ -185,37 +203,45 @@ public final class JdbcBotJdbcRepository {
             """;
         try (var conn = dataSource.getConnection()) {
             JdbcConnectionSupport.prepareWrite(conn);
-            conn.setAutoCommit(false);
-            try (var del = conn.prepareStatement(deleteLegacy);
-                 var ins = conn.prepareStatement(upsert);
-                 var upd = conn.prepareStatement(update)) {
-                JdbcQuerySupport.applyDefaultTimeout(del);
-                JdbcQuerySupport.applyDefaultTimeout(ins);
-                JdbcQuerySupport.applyDefaultTimeout(upd);
-                del.setObject(1, chatId);
-                del.executeUpdate();
-
-                upd.setString(1, webhookUrl);
-                upd.setObject(2, botId);
-                upd.setObject(3, chatId);
-                var updated = upd.executeUpdate();
-                if (updated == 0) {
-                    ins.setObject(1, chatId);
-                    ins.setString(2, webhookUrl);
-                    ins.setObject(3, botId);
-                    ins.executeUpdate();
-                }
-                conn.commit();
+            JdbcConnectionSupport.callInTransaction(conn, () -> {
+                runUpsertSubscription(conn, deleteLegacy, upsert, update, botId, chatId, webhookUrl);
                 return true;
-            } catch (Exception e) {
-                conn.rollback();
-                throw e;
-            } finally {
-                conn.setAutoCommit(true);
-            }
+            });
+            return true;
         } catch (Exception e) {
             log.warn("upsertSubscription failed: {}", e.getMessage());
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
+        }
+    }
+
+    private static void runUpsertSubscription(
+        java.sql.Connection conn,
+        String deleteLegacy,
+        String upsert,
+        String update,
+        UUID botId,
+        UUID chatId,
+        String webhookUrl
+    ) throws java.sql.SQLException {
+        try (var del = conn.prepareStatement(deleteLegacy);
+             var ins = conn.prepareStatement(upsert);
+             var upd = conn.prepareStatement(update)) {
+            JdbcQuerySupport.applyDefaultTimeout(del);
+            JdbcQuerySupport.applyDefaultTimeout(ins);
+            JdbcQuerySupport.applyDefaultTimeout(upd);
+            del.setObject(1, chatId);
+            del.executeUpdate();
+
+            upd.setString(1, webhookUrl);
+            upd.setObject(2, botId);
+            upd.setObject(3, chatId);
+            var updated = upd.executeUpdate();
+            if (updated == 0) {
+                ins.setObject(1, chatId);
+                ins.setString(2, webhookUrl);
+                ins.setObject(3, botId);
+                ins.executeUpdate();
+            }
         }
     }
 
@@ -229,7 +255,7 @@ public final class JdbcBotJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.warn("deleteSubscription failed: {}", e.getMessage());
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -256,6 +282,7 @@ public final class JdbcBotJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("listSubscriptionsForChat failed: {}", e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return out;
     }
@@ -274,7 +301,7 @@ public final class JdbcBotJdbcRepository {
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             log.warn("updateTokenHash failed: {}", e.getMessage());
-            return false;
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -292,6 +319,7 @@ public final class JdbcBotJdbcRepository {
             stmt.executeUpdate();
         } catch (Exception e) {
             log.warn("insertUpdate failed: {}", e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 
@@ -317,6 +345,7 @@ public final class JdbcBotJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("pollUpdates failed: {}", e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return out;
     }
@@ -340,6 +369,7 @@ public final class JdbcBotJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("findBotIdForSubscription failed: {}", e.getMessage());
+            throw new IllegalStateException("JDBC operation failed", e);
         }
         return Optional.empty();
     }
@@ -357,7 +387,7 @@ public final class JdbcBotJdbcRepository {
             }
         } catch (Exception e) {
             log.warn("queryOne failed: {}", e.getMessage());
-            return Optional.empty();
+            throw new IllegalStateException("JDBC operation failed", e);
         }
     }
 

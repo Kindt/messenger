@@ -125,10 +125,11 @@ class MessageSearchServiceSpiTest {
         }
 
         @Override
-        public List<MessageResponse> search(UUID userId, List<UUID> chatIds, String query, int limit) throws Exception {
+        public List<MessageResponse> search(UUID userId, List<UUID> chatIds, String query, int limit)
+                throws MessageSearchException {
             calls++;
             if (fail) {
-                throw new IllegalStateException("backend unavailable");
+                throw new MessageSearchException("backend unavailable");
             }
             return responses;
         }

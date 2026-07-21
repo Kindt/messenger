@@ -27,17 +27,26 @@ public final class ExportJobCancelSupport {
 
     private ExportJobCancelSupport() {}
 
-    public static Response cancel(
+    /** Job identity and actor for a cancel attempt. */
+    public record CancelRequest(
         ExportJobPort.ExportJobRow job,
         UUID chatId,
         UUID jobId,
         UUID actorUserId,
-        String auditAction,
+        String auditAction
+    ) {}
+
+    public static Response cancel(
+        CancelRequest request,
         ExportJobPort exportJobPort,
         AuditPort auditPort,
         UserMessageSource messages,
         NatsOutboundPort natsOutbound
     ) {
+        var job = request.job();
+        var chatId = request.chatId();
+        var jobId = request.jobId();
+        var auditAction = request.auditAction();
         if (!CANCELLABLE.contains(job.status())) {
             ExportMetrics.jobCancelRejected(auditAction, "not_cancellable");
             return Response.status(Response.Status.CONFLICT)
@@ -53,7 +62,7 @@ public final class ExportJobCancelSupport {
         ExportCancelPublisher.publish(natsOutbound, jobId, chatId);
         ExportMetrics.jobCancelled(auditAction, job.status());
         auditPort.record(
-            actorUserId,
+            request.actorUserId(),
             auditAction,
             "export_job",
             jobId.toString(),

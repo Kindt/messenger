@@ -58,14 +58,11 @@ final class MessageResponseJdbcMapper {
             return null;
         }
         var deleted = rs.getBoolean("reply_preview_deleted");
-        var previewType = hasColumn(rs, "reply_preview_type") ? rs.getString("reply_preview_type") : null;
         String snippet = null;
         if (!deleted) {
             var content = hasColumn(rs, "reply_preview_content") ? rs.getString("reply_preview_content") : null;
             if (content != null && !content.isBlank()) {
                 snippet = content.length() > 120 ? content.substring(0, 120) : content;
-            } else if (previewType != null && previewType.startsWith("e2ee-")) {
-                snippet = null;
             }
         }
         return new com.avandocmsg.messenger.api.messages.dto.MessageReplyPreview(

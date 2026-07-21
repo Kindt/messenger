@@ -19,7 +19,7 @@ public record ConnectorCompatibilityPack(
     }
 
     public boolean supported() {
-        return lifecycleStatus == LifecycleStatus.supported_bundled
-            || lifecycleStatus == LifecycleStatus.supported_external_byo;
+        return lifecycleStatus == LifecycleStatus.SUPPORTED_BUNDLED
+            || lifecycleStatus == LifecycleStatus.SUPPORTED_EXTERNAL_BYO;
     }
 }

@@ -29,6 +29,8 @@ import jakarta.ws.rs.core.SecurityContext;
 @Tag(name = "Collaboration ADR", description = "Kanban scaffold (T02314)")
 public class ChatKanbanAdrResource {
 
+    private static final String CHAT_ID = "chat_id";
+
     private final Phase5AdrService service;
     private final UserMessageSource messages;
 
@@ -43,7 +45,7 @@ public class ChatKanbanAdrResource {
     @Operation(summary = "List kanban tasks")
     public Response listTasks(@PathParam("chatId") String chatId, @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
         var rows = service.listKanbanTasks(cid, userId).stream().map(KanbanTaskResponse::from).toList();
         return Response.ok(rows).build();
     }
@@ -55,7 +57,7 @@ public class ChatKanbanAdrResource {
                                CreateKanbanTaskRequest request,
                                @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
         var column = request != null ? request.columnKey() : "todo";
         var title = request != null ? request.title() : null;
         return service.createKanbanTask(cid, userId, column, title)
@@ -72,7 +74,7 @@ public class ChatKanbanAdrResource {
                                UpdateKanbanTaskRequest request,
                                @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
         var tid = UuidParams.required(taskId, "task_id");
         var column = request != null ? request.columnKey() : null;
         var sort = request != null ? request.sortOrder() : null;
@@ -89,7 +91,7 @@ public class ChatKanbanAdrResource {
                                @PathParam("taskId") String taskId,
                                @Context SecurityContext securityContext) {
         var userId = CurrentUserId.uuid(securityContext);
-        var cid = UuidParams.required(chatId, "chat_id");
+        var cid = UuidParams.required(chatId, CHAT_ID);
         var tid = UuidParams.required(taskId, "task_id");
         return service.deleteKanbanTask(cid, userId, tid)
             .map(v -> Response.noContent().build())

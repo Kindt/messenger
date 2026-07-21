@@ -38,17 +38,38 @@ public final class MessageSendCoordinator {
     private final ReadCachePort readCachePort;
     private final MessageMentionCoordinator mentionCoordinator;
 
-    public MessageSendCoordinator(
+    /** Persistence / MLS ports for send path. */
+    public record Ports(
         MessageRepositoryPort messageRepositoryPort,
         ChatRepositoryPort chatRepositoryPort,
         MlsService mlsService,
-        MlsMigrationService mlsMigrationService,
+        MlsMigrationService mlsMigrationService
+    ) {}
+
+    /** Outbound / cache collaborators for send path. */
+    public record SideEffects(
         NatsOutboundPort natsOutbound,
         UuidGenerator uuidGenerator,
-        ReadCachePort readCachePort
-    ) {
-        this(messageRepositoryPort, chatRepositoryPort, mlsService, mlsMigrationService,
-            natsOutbound, uuidGenerator, readCachePort, null);
+        ReadCachePort readCachePort,
+        MessageMentionCoordinator mentionCoordinator
+    ) {}
+
+    /** Constructor dependencies for {@link MessageSendCoordinator}. */
+    public record Dependencies(Ports ports, SideEffects sideEffects) {}
+
+    public MessageSendCoordinator(Dependencies deps) {
+        var ports = deps.ports();
+        var side = deps.sideEffects();
+        this.messageRepositoryPort = ports.messageRepositoryPort();
+        this.chatRepositoryPort = ports.chatRepositoryPort();
+        this.mlsService = ports.mlsService();
+        this.mlsMigrationService = ports.mlsMigrationService();
+        this.natsOutbound = side.natsOutbound();
+        this.uuidGenerator = side.uuidGenerator();
+        this.readCachePort = side.readCachePort() != null
+            ? side.readCachePort()
+            : com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter.INSTANCE;
+        this.mentionCoordinator = side.mentionCoordinator();
     }
 
     public MessageSendCoordinator(
@@ -58,17 +79,27 @@ public final class MessageSendCoordinator {
         MlsMigrationService mlsMigrationService,
         NatsOutboundPort natsOutbound,
         UuidGenerator uuidGenerator,
+        ReadCachePort readCachePort
+    ) {
+        this(new Dependencies(
+            new Ports(messageRepositoryPort, chatRepositoryPort, mlsService, mlsMigrationService),
+            new SideEffects(natsOutbound, uuidGenerator, readCachePort, null)));
+    }
+
+    /** Kept for composition roots that still pass flat args. */
+    public MessageSendCoordinator( // NOSONAR java:S107 — flat overload for CoreApiComposition; prefer Dependencies
+        MessageRepositoryPort messageRepositoryPort,
+        ChatRepositoryPort chatRepositoryPort,
+        MlsService mlsService,
+        MlsMigrationService mlsMigrationService,
+        NatsOutboundPort natsOutbound,
+        UuidGenerator uuidGenerator,
         ReadCachePort readCachePort,
         MessageMentionCoordinator mentionCoordinator
     ) {
-        this.messageRepositoryPort = messageRepositoryPort;
-        this.chatRepositoryPort = chatRepositoryPort;
-        this.mlsService = mlsService;
-        this.mlsMigrationService = mlsMigrationService;
-        this.natsOutbound = natsOutbound;
-        this.uuidGenerator = uuidGenerator;
-        this.readCachePort = readCachePort != null ? readCachePort : com.avandocmsg.messenger.core.adapter.cache.NoOpReadCacheAdapter.INSTANCE;
-        this.mentionCoordinator = mentionCoordinator;
+        this(new Dependencies(
+            new Ports(messageRepositoryPort, chatRepositoryPort, mlsService, mlsMigrationService),
+            new SideEffects(natsOutbound, uuidGenerator, readCachePort, mentionCoordinator)));
     }
 
     public MessageResponse send(UUID chatId, UUID senderId, SendMessageRequest request, UUID replyToMsgId) {
@@ -79,7 +110,7 @@ public final class MessageSendCoordinator {
             mlsMigrationService.migrateToMls(chatId);
         }
         var encrypted = MessageSendSupport.shouldServerEncrypt(request)
-            ? mlsService.encrypt(chatId, senderId, content)
+            ? mlsService.encrypt(chatId, content)
             : null;
         if (encrypted != null) {
             content = MessageSendSupport.combinedCiphertextBase64(encrypted);

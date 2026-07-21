@@ -2,8 +2,7 @@
 # Needs: EXPORT_ADMIN_SUGGEST_ENABLED, EXPORT_ADMIN_EXPORT_ENABLED (if no auto-queue).
 # Optional: EXPORT_AUTO_QUEUE_ON_SUGGESTED=true (otherwise script POSTs admin export).
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$ChatId,
+    [string]$ChatId = "",
     [string]$BaseUrl = "http://localhost:8080",
     [string]$AdminUser = "csadmin",
     [string]$AdminPass = "csadmin",
@@ -16,6 +15,9 @@ param(
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $scriptDir "lib\SmokeExportAudit.ps1")
+. (Join-Path $scriptDir "lib\Resolve-SmokeExportChatId.ps1")
+. (Join-Path $scriptDir "lib\Invoke-ExportJobCancel.ps1")
+$ChatId = Resolve-SmokeExportChatId -ChatId $ChatId -BaseUrl $BaseUrl -ScriptDir $scriptDir
 
 function Get-Token {
     param($User, $Pass)
@@ -37,12 +39,22 @@ function Test-CancelTargetStatus {
     }
 }
 
+function Invoke-ExportCancel {
+    param([string]$CancelUri, [hashtable]$Headers, [string]$StatusUri)
+    $r = Invoke-ExportJobCancel -CancelUri $CancelUri -Headers $Headers -StatusUri $StatusUri -AllowFinishedEarly
+    if ($r.FinishedEarly) {
+        Write-Host "[WARN] Job finished before cancel (409 not_cancellable, status=$($r.Status))" -ForegroundColor Yellow
+        exit 0
+    }
+    if (-not $r.Ok) { throw "export cancel failed" }
+}
+
 $hdr = @{ Authorization = "Bearer $(Get-Token -User $AdminUser -Pass $AdminPass)" }
 
 Write-Host "POST export-suggest (local) ..." -ForegroundColor Cyan
 try {
     $suggest = Invoke-RestMethod -Uri "$BaseUrl/api/v1/admin/chats/$ChatId/export-suggest" -Method Post `
-        -Headers $hdr -ContentType "application/json" `
+        -Headers $hdr -ContentType "application/json; charset=utf-8" `
         -Body (@{
             dispatch = "local"
             candidate_message_count = 2
@@ -88,7 +100,7 @@ while ((Get-Date) -lt $deadline) {
     $st = Invoke-RestMethod -Uri $statusUri -Headers $hdr -Method Get
     Write-Host "  status=$($st.status)" -ForegroundColor DarkGray
     if (Test-CancelTargetStatus -Status $st.status) {
-        Invoke-RestMethod -Uri $cancelUri -Headers $hdr -Method Delete | Out-Null
+        [void](Invoke-ExportCancel -CancelUri $cancelUri -Headers $hdr -StatusUri $statusUri)
         $cancelled = $true
         break
     }
@@ -104,7 +116,7 @@ while ((Get-Date) -lt $deadline) {
 }
 
 if (-not $cancelled) {
-    Invoke-RestMethod -Uri $cancelUri -Headers $hdr -Method Delete | Out-Null
+    [void](Invoke-ExportCancel -CancelUri $cancelUri -Headers $hdr -StatusUri $statusUri)
 }
 
 $final = Invoke-RestMethod -Uri $statusUri -Headers $hdr -Method Get

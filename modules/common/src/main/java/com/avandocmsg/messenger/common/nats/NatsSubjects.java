@@ -47,22 +47,23 @@ public final class NatsSubjects {
     /** Live-streaming session (JSON {@link com.avandocmsg.messenger.common.dto.LiveSessionChangeEvent}). */
     public static final String LIVE_SESSION = "live.session";
 
-    /** Metadata-only downstream events (JSON {@link com.avandocmsg.messenger.common.dto.MessageWorkerEvent}). */
     /**
-     * Legacy per-consumer subject; retained for core-api hot-plug indexer publish, retention workers,
-     * and {@code NATS_DOWNSTREAM_LEGACY_PUBLISH=true} rollback (spec 025 FR-012 Phase 3).
+     * Legacy per-consumer subject for metadata-only downstream events
+     * (JSON {@link com.avandocmsg.messenger.common.dto.MessageWorkerEvent}); retained for core-api
+     * hot-plug indexer publish, retention workers, and {@code NATS_DOWNSTREAM_LEGACY_PUBLISH=true}
+     * rollback (spec 025 FR-012 Phase 3).
      */
     public static final String MSG_EVENT_INDEX = "msg.event.index";
     /**
      * @deprecated Phase 3: use {@link #MSG_EVENT_DOWNSTREAM} with route {@code push}; kept for legacy publish rollback.
      */
     @Deprecated
-    public static final String MSG_EVENT_PUSH = "msg.event.push";
+    public static final String MSG_EVENT_PUSH = "msg.event.push"; // NOSONAR java:S1133 — retained for NATS_DOWNSTREAM_LEGACY_PUBLISH rollback
     /**
      * @deprecated Phase 3: use {@link #MSG_EVENT_DOWNSTREAM} with route {@code bot}; kept for legacy publish rollback.
      */
     @Deprecated
-    public static final String MSG_EVENT_BOT = "msg.event.bot";
+    public static final String MSG_EVENT_BOT = "msg.event.bot"; // NOSONAR java:S1133 — retained for NATS_DOWNSTREAM_LEGACY_PUBLISH rollback
 
     /**
      * Consolidated downstream envelope ({@link com.avandocmsg.messenger.common.dto.MessageDownstreamEvent}).
@@ -114,7 +115,7 @@ public final class NatsSubjects {
      * @deprecated spec 025 FR-009: message-pipeline writes Redis DEL directly; subscriber kept for rollback only.
      */
     @Deprecated
-    public static final String MSG_CACHE_INVALIDATE = "msg.cache.invalidate";
+    public static final String MSG_CACHE_INVALIDATE = "msg.cache.invalidate"; // NOSONAR java:S1133 — retained for rollback until Redis-direct path is mandatory
 
     /**
      * MLS Welcome wire payload (binary KMLS envelope — {@link com.avandocmsg.messenger.api.mls.wire.MlsWireCodec}).
