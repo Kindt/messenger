@@ -4,6 +4,8 @@
 services:
   core-api:
     environment:
+      # Export admin/job APIs are gated by addon-export (PlatformAddonGateFilter).
+      KORUS_PRODUCT_ADDONS: "${KORUS_PRODUCT_ADDONS:-addon-export,addon-retention}"
       EXPORT_ADMIN_SUGGEST_ENABLED: "true"
       EXPORT_ADMIN_EXPORT_ENABLED: "true"
       EXPORT_SUGGESTED_SUBSCRIBER_ENABLED: "true"
