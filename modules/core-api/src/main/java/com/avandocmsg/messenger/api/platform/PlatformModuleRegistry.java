@@ -12,8 +12,6 @@ import java.util.Map;
 
 public class PlatformModuleRegistry {
 
-    private static final String API_ALLOW = "allow";
-
     private final ProductModulesCatalog catalog;
     private final Map<String, ProductModulesCatalog.AddonEntry> addonsById;
     private final Map<String, ProductModulesCatalog.FeatureEntry> featuresByKey;
@@ -87,17 +85,57 @@ public class PlatformModuleRegistry {
         var externalStack = externalStackSummary();
 
         for (var entry : resolved.entrySet()) {
-            appendAddonCapabilities(entry.getKey(), entry.getValue(), enabledIds, modules, features, infra, externalStack);
+            var addonId = entry.getKey();
+            var state = entry.getValue();
+            if (state.state() == PlatformModuleState.enabled) {
+                enabledIds.add(addonId);
+            }
+            var addon = addonsById.get(addonId);
+            String mode = null;
+            if ("addon-search".equals(addonId)) {
+                mode = appConfig.searchMode();
+            }
+            modules.put(addonId, new PlatformCapabilitiesResponse.ModuleSection(
+                state.selected(),
+                state.installed(),
+                state.schemaInstalled(),
+                state.runtimeReady(),
+                state.adminEnabled(),
+                state.state().name(),
+                state.reason() != null ? state.reason().name() : null,
+                addon.label(),
+                addon.degradationMode(),
+                firstUiBehavior(addon),
+                addon.networkProfile(),
+                addon.lifecycleStatus(),
+                addon.successorAddonId(),
+                mode,
+                safeList(addon.externalStackComponents()),
+                safeList(addon.externalStackProfiles()),
+                externalStackWarnings(addon, state, externalStack)
+            ));
+            if (addon.internalInfra() != null) {
+                for (var infraId : addon.internalInfra()) {
+                    var infraState = selectedAddonIds.contains(addonId)
+                        && state.state() != PlatformModuleState.disabled
+                        ? PlatformModuleState.enabled
+                        : PlatformModuleState.disabled;
+                    infra.put(infraId, new PlatformCapabilitiesResponse.InfraSection(infraState.name()));
+                }
+            }
+            for (var feature : safeList(addon.features())) {
+                features.put(feature.key(), featureSection(feature, state));
+            }
         }
 
         var base = catalog.base();
         for (var feature : safeList(base.features())) {
             features.put(feature.key(), new PlatformCapabilitiesResponse.FeatureSection(
                 "base",
-                appConfig.coreAvailable() ? PlatformModuleState.ENABLED.code() : PlatformModuleState.DEGRADED.code(),
-                appConfig.coreAvailable() ? null : PlatformModuleReason.CORE_UNAVAILABLE.code(),
+                appConfig.coreAvailable() ? PlatformModuleState.enabled.name() : PlatformModuleState.degraded.name(),
+                appConfig.coreAvailable() ? null : PlatformModuleReason.core_unavailable.name(),
                 valueOr(feature.uiBehavior(), "show"),
-                feature.apiBehavior() != null ? valueOr(feature.apiBehavior().mode(), API_ALLOW) : API_ALLOW
+                feature.apiBehavior() != null ? valueOr(feature.apiBehavior().mode(), "allow") : "allow"
             ));
         }
         return new PlatformCapabilitiesResponse(
@@ -117,54 +155,6 @@ public class PlatformModuleRegistry {
                 && !appConfig.jitsiMeetBaseUrl().isBlank()),
             externalStack
         );
-    }
-
-
-    private void appendAddonCapabilities(
-        String addonId,
-        ResolvedAddonState state,
-        List<String> enabledIds,
-        Map<String, PlatformCapabilitiesResponse.ModuleSection> modules,
-        Map<String, PlatformCapabilitiesResponse.FeatureSection> features,
-        Map<String, PlatformCapabilitiesResponse.InfraSection> infra,
-        Map<String, PlatformCapabilitiesResponse.ExternalStackSection> externalStack
-    ) {
-        if (state.state() == PlatformModuleState.ENABLED) {
-            enabledIds.add(addonId);
-        }
-        var addon = addonsById.get(addonId);
-        String mode = "addon-search".equals(addonId) ? appConfig.searchMode() : null;
-        modules.put(addonId, new PlatformCapabilitiesResponse.ModuleSection(
-            state.selected(),
-            state.installed(),
-            state.schemaInstalled(),
-            state.runtimeReady(),
-            state.adminEnabled(),
-            state.state().code(),
-            state.reason() != null ? state.reason().code() : null,
-            addon.label(),
-            addon.degradationMode(),
-            firstUiBehavior(addon),
-            addon.networkProfile(),
-            addon.lifecycleStatus(),
-            addon.successorAddonId(),
-            mode,
-            safeList(addon.externalStackComponents()),
-            safeList(addon.externalStackProfiles()),
-            externalStackWarnings(addon, state, externalStack)
-        ));
-        if (addon.internalInfra() != null) {
-            for (var infraId : addon.internalInfra()) {
-                var infraState = selectedAddonIds.contains(addonId)
-                    && state.state() != PlatformModuleState.DISABLED
-                    ? PlatformModuleState.ENABLED
-                    : PlatformModuleState.DISABLED;
-                infra.put(infraId, new PlatformCapabilitiesResponse.InfraSection(infraState.code()));
-            }
-        }
-        for (var feature : safeList(addon.features())) {
-            features.put(feature.key(), featureSection(feature, state));
-        }
     }
 
     private Map<String, PlatformCapabilitiesResponse.ExternalStackSection> externalStackSummary() {
@@ -194,7 +184,7 @@ public class PlatformModuleRegistry {
             if (component == null
                 || !"passed".equals(component.validationStatus())
                 || "degraded".equals(component.healthStatus())
-                || state.state() == PlatformModuleState.DEGRADED) {
+                || state.state() == PlatformModuleState.degraded) {
                 warnings.add("required external stack component " + componentId + " is degraded");
             }
         }
@@ -202,7 +192,7 @@ public class PlatformModuleRegistry {
     }
 
     public boolean isAddonEffective(String addonId) {
-        return resolveAddon(addonId).state() == PlatformModuleState.ENABLED;
+        return resolveAddon(addonId).state() == PlatformModuleState.enabled;
     }
 
     public ResolvedFeatureState resolveFeature(String featureKey) {
@@ -212,8 +202,8 @@ public class PlatformModuleRegistry {
         }
         var owner = feature.owner();
         if ("base".equals(owner)) {
-            var state = appConfig.coreAvailable() ? PlatformModuleState.ENABLED : PlatformModuleState.DEGRADED;
-            var reason = appConfig.coreAvailable() ? null : PlatformModuleReason.CORE_UNAVAILABLE;
+            var state = appConfig.coreAvailable() ? PlatformModuleState.enabled : PlatformModuleState.degraded;
+            var reason = appConfig.coreAvailable() ? null : PlatformModuleReason.core_unavailable;
             return new ResolvedFeatureState(featureKey, owner, state, reason, feature.uiBehavior(), apiMode(feature));
         }
         var addon = addonsById.get(owner);
@@ -222,41 +212,29 @@ public class PlatformModuleRegistry {
             return new ResolvedFeatureState(featureKey, owner, addonState.state(), addonState.reason(),
                 feature.uiBehavior(), apiMode(feature));
         }
-        return new ResolvedFeatureState(featureKey, owner, PlatformModuleState.ENABLED, null,
+        return new ResolvedFeatureState(featureKey, owner, PlatformModuleState.enabled, null,
             feature.uiBehavior(), apiMode(feature));
     }
 
     public ProductModulesCatalog.ApiGateEntry apiGateFor(String path, String method) {
         var normalized = normalizePath(path);
         for (var addon : addonsById.values()) {
-            var gate = findMatchingApiGate(addon, normalized, method);
-            if (gate != null) {
+            var gates = addon.gates();
+            if (gates == null) {
+                continue;
+            }
+            for (var gate : safeList(gates.api())) {
+                if (!pathMatches(normalized, gate.path())) {
+                    continue;
+                }
+                if (!safeList(gate.methods()).isEmpty()
+                    && gate.methods().stream().noneMatch(m -> m.equalsIgnoreCase(method))) {
+                    continue;
+                }
                 return gate;
             }
         }
         return null;
-    }
-
-    private static ProductModulesCatalog.ApiGateEntry findMatchingApiGate(
-        ProductModulesCatalog.AddonEntry addon,
-        String normalized,
-        String method
-    ) {
-        var gates = addon.gates();
-        if (gates == null) {
-            return null;
-        }
-        for (var gate : safeList(gates.api())) {
-            if (pathMatches(normalized, gate.path()) && methodAllowed(gate, method)) {
-                return gate;
-            }
-        }
-        return null;
-    }
-
-    private static boolean methodAllowed(ProductModulesCatalog.ApiGateEntry gate, String method) {
-        var methods = safeList(gate.methods());
-        return methods.isEmpty() || methods.stream().anyMatch(m -> m.equalsIgnoreCase(method));
     }
 
     public ProductModulesCatalog.JobGateEntry jobGate(String job) {
@@ -294,19 +272,12 @@ public class PlatformModuleRegistry {
     ) {
         if (!appConfig.coreAvailable()) {
             return new ResolvedAddonState(selected, false, false, false, true,
-                PlatformModuleState.DEGRADED, PlatformModuleReason.CORE_UNAVAILABLE);
+                PlatformModuleState.degraded, PlatformModuleReason.core_unavailable);
         }
         if (!selected) {
             return new ResolvedAddonState(false, false, false, false, true,
-                PlatformModuleState.DISABLED, PlatformModuleReason.NOT_SELECTED);
+                PlatformModuleState.disabled, PlatformModuleReason.not_selected);
         }
-        return resolveSelectedAddon(addon, override);
-    }
-
-    private ResolvedAddonState resolveSelectedAddon(
-        ProductModulesCatalog.AddonEntry addon,
-        PlatformModuleOverrideRow override
-    ) {
         var installed = csvContains(appConfig.korusProductInstalledAddons(), addon.id(), true);
         var schemaInstalled = installed && csvContains(appConfig.korusProductSchemaInstalledAddons(), addon.id(), true);
         var runtimeReady = installed && schemaInstalled
@@ -314,36 +285,36 @@ public class PlatformModuleRegistry {
         var adminEnabled = override == null || !override.disabled() || override.forceEnabled();
         if (csvContains(appConfig.korusProductInstallingAddons(), addon.id(), false) || !installed) {
             return new ResolvedAddonState(true, installed, schemaInstalled, false, adminEnabled,
-                PlatformModuleState.INSTALLING, installed ? PlatformModuleReason.MIGRATION_RUNNING
-                    : PlatformModuleReason.INSTALL_REQUESTED);
+                PlatformModuleState.installing, installed ? PlatformModuleReason.migration_running
+                    : PlatformModuleReason.install_requested);
         }
         if (!schemaInstalled) {
             return new ResolvedAddonState(true, true, false, false, adminEnabled,
-                PlatformModuleState.DEGRADED, PlatformModuleReason.SCHEMA_MISSING);
+                PlatformModuleState.degraded, PlatformModuleReason.schema_missing);
         }
         if (isEol(addon, override)) {
             return new ResolvedAddonState(true, true, true, runtimeReady, adminEnabled,
-                PlatformModuleState.DISABLED, PlatformModuleReason.EOL);
+                PlatformModuleState.disabled, PlatformModuleReason.eol);
         }
         if (secretsMissing(addon)) {
             return new ResolvedAddonState(true, true, true, false, adminEnabled,
-                PlatformModuleState.DEGRADED, PlatformModuleReason.SECRETS_MISSING);
+                PlatformModuleState.degraded, PlatformModuleReason.secrets_missing);
         }
         if (override != null && override.disabled() && !override.forceEnabled()) {
-            var reason = override.reasonEnum().orElse(PlatformModuleReason.ADMIN_OVERRIDE);
+            var reason = override.reasonEnum().orElse(PlatformModuleReason.admin_override);
             return new ResolvedAddonState(true, true, true, runtimeReady,
-                false, PlatformModuleState.DISABLED, reason);
+                false, PlatformModuleState.disabled, reason);
         }
         if (healthStale(addon)) {
             return new ResolvedAddonState(true, true, true, false, adminEnabled,
-                PlatformModuleState.DEGRADED, PlatformModuleReason.HEALTH_STALE);
+                PlatformModuleState.degraded, PlatformModuleReason.health_stale);
         }
         if (!runtimeReady) {
             return new ResolvedAddonState(true, true, true, false, adminEnabled,
-                PlatformModuleState.DEGRADED, PlatformModuleReason.BACKEND_UNAVAILABLE);
+                PlatformModuleState.degraded, PlatformModuleReason.backend_unavailable);
         }
         return new ResolvedAddonState(true, true, true, true, adminEnabled,
-            PlatformModuleState.ENABLED, null);
+            PlatformModuleState.enabled, null);
     }
 
     private boolean isEol(ProductModulesCatalog.AddonEntry addon, PlatformModuleOverrideRow override) {
@@ -358,25 +329,28 @@ public class PlatformModuleRegistry {
             return false;
         }
         for (var secret : addon.secrets()) {
-            if ("vapid".equals(secret.name()) && vapidSecretsMissing()) {
-                return true;
+            if ("vapid".equals(secret.name())) {
+                if (isBlank(System.getenv("PUSH_VAPID_PUBLIC_KEY"))
+                    && appConfig.webClientVapidPublicKey().isEmpty()) {
+                    return true;
+                }
+                if (isBlank(System.getenv("PUSH_VAPID_PRIVATE_KEY"))) {
+                    return true;
+                }
             }
-            if ("livekit".equals(secret.name()) && livekitSecretsMissing()) {
-                return true;
+            if ("livekit".equals(secret.name())) {
+                if (isBlank(System.getenv("LIVEKIT_API_KEY")) && isBlank(appConfig.livekitApiKey())) {
+                    return true;
+                }
+                if (isBlank(System.getenv("LIVEKIT_API_SECRET")) && isBlank(appConfig.livekitApiSecret())) {
+                    return true;
+                }
+                if (isBlank(System.getenv("LIVEKIT_URL")) && isBlank(appConfig.livekitUrl())) {
+                    return true;
+                }
             }
         }
         return false;
-    }
-
-    private boolean vapidSecretsMissing() {
-        return (isBlank(System.getenv("PUSH_VAPID_PUBLIC_KEY")) && appConfig.webClientVapidPublicKey().isEmpty())
-            || isBlank(System.getenv("PUSH_VAPID_PRIVATE_KEY"));
-    }
-
-    private boolean livekitSecretsMissing() {
-        return (isBlank(System.getenv("LIVEKIT_API_KEY")) && isBlank(appConfig.livekitApiKey()))
-            || (isBlank(System.getenv("LIVEKIT_API_SECRET")) && isBlank(appConfig.livekitApiSecret()))
-            || (isBlank(System.getenv("LIVEKIT_URL")) && isBlank(appConfig.livekitUrl()));
     }
 
     private boolean healthStale(ProductModulesCatalog.AddonEntry addon) {
@@ -412,8 +386,8 @@ public class PlatformModuleRegistry {
     ) {
         return new PlatformCapabilitiesResponse.FeatureSection(
             feature.owner(),
-            state.state().code(),
-            state.reason() != null ? state.reason().code() : null,
+            state.state().name(),
+            state.reason() != null ? state.reason().name() : null,
             valueOr(feature.uiBehavior(), firstUiBehavior(addonsById.get(feature.owner()))),
             apiMode(feature)
         );
@@ -431,7 +405,7 @@ public class PlatformModuleRegistry {
 
     private static String apiMode(ProductModulesCatalog.FeatureEntry feature) {
         if (feature.apiBehavior() == null) {
-            return API_ALLOW;
+            return "allow";
         }
         return valueOr(feature.apiBehavior().mode(), "reject");
     }
@@ -481,8 +455,8 @@ public class PlatformModuleRegistry {
         PlatformModuleReason reason
     ) {
         public ResolvedAddonState(PlatformModuleState state, PlatformModuleReason reason) {
-            this(state == PlatformModuleState.ENABLED, state == PlatformModuleState.ENABLED,
-                state == PlatformModuleState.ENABLED, state == PlatformModuleState.ENABLED,
+            this(state == PlatformModuleState.enabled, state == PlatformModuleState.enabled,
+                state == PlatformModuleState.enabled, state == PlatformModuleState.enabled,
                 true, state, reason);
         }
     }

@@ -35,8 +35,8 @@ class PlatformModuleRegistryTest {
             cfg
         );
         var state = registry.resolveAddon("addon-search");
-        assertEquals(PlatformModuleState.DISABLED, state.state());
-        assertEquals(PlatformModuleReason.NOT_SELECTED, state.reason());
+        assertEquals(PlatformModuleState.disabled, state.state());
+        assertEquals(PlatformModuleReason.not_selected, state.reason());
         assertTrue(!state.selected());
     }
 
@@ -55,8 +55,8 @@ class PlatformModuleRegistryTest {
         };
         var registry = PlatformModuleRegistry.create(cfg, new PlatformModuleOverrideRepository(null));
         var state = registry.resolveAddon("addon-search");
-        assertEquals(PlatformModuleState.DEGRADED, state.state());
-        assertEquals(PlatformModuleReason.HEALTH_STALE, state.reason());
+        assertEquals(PlatformModuleState.degraded, state.state());
+        assertEquals(PlatformModuleReason.health_stale, state.reason());
     }
 
     @Test
