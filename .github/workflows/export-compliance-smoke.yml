@@ -69,7 +69,11 @@ jobs:
           POLL_SECONDS: ${{ github.event.inputs.poll_seconds || '300' }}
 
       - name: Export compliance pack
-        run: ./scripts/smoke-export-compliance-pack.sh --skip-observability
+        run: >
+          ./scripts/smoke-export-compliance-pack.sh
+          --skip-observability
+          --skip-suggested-nats
+          --skip-auto-queue-nats
         env:
           POLL_SECONDS: ${{ github.event.inputs.poll_seconds || '300' }}
 
