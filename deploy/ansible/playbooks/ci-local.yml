@@ -10,6 +10,9 @@
     korus_build_images: true
     korus_run_smoke: "{{ run_smoke | default(false) }}"
     korus_bootstrap_log: "/tmp/korus-bootstrap.log"
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/korus_server.yml
   tasks:
     - name: Common prerequisites
       ansible.builtin.import_role:
