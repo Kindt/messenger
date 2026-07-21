@@ -84,7 +84,10 @@ except urllib.error.HTTPError as e:
 cid = prep.get("chat_id") or prep.get("chatId") or ""
 ids = prep.get("message_ids") or prep.get("messageIds") or []
 fid = prep.get("file_id") or prep.get("fileId") or ""
-print(f"[OK] chat_id={cid} messages={len(ids)} retention_patched={prep.get('retention_patched')} file_id={fid}")
+retention = prep.get("retention_patched")
+if retention is None:
+    retention = prep.get("retentionPatched")
+print(f"[OK] chat_id={cid} messages={len(ids)} retention_patched={retention} file_id={fid}")
 if cid:
     print(f"CHAT_ID={cid}")
 if fid:
