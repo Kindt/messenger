@@ -25,7 +25,7 @@ jobs:
     if: vars.STAGE_API_URL != ''
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install k6
         run: |
