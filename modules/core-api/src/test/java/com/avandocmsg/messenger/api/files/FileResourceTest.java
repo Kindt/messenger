@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.files;
 
+import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.filter.UserPrincipal;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
 import com.avandocmsg.messenger.api.params.InvalidUuidParameterException;
@@ -16,14 +17,14 @@ class FileResourceTest {
 
     @Test
     void getInfo_invalidFileId_throwsInvalidUuidParameterException() {
-        var resource = new FileResource(null, null, null, null, null, null, null, null, I18nTestFixtures.messagesEn());
+        var resource = minimalResource();
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.getInfo("not-a-uuid", userSecurityContext()));
     }
 
     @Test
     void revokePublicLink_invalidLinkId_throwsInvalidUuidParameterException() {
-        var resource = new FileResource(null, null, null, null, null, null, null, null, I18nTestFixtures.messagesEn());
+        var resource = minimalResource();
         var fileId = UUID.randomUUID().toString();
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.revokePublicLink(fileId, "bad-link-id", userSecurityContext()));
@@ -31,7 +32,7 @@ class FileResourceTest {
 
     @Test
     void revokePublicLink_invalidFileId_throwsInvalidUuidParameterException() {
-        var resource = new FileResource(null, null, null, null, null, null, null, null, I18nTestFixtures.messagesEn());
+        var resource = minimalResource();
         var linkId = UUID.randomUUID().toString();
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.revokePublicLink("not-a-uuid", linkId, userSecurityContext()));
@@ -39,16 +40,21 @@ class FileResourceTest {
 
     @Test
     void listPublicLinks_invalidFileId_throwsInvalidUuidParameterException() {
-        var resource = new FileResource(null, null, null, null, null, null, null, null, I18nTestFixtures.messagesEn());
+        var resource = minimalResource();
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.listPublicLinks("not-a-uuid", userSecurityContext()));
     }
 
     @Test
     void resize_invalidFileId_throwsInvalidUuidParameterException() {
-        var resource = new FileResource(null, null, null, null, null, null, null, null, I18nTestFixtures.messagesEn());
+        var resource = minimalResource();
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.resize("not-a-uuid", 200, 200, null, userSecurityContext()));
+    }
+
+    private static FileResource minimalResource() {
+        return new FileResource(null, null, null, null, new AppConfig(), null, null, null,
+            I18nTestFixtures.messagesEn());
     }
 
     private static SecurityContext userSecurityContext() {

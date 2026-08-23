@@ -14,6 +14,7 @@ import com.avandocmsg.messenger.api.files.dto.FileUploadResponse;
 import com.avandocmsg.messenger.api.metrics.ApiDeniedMetrics;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
+import com.avandocmsg.messenger.api.security.TimingSensitivePaths;
 import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.core.port.PublicLinkPort;
 import com.avandocmsg.messenger.common.dto.ApiError;
@@ -261,25 +262,29 @@ public class FileResource {
         content = @Content(schema = @Schema(implementation = ApiError.class)))
     public Response getInfo(@PathParam("fileId") String fileId,
                             @Context SecurityContext securityContext) {
-        var fid = UuidParams.required(fileId, FILE_ID);
-        var userId = CurrentUserId.uuid(securityContext);
-        var fileIdDomain = FileId.of(fid);
-        if (fileApplicationService.findById(fileIdDomain).isEmpty()) {
-            return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get(ERR_NOT_FOUND)))
-                .build();
-        }
-        var info = fileApplicationService
-            .getMetadataForUser(UserId.of(userId), fileIdDomain)
-            .map(FileDomainMapper::toResponse)
-            .orElse(null);
-        if (info == null) {
-            ApiDeniedMetrics.fileAccessDenied();
-            return Response.status(Response.Status.FORBIDDEN)
-                .entity(new ApiError(403, messages.get(ERR_NOT_ALLOWED)))
-                .build();
-        }
-        return Response.ok(info).build();
+        return TimingSensitivePaths.respond(appConfig, () -> {
+            var fid = UuidParams.required(fileId, FILE_ID);
+            var userId = CurrentUserId.uuid(securityContext);
+            var fileIdDomain = FileId.of(fid);
+            if (fileApplicationService.findById(fileIdDomain).isEmpty()) {
+                TimingSensitivePaths.padNotFound(appConfig);
+                return Response.status(Response.Status.NOT_FOUND)
+                    .entity(new ApiError(404, messages.get(ERR_NOT_FOUND)))
+                    .build();
+            }
+            var info = fileApplicationService
+                .getMetadataForUser(UserId.of(userId), fileIdDomain)
+                .map(FileDomainMapper::toResponse)
+                .orElse(null);
+            if (info == null) {
+                ApiDeniedMetrics.fileAccessDenied();
+                TimingSensitivePaths.padNotFound(appConfig);
+                return Response.status(Response.Status.FORBIDDEN)
+                    .entity(new ApiError(403, messages.get(ERR_NOT_ALLOWED)))
+                    .build();
+            }
+            return Response.ok(info).build();
+        });
     }
 
     @GET

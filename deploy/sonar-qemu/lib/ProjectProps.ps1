@@ -93,6 +93,16 @@ function Invoke-SonarLabCompile {
             if ($LASTEXITCODE -ne 0) { throw "CompileCommand failed ($LASTEXITCODE)" }
             return
         }
+        $gradlew = Join-Path $RepoRoot "gradlew.bat"
+        if (Test-Path $gradlew) {
+            Write-Host "Compile: gradlew.bat compileJava compileTestJava (host leaf modules)" -ForegroundColor Cyan
+            & $gradlew compileJava compileTestJava `
+                -x ":mobile:mobile-client-android:compileDebugKotlin" `
+                -x ":mobile:mobile-client-android:compileReleaseKotlin" `
+                --parallel
+            if ($LASTEXITCODE -ne 0) { throw "Gradle compile failed ($LASTEXITCODE)" }
+            return
+        }
         $jdk25 = Join-Path $RepoRoot "scripts\mvn-jdk25.ps1"
         if (Test-Path $jdk25) {
             if (-not $JdkHome) { $JdkHome = "C:\Program Files\Java\jdk-25.0.2" }

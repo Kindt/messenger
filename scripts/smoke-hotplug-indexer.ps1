@@ -67,6 +67,16 @@ $nats = Get-UrlHostPort $NatsUrl
 
 Write-Host "Checking NATS connectivity: $($nats.Host):$($nats.Port)" -ForegroundColor Cyan
 if (-not (Test-TcpPort -HostName $nats.Host -Port $nats.Port)) {
+    if ($NatsUrl -eq "nats://localhost:4222") {
+        $tunnelScript = Join-Path $PSScriptRoot "lib\Ensure-NatsQemuTunnel.ps1"
+        if (Test-Path $tunnelScript) {
+            . $tunnelScript
+            $NatsUrl = Ensure-NatsQemuTunnel
+            $nats = Get-UrlHostPort $NatsUrl
+        }
+    }
+}
+if (-not (Test-TcpPort -HostName $nats.Host -Port $nats.Port)) {
     Fail @"
 NATS is not reachable at $NatsUrl.
 For QEMU: start SSH tunnel first, e.g.

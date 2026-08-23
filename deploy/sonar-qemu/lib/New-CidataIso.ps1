@@ -11,16 +11,28 @@ function New-SonarCidataSeed {
     $iso = Join-Path $SonarQemuRunDir "cidata-sonar.iso"
     $pyScript = Join-Path $SonarQemuToolsDir "mk_cidata_iso.py"
 
-    if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-        throw "python not found (required for cidata ISO)"
+    $python = $null
+    foreach ($candidate in @(
+            $env:PYTHON,
+            "C:\Users\GKindt\AppData\Local\Python\bin\python.exe",
+            "py",
+            "python"
+        )) {
+        if (-not $candidate) { continue }
+        if ($candidate -match '[\\/]' -and -not (Test-Path $candidate)) { continue }
+        if ($candidate -notmatch '[\\/]' -and -not (Get-Command $candidate -ErrorAction SilentlyContinue)) { continue }
+        & $candidate -c "import sys; print(sys.version)" 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) { $python = $candidate; break }
     }
-    & python -c "import pycdlib" 2>$null
+    if (-not $python) { throw "python not found (required for cidata ISO)" }
+
+    & $python -c "import pycdlib" 2>$null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Installing pycdlib..." -ForegroundColor Cyan
-        & python -m pip install pycdlib --quiet
+        & $python -m pip install pycdlib --quiet
         if ($LASTEXITCODE -ne 0) { throw "pip install pycdlib failed" }
     }
-    $pyOut = & python $pyScript $staging $iso 2>&1
+    $pyOut = & $python $pyScript $staging $iso 2>&1
     if ($LASTEXITCODE -ne 0) { throw "mk_cidata_iso.py failed: $pyOut" }
     if (-not (Test-Path $iso) -or (Get-Item $iso).Length -lt 1024) {
         throw "cidata ISO missing: $iso"

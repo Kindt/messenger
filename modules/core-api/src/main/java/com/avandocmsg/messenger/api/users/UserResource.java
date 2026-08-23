@@ -2,6 +2,8 @@ package com.avandocmsg.messenger.api.users;
 
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
+import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.api.security.TimingSensitivePaths;
 import com.avandocmsg.messenger.api.users.dto.SavedChatResponse;
 import com.avandocmsg.messenger.api.users.dto.UpdateLocaleRequest;
 import com.avandocmsg.messenger.api.users.dto.UpdatePresenceRequest;
@@ -42,14 +44,17 @@ public class UserResource {
 
     private final UserApplicationService userApplicationService;
     private final AvatarApplicationService avatarApplicationService;
+    private final AppConfig appConfig;
     private final UserMessageSource messages;
 
     @Inject
     public UserResource(UserApplicationService userApplicationService,
                         AvatarApplicationService avatarApplicationService,
+                        AppConfig appConfig,
                         UserMessageSource messages) {
         this.userApplicationService = userApplicationService;
         this.avatarApplicationService = avatarApplicationService;
+        this.appConfig = appConfig;
         this.messages = messages;
     }
 
@@ -78,32 +83,38 @@ public class UserResource {
     @Path("/me")
     @Operation(summary = "Текущий профиль")
     public Response me(@Context SecurityContext securityContext) {
-        var userId = CurrentUserId.uuid(securityContext);
-        var profile = mapProfile(
-            userApplicationService.getProfileForViewer(UserId.of(userId), UserId.of(userId)),
-            UserId.of(userId));
-        if (profile == null) {
-            return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.user.not_found")))
-                .build();
-        }
-        return Response.ok(profile).build();
+        return TimingSensitivePaths.respond(appConfig, () -> {
+            var userId = CurrentUserId.uuid(securityContext);
+            var profile = mapProfile(
+                userApplicationService.getProfileForViewer(UserId.of(userId), UserId.of(userId)),
+                UserId.of(userId));
+            if (profile == null) {
+                TimingSensitivePaths.padNotFound(appConfig);
+                return Response.status(Response.Status.NOT_FOUND)
+                    .entity(new ApiError(404, messages.get("error.user.not_found")))
+                    .build();
+            }
+            return Response.ok(profile).build();
+        });
     }
 
     @GET
     @Path("/{id}")
     public Response getById(@PathParam("id") String id, @Context SecurityContext securityContext) {
-        var viewerId = CurrentUserId.uuid(securityContext);
-        var targetId = UuidParams.required(id, "user_id");
-        var profile = mapProfile(
-            userApplicationService.getProfileForViewer(UserId.of(viewerId), UserId.of(targetId)),
-            UserId.of(viewerId));
-        if (profile == null) {
-            return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get("error.user.not_found")))
-                .build();
-        }
-        return Response.ok(profile).build();
+        return TimingSensitivePaths.respond(appConfig, () -> {
+            var viewerId = CurrentUserId.uuid(securityContext);
+            var targetId = UuidParams.required(id, "user_id");
+            var profile = mapProfile(
+                userApplicationService.getProfileForViewer(UserId.of(viewerId), UserId.of(targetId)),
+                UserId.of(viewerId));
+            if (profile == null) {
+                TimingSensitivePaths.padNotFound(appConfig);
+                return Response.status(Response.Status.NOT_FOUND)
+                    .entity(new ApiError(404, messages.get("error.user.not_found")))
+                    .build();
+            }
+            return Response.ok(profile).build();
+        });
     }
 
     @PATCH

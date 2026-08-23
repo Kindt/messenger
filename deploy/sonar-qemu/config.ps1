@@ -14,10 +14,11 @@ $script:SonarQemuCloudDir = Join-Path $PSScriptRoot "cloud-init"
 # QEMU -name; also matched by qemu-down (plus legacy dqlclient-sonar)
 $script:SonarQemuVmName = "sonar-lab"
 
-$script:SonarQemuVmMemoryMb = 6144
+$script:SonarQemuVmMemoryMb = 4096
 $script:SonarQemuVmSmp = 2
 $script:SonarQemuVmDiskGb = 24
-$script:SonarQemuSshHostPort = 12224
+# Avoid clash with korus-mobile-build SSH (:12224 in deploy/qemu/config.ps1).
+$script:SonarQemuSshHostPort = 12229
 $script:SonarQemuHttpHostPort = 19000
 $script:SonarQemuGuestUser = "sonar"
 
@@ -38,6 +39,10 @@ $script:SonarQemuScannerImage = "sonarsource/sonar-scanner-cli:12.1.0.3233_8.0.1
 $script:SonarQemuGuestPassword = if ($env:SONAR_QEMU_GUEST_PASSWORD) { $env:SONAR_QEMU_GUEST_PASSWORD } else { "sonar" }
 $script:SonarQemuAdminPassword = if ($env:SONAR_QEMU_ADMIN_PASSWORD) { $env:SONAR_QEMU_ADMIN_PASSWORD } else { "AdminChangeMe1!" }
 $script:SonarQemuDbPassword = if ($env:SONAR_QEMU_DB_PASSWORD) { $env:SONAR_QEMU_DB_PASSWORD } else { "sonar" }
+
+# Host scanner: block CryptoPro CSP (set SONAR_QEMU_ALLOW_CRYPTOPRO=1 to opt out).
+$script:SonarQemuDisableCryptoPro = ($env:SONAR_QEMU_ALLOW_CRYPTOPRO -ne "1")
+$script:SonarQemuJavaSecurityNoCryptoPro = Join-Path $SonarQemuToolsDir "java-security-no-cryptopro.properties"
 
 $localConfig = Join-Path $PSScriptRoot "config.local.ps1"
 if (Test-Path -LiteralPath $localConfig) {

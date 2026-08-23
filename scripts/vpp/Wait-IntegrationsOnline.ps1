@@ -41,7 +41,14 @@ while ((Get-Date) -lt $deadline) {
     }
     if ($RepairGateway -and $repairAttempts -lt 5 -and -not (Test-Http 'http://127.0.0.1:18190/health')) {
         Write-Host "  gateway down - repair attempt $($repairAttempts + 1)/5..." -ForegroundColor Yellow
-        & (Join-Path $Root 'scripts\vpp\Repair-IntegrationsGateway.ps1')
+        try {
+            & (Join-Path $Root 'scripts\vpp\Repair-IntegrationsGateway.ps1')
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "  repair exit $LASTEXITCODE (will retry wait loop)" -ForegroundColor DarkYellow
+            }
+        } catch {
+            Write-Host "  repair error: $($_.Exception.Message)" -ForegroundColor DarkYellow
+        }
         $repairAttempts++
         Start-Sleep -Seconds 15
     }

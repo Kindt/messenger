@@ -1,0 +1,636 @@
+/* Korus Desktop — QIP Infium inspired skin (offline/demo + live) */
+
+.root, .qip-root {
+    -fx-font-family: "Tahoma", "Segoe UI", sans-serif;
+    -fx-font-size: 12px;
+    -fx-background-color: #e8ecf2;
+}
+
+/* ── Title bar (user strip) ── */
+.qip-title-bar {
+    -fx-background-color: linear-gradient(to bottom, #5b8fd4 0%, #3d6fad 55%, #2f5f96 100%);
+    -fx-padding: 8 12 8 12;
+    -fx-spacing: 10;
+    -fx-alignment: center-left;
+}
+
+.qip-title-bar .label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.qip-title-bar .qip-subtitle {
+    -fx-text-fill: #dce8f8;
+    -fx-font-size: 11px;
+    -fx-font-weight: normal;
+}
+
+.qip-avatar {
+    -fx-min-width: 36px;
+    -fx-min-height: 36px;
+    -fx-max-width: 36px;
+    -fx-max-height: 36px;
+    -fx-background-color: #f4f8ff;
+    -fx-background-radius: 18;
+    -fx-border-color: #ffffffaa;
+    -fx-border-radius: 18;
+    -fx-border-width: 1;
+    -fx-alignment: center;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2f5f96;
+}
+
+.qip-title-bar .button {
+    -fx-background-color: #ffffff22;
+    -fx-text-fill: white;
+    -fx-border-color: #ffffff55;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 4 10 4 10;
+}
+
+.qip-title-bar .button:hover {
+    -fx-background-color: #ffffff44;
+}
+
+.qip-title-bar .combo-box {
+    -fx-background-color: #ffffff33;
+    -fx-border-color: #ffffff55;
+}
+
+.qip-title-bar .combo-box .label {
+    -fx-text-fill: white;
+}
+
+/* ── Tab strip (bottom, QIP-style modes) ── */
+.qip-tabs {
+    -fx-tab-min-height: 32px;
+    -fx-background-color: #d5dde8;
+}
+
+.qip-tabs .tab-header-area {
+    -fx-padding: 0;
+}
+
+.qip-tabs .tab-header-background {
+    -fx-background-color: linear-gradient(to bottom, #c8d4e4, #b8c5d8);
+    -fx-border-color: #9aadc4;
+    -fx-border-width: 1 0 0 0;
+}
+
+.qip-tabs .tab {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 6 14 6 14;
+}
+
+.qip-tabs .tab:selected {
+    -fx-background-color: linear-gradient(to bottom, #f8fafc, #e8ecf2);
+    -fx-border-color: #9aadc4;
+    -fx-border-width: 1 1 0 1;
+    -fx-background-radius: 4 4 0 0;
+}
+
+.qip-tabs .tab .tab-label {
+    -fx-text-fill: #2a3f5f;
+    -fx-font-weight: bold;
+}
+
+.qip-tabs .tab:selected .tab-label {
+    -fx-text-fill: #1a4a8a;
+}
+
+.qip-tabs .tab-content-area {
+    -fx-background-color: #e8ecf2;
+    -fx-border-color: #9aadc4;
+    -fx-border-width: 0 1 1 1;
+}
+
+/* ── Contact list (left) ── */
+.qip-contact-panel {
+    -fx-background-color: #f4f6fa;
+    -fx-border-color: #b8c5d8;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 6;
+    -fx-spacing: 6;
+}
+
+.qip-contact-filter {
+    -fx-background-color: white;
+    -fx-border-color: #a8b8cc;
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+    -fx-padding: 4 10 4 10;
+}
+
+.qip-contact-list {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.qip-contact-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 2 4 2 4;
+}
+
+.qip-contact-list .list-cell:selected {
+    -fx-background-color: linear-gradient(to right, #e8f0ff, #ddeeff);
+    -fx-background-radius: 0 6 6 0;
+    -fx-border-color: transparent transparent transparent #3d78c8;
+    -fx-border-width: 0 0 0 3;
+}
+
+.qip-contact-list .list-cell:hover {
+    -fx-background-color: #e8eef8;
+    -fx-background-radius: 6;
+}
+
+.qip-contact-list .list-cell:selected:hover {
+    -fx-background-color: linear-gradient(to right, #dce8ff, #d0e4fc);
+}
+
+.qip-contact-row {
+    -fx-spacing: 8;
+    -fx-alignment: center-left;
+    -fx-padding: 4 2 4 2;
+}
+
+.qip-status-online {
+    -fx-fill: #3cb371;
+    -fx-stroke: #2d8a56;
+    -fx-stroke-width: 0.5;
+}
+
+.qip-status-away {
+    -fx-fill: #f0ad4e;
+    -fx-stroke: #c8872e;
+    -fx-stroke-width: 0.5;
+}
+
+.qip-status-offline {
+    -fx-fill: #b0b8c4;
+    -fx-stroke: #8a93a0;
+    -fx-stroke-width: 0.5;
+}
+
+.qip-status-busy {
+    -fx-fill: #e74c3c;
+    -fx-stroke: #b83225;
+    -fx-stroke-width: 0.5;
+}
+
+.qip-status-pulse-online {
+    -fx-fill: #3cb37144;
+    -fx-stroke: transparent;
+}
+
+.qip-status-pulse-away {
+    -fx-fill: #f0ad4e44;
+    -fx-stroke: transparent;
+}
+
+.qip-status-orb {
+    -fx-min-width: 18px;
+    -fx-min-height: 18px;
+}
+
+.qip-contact-avatar {
+    -fx-min-width: 36px;
+    -fx-min-height: 36px;
+    -fx-max-width: 36px;
+    -fx-max-height: 36px;
+    -fx-background-color: linear-gradient(to bottom right, #5b9aea, #6a5fd4);
+    -fx-background-radius: 18;
+    -fx-border-color: #ffffff88;
+    -fx-border-radius: 18;
+    -fx-border-width: 1;
+    -fx-alignment: center;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+}
+
+.qip-contact-name {
+    -fx-font-weight: bold;
+    -fx-text-fill: #1e3350;
+    -fx-font-size: 12px;
+}
+
+.qip-contact-status-line {
+    -fx-text-fill: #5a6d86;
+    -fx-font-size: 10px;
+}
+
+/* ── Chat panel (right) ── */
+.qip-chat-panel {
+    -fx-background-color: #ffffff;
+    -fx-padding: 0;
+}
+
+.qip-chat-header {
+    -fx-background-color: linear-gradient(to bottom, #f4f7fc, #e8eef6);
+    -fx-border-color: #c5d0de;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 10 16 10 16;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-text-fill: #1a3358;
+}
+
+.qip-messages {
+    -fx-control-inner-background: #fafbfd;
+    -fx-background-color: #fafbfd;
+    -fx-border-color: transparent;
+    -fx-font-family: "Tahoma", "Segoe UI", sans-serif;
+    -fx-font-size: 12px;
+    -fx-text-fill: #1e2a38;
+    -fx-padding: 8;
+}
+
+.qip-thread-pane {
+    -fx-background-color: #f0f4f9;
+}
+
+.qip-thread-pane > .title {
+    -fx-background-color: #e2eaf4;
+    -fx-font-size: 11px;
+}
+
+.qip-composer-bar {
+    -fx-background-color: linear-gradient(to bottom, #f6f8fb, #eef2f7);
+    -fx-border-color: #c5d0de;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 10 14 10 14;
+    -fx-spacing: 8;
+    -fx-alignment: center-left;
+}
+
+.qip-composer-bar .text-field {
+    -fx-background-color: white;
+    -fx-border-color: #b8c5d8;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 8 10 8 10;
+    -fx-font-size: 12px;
+}
+
+.qip-btn-icon {
+    -fx-min-width: 32px;
+    -fx-padding: 4 8 4 8;
+    -fx-background-color: #e8eef6;
+    -fx-border-color: #a8b8cc;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.qip-btn-send {
+    -fx-background-color: linear-gradient(to bottom, #5b9aea, #3d78c8);
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-border-color: #2d5f96;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 8 18 8 18;
+    -fx-min-width: 96px;
+    -fx-font-size: 12px;
+}
+
+.qip-composer-tools,
+.qip-composer-caps {
+    -fx-spacing: 4;
+    -fx-alignment: center-left;
+}
+
+.qip-composer-caps:empty {
+    -fx-padding: 0;
+}
+
+.qip-chat-header-bar {
+    -fx-background-color: linear-gradient(to bottom, #f0f4fa, #e4eaf2);
+    -fx-border-color: #b8c5d8;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 8 12 8 12;
+}
+
+.qip-win-controls {
+    -fx-spacing: 2;
+    -fx-padding: 0 8 0 0;
+}
+
+.qip-empty-state {
+    -fx-text-fill: #5a6d86;
+    -fx-font-size: 13px;
+    -fx-alignment: center;
+}
+
+.qip-error-state {
+    -fx-text-fill: #8b2e2e;
+}
+
+.qip-btn-send:hover {
+    -fx-background-color: linear-gradient(to bottom, #6aa8f2, #4a86d4);
+}
+
+/* ── Login / profile cards ── */
+.qip-auth-card {
+    -fx-background-color: white;
+    -fx-border-color: #9aadc4;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 24;
+    -fx-effect: dropshadow(gaussian, #00000033, 12, 0.2, 0, 2);
+}
+
+.qip-auth-shell {
+    -fx-background-color: linear-gradient(to bottom, #5b8fd4, #2f5f96);
+}
+
+.qip-auth-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1a3d6b;
+}
+
+.qip-auth-subtitle {
+    -fx-text-fill: #5a6d86;
+    -fx-font-size: 11px;
+}
+
+.button {
+    -fx-cursor: hand;
+}
+
+/* ── Message bubbles ── */
+.qip-message-scroll {
+    -fx-background-color: #fafbfd;
+    -fx-border-color: transparent;
+}
+
+.qip-bubble-in {
+    -fx-background-color: linear-gradient(to bottom, #e8f2ff, #d4e6fc);
+    -fx-border-color: #9ab8e0;
+    -fx-border-radius: 10 10 10 2;
+    -fx-background-radius: 10 10 10 2;
+    -fx-padding: 8 12 8 12;
+    -fx-text-fill: #1a2f4a;
+}
+
+.qip-bubble-out {
+    -fx-background-color: linear-gradient(to bottom, #d8f5e0, #b8e8c8);
+    -fx-border-color: #6db88a;
+    -fx-border-radius: 10 10 2 10;
+    -fx-background-radius: 10 10 2 10;
+    -fx-padding: 8 12 8 12;
+    -fx-text-fill: #1a3d2a;
+}
+
+.qip-bubble-thread {
+    -fx-background-color: #fff8e6;
+    -fx-border-color: #e0c878;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 6 10 6 10;
+}
+
+.qip-bubble-system {
+    -fx-background-color: #eef2f7;
+    -fx-border-color: #c5d0de;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 4 10 4 10;
+    -fx-text-fill: #4a5a70;
+    -fx-font-size: 11px;
+}
+
+/* ── Window chrome (undecorated) ── */
+.qip-win-btn {
+    -fx-min-width: 28px;
+    -fx-min-height: 22px;
+    -fx-padding: 0 6 0 6;
+    -fx-background-color: #ffffff22;
+    -fx-text-fill: white;
+    -fx-border-color: #ffffff44;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+    -fx-font-size: 11px;
+}
+
+.qip-win-close:hover {
+    -fx-background-color: #c0392b;
+    -fx-text-fill: white;
+}
+
+.qip-title-draggable {
+    -fx-cursor: default;
+}
+
+/* ── Emoji picker ── */
+.qip-emoji-popup {
+    -fx-background-color: white;
+    -fx-border-color: #9aadc4;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-effect: dropshadow(gaussian, #00000044, 8, 0.2, 0, 2);
+}
+
+.qip-emoji-btn {
+    -fx-min-width: 32px;
+    -fx-min-height: 28px;
+    -fx-padding: 2 6 2 6;
+}
+
+.qip-emoji-tabs .tab-header-area {
+    -fx-padding: 0;
+}
+
+/* ── Session lock ── */
+.qip-lock-overlay {
+    -fx-background-color: #1a2f4acc;
+}
+
+.qip-lock-card {
+    -fx-background-color: white;
+    -fx-padding: 24;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-min-width: 280;
+}
+
+/* ── Dark theme (profile settings: theme=dark) ── */
+.qip-root.theme-dark {
+    -fx-background-color: #1a2030;
+}
+
+.qip-root.theme-dark .qip-contact-panel {
+    -fx-background-color: #222a3a;
+    -fx-border-color: #3a4558;
+}
+
+.qip-root.theme-dark .qip-contact-filter,
+.qip-root.theme-dark .qip-composer-bar .text-field {
+    -fx-background-color: #2c3548;
+    -fx-text-fill: #e8ecf2;
+    -fx-border-color: #4a5568;
+}
+
+.qip-root.theme-dark .qip-message-scroll {
+    -fx-background-color: #1e2433;
+}
+
+.qip-root.theme-dark .qip-chat-header-bar {
+    -fx-background-color: linear-gradient(to bottom, #2a3348, #222a3a);
+    -fx-border-color: #3a4558;
+}
+
+.qip-root.theme-dark .qip-chat-header {
+    -fx-text-fill: #e8ecf2;
+}
+
+.qip-root.theme-dark .qip-composer-bar {
+    -fx-background-color: linear-gradient(to bottom, #2a3348, #222a3a);
+    -fx-border-color: #3a4558;
+}
+
+.qip-root.theme-dark .qip-btn-icon {
+    -fx-background-color: #343e52;
+    -fx-border-color: #4a5568;
+}
+
+.qip-root.theme-dark .qip-tabs .tab-content-area {
+    -fx-background-color: #1a2030;
+    -fx-border-color: #3a4558;
+}
+
+.qip-root.theme-dark .qip-empty-state {
+    -fx-text-fill: #9aa8bc;
+}
+
+.qip-root.theme-dark .qip-bubble-in {
+    -fx-background-color: linear-gradient(to bottom, #2a3d5c, #243550);
+    -fx-border-color: #4a6a9a;
+    -fx-text-fill: #e0e8f4;
+}
+
+.qip-root.theme-dark .qip-bubble-out {
+    -fx-background-color: linear-gradient(to bottom, #2a4a38, #234030);
+    -fx-border-color: #4a8a62;
+    -fx-text-fill: #d8f0e0;
+}
+
+/* ── Settings sub-tabs (parity web settings card) ── */
+.qip-settings-tabs .tab-header-area {
+    -fx-background-color: #eef2f8;
+    -fx-border-color: #c5d0de;
+    -fx-border-width: 0 0 1 0;
+}
+
+.qip-settings-tabs .tab:selected {
+    -fx-background-color: white;
+}
+
+.qip-settings-panel {
+    -fx-background-color: transparent;
+    -fx-spacing: 8;
+}
+
+.qip-settings-panel > .label {
+    -fx-text-fill: #1e3350;
+    -fx-font-weight: bold;
+}
+
+.qip-settings-panel .text-field,
+.qip-settings-panel .combo-box,
+.qip-settings-panel .spinner {
+    -fx-background-color: white;
+    -fx-border-color: #b8c5d8;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+}
+
+.qip-settings-panel .button {
+    -fx-background-color: linear-gradient(to bottom, #5b9aea, #3d78c8);
+    -fx-text-fill: white;
+    -fx-border-color: #2d5f96;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 6 14 6 14;
+}
+
+/* ── Servers tab list ── */
+.qip-servers-panel > .label {
+    -fx-text-fill: #3d5a80;
+    -fx-font-weight: bold;
+}
+
+.qip-servers-list {
+    -fx-background-color: white;
+    -fx-border-color: #b8c5d8;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 4;
+}
+
+.qip-servers-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #1e3350;
+    -fx-padding: 8 10 8 10;
+}
+
+.qip-servers-list .list-cell:selected {
+    -fx-background-color: linear-gradient(to right, #e8f0ff, #ddeeff);
+    -fx-background-radius: 4;
+}
+
+.qip-servers-list .list-cell:hover {
+    -fx-background-color: #eef3fa;
+}
+
+.qip-root.theme-dark .qip-settings-tabs .tab-header-area {
+    -fx-background-color: #2a3348;
+    -fx-border-color: #3a4558;
+}
+
+.qip-root.theme-dark .qip-settings-tabs .tab:selected {
+    -fx-background-color: #343e52;
+}
+
+.qip-root.theme-dark .qip-settings-panel > .label {
+    -fx-text-fill: #e8ecf2;
+}
+
+.qip-root.theme-dark .qip-settings-panel .text-field,
+.qip-root.theme-dark .qip-settings-panel .combo-box,
+.qip-root.theme-dark .qip-settings-panel .spinner {
+    -fx-background-color: #2c3548;
+    -fx-text-fill: #e8ecf2;
+    -fx-border-color: #4a5568;
+}
+
+.qip-root.theme-dark .qip-servers-panel > .label {
+    -fx-text-fill: #c5d4e8;
+}
+
+.qip-root.theme-dark .qip-servers-list {
+    -fx-background-color: #2c3548;
+    -fx-border-color: #4a5568;
+}
+
+.qip-root.theme-dark .qip-servers-list .list-cell {
+    -fx-text-fill: #e8ecf2;
+}
+
+.qip-root.theme-dark .qip-servers-list .list-cell:selected {
+    -fx-background-color: linear-gradient(to right, #3a4a68, #344060);
+}
+
+.qip-root.theme-dark .qip-contact-name {
+    -fx-text-fill: #e8ecf2;
+}
+
+.qip-root.theme-dark .qip-contact-status-line {
+    -fx-text-fill: #9aa8bc;
+}
+
+.qip-root.theme-dark .qip-chat-panel {
+    -fx-background-color: #1e2433;
+}

@@ -41,6 +41,7 @@ public class AppConfig {
         override("APP_PORT", "server.port");
         override("SECURITY_TIMING_NORMALIZATION_MIN_MS", "security.timing.normalization.min.ms");
         override("SECURITY_TIMING_NOT_FOUND_EXTRA_MS", "security.timing.not_found.extra.ms");
+        override("SECURITY_TIMING_AUTH_FAILURE_EXTRA_MS", "security.timing.auth_failure.extra.ms");
         override("APP_HOME", "app.home");
         override("DB_JDBC_URL", "db.jdbc.url");
         override("DB_USER", "db.user");
@@ -1116,6 +1117,23 @@ public class AppConfig {
             return ms * 1_000_000L;
         } catch (NumberFormatException e) {
             return 35L * 1_000_000L;
+        }
+    }
+
+    /** Extra delay on failed login when normalization enabled (Keycloak exist vs miss). Env: SECURITY_TIMING_AUTH_FAILURE_EXTRA_MS. */
+    public long timingAuthFailureExtraNanos() {
+        if (timingNormalizationMinNanos() <= 0) {
+            return 0L;
+        }
+        var raw = props.getProperty("security.timing.auth_failure.extra.ms", "").trim();
+        if (raw.isEmpty()) {
+            raw = System.getenv().getOrDefault("SECURITY_TIMING_AUTH_FAILURE_EXTRA_MS", "80");
+        }
+        try {
+            var ms = Math.max(0, Integer.parseInt(raw));
+            return ms * 1_000_000L;
+        } catch (NumberFormatException e) {
+            return 80L * 1_000_000L;
         }
     }
 

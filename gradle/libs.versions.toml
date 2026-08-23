@@ -13,6 +13,7 @@ hikari = "6.3.0"
 flyway = "12.6.1"
 lettuce = "6.3.2.RELEASE"
 netty-bom = "4.1.118.Final"
+jna = "5.16.0"
 jnats = "2.25.3"
 logback = "1.5.34"
 logstash-logback-encoder = "8.0"
@@ -38,6 +39,10 @@ commons-codec = "1.17.1"
 jakarta-xml-bind = "4.0.2"
 zstd-jni = "1.5.6-6"
 caffeine = "3.2.0"
+javafx = "23.0.2"
+testfx = "4.0.18"
+hamcrest = "2.1"
+mockwebserver = "4.12.0"
 
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
@@ -80,6 +85,8 @@ flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql", versio
 lettuce = { module = "io.lettuce:lettuce-core", version.ref = "lettuce" }
 netty-bom = { module = "io.netty:netty-bom", version.ref = "netty-bom" }
 jnats = { module = "io.nats:jnats", version.ref = "jnats" }
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback-encoder" }
@@ -111,6 +118,11 @@ commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "co
 commons-codec = { module = "commons-codec:commons-codec", version.ref = "commons-codec" }
 zstd-jni = { module = "com.github.luben:zstd-jni", version.ref = "zstd-jni" }
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
+javafx-controls = { module = "org.openjfx:javafx-controls", version.ref = "javafx" }
+javafx-fxml = { module = "org.openjfx:javafx-fxml", version.ref = "javafx" }
+okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "mockwebserver" }
+testfx-junit5 = { module = "org.testfx:testfx-junit5", version.ref = "testfx" }
+hamcrest = { module = "org.hamcrest:hamcrest", version.ref = "hamcrest" }
 
 [bundles]
 prometheus-server = ["prometheus-simpleclient", "prometheus-simpleclient-hotspot", "prometheus-simpleclient-httpserver", "prometheus-simpleclient-common"]

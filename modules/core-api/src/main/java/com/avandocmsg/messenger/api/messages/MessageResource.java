@@ -10,6 +10,7 @@ import com.avandocmsg.messenger.api.messages.dto.ReactionRequest;
 import com.avandocmsg.messenger.api.messages.dto.ReactionResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.api.security.TimingSensitivePaths;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.core.application.MessageDomainMapper;
 import com.avandocmsg.messenger.core.domain.ChatId;
@@ -195,19 +196,22 @@ public class MessageResource {
     public Response getById(@PathParam("chatId") String chatIdStr,
                             @PathParam("msgId") String msgIdStr,
                             @Context SecurityContext securityContext) {
-        var userId = CurrentUserId.uuid(securityContext);
-        var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
-        var msgId = UuidParams.required(msgIdStr, PARAM_MESSAGE_ID);
-        var msg = messageApplicationService
-            .getMessageForMember(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId))
-            .map(MessageDomainMapper::toResponse)
-            .orElse(null);
-        if (msg == null) {
-            return Response.status(Response.Status.NOT_FOUND)
-                .entity(new ApiError(404, messages.get(ERR_MESSAGE_NOT_FOUND)))
-                .build();
-        }
-        return Response.ok(msg).build();
+        return TimingSensitivePaths.respond(appConfig, () -> {
+            var userId = CurrentUserId.uuid(securityContext);
+            var chatId = UuidParams.required(chatIdStr, PARAM_CHAT_ID);
+            var msgId = UuidParams.required(msgIdStr, PARAM_MESSAGE_ID);
+            var msg = messageApplicationService
+                .getMessageForMember(ChatId.of(chatId), MessageId.of(msgId), UserId.of(userId))
+                .map(MessageDomainMapper::toResponse)
+                .orElse(null);
+            if (msg == null) {
+                TimingSensitivePaths.padNotFound(appConfig);
+                return Response.status(Response.Status.NOT_FOUND)
+                    .entity(new ApiError(404, messages.get(ERR_MESSAGE_NOT_FOUND)))
+                    .build();
+            }
+            return Response.ok(msg).build();
+        });
     }
 
     @PATCH

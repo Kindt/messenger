@@ -9,6 +9,7 @@ param(
     [int]$TimeoutMinutes = 45,
     [switch]$SkipScan,
     [switch]$OnHost,
+    [switch]$AllowCryptoPro,
     [switch]$Help
 )
 
@@ -23,9 +24,10 @@ Usage: .\deploy\sonar-qemu\sonar-scan.ps1 [options]
   -SkipCompile           Do not compile (payload uses existing binaries)
   -TimeoutMinutes 45     Wait for Sonar UP
   -SkipScan              Only wait UP + bootstrap admin/token
-  -OnHost                Windows SonarScanner (may pop CryptoPro CSP)
+  -OnHost                Windows SonarScanner (CryptoPro blocked unless -AllowCryptoPro)
+  -AllowCryptoPro         Allow host JVM to use system CryptoPro providers (-OnHost only)
 
-Default: Maven test-compile on host + sonar-scanner-cli Docker inside guest.
+Default: Gradle compile on host + sonar-scanner-cli Docker inside guest (no CryptoPro on host).
 "@
     exit 0
 }
@@ -33,6 +35,7 @@ Default: Maven test-compile on host + sonar-scanner-cli Docker inside guest.
 . (Join-Path $PSScriptRoot "config.ps1")
 . (Join-Path $PSScriptRoot "lib\GuestSsh.ps1")
 . (Join-Path $PSScriptRoot "lib\ProjectProps.ps1")
+. (Join-Path $PSScriptRoot "lib\Set-SonarHostJvm.ps1")
 
 $script:SonarQemuRepoRoot = Resolve-SonarLabRepoRoot -RepoRoot $RepoRoot
 $props = Get-SonarPropertiesMap -RepoRoot $SonarQemuRepoRoot
@@ -168,22 +171,34 @@ function Invoke-HostSonarScan {
     param(
         [Parameter(Mandatory)][string]$Token,
         [Parameter(Mandatory)][string]$ProjectKey,
-        [Parameter(Mandatory)][string]$ProjectName
+        [Parameter(Mandatory)][string]$ProjectName,
+        [switch]$AllowCryptoPro
     )
     $scanner = Resolve-SonarScannerBat
     if (-not $scanner) {
         throw "SonarScanner CLI not found under deploy\sonar-qemu\tools. Download sonar-scanner-*-windows-x64 first."
     }
-    Write-Host "Running SonarScanner CLI on host (may trigger CryptoPro CSP)..." -ForegroundColor Yellow
+    $blockCp = $SonarQemuDisableCryptoPro -and -not $AllowCryptoPro
+    if ($blockCp) {
+        Write-Host "Running SonarScanner CLI on host (CryptoPro disabled via java.security overlay)..." -ForegroundColor Cyan
+    } else {
+        Write-Host "Running SonarScanner CLI on host (CryptoPro allowed)..." -ForegroundColor Yellow
+    }
     Push-Location $SonarQemuRepoRoot
     try {
+        Use-SonarNoCryptoProJvm -AllowCryptoPro:(-not $blockCp)
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
         & $scanner `
             "-Dsonar.host.url=$SonarQemuUrl" `
             "-Dsonar.token=$Token" `
             "-Dsonar.projectKey=$ProjectKey" `
-            "-Dsonar.projectName=$ProjectName"
-        if ($LASTEXITCODE -ne 0) { throw "SonarScanner failed ($LASTEXITCODE)" }
+            "-Dsonar.projectName=$ProjectName" 2>&1 | Out-Host
+        $scanExit = $LASTEXITCODE
+        $ErrorActionPreference = $prevEap
+        if ($scanExit -ne 0) { throw "SonarScanner failed ($scanExit)" }
     } finally {
+        Restore-SonarNoCryptoProJvm
         Pop-Location
     }
 }
@@ -206,7 +221,7 @@ $stackNudged = $false
 while ((Get-Date) -lt $deadline) {
     $status = Get-SonarStatus
     if ($status -eq "UP") { break }
-    if (-not $stackNudged -and -not $status) {
+    if (-not $OnHost -and -not $stackNudged -and -not $status) {
         try {
             Ensure-GuestSonarStack
             $stackNudged = $true
@@ -271,7 +286,7 @@ if (-not $SkipCompile) {
 }
 
 if ($OnHost) {
-    Invoke-HostSonarScan -Token $token -ProjectKey $projectKey -ProjectName $projectName
+    Invoke-HostSonarScan -Token $token -ProjectKey $projectKey -ProjectName $projectName -AllowCryptoPro:$AllowCryptoPro
 } else {
     Invoke-GuestSonarScan -Token $token -ProjectKey $projectKey -ProjectName $projectName -Props $props
 }
@@ -279,5 +294,7 @@ if ($OnHost) {
 Write-Host ""
 Write-Host "[OK] Scan finished. Open: $SonarQemuUrl/dashboard?id=$([uri]::EscapeDataString($projectKey))" -ForegroundColor Green
 if (-not $OnHost) {
-    Write-Host "Scanner ran inside guest (CryptoPro on host should not pop)." -ForegroundColor DarkGray
+    Write-Host "Scanner ran inside guest (host CryptoPro CSP is not used)." -ForegroundColor DarkGray
+} elseif ($SonarQemuDisableCryptoPro -and -not $AllowCryptoPro) {
+    Write-Host "Host scanner used JDK-only java.security (CryptoPro blocked)." -ForegroundColor DarkGray
 }

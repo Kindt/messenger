@@ -278,9 +278,10 @@ public final class FleetSnapshotService {
             );
         }
 
+        @SuppressWarnings("java:S2447")
         private static Boolean nullableBoolean(JsonNode source, String field) {
             if (!source.has(field) || source.get(field).isNull()) {
-                return null; // absent/null → unknown (do not force false)
+                return null; // tri-state probe: absent means unknown, not false
             }
             return source.get(field).asBoolean();
         }

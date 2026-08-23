@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "channel": "stable",
+  "version": "0.0.2",
+  "published_at": "2026-08-23T00:00:00Z",
+  "release_notes_url": "https://example.invalid/releases/0.0.2",
+  "min_supported_version": "0.0.1",
+  "artifacts": [
+    {
+      "platform": "windows-x64",
+      "url": "https://example.invalid/dist/korus-desktop-0.0.2-windows-x64.msi",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 1048576
+    },
+    {
+      "platform": "linux-x64",
+      "url": "https://example.invalid/dist/korus-desktop-0.0.2-linux-x64.deb",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 1048576
+    },
+    {
+      "platform": "macos-aarch64",
+      "url": "https://example.invalid/dist/korus-desktop-0.0.2-macos-aarch64.dmg",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 1048576
+    },
+    {
+      "platform": "macos-x64",
+      "url": "https://example.invalid/dist/korus-desktop-0.0.2-macos-x64.dmg",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 1048576
+    }
+  ]
+}

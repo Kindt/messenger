@@ -117,11 +117,10 @@ if (-not $SkipStackPrep) {
     & (Join-Path $Root 'scripts\vpp\Set-VppMonitorPhase.ps1') -Phase 'prep:stack'
     $api = try { (Invoke-RestMethod 'http://127.0.0.1:18080/api/v1/health' -TimeoutSec 5).status } catch { 'DOWN' }
     if ($api -ne 'ok') {
-        Write-Host '[prep] API down - qemu-sync-api-core (launch only)...' -ForegroundColor Yellow
+        Write-Host '[prep] API down - qemu-sync-api-core + Wait-KorusLabStackReady...' -ForegroundColor Yellow
         & (Join-Path $Root 'scripts\vpp\Set-VppMonitorPhase.ps1') -Phase 'prep:api-rebuild'
-        & (Join-Path $Root 'scripts\qemu-sync-api-core.ps1') -NoCache 2>&1 | Out-Host
-        & (Join-Path $Root 'deploy\qemu\run\wait-api-health.ps1') -MaxMinutes 15
-        if ($LASTEXITCODE -ne 0) { throw 'API not ready after prep' }
+        & (Join-Path $Root 'scripts\Wait-KorusLabStackReady.ps1') -MaxMinutes 90 -LaunchRebuildIfNeeded -WarmIfDown
+        if ($LASTEXITCODE -ne 0) { throw 'API not ready after prep (Wait-KorusLabStackReady)' }
     }
     & (Join-Path $Root 'scripts\vpp\Set-VppMonitorPhase.ps1') -Phase 'prep:integrations'
     $intSsh = Test-NetConnection -ComputerName 127.0.0.1 -Port 12223 -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
@@ -134,7 +133,9 @@ if (-not $SkipStackPrep) {
 }
 
 & (Join-Path $Root 'scripts\vpp\Set-VppMonitorPhase.ps1') -Phase ''
-& python (Join-Path $Root 'scripts\vpp\build_gate_labels_ru.py') 2>&1 | Out-Null
+. (Join-Path $Root 'deploy\qemu\lib\Get-KorusPythonCmd.ps1')
+$py = Get-KorusPythonCmd
+& $py (Join-Path $Root 'scripts\vpp\build_gate_labels_ru.py') 2>&1 | Out-Null
 & (Join-Path $Root 'scripts\vpp\Write-VppChatReport.ps1') | Out-Null
 & (Join-Path $Root 'scripts\vpp\Write-VppStatusTick.ps1')
 

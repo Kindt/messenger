@@ -94,4 +94,7 @@ if (-not $vapidSet) {
 }
 Write-Host "Smoke: .\scripts\smoke-korus-web.ps1 -CheckApi  (Linux/macOS: ./scripts/smoke-korus-web.sh --check-api)" -ForegroundColor DarkGray
 Write-Host "Stop:  .\scripts\korus-web-down.ps1$(if ($Attach) { ' -Attach' })$(if ($Turn) { ' -Turn' })  (same flags as this run)" -ForegroundColor DarkGray
-& (Join-Path $PSScriptRoot "dev-ui-hints.ps1") -RepoRoot $Root
+$hints = Join-Path $PSScriptRoot "dev-ui-hints.ps1"
+if (Test-Path $hints) {
+    & $hints -RepoRoot $Root
+}

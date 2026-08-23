@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.api.users;
 
+import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.filter.UserPrincipal;
 import com.avandocmsg.messenger.api.i18n.I18nTestFixtures;
 import com.avandocmsg.messenger.api.params.InvalidUuidParameterException;
@@ -16,7 +17,7 @@ class UserResourceTest {
 
     @Test
     void getById_invalidPathId_throwsInvalidUuidParameterException() {
-        var resource = new UserResource(null, null, I18nTestFixtures.messagesEn());
+        var resource = new UserResource(null, null, new AppConfig(), I18nTestFixtures.messagesEn());
         assertThrows(InvalidUuidParameterException.class,
             () -> resource.getById("not-a-uuid", userSecurityContext()));
     }

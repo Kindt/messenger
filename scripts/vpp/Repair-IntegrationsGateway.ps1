@@ -14,7 +14,10 @@ if (-not $tcp.TcpTestSucceeded) {
 }
 
 $hostKey = Get-KorusEd25519HostKey -SerialPath (Join-Path $runDir "integrations-serial.log") -Role integrations -SshPort 12223
-if (-not $hostKey) { throw "integrations SSH host key not ready" }
+if (-not $hostKey) {
+    Write-Host "[WARN] integrations SSH host key not ready (skip plink repair)" -ForegroundColor Yellow
+    exit 3
+}
 
 $guestScript = @'
 set -e

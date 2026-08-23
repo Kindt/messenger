@@ -84,7 +84,7 @@ foreach ($chain in $chains) {
             & $scriptPath -SkipIfUnreachable
         } elseif ($scriptRel -match "read-receipts") {
             & $scriptPath -BaseUrl "$ApiBaseUrl/api"
-        } elseif ($scriptRel -match "voice-message|federation-trust|bot-api|phase5|migration|dlp|live-session|scim|openmls") {
+        } elseif ($scriptRel -match "deep-archive|archive-chunks|voice-message|federation-trust|bot-api|phase5|migration|dlp|live-session|scim|openmls") {
             & $scriptPath -BaseUrl $ApiBaseUrl
         } else {
             & $scriptPath

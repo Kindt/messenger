@@ -35,7 +35,7 @@ $messageId = $message.id
 if (-not $messageId) { throw "send message returned no id" }
 
 $batch = @{ message_ids = @($messageId) } | ConvertTo-Json
-Invoke-WebRequest -Uri "$apiRoot/v1/chats/$chatId/read-batch" -Headers $headers -Method POST -Body $batch | Out-Null
+Invoke-RestMethod -Uri "$apiRoot/v1/chats/$chatId/read-batch" -Headers $headers -Method POST -Body $batch | Out-Null
 Write-Host "POST /read-batch -> OK"
 
 $rr = Invoke-RestMethod -Uri "$apiRoot/v1/chats/$chatId/read-receipts?message_id=$messageId" -Headers $headers -Method GET

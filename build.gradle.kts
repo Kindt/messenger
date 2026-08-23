@@ -3,6 +3,12 @@ plugins {
     id("java-library")
     alias(libs.plugins.spotless)
     id("org.gradle.test-retry") version "1.6.5"
+    kotlin("multiplatform") version "2.1.10" apply false
+    kotlin("android") version "2.1.10" apply false
+    kotlin("plugin.serialization") version "2.1.10" apply false
+    kotlin("plugin.compose") version "2.1.10" apply false
+    id("com.android.application") version "8.7.3" apply false
+    id("com.android.library") version "8.7.3" apply false
 }
 
 group = "com.avandocmsg"
@@ -27,11 +33,15 @@ tasks.register("spotlessCheckIncremental") {
 
 allprojects {
     repositories {
+        google()
         mavenCentral()
     }
 }
 
 subprojects {
+    if (project.path.startsWith(":mobile:")) {
+        return@subprojects
+    }
     if (childProjects.isNotEmpty()) {
         return@subprojects
     }
@@ -146,7 +156,7 @@ tasks.register<Exec>("checkCellManifest") {
     description = "Validate Korus Cloud Cell manifests (test_cell_manifest.py)"
     workingDir = rootDir
     val pythonCmd = System.getenv("PYTHON")
-        ?: if (System.getProperty("os.name").lowercase().contains("win")) "python" else "python3"
+        ?: if (System.getProperty("os.name").lowercase().contains("win")) "py" else "python3"
     commandLine(pythonCmd, "scripts/test_cell_manifest.py")
 }
 
@@ -191,6 +201,12 @@ tasks.named("spotlessJava") {
     mustRunAfter(project(":modules:core-api").tasks.named("benchmark"))
 }
 
+/** Leaf modules for host CI gate (mobile Android targets build in QEMU guest, not Windows host). */
+fun Project.hostIntegrityLeafProjects(): Sequence<Project> =
+    leafSubprojects().filter { sub ->
+        !sub.path.startsWith(":mobile:")
+    }
+
 /** Runs `build` (compile, test, assemble) on every subproject — CI smoke / integrity gate. */
 tasks.register("buildIntegrity") {
     group = "verification"
@@ -201,9 +217,10 @@ tasks.register("buildIntegrity") {
         "checkWebuiLabelLint",
         "checkNpmAudit",
         "spotlessCheck",
-        ":modules:core-api:benchmark"
+        ":modules:core-api:benchmark",
+        ":mobile:mobile-client-sdk:jvmTest"
     )
-    leafSubprojects().forEach { sub ->
+    hostIntegrityLeafProjects().forEach { sub ->
         dependsOn(sub.tasks.named("build"))
     }
 }

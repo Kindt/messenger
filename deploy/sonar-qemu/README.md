@@ -9,7 +9,7 @@ Windows host has **no Docker** — guest runs SonarQube + scanner.
 | Guest | Ubuntu 24.04 cloud image + Docker Engine |
 | App | `sonarqube:community` + Postgres 16 |
 | Host URL | http://127.0.0.1:19000 |
-| SSH | `ssh sonar@127.0.0.1 -p 12224` (password from env/`config.local.ps1`) |
+| SSH | `ssh sonar@127.0.0.1 -p 12229` (password from env/`config.local.ps1`) |
 | VM name | `sonar-lab` |
 | Scan | **guest by default** (pinned `sonar-scanner-cli` image) |
 
@@ -40,7 +40,7 @@ Point at another tree without moving the lab:
 .\deploy\sonar-qemu\install-qemu.ps1          # once
 .\deploy\sonar-qemu\qemu-up.ps1               # wipe disk + boot (first time long)
 .\deploy\sonar-qemu\sonar-scan.ps1            # host compile + scanner in guest
-.\deploy\sonar-qemu\sonar-scan.ps1 -OnHost    # Windows scanner (CryptoPro risk)
+.\deploy\sonar-qemu\sonar-scan.ps1 -OnHost    # host scanner; CryptoPro blocked by default
 .\deploy\sonar-qemu\sonar-scan.ps1 -SkipCompile
 .\deploy\sonar-qemu\sonar-scan.ps1 -CompileCommand "mvn -q test-compile -DskipTests"
 
@@ -90,5 +90,13 @@ Does **not** touch other QEMU labs (unique `-name sonar-lab` and ports).
 
 ## CryptoPro on Windows
 
-Host `-OnHost` scanner can pop expired CryptoPro CSP (2×6 MSI).  
-Default **guest** scan avoids that. Prefer guest; fix CSP license only if you need host scan.
+Host `-OnHost` scanner used to trigger expired CryptoPro CSP repair dialogs when the JVM loaded corporate providers.
+
+**Default mitigations (2026-08):**
+
+1. **Guest scan** (default) — scanner runs in QEMU Docker; host JVM/CryptoPro is not involved.
+2. **`-OnHost`** — `sonar-scan.ps1` sets `SONAR_SCANNER_OPTS` / `JAVA_TOOL_OPTIONS` with  
+   `-Djava.security.properties==deploy/sonar-qemu/tools/java-security-no-cryptopro.properties`  
+   (JDK built-in providers only). Override: `-AllowCryptoPro` or `SONAR_QEMU_ALLOW_CRYPTOPRO=1`.
+
+If CryptoPro still appears, use guest scan or stop patching the corporate JDK used by Gradle compile on the host.

@@ -120,4 +120,6 @@ fi
 echo "Smoke: ./scripts/smoke-korus-web.sh --check-api"
 echo "Stop:  ./scripts/korus-web-down.sh$(if "$ATTACH"; then echo -n ' --attach'; fi)$(if "$TURN_PROD"; then echo -n ' --turn-prod'; elif "$TURN"; then echo -n ' --turn'; fi)  (same flags as this run)" >&2
 echo "Quick check: curl -fsS http://localhost:9088/health"
-bash "$ROOT/scripts/dev-ui-hints.sh"
+if [[ -f "$ROOT/scripts/dev-ui-hints.sh" ]]; then
+  bash "$ROOT/scripts/dev-ui-hints.sh"
+fi

@@ -2,6 +2,7 @@
 param(
     [switch]$SkipBuild,
     [switch]$SkipQemuSmokes,
+    [switch]$Strict,
     [string]$BaseUrl = "http://127.0.0.1:18080",
     [double]$MaxTimingDelta = 0.05,
     [switch]$Help
@@ -10,15 +11,18 @@ param(
 $ErrorActionPreference = "Stop"
 if ($Help) {
     Write-Host @"
-Usage: .\scripts\security-gate.ps1 [-SkipBuild] [-SkipQemuSmokes] [-BaseUrl url]
+Usage: .\scripts\security-gate.ps1 [-SkipBuild] [-SkipQemuSmokes] [-Strict] [-BaseUrl url]
 
 Runs PR security gate:
   1. ./gradlew buildIntegrity (spotless ratchet, npm audit, benchmark, all tests)
   2. Optional QEMU smokes when API health OK:
-     smoke-security-headers, smoke-rate-limit, audit-timing
+     smoke-security-headers, audit-timing, smoke-rate-limit
+  3. With -Strict (FSTEC conveyor): + smoke-ip-allowlist, smoke-dlp-mock (-SkipIfUnreachable),
+     smoke-desktop-security (offline SDK + FSTEC matrix doc)
 
 Examples:
   .\scripts\security-gate.ps1 -SkipQemuSmokes
+  .\scripts\security-gate.ps1 -Strict
   .\scripts\security-gate.ps1 -SkipBuild
 "@
     exit 0
@@ -42,7 +46,14 @@ try {
     }
 
     if ($SkipQemuSmokes) {
-        Write-Host "[OK] security-gate (build only)" -ForegroundColor Green
+        if ($Strict) {
+            Write-Host "=== FSTEC strict (offline) ===" -ForegroundColor Cyan
+            & "$Root\scripts\smoke-desktop-security.ps1"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            Write-Host "[OK] security-gate (build + FSTEC offline strict)" -ForegroundColor Green
+        } else {
+            Write-Host "[OK] security-gate (build only)" -ForegroundColor Green
+        }
         exit 0
     }
 
@@ -51,6 +62,14 @@ try {
         $null = Invoke-WebRequest -Uri "$BaseUrl/api/v1/health" -UseBasicParsing -TimeoutSec 5
         $healthOk = $true
     } catch {
+        if ($Strict) {
+            Write-Host "[WARN] QEMU smokes skipped: API not reachable at $BaseUrl" -ForegroundColor Yellow
+            Write-Host "=== FSTEC strict (offline) ===" -ForegroundColor Cyan
+            & "$Root\scripts\smoke-desktop-security.ps1"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            Write-Host "[OK] security-gate (FSTEC offline strict only)" -ForegroundColor Green
+            exit 0
+        }
         Write-Host "[SKIP] QEMU smokes: API not reachable at $BaseUrl (use -SkipQemuSmokes for build-only CI parity)" -ForegroundColor Yellow
         exit 0
     }
@@ -70,11 +89,24 @@ try {
     $auditExit = $LASTEXITCODE
     if ($auditExit -ne 0) { exit $auditExit }
 
+    if ($Strict) {
+        Write-Host "=== FSTEC strict smokes ===" -ForegroundColor Cyan
+        & "$Root\scripts\smoke-ip-allowlist.ps1" -BaseUrl $BaseUrl
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+        & "$Root\scripts\smoke-dlp-mock.ps1" -SkipIfUnreachable
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+        & "$Root\scripts\smoke-desktop-security.ps1"
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+
+    # Last: rate-limit smoke triggers 429 and blocks subsequent logins for a window.
     & "$Root\scripts\smoke-rate-limit.ps1" -BaseUrl $BaseUrl
     $rateExit = $LASTEXITCODE
     if ($rateExit -ne 0) { exit $rateExit }
 
-    Write-Host "[OK] security-gate (build + QEMU smokes)" -ForegroundColor Green
+    Write-Host "[OK] security-gate (build + QEMU smokes$(if ($Strict) { ' + FSTEC strict' }))" -ForegroundColor Green
     exit 0
 } finally {
     Pop-Location

@@ -125,6 +125,7 @@ services:
       APP_PORT: 8080
       SECURITY_TIMING_NORMALIZATION_MIN_MS: "220"
       SECURITY_TIMING_NOT_FOUND_EXTRA_MS: "35"
+      SECURITY_TIMING_AUTH_FAILURE_EXTRA_MS: "80"
       DB_JDBC_URL: jdbc:postgresql://postgres-hot:5432/avandocmsg_hot
       DB_USER: avandocmsg
       DB_PASSWORD: avandocmsg

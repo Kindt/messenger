@@ -6,6 +6,8 @@ import com.avandocmsg.messenger.api.auth.dto.LoginOptionsResponse;
 import com.avandocmsg.messenger.api.auth.dto.RegisterRequest;
 import com.avandocmsg.messenger.api.auth.dto.RegisterResponse;
 import com.avandocmsg.messenger.api.auth.policy.AuthPolicyService;
+import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.api.security.TimingSensitivePaths;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -35,6 +37,7 @@ public class AuthResource {
     private final AuthService authService;
     private final AuthPolicyService authPolicyService;
     private final AuthRateLimiter rateLimiter;
+    private final AppConfig appConfig;
     private final UserMessageSource messages;
 
     @Inject
@@ -42,11 +45,13 @@ public class AuthResource {
         AuthService authService,
         AuthPolicyService authPolicyService,
         AuthRateLimiter rateLimiter,
+        AppConfig appConfig,
         UserMessageSource messages
     ) {
         this.authService = authService;
         this.authPolicyService = authPolicyService;
         this.rateLimiter = rateLimiter;
+        this.appConfig = appConfig;
         this.messages = messages;
     }
 
@@ -84,6 +89,10 @@ public class AuthResource {
     @ApiResponse(responseCode = "429", description = "Too many requests",
         content = @Content(schema = @Schema(implementation = ApiError.class)))
     public Response login(LoginRequest request, @Context HttpServletRequest httpRequest) {
+        return TimingSensitivePaths.respond(appConfig, () -> resolveLogin(request, httpRequest));
+    }
+
+    private Response resolveLogin(LoginRequest request, HttpServletRequest httpRequest) {
         if (!rateLimiter.allowLogin(AuthRateLimiter.clientIp(httpRequest))) {
             return Response.status(429)
                 .entity(new ApiError(429, messages.get("error.auth.rate_login")))
@@ -97,6 +106,7 @@ public class AuthResource {
         }
         var response = authService.login(new LoginRequest(username, request.password()));
         if (response == null) {
+            TimingSensitivePaths.padAuthFailure(appConfig);
             return Response.status(Response.Status.UNAUTHORIZED)
                 .entity(new ApiError(401, messages.get("error.auth.invalid_credentials")))
                 .build();
