@@ -8,7 +8,7 @@ export const DEFERRED_HEAVY_SCRIPTS = [
 ];
 
 /** Loaded on demand via import("/ui-lazy-call.mjs") in app.js (FR-121). */
-export const DEFERRED_CALL_SCRIPTS = ["ui-call-mesh.js", "ui-call-livekit.js"];
+export const DEFERRED_CALL_SCRIPTS = ["ui-call-pc.js", "ui-call-mesh.js", "ui-call-livekit.js"];
 
 /** @type {string[]} */
 export const BUNDLE_SCRIPTS = [

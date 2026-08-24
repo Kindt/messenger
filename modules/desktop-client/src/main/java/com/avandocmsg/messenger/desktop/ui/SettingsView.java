@@ -36,13 +36,15 @@ public final class SettingsView {
         var security = securityStore.read();
 
         root.setId(DesktopUiIds.SETTINGS_TABS);
-        root.getStyleClass().add("qip-settings-tabs");
+        root.getStyleClass().addAll("qip-settings-tabs", "qip-nav-rail-tabs");
+        root.setSide(javafx.geometry.Side.LEFT);
+        root.setTabMinWidth(52);
+        root.setTabMaxWidth(52);
         root.getTabs().add(tabGeneral(store, profileId, settings, onSaved));
         root.getTabs().add(tabProfile(runtime, onSaved));
         root.getTabs().add(tabNotifications(store, profileId, settings, securityStore, security, onSaved));
         root.getTabs().add(tabLinks(store, profileId, settings, onSaved));
         root.getTabs().add(tabSecurity(runtime, gate, securityStore, security));
-        root.setTabMinWidth(120);
     }
 
     private Tab tabGeneral(ProfileSettingsStore store, String profileId, ProfileSettings s, Runnable onSaved)
@@ -61,9 +63,7 @@ public final class SettingsView {
         updateFeed.setId(DesktopUiIds.SETTINGS_UPDATE_FEED);
         updateFeed.setPromptText("URL манифеста (пусто = demo-update-manifest.json)");
         var updateStatus = statusLabel("Версия клиента: " + DesktopVersions.CURRENT, DesktopUiIds.SETTINGS_UPDATE_STATUS);
-        var checkUpdate = new javafx.scene.control.Button("Проверить обновления");
-        checkUpdate.setId(DesktopUiIds.SETTINGS_UPDATE_CHECK);
-        checkUpdate.getStyleClass().add("qip-settings-btn-secondary");
+        var checkUpdate = iconAction("🔄", "Проверить обновления", DesktopUiIds.SETTINGS_UPDATE_CHECK, "qip-settings-btn-secondary");
         checkUpdate.setOnAction(e -> {
             try {
                 var feed = updateFeed.getText().isBlank() ? defaultDemoManifestUrl() : updateFeed.getText().trim();
@@ -73,9 +73,7 @@ public final class SettingsView {
                 updateStatus.setText("Ошибка: " + ex.getMessage());
             }
         });
-        var save = new javafx.scene.control.Button("Сохранить");
-        save.setId(DesktopUiIds.SETTINGS_SAVE);
-        save.getStyleClass().add("qip-settings-btn-primary");
+        var save = iconAction("💾", "Сохранить", DesktopUiIds.SETTINGS_SAVE, "qip-settings-btn-primary");
         save.setOnAction(e -> {
             try {
                 store.write(profileId, new ProfileSettings(
@@ -102,8 +100,7 @@ public final class SettingsView {
         );
         box.setPadding(new Insets(12));
         box.getStyleClass().add("qip-settings-panel");
-        var tab = new Tab("Общие", box);
-        tab.setId(DesktopUiIds.SETTINGS_GENERAL);
+        var tab = DesktopUiIcons.tab(DesktopUiIds.SETTINGS_GENERAL, "⚙", "Общие", box);
         return tab;
     }
 
@@ -117,13 +114,12 @@ public final class SettingsView {
 
     private Tab tabProfile(DesktopRuntime runtime, Runnable onSaved) {
         var name = new TextField(runtime.activeProfile().displayName());
-        var save = new javafx.scene.control.Button("Сохранить имя профиля");
+        var save = DesktopUiIcons.button("💾", "Сохранить имя профиля");
         save.setOnAction(e -> onSaved.run());
         var box = new VBox(10, fieldLabel("Отображаемое имя профиля"), name, save);
         box.setPadding(new Insets(12));
         box.getStyleClass().add("qip-settings-panel");
-        var tab = new Tab("Профиль", box);
-        tab.setId(DesktopUiIds.SETTINGS_PROFILE);
+        var tab = DesktopUiIcons.tab(DesktopUiIds.SETTINGS_PROFILE, "👤", "Профиль", box);
         return tab;
     }
 
@@ -144,7 +140,7 @@ public final class SettingsView {
         var sound = new CheckBox("Звук входящих сообщений");
         sound.setId(DesktopUiIds.SETTINGS_SOUND);
         sound.setSelected(security.soundNotifications());
-        var testPush = new javafx.scene.control.Button("Проверить уведомление");
+        var testPush = DesktopUiIcons.button("🔔", "Проверить уведомление");
         testPush.setId(DesktopUiIds.SETTINGS_NOTIFICATIONS_TEST);
         testPush.setDisable(!DesktopOsNotifications.isSupported());
         testPush.setOnAction(e -> DesktopOsNotifications.show(
@@ -154,7 +150,7 @@ public final class SettingsView {
         var policy = new ComboBox<String>();
         policy.getItems().addAll("notify", "auto", "disabled");
         policy.setValue(s.updatePolicy() == null ? "notify" : s.updatePolicy());
-        var save = new javafx.scene.control.Button("Сохранить");
+        var save = DesktopUiIcons.button("💾", "Сохранить политику уведомлений");
         save.setOnAction(e -> {
             try {
                 store.write(profileId, new ProfileSettings(
@@ -184,8 +180,7 @@ public final class SettingsView {
         var box = new VBox(10, push, sound, trayHint, testPush, fieldLabel("Политика обновлений клиента"), policy, save);
         box.setPadding(new Insets(12));
         box.getStyleClass().add("qip-settings-panel");
-        var tab = new Tab("Уведомления", box);
-        tab.setId(DesktopUiIds.SETTINGS_NOTIFICATIONS);
+        var tab = DesktopUiIcons.tab(DesktopUiIds.SETTINGS_NOTIFICATIONS, "🔔", "Уведомления", box);
         return tab;
     }
 
@@ -195,7 +190,7 @@ public final class SettingsView {
             .toString();
         var path = new TextField(s.attachmentsRoot() == null ? defaultPath : s.attachmentsRoot());
         path.setId(DesktopUiIds.SETTINGS_ATTACH_PATH);
-        var save = new javafx.scene.control.Button("Сохранить путь вложений");
+        var save = DesktopUiIcons.button("💾", "Сохранить путь вложений");
         save.setOnAction(e -> {
             try {
                 store.write(profileId, new ProfileSettings(
@@ -210,8 +205,7 @@ public final class SettingsView {
         var box = new VBox(10, fieldLabel("Корень для вложений (как web Downloads/KorusMessenger)"), path, save);
         box.setPadding(new Insets(12));
         box.getStyleClass().add("qip-settings-panel");
-        var tab = new Tab("Ссылки и файлы", box);
-        tab.setId(DesktopUiIds.SETTINGS_LINKS);
+        var tab = DesktopUiIcons.tab(DesktopUiIds.SETTINGS_LINKS, "📎", "Ссылки и файлы", box);
         return tab;
     }
 
@@ -251,8 +245,7 @@ public final class SettingsView {
         var ent = hint(gate.isEnabled(CapabilityGate.Feature.ENTERPRISE_AUTH)
             ? "Enterprise auth: включено"
             : "Enterprise auth: не в составе сервера");
-        var save = new javafx.scene.control.Button("Сохранить политику безопасности");
-        save.setId(DesktopUiIds.SETTINGS_SECURITY_SAVE);
+        var save = iconAction("💾", "Сохранить политику безопасности", DesktopUiIds.SETTINGS_SECURITY_SAVE, "qip-settings-btn-primary");
         save.setOnAction(e -> {
             try {
                 var latest = securityStore.read();
@@ -262,7 +255,7 @@ public final class SettingsView {
                 throw new IllegalStateException(ex);
             }
         });
-        var fstecMax = new javafx.scene.control.Button("Профиль «максимум ФСТЭК»");
+        var fstecMax = DesktopUiIcons.button("🛡", "Профиль «максимум ФСТЭК»");
         fstecMax.setOnAction(e -> {
             try {
                 var max = SecuritySettings.fstecMaximum();
@@ -291,9 +284,14 @@ public final class SettingsView {
         );
         box.setPadding(new Insets(12));
         box.getStyleClass().add("qip-settings-panel");
-        var tab = new Tab("Безопасность", box);
-        tab.setId(DesktopUiIds.SETTINGS_SECURITY);
+        var tab = DesktopUiIcons.tab(DesktopUiIds.SETTINGS_SECURITY, "🔒", "Безопасность", box);
         return tab;
+    }
+
+    private static javafx.scene.control.Button iconAction(String icon, String tooltip, String fxId, String styleClass) {
+        var btn = DesktopUiIcons.button(icon, tooltip, styleClass);
+        btn.setId(fxId);
+        return btn;
     }
 
     private static CheckBox check(String text, boolean selected) {

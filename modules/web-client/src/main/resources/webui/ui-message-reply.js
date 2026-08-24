@@ -52,7 +52,7 @@
       sn.textContent = ctx.L("ui.message.deleted");
       sn.classList.add("msg-reply-quote-deleted");
     } else if (rp.encrypted) {
-      sn.textContent = ctx.L("chat.encryptedE2eePreview");
+      sn.textContent = ctx.L("e2ee.encryptedE2eePreview");
     } else {
       sn.textContent = rp.snippet || ctx.L("ui.message.default");
     }

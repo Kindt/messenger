@@ -64,7 +64,7 @@
 
   function ensureCallPanelOpen() {
     state.callPanelOpen = true;
-    state.callMode = "mesh";
+    state.callMode = "korus";
   }
 
   function ensureMeetingsOpen() {
@@ -268,8 +268,8 @@
   const PENDING_MEET_KEY = "korus_pending_meet";
   const PENDING_GUEST_KEY = "korus_pending_guest";
   const PENDING_CONF_KEY = "korus_pending_conf";
-  const PENDING_MESH_SESSION_KEY = "korus_pending_mesh_session";
-  const PENDING_MESH_MODE_KEY = "korus_pending_mesh_mode";
+  const PENDING_CALL_SESSION_KEY = "korus_pending_call_session";
+  const PENDING_CALL_MODE_KEY = "korus_pending_call_mode";
   const LAST_PUBLIC_LINK_KEY = "korus_last_public_link";
   const DRAFT_KEY_PREFIX = "korus_draft_";
   const SIDEBAR_WIDTH_KEY = "korus-sidebar-width";
@@ -296,7 +296,14 @@
     wsReconnectAttempt: 0,
     sidebarSearch: "",
     callPanelOpen: false,
-    callMode: "mesh",
+    callMode: "korus",
+    callState: "idle",
+    callJoin: null,
+    callChatId: null,
+    callError: null,
+    callRemoteStream: null,
+    callRemoteParticipantId: null,
+    callController: null,
     meetingsMode: "jitsi",
     activeConference: null,
     activeConferenceByChat: {},
@@ -753,6 +760,7 @@
   var uiCallAdr = window.KorusUiCallAdr;
   var callMeshImportPromise = null;
   var callLivekitImportPromise = null;
+  var callPcImportPromise = null;
   /** Bump when ui-lazy-call.mjs or call lazy-load contract changes (cache-bust after MIME fix). */
   var lazyCallModuleUrl = "/ui-lazy-call.mjs?v=3";
 
@@ -768,6 +776,16 @@
       });
     }
     return callMeshImportPromise;
+  }
+
+  function ensureCallPcModule() {
+    if (window.KorusUiCallPc) return Promise.resolve(window.KorusUiCallPc);
+    if (!callPcImportPromise) {
+      callPcImportPromise = import(lazyCallModuleUrl).then(function (m) {
+        return m.loadCallPc();
+      });
+    }
+    return callPcImportPromise;
   }
 
   function getMeshRecordCtx() {
@@ -866,6 +884,7 @@
     isAvatarEvent: function () { return false; },
     isChatAvatarEvent: function () { return false; },
     isReadReceiptEvent: function () { return false; },
+    isCallSessionEvent: function () { return false; },
   };
   var uiRtcUtils = window.KorusUiRtcUtils || {
     sendRtcSignal: function (ws, chatId, payload) {
@@ -2492,23 +2511,28 @@
     stopCallMedia();
   }
 
+  function terminateActiveCall() {
+    var leavePromise = Promise.resolve();
+    if (window.KorusUiCallLivekit) KorusUiCallLivekit.disconnectRoom(state);
+    if (state.callController) {
+      try {
+        leavePromise = Promise.resolve(state.callController.leave()).catch(function () {});
+      } catch (e) {}
+    }
+    stopCallMedia();
+    state.callState = "idle";
+    state.callRemoteStream = null;
+    state.callRemoteParticipantId = null;
+    state.callJoin = null;
+    state.callChatId = null;
+    return leavePromise;
+  }
+
   async function endChatCall() {
     if (state.callPanelToggleBusy) return;
-    if (!state.callPanelOpen) return;
-    state.callPanelOpen = false;
     state.callPanelToggleBusy = true;
     try {
-      if (window.KorusUiCallMeshRecord) {
-        await KorusUiCallMeshRecord.finishAll(getMeshRecordCtx());
-      } else {
-        state.meshCallSessionId = null;
-        state.meshAuditRecordingId = null;
-        state.meshUserRecordingId = null;
-        state.meshUserRecordingActive = false;
-        state.meshCompositeRecording = false;
-      }
-      if (window.KorusUiCallLivekit) KorusUiCallLivekit.disconnectRoom(state);
-      stopMeshCallMedia();
+      await terminateActiveCall();
       render();
     } finally {
       state.callPanelToggleBusy = false;
@@ -2760,132 +2784,177 @@
     }
   }
 
-  async function startChatCall(mediaMode) {
-    if (!state.selectedId || state.selectedId === state.savedChatId) {
-      state.error = L("conference.selectChat");
-      render();
-      return;
+  function callErrorDescriptor(error) {
+    var name = error && error.name;
+    if (name === "NotAllowedError" || name === "SecurityError") {
+      return { title: "ui.call.error.permissionTitle", hint: "ui.call.error.permissionHint" };
     }
-    if (!meshCallChatReady()) {
-      state.error = L("conference.meshNeedsChat");
-      render();
-      return;
+    if (name === "NotFoundError" || name === "OverconstrainedError") {
+      return { title: "ui.call.error.deviceMissingTitle", hint: "ui.call.error.deviceMissingHint" };
     }
-    state.callMode = "mesh";
-    state.callPanelOpen = true;
-    state.callPanelToggleBusy = true;
-    render();
-    try {
-      if (state.activeConference) {
-        await leaveActiveConference();
+    if (name === "NotReadableError" || name === "AbortError") {
+      return { title: "ui.call.error.deviceBusyTitle", hint: "ui.call.error.deviceBusyHint" };
+    }
+    return { title: "ui.call.error.connectionTitle", hint: "ui.call.error.connectionHint" };
+  }
+
+  function attachKorusCallMedia() {
+    var local = document.querySelector('[data-testid="call-local-video"]');
+    if (local) local.srcObject = state.callStream || null;
+    var remoteVideo = document.querySelector('[data-testid="call-remote-video"]');
+    if (remoteVideo) remoteVideo.srcObject = state.callRemoteStream || null;
+    var remoteAudio = document.querySelector('[data-testid="call-remote-audio"]');
+    if (remoteAudio) {
+      remoteAudio.srcObject = state.callRemoteStream || null;
+      var play = remoteAudio.play && remoteAudio.play();
+      if (play && typeof play.catch === "function") {
+        play.catch(function () {});
       }
-      if (window.KorusUiCallLivekit) KorusUiCallLivekit.disconnectRoom(state);
-      await ensureCallMeshModule();
-      await ensureCallAudio();
-      if (mediaMode === "video") {
-        await addCallVideoTrack();
-      } else {
-        state.callMediaMode = "audio";
-        state.callCamOn = false;
-      }
-      await loadRtcPeerIds();
-      await startMeshCallSession(mediaMode);
-      if (state.meshCompositeRecording && state.meshLivekitToken) {
-        state.callMode = "livekit";
-        await ensureCallLivekitModule();
-        if (mediaMode === "video") {
-          state.callMediaMode = "video";
-          state.callCamOn = true;
-        } else {
-          state.callMediaMode = "audio";
-          state.callCamOn = false;
-        }
-        await KorusUiCallLivekit.joinGroupCall(state, apiJson, {
-          room_name: state.meshLivekitRoom,
-          livekit_url: state.meshLivekitUrl,
-          access_token: state.meshLivekitToken,
-        });
-        broadcastMeshSession();
-        return;
-      }
-      startThumbCapture();
-      attachLocalVideo();
-      if (window.KorusUiCallMesh) {
-        KorusUiCallMesh.ensureSpeakerMonitor(state);
-        KorusUiCallMesh.syncAllSlots(state);
-      }
-      setTimeout(function () {
-        beginRtcMesh(true);
-        broadcastMeshSession();
-      }, 120);
-    } catch (e) {
-      state.error = localErr(e.message) || L("conference.meshUnavailable");
-    } finally {
-      state.callPanelToggleBusy = false;
-      render();
     }
   }
 
-  async function joinMeshCallFromDeepLink(sessionId, mediaMode) {
-    if (!state.selectedId || !sessionId || state.meshCallSessionId) return;
-    if (!meshCallChatReady()) {
-      state.error = L("conference.meshNeedsChat");
+  function syncKorusCallState(snapshot) {
+    state.callState = snapshot.status;
+    state.callJoin = snapshot.join;
+    state.callChatId = snapshot.chatId;
+    state.callStream = snapshot.localStream;
+    state.callScreenStream = snapshot.screenStream;
+    state.callMicOn = snapshot.micOn;
+    state.callCamOn = snapshot.cameraOn;
+    state.callError = snapshot.error ? callErrorDescriptor(snapshot.error) : null;
+    state.callPanelToggleBusy =
+      snapshot.status === "acquiring"
+      || snapshot.status === "connecting"
+      || snapshot.status === "leaving";
+    render();
+    setTimeout(attachKorusCallMedia, 0);
+  }
+
+  function acceptKorusRemoteTrack(event) {
+    var stream = event && event.streams && event.streams[0];
+    if (stream) {
+      state.callRemoteStream = stream;
+    } else if (event && event.track) {
+      if (!state.callRemoteStream) state.callRemoteStream = new MediaStream();
+      var present = state.callRemoteStream.getTracks().some(function (track) {
+        return track.id === event.track.id;
+      });
+      if (!present) state.callRemoteStream.addTrack(event.track);
+    }
+    if (event && event.track) {
+      event.track.onended = function () {
+        if (state.callRemoteStream) state.callRemoteStream.removeTrack(event.track);
+        render();
+        setTimeout(attachKorusCallMedia, 0);
+      };
+    }
+    render();
+    setTimeout(attachKorusCallMedia, 0);
+  }
+
+  function handleKorusParticipantLeft(signal) {
+    if (state.callRemoteStream && typeof state.callRemoteStream.getTracks === "function") {
+      state.callRemoteStream.getTracks().forEach(function (track) {
+        if (track && typeof track.stop === "function") track.stop();
+      });
+    }
+    state.callRemoteStream = null;
+    state.callRemoteParticipantId = null;
+    render();
+    setTimeout(attachKorusCallMedia, 0);
+  }
+
+  async function ensureKorusCallController() {
+    if (state.callController) return state.callController;
+    var calls = await ensureCallPcModule();
+    state.callController = calls.createSessionController({
+      api: calls.createApi(apiJson),
+      mediaDevices: navigator.mediaDevices,
+      audioReceiveSlots: 3,
+      videoReceiveSlots: 7,
+      onState: syncKorusCallState,
+      onRemoteTrack: acceptKorusRemoteTrack,
+      onParticipantLeft: handleKorusParticipantLeft,
+    });
+    return state.callController;
+  }
+
+  async function startChatCall(mediaMode) {
+    if (!state.selectedId || state.selectedId === state.savedChatId) {
+      state.callPanelOpen = true;
+      state.callMode = "korus";
+      state.callState = "idle";
       render();
       return;
     }
-    state.callMode = "mesh";
+    if (!state.tokens) {
+      state.callError = {
+        title: "ui.call.error.forbiddenTitle",
+        hint: "ui.call.error.forbiddenHint",
+      };
+      state.callState = "error";
+      render();
+      return;
+    }
+    if (
+      state.callController
+      && state.callChatId
+      && state.callChatId !== state.selectedId
+      && state.callState !== "idle"
+      && state.callState !== "error"
+    ) {
+      state.statusMessage = L("ui.call.action.leaveCurrentFirst");
+      render();
+      return;
+    }
+    state.callMode = "korus";
     state.callPanelOpen = true;
     state.callPanelToggleBusy = true;
+    state.callError = null;
     render();
     try {
       if (state.activeConference) {
         await leaveActiveConference();
       }
       if (window.KorusUiCallLivekit) KorusUiCallLivekit.disconnectRoom(state);
-      await ensureCallMeshModule();
-      await ensureCallAudio();
-      var mode = mediaMode === "video" ? "video" : "audio";
-      if (mode === "video") {
-        await addCallVideoTrack();
-      } else {
-        state.callMediaMode = "audio";
-        state.callCamOn = false;
-      }
-      await loadRtcPeerIds();
-      await joinMeshCallSession(sessionId);
-      if (state.meshCompositeRecording && state.meshLivekitToken) {
-        state.callMode = "livekit";
-        await ensureCallLivekitModule();
-        if (mode === "video") {
-          state.callMediaMode = "video";
-          state.callCamOn = true;
-        } else {
-          state.callMediaMode = "audio";
-          state.callCamOn = false;
-        }
-        await KorusUiCallLivekit.joinGroupCall(state, apiJson, {
-          room_name: state.meshLivekitRoom,
-          livekit_url: state.meshLivekitUrl,
-          access_token: state.meshLivekitToken,
-        });
-        broadcastMeshSession();
-        return;
-      }
-      startThumbCapture();
-      attachLocalVideo();
-      if (window.KorusUiCallMesh) {
-        KorusUiCallMesh.ensureSpeakerMonitor(state);
-        KorusUiCallMesh.syncAllSlots(state);
-      }
-      setTimeout(function () {
-        beginRtcMesh(true);
-        broadcastMeshSession();
-      }, 120);
+      var controller = await ensureKorusCallController();
+      var chat = currentChat();
+      var callKind = chat && chat.type === "p2p" ? "direct" : "group";
+      await controller.start(
+        state.selectedId,
+        mediaMode === "video" ? "video" : "audio",
+        null,
+        callKind
+      );
     } catch (e) {
-      state.error = localErr(e.message) || L("conference.meshUnavailable");
+      state.callError = callErrorDescriptor(e);
+      state.callState = "error";
     } finally {
       state.callPanelToggleBusy = false;
       render();
+      setTimeout(attachKorusCallMedia, 0);
+    }
+  }
+
+  async function joinCallFromDeepLink(sessionId, mediaMode) {
+    if (!state.selectedId || !sessionId || !state.tokens) return;
+    state.callMode = "korus";
+    state.callPanelOpen = true;
+    state.callPanelToggleBusy = true;
+    render();
+    try {
+      if (state.activeConference) await leaveActiveConference();
+      if (window.KorusUiCallLivekit) KorusUiCallLivekit.disconnectRoom(state);
+      var mode = mediaMode === "video" ? "video" : "audio";
+      var controller = await ensureKorusCallController();
+      await controller.start(state.selectedId, mode, sessionId);
+    } catch (e) {
+      state.callError = callErrorDescriptor(e);
+      state.callState = "error";
+    } finally {
+      state.callPanelToggleBusy = false;
+      render();
+      setTimeout(attachKorusCallMedia, 0);
     }
   }
 
@@ -3856,6 +3925,9 @@
           .catch(function () {});
       }
     });
+    window.addEventListener("pagehide", function () {
+      terminateActiveCall();
+    });
   }
 
   async function createAndUploadKeyPackage() {
@@ -3999,6 +4071,7 @@
   }
 
   function sessionExpired() {
+    terminateActiveCall();
     clearTokens();
     closeWs();
     state.selectedId = null;
@@ -4235,7 +4308,7 @@
     state.incomingRtcCall = null;
     stopIncomingCallRing();
     state.busy = true;
-    state.error = null;
+    state.callError = null;
     render();
     try {
       if (state.selectedId !== inc.chatId) {
@@ -4245,57 +4318,39 @@
         await leaveActiveConference();
       }
       state.callPanelOpen = true;
-      state.callMode = "mesh";
-      await loadChatConferences();
-      await ensureCallMeshModule();
-      await ensureCallAudio();
-      await loadRtcPeerIds();
-      if (inc.meshSessionId) {
-        await joinMeshCallSession(inc.meshSessionId);
-      } else {
-        await startMeshCallSession(state.callCamOn ? "video" : "audio");
-      }
-      if (state.meshCompositeRecording && state.meshLivekitToken) {
-        state.callMode = "livekit";
-        await ensureCallLivekitModule();
-        await KorusUiCallLivekit.joinGroupCall(state, apiJson, {
-          room_name: state.meshLivekitRoom,
-          livekit_url: state.meshLivekitUrl,
-          access_token: state.meshLivekitToken,
-        });
-        state.statusMessage = L("rtc.callAccepted");
-        return;
-      }
-      startThumbCapture();
-      var from = inc.fromUserId;
-      var pc = getOrCreatePeerConnection(from);
-      await pc.setRemoteDescription({ type: "offer", sdp: inc.sdp });
-      await flushPendingIceCandidates(from);
-      var ans = await pc.createAnswer();
-      await pc.setLocalDescription(ans);
-      await flushPendingIceCandidates(from);
-      sendRtcSignal({ kind: "answer", targetUserId: from, sdp: ans.sdp }, inc.chatId);
-      attachLocalVideo();
-      if (window.KorusUiCallMesh) {
-        KorusUiCallMesh.ensureSpeakerMonitor(state);
-        KorusUiCallMesh.syncAllSlots(state);
-      }
-      state.statusMessage = L("rtc.callAccepted");
+      state.callMode = "korus";
+      var controller = await ensureKorusCallController();
+      await controller.start(
+        inc.chatId,
+        inc.mediaIntent === "video" ? "video" : "audio",
+        inc.sessionId
+      );
+      state.statusMessage = L("ui.call.state.connected");
     } catch (e) {
-      state.error = e.message || L("rtc.acceptFailed");
+      state.callError = callErrorDescriptor(e);
+      state.callState = "error";
     } finally {
       state.busy = false;
       render();
     }
   }
 
-  function declineIncomingRtcCall() {
+  async function declineIncomingRtcCall() {
     var inc = state.incomingRtcCall;
     if (!inc) return;
-    sendRtcSignal({ kind: "hangup", targetUserId: inc.fromUserId }, inc.chatId);
-    state.incomingRtcCall = null;
-    stopIncomingCallRing();
+    state.busy = true;
     render();
+    try {
+      var calls = await ensureCallPcModule();
+      await calls.createApi(apiJson).decline(inc.chatId, inc.sessionId);
+    } catch (e) {
+      state.error = (e && e.message) || L("ui.call.error.unknownTitle");
+    } finally {
+      state.busy = false;
+      state.incomingRtcCall = null;
+      stopIncomingCallRing();
+      render();
+    }
   }
 
   function formatInstantLabel(iso) {
@@ -4785,6 +4840,7 @@
         return;
       }
       if (p.kind === "offer" && p.sdp) {
+        if (state.callMode === "korus") return;
         if (!state.callPanelOpen || env.chatId !== state.selectedId) {
           state.incomingRtcCall = {
             chatId: env.chatId,
@@ -4833,19 +4889,34 @@
     }
   }
 
-  async function toggleCallPanel() {
-    if (state.callPanelToggleBusy) return;
-    if (state.callPanelOpen) {
-      await endChatCall();
-      return;
-    }
-    state.callPanelOpen = true;
-    if (!meshCallChatReady()) {
-      state.error = L("conference.meshNeedsChat");
+  function handleCallSessionEvent(event) {
+    var me = jwtSub(state.tokens && state.tokens.access_token);
+    if (!event || !me) return;
+    if (event.type === "call.invited") {
+      if (event.caller_user_id === me) return;
+      if (state.callJoin && state.callJoin.session_id === event.session_id) return;
+      state.incomingRtcCall = {
+        chatId: event.chat_id,
+        fromUserId: event.caller_user_id,
+        sessionId: event.session_id,
+        mediaIntent: event.media_intent === "video" ? "video" : "audio",
+      };
+      syncIncomingCallRing();
       render();
       return;
     }
-    await startChatCall(state.callCamOn ? "video" : "audio");
+    if (event.type === "call.invitation_declined") {
+      state.statusMessage = L("ui.call.notice.declined");
+      render();
+    }
+  }
+
+  async function toggleCallPanel() {
+    if (state.callPanelToggleBusy) return;
+    state.callPanelOpen = !state.callPanelOpen;
+    state.callMode = "korus";
+    render();
+    if (state.callPanelOpen) setTimeout(attachKorusCallMedia, 0);
   }
 
   function attachLocalVideo() {
@@ -4878,6 +4949,10 @@
   }
 
   async function toggleCallMic() {
+    if (state.callMode === "korus" && state.callController) {
+      state.callController.toggleMicrophone();
+      return;
+    }
     if (!state.callStream) return;
     state.callMicOn = !state.callMicOn;
     state.callStream.getAudioTracks().forEach(function (t) {
@@ -4888,6 +4963,16 @@
   }
 
   async function toggleCallCam() {
+    if (state.callMode === "korus" && state.callController) {
+      try {
+        await state.callController.toggleCamera();
+      } catch (e) {
+        state.callError = callErrorDescriptor(e);
+        state.callState = "error";
+        render();
+      }
+      return;
+    }
     if (!state.callStream) await ensureCallAudio();
     if (!state.callStream.getVideoTracks().length) {
       try {
@@ -4916,6 +5001,15 @@
   }
 
   async function toggleScreenShare() {
+    if (state.callMode === "korus" && state.callController) {
+      try {
+        await state.callController.toggleScreen();
+      } catch (e) {
+        state.statusMessage = L("ui.call.notice.screenCancelled");
+        render();
+      }
+      return;
+    }
     if (state.callScreenStream) {
       await stopScreenShareInternal();
       return;
@@ -4976,6 +5070,10 @@
 
   function isConferenceChangeEvent(o) {
     return wsEvents.isConferenceChangeEvent(o);
+  }
+
+  function isCallSessionEvent(o) {
+    return wsEvents.isCallSessionEvent(o);
   }
 
   function isTypingEvent(o) {
@@ -7625,6 +7723,8 @@
       L: L,
       jwtSub: jwtSub,
       sendHeartbeatThrottled: sendHeartbeatThrottled,
+      isCallSessionEvent: isCallSessionEvent,
+      handleCallSessionEvent: handleCallSessionEvent,
       handleRtcEnvelope: handleRtcEnvelope,
       isTypingEvent: isTypingEvent,
       noteTyping: noteTyping,
@@ -8082,14 +8182,15 @@
   }
 
   function sidebarTabButton(icon, labelKey, ruFallback, enFallback, active, testId, onClick) {
-    var btn = el("button", "sidebar-tab" + (active ? " active" : ""));
+    var btn = el("button", "sidebar-tab sidebar-tab--icon-only" + (active ? " active" : ""));
     btn.type = "button";
     var label = uiLabelFallback(labelKey, ruFallback, enFallback);
     btn.title = label;
     btn.setAttribute("aria-label", label);
     btn.setAttribute("data-testid", testId);
     btn.appendChild(el("span", "sidebar-tab-icon", icon));
-    btn.appendChild(el("span", "sidebar-tab-label", label));
+    var labelEl = el("span", "sidebar-tab-label visually-hidden", label);
+    btn.appendChild(labelEl);
     btn.onclick = onClick;
     return btn;
   }
@@ -8478,7 +8579,7 @@
     stopHeartbeat();
     stopTtlRenderTicker();
     clearDeferredUiTimers();
-    stopCallMedia();
+    await terminateActiveCall();
     exportPollGeneration++;
     chatPreviewHydrateGen++;
     state.exportBusy = false;
@@ -8532,7 +8633,14 @@
     state.chatBans = null;
     state.chatHeaderMembers = null;
     state.chatHeaderMembersChatId = null;
-    state.callMode = "mesh";
+    state.callMode = "korus";
+    state.callState = "idle";
+    state.callJoin = null;
+    state.callChatId = null;
+    state.callError = null;
+    state.callRemoteStream = null;
+    state.callRemoteParticipantId = null;
+    state.callController = null;
     state.meetingsMode = "jitsi";
     state.activeConference = null;
     state.activeConferenceByChat = {};
@@ -8902,6 +9010,272 @@
     shell.appendChild(panel);
   }
 
+  function callTextButton(icon, label, testId, onClick, options) {
+    var config = options || {};
+    var button = el("button", "btn call-action-button" + (config.primary ? " btn-primary" : " btn-ghost"));
+    button.type = "button";
+    button.appendChild(el("span", "call-action-icon", icon));
+    button.appendChild(el("span", "call-action-label", label));
+    button.setAttribute("data-testid", testId);
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.disabled = !!config.disabled;
+    button.onclick = onClick;
+    return button;
+  }
+
+  function callInitials(value) {
+    return String(value || "?")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map(function (part) { return part.charAt(0).toUpperCase(); })
+      .join("") || "?";
+  }
+
+  function korusCallStatusCopy() {
+    var status = state.callState || "idle";
+    var labels = {
+      acquiring: ["ui.call.state.acquiring", "ui.call.state.acquiringHint"],
+      connecting: ["ui.call.state.connecting", "ui.call.state.connectingHint"],
+      connected: ["ui.call.state.connected", null],
+      reconnecting: ["ui.call.state.reconnecting", "ui.call.state.reconnectingHint"],
+      leaving: ["ui.call.state.leaving", null],
+    };
+    return labels[status] || [null, null];
+  }
+
+  function appendKorusCallStatus(content) {
+    var copy = korusCallStatusCopy();
+    if (!copy[0]) return;
+    var status = el("div", "call-status", L(copy[0]));
+    status.setAttribute("data-testid", "call-status");
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    status.setAttribute("aria-atomic", "true");
+    content.appendChild(status);
+    if (copy[1]) {
+      var detail = el("p", "call-status-detail", L(copy[1]));
+      detail.setAttribute("data-testid", "call-status-detail");
+      content.appendChild(detail);
+    }
+  }
+
+  function appendKorusCallIdle(content) {
+    var ready = !!(state.selectedId && state.selectedId !== state.savedChatId && state.tokens);
+    var block = el("section", "call-state call-idle");
+    block.setAttribute("data-testid", ready ? "call-idle" : "call-empty");
+    var titleKey = ready ? "ui.call.state.idleTitle" : "ui.call.empty.title";
+    var hintKey = ready ? "ui.call.state.idleHint" : "ui.call.empty.hint";
+    var title = el("h3", "call-state-title", L(titleKey));
+    title.setAttribute("data-testid", ready ? "call-idle-title" : "call-empty-title");
+    block.appendChild(title);
+    var hint = el("p", "call-state-hint", L(hintKey));
+    hint.setAttribute("data-testid", ready ? "call-idle-hint" : "call-empty-hint");
+    block.appendChild(hint);
+    if (ready) {
+      var actions = el("div", "call-idle-actions");
+      actions.appendChild(
+        callTextButton("📞", L("ui.call.action.startAudio"), "call-start-audio", function () {
+          startChatCall("audio");
+        }, { primary: true })
+      );
+      actions.appendChild(
+        callTextButton("📹", L("ui.call.action.startVideo"), "call-start-video", function () {
+          startChatCall("video");
+        })
+      );
+      block.appendChild(actions);
+    }
+    content.appendChild(block);
+  }
+
+  function appendKorusCallError(content) {
+    var descriptor = state.callError || {
+      title: "ui.call.error.unknownTitle",
+      hint: "ui.call.error.unknownHint",
+    };
+    var box = el("section", "call-state call-error");
+    box.setAttribute("data-testid", "call-error");
+    box.setAttribute("role", "alert");
+    var title = el("h3", "call-state-title", L(descriptor.title));
+    title.setAttribute("data-testid", "call-error-title");
+    box.appendChild(title);
+    var hint = el("p", "call-state-hint", L(descriptor.hint));
+    hint.setAttribute("data-testid", "call-error-hint");
+    box.appendChild(hint);
+    var actions = el("div", "call-error-actions");
+    actions.appendChild(
+      callTextButton("↻", L("ui.call.action.retry"), "call-error-retry", function () {
+        if (state.callController) {
+          state.callController.retry().catch(function (error) {
+            state.callError = callErrorDescriptor(error);
+            render();
+          });
+        }
+      }, { primary: true })
+    );
+    actions.appendChild(
+      callTextButton("←", L("ui.call.action.back"), "call-error-back", function () {
+        if (state.callController) {
+          state.callController.cancel();
+        } else {
+          state.callState = "idle";
+          state.callError = null;
+          render();
+        }
+      })
+    );
+    box.appendChild(actions);
+    content.appendChild(box);
+  }
+
+  function appendKorusCallMedia(content) {
+    var live = el("section", "call-live-stage");
+    var stage = el("div", "call-stage");
+    stage.setAttribute("data-testid", "call-stage");
+    var local = el("div", "call-main-wrap call-local-participant");
+    local.setAttribute("data-testid", "call-local-participant");
+    local.setAttribute("data-participant-id", "local");
+    var localAvatar = el("div", "call-local-avatar", callInitials(state.myDisplayName || "K"));
+    if (state.callCamOn) localAvatar.className += " is-hidden";
+    localAvatar.setAttribute("data-testid", "call-local-avatar");
+    local.appendChild(localAvatar);
+    var localVideo = document.createElement("video");
+    localVideo.className = "call-video";
+    localVideo.autoplay = true;
+    localVideo.playsInline = true;
+    localVideo.muted = true;
+    localVideo.setAttribute("playsinline", "");
+    localVideo.setAttribute("data-testid", "call-local-video");
+    local.appendChild(localVideo);
+    stage.appendChild(local);
+    if (state.callScreenStream) {
+      var share = el("div", "call-screen-status", L("ui.call.participants.sharing"));
+      share.setAttribute("data-testid", "call-screen-status");
+      share.appendChild(
+        callTextButton("⏹", L("ui.call.action.stopScreen"), "call-screen-status-stop", function () {
+          toggleScreenShare();
+        })
+      );
+      stage.appendChild(share);
+    }
+    live.appendChild(stage);
+
+    var remotes = el("div", "call-remotes");
+    remotes.setAttribute("data-testid", "call-remote-participants");
+    remotes.setAttribute("role", "list");
+    if (!state.callRemoteStream || !state.callRemoteStream.getTracks().length) {
+      var empty = el("div", "call-state call-remote-empty");
+      empty.setAttribute("data-testid", "call-remote-empty");
+      var emptyTitle = el("h3", "call-state-title", L("ui.call.participants.aloneTitle"));
+      emptyTitle.setAttribute("data-testid", "call-remote-empty-title");
+      empty.appendChild(emptyTitle);
+      var emptyHint = el("p", "call-state-hint", L("ui.call.participants.aloneHint"));
+      emptyHint.setAttribute("data-testid", "call-remote-empty-hint");
+      empty.appendChild(emptyHint);
+      remotes.appendChild(empty);
+    } else {
+      var participantId = state.callRemoteParticipantId || "remote";
+      var slot = el("div", "rtc-remote-slot");
+      slot.setAttribute("data-testid", "call-remote-participant");
+      slot.setAttribute("data-participant-id", participantId);
+      slot.setAttribute("role", "listitem");
+      var label = el("div", "rtc-remote-label", L("ui.call.participants.remote"));
+      label.setAttribute("data-testid", "call-remote-label");
+      label.setAttribute("data-participant-id", participantId);
+      slot.appendChild(label);
+      var remoteVideo = document.createElement("video");
+      remoteVideo.className = "call-video rtc-remote-video";
+      remoteVideo.autoplay = true;
+      remoteVideo.playsInline = true;
+      remoteVideo.muted = true;
+      remoteVideo.setAttribute("playsinline", "");
+      remoteVideo.setAttribute("data-testid", "call-remote-video");
+      remoteVideo.setAttribute("data-participant-id", participantId);
+      slot.appendChild(remoteVideo);
+      var remoteAudio = document.createElement("audio");
+      remoteAudio.autoplay = true;
+      remoteAudio.setAttribute("data-testid", "call-remote-audio");
+      remoteAudio.setAttribute("data-participant-id", participantId);
+      slot.appendChild(remoteAudio);
+      remotes.appendChild(slot);
+    }
+    live.appendChild(remotes);
+    content.appendChild(live);
+  }
+
+  function appendKorusCallToolbar(panel) {
+    var connected =
+      state.callState === "connecting"
+      || state.callState === "connected"
+      || state.callState === "reconnecting";
+    if (!connected) return;
+    var bar = el("div", "call-toolbar");
+    bar.setAttribute("data-testid", "call-toolbar");
+    bar.setAttribute("role", "toolbar");
+    bar.setAttribute("aria-label", L("ui.call.title"));
+    var mic = callTextButton(
+      state.callMicOn ? "🎤" : "🔇",
+      L(state.callMicOn ? "ui.call.action.muteMicrophone" : "ui.call.action.unmuteMicrophone"),
+      "call-mic-toggle",
+      function () { toggleCallMic(); }
+    );
+    mic.setAttribute("aria-pressed", state.callMicOn ? "true" : "false");
+    bar.appendChild(mic);
+    var cam = callTextButton(
+      "📷",
+      L(state.callCamOn ? "ui.call.action.turnCameraOff" : "ui.call.action.turnCameraOn"),
+      "call-cam-toggle",
+      function () { toggleCallCam(); }
+    );
+    cam.setAttribute("aria-pressed", state.callCamOn ? "true" : "false");
+    bar.appendChild(cam);
+    var screen = callTextButton(
+      "🖥",
+      L(state.callScreenStream ? "ui.call.action.stopScreen" : "ui.call.action.shareScreen"),
+      "call-screen-toggle",
+      function () { toggleScreenShare(); },
+      { disabled: state.callState !== "connected" }
+    );
+    screen.setAttribute("aria-pressed", state.callScreenStream ? "true" : "false");
+    bar.appendChild(screen);
+    bar.appendChild(
+      callTextButton("📵", L("ui.call.action.leave"), "call-hangup", function () {
+        endChatCall();
+      })
+    );
+    panel.appendChild(bar);
+  }
+
+  function renderKorusCallPanelContent(panel, content) {
+    appendKorusCallStatus(content);
+    if (state.callState === "idle") {
+      appendKorusCallIdle(content);
+      return;
+    }
+    if (state.callState === "error") {
+      appendKorusCallError(content);
+      return;
+    }
+    if (
+      state.callState === "connecting"
+      || state.callState === "connected"
+      || state.callState === "reconnecting"
+    ) {
+      appendKorusCallMedia(content);
+      appendKorusCallToolbar(panel);
+      return;
+    }
+    if (state.callState === "acquiring") {
+      content.appendChild(
+        callTextButton("✕", L("ui.call.action.cancel"), "call-cancel-connect", function () {
+          if (state.callController) state.callController.cancel();
+        })
+      );
+    }
+  }
+
   function renderCallPanel(shell) {
     if (!state.callPanelOpen) return;
     state._callMeshLabels = {
@@ -8909,17 +9283,21 @@
       sharing: L("ui.call.badgeSharing"),
     };
     var panel = el("aside", "call-panel");
+    panel.setAttribute("data-testid", "call-panel");
+    panel.setAttribute("data-call-state", state.callState || "idle");
+    panel.setAttribute("aria-labelledby", "call-panel-title");
     var ph = el("div", "call-panel-head");
-    var callTitleKey =
-      state.callMediaMode === "audio" && !state.callCamOn ? "ui.call.titleAudio" : "ui.call.title";
-    var titleSpan = el("span", "call-panel-title", L(callTitleKey));
-    titleSpan.setAttribute(
-      "data-testid",
-      state.callMediaMode === "audio" && !state.callCamOn ? "call-panel-title-audio" : "call-panel-title"
-    );
+    var titleSpan = el("span", "call-panel-title", L("ui.call.title"));
+    titleSpan.id = "call-panel-title";
+    titleSpan.setAttribute("data-testid", "call-panel-title");
     ph.appendChild(titleSpan);
-    ph.appendChild(el("span", "call-panel-audit-hint", L(state.meshCompositeRecording ? "ui.call.auditNoticeComposite" : "ui.call.auditNotice")));
+    if (state.callChatId) {
+      var boundChat = el("span", "call-panel-chat-title", chatTitleById(state.callChatId));
+      boundChat.setAttribute("data-testid", "call-chat-title");
+      ph.appendChild(boundChat);
+    }
     var cl = iconBtn("✕", L("ui.call.collapse"), {
+      testId: "call-panel-collapse",
       onClick: function () {
         toggleCallPanel();
       },
@@ -8929,6 +9307,12 @@
     var panelContent = el("div", "call-panel-content");
     var callLiveStage = el("section", "call-live-stage");
     panel.appendChild(panelContent);
+    if (state.callMode === "korus") {
+      renderKorusCallPanelContent(panel, panelContent);
+      shell.appendChild(panel);
+      setTimeout(attachKorusCallMedia, 0);
+      return;
+    }
     if (!meshCallChatReady()) {
       panelContent.appendChild(el("p", "call-hint call-hint-warn", L("conference.meshNeedsChatHint")));
       shell.appendChild(panel);
@@ -10237,6 +10621,7 @@
     if (state.incomingRtcCall) {
       var inc = state.incomingRtcCall;
       var incWrap = el("div", "incoming-call-banner");
+      incWrap.setAttribute("data-testid", "incoming-call-banner");
       incWrap.appendChild(
         el(
           "span",
@@ -10251,12 +10636,14 @@
       var bAcc = iconBtn("📞", L("ui.shell.accept"), {
         primary: true,
         disabled: state.busy,
+        testId: "incoming-call-accept",
         onClick: function () {
           acceptIncomingRtcCall();
         },
       });
       var bDec = iconBtn("✕", L("ui.shell.decline"), {
         disabled: state.busy,
+        testId: "incoming-call-decline",
         onClick: function () {
           declineIncomingRtcCall();
         },
@@ -10268,9 +10655,81 @@
     }
     var main = el(
       "div",
-      "messenger" + (state.selectedId ? " has-selection" : "")
+      "messenger messenger--icon-rail" + (state.selectedId ? " has-selection" : "")
     );
     applySidebarWidthCss();
+    var navRail = el("nav", "messenger-nav-rail");
+    navRail.setAttribute("aria-label", L("ui.shell.navLabel") || "Navigation");
+    navRail.appendChild(
+      sidebarTabButton(
+        "💬",
+        "ui.sidebar.chats",
+        "Чаты",
+        "Chats",
+        state.sidebarMode === "chats",
+        "nav-rail-chats",
+        function () {
+          state.sidebarMode = "chats";
+          render();
+        }
+      )
+    );
+    navRail.appendChild(
+      sidebarTabButton(
+        "👥",
+        "ui.sidebar.contacts",
+        "Контакты",
+        "Contacts",
+        state.sidebarMode === "contacts",
+        "nav-rail-contacts",
+        function () {
+          if (state.sidebarMode === "contacts") return;
+          state.sidebarMode = "contacts";
+          loadContacts().then(render);
+        }
+      )
+    );
+    navRail.appendChild(
+      sidebarTabButton(
+        "🎥",
+        "ui.sidebar.meetings",
+        "Встречи",
+        "Meetings",
+        state.sidebarMode === "meetings",
+        "nav-rail-meetings",
+        function () {
+          if (state.sidebarMode === "meetings") return;
+          openMeetingsSection();
+        }
+      )
+    );
+    if (isPlatformFeatureEnabled("integrations.sidebar.open")) {
+      navRail.appendChild(
+        sidebarTabButton(
+          "🧩",
+          "ui.sidebar.integrations",
+          "Интеграции",
+          "Integrations",
+          state.sidebarMode === "integrations",
+          "nav-rail-integrations",
+          function () {
+            if (state.sidebarMode === "integrations") return;
+            state.sidebarMode = "integrations";
+            loadIntegrations().then(render);
+          }
+        )
+      );
+    }
+    navRail.appendChild(
+      iconBtn("⚙", L("ui.shell.settings"), {
+        testId: "nav-rail-settings",
+        cls: "messenger-nav-rail-btn",
+        onClick: function () {
+          toggleSettings();
+        },
+      })
+    );
+    main.appendChild(navRail);
     var side = el("aside", "sidebar");
     side.onmousedown = function () {
       setUiPaneFocus("sidebar");
@@ -10309,7 +10768,9 @@
       });
       sh.appendChild(msgSearchHost);
     }
-    var modeBar = el("div", "sidebar-mode-bar");
+    /* Mode tabs live in .messenger-nav-rail (Telegram/Discord icon rail). Keep
+       a compact icon-only bar for mobile / legacy selectors. */
+    var modeBar = el("div", "sidebar-mode-bar sidebar-mode-bar--legacy");
     var tabs = el("div", "sidebar-tabs");
     tabs.appendChild(
       sidebarTabButton(
@@ -10881,7 +11342,7 @@
         );
         thActs.appendChild(
           iconBtn("📹", uiLabelFallback("ui.thread.videoCall", "Видеозвонок", "Video call"), {
-            testId: "mesh-webrtc-button",
+            testId: "thread-video-call",
             disabled: state.busy || state.callPanelToggleBusy,
             onClick: function () {
               startChatCall("video");
@@ -11717,6 +12178,8 @@
 
   function consumePendingDeepLink() {
     var fromUrl = stripDeepLinkFromUrl();
+    stashPendingCallDeepLink(fromUrl);
+    stashPendingMeetingDeepLink(fromUrl);
     if (fromUrl.chatId || fromUrl.msgId) {
       stashPendingDeepLink(fromUrl.chatId, fromUrl.msgId);
     }
@@ -11764,37 +12227,33 @@
     }
   }
 
-  function stashPendingMeshDeepLink(fromUrl) {
-    if (fromUrl && fromUrl.meshSession) {
+  function stashPendingCallDeepLink(fromUrl) {
+    if (fromUrl && fromUrl.callSession) {
       try {
-        sessionStorage.setItem(PENDING_MESH_SESSION_KEY, fromUrl.meshSession);
+        sessionStorage.setItem(PENDING_CALL_SESSION_KEY, fromUrl.callSession);
         sessionStorage.setItem(
-          PENDING_MESH_MODE_KEY,
-          fromUrl.meshMode === "video" ? "video" : "audio"
+          PENDING_CALL_MODE_KEY,
+          fromUrl.callMode === "video" ? "video" : "audio"
         );
       } catch (e) {}
     }
   }
 
-  async function consumePendingMeshDeepLink() {
-    var fromUrl = stripDeepLinkFromUrl();
-    stashPendingMeshDeepLink(fromUrl);
+  async function consumePendingCallDeepLink() {
     var sessionId = null;
     var mediaMode = "audio";
     try {
-      sessionId = sessionStorage.getItem(PENDING_MESH_SESSION_KEY);
-      var mode = sessionStorage.getItem(PENDING_MESH_MODE_KEY);
-      sessionStorage.removeItem(PENDING_MESH_SESSION_KEY);
-      sessionStorage.removeItem(PENDING_MESH_MODE_KEY);
+      sessionId = sessionStorage.getItem(PENDING_CALL_SESSION_KEY);
+      var mode = sessionStorage.getItem(PENDING_CALL_MODE_KEY);
+      sessionStorage.removeItem(PENDING_CALL_SESSION_KEY);
+      sessionStorage.removeItem(PENDING_CALL_MODE_KEY);
       if (mode === "video") mediaMode = "video";
     } catch (e) {}
     if (!sessionId || !state.selectedId) return;
-    await joinMeshCallFromDeepLink(sessionId, mediaMode);
+    await joinCallFromDeepLink(sessionId, mediaMode);
   }
 
   async function consumePendingMeetingDeepLink() {
-    var fromUrl = stripDeepLinkFromUrl();
-    stashPendingMeetingDeepLink(fromUrl);
     var meet = null;
     var confId = null;
     try {
@@ -11868,7 +12327,7 @@
       state.error = err.message;
     }
     openWs();
-    await consumePendingMeshDeepLink();
+    await consumePendingCallDeepLink();
     startHeartbeat();
     render();
   }
@@ -11940,6 +12399,7 @@
           stashPendingDeepLink(pendingUrl.chatId, pendingUrl.msgId);
         }
         stashPendingMeetingDeepLink(pendingUrl);
+        stashPendingCallDeepLink(pendingUrl);
         fetchLoginOptions().finally(function () {
           updateDocumentTitle();
           render();

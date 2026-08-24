@@ -58,6 +58,219 @@ class KorusApiClientTest {
     }
 
     @Test
+    void createsProviderNeutralCallSession() throws Exception {
+        try (var server = new MockWebServer()) {
+            server.enqueue(new MockResponse()
+                .setBody("""
+                    {"session_id":"s1","participant_id":"p1","chat_id":"chat-1","kind":"group",
+                     "role":"host","status":"active","media_node_id":"embedded-1",
+                     "signaling_path":"/api/v1/chats/chat-1/calls/s1/signals",
+                     "ice_servers":[]}
+                    """)
+                .addHeader("Content-Type", "application/json"));
+            server.start();
+            var api = new KorusApiClient(
+                KorusApiClient.defaultHttpClient(),
+                server.url("/").toString().replaceAll("/$", "")
+            );
+
+            var call = api.createCall("token", "chat-1", "group", "video");
+
+            assertEquals("s1", call.sessionId());
+            assertEquals("p1", call.participantId());
+            var request = server.takeRequest();
+            assertEquals("/api/v1/chats/chat-1/calls", request.getPath());
+            var requestBody = request.getBody().readUtf8();
+            assertTrue(requestBody.contains("\"kind\":\"group\""));
+            assertTrue(requestBody.contains("\"media_intent\":\"video\""));
+        }
+    }
+
+    @Test
+    void joinsSignalsPollsAndLeavesCallSession() throws Exception {
+        try (var server = new MockWebServer()) {
+            var joinBody = """
+                {"session_id":"s1","participant_id":"p2","chat_id":"chat-1","kind":"group",
+                 "role":"member","status":"active","media_node_id":"embedded-1",
+                 "signaling_path":"/api/v1/chats/chat-1/calls/s1/signals",
+                 "ice_servers":[]}
+                """;
+            server.enqueue(new MockResponse().setBody(joinBody).addHeader("Content-Type", "application/json"));
+            server.enqueue(new MockResponse().setResponseCode(202));
+            server.enqueue(new MockResponse()
+                .setBody("""
+                    [
+                      {"id":"sig-1","type":"answer","sdp":"v=0","candidate":null,"createdAt":"2026-08-24T09:00:00Z"},
+                      {"id":"sig-2","type":"error","error_code":"NO_COMMON_AUDIO_CODEC"}
+                    ]
+                    """)
+                .addHeader("Content-Type", "application/json"));
+            server.enqueue(new MockResponse().setResponseCode(204));
+            server.enqueue(new MockResponse().setResponseCode(204));
+            server.start();
+            var api = new KorusApiClient(
+                KorusApiClient.defaultHttpClient(),
+                server.url("/").toString().replaceAll("/$", "")
+            );
+
+            var join = api.joinCall("token", "chat-1", "s1");
+            api.sendCallSignal("token", join, "offer", "v=0", null);
+            var signals = api.pollCallSignals("token", join);
+            api.declineCall("token", "chat-1", "s1");
+            api.leaveCall("token", join);
+
+            assertEquals("p2", join.participantId());
+            assertEquals(2, signals.size());
+            assertEquals("answer", signals.getFirst().type());
+            assertEquals("error", signals.getLast().type());
+            assertEquals("NO_COMMON_AUDIO_CODEC", signals.getLast().errorCode());
+            server.takeRequest();
+            server.takeRequest();
+            server.takeRequest();
+            assertEquals(
+                "/api/v1/chats/chat-1/calls/s1/decline",
+                server.takeRequest().getPath()
+            );
+            assertEquals(
+                "/api/v1/chats/chat-1/calls/s1/participants/p2/leave",
+                server.takeRequest().getPath()
+            );
+        }
+    }
+
+    @Test
+    void parsesCallInviteFromChatDeliveryJson() {
+        var invited = com.avandocmsg.messenger.desktop.sdk.ws.CallInviteEvent.parse(
+            """
+            {"type":"call.invited","chat_id":"chat-1","session_id":"s1",
+             "caller_user_id":"u-caller","media_intent":"video"}
+            """
+        );
+        assertEquals("call.invited", invited.type());
+        assertEquals("chat-1", invited.chatId());
+        assertEquals("s1", invited.sessionId());
+        assertEquals("u-caller", invited.callerUserId());
+        assertEquals("video", invited.mediaIntent());
+        assertTrue(invited.invited());
+        org.junit.jupiter.api.Assertions.assertNull(
+            com.avandocmsg.messenger.desktop.sdk.ws.CallInviteEvent.parse(
+                "{\"type\":\"message\",\"chat_id\":\"c1\"}"
+            )
+        );
+    }
+
+    @Test
+    void startsLiveCallThroughSessionWithoutBrowserHandoff() throws Exception {
+        try (var server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody("{\"status\":\"ok\"}").addHeader("Content-Type", "application/json"));
+            server.enqueue(new MockResponse()
+                .setBody("{\"access_token\":\"t-live\"}")
+                .addHeader("Content-Type", "application/json"));
+            server.enqueue(new MockResponse()
+                .setBody("""
+                    {"session_id":"s-live","participant_id":"p-live","chat_id":"chat-1","kind":"group",
+                     "role":"host","status":"active","media_node_id":"embedded-1",
+                     "signaling_path":"/api/v1/chats/chat-1/calls/s-live/signals",
+                     "ice_servers":[]}
+                    """)
+                .addHeader("Content-Type", "application/json"));
+            server.enqueue(new MockResponse().setResponseCode(202));
+            server.enqueue(new MockResponse()
+                .setBody("[{\"id\":\"sig-1\",\"type\":\"answer\",\"sdp\":\"v=0\\r\\nanswer\"}]")
+                .addHeader("Content-Type", "application/json"));
+            server.enqueue(new MockResponse().setResponseCode(204));
+            server.start();
+            var root = Files.createTempDirectory("korus-desktop-live-call");
+            var profile = new ProfileStore(root).createProfile("Live");
+            var registry = new ServerRegistry(new ProfileStore(root).profileRoot(profile.profileId()));
+            var mgr = new MultiServerSessionManager(registry, new InMemorySecureTokenStore(), KorusApiClient.defaultHttpClient());
+            var base = server.url("/").toString().replaceAll("/$", "");
+            mgr.registerServer(new ServerEntry("s1", "Lab", base));
+            mgr.login(new ServerId("s1"), "alice", "alice");
+            var media = new RecordingAudioMedia();
+            var session = new com.avandocmsg.messenger.desktop.sdk.session.ApiDesktopSession(
+                mgr,
+                null,
+                () -> media
+            );
+            try (var call = session.startLiveCall(
+                new ServerId("s1"),
+                "alice",
+                new ChatRef(new ServerId("s1"), "chat-1"),
+                "audio"
+            )) {
+                assertEquals("s-live", call.join().sessionId());
+                assertEquals("v=0\r\nanswer", media.connectedSdp);
+                assertTrue(call.mediaReady());
+            }
+        }
+    }
+
+    @Test
+    void startsInProcessCallThroughNeutralSignaling() throws Exception {
+        try (var server = new MockWebServer()) {
+            server.enqueue(new MockResponse()
+                .setBody("""
+                    {"session_id":"s1","participant_id":"p1","chat_id":"chat-1","kind":"group",
+                     "role":"host","status":"active","media_node_id":"embedded-1",
+                     "signaling_path":"/api/v1/chats/chat-1/calls/s1/signals",
+                     "ice_servers":[]}
+                    """)
+                .addHeader("Content-Type", "application/json"));
+            server.enqueue(new MockResponse().setResponseCode(202));
+            server.enqueue(new MockResponse()
+                .setBody("[{\"id\":\"sig-1\",\"type\":\"answer\",\"sdp\":\"v=0\\r\\nanswer\"}]")
+                .addHeader("Content-Type", "application/json"));
+            server.enqueue(new MockResponse().setResponseCode(204));
+            server.start();
+            var api = new KorusApiClient(
+                KorusApiClient.defaultHttpClient(),
+                server.url("/").toString().replaceAll("/$", "")
+            );
+            var media = new RecordingAudioMedia();
+            try (var call = new com.avandocmsg.messenger.desktop.sdk.call.InProcessCallClient(api, () -> media)) {
+                var join = call.start("token", "chat-1", "group", "audio");
+                assertEquals("s1", join.sessionId());
+                assertEquals("v=0\r\nanswer", media.connectedSdp);
+                call.leave();
+            }
+            server.takeRequest();
+            var offer = server.takeRequest();
+            assertTrue(offer.getPath().contains("/calls/s1/signals/p1"));
+            assertTrue(offer.getBody().readUtf8().contains("\"type\":\"offer\""));
+        }
+    }
+
+    private static final class RecordingAudioMedia
+        implements com.avandocmsg.messenger.desktop.sdk.call.CallAudioMedia {
+        private String connectedSdp;
+
+        @Override
+        public String createOffer() {
+            return "v=0\r\noffer";
+        }
+
+        @Override
+        public void connect(String answerSdp) {
+            connectedSdp = answerSdp;
+        }
+
+        @Override
+        public void sendPcmu(byte[] payload) {}
+
+        @Override
+        public void onPcmu(java.util.function.Consumer<byte[]> listener) {}
+
+        @Override
+        public boolean mediaReady() {
+            return connectedSdp != null;
+        }
+
+        @Override
+        public void close() {}
+    }
+
+    @Test
     void multiServerLogin() throws Exception {
         try (var server = new MockWebServer()) {
             server.enqueue(new MockResponse().setBody("{\"status\":\"ok\"}").addHeader("Content-Type", "application/json"));
@@ -252,16 +465,17 @@ class WebUiUrlResolverTest {
     }
 
     @Test
-    void buildsMeshJoinUrl() {
-        var join = com.avandocmsg.messenger.desktop.sdk.web.WebUiUrlResolver.meshJoinUrl(
+    void buildsProviderNeutralCallJoinUrl() {
+        var join = com.avandocmsg.messenger.desktop.sdk.web.WebUiUrlResolver.callJoinUrl(
             "http://127.0.0.1:19088",
             "chat-1",
             "sess-2",
             "video"
         );
         assertTrue(join.contains("chat=chat-1"));
-        assertTrue(join.contains("mesh_session=sess-2"));
-        assertTrue(join.contains("mesh_mode=video"));
+        assertTrue(join.contains("call_session=sess-2"));
+        assertTrue(join.contains("call_mode=video"));
+        assertFalse(join.contains("mesh_"));
     }
 }
 
@@ -271,6 +485,12 @@ class WsUrlResolverTest {
     void derivesQemuWsPort() {
         var url = com.avandocmsg.messenger.desktop.sdk.ws.WsUrlResolver.defaultFromApiBase("http://127.0.0.1:18080");
         assertEquals("ws://127.0.0.1:18082/ws", url);
+    }
+
+    @Test
+    void derivesWssFromHttpsApiBase() {
+        var url = com.avandocmsg.messenger.desktop.sdk.ws.WsUrlResolver.defaultFromApiBase("https://corp.example:18080");
+        assertEquals("wss://corp.example:18082/ws", url);
     }
 
     @Test

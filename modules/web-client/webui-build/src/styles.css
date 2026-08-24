@@ -177,6 +177,7 @@ html[data-mobile-shell="1"] .messenger-shell.call-open {
 html[data-mobile-shell="1"] .messenger-shell.call-open > .call-panel {
     width: 100%;
     max-height: 42vh;
+    max-height: 42dvh;
     border-left: none;
     border-bottom: 1px solid var(--border);
     overflow: hidden;
@@ -358,7 +359,14 @@ html[data-mobile-shell="1"] .call-mode-bar {
 
 html[data-mobile-shell="1"] .call-toolbar {
     flex-wrap: wrap;
+    padding-left: max(10px, env(safe-area-inset-left, 0px));
+    padding-right: max(10px, env(safe-area-inset-right, 0px));
     padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  }
+
+html[data-mobile-shell="1"] .call-action-button {
+    min-width: 44px;
+    min-height: 44px;
   }
 
 html[data-mobile-shell="1"] .auth-shell {
@@ -1223,6 +1231,83 @@ html[data-mobile-shell="0"] .app-header-left > .global-search-wrap {
   flex: 1;
   min-height: 0;
   align-items: stretch;
+}
+
+/* Telegram / Discord / Teams / Slack — far-left icon rail */
+.messenger-nav-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 52px;
+  min-width: 52px;
+  max-width: 52px;
+  padding: 10px 0;
+  background: var(--panel2, #eef0f3);
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 3;
+}
+
+.messenger-nav-rail .sidebar-tab,
+.messenger-nav-rail .btn-icon,
+.messenger-nav-rail .messenger-nav-rail-btn {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 12px;
+  flex: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+}
+
+.messenger-nav-rail .sidebar-tab.active,
+.messenger-nav-rail .sidebar-tab:hover,
+.messenger-nav-rail .btn-icon:hover {
+  background: var(--brand-soft, #dbeafe);
+  color: var(--text);
+}
+
+.messenger-nav-rail .sidebar-tab-icon {
+  font-size: 1.15rem;
+}
+
+.messenger--icon-rail .sidebar-mode-bar--legacy {
+  display: none;
+}
+
+html[data-mobile-shell="1"] .messenger-nav-rail {
+  display: none;
+}
+
+html[data-mobile-shell="1"] .messenger--icon-rail .sidebar-mode-bar--legacy {
+  display: block;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sidebar-tab--icon-only {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+  gap: 0;
+  padding: 8px;
+}
+
+.sidebar-tab--icon-only .sidebar-tab-icon {
+  font-size: 1.1rem;
 }
 
 .sidebar {
@@ -4161,6 +4246,102 @@ html[data-device="phone"] .settings-title {
   font-size: 0.9rem;
 }
 
+.call-panel-chat-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0 8px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.call-state,
+.call-status,
+.call-status-detail {
+  margin: 12px;
+}
+
+.call-state {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel2);
+}
+
+.call-state-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.call-state-hint,
+.call-status-detail {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.call-state-hint {
+  margin: 6px 0 0;
+}
+
+.call-status {
+  margin-bottom: 0;
+  font-weight: 600;
+}
+
+.call-status-detail {
+  margin-top: 4px;
+}
+
+.call-idle-actions,
+.call-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.call-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+}
+
+.call-action-icon {
+  line-height: 1;
+}
+
+.call-local-avatar {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: color-mix(in srgb, var(--accent) 72%, #111);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.call-local-avatar.is-hidden {
+  display: none;
+}
+
+.call-remote-empty {
+  margin: 0;
+}
+
+.rtc-remote-slot audio {
+  display: none;
+}
+
 .call-panel-audit-hint {
   flex: 1;
   margin: 0 8px;
@@ -4669,4 +4850,26 @@ html[data-device="phone"] .settings-title {
   height: 100%;
   object-fit: cover;
   border-radius: inherit;
+}
+
+@media (max-width: 520px) {
+  .call-toolbar .call-action-button {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .call-idle-actions .call-action-button,
+  .call-error-actions .call-action-button {
+    flex: 1 1 100%;
+  }
+
+  .call-action-label {
+    display: inline;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .call-panel * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

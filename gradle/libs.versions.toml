@@ -99,6 +99,7 @@ swagger-annotations-jakarta = { module = "io.swagger.core.v3:swagger-annotations
 minio = { module = "io.minio:minio", version.ref = "minio" }
 bcprov-jdk18on = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
 bcpkix-jdk18on = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
+bctls-jdk18on = { module = "org.bouncycastle:bctls-jdk18on", version.ref = "bouncycastle" }
 solr-solrj = { module = "org.apache.solr:solr-solrj", version.ref = "solr" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
 

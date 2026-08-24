@@ -22,6 +22,7 @@ include(
     "modules:common",
     "modules:core-domain",
     "modules:core-port",
+    "modules:media-sfu",
     "modules:core-api",
     "modules:web-client",
     "modules:ws-gateway",

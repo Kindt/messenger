@@ -69,7 +69,9 @@ public final class MessageApplicationService {
         var gateways = deps.gateways();
         this.messageRepositoryPort = ports.messageRepositoryPort();
         this.chatRepositoryPort = ports.chatRepositoryPort();
-        this.blockRepositoryPort = ports.blockRepositoryPort();
+        this.blockRepositoryPort = ports.blockRepositoryPort() == null
+            ? BlockRepositoryPort.NOOP
+            : ports.blockRepositoryPort();
         this.messageQueryPort = ports.messageQueryPort();
         this.sendCoordinator = coordinators.sendCoordinator();
         this.editCoordinator = coordinators.editCoordinator();
@@ -407,18 +409,12 @@ public final class MessageApplicationService {
     }
 
     private boolean isMutuallyBlocked(UUID a, UUID b) {
-        if (blockRepositoryPort == null) {
-            return false;
-        }
         var userA = UserId.of(a);
         var userB = UserId.of(b);
         return blockRepositoryPort.exists(userA, userB) || blockRepositoryPort.exists(userB, userA);
     }
 
     private boolean isP2PMessagingBlocked(UUID chatId, UUID senderId) {
-        if (blockRepositoryPort == null) {
-            return false;
-        }
         var chat = ChatId.of(chatId);
         var sender = UserId.of(senderId);
         if (!chatTypeWire(chat).filter("p2p"::equals).isPresent()) {

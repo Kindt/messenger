@@ -74,7 +74,7 @@ public final class ServerConnectCoordinator {
     /** Re-attach WS + refresh capabilities for saved token (profile reopen). */
     public void resumeConnected(ServerEntry entry, String username) throws Exception {
         var serverId = new ServerId(entry.serverId());
-        var token = sessions.token(serverId, username);
+        var token = sessions.ensureAccessToken(serverId, username);
         if (token == null || token.isBlank()) {
             return;
         }

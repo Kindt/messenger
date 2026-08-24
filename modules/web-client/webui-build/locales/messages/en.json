@@ -106,7 +106,12 @@
     "leave": "Leave",
     "endAll": "End for all",
     "startInChat": "Call in this chat",
-    "ended": "Conference ended"
+    "ended": "Conference ended",
+    "livekitJoin": "Join LiveKit",
+    "livekitLeave": "Leave LiveKit",
+    "livekitJoinFailed": "Could not join LiveKit room",
+    "livekitUnavailable": "LiveKit is not available",
+    "livekitSfuHint": "SFU mode uses LiveKit for media routing."
   },
   "live": {
     "sectionTitle": "Live stream",
@@ -128,7 +133,10 @@
     "createdDefault": "Live stream started",
     "ended": "Live session ended",
     "leave": "Leave",
-    "endAll": "End stream"
+    "endAll": "End stream",
+    "watchReplay": "Watch replay",
+    "hlsReplay": "HLS replay stream",
+    "replaySection": "Replay"
   },
   "media": {
     "deviceNotFound": "camera or microphone not found",
@@ -243,7 +251,8 @@
     "iceFailed": "Connection to call participant lost (network / ICE / TURN).",
     "screenShareFailed": "Screen: {detail}",
     "screenShareCancelled": "cancelled",
-    "screenShareUnsupported": "screen sharing is not supported by this browser or context"
+    "screenShareUnsupported": "screen sharing is not supported by this browser or context",
+    "iceFailedHelp": "Connection failed (ICE/TURN). Check network or VPN."
   },
   "messages": {
     "editPrompt": "Edit message",
@@ -262,7 +271,12 @@
     "deleteFailed": "Could not delete",
     "sendFileFailed": "Could not send file",
     "sendFailed": "Could not send",
-    "notFoundInHistory": "Message not found in chat history"
+    "notFoundInHistory": "Message not found in chat history",
+    "voiceMicDenied": "Microphone access denied",
+    "voiceNotSupported": "Voice messages are not supported in this browser",
+    "sendVoiceFailed": "Could not send voice message",
+    "locationDenied": "Location access denied",
+    "sendLocationFailed": "Could not send location"
   },
   "saved": {
     "alreadyInVault": "Message already in vault",
@@ -370,7 +384,15 @@
       "presenceTitle": "Click to change status",
       "updateReady": "A new version is available",
       "reloadNow": "Reload",
-      "reloadLater": "Later"
+      "reloadLater": "Later",
+      "navLabel": "Main navigation"
+    },
+    "mention": {
+      "notificationTitle": "Mention in {chat}",
+      "notificationBody": "You were mentioned in a message"
+    },
+    "chat": {
+      "channel": "Channel"
     },
     "sidebar": {
       "searchPlaceholder": "Search chats…",
@@ -433,6 +455,7 @@
     },
     "thread": {
       "empty": "Select a chat or create a group.",
+      "openDiscussion": "Open discussion thread",
       "backToChat": "Back to chat",
       "discussion": "Discussion",
       "messageTtl": "Message TTL in chat: {ttl}",
@@ -720,7 +743,62 @@
       "badgeSharing": "Screen sharing",
       "screen": "Screen",
       "screenSharing": "You are sharing your screen",
-      "stopScreen": "Stop screen"
+      "stopScreen": "Stop screen",
+      "state": {
+        "idleTitle": "Start a call",
+        "idleHint": "Choose audio or video. Device access is requested only after you continue.",
+        "acquiring": "Connecting devices…",
+        "acquiringHint": "Allow microphone access and, when needed, camera access.",
+        "connecting": "Joining the call…",
+        "connectingHint": "Establishing a secure media connection.",
+        "connected": "You are in the call",
+        "reconnecting": "Restoring the connection…",
+        "reconnectingHint": "Your camera and microphone choices are preserved.",
+        "leaving": "Leaving the call…"
+      },
+      "empty": {
+        "title": "Select a chat",
+        "hint": "Calls are available in direct and group chats."
+      },
+      "action": {
+        "startAudio": "Start with audio",
+        "startVideo": "Start with video",
+        "cancel": "Cancel connection",
+        "retry": "Try again",
+        "back": "Back to start",
+        "muteMicrophone": "Mute microphone",
+        "unmuteMicrophone": "Unmute microphone",
+        "turnCameraOff": "Turn camera off",
+        "turnCameraOn": "Turn camera on",
+        "shareScreen": "Share screen",
+        "stopScreen": "Stop sharing",
+        "leave": "Leave call",
+        "leaveCurrentFirst": "Leave the current call first"
+      },
+      "participants": {
+        "aloneTitle": "You are here alone",
+        "aloneHint": "Other participants will appear after they connect.",
+        "remote": "Call participant",
+        "sharing": "You are sharing your screen"
+      },
+      "error": {
+        "permissionTitle": "Device access denied",
+        "permissionHint": "Allow access in your browser settings and try again.",
+        "deviceMissingTitle": "Device not found",
+        "deviceMissingHint": "Connect a microphone or camera and try again.",
+        "deviceBusyTitle": "Device is busy",
+        "deviceBusyHint": "Close the other application using this device.",
+        "connectionTitle": "Media connection lost",
+        "connectionHint": "Try connecting to this call again.",
+        "forbiddenTitle": "No access to this call",
+        "forbiddenHint": "Make sure you are a member of this chat.",
+        "unknownTitle": "Could not connect",
+        "unknownHint": "Try again."
+      },
+      "notice": {
+        "screenCancelled": "Screen sharing did not start.",
+        "declined": "The call invitation was declined."
+      }
     },
     "meetings": {
       "title": "Video meetings",

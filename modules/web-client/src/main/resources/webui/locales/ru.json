@@ -106,7 +106,12 @@
     "leave": "Выйти",
     "endAll": "Завершить для всех",
     "startInChat": "Звонок в этом чате",
-    "ended": "Конференция завершена"
+    "ended": "Конференция завершена",
+    "livekitJoin": "Подключиться к LiveKit",
+    "livekitLeave": "Выйти из LiveKit",
+    "livekitJoinFailed": "Не удалось подключиться к LiveKit",
+    "livekitUnavailable": "LiveKit недоступен",
+    "livekitSfuHint": "Режим SFU использует LiveKit для маршрутизации медиа."
   },
   "live": {
     "sectionTitle": "Прямой эфир",
@@ -128,7 +133,10 @@
     "createdDefault": "Прямой эфир начат",
     "ended": "Эфир завершён",
     "leave": "Выйти",
-    "endAll": "Завершить эфир"
+    "endAll": "Завершить эфир",
+    "watchReplay": "Смотреть запись",
+    "hlsReplay": "HLS-поток записи",
+    "replaySection": "Запись"
   },
   "media": {
     "deviceNotFound": "камера или микрофон не найдены",
@@ -243,7 +251,8 @@
     "iceFailed": "Связь с участником звонка прервана (сеть / ICE / TURN).",
     "screenShareFailed": "Экран: {detail}",
     "screenShareCancelled": "отмена",
-    "screenShareUnsupported": "демонстрация экрана не поддерживается этим браузером или контекстом"
+    "screenShareUnsupported": "демонстрация экрана не поддерживается этим браузером или контекстом",
+    "iceFailedHelp": "Не удалось установить соединение (ICE/TURN). Проверьте сеть или VPN."
   },
   "messages": {
     "editPrompt": "Редактировать сообщение",
@@ -262,7 +271,12 @@
     "deleteFailed": "Не удалось удалить",
     "sendFileFailed": "Не удалось отправить файл",
     "sendFailed": "Не отправилось",
-    "notFoundInHistory": "Сообщение не найдено в истории чата"
+    "notFoundInHistory": "Сообщение не найдено в истории чата",
+    "voiceMicDenied": "Доступ к микрофону запрещён",
+    "voiceNotSupported": "Голосовые сообщения не поддерживаются в этом браузере",
+    "sendVoiceFailed": "Не удалось отправить голосовое сообщение",
+    "locationDenied": "Доступ к геолокации запрещён",
+    "sendLocationFailed": "Не удалось отправить геолокацию"
   },
   "saved": {
     "alreadyInVault": "Сообщение уже в хранилище",
@@ -370,7 +384,15 @@
       "presenceTitle": "Нажмите, чтобы сменить статус",
       "updateReady": "Доступна новая версия приложения",
       "reloadNow": "Обновить",
-      "reloadLater": "Позже"
+      "reloadLater": "Позже",
+      "navLabel": "Основная навигация"
+    },
+    "mention": {
+      "notificationTitle": "Упоминание в {chat}",
+      "notificationBody": "Вас упомянули в сообщении"
+    },
+    "chat": {
+      "channel": "Канал"
     },
     "sidebar": {
       "searchPlaceholder": "Поиск чатов…",
@@ -433,6 +455,7 @@
     },
     "thread": {
       "empty": "Выберите чат или создайте группу.",
+      "openDiscussion": "Открыть обсуждение",
       "backToChat": "К чату",
       "discussion": "Обсуждение",
       "messageTtl": "TTL сообщений в чате: {ttl}",
@@ -720,7 +743,62 @@
       "badgeSharing": "Демонстрация экрана",
       "screen": "Экран",
       "screenSharing": "Вы демонстрируете экран",
-      "stopScreen": "Стоп экрана"
+      "stopScreen": "Стоп экрана",
+      "state": {
+        "idleTitle": "Начать звонок",
+        "idleHint": "Выберите аудио или видео. Доступ к устройствам будет запрошен после нажатия.",
+        "acquiring": "Подключаем устройства…",
+        "acquiringHint": "Разрешите доступ к микрофону и, при необходимости, камере.",
+        "connecting": "Подключаем к звонку…",
+        "connectingHint": "Устанавливаем защищённое медиасоединение.",
+        "connected": "Вы в звонке",
+        "reconnecting": "Восстанавливаем соединение…",
+        "reconnectingHint": "Камера и микрофон сохранят выбранное состояние.",
+        "leaving": "Выходим из звонка…"
+      },
+      "empty": {
+        "title": "Выберите чат",
+        "hint": "Звонки доступны в личных и групповых чатах."
+      },
+      "action": {
+        "startAudio": "Начать с аудио",
+        "startVideo": "Начать с видео",
+        "cancel": "Отменить подключение",
+        "retry": "Повторить",
+        "back": "Назад к началу",
+        "muteMicrophone": "Выключить микрофон",
+        "unmuteMicrophone": "Включить микрофон",
+        "turnCameraOff": "Выключить камеру",
+        "turnCameraOn": "Включить камеру",
+        "shareScreen": "Показать экран",
+        "stopScreen": "Остановить демонстрацию",
+        "leave": "Выйти из звонка",
+        "leaveCurrentFirst": "Сначала выйдите из текущего звонка"
+      },
+      "participants": {
+        "aloneTitle": "Вы пока одни",
+        "aloneHint": "Другие участники появятся здесь после подключения.",
+        "remote": "Участник звонка",
+        "sharing": "Вы демонстрируете экран"
+      },
+      "error": {
+        "permissionTitle": "Нет доступа к устройствам",
+        "permissionHint": "Разрешите доступ в настройках браузера и повторите.",
+        "deviceMissingTitle": "Устройство не найдено",
+        "deviceMissingHint": "Подключите микрофон или камеру и повторите.",
+        "deviceBusyTitle": "Устройство занято",
+        "deviceBusyHint": "Закройте другое приложение, использующее устройство.",
+        "connectionTitle": "Медиасоединение потеряно",
+        "connectionHint": "Повторите подключение к этому звонку.",
+        "forbiddenTitle": "Нет доступа к звонку",
+        "forbiddenHint": "Убедитесь, что вы состоите в этом чате.",
+        "unknownTitle": "Не удалось подключиться",
+        "unknownHint": "Повторите попытку."
+      },
+      "notice": {
+        "screenCancelled": "Демонстрация экрана не начата.",
+        "declined": "Приглашение на звонок отклонено."
+      }
     },
     "meetings": {
       "title": "Видеовстречи",

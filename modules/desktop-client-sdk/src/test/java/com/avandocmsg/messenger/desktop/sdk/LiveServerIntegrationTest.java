@@ -113,19 +113,15 @@ class LiveServerIntegrationTest {
         var conf = api.createConference(token, chatId, new com.avandocmsg.messenger.desktop.sdk.model.CreateConferenceRequest("SDK smoke"));
         assertNotNull(conf.joinUrl());
 
-        var mesh = api.startMeshCallSession(
-            token,
-            chatId,
-            new com.avandocmsg.messenger.desktop.sdk.model.StartMeshCallRequest("audio")
-        );
-        assertNotNull(mesh.resolvedSessionId());
-        var webUrl = com.avandocmsg.messenger.desktop.sdk.web.WebUiUrlResolver.meshJoinUrl(
+        var call = api.createCall(token, chatId, "group", "audio");
+        assertNotNull(call.sessionId());
+        var webUrl = com.avandocmsg.messenger.desktop.sdk.web.WebUiUrlResolver.callJoinUrl(
             com.avandocmsg.messenger.desktop.sdk.web.WebUiUrlResolver.defaultFromApiBase(BASE),
             chatId,
-            mesh.resolvedSessionId(),
+            call.sessionId(),
             "audio"
         );
-        assertTrue(webUrl.contains("mesh_session="));
+        assertTrue(webUrl.contains("call_session="));
 
         var entry = new com.avandocmsg.messenger.desktop.sdk.model.ServerEntry(
             java.util.UUID.randomUUID().toString(),
@@ -136,5 +132,42 @@ class LiveServerIntegrationTest {
         hub.connect(new ServerId(entry.serverId()), entry, token);
         assertTrue(hub.isConnected(new ServerId(entry.serverId())));
         hub.close();
+    }
+
+    @Test
+    void twoInProcessClientsExchangePcmuOnLiveSfu() throws Exception {
+        assumeTrue(live);
+        var api = new KorusApiClient(KorusApiClient.defaultHttpClient(), BASE);
+        var userA = System.getenv().getOrDefault("KORUS_DESKTOP_SMOKE_USER_A", "smoke_user_a");
+        var userB = System.getenv().getOrDefault("KORUS_DESKTOP_SMOKE_USER_B", "smoke_user_b");
+        var pass = System.getenv().getOrDefault("KORUS_CROSS_SMOKE_PASSWORD", "smokepass123");
+        String tokenA;
+        String tokenB;
+        try {
+            tokenA = api.login(userA, pass).accessToken();
+            tokenB = api.login(userB, pass).accessToken();
+        } catch (RuntimeException missingUsers) {
+            assumeTrue(false, "cross-client smoke users are not provisioned");
+            return;
+        }
+        var memberB = api.me(tokenB).resolvedId();
+        var chat = api.createGroupChat(tokenA, "live-pcmu-" + java.time.Instant.now(), java.util.List.of(memberB));
+        var received = new java.util.concurrent.ArrayBlockingQueue<byte[]>(4);
+        try (
+            var caller = new com.avandocmsg.messenger.desktop.sdk.call.InProcessCallClient(api);
+            var callee = new com.avandocmsg.messenger.desktop.sdk.call.InProcessCallClient(api)
+        ) {
+            caller.start(tokenA, chat.resolvedId(), "group", "audio");
+            callee.join(tokenB, chat.resolvedId(), caller.join().sessionId());
+            callee.onPcmu(received::offer);
+            assertTrue(caller.mediaReady());
+            assertTrue(callee.mediaReady());
+            var payload = new byte[160];
+            java.util.Arrays.fill(payload, (byte) 0x5a);
+            caller.sendPcmu(payload);
+            var remote = received.poll(12, java.util.concurrent.TimeUnit.SECONDS);
+            assertNotNull(remote, "callee did not receive PCMU from the live SFU");
+            assertTrue(java.util.Arrays.equals(payload, remote));
+        }
     }
 }

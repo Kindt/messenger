@@ -16,9 +16,11 @@ import com.avandocmsg.messenger.desktop.sdk.mentions.MentionParser;
 
 import com.avandocmsg.messenger.desktop.sdk.queue.OutgoingMessageQueue;
 
+import com.avandocmsg.messenger.desktop.sdk.call.InProcessCallClient;
+
 import com.avandocmsg.messenger.desktop.sdk.session.DesktopSession;
 
-import com.avandocmsg.messenger.desktop.sdk.conference.CallLauncher;
+import com.avandocmsg.messenger.desktop.sdk.ws.CallInviteEvent;
 
 import java.nio.file.Files;
 
@@ -48,8 +50,6 @@ import javafx.scene.control.Label;
 
 import javafx.scene.control.ListView;
 
-import javafx.scene.control.Tab;
-
 import javafx.scene.control.TabPane;
 
 import javafx.scene.control.TextArea;
@@ -78,6 +78,14 @@ public final class MainShellView {
     private final StackPane root = new StackPane();
 
     private final BorderPane mainPane = new BorderPane();
+
+    private final Object liveCallLock = new Object();
+
+    private InProcessCallClient liveCall;
+
+    private DesktopCallAudio liveAudio;
+
+    private volatile boolean callBusy;
 
     public MainShellView(
 
@@ -149,11 +157,14 @@ public final class MainShellView {
 
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        var logout = new Button("Выход");
+        var logout = DesktopUiIcons.button("🚪", "Выход");
 
         logout.setId(DesktopUiIds.SHELL_LOGOUT);
 
-        logout.setOnAction(e -> onLogout.run());
+        logout.setOnAction(e -> {
+            hangupLiveCall();
+            onLogout.run();
+        });
 
         header.getChildren().addAll(userAvatar, titleOrb, userCol, status, spacer, logout);
 
@@ -227,15 +238,14 @@ public final class MainShellView {
 
         threadIdField.setPromptText("thread_id (optional)");
 
-        var attach = new Button("📎");
-
+        var attach = DesktopUiIcons.button("📎", "Вложение");
         attach.setId(DesktopUiIds.ATTACH);
 
         attach.getStyleClass().add("qip-btn-icon");
 
         attach.setTooltip(new javafx.scene.control.Tooltip("Вложение"));
 
-        var send = new Button("Отпр.");
+        var send = DesktopUiIcons.button("➤", "Отправить", "qip-btn-send");
 
         send.setId(DesktopUiIds.SEND);
 
@@ -247,7 +257,7 @@ public final class MainShellView {
 
         searchField.setPromptText("Поиск…");
 
-        var searchBtn = new Button("Найти");
+        var searchBtn = DesktopUiIcons.button("🔍", "Найти");
 
         searchBtn.setId(DesktopUiIds.SEARCH_BTN);
 
@@ -255,33 +265,16 @@ public final class MainShellView {
 
         searchResults.setId(DesktopUiIds.SEARCH_RESULTS);
 
-        var callBtn = new Button("📞");
-
+        var callBtn = DesktopUiIcons.button("📞", "Аудиозвонок");
         callBtn.setId(DesktopUiIds.CALL_BTN);
-
-        callBtn.getStyleClass().add("qip-btn-icon");
-
-        callBtn.setTooltip(new javafx.scene.control.Tooltip("Аудиозвонок"));
-
         callBtn.setVisible(session.isDemo() || gate.isEnabled(CapabilityGate.Feature.LIVE_CALLS));
 
-        var videoCallBtn = new Button("📹");
-
+        var videoCallBtn = DesktopUiIcons.button("📹", "Видеозвонок");
         videoCallBtn.setId(DesktopUiIds.VIDEO_CALL_BTN);
-
-        videoCallBtn.getStyleClass().add("qip-btn-icon");
-
-        videoCallBtn.setTooltip(new javafx.scene.control.Tooltip("Видеозвонок"));
-
         videoCallBtn.setVisible(session.isDemo() || gate.isEnabled(CapabilityGate.Feature.LIVE_CALLS));
 
-        var pollBtn = new Button("📊");
-
+        var pollBtn = DesktopUiIcons.button("📊", "Опрос");
         pollBtn.setId(DesktopUiIds.POLL_BTN);
-
-        pollBtn.getStyleClass().add("qip-btn-icon");
-
-        pollBtn.setTooltip(new javafx.scene.control.Tooltip("Опрос"));
 
         pollBtn.setVisible(gate.isEnabled(CapabilityGate.Feature.PRODUCTIVITY));
 
@@ -497,17 +490,13 @@ public final class MainShellView {
 
 
 
-        callBtn.setOnAction(e -> launchMeshCall(session, username, inbox, messages, "audio"));
+        callBtn.setOnAction(e -> launchCall(session, username, inbox, messages, "audio"));
 
-        videoCallBtn.setOnAction(e -> launchMeshCall(session, username, inbox, messages, "video"));
+        videoCallBtn.setOnAction(e -> launchCall(session, username, inbox, messages, "video"));
 
 
 
-        var chatsTab = new Tab("Чаты");
-
-        chatsTab.setId(DesktopUiIds.TAB_CHATS);
-
-        chatsTab.setClosable(false);
+        var chatsTab = DesktopUiIcons.tab(DesktopUiIds.TAB_CHATS, "💬", "Чаты", null);
 
         var threadPane = new TitledPane("Ответы в треде", new VBox(6, threadIdField, threadMessages));
 
@@ -519,13 +508,8 @@ public final class MainShellView {
 
         threadMessages.getStyleClass().add("qip-messages");
 
-        var emojiBtn = new Button("☺");
-
+        var emojiBtn = DesktopUiIcons.button("☺", "Смайлы");
         emojiBtn.setId(DesktopUiIds.EMOJI_BTN);
-
-        emojiBtn.getStyleClass().add("qip-btn-icon");
-
-        emojiBtn.setTooltip(new javafx.scene.control.Tooltip("Смайлы"));
 
         EmojiPickerPopup.attach(emojiBtn, composer);
 
@@ -631,17 +615,7 @@ public final class MainShellView {
 
 
 
-        var searchTab = new Tab("Поиск");
-
-        searchTab.setId(DesktopUiIds.TAB_SEARCH);
-
-        searchTab.setClosable(false);
-
-        searchTab.setDisable(!gateRef.get().isEnabled(CapabilityGate.Feature.SEARCH));
-
-        searchTab.setTooltip(new javafx.scene.control.Tooltip("Поиск отключён на сервере"));
-
-        searchTab.setContent(new VBox(8, searchField, searchBtn, searchResults));
+        var searchTab = DesktopUiIcons.tab(DesktopUiIds.TAB_SEARCH, "🔍", "Поиск", new VBox(8, searchField, searchBtn, searchResults));
 
 
 
@@ -685,23 +659,24 @@ public final class MainShellView {
 
 
 
-        var settingsTab = new Tab("Настройки");
+        searchTab.setDisable(!gateRef.get().isEnabled(CapabilityGate.Feature.SEARCH));
+        if (searchTab.isDisabled()) {
+            searchTab.setTooltip(new javafx.scene.control.Tooltip("Поиск отключён на сервере"));
+        }
 
-        settingsTab.setId(DesktopUiIds.TAB_SETTINGS);
+        var settingsTab = DesktopUiIcons.tab(
+            DesktopUiIds.TAB_SETTINGS,
+            "⚙",
+            "Настройки",
+            new SettingsView(runtime, initialCaps, onRefresh).root()
+        );
 
-        settingsTab.setClosable(false);
-
-        settingsTab.setContent(new SettingsView(runtime, initialCaps, onRefresh).root());
-
-
-
-        var serversTab = new Tab("Серверы");
-
-        serversTab.setId(DesktopUiIds.TAB_SERVERS);
-
-        serversTab.setClosable(false);
-
-        serversTab.setContent(buildServersPanel(runtime, session, username, onRefresh));
+        var serversTab = DesktopUiIcons.tab(
+            DesktopUiIds.TAB_SERVERS,
+            "🖥",
+            "Серверы",
+            buildServersPanel(runtime, session, username, onRefresh)
+        );
 
 
 
@@ -709,9 +684,9 @@ public final class MainShellView {
 
         tabs.setId(DesktopUiIds.SHELL_TABS);
 
-        tabs.getStyleClass().add("qip-tabs");
+        tabs.getStyleClass().addAll("qip-tabs", "qip-nav-rail-tabs");
 
-        tabs.setSide(javafx.geometry.Side.BOTTOM);
+        tabs.setSide(javafx.geometry.Side.LEFT);
 
         mainPane.setTop(header);
 
@@ -809,6 +784,8 @@ public final class MainShellView {
                     DesktopNotificationSound.playIncoming();
 
                 }
+
+                handleIncomingCall(session, username, inbox, messages, json);
 
                 loadMessages.run();
 
@@ -1095,10 +1072,10 @@ public final class MainShellView {
         list.getItems().addAll(session.servers().stream()
             .map(s -> s.displayName() + " — " + s.apiBaseUrl() + (s.paused() ? " [paused]" : ""))
             .toList());
-        var refresh = new Button("Обновить");
+        var refresh = DesktopUiIcons.button("🔄", "Обновить список");
         refresh.setId(DesktopUiIds.SERVERS_REFRESH);
         refresh.setOnAction(e -> onRefresh.run());
-        var settings = new Button("VPN / Брендинг");
+        var settings = DesktopUiIcons.button("⚙", "VPN и брендинг сервера");
         settings.setId(DesktopUiIds.SERVER_SETTINGS);
         settings.setOnAction(e -> {
             var idx = list.getSelectionModel().getSelectedIndex();
@@ -1133,7 +1110,7 @@ public final class MainShellView {
         String username,
         Runnable onRefresh
     ) {
-        var add = new Button("Добавить сервер");
+        var add = DesktopUiIcons.button("➕", "Добавить сервер");
         add.setId(DesktopUiIds.SERVERS_ADD);
         add.setDisable(session.isDemo());
         if (session.isDemo()) {
@@ -1183,7 +1160,7 @@ public final class MainShellView {
 
 
 
-    private static void launchMeshCall(
+    private void launchCall(
         DesktopSession session,
         String username,
         ListView<InboxRow> inbox,
@@ -1192,36 +1169,148 @@ public final class MainShellView {
     ) {
         if (session.isDemo()) {
             try {
-                var row = inbox.getSelectionModel().getSelectedItem();
-                if (row == null && !inbox.getItems().isEmpty()) {
-                    row = inbox.getItems().getFirst();
-                }
+                var row = selectedInboxRow(inbox);
                 if (row == null) {
                     return;
                 }
                 var sid = new ServerId(row.server().serverId());
-                var joinUrl = session.startMeshCall(sid, username, row.chatRef(), mediaMode);
+                var joinUrl = session.startCall(sid, username, row.chatRef(), mediaMode);
                 messages.appendText("\n[call] " + joinUrl);
             } catch (Exception ex) {
                 messages.appendText("\n[call failed] " + ex.getMessage());
             }
             return;
         }
-        var row = inbox.getSelectionModel().getSelectedItem();
-        if (row == null && !inbox.getItems().isEmpty()) {
-            row = inbox.getItems().getFirst();
+        if (liveCall != null) {
+            hangupLiveCall();
+            return;
         }
+        var row = selectedInboxRow(inbox);
         if (row == null) {
             return;
         }
-        try {
-            var sid = new ServerId(row.server().serverId());
-            var joinUrl = session.startMeshCall(sid, username, row.chatRef(), mediaMode);
-            CallLauncher.openJoinUrl(joinUrl);
-            messages.appendText("\n[call opened] " + joinUrl);
-        } catch (Exception ex) {
-            messages.appendText("\n[call failed] " + ex.getMessage());
+        startLiveCallAsync(session, username, row, mediaMode, messages, null);
+    }
+
+    private void handleIncomingCall(
+        DesktopSession session,
+        String username,
+        ListView<InboxRow> inbox,
+        ChatMessagePane messages,
+        String json
+    ) {
+        if (session.isDemo()) {
+            return;
         }
+        var invite = CallInviteEvent.parse(json);
+        if (invite == null || !invite.invited()) {
+            return;
+        }
+        synchronized (liveCallLock) {
+            if (liveCall != null && liveCall.join() != null
+                && invite.sessionId().equals(liveCall.join().sessionId())) {
+                return;
+            }
+            if (callBusy || liveCall != null) {
+                return;
+            }
+        }
+        var row = inboxRowForChat(inbox, invite.chatId());
+        if (row == null) {
+            return;
+        }
+        messages.appendText("\n[incoming call] подключаюсь…");
+        startLiveCallAsync(session, username, row, invite.mediaIntent(), messages, invite.sessionId());
+    }
+
+    private void startLiveCallAsync(
+        DesktopSession session,
+        String username,
+        InboxRow row,
+        String mediaMode,
+        ChatMessagePane messages,
+        String sessionId
+    ) {
+        if (!callBusyCompareAndSet()) {
+            return;
+        }
+        Thread.ofVirtual().name("korus-desktop-live-call").start(() -> {
+            InProcessCallClient client = null;
+            try {
+                var sid = new ServerId(row.server().serverId());
+                client = sessionId == null || sessionId.isBlank()
+                    ? session.startLiveCall(sid, username, row.chatRef(), mediaMode)
+                    : session.joinLiveCall(sid, username, row.chatRef(), sessionId);
+                var audio = DesktopCallAudio.start(client);
+                synchronized (liveCallLock) {
+                    liveCall = client;
+                    liveAudio = audio;
+                }
+                client.onHangup(() -> Platform.runLater(() -> {
+                    hangupLiveCall();
+                    messages.appendText("\n[call] завершён");
+                }));
+                var capture = audio.captureEnabled() ? "микрофон" : "без микрофона";
+                var playback = audio.playbackEnabled() ? "динамик" : "без динамика";
+                Platform.runLater(() -> messages.appendText(
+                    "\n[call] разговор начат · " + capture + " · " + playback
+                ));
+            } catch (Exception ex) {
+                if (client != null) {
+                    client.leave();
+                }
+                hangupLiveCall();
+                Platform.runLater(() -> messages.appendText("\n[call failed] " + ex.getMessage()));
+            }
+        });
+    }
+
+    private boolean callBusyCompareAndSet() {
+        synchronized (liveCallLock) {
+            if (callBusy) {
+                return false;
+            }
+            callBusy = true;
+            return true;
+        }
+    }
+
+    private void hangupLiveCall() {
+        InProcessCallClient client;
+        DesktopCallAudio audio;
+        synchronized (liveCallLock) {
+            client = liveCall;
+            audio = liveAudio;
+            liveCall = null;
+            liveAudio = null;
+            callBusy = false;
+        }
+        if (audio != null) {
+            audio.close();
+        }
+        if (client != null) {
+            client.leave();
+        }
+    }
+
+    private static InboxRow selectedInboxRow(ListView<InboxRow> inbox) {
+        var row = inbox.getSelectionModel().getSelectedItem();
+        if (row == null && !inbox.getItems().isEmpty()) {
+            return inbox.getItems().getFirst();
+        }
+        return row;
+    }
+
+    private static InboxRow inboxRowForChat(ListView<InboxRow> inbox, String chatId) {
+        if (chatId == null || chatId.isBlank()) {
+            return selectedInboxRow(inbox);
+        }
+        for (var row : inbox.getItems()) {
+            if (chatId.equals(row.chatRef().chatId()) || chatId.equals(row.chat().resolvedId())) {
+                return row;
+            }
+        }
+        return selectedInboxRow(inbox);
     }
 
     private static QipStatusOrb.Mode mapStatus(String label) {

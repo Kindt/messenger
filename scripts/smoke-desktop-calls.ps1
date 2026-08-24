@@ -15,15 +15,14 @@ $chats = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats" -Headers $h
 $cid = $chats[0].id
 if (-not $cid) { $cid = $chats[0].chat_id }
 
-$meshBody = @{ media_mode = 'audio' } | ConvertTo-Json
-$mesh = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$cid/mesh-calls/sessions" -Method POST -Headers $h -Body $meshBody -ContentType 'application/json'
-$sessionId = $mesh.session_id
-if (-not $sessionId) { $sessionId = $mesh.id }
-if (-not $sessionId) { Write-Error 'mesh session id missing' }
+$callBody = @{ kind = 'group'; media_intent = 'audio' } | ConvertTo-Json
+$call = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$cid/calls" -Method POST -Headers $h -Body $callBody -ContentType 'application/json'
+$sessionId = $call.session_id
+if (-not $sessionId) { Write-Error 'call session id missing' }
 
-$joinUrl = "$WebUrl/?chat=$([uri]::EscapeDataString($cid))&mesh_session=$([uri]::EscapeDataString($sessionId))&mesh_mode=audio"
+$joinUrl = "$WebUrl/?chat=$([uri]::EscapeDataString($cid))&call_session=$([uri]::EscapeDataString($sessionId))&call_mode=audio"
 $web = Invoke-WebRequest -Uri $joinUrl -UseBasicParsing -TimeoutSec 15
-if ($web.StatusCode -ge 400) { Write-Error "mesh join URL HTTP $($web.StatusCode)" }
+if ($web.StatusCode -ge 400) { Write-Error "call join URL HTTP $($web.StatusCode)" }
 
-Write-Host "PASS smoke-desktop-calls (mesh session=$sessionId join=$joinUrl)"
+Write-Host "PASS smoke-desktop-calls (neutral session=$sessionId join=$joinUrl)"
 exit 0

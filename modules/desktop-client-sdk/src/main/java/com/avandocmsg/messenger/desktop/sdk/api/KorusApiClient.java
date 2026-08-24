@@ -2,6 +2,8 @@ package com.avandocmsg.messenger.desktop.sdk.api;
 
 import com.avandocmsg.messenger.desktop.sdk.json.JsonSupport;
 import com.avandocmsg.messenger.desktop.sdk.model.CapabilitiesResponse;
+import com.avandocmsg.messenger.desktop.sdk.model.CallJoinResponse;
+import com.avandocmsg.messenger.desktop.sdk.model.CallSignalResponse;
 import com.avandocmsg.messenger.desktop.sdk.model.ChatDto;
 import com.avandocmsg.messenger.desktop.sdk.model.ConferenceResponse;
 import com.avandocmsg.messenger.desktop.sdk.model.CreateChatRequest;
@@ -61,6 +63,12 @@ public final class KorusApiClient {
     public LoginResponse login(String username, String password) {
         var body = JsonSupport.mapper().valueToTree(new LoginRequest(username, password));
         return post("v1/auth/login", null, body.toString(), LoginResponse.class);
+    }
+
+    public LoginResponse refresh(String refreshToken) {
+        var node = JsonSupport.mapper().createObjectNode();
+        node.put("refresh_token", refreshToken);
+        return post("v1/auth/refresh", null, node.toString(), LoginResponse.class);
     }
 
     public UserMeDto me(String token) {
@@ -175,6 +183,66 @@ public final class KorusApiClient {
         );
     }
 
+    public CallJoinResponse createCall(String token, String chatId, String kind) {
+        return createCall(token, chatId, kind, "audio");
+    }
+
+    public CallJoinResponse createCall(String token, String chatId, String kind, String mediaIntent) {
+        var body = JsonSupport.mapper().createObjectNode();
+        body.put("kind", kind == null || kind.isBlank() ? "group" : kind);
+        body.put("media_intent", "video".equalsIgnoreCase(mediaIntent) ? "video" : "audio");
+        return post(PATH_CHATS_PREFIX + chatId + "/calls", token, body.toString(), CallJoinResponse.class);
+    }
+
+    public CallJoinResponse joinCall(String token, String chatId, String sessionId) {
+        return post(
+            PATH_CHATS_PREFIX + chatId + "/calls/" + sessionId + "/join",
+            token,
+            "{}",
+            CallJoinResponse.class
+        );
+    }
+
+    public void sendCallSignal(
+        String token,
+        CallJoinResponse join,
+        String type,
+        String sdp,
+        String candidate
+    ) {
+        var body = JsonSupport.mapper().createObjectNode();
+        body.put("type", type);
+        if (sdp != null) {
+            body.put("sdp", sdp);
+        }
+        if (candidate != null) {
+            body.put("candidate", candidate);
+        }
+        post(callSignalPath(join), token, body.toString(), Void.class);
+    }
+
+    public List<CallSignalResponse> pollCallSignals(String token, CallJoinResponse join) {
+        return get(callSignalPath(join), token, new TypeReference<List<CallSignalResponse>>() {});
+    }
+
+    public void declineCall(String token, String chatId, String sessionId) {
+        post(PATH_CHATS_PREFIX + chatId + "/calls/" + sessionId + "/decline", token, "{}", Void.class);
+    }
+
+    public void leaveCall(String token, CallJoinResponse join) {
+        post(
+            PATH_CHATS_PREFIX + join.chatId() + "/calls/" + join.sessionId()
+                + "/participants/" + join.participantId() + "/leave",
+            token,
+            "{}",
+            Void.class
+        );
+    }
+
+    public void endCall(String token, String chatId, String sessionId) {
+        post(PATH_CHATS_PREFIX + chatId + "/calls/" + sessionId + "/end", token, "{}", Void.class);
+    }
+
     public MlsSessionInfo mlsSession(String token, String chatId) {
         return get("v1/e2ee/mls/session/" + chatId, token, MlsSessionInfo.class);
     }
@@ -197,6 +265,11 @@ public final class KorusApiClient {
             return base + "/" + p;
         }
         return base + "/api/" + p;
+    }
+
+    private static String callSignalPath(CallJoinResponse join) {
+        return PATH_CHATS_PREFIX + join.chatId() + "/calls/" + join.sessionId()
+            + "/signals/" + join.participantId();
     }
 
     private <T> T get(String path, String token, Class<T> type) {

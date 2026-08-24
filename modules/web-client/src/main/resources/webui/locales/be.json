@@ -106,7 +106,12 @@
     "leave": "Выйсці",
     "endAll": "Завяршыць для ўсіх",
     "startInChat": "Званок у гэтым чаце",
-    "ended": "Канферэнцыя завершана"
+    "ended": "Канферэнцыя завершана",
+    "livekitJoin": "Join LiveKit",
+    "livekitLeave": "Leave LiveKit",
+    "livekitJoinFailed": "Could not join LiveKit room",
+    "livekitUnavailable": "LiveKit is not available",
+    "livekitSfuHint": "SFU mode uses LiveKit for media routing."
   },
   "live": {
     "sectionTitle": "Прямой эфир",
@@ -128,7 +133,10 @@
     "createdDefault": "Прямой эфир начат",
     "ended": "Эфир завершён",
     "leave": "Выйти",
-    "endAll": "Завершить эфир"
+    "endAll": "Завершить эфир",
+    "watchReplay": "Watch replay",
+    "hlsReplay": "HLS replay stream",
+    "replaySection": "Replay"
   },
   "media": {
     "deviceNotFound": "камера або мікрафон не знойдзены",
@@ -243,7 +251,8 @@
     "iceFailed": "Сувязь з удзельнікам званка перарвана (сетка / ICE / TURN).",
     "screenShareFailed": "Экран: {detail}",
     "screenShareCancelled": "адмена",
-    "screenShareUnsupported": "дэманстрацыя экрана не падтрымліваецца гэтым браўзерам або кантэкстам"
+    "screenShareUnsupported": "дэманстрацыя экрана не падтрымліваецца гэтым браўзерам або кантэкстам",
+    "iceFailedHelp": "Connection failed (ICE/TURN). Check network or VPN."
   },
   "messages": {
     "editPrompt": "Рэдагаваць паведамленне",
@@ -262,7 +271,12 @@
     "deleteFailed": "Не ўдалося выдаліць",
     "sendFileFailed": "Не ўдалося адправіць файл",
     "sendFailed": "Не адправілася",
-    "notFoundInHistory": "Паведамленне не знойдзена ў гісторыі чата"
+    "notFoundInHistory": "Паведамленне не знойдзена ў гісторыі чата",
+    "voiceMicDenied": "Microphone access denied",
+    "voiceNotSupported": "Voice messages are not supported in this browser",
+    "sendVoiceFailed": "Could not send voice message",
+    "locationDenied": "Location access denied",
+    "sendLocationFailed": "Could not send location"
   },
   "saved": {
     "alreadyInVault": "Паведамленне ўжо ў сховішчы",
@@ -370,7 +384,8 @@
       "updateReady": "A new version is available",
       "reloadNow": "Reload",
       "reloadLater": "Later",
-      "openMeetings": "Video meetings"
+      "openMeetings": "Video meetings",
+      "navLabel": "Main navigation"
     },
     "sidebar": {
       "searchPlaceholder": "Чаты або карыстальнікі (ад 2 сімв.)…",
@@ -481,7 +496,8 @@
       "emoji": "Emoji",
       "audioCall": "Audio call",
       "videoCall": "Video call",
-      "scheduleMeeting": "Schedule meeting"
+      "scheduleMeeting": "Schedule meeting",
+      "openDiscussion": "Open discussion thread"
     },
     "phase5": {
       "stickers": "Стыкеры",
@@ -720,7 +736,62 @@
       "badgeSharing": "Дэманстрацыя экрана",
       "screen": "Экран",
       "screenSharing": "Вы дэманструеце экран",
-      "stopScreen": "Стоп экрана"
+      "stopScreen": "Стоп экрана",
+      "state": {
+        "idleTitle": "Пачаць званок",
+        "idleHint": "Выберыце аўдыя або відэа. Доступ да прылад будзе запытаны пасля націску.",
+        "acquiring": "Падключаем прылады…",
+        "acquiringHint": "Дазвольце доступ да мікрафона і, пры неабходнасці, камеры.",
+        "connecting": "Падключаем да званка…",
+        "connectingHint": "Усталёўваем абароненае медыязлучэнне.",
+        "connected": "Вы ў званку",
+        "reconnecting": "Аднаўляем злучэнне…",
+        "reconnectingHint": "Налады камеры і мікрафона захаваны.",
+        "leaving": "Выходзім са званка…"
+      },
+      "empty": {
+        "title": "Выберыце чат",
+        "hint": "Званкі даступныя ў асабістых і групавых чатах."
+      },
+      "action": {
+        "startAudio": "Пачаць з аўдыя",
+        "startVideo": "Пачаць з відэа",
+        "cancel": "Скасаваць падключэнне",
+        "retry": "Паўтарыць",
+        "back": "Назад да пачатку",
+        "muteMicrophone": "Выключыць мікрафон",
+        "unmuteMicrophone": "Уключыць мікрафон",
+        "turnCameraOff": "Выключыць камеру",
+        "turnCameraOn": "Уключыць камеру",
+        "shareScreen": "Паказаць экран",
+        "stopScreen": "Спыніць дэманстрацыю",
+        "leave": "Выйсці са званка",
+        "leaveCurrentFirst": "Спачатку выйдзіце з бягучага званка"
+      },
+      "participants": {
+        "aloneTitle": "Вы пакуль адны",
+        "aloneHint": "Іншыя ўдзельнікі з'явяцца пасля падключэння.",
+        "remote": "Удзельнік званка",
+        "sharing": "Вы дэманструеце экран"
+      },
+      "error": {
+        "permissionTitle": "Няма доступу да прылад",
+        "permissionHint": "Дазвольце доступ у наладах браўзера і паўтарыце.",
+        "deviceMissingTitle": "Прылада не знойдзена",
+        "deviceMissingHint": "Падключыце мікрафон або камеру і паўтарыце.",
+        "deviceBusyTitle": "Прылада занята",
+        "deviceBusyHint": "Закрыйце іншую праграму, якая выкарыстоўвае прыладу.",
+        "connectionTitle": "Медыязлучэнне страчана",
+        "connectionHint": "Паўтарыце падключэнне да гэтага званка.",
+        "forbiddenTitle": "Няма доступу да званка",
+        "forbiddenHint": "Пераканайцеся, што вы ўдзельнік гэтага чата.",
+        "unknownTitle": "Не ўдалося падключыцца",
+        "unknownHint": "Паўтарыце спробу."
+      },
+      "notice": {
+        "screenCancelled": "Дэманстрацыя экрана не пачалася.",
+        "declined": "Запрашэнне на званок адхілена."
+      }
     },
     "settings": {
       "title": "Налады",
@@ -924,6 +995,13 @@
       "title": "Video meetings",
       "subtitle": "Planning, guest links, and admin tools — separate from quick in-chat calls.",
       "unavailable": "Meetings section is unavailable."
+    },
+    "mention": {
+      "notificationTitle": "Mention in {chat}",
+      "notificationBody": "You were mentioned in a message"
+    },
+    "chat": {
+      "channel": "Channel"
     }
   },
   "push": {

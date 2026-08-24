@@ -106,7 +106,12 @@
     "leave": "离开",
     "endAll": "为所有人结束",
     "startInChat": "在此聊天中通话",
-    "ended": "会议已结束"
+    "ended": "会议已结束",
+    "livekitJoin": "Join LiveKit",
+    "livekitLeave": "Leave LiveKit",
+    "livekitJoinFailed": "Could not join LiveKit room",
+    "livekitUnavailable": "LiveKit is not available",
+    "livekitSfuHint": "SFU mode uses LiveKit for media routing."
   },
   "live": {
     "sectionTitle": "Live stream",
@@ -128,7 +133,10 @@
     "createdDefault": "Live stream started",
     "ended": "Live session ended",
     "leave": "Leave",
-    "endAll": "End stream"
+    "endAll": "End stream",
+    "watchReplay": "Watch replay",
+    "hlsReplay": "HLS replay stream",
+    "replaySection": "Replay"
   },
   "media": {
     "deviceNotFound": "未找到摄像头或麦克风",
@@ -243,7 +251,8 @@
     "iceFailed": "与通话参与者的连接已中断（网络 / ICE / TURN）。",
     "screenShareFailed": "屏幕共享：{detail}",
     "screenShareCancelled": "已取消",
-    "screenShareUnsupported": "此浏览器或上下文不支持屏幕共享"
+    "screenShareUnsupported": "此浏览器或上下文不支持屏幕共享",
+    "iceFailedHelp": "Connection failed (ICE/TURN). Check network or VPN."
   },
   "messages": {
     "editPrompt": "编辑消息",
@@ -262,7 +271,12 @@
     "deleteFailed": "无法删除",
     "sendFileFailed": "无法发送文件",
     "sendFailed": "发送失败",
-    "notFoundInHistory": "聊天历史中未找到消息"
+    "notFoundInHistory": "聊天历史中未找到消息",
+    "voiceMicDenied": "Microphone access denied",
+    "voiceNotSupported": "Voice messages are not supported in this browser",
+    "sendVoiceFailed": "Could not send voice message",
+    "locationDenied": "Location access denied",
+    "sendLocationFailed": "Could not send location"
   },
   "saved": {
     "alreadyInVault": "消息已在收藏夹中",
@@ -370,7 +384,8 @@
       "updateReady": "A new version is available",
       "reloadNow": "Reload",
       "reloadLater": "Later",
-      "openMeetings": "Video meetings"
+      "openMeetings": "Video meetings",
+      "navLabel": "Main navigation"
     },
     "sidebar": {
       "searchPlaceholder": "聊天或用户（至少 2 个字符）…",
@@ -481,7 +496,8 @@
       "emoji": "Emoji",
       "audioCall": "Audio call",
       "videoCall": "Video call",
-      "scheduleMeeting": "Schedule meeting"
+      "scheduleMeeting": "Schedule meeting",
+      "openDiscussion": "Open discussion thread"
     },
     "phase5": {
       "stickers": "贴纸",
@@ -720,7 +736,62 @@
       "badgeSharing": "屏幕共享",
       "screen": "屏幕",
       "screenSharing": "您正在共享屏幕",
-      "stopScreen": "停止共享"
+      "stopScreen": "停止共享",
+      "state": {
+        "idleTitle": "发起通话",
+        "idleHint": "选择音频或视频。继续后才会请求设备权限。",
+        "acquiring": "正在连接设备…",
+        "acquiringHint": "请允许使用麦克风，并在需要时允许使用摄像头。",
+        "connecting": "正在加入通话…",
+        "connectingHint": "正在建立安全的媒体连接。",
+        "connected": "您已加入通话",
+        "reconnecting": "正在恢复连接…",
+        "reconnectingHint": "摄像头和麦克风设置将保持不变。",
+        "leaving": "正在退出通话…"
+      },
+      "empty": {
+        "title": "选择聊天",
+        "hint": "私聊和群聊均可使用通话。"
+      },
+      "action": {
+        "startAudio": "以音频开始",
+        "startVideo": "以视频开始",
+        "cancel": "取消连接",
+        "retry": "重试",
+        "back": "返回开始",
+        "muteMicrophone": "关闭麦克风",
+        "unmuteMicrophone": "打开麦克风",
+        "turnCameraOff": "关闭摄像头",
+        "turnCameraOn": "打开摄像头",
+        "shareScreen": "共享屏幕",
+        "stopScreen": "停止共享",
+        "leave": "退出通话",
+        "leaveCurrentFirst": "请先退出当前通话"
+      },
+      "participants": {
+        "aloneTitle": "目前只有您",
+        "aloneHint": "其他参与者连接后会显示在这里。",
+        "remote": "通话参与者",
+        "sharing": "您正在共享屏幕"
+      },
+      "error": {
+        "permissionTitle": "设备访问被拒绝",
+        "permissionHint": "请在浏览器设置中允许访问，然后重试。",
+        "deviceMissingTitle": "未找到设备",
+        "deviceMissingHint": "请连接麦克风或摄像头，然后重试。",
+        "deviceBusyTitle": "设备正忙",
+        "deviceBusyHint": "请关闭正在使用此设备的其他应用。",
+        "connectionTitle": "媒体连接已断开",
+        "connectionHint": "请尝试重新连接此通话。",
+        "forbiddenTitle": "无权访问此通话",
+        "forbiddenHint": "请确认您是此聊天的成员。",
+        "unknownTitle": "无法连接",
+        "unknownHint": "请重试。"
+      },
+      "notice": {
+        "screenCancelled": "屏幕共享未开始。",
+        "declined": "通话邀请已被拒绝。"
+      }
     },
     "settings": {
       "title": "设置",
@@ -924,6 +995,13 @@
       "title": "Video meetings",
       "subtitle": "Planning, guest links, and admin tools — separate from quick in-chat calls.",
       "unavailable": "Meetings section is unavailable."
+    },
+    "mention": {
+      "notificationTitle": "Mention in {chat}",
+      "notificationBody": "You were mentioned in a message"
+    },
+    "chat": {
+      "channel": "Channel"
     }
   },
   "push": {

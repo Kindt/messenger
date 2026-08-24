@@ -215,7 +215,9 @@ public final class DesktopRuntime {
 
         this.capabilitiesCache = new ServerCapabilitiesCache(stateDir);
 
-        this.wsHub = new MultiServerWsHub(KorusApiClient.defaultHttpClient());
+        this.wsHub = new MultiServerWsHub(
+            new com.avandocmsg.messenger.desktop.sdk.security.SecuritySettingsStore(profileStore, profile.profileId()).read()
+        );
 
         var resolver = new AttachmentPathResolver(
 

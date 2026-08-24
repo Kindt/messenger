@@ -17,10 +17,15 @@ public final class WsUrlResolver {
 
     public static String defaultFromApiBase(String apiBaseUrl) {
         var uri = URI.create(apiBaseUrl.trim());
+        var secure = "https".equalsIgnoreCase(uri.getScheme());
+        var wsScheme = secure ? "wss" : "ws";
         var host = uri.getHost() == null ? "127.0.0.1" : uri.getHost();
-        var port = uri.getPort() > 0 ? uri.getPort() : 18080;
+        var port = uri.getPort() > 0 ? uri.getPort() : (secure ? 443 : 18080);
         var wsPort = port == 18080 ? 18082 : port;
-        return "ws://" + host + ":" + wsPort + "/ws";
+        if (secure && port <= 0) {
+            return wsScheme + "://" + host + "/ws";
+        }
+        return wsScheme + "://" + host + ":" + wsPort + "/ws";
     }
 
     public static String withToken(String baseUrl, String token) {

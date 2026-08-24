@@ -21,6 +21,11 @@
       if (!data) {
         return;
       }
+      if (ctx.isCallSessionEvent(data)) {
+        ctx.sendHeartbeatThrottled();
+        ctx.handleCallSessionEvent(data);
+        return;
+      }
       if (data && data.type === "rtc_signal") {
         ctx.sendHeartbeatThrottled();
         ctx.handleRtcEnvelope(data);

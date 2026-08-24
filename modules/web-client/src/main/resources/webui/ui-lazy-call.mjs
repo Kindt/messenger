@@ -42,3 +42,7 @@ export function loadCallMeshRecord() {
 export function loadCallLivekit() {
   return loadClassicScript("/ui-call-livekit.js", "KorusUiCallLivekit");
 }
+
+export function loadCallPc() {
+  return loadClassicScript("/ui-call-pc.js", "KorusUiCallPc");
+}

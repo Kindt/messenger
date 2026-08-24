@@ -31,6 +31,8 @@
     or korus_product_addons is defined
     or korus_lab_allow_dev_secrets | default(false) | bool
     or korus_core_api_deploy_mode is defined
+    or korus_media_sfu_mode is defined
+    or korus_media_sfu_public_address is defined
     or korus_external_stack_manifest_enabled | default(true) | bool
 
 - name: Template desired external stack manifest

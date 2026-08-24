@@ -121,8 +121,13 @@ services:
       dockerfile: docker/Dockerfile.core-api
     ports:
       - "8080:8080"
+      - "40000-40031:40000-40031/udp"
     environment:
       APP_PORT: 8080
+      MEDIA_SFU_BIND_ADDRESS: "0.0.0.0"
+      MEDIA_SFU_PUBLIC_ADDRESS: "${MEDIA_SFU_PUBLIC_ADDRESS:-127.0.0.1}"
+      MEDIA_SFU_PORT_MIN: "40000"
+      MEDIA_SFU_PORT_MAX: "40031"
       SECURITY_TIMING_NORMALIZATION_MIN_MS: "220"
       SECURITY_TIMING_NOT_FOUND_EXTRA_MS: "35"
       SECURITY_TIMING_AUTH_FAILURE_EXTRA_MS: "120"

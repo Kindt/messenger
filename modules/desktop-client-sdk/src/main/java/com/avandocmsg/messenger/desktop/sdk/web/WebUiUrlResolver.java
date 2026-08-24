@@ -41,7 +41,7 @@ public final class WebUiUrlResolver {
         return normalizeBase(base);
     }
 
-    public static String meshJoinUrl(String webBase, String chatId, String sessionId, String mediaMode) {
+    public static String callJoinUrl(String webBase, String chatId, String sessionId, String mediaMode) {
         if (chatId == null || chatId.isBlank()) {
             throw new IllegalArgumentException("chatId required");
         }
@@ -52,8 +52,14 @@ public final class WebUiUrlResolver {
         var base = normalizeBase(webBase);
         return base
             + "?chat=" + encode(chatId)
-            + "&mesh_session=" + encode(sessionId)
-            + "&mesh_mode=" + mode;
+            + "&call_session=" + encode(sessionId)
+            + "&call_mode=" + mode;
+    }
+
+    /** @deprecated Use {@link #callJoinUrl(String, String, String, String)}. */
+    @Deprecated(forRemoval = true)
+    public static String meshJoinUrl(String webBase, String chatId, String sessionId, String mediaMode) {
+        return callJoinUrl(webBase, chatId, sessionId, mediaMode);
     }
 
     private static String encode(String value) {

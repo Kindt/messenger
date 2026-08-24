@@ -88,11 +88,11 @@ class DesktopShellDemoUiTest {
     }
 
     @Test
-    void demoCallButtonAppendsMeshCallLine(FxRobot robot) {
+    void demoCallButtonAppendsProviderNeutralCallLine(FxRobot robot) {
         DesktopUiRobot.waitForFx();
         var call = robot.lookup("#" + DesktopUiIds.CALL_BTN).queryAs(Button.class);
         robot.interact(call::fire);
-        DesktopUiRobot.waitForTextContains(robot, DesktopUiIds.MESSAGES, "demo://mesh-call", 8000);
+        DesktopUiRobot.waitForTextContains(robot, DesktopUiIds.MESSAGES, "demo://call", 8000);
     }
 
     @Test

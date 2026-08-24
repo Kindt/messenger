@@ -4,7 +4,7 @@
   Cross-client smoke: web ↔ desktop paths on same QEMU stack (:18080 / :19088).
 
   Messaging: smoke_user_a (desktop SDK path) ↔ smoke_user_b (web API path).
-  Calls: mesh-calls (web WebRTC) — desktop CALL_BTN opens same mesh via web UI deep link.
+  Calls: provider-neutral /calls — desktop starts in-process PCMU; web deep link remains for share.
 #>
 param(
     [string] $BaseUrl = 'http://127.0.0.1:18080',
@@ -99,38 +99,38 @@ try {
     }
     Write-Host "PASS messaging B->A (web API path -> desktop consumer)" -ForegroundColor Green
 
-    # Mesh call (web in-browser path): A starts, B joins same session
-    $meshBody = @{ media_mode = 'audio' } | ConvertTo-Json
-    $mesh = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/mesh-calls/sessions" -Method POST -Headers $hA -Body $meshBody -ContentType 'application/json'
-    $sessionId = $mesh.session_id
-    if (-not $sessionId) { $sessionId = $mesh.id }
-    if (-not $sessionId) { throw 'mesh session id missing' }
-    $meshJoin = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/mesh-calls/sessions/$sessionId/join" -Method POST -Headers $hB -ContentType 'application/json' -Body '{}'
-    if (-not $meshJoin) { throw 'mesh join failed for B' }
-    Write-Host "PASS mesh audio call session A start + B join (web WebRTC path)" -ForegroundColor Green
+    # Provider-neutral call: A starts, B joins the same session.
+    $audioBody = @{ kind = 'group'; media_intent = 'audio' } | ConvertTo-Json
+    $audio = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/calls" -Method POST -Headers $hA -Body $audioBody -ContentType 'application/json'
+    $sessionId = $audio.session_id
+    if (-not $sessionId) { throw 'audio call session id missing' }
+    $audioJoin = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/calls/$sessionId/join" -Method POST -Headers $hB -ContentType 'application/json' -Body '{}'
+    if (-not $audioJoin.participant_id) { throw 'audio call join failed for B' }
+    Write-Host "PASS neutral audio call session A start + B join" -ForegroundColor Green
 
-    $meshVideoBody = @{ media_mode = 'video' } | ConvertTo-Json
-    $meshV = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/mesh-calls/sessions" -Method POST -Headers $hB -Body $meshVideoBody -ContentType 'application/json'
-    $sessionV = $meshV.session_id
-    if (-not $sessionV) { $sessionV = $meshV.id }
-    if (-not $sessionV) { throw 'mesh video session id missing' }
-    Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/mesh-calls/sessions/$sessionV/join" -Method POST -Headers $hA -ContentType 'application/json' -Body '{}' | Out-Null
-    Write-Host "PASS mesh video call session B start + A join" -ForegroundColor Green
+    Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/calls/$sessionId/end" -Method POST -Headers $hA -ContentType 'application/json' -Body '{}' | Out-Null
+    $videoBody = @{ kind = 'group'; media_intent = 'video' } | ConvertTo-Json
+    $video = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/calls" -Method POST -Headers $hB -Body $videoBody -ContentType 'application/json'
+    $sessionV = $video.session_id
+    if (-not $sessionV) { throw 'video call session id missing' }
+    Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/calls/$sessionV/join" -Method POST -Headers $hA -ContentType 'application/json' -Body '{}' | Out-Null
+    Write-Host "PASS neutral video call session B start + A join" -ForegroundColor Green
 
-    # Desktop mesh path: start session + web deep link (same stack as web CALL_BTN)
-    $meshDesktopBody = @{ media_mode = 'audio' } | ConvertTo-Json
-    $meshDesktop = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/mesh-calls/sessions" -Method POST -Headers $hA -Body $meshDesktopBody -ContentType 'application/json'
-    $desktopSessionId = $meshDesktop.session_id
-    if (-not $desktopSessionId) { $desktopSessionId = $meshDesktop.id }
-    if (-not $desktopSessionId) { throw 'desktop mesh session id missing' }
-    $desktopJoinUrl = "$WebUrl/?chat=$([uri]::EscapeDataString($chatId))&mesh_session=$([uri]::EscapeDataString($desktopSessionId))&mesh_mode=audio"
+    Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/calls/$sessionV/end" -Method POST -Headers $hB -ContentType 'application/json' -Body '{}' | Out-Null
+
+    # Desktop handoff: neutral session + provider-neutral web deep link.
+    $desktopBody = @{ kind = 'group'; media_intent = 'audio' } | ConvertTo-Json
+    $desktop = Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/calls" -Method POST -Headers $hA -Body $desktopBody -ContentType 'application/json'
+    $desktopSessionId = $desktop.session_id
+    if (-not $desktopSessionId) { throw 'desktop call session id missing' }
+    $desktopJoinUrl = "$WebUrl/?chat=$([uri]::EscapeDataString($chatId))&call_session=$([uri]::EscapeDataString($desktopSessionId))&call_mode=audio"
     $desktopWeb = Invoke-WebRequest -Uri $desktopJoinUrl -UseBasicParsing -TimeoutSec 15
-    if ($desktopWeb.StatusCode -ge 400) { throw "desktop mesh join URL HTTP $($desktopWeb.StatusCode)" }
-    Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/mesh-calls/sessions/$desktopSessionId/join" -Method POST -Headers $hB -ContentType 'application/json' -Body '{}' | Out-Null
-    Write-Host "PASS desktop mesh call URL + web peer join: $desktopJoinUrl" -ForegroundColor Green
+    if ($desktopWeb.StatusCode -ge 400) { throw "desktop call join URL HTTP $($desktopWeb.StatusCode)" }
+    Invoke-RestMethod -Uri "$BaseUrl/api/v1/chats/$chatId/calls/$desktopSessionId/join" -Method POST -Headers $hB -ContentType 'application/json' -Body '{}' | Out-Null
+    Write-Host "PASS desktop neutral call URL + web join: $desktopJoinUrl" -ForegroundColor Green
 
     Write-Host ""
-    Write-Host "PASS smoke-desktop-web-cross (messaging + mesh AV + desktop mesh URL)" -ForegroundColor Green
+    Write-Host "PASS smoke-desktop-web-cross (messaging + neutral AV + desktop call URL)" -ForegroundColor Green
     exit 0
 }
 catch {

@@ -133,6 +133,7 @@ public class CoreApiComposition {
     private com.avandocmsg.messenger.api.messages.MessageReminderScheduler messageReminderScheduler;
     private com.avandocmsg.messenger.core.port.ScheduledMessagePort scheduledMessagePort;
     private com.avandocmsg.messenger.core.port.MessageReminderPort messageReminderPort;
+    private com.avandocmsg.messenger.media.EmbeddedWebRtcMediaNode webRtcMediaNode;
 
     public CoreApiComposition() {
         this.appConfig = new AppConfig();
@@ -426,6 +427,25 @@ public class CoreApiComposition {
             appConfig,
             CoreModule.fileMetadataPort(dataSource),
             this.uuidGenerator);
+        var mediaSfuConfig = com.avandocmsg.messenger.media.MediaSfuConfiguration.fromEnvironment();
+        var mediaRooms = new com.avandocmsg.messenger.media.InMemoryMediaRoomService(
+            this.clock,
+            mediaSfuConfig.idleTimeout(),
+            mediaSfuConfig.nodeId());
+        this.webRtcMediaNode = new com.avandocmsg.messenger.media.EmbeddedWebRtcMediaNode(
+            mediaRooms,
+            resolveMediaAddress(mediaSfuConfig.bindAddress()),
+            resolveMediaAddress(mediaSfuConfig.publicAddress()),
+            mediaSfuConfig.mediaPortMin(),
+            mediaSfuConfig.mediaPortMax(),
+            mediaSfuConfig.lastN(),
+            com.avandocmsg.messenger.media.DtlsIdentity.generate(this.clock, new java.security.SecureRandom())
+        );
+        var unifiedCallService = new com.avandocmsg.messenger.api.calls.UnifiedCallService(
+            chatPersistencePort,
+            mediaRooms,
+            webRtcMediaNode,
+            new com.avandocmsg.messenger.api.calls.NatsCallSessionEventPublisher(natsOutbound));
 
         var jerseyConfig = new JerseyConfig(dataSource, appConfig, userMessages, this.clock, this.uuidGenerator, tokenValidator, authService, authRateLimiter,
                 userLookupPort, organizationLookupPort, contactRepositoryPort, contactService,
@@ -451,6 +471,7 @@ public class CoreApiComposition {
                 federationTrustPort, federationStatusService, dlpBridgeGate,
                 chatPollPort, chatPollService, scheduledMessagePort, messageReminderPort, phase5AdrService,
                 meshCallRecordingService,
+                unifiedCallService,
                 uiBrandingService);
         var jerseyServlet = new ServletContainer(jerseyConfig);
 
@@ -533,6 +554,10 @@ public class CoreApiComposition {
     }
 
     public void stopBackgroundServices() throws Exception {
+        if (webRtcMediaNode != null) {
+            webRtcMediaNode.close();
+            webRtcMediaNode = null;
+        }
         if (exportCompleteSubscriber != null) {
             exportCompleteSubscriber.close();
             exportCompleteSubscriber = null;
@@ -584,6 +609,14 @@ public class CoreApiComposition {
                 log.warn("Solr close: {}", e.getMessage());
             }
             solrClient = null;
+        }
+    }
+
+    private static java.net.InetAddress resolveMediaAddress(String value) {
+        try {
+            return java.net.InetAddress.getByName(value);
+        } catch (java.net.UnknownHostException error) {
+            throw new IllegalArgumentException("Invalid media address: " + value, error);
         }
     }
 

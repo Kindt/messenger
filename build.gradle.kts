@@ -33,8 +33,8 @@ tasks.register("spotlessCheckIncremental") {
 
 allprojects {
     repositories {
-        google()
         mavenCentral()
+        google()
     }
 }
 

@@ -1,0 +1,23 @@
+---
+alwaysApply: true
+---
+
+# Korus mobile native client workflow
+
+Tasks touching `mobile/**`, Kotlin Multiplatform, Android/iOS native app, Maestro flows, `smoke-mobile-*.ps1`, mobile push/downloads/platform services:
+
+1. Read `.cursor/skills/korus-mobile-orchestrator/SKILL.md` **FIRST**
+2. Identify wave W0–W4 **before** editing files
+3. Follow role phases and gates — spec `specs/032-mobile-native-client/`
+4. **UI:** `DESIGNER` → `UX_EVALUATOR` **before** Engineer — full `mobile-ux-spec` (IA, menu vs screen), not ad-hoc buttons
+5. **ENGINEER:** no `mobile/**` edits until `plan-review.status == APPROVED` **and** `ux-review.status == PASS` (or N/A SDK-only)
+
+Designer subagent: `.cursor/agents/korus-mobile-designer.md`  
+UX subagent: `.cursor/agents/korus-mobile-ux-evaluator.md`  
+UX framework: `specs/032-mobile-native-client/design/mobile-ux-framework.md`
+
+If task is **not** mobile native (webui responsive, backend-only, desktop Java): orchestrator exits quickly.
+
+Engineer domain reference (after orchestrator routes to ENGINEER): `specs/032-mobile-native-client/research.md` + `mobile/mobile-client-sdk/`.
+
+**Not mobile orchestrator:** responsive web shell in `webui/` → `korus-ui-orchestrator` + `korus-webui-mobile`.

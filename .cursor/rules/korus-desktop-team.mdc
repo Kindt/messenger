@@ -1,0 +1,18 @@
+# Korus Desktop team workflow
+
+Tasks touching `modules/desktop-client*`, JavaFX, jpackage, multi-server desktop registry, profile store, desktop smokes, spec `031-*`:
+
+1. Read `.cursor/skills/korus-desktop-orchestrator/SKILL.md` **FIRST**
+2. **Continuous conveyor** — не останавливаться между ролями; Prepare W+1 пока Build W (`specs/031-desktop-java-client/design/continuous-conveyor.md`)
+3. Classify pipeline D1–D5 **before** editing files
+4. Hard gates: `ux_review` + `plan_review` для Engineer (не паузы для пользователя)
+5. **UI:** full `desktop-ux-spec` before JavaFX edits
+6. Spec: `specs/031-desktop-java-client/`
+
+Designer: `.cursor/agents/korus-desktop-designer.md`  
+UX: `.cursor/agents/korus-desktop-ux-evaluator.md`  
+Framework: `specs/031-desktop-java-client/design/desktop-ux-framework.md`
+
+Not desktop → `korus-ui-orchestrator` or `korus-agent-workflow`.
+
+Engineer: `.cursor/skills/korus-desktop-role-engineer/SKILL.md`

@@ -1,9 +1,11 @@
 package com.avandocmsg.messenger.desktop.sdk.session;
 
 import com.avandocmsg.messenger.desktop.sdk.api.KorusApiClient;
+import com.avandocmsg.messenger.desktop.sdk.call.CallAudioMedia;
+import com.avandocmsg.messenger.desktop.sdk.call.InProcessCallClient;
+import com.avandocmsg.messenger.desktop.sdk.call.NativeCallAudioMedia;
 import com.avandocmsg.messenger.desktop.sdk.chat.ChatService;
 import com.avandocmsg.messenger.desktop.sdk.chat.ReadReceiptService;
-import com.avandocmsg.messenger.desktop.sdk.mesh.MeshCallClient;
 import com.avandocmsg.messenger.desktop.sdk.web.WebUiUrlResolver;
 import com.avandocmsg.messenger.desktop.sdk.files.FileTransferService;
 import com.avandocmsg.messenger.desktop.sdk.identity.ChatRef;
@@ -16,19 +18,30 @@ import com.avandocmsg.messenger.desktop.sdk.mls.MlsChatFacade;
 import com.avandocmsg.messenger.desktop.sdk.model.ServerEntry;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Supplier;
 
 public final class ApiDesktopSession implements DesktopSession {
 
     private final MultiServerSessionManager sessions;
     private final FileTransferService fileTransfer;
+    private final Supplier<CallAudioMedia> mediaFactory;
 
     public ApiDesktopSession(MultiServerSessionManager sessions) {
         this(sessions, null);
     }
 
     public ApiDesktopSession(MultiServerSessionManager sessions, FileTransferService fileTransfer) {
+        this(sessions, fileTransfer, NativeCallAudioMedia::new);
+    }
+
+    public ApiDesktopSession(
+        MultiServerSessionManager sessions,
+        FileTransferService fileTransfer,
+        Supplier<CallAudioMedia> mediaFactory
+    ) {
         this.sessions = sessions;
         this.fileTransfer = fileTransfer;
+        this.mediaFactory = mediaFactory == null ? NativeCallAudioMedia::new : mediaFactory;
     }
 
     @Override
@@ -94,20 +107,41 @@ public final class ApiDesktopSession implements DesktopSession {
     }
 
     @Override
-    public String startCall(ServerId serverId, String username, ChatRef chat, String title) throws Exception {
-        return startMeshCall(serverId, username, chat, "audio");
+    public String startCall(ServerId serverId, String username, ChatRef chat, String mediaMode) throws Exception {
+        var token = requireToken(serverId, username);
+        var call = client(serverId).createCall(token, chat.chatId(), "group", mediaMode);
+        var sessionId = call.sessionId();
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new IllegalStateException("call session id missing");
+        }
+        var webBase = WebUiUrlResolver.resolve(serverEntry(serverId));
+        return WebUiUrlResolver.callJoinUrl(webBase, chat.chatId(), sessionId, mediaMode);
     }
 
     @Override
-    public String startMeshCall(ServerId serverId, String username, ChatRef chat, String mediaMode) throws Exception {
+    public InProcessCallClient startLiveCall(
+        ServerId serverId,
+        String username,
+        ChatRef chat,
+        String mediaMode
+    ) throws Exception {
         var token = requireToken(serverId, username);
-        var mesh = new MeshCallClient(client(serverId)).startSession(token, chat.chatId(), mediaMode);
-        var sessionId = mesh.resolvedSessionId();
-        if (sessionId == null || sessionId.isBlank()) {
-            throw new IllegalStateException("mesh session id missing");
-        }
-        var webBase = WebUiUrlResolver.resolve(serverEntry(serverId));
-        return WebUiUrlResolver.meshJoinUrl(webBase, chat.chatId(), sessionId, mediaMode);
+        var client = new InProcessCallClient(client(serverId), mediaFactory);
+        client.start(token, chat.chatId(), "group", mediaMode);
+        return client;
+    }
+
+    @Override
+    public InProcessCallClient joinLiveCall(
+        ServerId serverId,
+        String username,
+        ChatRef chat,
+        String sessionId
+    ) throws Exception {
+        var token = requireToken(serverId, username);
+        var client = new InProcessCallClient(client(serverId), mediaFactory);
+        client.join(token, chat.chatId(), sessionId);
+        return client;
     }
 
     @Override

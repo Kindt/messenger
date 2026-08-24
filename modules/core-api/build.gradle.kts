@@ -7,6 +7,7 @@ dependencies {
     implementation(project(":modules:common"))
     implementation(project(":modules:core-domain"))
     implementation(project(":modules:core-port"))
+    implementation(project(":modules:media-sfu"))
 
     // Tomcat embedded
     implementation(libs.tomcat.embed.core)

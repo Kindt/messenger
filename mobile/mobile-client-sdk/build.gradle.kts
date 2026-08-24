@@ -13,7 +13,12 @@ group = "com.avandocmsg.messenger.mobile"
 version = "0.0.1-SNAPSHOT"
 
 kotlin {
-    androidTarget()
+    jvmToolchain(17)
+    androidTarget {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
+    }
     jvm {
         testRuns["test"].executionTask.configure {
             useJUnitPlatform()
@@ -31,6 +36,7 @@ kotlin {
         androidMain.dependencies {
             implementation("io.ktor:ktor-client-okhttp:2.3.12")
             implementation("androidx.security:security-crypto:1.1.0-alpha06")
+            implementation(project(":modules:media-sfu"))
         }
         jvmMain.dependencies {
             implementation("io.ktor:ktor-client-cio:2.3.12")

@@ -1,0 +1,38 @@
+appId: com.avandocmsg.messenger.mobile
+---
+# W0 login via server list (emulator -> host QEMU :18080). Text selectors for Maestro + Compose.
+- launchApp
+- extendedWaitUntil:
+    visible: "Адрес сервера"
+    timeout: 20000
+- runFlow:
+    when:
+      visible: "Адрес сервера"
+    commands:
+      - tapOn: "Адрес сервера"
+      - eraseText: 80
+      - inputText: "http://10.0.2.2:18080"
+      - tapOn: "Название"
+      - eraseText: 40
+      - inputText: "Lab"
+      - hideKeyboard
+      - scrollUntilVisible:
+          element: "Добавить"
+      - tapOn: "Добавить"
+      - extendedWaitUntil:
+          visible: "Подключённые серверы"
+          timeout: 45000
+- tapOn:
+    text: "Войти"
+    below: "Lab"
+- extendedWaitUntil:
+    visible: "Вход на сервер Lab"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Войти"
+- tapOn:
+    text: "Войти"
+    below: "Пароль"
+- extendedWaitUntil:
+    visible: "Вход выполнен: user1"
+    timeout: 30000

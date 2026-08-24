@@ -62,7 +62,7 @@
     -fx-text-fill: white;
 }
 
-/* ── Tab strip (bottom, QIP-style modes) ── */
+/* ── Tab strip (legacy bottom modes) ── */
 .qip-tabs {
     -fx-tab-min-height: 32px;
     -fx-background-color: #d5dde8;
@@ -104,6 +104,83 @@
     -fx-background-color: #e8ecf2;
     -fx-border-color: #9aadc4;
     -fx-border-width: 0 1 1 1;
+}
+
+/* ── Icon nav rail (Telegram / Discord / Teams / Slack) ── */
+.qip-nav-rail-tabs {
+    -fx-tab-min-width: 52px;
+    -fx-tab-max-width: 52px;
+    -fx-tab-min-height: 48px;
+    -fx-background-color: #eef0f3;
+}
+
+.qip-nav-rail-tabs .tab-header-area {
+    -fx-padding: 8 0 8 0;
+    -fx-background-color: #eef0f3;
+}
+
+.qip-nav-rail-tabs .tab-header-background {
+    -fx-background-color: #eef0f3;
+    -fx-border-color: #d0d5dd;
+    -fx-border-width: 0 1 0 0;
+}
+
+.qip-nav-rail-tabs .tab {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 10 0 10 0;
+    -fx-background-radius: 12;
+}
+
+.qip-nav-rail-tabs .tab:selected {
+    -fx-background-color: #dbeafe;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-radius: 12;
+    -fx-background-insets: 4 6 4 6;
+}
+
+.qip-nav-rail-tabs .tab:hover {
+    -fx-background-color: #e2e8f0;
+    -fx-background-radius: 12;
+    -fx-background-insets: 4 6 4 6;
+}
+
+.qip-nav-rail-tabs .tab .tab-label {
+    -fx-text-fill: transparent;
+    -fx-padding: 0;
+    -fx-font-size: 1px;
+}
+
+.qip-tab-icon {
+    -fx-font-size: 18px;
+    -fx-alignment: center;
+    -fx-text-fill: #475569;
+    -fx-padding: 0;
+}
+
+.qip-nav-rail-tabs .tab:selected .qip-tab-icon {
+    -fx-text-fill: #1d4ed8;
+}
+
+.qip-nav-rail-tabs .tab-content-area {
+    -fx-background-color: #e8ecf2;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+}
+
+.qip-title-bar .qip-btn-icon {
+    -fx-min-width: 36px;
+    -fx-min-height: 32px;
+    -fx-padding: 4 8 4 8;
+    -fx-font-size: 14px;
+}
+
+.qip-btn-send {
+    -fx-min-width: 40px;
+    -fx-min-height: 36px;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
 }
 
 /* ── Contact list (left) ── */
@@ -688,13 +765,20 @@
     -fx-background-color: #eef3fa;
 }
 
-.qip-root.theme-dark .qip-settings-tabs .tab-header-area {
-    -fx-background-color: #2a3348;
+.qip-root.theme-dark .qip-settings-tabs .tab-header-area,
+.qip-root.theme-dark .qip-nav-rail-tabs .tab-header-area {
+    -fx-background-color: #1e1f22;
     -fx-border-color: #3a4558;
 }
 
-.qip-root.theme-dark .qip-settings-tabs .tab:selected {
-    -fx-background-color: #343e52;
+.qip-root.theme-dark .qip-nav-rail-tabs,
+.qip-root.theme-dark .qip-nav-rail-tabs .tab-header-background {
+    -fx-background-color: #1e1f22;
+}
+
+.qip-root.theme-dark .qip-settings-tabs .tab:selected,
+.qip-root.theme-dark .qip-nav-rail-tabs .tab:selected {
+    -fx-background-color: #3b4554;
 }
 
 .qip-root.theme-dark .qip-settings-tabs .tab .tab-label {
@@ -703,6 +787,14 @@
 
 .qip-root.theme-dark .qip-settings-tabs .tab:selected .tab-label {
     -fx-text-fill: #e8ecf2;
+}
+
+.qip-root.theme-dark .qip-tab-icon {
+    -fx-text-fill: #9aa8bc;
+}
+
+.qip-root.theme-dark .qip-nav-rail-tabs .tab:selected .qip-tab-icon {
+    -fx-text-fill: #93c5fd;
 }
 
 .qip-root.theme-dark .qip-settings-heading {

@@ -106,7 +106,12 @@
     "leave": "Шығу",
     "endAll": "Барлығы үшін аяқтау",
     "startInChat": "Осы чатта қоңырау",
-    "ended": "Конференция аяқталды"
+    "ended": "Конференция аяқталды",
+    "livekitJoin": "Join LiveKit",
+    "livekitLeave": "Leave LiveKit",
+    "livekitJoinFailed": "Could not join LiveKit room",
+    "livekitUnavailable": "LiveKit is not available",
+    "livekitSfuHint": "SFU mode uses LiveKit for media routing."
   },
   "live": {
     "sectionTitle": "Live stream",
@@ -128,7 +133,10 @@
     "createdDefault": "Live stream started",
     "ended": "Live session ended",
     "leave": "Leave",
-    "endAll": "End stream"
+    "endAll": "End stream",
+    "watchReplay": "Watch replay",
+    "hlsReplay": "HLS replay stream",
+    "replaySection": "Replay"
   },
   "media": {
     "deviceNotFound": "камера немесе микрофон табылмады",
@@ -243,7 +251,8 @@
     "iceFailed": "Қоңырау қатысушысымен байланыс үзілді (желі / ICE / TURN).",
     "screenShareFailed": "Экран: {detail}",
     "screenShareCancelled": "бас тарту",
-    "screenShareUnsupported": "экранды көрсету бұл браузерде немесе контексте қолдау таппайды"
+    "screenShareUnsupported": "экранды көрсету бұл браузерде немесе контексте қолдау таппайды",
+    "iceFailedHelp": "Connection failed (ICE/TURN). Check network or VPN."
   },
   "messages": {
     "editPrompt": "Хабарламаны өңдеу",
@@ -262,7 +271,12 @@
     "deleteFailed": "Жою сәтсіз аяқталды",
     "sendFileFailed": "Файл жіберілмеді",
     "sendFailed": "Жіберілмеді",
-    "notFoundInHistory": "Хабарлама чат тарихында табылмады"
+    "notFoundInHistory": "Хабарлама чат тарихында табылмады",
+    "voiceMicDenied": "Microphone access denied",
+    "voiceNotSupported": "Voice messages are not supported in this browser",
+    "sendVoiceFailed": "Could not send voice message",
+    "locationDenied": "Location access denied",
+    "sendLocationFailed": "Could not send location"
   },
   "saved": {
     "alreadyInVault": "Хабарлама қоймада бар",
@@ -370,7 +384,8 @@
       "updateReady": "A new version is available",
       "reloadNow": "Reload",
       "reloadLater": "Later",
-      "openMeetings": "Video meetings"
+      "openMeetings": "Video meetings",
+      "navLabel": "Main navigation"
     },
     "sidebar": {
       "searchPlaceholder": "Чаттар немесе пайдаланушылар (2 таңбадан)…",
@@ -481,7 +496,8 @@
       "emoji": "Emoji",
       "audioCall": "Audio call",
       "videoCall": "Video call",
-      "scheduleMeeting": "Schedule meeting"
+      "scheduleMeeting": "Schedule meeting",
+      "openDiscussion": "Open discussion thread"
     },
     "phase5": {
       "stickers": "Стикерлер",
@@ -720,7 +736,62 @@
       "badgeSharing": "Экранды көрсету",
       "screen": "Экран",
       "screenSharing": "Экранды көрсетіп жатырсыз",
-      "stopScreen": "Экранды тоқтату"
+      "stopScreen": "Экранды тоқтату",
+      "state": {
+        "idleTitle": "Қоңырауды бастау",
+        "idleHint": "Аудио немесе бейнені таңдаңыз. Құрылғыларға рұқсат басқаннан кейін сұралады.",
+        "acquiring": "Құрылғылар қосылуда…",
+        "acquiringHint": "Микрофонға және қажет болса камераға рұқсат беріңіз.",
+        "connecting": "Қоңырауға қосылуда…",
+        "connectingHint": "Қауіпсіз медиа байланыс орнатылуда.",
+        "connected": "Сіз қоңыраудасыз",
+        "reconnecting": "Байланыс қалпына келтірілуде…",
+        "reconnectingHint": "Камера мен микрофон параметрлері сақталады.",
+        "leaving": "Қоңыраудан шығуда…"
+      },
+      "empty": {
+        "title": "Чатты таңдаңыз",
+        "hint": "Қоңыраулар жеке және топтық чаттарда қолжетімді."
+      },
+      "action": {
+        "startAudio": "Аудиомен бастау",
+        "startVideo": "Бейнемен бастау",
+        "cancel": "Қосылудан бас тарту",
+        "retry": "Қайталау",
+        "back": "Басына оралу",
+        "muteMicrophone": "Микрофонды өшіру",
+        "unmuteMicrophone": "Микрофонды қосу",
+        "turnCameraOff": "Камераны өшіру",
+        "turnCameraOn": "Камераны қосу",
+        "shareScreen": "Экранды көрсету",
+        "stopScreen": "Көрсетуді тоқтату",
+        "leave": "Қоңыраудан шығу",
+        "leaveCurrentFirst": "Алдымен ағымдағы қоңыраудан шығыңыз"
+      },
+      "participants": {
+        "aloneTitle": "Әзірге жалғызсыз",
+        "aloneHint": "Басқа қатысушылар қосылғаннан кейін осында көрінеді.",
+        "remote": "Қоңырау қатысушысы",
+        "sharing": "Экранды көрсетіп жатырсыз"
+      },
+      "error": {
+        "permissionTitle": "Құрылғыларға рұқсат жоқ",
+        "permissionHint": "Браузер баптауларында рұқсат беріп, қайталаңыз.",
+        "deviceMissingTitle": "Құрылғы табылмады",
+        "deviceMissingHint": "Микрофонды немесе камераны қосып, қайталаңыз.",
+        "deviceBusyTitle": "Құрылғы бос емес",
+        "deviceBusyHint": "Осы құрылғыны пайдаланатын басқа қолданбаны жабыңыз.",
+        "connectionTitle": "Медиа байланыс үзілді",
+        "connectionHint": "Осы қоңырауға қайта қосылып көріңіз.",
+        "forbiddenTitle": "Қоңырауға рұқсат жоқ",
+        "forbiddenHint": "Осы чаттың қатысушысы екеніңізді тексеріңіз.",
+        "unknownTitle": "Қосылу мүмкін болмады",
+        "unknownHint": "Қайтадан көріңіз."
+      },
+      "notice": {
+        "screenCancelled": "Экран көрсету басталмады.",
+        "declined": "Қоңырауға шақыру қабылданбады."
+      }
     },
     "settings": {
       "title": "Параметрлер",
@@ -924,6 +995,13 @@
       "title": "Video meetings",
       "subtitle": "Planning, guest links, and admin tools — separate from quick in-chat calls.",
       "unavailable": "Meetings section is unavailable."
+    },
+    "mention": {
+      "notificationTitle": "Mention in {chat}",
+      "notificationBody": "You were mentioned in a message"
+    },
+    "chat": {
+      "channel": "Channel"
     }
   },
   "push": {

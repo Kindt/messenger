@@ -10,6 +10,7 @@ javafx {
 
 dependencies {
     implementation(project(":modules:desktop-client-sdk"))
+    implementation(project(":modules:media-sfu"))
     implementation(libs.bundles.logging)
 
     testImplementation(libs.junit.jupiter)

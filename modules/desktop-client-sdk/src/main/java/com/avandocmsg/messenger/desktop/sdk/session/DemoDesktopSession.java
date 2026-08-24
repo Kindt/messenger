@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.desktop.sdk.session;
 
+import com.avandocmsg.messenger.desktop.sdk.call.InProcessCallClient;
 import com.avandocmsg.messenger.desktop.sdk.capabilities.CapabilityGate;
 import com.avandocmsg.messenger.desktop.sdk.demo.DemoDataStore;
 import com.avandocmsg.messenger.desktop.sdk.identity.ChatRef;
@@ -70,13 +71,28 @@ public final class DemoDesktopSession implements DesktopSession {
     }
 
     @Override
-    public String startCall(ServerId serverId, String username, ChatRef chat, String title) {
-        return startMeshCall(serverId, username, chat, "audio");
+    public String startCall(ServerId serverId, String username, ChatRef chat, String mediaMode) {
+        return "demo://call?chat=" + chat.chatId() + "&call_mode=" + mediaMode;
     }
 
     @Override
-    public String startMeshCall(ServerId serverId, String username, ChatRef chat, String mediaMode) {
-        return "demo://mesh-call?chat=" + chat.chatId() + "&mesh_mode=" + mediaMode;
+    public InProcessCallClient startLiveCall(
+        ServerId serverId,
+        String username,
+        ChatRef chat,
+        String mediaMode
+    ) {
+        throw new IllegalStateException("demo has no live media");
+    }
+
+    @Override
+    public InProcessCallClient joinLiveCall(
+        ServerId serverId,
+        String username,
+        ChatRef chat,
+        String sessionId
+    ) {
+        throw new IllegalStateException("demo has no live media");
     }
 
     @Override

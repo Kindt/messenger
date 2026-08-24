@@ -1,5 +1,6 @@
 dependencies {
     implementation(project(":modules:common"))
+    implementation(project(":modules:media-sfu"))
     implementation(platform(libs.jackson.bom))
     implementation(libs.jackson.databind)
     implementation(libs.jackson.datatype.jsr310)

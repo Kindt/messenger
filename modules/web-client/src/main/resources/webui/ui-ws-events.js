@@ -89,6 +89,16 @@
     return o && o.type === "read_receipt" && o.chat_id && o.user_id;
   }
 
+  function isCallSessionEvent(o) {
+    return (
+      o
+      && typeof o === "object"
+      && (o.type === "call.invited" || o.type === "call.invitation_declined")
+      && typeof o.chat_id === "string"
+      && typeof o.session_id === "string"
+    );
+  }
+
   global.KorusUiWsEvents = {
     isMessageSendEvent: isMessageSendEvent,
     isMessageChangeEvent: isMessageChangeEvent,
@@ -101,5 +111,6 @@
     isAvatarEvent: isAvatarEvent,
     isChatAvatarEvent: isChatAvatarEvent,
     isReadReceiptEvent: isReadReceiptEvent,
+    isCallSessionEvent: isCallSessionEvent,
   };
 })(typeof window !== "undefined" ? window : globalThis);

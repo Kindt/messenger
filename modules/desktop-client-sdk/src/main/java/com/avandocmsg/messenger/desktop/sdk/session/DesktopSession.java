@@ -1,5 +1,6 @@
 package com.avandocmsg.messenger.desktop.sdk.session;
 
+import com.avandocmsg.messenger.desktop.sdk.call.InProcessCallClient;
 import com.avandocmsg.messenger.desktop.sdk.identity.ChatRef;
 import com.avandocmsg.messenger.desktop.sdk.identity.ServerId;
 import com.avandocmsg.messenger.desktop.sdk.model.CapabilitiesResponse;
@@ -27,11 +28,20 @@ public interface DesktopSession {
 
     MessageDto sendFile(ServerId serverId, String username, ChatRef chat, Path file, String threadId) throws Exception;
 
-    /** Starts mesh call (audio) and returns web UI join URL. */
-    String startCall(ServerId serverId, String username, ChatRef chat, String title) throws Exception;
+    /** Starts a provider-neutral call and returns its temporary web handoff URL. */
+    String startCall(ServerId serverId, String username, ChatRef chat, String mediaMode) throws Exception;
 
-    /** Starts mesh call with {@code audio} or {@code video} media mode; returns web UI join URL. */
-    String startMeshCall(ServerId serverId, String username, ChatRef chat, String mediaMode) throws Exception;
+    /** Starts an in-process native media call (no browser). */
+    InProcessCallClient startLiveCall(ServerId serverId, String username, ChatRef chat, String mediaMode)
+        throws Exception;
+
+    /** Joins an existing in-process native media call (no browser). */
+    InProcessCallClient joinLiveCall(
+        ServerId serverId,
+        String username,
+        ChatRef chat,
+        String sessionId
+    ) throws Exception;
 
     void sendTyping(ServerId serverId, String username, ChatRef chat);
 

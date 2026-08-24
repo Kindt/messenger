@@ -40,6 +40,7 @@ class WebUiParityAssetsTest {
     void appJs_wiresMessagingFileExportAndReconnectParityPaths() throws Exception {
         var app = readResource("webui/app.js");
         var exportUtils = readResource("webui/ui-export-utils.js");
+        var callPc = readResource("webui/ui-call-pc.js");
         assertTrue(app.contains("/messages/") && app.contains("/pin"), "message pin path");
         assertTrue(app.contains("/reactions"), "message reactions path");
         assertTrue(app.contains("/forward"), "message forward path");
@@ -67,15 +68,17 @@ class WebUiParityAssetsTest {
         assertTrue(app.contains("openIntegration"), "integration launcher");
         assertTrue(app.contains("getMessageReplyCtx"), "reply ctx builder in app");
         assertTrue(app.contains("reply_preview"), "reply_preview from API");
-        assertTrue(app.contains("mesh-webrtc-button"), "mesh webrtc testid");
+        assertTrue(app.contains("thread-audio-call"), "provider-neutral audio call testid");
+        assertTrue(app.contains("thread-video-call"), "provider-neutral video call testid");
         assertTrue(app.contains("KorusUiMeetings"), "meetings workspace module");
         assertTrue(app.contains("startChatCall"), "chat call launcher");
         assertTrue(app.contains("call-hangup"), "call hangup testid");
         assertTrue(app.contains("endChatCall"), "end chat call helper");
-        assertTrue(app.contains("mesh-record-start"), "mesh user record button");
-        assertTrue(app.contains("mesh-calls/sessions"), "mesh call session API");
-        assertTrue(app.contains("mesh-record-list"), "mesh record list button");
-        assertTrue(app.contains("joinMeshCallSession"), "mesh session join");
+        assertTrue(app.contains("KorusUiCallPc"), "first-party WebRTC call client");
+        assertTrue(app.contains("createSessionController"), "provider-neutral call session controller");
+        assertTrue(callPc.contains("/calls"), "provider-neutral call session API");
+        assertTrue(callPc.contains("RTCPeerConnection"), "native browser WebRTC transport");
+        assertTrue(app.contains("call-error-retry"), "recoverable call error action");
         assertTrue(app.contains("KorusMlsWasmFactory"), "mls wasm factory");
         assertTrue(app.contains("e2ee_openmls_dev"), "openmls dev flag");
         assertTrue(app.contains("KorusOpenMlsDevFactory"), "openmls dev factory selection");

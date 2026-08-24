@@ -76,9 +76,49 @@ public final class MultiServerSessionManager {
 
     public String login(ServerId serverId, String username, String password, String vpnTotpCode) throws IOException {
         var entry = findServer(serverId);
-        var token = clientFor(entry).login(username, password).accessToken();
-        tokenStore.put(TokenKeys.tokenKey(serverId.value(), username), token);
+        var response = clientFor(entry).login(username, password);
+        storeTokens(serverId, username, response);
+        return response.accessToken();
+    }
+
+    /** Returns a valid access token, refreshing when near expiry if refresh_token was stored. */
+    public String ensureAccessToken(ServerId serverId, String username) throws IOException {
+        var entry = findServer(serverId);
+        var token = token(serverId, username);
+        if (token == null || token.isBlank()) {
+            throw new IllegalStateException("no saved token for " + username + "@" + serverId.value());
+        }
+        var expiresKey = TokenKeys.tokenExpiresKey(serverId.value(), username);
+        var expiresRaw = tokenStore.get(expiresKey);
+        if (expiresRaw != null && !expiresRaw.isBlank()) {
+            var expiresAt = Long.parseLong(expiresRaw);
+            if (Instant.now().getEpochSecond() >= expiresAt - 60) {
+                return refreshAccessToken(serverId, username, entry);
+            }
+        }
         return token;
+    }
+
+    private String refreshAccessToken(ServerId serverId, String username, ServerEntry entry) throws IOException {
+        var refreshKey = TokenKeys.refreshTokenKey(serverId.value(), username);
+        var refresh = tokenStore.get(refreshKey);
+        if (refresh == null || refresh.isBlank()) {
+            return token(serverId, username);
+        }
+        var response = clientFor(entry).refresh(refresh);
+        storeTokens(serverId, username, response);
+        return response.accessToken();
+    }
+
+    private void storeTokens(ServerId serverId, String username, com.avandocmsg.messenger.desktop.sdk.model.LoginResponse response) {
+        tokenStore.put(TokenKeys.tokenKey(serverId.value(), username), response.accessToken());
+        if (response.refreshToken() != null && !response.refreshToken().isBlank()) {
+            tokenStore.put(TokenKeys.refreshTokenKey(serverId.value(), username), response.refreshToken());
+        }
+        if (response.expiresInOrZero() > 0) {
+            var expiresAt = Instant.now().plusSeconds(response.expiresInOrZero()).getEpochSecond();
+            tokenStore.put(TokenKeys.tokenExpiresKey(serverId.value(), username), Long.toString(expiresAt));
+        }
     }
 
     public ServerEntry findServerEntry(ServerId serverId) throws IOException {

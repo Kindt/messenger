@@ -19,6 +19,9 @@ logs/
 # Р›РѕРєР°Р»СЊРЅС‹Рµ overrides РґР»СЏ Docker-СЃС‚РµРєР° РІРµР±-РєР»РёРµРЅС‚Р°
 korus-web/.env
 
+# Mobile AVD quickboot snapshots (501MB+; export locally via scripts/export-host-avd-snapshot.ps1)
+deploy/mobile/avd-snapshot/*.tgz
+
 scripts/__pycache__/
 **/*.pyc
 **/*.pyo
