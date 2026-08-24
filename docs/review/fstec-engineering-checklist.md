@@ -12,7 +12,7 @@
 | FSTEC-04 | Аудит значимых событий | `AuditPort`, `audit_events` | partial |
 | FSTEC-05 | Аудит изменения IP allowlist | `OrgIpAllowlistAdminResource` PATCH → `organization.ip_allowlist.update` | done |
 | FSTEC-06 | HTTP security headers | `SecurityHeadersFilter`, `smoke-security-headers.ps1` | done |
-| FSTEC-07 | Защита от timing side-channel (exist vs miss) | `TimingSensitivePaths` + `padAuthFailure` + `audit-timing.ps1` | done |
+| FSTEC-07 | Защита от timing side-channel (exist vs miss) | `TimingSensitivePaths.respond` / `respondLogin` / `respondUser`, `audit-timing.ps1` | done |
 | FSTEC-08 | Org IP allowlist (app layer) | `OrgIpAllowlistFilter`, `smoke-ip-allowlist.ps1` | partial |
 | FSTEC-09 | DLP интеграция (lab mock) | `smoke-dlp-mock.ps1`, integrations VM | partial |
 | FSTEC-10 | Шифрование локальных секретов (desktop) | `MasterKeyStore`, `smoke-desktop-security.ps1` | done |
@@ -29,12 +29,21 @@
 | Endpoint | Класс |
 |----------|-------|
 | GET `/v1/chats/{id}` | `ChatResource` |
-| GET `/v1/users/me`, `/v1/users/{id}` | `UserResource` |
+| GET `/v1/users/me`, `/v1/users/{id}` | `UserResource` (`respondUser`, floor 420 ms) |
 | GET `/v1/chats/{chatId}/messages/{msgId}` | `MessageResource` |
 | GET `/v1/files/{fileId}` | `FileResource` |
-| POST `/v1/auth/login` | `AuthResource` |
+| POST `/v1/auth/login` | `AuthResource` (`respondLogin`, floor 660 ms) |
 
 Verify: `.\scripts\audit-timing.ps1 -BaseUrl http://127.0.0.1:18080`
+
+## Последняя верификация (2026-08-24)
+
+| Шаг | Результат |
+|-----|-----------|
+| `buildIntegrity` | PASS (после коммита `95faa15`) |
+| `audit-timing` (:18080) | PASS (worst POST login ~11%, порог 25%) |
+| `security-gate -Strict -SkipBuild` | PASS (DLP SKIP — integrations VM down) |
+| API hotswap | active на guest |
 
 ## Gate
 
@@ -44,6 +53,7 @@ Verify: `.\scripts\audit-timing.ps1 -BaseUrl http://127.0.0.1:18080`
 
 ## Открытые действия (следующие итерации)
 
-1. FSTEC-02: rate-limit smoke в strict gate (последним в цепочке)
+1. FSTEC-02: `RATE_LIMIT_AUTH_ENABLED=true` на lab stack (hotswap overlay без env) + smoke 429 стабильно
 2. FSTEC-04: расширить audit на retention/legal_hold
-3. Sonar bugs: 14 (тренд вниз, quality gate OK)
+3. FSTEC-09: поднять integrations VM для DLP mock (не SKIP)
+4. Sonar bugs: 14 (тренд вниз, quality gate OK)

@@ -29,6 +29,22 @@ Examples:
 }
 
 $Root = Split-Path -Parent $PSScriptRoot
+
+function Invoke-SecurityGateScript {
+    param(
+        [Parameter(Mandatory)][string]$ScriptPath,
+        [string[]]$ArgumentList = @()
+    )
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & powershell -NoProfile -ExecutionPolicy Bypass -File $ScriptPath @ArgumentList 2>&1 | Out-Host
+        return $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $prevEap
+    }
+}
+
 Push-Location $Root
 try {
     if (-not $SkipBuild) {
@@ -82,28 +98,26 @@ try {
     }
     $timingDelta = $MaxTimingDelta
     if ($BaseUrl -match ':18080' -and $timingDelta -le 0.05) { $timingDelta = 0.25 }
-    & "$Root\scripts\smoke-security-headers.ps1" -BaseUrl $BaseUrl
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    $headersExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-security-headers.ps1" -ArgumentList @("-BaseUrl", $BaseUrl)
+    if ($headersExit -ne 0) { exit $headersExit }
 
-    & "$Root\scripts\audit-timing.ps1" -BaseUrl $BaseUrl -MaxDeltaRatio $timingDelta
-    $auditExit = $LASTEXITCODE
+    $auditExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\audit-timing.ps1" -ArgumentList @("-BaseUrl", $BaseUrl, "-MaxDeltaRatio", $timingDelta)
     if ($auditExit -ne 0) { exit $auditExit }
 
     if ($Strict) {
         Write-Host "=== FSTEC strict smokes ===" -ForegroundColor Cyan
-        & "$Root\scripts\smoke-ip-allowlist.ps1" -BaseUrl $BaseUrl
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        $ipExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-ip-allowlist.ps1" -ArgumentList @("-BaseUrl", $BaseUrl)
+        if ($ipExit -ne 0) { exit $ipExit }
 
-        & "$Root\scripts\smoke-dlp-mock.ps1" -SkipIfUnreachable
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        $dlpExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-dlp-mock.ps1" -ArgumentList @("-SkipIfUnreachable")
+        if ($dlpExit -ne 0) { exit $dlpExit }
 
-        & "$Root\scripts\smoke-desktop-security.ps1"
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        $desktopExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-desktop-security.ps1"
+        if ($desktopExit -ne 0) { exit $desktopExit }
     }
 
     # Last: rate-limit smoke triggers 429 and blocks subsequent logins for a window.
-    & "$Root\scripts\smoke-rate-limit.ps1" -BaseUrl $BaseUrl
-    $rateExit = $LASTEXITCODE
+    $rateExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-rate-limit.ps1" -ArgumentList @("-BaseUrl", $BaseUrl)
     if ($rateExit -ne 0) { exit $rateExit }
 
     Write-Host "[OK] security-gate (build + QEMU smokes$(if ($Strict) { ' + FSTEC strict' }))" -ForegroundColor Green

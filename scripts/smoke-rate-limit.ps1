@@ -9,7 +9,7 @@ for ($i = 1; $i -le $Attempts; $i++) {
     try {
         Invoke-WebRequest -Uri "$BaseUrl/api/v1/auth/login" -Method Post `
             -Body (@{ username = "nobody"; password = "bad" } | ConvertTo-Json) `
-            -ContentType "application/json" -UseBasicParsing | Out-Null
+            -ContentType "application/json" -UseBasicParsing -TimeoutSec 15 | Out-Null
     } catch {
         if ($_.Exception.Response.StatusCode.value__ -eq 429) { $got429 = $true; break }
     }
