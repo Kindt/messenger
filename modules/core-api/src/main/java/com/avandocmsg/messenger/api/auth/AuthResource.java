@@ -89,7 +89,7 @@ public class AuthResource {
     @ApiResponse(responseCode = "429", description = "Too many requests",
         content = @Content(schema = @Schema(implementation = ApiError.class)))
     public Response login(LoginRequest request, @Context HttpServletRequest httpRequest) {
-        return TimingSensitivePaths.respond(appConfig, () -> resolveLogin(request, httpRequest));
+        return TimingSensitivePaths.respondLogin(appConfig, () -> resolveLogin(request, httpRequest));
     }
 
     private Response resolveLogin(LoginRequest request, HttpServletRequest httpRequest) {

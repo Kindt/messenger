@@ -83,7 +83,7 @@ public class UserResource {
     @Path("/me")
     @Operation(summary = "Текущий профиль")
     public Response me(@Context SecurityContext securityContext) {
-        return TimingSensitivePaths.respond(appConfig, () -> {
+        return TimingSensitivePaths.respondUser(appConfig, () -> {
             var userId = CurrentUserId.uuid(securityContext);
             var profile = mapProfile(
                 userApplicationService.getProfileForViewer(UserId.of(userId), UserId.of(userId)),
@@ -101,7 +101,7 @@ public class UserResource {
     @GET
     @Path("/{id}")
     public Response getById(@PathParam("id") String id, @Context SecurityContext securityContext) {
-        return TimingSensitivePaths.respond(appConfig, () -> {
+        return TimingSensitivePaths.respondUser(appConfig, () -> {
             var viewerId = CurrentUserId.uuid(securityContext);
             var targetId = UuidParams.required(id, "user_id");
             var profile = mapProfile(

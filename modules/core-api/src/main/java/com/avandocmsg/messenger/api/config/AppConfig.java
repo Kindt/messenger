@@ -42,6 +42,8 @@ public class AppConfig {
         override("SECURITY_TIMING_NORMALIZATION_MIN_MS", "security.timing.normalization.min.ms");
         override("SECURITY_TIMING_NOT_FOUND_EXTRA_MS", "security.timing.not_found.extra.ms");
         override("SECURITY_TIMING_AUTH_FAILURE_EXTRA_MS", "security.timing.auth_failure.extra.ms");
+        override("SECURITY_TIMING_LOGIN_MIN_MS", "security.timing.login.min.ms");
+        override("SECURITY_TIMING_USER_LOOKUP_MIN_MS", "security.timing.user_lookup.min.ms");
         override("APP_HOME", "app.home");
         override("DB_JDBC_URL", "db.jdbc.url");
         override("DB_USER", "db.user");
@@ -1117,6 +1119,40 @@ public class AppConfig {
             return ms * 1_000_000L;
         } catch (NumberFormatException e) {
             return 35L * 1_000_000L;
+        }
+    }
+
+    /** Minimum handler duration for POST /auth/login when normalization enabled. Env: SECURITY_TIMING_LOGIN_MIN_MS. */
+    public long timingLoginMinNanos() {
+        if (timingNormalizationMinNanos() <= 0) {
+            return 0L;
+        }
+        var raw = props.getProperty("security.timing.login.min.ms", "").trim();
+        if (raw.isEmpty()) {
+            raw = System.getenv().getOrDefault("SECURITY_TIMING_LOGIN_MIN_MS", "660");
+        }
+        try {
+            var ms = Math.max(0, Integer.parseInt(raw));
+            return ms * 1_000_000L;
+        } catch (NumberFormatException e) {
+            return 660L * 1_000_000L;
+        }
+    }
+
+    /** Minimum handler duration for GET /users/me and /users/{id} when normalization enabled. Env: SECURITY_TIMING_USER_LOOKUP_MIN_MS. */
+    public long timingUserLookupMinNanos() {
+        if (timingNormalizationMinNanos() <= 0) {
+            return 0L;
+        }
+        var raw = props.getProperty("security.timing.user_lookup.min.ms", "").trim();
+        if (raw.isEmpty()) {
+            raw = System.getenv().getOrDefault("SECURITY_TIMING_USER_LOOKUP_MIN_MS", "420");
+        }
+        try {
+            var ms = Math.max(0, Integer.parseInt(raw));
+            return ms * 1_000_000L;
+        } catch (NumberFormatException e) {
+            return 420L * 1_000_000L;
         }
     }
 

@@ -9,8 +9,9 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
-        google()
+        // Maven Central first: server/desktop deps (e.g. slf4j) must not depend on dl.google.com DNS in QEMU/Docker.
         mavenCentral()
+        google()
     }
 }
 

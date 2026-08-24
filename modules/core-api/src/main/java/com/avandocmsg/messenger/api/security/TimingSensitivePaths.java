@@ -18,6 +18,24 @@ public final class TimingSensitivePaths {
         return action.get();
     }
 
+    /** Login probe needs higher floor (Keycloak exist-user vs unknown-user gap on QEMU). */
+    public static Response respondLogin(AppConfig config, Supplier<Response> action) {
+        long minNs = config.timingLoginMinNanos();
+        if (minNs > 0) {
+            return TimingNormalization.runWithMinimumDuration(minNs, action);
+        }
+        return respond(config, action);
+    }
+
+    /** GET /users/me vs missing user id (exist fast path vs 404 lookup gap on QEMU). */
+    public static Response respondUser(AppConfig config, Supplier<Response> action) {
+        long minNs = config.timingUserLookupMinNanos();
+        if (minNs > 0) {
+            return TimingNormalization.runWithMinimumDuration(minNs, action);
+        }
+        return respond(config, action);
+    }
+
     public static void padNotFound(AppConfig config) {
         TimingNormalization.padNotFoundExtra(config.timingNotFoundExtraNanos());
     }
