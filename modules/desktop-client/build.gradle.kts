@@ -29,6 +29,27 @@ tasks.test {
     }
 }
 
+tasks.register<Test>("visualCapture") {
+    description = "Desktop screenshot capture (headless, no mouse)"
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform {
+        includeTags("desktop-visual-capture")
+    }
+    maxParallelForks = 1
+    forkEvery = 1
+    jvmArgs(
+        "--add-opens=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED",
+        "--add-opens=javafx.graphics/com.sun.glass.ui=ALL-UNNAMED",
+        "-Dtestfx.robot=glass",
+        "-Dtestfx.headless=false",
+        "-Dtestfx.setup.timeout=15000",
+        "-Dkorus.desktop.demo=true",
+    )
+    systemProperty("java.awt.headless", "false")
+}
+
 tasks.register<Test>("uiTest") {
     description = "JavaFX TestFX click-through tests (headed, demo mode)"
     group = "verification"
@@ -36,6 +57,7 @@ tasks.register<Test>("uiTest") {
     classpath = sourceSets.test.get().runtimeClasspath
     useJUnitPlatform {
         includeTags("desktop-ui")
+        excludeTags("desktop-visual-capture")
     }
     maxParallelForks = 1
     forkEvery = 1

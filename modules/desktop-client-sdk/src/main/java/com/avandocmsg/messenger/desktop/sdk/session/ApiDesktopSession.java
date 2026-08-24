@@ -3,7 +3,8 @@ package com.avandocmsg.messenger.desktop.sdk.session;
 import com.avandocmsg.messenger.desktop.sdk.api.KorusApiClient;
 import com.avandocmsg.messenger.desktop.sdk.chat.ChatService;
 import com.avandocmsg.messenger.desktop.sdk.chat.ReadReceiptService;
-import com.avandocmsg.messenger.desktop.sdk.conference.ConferenceClient;
+import com.avandocmsg.messenger.desktop.sdk.mesh.MeshCallClient;
+import com.avandocmsg.messenger.desktop.sdk.web.WebUiUrlResolver;
 import com.avandocmsg.messenger.desktop.sdk.files.FileTransferService;
 import com.avandocmsg.messenger.desktop.sdk.identity.ChatRef;
 import com.avandocmsg.messenger.desktop.sdk.identity.ServerId;
@@ -94,12 +95,19 @@ public final class ApiDesktopSession implements DesktopSession {
 
     @Override
     public String startCall(ServerId serverId, String username, ChatRef chat, String title) throws Exception {
+        return startMeshCall(serverId, username, chat, "audio");
+    }
+
+    @Override
+    public String startMeshCall(ServerId serverId, String username, ChatRef chat, String mediaMode) throws Exception {
         var token = requireToken(serverId, username);
-        var conf = new ConferenceClient(client(serverId)).create(token, chat.chatId(), title);
-        if (conf.joinUrl() == null || conf.joinUrl().isBlank()) {
-            throw new IllegalStateException("conference has no join_url");
+        var mesh = new MeshCallClient(client(serverId)).startSession(token, chat.chatId(), mediaMode);
+        var sessionId = mesh.resolvedSessionId();
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new IllegalStateException("mesh session id missing");
         }
-        return conf.joinUrl();
+        var webBase = WebUiUrlResolver.resolve(serverEntry(serverId));
+        return WebUiUrlResolver.meshJoinUrl(webBase, chat.chatId(), sessionId, mediaMode);
     }
 
     @Override

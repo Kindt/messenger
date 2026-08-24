@@ -66,4 +66,20 @@ if (!hashCleared) {
   throw new Error("hash should be cleared");
 }
 
+const dlMesh = runWithLocation({
+  origin: "https://app.example",
+  pathname: "/",
+  search: "?chat=c2&mesh_session=s1&mesh_mode=video",
+  hash: "",
+  history: { replaceState: () => {} },
+});
+const meshParsed = dlMesh.stripDeepLinkFromUrl();
+if (meshParsed.chatId !== "c2" || meshParsed.meshSession !== "s1" || meshParsed.meshMode !== "video") {
+  throw new Error("mesh deep link: " + JSON.stringify(meshParsed));
+}
+const meshUrl = dl.buildMeshCallUrl("c9", "s9", "audio");
+if (!meshUrl.includes("mesh_session=s9") || !meshUrl.includes("mesh_mode=audio")) {
+  throw new Error("buildMeshCallUrl: " + meshUrl);
+}
+
 console.log("ui-deep-link-utils smoke OK");

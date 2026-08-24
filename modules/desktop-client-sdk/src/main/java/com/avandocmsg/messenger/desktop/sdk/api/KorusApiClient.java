@@ -10,8 +10,10 @@ import com.avandocmsg.messenger.desktop.sdk.model.FileUploadResponse;
 import com.avandocmsg.messenger.desktop.sdk.model.HealthResponse;
 import com.avandocmsg.messenger.desktop.sdk.model.LoginRequest;
 import com.avandocmsg.messenger.desktop.sdk.model.LoginResponse;
+import com.avandocmsg.messenger.desktop.sdk.model.MeshCallSessionResponse;
 import com.avandocmsg.messenger.desktop.sdk.model.MessageDto;
 import com.avandocmsg.messenger.desktop.sdk.model.SendMessageRequest;
+import com.avandocmsg.messenger.desktop.sdk.model.StartMeshCallRequest;
 import com.avandocmsg.messenger.desktop.sdk.model.SearchResponse;
 import com.avandocmsg.messenger.desktop.sdk.model.UnreadCountResponse;
 import com.avandocmsg.messenger.desktop.sdk.model.UserMeDto;
@@ -157,6 +159,20 @@ public final class KorusApiClient {
     public ConferenceResponse createConference(String token, String chatId, CreateConferenceRequest request) {
         var json = JsonSupport.mapper().valueToTree(request).toString();
         return post(PATH_CHATS_PREFIX + chatId + "/conferences", token, json, ConferenceResponse.class);
+    }
+
+    public MeshCallSessionResponse startMeshCallSession(String token, String chatId, StartMeshCallRequest request) {
+        var json = JsonSupport.mapper().valueToTree(request).toString();
+        return post(PATH_CHATS_PREFIX + chatId + "/mesh-calls/sessions", token, json, MeshCallSessionResponse.class);
+    }
+
+    public MeshCallSessionResponse joinMeshCallSession(String token, String chatId, String sessionId) {
+        return post(
+            PATH_CHATS_PREFIX + chatId + "/mesh-calls/sessions/" + sessionId + "/join",
+            token,
+            "{}",
+            MeshCallSessionResponse.class
+        );
     }
 
     public MlsSessionInfo mlsSession(String token, String chatId) {

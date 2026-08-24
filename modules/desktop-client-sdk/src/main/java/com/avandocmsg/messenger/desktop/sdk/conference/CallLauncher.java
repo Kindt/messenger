@@ -3,7 +3,7 @@ package com.avandocmsg.messenger.desktop.sdk.conference;
 import java.awt.Desktop;
 import java.net.URI;
 
-/** Opens conference join URL in the system browser (Jitsi/WebRTC). */
+/** Opens mesh call join URL in the system browser (web UI WebRTC). */
 public final class CallLauncher {
 
     private CallLauncher() {}

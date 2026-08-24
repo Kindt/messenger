@@ -27,7 +27,11 @@ public interface DesktopSession {
 
     MessageDto sendFile(ServerId serverId, String username, ChatRef chat, Path file, String threadId) throws Exception;
 
+    /** Starts mesh call (audio) and returns web UI join URL. */
     String startCall(ServerId serverId, String username, ChatRef chat, String title) throws Exception;
+
+    /** Starts mesh call with {@code audio} or {@code video} media mode; returns web UI join URL. */
+    String startMeshCall(ServerId serverId, String username, ChatRef chat, String mediaMode) throws Exception;
 
     void sendTyping(ServerId serverId, String username, ChatRef chat);
 

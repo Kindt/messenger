@@ -59,6 +59,7 @@ public final class DesktopUiIds {
     public static final String SEARCH_BTN = "desktop-search-btn";
     public static final String SEARCH_RESULTS = "desktop-search-results";
     public static final String CALL_BTN = "desktop-call-btn";
+    public static final String VIDEO_CALL_BTN = "desktop-video-call-btn";
     public static final String POLL_BTN = "desktop-poll-btn";
     public static final String SERVERS_LIST = "desktop-servers-list";
     public static final String SERVERS_REFRESH = "desktop-servers-refresh";

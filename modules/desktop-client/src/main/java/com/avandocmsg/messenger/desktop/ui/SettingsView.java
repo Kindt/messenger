@@ -60,10 +60,10 @@ public final class SettingsView {
         var updateFeed = new TextField(s.updateFeedUrl() == null ? "" : s.updateFeedUrl());
         updateFeed.setId(DesktopUiIds.SETTINGS_UPDATE_FEED);
         updateFeed.setPromptText("URL манифеста (пусто = demo-update-manifest.json)");
-        var updateStatus = new Label("Версия клиента: " + DesktopVersions.CURRENT);
-        updateStatus.setId(DesktopUiIds.SETTINGS_UPDATE_STATUS);
+        var updateStatus = statusLabel("Версия клиента: " + DesktopVersions.CURRENT, DesktopUiIds.SETTINGS_UPDATE_STATUS);
         var checkUpdate = new javafx.scene.control.Button("Проверить обновления");
         checkUpdate.setId(DesktopUiIds.SETTINGS_UPDATE_CHECK);
+        checkUpdate.getStyleClass().add("qip-settings-btn-secondary");
         checkUpdate.setOnAction(e -> {
             try {
                 var feed = updateFeed.getText().isBlank() ? defaultDemoManifestUrl() : updateFeed.getText().trim();
@@ -75,6 +75,7 @@ public final class SettingsView {
         });
         var save = new javafx.scene.control.Button("Сохранить");
         save.setId(DesktopUiIds.SETTINGS_SAVE);
+        save.getStyleClass().add("qip-settings-btn-primary");
         save.setOnAction(e -> {
             try {
                 store.write(profileId, new ProfileSettings(
@@ -88,12 +89,12 @@ public final class SettingsView {
         });
         var box = new VBox(
             10,
-            new Label("Язык и тема"),
+            heading("Язык и тема"),
             grid(locale, theme),
-            new Label("Обновления клиента"),
-            new Label("Канал"),
+            heading("Обновления клиента"),
+            fieldLabel("Канал"),
             updateChannel,
-            new Label("Feed URL"),
+            fieldLabel("Feed URL"),
             updateFeed,
             checkUpdate,
             updateStatus,
@@ -118,7 +119,7 @@ public final class SettingsView {
         var name = new TextField(runtime.activeProfile().displayName());
         var save = new javafx.scene.control.Button("Сохранить имя профиля");
         save.setOnAction(e -> onSaved.run());
-        var box = new VBox(10, new Label("Отображаемое имя профиля"), name, save);
+        var box = new VBox(10, fieldLabel("Отображаемое имя профиля"), name, save);
         box.setPadding(new Insets(12));
         box.getStyleClass().add("qip-settings-panel");
         var tab = new Tab("Профиль", box);
@@ -178,9 +179,9 @@ public final class SettingsView {
             }
         });
         var trayHint = DesktopOsNotifications.isSupported()
-            ? new Label("Уведомления в центре Windows при входящих сообщениях (если окно не в фокусе).")
-            : new Label("Системный трей недоступен в этой среде (headless / TestFX).");
-        var box = new VBox(10, push, sound, trayHint, testPush, new Label("Политика обновлений клиента"), policy, save);
+            ? hint("Уведомления в центре Windows при входящих сообщениях (если окно не в фокусе).")
+            : hint("Системный трей недоступен в этой среде (headless / TestFX).");
+        var box = new VBox(10, push, sound, trayHint, testPush, fieldLabel("Политика обновлений клиента"), policy, save);
         box.setPadding(new Insets(12));
         box.getStyleClass().add("qip-settings-panel");
         var tab = new Tab("Уведомления", box);
@@ -206,7 +207,7 @@ public final class SettingsView {
                 throw new IllegalStateException(ex);
             }
         });
-        var box = new VBox(10, new Label("Корень для вложений (как web Downloads/KorusMessenger)"), path, save);
+        var box = new VBox(10, fieldLabel("Корень для вложений (как web Downloads/KorusMessenger)"), path, save);
         box.setPadding(new Insets(12));
         box.getStyleClass().add("qip-settings-panel");
         var tab = new Tab("Ссылки и файлы", box);
@@ -230,8 +231,7 @@ public final class SettingsView {
         var clearExit = check("Очищать токены при выходе", initial.clearTokensOnExit());
         var audit = check("Журнал безопасности", initial.auditLogEnabled());
         var signedUpd = check("Только подписанные обновления", initial.requireSecureUpdates());
-        var scoreLabel = new Label();
-        scoreLabel.setId(DesktopUiIds.SETTINGS_SECURITY_SCORE);
+        var scoreLabel = statusLabel("", DesktopUiIds.SETTINGS_SECURITY_SCORE);
         Runnable refreshScore = () -> {
             try {
                 var draft = draftSecurity(initial, tlsPin, idle, clipboard, clearExit, audit, signedUpd);
@@ -245,10 +245,10 @@ public final class SettingsView {
             }
         };
         refreshScore.run();
-        var e2ee = new Label(gate.isEnabled(CapabilityGate.Feature.E2EE)
+        var e2ee = hint(gate.isEnabled(CapabilityGate.Feature.E2EE)
             ? "E2EE (MLS): включено — AES-GCM + HKDF (parity web)"
             : "E2EE: отключено на сервере");
-        var ent = new Label(gate.isEnabled(CapabilityGate.Feature.ENTERPRISE_AUTH)
+        var ent = hint(gate.isEnabled(CapabilityGate.Feature.ENTERPRISE_AUTH)
             ? "Enterprise auth: включено"
             : "Enterprise auth: не в составе сервера");
         var save = new javafx.scene.control.Button("Сохранить политику безопасности");
@@ -275,10 +275,10 @@ public final class SettingsView {
         });
         var box = new VBox(
             10,
-            new Label("Политика безопасности клиента"),
+            heading("Политика безопасности клиента"),
             scoreLabel,
             tlsPin,
-            new Label("Блокировка при бездействии (мин, 0=выкл)"),
+            fieldLabel("Блокировка при бездействии (мин, 0=выкл)"),
             idle,
             clipboard,
             clearExit,
@@ -343,13 +343,43 @@ public final class SettingsView {
 
     private GridPane grid(ComboBox<String> locale, ComboBox<String> theme) {
         var g = new GridPane();
-        g.setHgap(8);
-        g.setVgap(8);
-        g.add(new Label("Язык"), 0, 0);
+        g.setHgap(12);
+        g.setVgap(10);
+        g.getStyleClass().add("qip-settings-grid");
+        g.add(fieldLabel("Язык"), 0, 0);
         g.add(locale, 1, 0);
-        g.add(new Label("Тема"), 0, 1);
+        g.add(fieldLabel("Тема"), 0, 1);
         g.add(theme, 1, 1);
         return g;
+    }
+
+    private static Label heading(String text) {
+        var label = new Label(text);
+        label.getStyleClass().add("qip-settings-heading");
+        label.setWrapText(true);
+        return label;
+    }
+
+    private static Label fieldLabel(String text) {
+        var label = new Label(text);
+        label.getStyleClass().add("qip-settings-field-label");
+        label.setWrapText(true);
+        return label;
+    }
+
+    private static Label hint(String text) {
+        var label = new Label(text);
+        label.getStyleClass().add("qip-settings-hint");
+        label.setWrapText(true);
+        return label;
+    }
+
+    private static Label statusLabel(String text, String fxId) {
+        var label = new Label(text);
+        label.setId(fxId);
+        label.getStyleClass().add("qip-settings-status");
+        label.setWrapText(true);
+        return label;
     }
 
     public Parent root() {

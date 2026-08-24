@@ -518,24 +518,73 @@
 }
 
 /* ── Settings sub-tabs (parity web settings card) ── */
+.qip-settings-tabs {
+    -fx-font-family: "Segoe UI Variable", "Segoe UI", sans-serif;
+    -fx-font-size: 13px;
+}
+
 .qip-settings-tabs .tab-header-area {
     -fx-background-color: #eef2f8;
     -fx-border-color: #c5d0de;
     -fx-border-width: 0 0 1 0;
+    -fx-padding: 0 8 0 8;
+}
+
+.qip-settings-tabs .tab {
+    -fx-font-size: 12.5px;
+    -fx-font-weight: normal;
 }
 
 .qip-settings-tabs .tab:selected {
     -fx-background-color: white;
+    -fx-font-weight: 600;
+}
+
+.qip-settings-tabs .tab .tab-label {
+    -fx-text-fill: #4a5d78;
+}
+
+.qip-settings-tabs .tab:selected .tab-label {
+    -fx-text-fill: #1a3358;
 }
 
 .qip-settings-panel {
     -fx-background-color: transparent;
-    -fx-spacing: 8;
+    -fx-spacing: 10;
+    -fx-font-family: "Segoe UI Variable", "Segoe UI", sans-serif;
+    -fx-font-size: 13px;
 }
 
-.qip-settings-panel > .label {
-    -fx-text-fill: #1e3350;
-    -fx-font-weight: bold;
+.qip-settings-heading {
+    -fx-font-size: 14px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #1a3358;
+    -fx-padding: 4 0 2 0;
+}
+
+.qip-settings-field-label {
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 500;
+    -fx-text-fill: #3d5a80;
+    -fx-padding: 2 0 0 0;
+}
+
+.qip-settings-hint {
+    -fx-font-size: 12px;
+    -fx-font-weight: normal;
+    -fx-text-fill: #5a6d86;
+    -fx-line-spacing: 2px;
+}
+
+.qip-settings-status {
+    -fx-font-size: 12px;
+    -fx-font-weight: normal;
+    -fx-text-fill: #4a5d78;
+    -fx-font-family: "Cascadia Mono", "Consolas", "Segoe UI", monospace;
+}
+
+.qip-settings-grid {
+    -fx-padding: 0 0 4 0;
 }
 
 .qip-settings-panel .text-field,
@@ -545,15 +594,69 @@
     -fx-border-color: #b8c5d8;
     -fx-border-radius: 6;
     -fx-background-radius: 6;
+    -fx-font-size: 13px;
+    -fx-text-fill: #1e2a38;
+}
+
+.qip-settings-panel .text-field {
+    -fx-padding: 8 10 8 10;
+    -fx-prompt-text-fill: #8a9bb0;
+}
+
+.qip-settings-panel .combo-box {
+    -fx-pref-height: 32px;
+}
+
+.qip-settings-panel .combo-box .list-cell,
+.qip-settings-panel .combo-box .label {
+    -fx-font-size: 13px;
+    -fx-text-fill: #1e2a38;
+}
+
+.qip-settings-panel .spinner .text-field {
+    -fx-font-size: 13px;
+    -fx-padding: 6 8 6 8;
+}
+
+.qip-settings-panel .check-box {
+    -fx-font-size: 13px;
+    -fx-text-fill: #1e3350;
+    -fx-label-padding: 0 0 0 6;
+}
+
+.qip-settings-panel .check-box .box {
+    -fx-background-color: white;
+    -fx-border-color: #9aadc4;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
 }
 
 .qip-settings-panel .button {
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+}
+
+.qip-settings-panel .qip-settings-btn-primary {
     -fx-background-color: linear-gradient(to bottom, #5b9aea, #3d78c8);
     -fx-text-fill: white;
     -fx-border-color: #2d5f96;
     -fx-border-radius: 6;
     -fx-background-radius: 6;
-    -fx-padding: 6 14 6 14;
+    -fx-padding: 8 16 8 16;
+}
+
+.qip-settings-panel .qip-settings-btn-secondary {
+    -fx-background-color: linear-gradient(to bottom, #f4f7fb, #e6edf6);
+    -fx-text-fill: #1a3358;
+    -fx-border-color: #b8c5d8;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 8 14 8 14;
+    -fx-font-weight: 500;
+}
+
+.qip-settings-panel .button:hover {
+    -fx-opacity: 0.92;
 }
 
 /* ── Servers tab list ── */
@@ -594,8 +697,28 @@
     -fx-background-color: #343e52;
 }
 
-.qip-root.theme-dark .qip-settings-panel > .label {
+.qip-root.theme-dark .qip-settings-tabs .tab .tab-label {
+    -fx-text-fill: #9aa8bc;
+}
+
+.qip-root.theme-dark .qip-settings-tabs .tab:selected .tab-label {
     -fx-text-fill: #e8ecf2;
+}
+
+.qip-root.theme-dark .qip-settings-heading {
+    -fx-text-fill: #e8ecf2;
+}
+
+.qip-root.theme-dark .qip-settings-field-label {
+    -fx-text-fill: #b8c8dc;
+}
+
+.qip-root.theme-dark .qip-settings-hint {
+    -fx-text-fill: #9aa8bc;
+}
+
+.qip-root.theme-dark .qip-settings-status {
+    -fx-text-fill: #a8b8cc;
 }
 
 .qip-root.theme-dark .qip-settings-panel .text-field,
@@ -604,6 +727,34 @@
     -fx-background-color: #2c3548;
     -fx-text-fill: #e8ecf2;
     -fx-border-color: #4a5568;
+}
+
+.qip-root.theme-dark .qip-settings-panel .text-field {
+    -fx-prompt-text-fill: #7a8aa0;
+}
+
+.qip-root.theme-dark .qip-settings-panel .combo-box .list-cell,
+.qip-root.theme-dark .qip-settings-panel .combo-box .label {
+    -fx-text-fill: #e8ecf2;
+}
+
+.qip-root.theme-dark .qip-settings-panel .check-box {
+    -fx-text-fill: #e8ecf2;
+}
+
+.qip-root.theme-dark .qip-settings-panel .check-box .box {
+    -fx-background-color: #2c3548;
+    -fx-border-color: #5a6a82;
+}
+
+.qip-root.theme-dark .qip-settings-panel .qip-settings-btn-secondary {
+    -fx-background-color: linear-gradient(to bottom, #3a4558, #2f3848);
+    -fx-text-fill: #e8ecf2;
+    -fx-border-color: #4a5568;
+}
+
+.qip-root.theme-dark .qip-settings-panel > .label {
+    -fx-text-fill: #e8ecf2;
 }
 
 .qip-root.theme-dark .qip-servers-panel > .label {

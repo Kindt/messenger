@@ -113,6 +113,20 @@ class LiveServerIntegrationTest {
         var conf = api.createConference(token, chatId, new com.avandocmsg.messenger.desktop.sdk.model.CreateConferenceRequest("SDK smoke"));
         assertNotNull(conf.joinUrl());
 
+        var mesh = api.startMeshCallSession(
+            token,
+            chatId,
+            new com.avandocmsg.messenger.desktop.sdk.model.StartMeshCallRequest("audio")
+        );
+        assertNotNull(mesh.resolvedSessionId());
+        var webUrl = com.avandocmsg.messenger.desktop.sdk.web.WebUiUrlResolver.meshJoinUrl(
+            com.avandocmsg.messenger.desktop.sdk.web.WebUiUrlResolver.defaultFromApiBase(BASE),
+            chatId,
+            mesh.resolvedSessionId(),
+            "audio"
+        );
+        assertTrue(webUrl.contains("mesh_session="));
+
         var entry = new com.avandocmsg.messenger.desktop.sdk.model.ServerEntry(
             java.util.UUID.randomUUID().toString(),
             "WS smoke",

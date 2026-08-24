@@ -268,6 +268,8 @@
   const PENDING_MEET_KEY = "korus_pending_meet";
   const PENDING_GUEST_KEY = "korus_pending_guest";
   const PENDING_CONF_KEY = "korus_pending_conf";
+  const PENDING_MESH_SESSION_KEY = "korus_pending_mesh_session";
+  const PENDING_MESH_MODE_KEY = "korus_pending_mesh_mode";
   const LAST_PUBLIC_LINK_KEY = "korus_last_public_link";
   const DRAFT_KEY_PREFIX = "korus_draft_";
   const SIDEBAR_WIDTH_KEY = "korus-sidebar-width";
@@ -2792,6 +2794,69 @@
         state.callMode = "livekit";
         await ensureCallLivekitModule();
         if (mediaMode === "video") {
+          state.callMediaMode = "video";
+          state.callCamOn = true;
+        } else {
+          state.callMediaMode = "audio";
+          state.callCamOn = false;
+        }
+        await KorusUiCallLivekit.joinGroupCall(state, apiJson, {
+          room_name: state.meshLivekitRoom,
+          livekit_url: state.meshLivekitUrl,
+          access_token: state.meshLivekitToken,
+        });
+        broadcastMeshSession();
+        return;
+      }
+      startThumbCapture();
+      attachLocalVideo();
+      if (window.KorusUiCallMesh) {
+        KorusUiCallMesh.ensureSpeakerMonitor(state);
+        KorusUiCallMesh.syncAllSlots(state);
+      }
+      setTimeout(function () {
+        beginRtcMesh(true);
+        broadcastMeshSession();
+      }, 120);
+    } catch (e) {
+      state.error = localErr(e.message) || L("conference.meshUnavailable");
+    } finally {
+      state.callPanelToggleBusy = false;
+      render();
+    }
+  }
+
+  async function joinMeshCallFromDeepLink(sessionId, mediaMode) {
+    if (!state.selectedId || !sessionId || state.meshCallSessionId) return;
+    if (!meshCallChatReady()) {
+      state.error = L("conference.meshNeedsChat");
+      render();
+      return;
+    }
+    state.callMode = "mesh";
+    state.callPanelOpen = true;
+    state.callPanelToggleBusy = true;
+    render();
+    try {
+      if (state.activeConference) {
+        await leaveActiveConference();
+      }
+      if (window.KorusUiCallLivekit) KorusUiCallLivekit.disconnectRoom(state);
+      await ensureCallMeshModule();
+      await ensureCallAudio();
+      var mode = mediaMode === "video" ? "video" : "audio";
+      if (mode === "video") {
+        await addCallVideoTrack();
+      } else {
+        state.callMediaMode = "audio";
+        state.callCamOn = false;
+      }
+      await loadRtcPeerIds();
+      await joinMeshCallSession(sessionId);
+      if (state.meshCompositeRecording && state.meshLivekitToken) {
+        state.callMode = "livekit";
+        await ensureCallLivekitModule();
+        if (mode === "video") {
           state.callMediaMode = "video";
           state.callCamOn = true;
         } else {
@@ -11699,6 +11764,34 @@
     }
   }
 
+  function stashPendingMeshDeepLink(fromUrl) {
+    if (fromUrl && fromUrl.meshSession) {
+      try {
+        sessionStorage.setItem(PENDING_MESH_SESSION_KEY, fromUrl.meshSession);
+        sessionStorage.setItem(
+          PENDING_MESH_MODE_KEY,
+          fromUrl.meshMode === "video" ? "video" : "audio"
+        );
+      } catch (e) {}
+    }
+  }
+
+  async function consumePendingMeshDeepLink() {
+    var fromUrl = stripDeepLinkFromUrl();
+    stashPendingMeshDeepLink(fromUrl);
+    var sessionId = null;
+    var mediaMode = "audio";
+    try {
+      sessionId = sessionStorage.getItem(PENDING_MESH_SESSION_KEY);
+      var mode = sessionStorage.getItem(PENDING_MESH_MODE_KEY);
+      sessionStorage.removeItem(PENDING_MESH_SESSION_KEY);
+      sessionStorage.removeItem(PENDING_MESH_MODE_KEY);
+      if (mode === "video") mediaMode = "video";
+    } catch (e) {}
+    if (!sessionId || !state.selectedId) return;
+    await joinMeshCallFromDeepLink(sessionId, mediaMode);
+  }
+
   async function consumePendingMeetingDeepLink() {
     var fromUrl = stripDeepLinkFromUrl();
     stashPendingMeetingDeepLink(fromUrl);
@@ -11775,6 +11868,7 @@
       state.error = err.message;
     }
     openWs();
+    await consumePendingMeshDeepLink();
     startHeartbeat();
     render();
   }

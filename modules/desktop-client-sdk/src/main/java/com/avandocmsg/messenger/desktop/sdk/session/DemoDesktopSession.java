@@ -71,7 +71,12 @@ public final class DemoDesktopSession implements DesktopSession {
 
     @Override
     public String startCall(ServerId serverId, String username, ChatRef chat, String title) {
-        return "demo://conference/room-demo";
+        return startMeshCall(serverId, username, chat, "audio");
+    }
+
+    @Override
+    public String startMeshCall(ServerId serverId, String username, ChatRef chat, String mediaMode) {
+        return "demo://mesh-call?chat=" + chat.chatId() + "&mesh_mode=" + mediaMode;
     }
 
     @Override

@@ -261,9 +261,19 @@ public final class MainShellView {
 
         callBtn.getStyleClass().add("qip-btn-icon");
 
-        callBtn.setTooltip(new javafx.scene.control.Tooltip("Звонок"));
+        callBtn.setTooltip(new javafx.scene.control.Tooltip("Аудиозвонок"));
 
         callBtn.setVisible(session.isDemo() || gate.isEnabled(CapabilityGate.Feature.LIVE_CALLS));
+
+        var videoCallBtn = new Button("📹");
+
+        videoCallBtn.setId(DesktopUiIds.VIDEO_CALL_BTN);
+
+        videoCallBtn.getStyleClass().add("qip-btn-icon");
+
+        videoCallBtn.setTooltip(new javafx.scene.control.Tooltip("Видеозвонок"));
+
+        videoCallBtn.setVisible(session.isDemo() || gate.isEnabled(CapabilityGate.Feature.LIVE_CALLS));
 
         var pollBtn = new Button("📊");
 
@@ -487,47 +497,9 @@ public final class MainShellView {
 
 
 
-        callBtn.setOnAction(e -> {
+        callBtn.setOnAction(e -> launchMeshCall(session, username, inbox, messages, "audio"));
 
-            if (session.isDemo()) {
-
-                messages.appendText("\n[call] demo://conference/room-demo");
-
-                return;
-
-            }
-
-            var row = inbox.getSelectionModel().getSelectedItem();
-
-            if (row == null && !inbox.getItems().isEmpty()) {
-
-                row = inbox.getItems().getFirst();
-
-            }
-
-            if (row == null) {
-
-                return;
-
-            }
-
-            try {
-
-                var sid = new ServerId(row.server().serverId());
-
-                var joinUrl = session.startCall(sid, username, row.chatRef(), "Desktop call");
-
-                CallLauncher.openJoinUrl(joinUrl);
-
-                messages.appendText("\n[call opened] " + joinUrl);
-
-            } catch (Exception ex) {
-
-                messages.appendText("\n[call failed] " + ex.getMessage());
-
-            }
-
-        });
+        videoCallBtn.setOnAction(e -> launchMeshCall(session, username, inbox, messages, "video"));
 
 
 
@@ -561,7 +533,7 @@ public final class MainShellView {
 
         composerTools.getStyleClass().add("qip-composer-tools");
 
-        var composerCaps = new HBox(4, pollBtn, callBtn);
+        var composerCaps = new HBox(4, pollBtn, callBtn, videoCallBtn);
 
         composerCaps.getStyleClass().add("qip-composer-caps");
 
@@ -696,6 +668,8 @@ public final class MainShellView {
             pollBtn.setVisible(g.isEnabled(CapabilityGate.Feature.PRODUCTIVITY));
 
             callBtn.setVisible(session.isDemo() || g.isEnabled(CapabilityGate.Feature.LIVE_CALLS));
+
+            videoCallBtn.setVisible(session.isDemo() || g.isEnabled(CapabilityGate.Feature.LIVE_CALLS));
 
         };
 
@@ -1208,6 +1182,47 @@ public final class MainShellView {
     }
 
 
+
+    private static void launchMeshCall(
+        DesktopSession session,
+        String username,
+        ListView<InboxRow> inbox,
+        ChatMessagePane messages,
+        String mediaMode
+    ) {
+        if (session.isDemo()) {
+            try {
+                var row = inbox.getSelectionModel().getSelectedItem();
+                if (row == null && !inbox.getItems().isEmpty()) {
+                    row = inbox.getItems().getFirst();
+                }
+                if (row == null) {
+                    return;
+                }
+                var sid = new ServerId(row.server().serverId());
+                var joinUrl = session.startMeshCall(sid, username, row.chatRef(), mediaMode);
+                messages.appendText("\n[call] " + joinUrl);
+            } catch (Exception ex) {
+                messages.appendText("\n[call failed] " + ex.getMessage());
+            }
+            return;
+        }
+        var row = inbox.getSelectionModel().getSelectedItem();
+        if (row == null && !inbox.getItems().isEmpty()) {
+            row = inbox.getItems().getFirst();
+        }
+        if (row == null) {
+            return;
+        }
+        try {
+            var sid = new ServerId(row.server().serverId());
+            var joinUrl = session.startMeshCall(sid, username, row.chatRef(), mediaMode);
+            CallLauncher.openJoinUrl(joinUrl);
+            messages.appendText("\n[call opened] " + joinUrl);
+        } catch (Exception ex) {
+            messages.appendText("\n[call failed] " + ex.getMessage());
+        }
+    }
 
     private static QipStatusOrb.Mode mapStatus(String label) {
         if (label == null) {

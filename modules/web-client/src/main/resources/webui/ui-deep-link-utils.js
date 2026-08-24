@@ -13,7 +13,8 @@
         !params.has("chat") &&
         !params.has("msg") &&
         !params.has("meet") &&
-        !params.has("conf")
+        !params.has("conf") &&
+        !params.has("mesh_session")
       ) {
         return null;
       }
@@ -22,6 +23,8 @@
         msgId: params.has("msg") ? params.get("msg") : null,
         meet: params.has("meet") ? params.get("meet") : null,
         conf: params.has("conf") ? params.get("conf") : null,
+        meshSession: params.has("mesh_session") ? params.get("mesh_session") : null,
+        meshMode: params.has("mesh_mode") ? params.get("mesh_mode") : null,
       };
     } catch (e) {
       return null;
@@ -47,34 +50,50 @@
       var msgId = params.has("msg") ? params.get("msg") : null;
       var meet = params.has("meet") ? params.get("meet") : null;
       var conf = params.has("conf") ? params.get("conf") : null;
+      var meshSession = params.has("mesh_session") ? params.get("mesh_session") : null;
+      var meshMode = params.has("mesh_mode") ? params.get("mesh_mode") : null;
       var guest = params.has("guest") ? params.get("guest") : null;
       var changed =
         params.has("chat") ||
         params.has("msg") ||
         params.has("meet") ||
         params.has("conf") ||
+        params.has("mesh_session") ||
+        params.has("mesh_mode") ||
         params.has("guest");
       if (params.has("chat")) params.delete("chat");
       if (params.has("msg")) params.delete("msg");
       if (params.has("meet")) params.delete("meet");
       if (params.has("conf")) params.delete("conf");
+      if (params.has("mesh_session")) params.delete("mesh_session");
+      if (params.has("mesh_mode")) params.delete("mesh_mode");
       if (params.has("guest")) params.delete("guest");
       if (changed && window.history && window.history.replaceState) {
         var q = params.toString();
         var path = window.location.pathname + (q ? "?" + q : "");
         window.history.replaceState(null, "", path);
       }
-      if (!chatId && !msgId && !meet && !conf && !guest) {
+      if (!chatId && !msgId && !meet && !conf && !guest && !meshSession) {
         var fromHash = parseHashDeepLink();
         if (fromHash) {
           chatId = fromHash.chatId;
           msgId = fromHash.msgId;
           meet = fromHash.meet;
           conf = fromHash.conf;
+          meshSession = fromHash.meshSession;
+          meshMode = fromHash.meshMode;
           clearHashDeepLink();
         }
       }
-      return { chatId: chatId, msgId: msgId, meet: meet, conf: conf, guest: guest };
+      return {
+        chatId: chatId,
+        msgId: msgId,
+        meet: meet,
+        conf: conf,
+        guest: guest,
+        meshSession: meshSession,
+        meshMode: meshMode,
+      };
     } catch (e) {
       return { chatId: null, msgId: null, meet: null, conf: null, guest: null };
     }
@@ -106,10 +125,23 @@
     } catch (e) {}
   }
 
+  function buildMeshCallUrl(chatId, sessionId, mediaMode) {
+    if (!chatId || !sessionId) return buildChatUrl(chatId);
+    var mode = mediaMode === "video" ? "video" : "audio";
+    return (
+      buildChatUrl(chatId) +
+      "&mesh_session=" +
+      encodeURIComponent(sessionId) +
+      "&mesh_mode=" +
+      mode
+    );
+  }
+
   global.KorusUiDeepLinkUtils = {
     stripDeepLinkFromUrl: stripDeepLinkFromUrl,
     buildChatUrl: buildChatUrl,
     buildMessageUrl: buildMessageUrl,
+    buildMeshCallUrl: buildMeshCallUrl,
     appBaseUrl: appBaseUrl,
     syncChatUrl: syncChatUrl,
   };

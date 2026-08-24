@@ -22,8 +22,8 @@ import org.testfx.api.FxRobot;
 import org.testfx.framework.junit5.ApplicationExtension;
 import org.testfx.framework.junit5.Start;
 
-/** Captures desktop UI screenshots for web parity visual audit (offline demo). */
-@Tag("desktop-ui")
+/** Captures desktop UI screenshots — FX-thread navigation only (no mouse). */
+@Tag("desktop-visual-capture")
 @ExtendWith(ApplicationExtension.class)
 class DesktopVisualCaptureTest {
 
@@ -31,6 +31,8 @@ class DesktopVisualCaptureTest {
     void start(Stage stage) {
         DesktopUiTestSupport.autostartDemoShell();
         new DesktopApplication().start(stage);
+        stage.setX(80);
+        stage.setY(40);
         stage.setWidth(1280);
         stage.setHeight(800);
         DesktopUiRobot.waitForFx();
@@ -40,29 +42,30 @@ class DesktopVisualCaptureTest {
     void captureDemoShellScreens(FxRobot robot) throws Exception {
         var out = outDir();
         Files.createDirectories(out);
+        DesktopUiRobot.focusMainWindow(robot);
         DesktopUiRobot.waitForTextContains(robot, DesktopUiIds.MESSAGES, "Welcome", 12_000);
         capture(stage(robot), out.resolve("01-chats-main.png"));
 
-        robot.clickOn("Поиск");
-        DesktopUiRobot.waitForFx();
+        DesktopUiRobot.selectShellTab(robot, DesktopUiIds.TAB_SEARCH);
         capture(stage(robot), out.resolve("02-search-tab.png"));
 
-        robot.clickOn("Настройки");
-        DesktopUiRobot.waitForFx();
+        DesktopUiRobot.selectShellTab(robot, DesktopUiIds.TAB_SETTINGS);
         capture(stage(robot), out.resolve("03-settings-general.png"));
-        for (var tab : new String[] {"Профиль", "Уведомления", "Ссылки и файлы", "Безопасность", "Общие"}) {
-            robot.clickOn(tab);
-            DesktopUiRobot.waitForFx();
-            var slug = tab.toLowerCase().replace(' ', '-');
-            capture(stage(robot), out.resolve("03-settings-" + slug + ".png"));
+        for (var tabId : new String[] {
+            DesktopUiIds.SETTINGS_PROFILE,
+            DesktopUiIds.SETTINGS_NOTIFICATIONS,
+            DesktopUiIds.SETTINGS_LINKS,
+            DesktopUiIds.SETTINGS_SECURITY,
+            DesktopUiIds.SETTINGS_GENERAL
+        }) {
+            DesktopUiRobot.selectSettingsTab(robot, tabId);
+            capture(stage(robot), out.resolve("03-settings-" + tabId.replace("desktop-settings-", "") + ".png"));
         }
 
-        robot.clickOn("Серверы");
-        DesktopUiRobot.waitForFx();
+        DesktopUiRobot.selectShellTab(robot, DesktopUiIds.TAB_SERVERS);
         capture(stage(robot), out.resolve("04-servers-tab.png"));
 
-        robot.clickOn("Чаты");
-        DesktopUiRobot.waitForFx();
+        DesktopUiRobot.selectShellTab(robot, DesktopUiIds.TAB_CHATS);
         robot.interact(() -> {
             TitledPane pane = robot.lookup("#" + DesktopUiIds.THREAD_TOGGLE).query();
             pane.setExpanded(true);

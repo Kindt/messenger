@@ -23,6 +23,8 @@ class DesktopShellDemoUiTest {
     void start(Stage stage) {
         DesktopUiTestSupport.autostartDemoShell();
         new DesktopApplication().start(stage);
+        stage.setX(80);
+        stage.setY(40);
         stage.setWidth(1280);
         stage.setHeight(800);
         DesktopUiRobot.waitForFx();
@@ -56,7 +58,7 @@ class DesktopShellDemoUiTest {
 
     @Test
     void searchTabFindsDemoContent(FxRobot robot) {
-        robot.clickOn("Поиск");
+        DesktopUiRobot.selectShellTab(robot, DesktopUiIds.TAB_SEARCH);
         DesktopUiRobot.clickWhenReady(robot, DesktopUiIds.SEARCH_FIELD);
         robot.write("deploy");
         DesktopUiRobot.clickWhenReady(robot, DesktopUiIds.SEARCH_BTN);
@@ -65,14 +67,14 @@ class DesktopShellDemoUiTest {
 
     @Test
     void settingsTabsClickThrough(FxRobot robot) {
-        robot.clickOn("Настройки");
-        robot.clickOn("Профиль");
-        robot.clickOn("Уведомления");
+        DesktopUiRobot.selectShellTab(robot, DesktopUiIds.TAB_SETTINGS);
+        DesktopUiRobot.selectSettingsTab(robot, DesktopUiIds.SETTINGS_PROFILE);
+        DesktopUiRobot.selectSettingsTab(robot, DesktopUiIds.SETTINGS_NOTIFICATIONS);
         verifyThat("#" + DesktopUiIds.SETTINGS_SOUND, isVisible());
-        robot.clickOn("Ссылки и файлы");
+        DesktopUiRobot.selectSettingsTab(robot, DesktopUiIds.SETTINGS_LINKS);
         verifyThat("#" + DesktopUiIds.SETTINGS_ATTACH_PATH, isVisible());
-        robot.clickOn("Безопасность");
-        robot.clickOn("Общие");
+        DesktopUiRobot.selectSettingsTab(robot, DesktopUiIds.SETTINGS_SECURITY);
+        DesktopUiRobot.selectSettingsTab(robot, DesktopUiIds.SETTINGS_GENERAL);
         DesktopUiRobot.clickWhenReady(robot, DesktopUiIds.SETTINGS_UPDATE_CHECK);
         DesktopUiRobot.waitForTextContains(robot, DesktopUiIds.SETTINGS_UPDATE_STATUS, "0.0.2", 8000);
         DesktopUiRobot.clickWhenReady(robot, DesktopUiIds.SETTINGS_SAVE);
@@ -80,17 +82,17 @@ class DesktopShellDemoUiTest {
 
     @Test
     void serversTabListsDemoServers(FxRobot robot) {
-        robot.clickOn("Серверы");
+        DesktopUiRobot.selectShellTab(robot, DesktopUiIds.TAB_SERVERS);
         verifyThat("#" + DesktopUiIds.SERVERS_LIST, isVisible());
         DesktopUiRobot.clickWhenReady(robot, DesktopUiIds.SERVERS_REFRESH);
     }
 
     @Test
-    void demoCallButtonAppendsConferenceLine(FxRobot robot) {
+    void demoCallButtonAppendsMeshCallLine(FxRobot robot) {
         DesktopUiRobot.waitForFx();
         var call = robot.lookup("#" + DesktopUiIds.CALL_BTN).queryAs(Button.class);
         robot.interact(call::fire);
-        DesktopUiRobot.waitForTextContains(robot, DesktopUiIds.MESSAGES, "demo://conference", 8000);
+        DesktopUiRobot.waitForTextContains(robot, DesktopUiIds.MESSAGES, "demo://mesh-call", 8000);
     }
 
     @Test

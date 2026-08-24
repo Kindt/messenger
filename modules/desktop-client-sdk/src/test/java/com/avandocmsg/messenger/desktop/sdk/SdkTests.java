@@ -243,6 +243,28 @@ class BrandingPaletteTest {
     }
 }
 
+class WebUiUrlResolverTest {
+
+    @Test
+    void derivesQemuWebPort() {
+        var url = com.avandocmsg.messenger.desktop.sdk.web.WebUiUrlResolver.defaultFromApiBase("http://127.0.0.1:18080");
+        assertEquals("http://127.0.0.1:19088", url);
+    }
+
+    @Test
+    void buildsMeshJoinUrl() {
+        var join = com.avandocmsg.messenger.desktop.sdk.web.WebUiUrlResolver.meshJoinUrl(
+            "http://127.0.0.1:19088",
+            "chat-1",
+            "sess-2",
+            "video"
+        );
+        assertTrue(join.contains("chat=chat-1"));
+        assertTrue(join.contains("mesh_session=sess-2"));
+        assertTrue(join.contains("mesh_mode=video"));
+    }
+}
+
 class WsUrlResolverTest {
 
     @Test

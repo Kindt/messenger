@@ -2,20 +2,57 @@ package com.avandocmsg.messenger.desktop.ui.test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.concurrent.TimeUnit;
 import com.avandocmsg.messenger.desktop.ui.ChatMessagePane;
+import com.avandocmsg.messenger.desktop.ui.DesktopUiIds;
+import java.util.concurrent.TimeUnit;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputControl;
+import javafx.stage.Stage;
 import org.testfx.api.FxRobot;
 import org.testfx.util.WaitForAsyncUtils;
 
+/** TestFX helpers — programmatic focus/events, no screen-coordinate mouse moves. */
 public final class DesktopUiRobot {
 
     private DesktopUiRobot() {}
 
     public static void waitForFx() {
         WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    public static void focusMainWindow(FxRobot robot) {
+        robot.interact(() -> {
+            Stage stage = (Stage) robot.listWindows().getFirst();
+            stage.toFront();
+            stage.requestFocus();
+        });
+        waitForFx();
+    }
+
+    public static void selectShellTab(FxRobot robot, String tabId) {
+        selectTab(robot, DesktopUiIds.SHELL_TABS, tabId);
+    }
+
+    public static void selectSettingsTab(FxRobot robot, String tabId) {
+        selectTab(robot, DesktopUiIds.SETTINGS_TABS, tabId);
+    }
+
+    public static void selectTab(FxRobot robot, String tabPaneId, String tabId) {
+        robot.interact(() -> {
+            TabPane pane = robot.lookup("#" + tabPaneId).query();
+            for (Tab tab : pane.getTabs()) {
+                if (tabId.equals(tab.getId())) {
+                    pane.getSelectionModel().select(tab);
+                    return;
+                }
+            }
+            throw new IllegalStateException("tab not found: " + tabId + " in #" + tabPaneId);
+        });
+        waitForFx();
     }
 
     public static void waitForTextContains(FxRobot robot, String fxId, String substring, long timeoutMs) {
@@ -55,9 +92,21 @@ public final class DesktopUiRobot {
         assertTrue(text.contains(substring), "expected '" + substring + "' in: " + text);
     }
 
+    /** Focus control or fire button — does not move the OS mouse cursor. */
     public static void clickWhenReady(FxRobot robot, String fxId) {
-        waitForFx();
-        robot.clickOn("#" + fxId);
+        focusMainWindow(robot);
+        robot.interact(() -> {
+            var node = robot.lookup("#" + fxId).query();
+            if (node instanceof Button button) {
+                button.fire();
+                return;
+            }
+            if (node instanceof TextInputControl input) {
+                input.requestFocus();
+                return;
+            }
+            node.requestFocus();
+        });
         waitForFx();
     }
 
