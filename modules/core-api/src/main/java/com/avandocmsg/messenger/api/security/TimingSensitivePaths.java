@@ -11,29 +11,17 @@ public final class TimingSensitivePaths {
     }
 
     public static Response respond(AppConfig config, Supplier<Response> action) {
-        long minNs = config.timingNormalizationMinNanos();
-        if (minNs > 0) {
-            return TimingNormalization.runWithMinimumDuration(minNs, action);
-        }
-        return action.get();
+        return withMinimumDuration(config.timingNormalizationMinNanos(), config, action, false);
     }
 
     /** Login probe needs higher floor (Keycloak exist-user vs unknown-user gap on QEMU). */
     public static Response respondLogin(AppConfig config, Supplier<Response> action) {
-        long minNs = config.timingLoginMinNanos();
-        if (minNs > 0) {
-            return TimingNormalization.runWithMinimumDuration(minNs, action);
-        }
-        return respond(config, action);
+        return withMinimumDuration(config.timingLoginMinNanos(), config, action, true);
     }
 
     /** GET /users/me vs missing user id (exist fast path vs 404 lookup gap on QEMU). */
     public static Response respondUser(AppConfig config, Supplier<Response> action) {
-        long minNs = config.timingUserLookupMinNanos();
-        if (minNs > 0) {
-            return TimingNormalization.runWithMinimumDuration(minNs, action);
-        }
-        return respond(config, action);
+        return withMinimumDuration(config.timingUserLookupMinNanos(), config, action, true);
     }
 
     public static void padNotFound(AppConfig config) {
@@ -46,5 +34,16 @@ public final class TimingSensitivePaths {
         if (config.timingNormalizationMinNanos() > 0) {
             TimingNormalization.padNotFoundExtra(config.timingAuthFailureExtraNanos());
         }
+    }
+
+    private static Response withMinimumDuration(
+            long minNs,
+            AppConfig config,
+            Supplier<Response> action,
+            boolean fallbackToRespond) {
+        if (minNs > 0) {
+            return TimingNormalization.runWithMinimumDuration(minNs, action);
+        }
+        return fallbackToRespond ? respond(config, action) : action.get();
     }
 }

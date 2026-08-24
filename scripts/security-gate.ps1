@@ -17,7 +17,8 @@ Runs PR security gate:
   1. ./gradlew buildIntegrity (spotless ratchet, npm audit, benchmark, all tests)
   2. Optional QEMU smokes when API health OK:
      smoke-security-headers, audit-timing, smoke-rate-limit
-  3. With -Strict (FSTEC conveyor): + smoke-ip-allowlist, smoke-dlp-mock (-SkipIfUnreachable),
+  3. With -Strict (FSTEC conveyor): + smoke-ip-allowlist (-RequireEnforce),
+     smoke-admin-audit-retention, smoke-dlp-mock (-SkipIfUnreachable),
      smoke-desktop-security (offline SDK + FSTEC matrix doc)
 
 Examples:
@@ -64,8 +65,8 @@ try {
     if ($SkipQemuSmokes) {
         if ($Strict) {
             Write-Host "=== FSTEC strict (offline) ===" -ForegroundColor Cyan
-            & "$Root\scripts\smoke-desktop-security.ps1"
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $desktopExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-desktop-security.ps1"
+            if ($desktopExit -ne 0) { exit $desktopExit }
             Write-Host "[OK] security-gate (build + FSTEC offline strict)" -ForegroundColor Green
         } else {
             Write-Host "[OK] security-gate (build only)" -ForegroundColor Green
@@ -73,24 +74,20 @@ try {
         exit 0
     }
 
-    $healthOk = $false
     try {
         $null = Invoke-WebRequest -Uri "$BaseUrl/api/v1/health" -UseBasicParsing -TimeoutSec 5
-        $healthOk = $true
     } catch {
         if ($Strict) {
             Write-Host "[WARN] QEMU smokes skipped: API not reachable at $BaseUrl" -ForegroundColor Yellow
             Write-Host "=== FSTEC strict (offline) ===" -ForegroundColor Cyan
-            & "$Root\scripts\smoke-desktop-security.ps1"
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $desktopExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-desktop-security.ps1"
+            if ($desktopExit -ne 0) { exit $desktopExit }
             Write-Host "[OK] security-gate (FSTEC offline strict only)" -ForegroundColor Green
             exit 0
         }
         Write-Host "[SKIP] QEMU smokes: API not reachable at $BaseUrl (use -SkipQemuSmokes for build-only CI parity)" -ForegroundColor Yellow
         exit 0
     }
-
-    if (-not $healthOk) { exit 0 }
 
     Write-Host "=== QEMU security smokes ===" -ForegroundColor Cyan
     if ($BaseUrl -match ':18080' -and -not $env:SECURITY_TIMING_NORMALIZATION_MIN_MS) {
@@ -106,8 +103,13 @@ try {
 
     if ($Strict) {
         Write-Host "=== FSTEC strict smokes ===" -ForegroundColor Cyan
-        $ipExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-ip-allowlist.ps1" -ArgumentList @("-BaseUrl", $BaseUrl)
+        $ipExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-ip-allowlist.ps1" `
+            -ArgumentList @("-BaseUrl", $BaseUrl, "-RequireEnforce")
         if ($ipExit -ne 0) { exit $ipExit }
+
+        $auditRetentionExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-admin-audit-retention.ps1" `
+            -ArgumentList @("-BaseUrl", $BaseUrl)
+        if ($auditRetentionExit -ne 0) { exit $auditRetentionExit }
 
         $dlpExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-dlp-mock.ps1" -ArgumentList @("-SkipIfUnreachable")
         if ($dlpExit -ne 0) { exit $dlpExit }

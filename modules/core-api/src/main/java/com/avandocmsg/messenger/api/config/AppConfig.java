@@ -1093,83 +1093,49 @@ public class AppConfig {
 
     /** Minimum handler duration for timing normalization (GET chat etc.). 0 = disabled. Env: SECURITY_TIMING_NORMALIZATION_MIN_MS. */
     public long timingNormalizationMinNanos() {
-        var raw = props.getProperty("security.timing.normalization.min.ms", "").trim();
-        if (raw.isEmpty()) {
-            raw = System.getenv().getOrDefault("SECURITY_TIMING_NORMALIZATION_MIN_MS", "0");
-        }
-        try {
-            var ms = Math.max(0, Integer.parseInt(raw));
-            return ms * 1_000_000L;
-        } catch (NumberFormatException e) {
-            return 0L;
-        }
+        return envTimingMsToNanos("security.timing.normalization.min.ms", "SECURITY_TIMING_NORMALIZATION_MIN_MS", 0L, false);
     }
 
     /** Extra delay on 404 when normalization enabled (closes response-size / serialization gap). Env: SECURITY_TIMING_NOT_FOUND_EXTRA_MS. */
     public long timingNotFoundExtraNanos() {
-        if (timingNormalizationMinNanos() <= 0) {
-            return 0L;
-        }
-        var raw = props.getProperty("security.timing.not_found.extra.ms", "").trim();
-        if (raw.isEmpty()) {
-            raw = System.getenv().getOrDefault("SECURITY_TIMING_NOT_FOUND_EXTRA_MS", "35");
-        }
-        try {
-            var ms = Math.max(0, Integer.parseInt(raw));
-            return ms * 1_000_000L;
-        } catch (NumberFormatException e) {
-            return 35L * 1_000_000L;
-        }
+        return gatedEnvTimingMsToNanos(
+            "security.timing.not_found.extra.ms", "SECURITY_TIMING_NOT_FOUND_EXTRA_MS", 35L);
     }
 
     /** Minimum handler duration for POST /auth/login when normalization enabled. Env: SECURITY_TIMING_LOGIN_MIN_MS. */
     public long timingLoginMinNanos() {
-        if (timingNormalizationMinNanos() <= 0) {
-            return 0L;
-        }
-        var raw = props.getProperty("security.timing.login.min.ms", "").trim();
-        if (raw.isEmpty()) {
-            raw = System.getenv().getOrDefault("SECURITY_TIMING_LOGIN_MIN_MS", "660");
-        }
-        try {
-            var ms = Math.max(0, Integer.parseInt(raw));
-            return ms * 1_000_000L;
-        } catch (NumberFormatException e) {
-            return 660L * 1_000_000L;
-        }
+        return gatedEnvTimingMsToNanos("security.timing.login.min.ms", "SECURITY_TIMING_LOGIN_MIN_MS", 660L);
     }
 
     /** Minimum handler duration for GET /users/me and /users/{id} when normalization enabled. Env: SECURITY_TIMING_USER_LOOKUP_MIN_MS. */
     public long timingUserLookupMinNanos() {
-        if (timingNormalizationMinNanos() <= 0) {
-            return 0L;
-        }
-        var raw = props.getProperty("security.timing.user_lookup.min.ms", "").trim();
-        if (raw.isEmpty()) {
-            raw = System.getenv().getOrDefault("SECURITY_TIMING_USER_LOOKUP_MIN_MS", "420");
-        }
-        try {
-            var ms = Math.max(0, Integer.parseInt(raw));
-            return ms * 1_000_000L;
-        } catch (NumberFormatException e) {
-            return 420L * 1_000_000L;
-        }
+        return gatedEnvTimingMsToNanos(
+            "security.timing.user_lookup.min.ms", "SECURITY_TIMING_USER_LOOKUP_MIN_MS", 420L);
     }
 
     /** Extra delay on failed login when normalization enabled (Keycloak exist vs miss). Env: SECURITY_TIMING_AUTH_FAILURE_EXTRA_MS. */
     public long timingAuthFailureExtraNanos() {
+        return gatedEnvTimingMsToNanos(
+            "security.timing.auth_failure.extra.ms", "SECURITY_TIMING_AUTH_FAILURE_EXTRA_MS", 80L);
+    }
+
+    private long gatedEnvTimingMsToNanos(String propKey, String envKey, long defaultMs) {
         if (timingNormalizationMinNanos() <= 0) {
             return 0L;
         }
-        var raw = props.getProperty("security.timing.auth_failure.extra.ms", "").trim();
+        return envTimingMsToNanos(propKey, envKey, defaultMs, true);
+    }
+
+    private long envTimingMsToNanos(String propKey, String envKey, long defaultMs, boolean useDefaultWhenBlank) {
+        var raw = props.getProperty(propKey, "").trim();
         if (raw.isEmpty()) {
-            raw = System.getenv().getOrDefault("SECURITY_TIMING_AUTH_FAILURE_EXTRA_MS", "80");
+            raw = System.getenv().getOrDefault(envKey, useDefaultWhenBlank ? Long.toString(defaultMs) : "0");
         }
         try {
-            var ms = Math.max(0, Integer.parseInt(raw));
+            var ms = Math.max(0, Long.parseLong(raw));
             return ms * 1_000_000L;
         } catch (NumberFormatException e) {
-            return 80L * 1_000_000L;
+            return (useDefaultWhenBlank ? defaultMs : 0L) * 1_000_000L;
         }
     }
 

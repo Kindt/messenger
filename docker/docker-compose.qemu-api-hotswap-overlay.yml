@@ -6,6 +6,9 @@ services:
   core-api:
     environment:
       HOT_RELOAD: "true"
+      RATE_LIMIT_AUTH_ENABLED: "true"
+      RATE_LIMIT_AUTH_FAIL_OPEN: "false"
+      ORG_IP_ALLOWLIST_ENFORCE: "1"
     volumes:
       - /mnt/korus/.qemu-hotswap/core-api/lib:/app/core-api/lib
       - /mnt/korus/.qemu-hotswap/core-api/conf:/app/core-api/conf
