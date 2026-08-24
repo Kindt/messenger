@@ -1,10 +1,8 @@
 package com.avandocmsg.messenger.api.filter;
 
-import com.avandocmsg.messenger.api.auth.AuthRateLimiter;
 import com.avandocmsg.messenger.api.config.AppConfig;
 import com.avandocmsg.messenger.api.config.OrgRoutingContext;
 import com.avandocmsg.messenger.api.security.DeniedAccessAudit;
-import com.avandocmsg.messenger.api.security.OrgIpAllowlistService;
 import com.avandocmsg.messenger.common.dto.ApiError;
 import com.avandocmsg.messenger.common.i18n.UserMessageSource;
 import jakarta.annotation.Priority;
@@ -18,29 +16,29 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.ext.Provider;
 
+import java.util.Locale;
 import java.util.UUID;
 
-/** Lab enforcement of org IP allowlist after auth (spec 022 US32). */
+/**
+ * Prod geo deny scaffold: nginx sets {@code X-Geo-Country} or {@code CF-IPCountry}.
+ * Enforce with {@code ORG_GEO_DENY_ENFORCE=1} and {@code ORG_GEO_DENY_COUNTRIES=RU,CN,...}.
+ */
 @Provider
-@Priority(Priorities.AUTHORIZATION)
-public class OrgIpAllowlistFilter implements ContainerRequestFilter {
+@Priority(Priorities.AUTHORIZATION + 1)
+public class OrgGeoDenyFilter implements ContainerRequestFilter {
 
-    private final OrgIpAllowlistService allowlistService;
+    private static final String HDR_GEO = "X-Geo-Country";
+    private static final String HDR_CF = "CF-IPCountry";
+
     private final AppConfig appConfig;
     private final DeniedAccessAudit deniedAccessAudit;
     private final UserMessageSource messages;
 
-  @Context
+    @Context
     private HttpServletRequest httpRequest;
 
     @Inject
-    public OrgIpAllowlistFilter(
-        OrgIpAllowlistService allowlistService,
-        AppConfig appConfig,
-        DeniedAccessAudit deniedAccessAudit,
-        UserMessageSource messages
-    ) {
-        this.allowlistService = allowlistService;
+    public OrgGeoDenyFilter(AppConfig appConfig, DeniedAccessAudit deniedAccessAudit, UserMessageSource messages) {
         this.appConfig = appConfig;
         this.deniedAccessAudit = deniedAccessAudit;
         this.messages = messages;
@@ -48,24 +46,38 @@ public class OrgIpAllowlistFilter implements ContainerRequestFilter {
 
     @Override
     public void filter(ContainerRequestContext request) {
-        if (!appConfig.orgIpAllowlistEnforce()) {
+        if (!appConfig.orgGeoDenyEnforce()) {
             return;
         }
         if (JwtAuthFilter.isPublicJerseyPath(request.getUriInfo().getPath())) {
             return;
         }
+        var denied = appConfig.orgGeoDeniedCountries();
+        if (denied.isEmpty()) {
+            return;
+        }
+        var country = resolveCountryCode();
+        if (country == null || !denied.contains(country)) {
+            return;
+        }
         var orgId = OrgRoutingContext.get();
-        if (orgId == null) {
-            return;
-        }
-        var clientIp = AuthRateLimiter.clientIp(httpRequest);
-        if (allowlistService.isAllowed(orgId, clientIp)) {
-            return;
-        }
-        deniedAccessAudit.ipAllowlistDenied(actorUserId(request.getSecurityContext()), orgId, clientIp);
+        deniedAccessAudit.geoDenied(actorUserId(request.getSecurityContext()), orgId, country);
         request.abortWith(Response.status(Response.Status.FORBIDDEN)
-            .entity(new ApiError(403, messages.get("error.org.ip_allowlist_denied")))
+            .entity(new ApiError(403, messages.get("error.org.geo_denied")))
             .build());
+    }
+
+    private String resolveCountryCode() {
+        if (httpRequest == null) {
+            return null;
+        }
+        for (var header : new String[] { HDR_GEO, HDR_CF }) {
+            var raw = httpRequest.getHeader(header);
+            if (raw != null && !raw.isBlank()) {
+                return raw.trim().toUpperCase(Locale.ROOT);
+            }
+        }
+        return null;
     }
 
     private static UUID actorUserId(SecurityContext securityContext) {

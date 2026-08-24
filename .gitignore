@@ -48,6 +48,7 @@ specs/*
 !specs/028-org-shell-layouts/**
 docs/*
 !docs/index.html
+!docs/review/fstec-prod-controls.md
 !docs/runtime-startup-keycloak-audit.md
 !docs/user/
 !docs/user/avatars.md
@@ -149,6 +150,11 @@ deploy/sonar-qemu/images/
 deploy/sonar-qemu/run/
 deploy/sonar-qemu/tools/
 deploy/sonar-qemu/config.local.ps1
+.scannerwork/
+
+# Desktop/mobile pipeline runtime (local conveyor output)
+deploy/desktop/run/
+deploy/mobile/run/
 
 # Playwright artifacts (when e2e tree exists locally)
 tests/e2e-web/node_modules/

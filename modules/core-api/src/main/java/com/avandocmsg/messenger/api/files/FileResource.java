@@ -11,9 +11,9 @@ import com.avandocmsg.messenger.api.files.dto.PublicLinkSummary;
 import com.avandocmsg.messenger.api.files.dto.FilePresignUploadRequest;
 import com.avandocmsg.messenger.api.files.dto.FilePresignUploadResponse;
 import com.avandocmsg.messenger.api.files.dto.FileUploadResponse;
-import com.avandocmsg.messenger.api.metrics.ApiDeniedMetrics;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.UuidParams;
+import com.avandocmsg.messenger.api.security.DeniedAccessAudit;
 import com.avandocmsg.messenger.api.security.TimingSensitivePaths;
 import com.avandocmsg.messenger.core.port.AuditPort;
 import com.avandocmsg.messenger.core.port.PublicLinkPort;
@@ -104,6 +104,7 @@ public class FileResource {
     private final AppConfig appConfig;
     private final PublicLinkPort publicLinkPort;
     private final AuditPort auditPort;
+    private final DeniedAccessAudit deniedAccessAudit;
     private final Clock clock;
     private final UserMessageSource messages;
 
@@ -113,7 +114,9 @@ public class FileResource {
                           AvatarAccessTokenService avatarAccessTokenService,
                           AppConfig appConfig,
                           PublicLinkPort publicLinkPort,
-                          AuditPort auditPort, Clock clock, UserMessageSource messages) {
+                          AuditPort auditPort,
+                          DeniedAccessAudit deniedAccessAudit,
+                          Clock clock, UserMessageSource messages) {
         this.fileService = fileService;
         this.fileApplicationService = fileApplicationService;
         this.avatarApplicationService = avatarApplicationService;
@@ -121,6 +124,7 @@ public class FileResource {
         this.appConfig = appConfig;
         this.publicLinkPort = publicLinkPort;
         this.auditPort = auditPort;
+        this.deniedAccessAudit = deniedAccessAudit;
         this.clock = clock;
         this.messages = messages;
     }
@@ -277,7 +281,7 @@ public class FileResource {
                 .map(FileDomainMapper::toResponse)
                 .orElse(null);
             if (info == null) {
-                ApiDeniedMetrics.fileAccessDenied();
+                deniedAccessAudit.fileAccessDenied(userId, fid);
                 TimingSensitivePaths.padNotFound(appConfig);
                 return Response.status(Response.Status.FORBIDDEN)
                     .entity(new ApiError(403, messages.get(ERR_NOT_ALLOWED)))
@@ -332,7 +336,7 @@ public class FileResource {
             if (fileApplicationService.findById(fileIdDomain).isEmpty()) {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
-            ApiDeniedMetrics.fileAccessDenied();
+            deniedAccessAudit.fileAccessDenied(userId, fid);
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get(ERR_NOT_ALLOWED)))
                 .type(MediaType.APPLICATION_JSON)
@@ -472,7 +476,11 @@ public class FileResource {
                     .type(MediaType.APPLICATION_JSON)
                     .build();
             }
-            ApiDeniedMetrics.fileAccessDenied();
+            if (securityContext.getUserPrincipal() != null) {
+                deniedAccessAudit.fileAccessDenied(CurrentUserId.uuid(securityContext), fid);
+            } else {
+                deniedAccessAudit.fileAccessDenied(null, fid);
+            }
             return Response.status(Response.Status.FORBIDDEN)
                 .entity(new ApiError(403, messages.get(ERR_NOT_ALLOWED)))
                 .type(MediaType.APPLICATION_JSON)

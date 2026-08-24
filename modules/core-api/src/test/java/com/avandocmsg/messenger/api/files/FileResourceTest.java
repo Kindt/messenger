@@ -53,7 +53,7 @@ class FileResourceTest {
     }
 
     private static FileResource minimalResource() {
-        return new FileResource(null, null, null, null, new AppConfig(), null, null, null,
+        return new FileResource(null, null, null, null, new AppConfig(), null, null, null, null,
             I18nTestFixtures.messagesEn());
     }
 

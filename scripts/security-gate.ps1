@@ -19,7 +19,8 @@ Runs PR security gate:
      smoke-security-headers, audit-timing, smoke-rate-limit
   3. With -Strict (FSTEC conveyor): + smoke-ip-allowlist (-RequireEnforce),
      smoke-admin-audit-retention, smoke-dlp-mock (-SkipIfUnreachable),
-     smoke-desktop-security (offline SDK + FSTEC matrix doc)
+     smoke-denied-access-audit, smoke-passkeys-scaffold, smoke-fstec-prod-prep,
+     smoke-org-geo-deny (SKIP if enforce off), smoke-desktop-security
 
 Examples:
   .\scripts\security-gate.ps1 -SkipQemuSmokes
@@ -101,6 +102,13 @@ try {
     $auditExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\audit-timing.ps1" -ArgumentList @("-BaseUrl", $BaseUrl, "-MaxDeltaRatio", $timingDelta)
     if ($auditExit -ne 0) { exit $auditExit }
 
+    if ($Strict -and $BaseUrl -match ':18080') {
+        Write-Host "=== auth rate-limit cooldown (post audit-timing) ===" -ForegroundColor Cyan
+        $cooldownExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\vpp\Wait-AuthRateLimitCooldown.ps1" `
+            -ArgumentList @("-BaseUrl", $BaseUrl, "-MaxSec", "120")
+        if ($cooldownExit -ne 0) { exit $cooldownExit }
+    }
+
     if ($Strict) {
         Write-Host "=== FSTEC strict smokes ===" -ForegroundColor Cyan
         $ipExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-ip-allowlist.ps1" `
@@ -113,6 +121,22 @@ try {
 
         $dlpExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-dlp-mock.ps1" -ArgumentList @("-SkipIfUnreachable")
         if ($dlpExit -ne 0) { exit $dlpExit }
+
+        $deniedAuditExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-denied-access-audit.ps1" `
+            -ArgumentList @("-BaseUrl", $BaseUrl)
+        if ($deniedAuditExit -ne 0) { exit $deniedAuditExit }
+
+        $passkeysExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-passkeys-scaffold.ps1" `
+            -ArgumentList @("-BaseUrl", $BaseUrl)
+        if ($passkeysExit -ne 0) { exit $passkeysExit }
+
+        $prodPrepExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-fstec-prod-prep.ps1" `
+            -ArgumentList @("-BaseUrl", $BaseUrl)
+        if ($prodPrepExit -ne 0) { exit $prodPrepExit }
+
+        $geoExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-org-geo-deny.ps1" `
+            -ArgumentList @("-BaseUrl", $BaseUrl)
+        if ($geoExit -ne 0) { exit $geoExit }
 
         $desktopExit = Invoke-SecurityGateScript -ScriptPath "$Root\scripts\smoke-desktop-security.ps1"
         if ($desktopExit -ne 0) { exit $desktopExit }

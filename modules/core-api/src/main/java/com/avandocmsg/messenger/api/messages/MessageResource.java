@@ -10,13 +10,13 @@ import com.avandocmsg.messenger.api.messages.dto.ReactionRequest;
 import com.avandocmsg.messenger.api.messages.dto.ReactionResponse;
 import com.avandocmsg.messenger.api.messages.dto.SendMessageRequest;
 import com.avandocmsg.messenger.api.config.AppConfig;
+import com.avandocmsg.messenger.api.security.DeniedAccessAudit;
 import com.avandocmsg.messenger.api.security.TimingSensitivePaths;
 import com.avandocmsg.messenger.core.application.MessageApplicationService;
 import com.avandocmsg.messenger.core.application.MessageDomainMapper;
 import com.avandocmsg.messenger.core.domain.ChatId;
 import com.avandocmsg.messenger.core.domain.MessageId;
 import com.avandocmsg.messenger.core.domain.UserId;
-import com.avandocmsg.messenger.api.metrics.ApiDeniedMetrics;
 import com.avandocmsg.messenger.api.params.CurrentUserId;
 import com.avandocmsg.messenger.api.params.ListPagination;
 import com.avandocmsg.messenger.api.params.UuidParams;
@@ -59,14 +59,17 @@ public class MessageResource {
 
     private final MessageApplicationService messageApplicationService;
     private final AppConfig appConfig;
+    private final DeniedAccessAudit deniedAccessAudit;
     private final UserMessageSource messages;
 
     @Inject
     public MessageResource(MessageApplicationService messageApplicationService,
                              AppConfig appConfig,
+                             DeniedAccessAudit deniedAccessAudit,
                              UserMessageSource messages) {
         this.messageApplicationService = messageApplicationService;
         this.appConfig = appConfig;
+        this.deniedAccessAudit = deniedAccessAudit;
         this.messages = messages;
     }
 
@@ -114,7 +117,7 @@ public class MessageResource {
         if (msg == null) {
             var denied = messageApplicationService.sendDeniedReason(chatId, userId, request);
             if (denied.isPresent()) {
-                ApiDeniedMetrics.messageSendDenied();
+                deniedAccessAudit.messageSendDenied(userId, chatId, denied.get());
                 return Response.status(Response.Status.FORBIDDEN)
                     .entity(new ApiError(403, messages.get(denied.get())))
                     .build();
@@ -475,7 +478,7 @@ public class MessageResource {
             var denied = messageApplicationService.sendBlockedReason(sourceChatId, userId)
                 .or(() -> messageApplicationService.sendBlockedReason(targetChatId, userId));
             if (denied.isPresent()) {
-                ApiDeniedMetrics.messageSendDenied();
+                deniedAccessAudit.messageSendDenied(userId, targetChatId, denied.get());
                 return Response.status(Response.Status.FORBIDDEN)
                     .entity(new ApiError(403, messages.get(denied.get())))
                     .build();

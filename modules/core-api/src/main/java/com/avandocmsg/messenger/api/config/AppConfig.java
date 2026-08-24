@@ -1224,6 +1224,34 @@ public class AppConfig {
         return Boolean.parseBoolean(props.getProperty("org.ip.allowlist.enforce", STRING_FALSE));
     }
 
+    /** When true, enforce geo deny via {@code X-Geo-Country} / {@code CF-IPCountry}. Env: ORG_GEO_DENY_ENFORCE. */
+    public boolean orgGeoDenyEnforce() {
+        var env = System.getenv("ORG_GEO_DENY_ENFORCE");
+        if (env != null && !env.isBlank()) {
+            return Boolean.parseBoolean(env.trim());
+        }
+        return Boolean.parseBoolean(props.getProperty("org.geo.deny.enforce", STRING_FALSE));
+    }
+
+    /** ISO 3166-1 alpha-2 codes to deny when geo enforce is on. Env: ORG_GEO_DENY_COUNTRIES (comma-separated). */
+    public java.util.Set<String> orgGeoDeniedCountries() {
+        var env = System.getenv("ORG_GEO_DENY_COUNTRIES");
+        var raw = env != null && !env.isBlank()
+            ? env
+            : props.getProperty("org.geo.deny.countries", "");
+        if (raw == null || raw.isBlank()) {
+            return java.util.Set.of();
+        }
+        var out = new java.util.HashSet<String>();
+        for (var part : raw.split(",")) {
+            var code = part.trim().toUpperCase(java.util.Locale.ROOT);
+            if (!code.isEmpty()) {
+                out.add(code);
+            }
+        }
+        return java.util.Collections.unmodifiableSet(out);
+    }
+
     /** Entity avatars feature flag (spec 068). Env: {@code AVATARS_ENABLED}. */
     public boolean avatarsEnabled() {
         return Boolean.parseBoolean(props.getProperty("avatars.enabled", "true"));
